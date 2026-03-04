@@ -60,7 +60,7 @@ from ..otel._collect import OtelCollectLevel, _get_env_level
 from ..otel._decorators import suppress as _otel_suppress
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_span_name
-from ..otel._span_wrappers import shiny_otel_span
+from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
@@ -938,13 +938,28 @@ class AppSession(Session):
                             "Cache-Control": "no-store",
                         }
 
+                        otel_attrs = {
+                            **get_session_id_attrs(self),
+                            "download.id": download_id,
+                            "download.filename": filename,
+                        }
+
                         if isinstance(contents, str):
                             # contents is the path to a file
-                            return FileResponse(
-                                Path(contents),
-                                headers=headers,
-                                media_type=content_type,
-                            )
+                            # Span captures download initiation; the actual file
+                            # transfer is handled by Starlette's ASGI layer after
+                            # we return the FileResponse object.
+                            async with shiny_otel_span(
+                                "download",
+                                attributes=otel_attrs,
+                                required_level=OtelCollectLevel.REACTIVITY,
+                            ):
+                                file_response = FileResponse(
+                                    Path(contents),
+                                    headers=headers,
+                                    media_type=content_type,
+                                )
+                            return file_response
 
                         wrapped_contents: AsyncIterable[bytes]
 
@@ -977,6 +992,13 @@ class AppSession(Session):
                                                 yield chunk
 
                             wrapped_contents = wrap_content_sync()
+
+                        wrapped_contents = shiny_otel_span_stream(
+                            "download",
+                            wrapped_contents,
+                            attributes=otel_attrs,
+                            required_level=OtelCollectLevel.REACTIVITY,
+                        )
 
                         # In streaming downloads, we send a 200 response, but if an
                         # error occurs in the middle of it, the client needs to know.

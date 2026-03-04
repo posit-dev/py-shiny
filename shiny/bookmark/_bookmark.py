@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 from .._docstring import add_example
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
 from ..otel._decorators import suppress as _otel_suppress
-from ..otel._collect import _get_env_level
-from ..otel._span_wrappers import OtelCollectLevel, shiny_otel_span
 from ._button import BOOKMARK_ID
 from ._restore_state import RestoreState
 from ._save_state import BookmarkState
@@ -407,34 +405,15 @@ class BookmarkApp(Bookmark):
                     try:
                         with reactive.isolate():
                             if self._restore_context and self._restore_context.active:
-                                # Only create span if there's actual work to do
-                                async with shiny_otel_span(
-                                    "restore_bookmark_callbacks",
-                                    required_level=OtelCollectLevel.REACTIVE_UPDATE,
-                                    collection_level=_get_env_level(),
-                                ):
-                                    restore_state = self._restore_context.as_state()
-                                    await self._on_restore_callbacks.invoke(
-                                        restore_state
-                                    )
+                                restore_state = self._restore_context.as_state()
+                                await self._on_restore_callbacks.invoke(restore_state)
                     except Exception as e:
-                        # DEV NOTE: Error sanitization is important here even though
-                        # this is not OTel-specific. User callback errors may contain
-                        # sensitive information (file paths, API keys, internal state)
-                        # that should not be displayed directly in the UI.
-                        #
-                        # This respects app.sanitize_error_msg setting and SafeException
-                        # exceptions bypass sanitization.
-                        from ..otel._errors import maybe_sanitize_error
-
-                        sanitized = maybe_sanitize_error(e, session=root_session)
-
                         warnings.warn(
-                            f"Error calling on_restore callback: {sanitized}",
+                            f"Error calling on_restore callback: {e}",
                             stacklevel=2,
                         )
                         notification_show(
-                            f"Error calling on_restore callback: {sanitized}",
+                            f"Error calling on_restore callback: {e}",
                             duration=None,
                             type="error",
                         )
@@ -450,34 +429,15 @@ class BookmarkApp(Bookmark):
                     try:
                         with reactive.isolate():
                             if self._restore_context and self._restore_context.active:
-                                # Only create span if there's actual work to do
-                                async with shiny_otel_span(
-                                    "restored_bookmark_callbacks",
-                                    required_level=OtelCollectLevel.REACTIVE_UPDATE,
-                                    collection_level=_get_env_level(),
-                                ):
-                                    restore_state = self._restore_context.as_state()
-                                    await self._on_restored_callbacks.invoke(
-                                        restore_state
-                                    )
+                                restore_state = self._restore_context.as_state()
+                                await self._on_restored_callbacks.invoke(restore_state)
                     except Exception as e:
-                        # DEV NOTE: Error sanitization is important here even though
-                        # this is not OTel-specific. User callback errors may contain
-                        # sensitive information (file paths, API keys, internal state)
-                        # that should not be displayed directly in the UI.
-                        #
-                        # This respects app.sanitize_error_msg setting and SafeException
-                        # exceptions bypass sanitization.
-                        from ..otel._errors import maybe_sanitize_error
-
-                        sanitized = maybe_sanitize_error(e, session=root_session)
-
                         warnings.warn(
-                            f"Error calling on_restored callback: {sanitized}",
+                            f"Error calling on_restored callback: {e}",
                             stacklevel=2,
                         )
                         notification_show(
-                            f"Error calling on_restored callback: {sanitized}",
+                            f"Error calling on_restored callback: {e}",
                             duration=None,
                             type="error",
                         )
