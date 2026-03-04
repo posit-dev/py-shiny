@@ -143,9 +143,7 @@ async def shiny_otel_span(
         return
 
     # Use provided collection_level or get current level
-    current_level = (
-        collection_level if collection_level is not None else get_level()
-    )
+    current_level = collection_level if collection_level is not None else get_level()
 
     # Check if we should collect based on current level vs required threshold
     if current_level < required_level:

@@ -147,7 +147,6 @@ class TestSessionInstrumentation:
         with patch_otel_tracing_state(tracing_enabled=False):
             # Without SDK configured, should always return False
             result = (
-                is_otel_tracing_enabled()
-                and get_level() >= OtelCollectLevel.SESSION
+                is_otel_tracing_enabled() and get_level() >= OtelCollectLevel.SESSION
             )
             assert result is False

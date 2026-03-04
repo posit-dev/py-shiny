@@ -42,7 +42,9 @@ class TestSuppressDecorator:
         def failing_func():
             raise ValueError("boom")
 
-        assert getattr(failing_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+        assert (
+            getattr(failing_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+        )
         with pytest.raises(ValueError, match="boom"):
             failing_func()
 
@@ -171,6 +173,7 @@ class TestSuppressIntegration:
         from shiny import reactive
 
         with patch_otel_tracing_state(tracing_enabled=True):
+
             @reactive.calc
             @otel.suppress
             def my_calc():
@@ -182,6 +185,7 @@ class TestSuppressIntegration:
         from shiny import reactive
 
         with patch_otel_tracing_state(tracing_enabled=True):
+
             @reactive.effect
             @otel.suppress
             def my_effect():
