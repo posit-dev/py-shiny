@@ -223,7 +223,3 @@ Note: This only affects Shiny's internal spans and logs. Your own custom
 OpenTelemetry spans and logs are unaffected.
 """
 
-
-def _no_collect() -> _SuppressContext:
-    """Internal helper used by Shiny's own reactive objects. Not public API."""
-    return _SuppressContext()
