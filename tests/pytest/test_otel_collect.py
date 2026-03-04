@@ -150,6 +150,24 @@ class TestGetLevel:
         with pytest.warns(UserWarning, match="Invalid SHINY_OTEL_COLLECT"):
             assert otel.get_level() == OtelCollectLevel.ALL
 
+    def test_get_env_level_ignores_contextvar(self, monkeypatch: pytest.MonkeyPatch):
+        from shiny.otel._collect import _get_env_level
+
+        monkeypatch.setenv("SHINY_OTEL_COLLECT", "session")
+        _current_collect_level.set(None)
+
+        with otel.suppress():
+            # get_level() returns NONE (contextvar wins)
+            assert otel.get_level() == OtelCollectLevel.NONE
+            # _get_env_level() ignores contextvar, returns env var value
+            assert _get_env_level() == OtelCollectLevel.SESSION
+
+    def test_get_env_level_defaults_to_all(self):
+        from shiny.otel._collect import _get_env_level
+
+        _current_collect_level.set(None)
+        assert _get_env_level() == OtelCollectLevel.ALL
+
 
 class TestSuppressIntegration:
     """Integration tests for otel.suppress with the reactive system."""

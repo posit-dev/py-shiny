@@ -16,11 +16,11 @@ class OtelCollectLevel(IntEnum):
 
     Collect levels control the granularity of telemetry data collected:
 
-    - NONE (0): No telemetry collected
-    - SESSION (1): Session lifecycle spans only
-    - REACTIVE_UPDATE (2): SESSION + reactive update cycles
-    - REACTIVITY (3): REACTIVE_UPDATE + individual reactive executions and value updates
-    - ALL (4): All available telemetry (currently equivalent to REACTIVITY)
+    - NONE: No telemetry collected
+    - SESSION: Session lifecycle spans only
+    - REACTIVE_UPDATE: SESSION + reactive update cycles
+    - REACTIVITY: REACTIVE_UPDATE + individual reactive executions and value updates
+    - ALL: All available telemetry (currently equivalent to REACTIVITY)
 
     Examples
     --------
@@ -51,6 +51,32 @@ class OtelCollectLevel(IntEnum):
 _current_collect_level: ContextVar[Optional[OtelCollectLevel]] = ContextVar(
     "otel_collect_level", default=None
 )
+
+
+def _get_env_level() -> OtelCollectLevel:
+    """Read the collection level from the env var only, bypassing the contextvar.
+
+    Used by infrastructure spans (session.start, session.end, reactive_update)
+    that must not be affected by otel.suppress() or otel.collect().
+    """
+    env_level = os.getenv("SHINY_OTEL_COLLECT", "all").strip().upper()
+
+    if env_level == "REACTIVE":
+        env_level = "REACTIVITY"
+
+    try:
+        return OtelCollectLevel[env_level]
+    except KeyError:
+        import warnings
+
+        warnings.warn(
+            f"Invalid SHINY_OTEL_COLLECT value: {env_level}. "
+            f"Valid values are: {', '.join(level.name.lower() for level in OtelCollectLevel)}. "
+            f"Defaulting to 'all'.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return OtelCollectLevel.ALL
 
 
 def get_level() -> OtelCollectLevel:
@@ -97,24 +123,4 @@ def get_level() -> OtelCollectLevel:
     if level is not None:
         return level
 
-    # Check environment variable
-    env_level = os.getenv("SHINY_OTEL_COLLECT", "all").strip().upper()
-
-    # Handle common variations
-    if env_level == "REACTIVE":
-        env_level = "REACTIVITY"
-
-    try:
-        return OtelCollectLevel[env_level]
-    except KeyError:
-        # Invalid level, default to ALL
-        import warnings
-
-        warnings.warn(
-            f"Invalid SHINY_OTEL_COLLECT value: {env_level}. "
-            f"Valid values are: {', '.join(level.name.lower() for level in OtelCollectLevel)}. "
-            f"Defaulting to 'all'.",
-            UserWarning,
-            stacklevel=2,
-        )
-        return OtelCollectLevel.ALL
+    return _get_env_level()
