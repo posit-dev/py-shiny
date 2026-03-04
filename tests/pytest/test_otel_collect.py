@@ -518,3 +518,110 @@ class TestOtelCollectIntegrationWithRealBackend:
         from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
         assert hasattr(func_to_wrap, FUNC_ATTR_OTEL_COLLECT_LEVEL)
+
+
+class TestSuppress:
+    """Tests for otel.suppress as decorator (no parens) and context manager."""
+
+    def test_decorator_no_parens_stamps_function(self):
+        from shiny import otel
+        from shiny.otel._collect import OtelCollectLevel
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
+
+        @otel.suppress
+        def my_func():
+            return 42
+
+        assert getattr(my_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.NONE
+        assert my_func() == 42
+
+    def test_decorator_no_parens_preserves_metadata(self):
+        from shiny import otel
+
+        @otel.suppress
+        def my_func():
+            """My docstring."""
+            pass
+
+        assert my_func.__name__ == "my_func"
+        assert my_func.__doc__ == "My docstring."
+
+    def test_context_manager_sets_none_level(self):
+        from shiny import otel
+        from shiny.otel._collect import OtelCollectLevel
+        from tests.pytest.otel_helpers import patch_otel_tracing_state
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            assert otel.get_level() >= OtelCollectLevel.REACTIVITY
+            with otel.suppress():
+                assert otel.get_level() == OtelCollectLevel.NONE
+            assert otel.get_level() >= OtelCollectLevel.REACTIVITY
+
+    def test_context_manager_restores_on_exception(self):
+        import pytest
+
+        from shiny import otel
+        from tests.pytest.otel_helpers import patch_otel_tracing_state
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            original = otel.get_level()
+            with pytest.raises(ValueError):
+                with otel.suppress():
+                    raise ValueError("boom")
+            assert otel.get_level() == original
+
+    def test_context_manager_nested(self):
+        from shiny import otel
+        from shiny.otel._collect import OtelCollectLevel
+        from tests.pytest.otel_helpers import patch_otel_tracing_state
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with otel.suppress():
+                assert otel.get_level() == OtelCollectLevel.NONE
+                with otel.suppress():
+                    assert otel.get_level() == OtelCollectLevel.NONE
+                assert otel.get_level() == OtelCollectLevel.NONE
+
+    def test_suppress_with_parens_as_decorator_raises(self):
+        import pytest
+
+        from shiny import otel
+
+        with pytest.raises(TypeError):
+            otel.suppress()(lambda: None)  # type: ignore[misc]
+
+    def test_rejects_calc_object(self):
+        import pytest
+
+        from shiny import otel, reactive
+
+        @reactive.calc
+        def my_calc():
+            return 1
+
+        with pytest.raises(TypeError, match="@reactive.calc"):
+            otel.suppress(my_calc)  # type: ignore[arg-type]
+
+    def test_rejects_effect_object(self):
+        import pytest
+
+        from shiny import otel, reactive
+
+        @reactive.effect
+        def my_effect():
+            pass
+
+        with pytest.raises(TypeError, match="@reactive.effect"):
+            otel.suppress(my_effect)  # type: ignore[arg-type]
+
+    def test_rejects_renderer_object(self):
+        import pytest
+
+        from shiny import otel, render
+
+        @render.text
+        def my_text():
+            return "hello"
+
+        with pytest.raises(TypeError, match="render"):
+            otel.suppress(my_text)  # type: ignore[arg-type]
