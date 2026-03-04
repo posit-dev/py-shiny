@@ -9,6 +9,7 @@ Tests cover:
 """
 
 import os
+from pathlib import Path
 from typing import AsyncIterable, AsyncIterator, Iterator, Mapping, Tuple, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -217,11 +218,14 @@ class TestDownloadHandlerSpans:
     """
 
     @pytest.mark.asyncio
-    async def test_file_response_path_calls_shiny_otel_span(self):
+    async def test_file_response_path_calls_shiny_otel_span(self, tmp_path: Path):
         """
         File-response download (handler returns a path string) should call
         shiny_otel_span with name='download' and appropriate attributes.
         """
+        report_csv = tmp_path / "report.csv"
+        report_csv.write_text("col1,col2\n1,2\n")
+
         mock_session = MagicMock()
         mock_session.id = "test-session-id"
         mock_session.ns = Root
@@ -229,7 +233,7 @@ class TestDownloadHandlerSpans:
             "my_file": DownloadInfo(
                 filename="report.csv",
                 content_type="text/csv",
-                handler=lambda: "/tmp/report.csv",
+                handler=lambda: str(report_csv),
                 encoding="utf-8",
             )
         }
