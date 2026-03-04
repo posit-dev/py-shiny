@@ -35,7 +35,7 @@ export SHINY_OTEL_COLLECT=all
 python app.py
 ```
 
-Watch the console output to see spans for `result` but not for `result_private`.
+Watch the console output to see Shiny's spans for `result` but not for `result_private`.
 
 ## Table of Contents
 
@@ -162,31 +162,31 @@ You'll see OpenTelemetry spans printed to the console showing Shiny's internal e
 
 Shiny provides five collection levels to control the granularity of telemetry:
 
-### `none` (0)
+### `none`
 No Shiny telemetry collected. Use when you want to completely disable Shiny's instrumentation while keeping your own custom spans.
 
 **Overhead**: None
 **Use case**: Disabling telemetry entirely
 
-### `session` (1)
+### `session`
 Only session lifecycle spans (session start/end, HTTP/WebSocket connections).
 
 **Overhead**: Minimal (1-2 spans per session)
 **Use case**: Basic session tracking in production
 
-### `reactive_update` (2)
+### `reactive_update`
 Session spans + reactive update cycle spans (one span per flush cycle).
 
 **Overhead**: Low (1 span per reactive flush)
 **Use case**: Understanding how many update cycles occur
 
-### `reactivity` (3)
+### `reactivity`
 Everything from `reactive_update` + individual reactive execution spans (calcs, effects, outputs, extended tasks) + value update logs.
 
 **Overhead**: Moderate (1 span per reactive computation)
 **Use case**: Detailed debugging and development
 
-### `all` (4)
+### `all`
 All available telemetry (currently equivalent to `reactivity`). Reserved for future expansion.
 
 **Overhead**: Moderate
@@ -314,34 +314,17 @@ because the suppression setting was already captured when the object was created
 
 ```python
 @reactive.calc
+def load_secrets():
+    ...  # This part is instrumented with Shiny telemetry
+
+@reactive.calc
 def my_calc():
     # THIS DOES NOT WORK as intended for Shiny telemetry.
-    # The calc's suppression setting was already set at initialization time.
+    # `load_secrets()` will still generate spans/logs because
+    # reactive objects are captured at initialization time.
     with otel.suppress():
-        # Shiny's span for this calc was already started with
-        # the setting captured at init, so this block cannot suppress it.
         sensitive_data = load_secrets()
     return sensitive_data
-```
-
-### Nested Context Managers (Initialization Time)
-
-Nesting `otel.suppress()` is safe -- the suppression applies within the `with` block
-and is restored when the block exits:
-
-```python
-from shiny import otel
-
-with otel.suppress():
-    # Reactive objects created here have telemetry suppressed
-    @reactive.calc
-    def no_telemetry_calc():
-        return "no spans"
-
-# Reactive objects created outside use the default level
-@reactive.calc
-def normal_calc():
-    return "default telemetry"
 ```
 
 ## Best Practices
@@ -727,9 +710,10 @@ pip install "shiny[otel]"
 from __future__ import annotations
 
 from ._collect import get_level
-from ._decorators import suppress
+from ._decorators import collect, suppress
 
 __all__ = (
+    "collect",
     "get_level",
     "suppress",
 )

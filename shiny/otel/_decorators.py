@@ -10,7 +10,7 @@ from typing import Any, Callable, TypeVar, overload
 from ._collect import OtelCollectLevel, _current_collect_level
 from ._function_attrs import set_otel_collect_level_on_func
 
-__all__ = ("suppress",)
+__all__ = ("collect", "suppress")
 
 T = TypeVar("T", bound=Callable[..., Any])
 
@@ -23,6 +23,22 @@ class _SuppressContext:
 
     def __enter__(self) -> None:
         self._token = _current_collect_level.set(OtelCollectLevel.NONE)
+        return None
+
+    def __exit__(self, *_: object) -> None:
+        if self._token is not None:
+            _current_collect_level.reset(self._token)
+            self._token = None
+
+
+class _CollectContext:
+    """Per-use context manager returned by collect(). Owns its own Token."""
+
+    def __init__(self) -> None:
+        self._token: Token[OtelCollectLevel | None] | None = None
+
+    def __enter__(self) -> None:
+        self._token = _current_collect_level.set(OtelCollectLevel.ALL)
         return None
 
     def __exit__(self, *_: object) -> None:
@@ -116,8 +132,95 @@ Use as a context manager (parens required):
         @reactive.effect
         def my_effect(): ...
 
-Note: This only affects spans created by Shiny itself. Your own custom
-OpenTelemetry spans are unaffected.
+Note: This only affects spans and logs created by Shiny itself. Your own custom
+OpenTelemetry spans and logs are unaffected.
+"""
+
+
+class _Collect:
+    """
+    Singleton that enables Shiny's internal OTel instrumentation.
+
+    Use as a no-parens decorator or a parens context manager:
+
+        @reactive.calc
+        @otel.collect
+        def instrumented_calc(): ...
+
+        with otel.collect():
+            @reactive.effect
+            def my_effect(): ...
+    """
+
+    @overload
+    def __call__(self, func: T) -> T: ...  # @otel.collect
+
+    @overload
+    def __call__(self) -> _CollectContext: ...  # with otel.collect():
+
+    def __call__(self, func: Any = None) -> Any:
+        if func is None:
+            return _CollectContext()
+
+        from shiny.reactive._reactives import Calc_, Effect_
+        from shiny.render.renderer import Renderer
+
+        if isinstance(func, Calc_):
+            raise TypeError(
+                "otel.collect cannot be used on @reactive.calc objects. "
+                "Apply @otel.collect before @reactive.calc:\n"
+                "  @reactive.calc\n"
+                "  @otel.collect\n"
+                "  def my_calc(): ..."
+            )
+
+        if isinstance(func, Effect_):
+            raise TypeError(
+                "otel.collect cannot be used on @reactive.effect objects. "
+                "Apply @otel.collect before @reactive.effect:\n"
+                "  @reactive.effect\n"
+                "  @otel.collect\n"
+                "  def my_effect(): ..."
+            )
+
+        if isinstance(func, Renderer):
+            raise TypeError(
+                "otel.collect cannot be used on render objects. "
+                "Apply @otel.collect before the @render.func decorator:\n"
+                "  @render.text\n"
+                "  @otel.collect\n"
+                "  def my_output(): ..."
+            )
+
+        if not callable(func):
+            raise TypeError(
+                f"otel.collect received a non-callable argument: {type(func).__name__!r}. "
+                f"Use @otel.collect (no parens) as a decorator, "
+                f"or otel.collect() (with parens) as a context manager."
+            )
+
+        set_otel_collect_level_on_func(func, OtelCollectLevel.ALL)
+        return func
+
+
+collect = _Collect()
+"""
+Enables Shiny's internal telemetry for a function or block.
+
+Use as a no-parens decorator:
+
+    @reactive.calc
+    @otel.collect
+    def instrumented_calc(): ...
+
+Use as a context manager (parens required):
+
+    with otel.collect():
+        @reactive.effect
+        def my_effect(): ...
+
+Note: This only affects Shiny's internal spans and logs. Your own custom
+OpenTelemetry spans and logs are unaffected.
 """
 
 

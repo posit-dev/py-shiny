@@ -238,3 +238,135 @@ class TestSuppressIntegration:
             return 99
 
         assert resolve_func_otel_level(plain_func) == OtelCollectLevel.NONE
+
+
+class TestCollectDecorator:
+    """Tests for @otel.collect (no parens) as a function decorator."""
+
+    def test_stamps_function_with_all_level(self):
+        @otel.collect
+        def my_func():
+            return 42
+
+        assert getattr(my_func, FUNC_ATTR_OTEL_COLLECT_LEVEL) == OtelCollectLevel.ALL
+        assert my_func() == 42
+
+    def test_preserves_function_name_and_docstring(self):
+        @otel.collect
+        def my_func():
+            """My docstring."""
+            pass
+
+        assert my_func.__name__ == "my_func"
+        assert my_func.__doc__ == "My docstring."
+
+    def test_rejects_calc_object(self):
+        from shiny import reactive
+
+        @reactive.calc
+        def my_calc():
+            return 1
+
+        with pytest.raises(TypeError, match="@reactive.calc"):
+            otel.collect(my_calc)  # type: ignore[arg-type]
+
+    def test_rejects_effect_object(self):
+        from shiny import reactive
+
+        @reactive.effect
+        def my_effect():
+            pass
+
+        with pytest.raises(TypeError, match="@reactive.effect"):
+            otel.collect(my_effect)  # type: ignore[arg-type]
+
+    def test_rejects_renderer_object(self):
+        from shiny import render
+
+        @render.text
+        def my_text():
+            return "hello"
+
+        with pytest.raises(TypeError, match="render"):
+            otel.collect(my_text)  # type: ignore[arg-type]
+
+
+class TestCollectContextManager:
+    """Tests for with otel.collect(): as a context manager."""
+
+    def test_sets_all_level_inside_block(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("SHINY_OTEL_COLLECT", "none")
+        _current_collect_level.set(None)
+
+        assert otel.get_level() == OtelCollectLevel.NONE
+
+        with otel.collect():
+            assert otel.get_level() == OtelCollectLevel.ALL
+
+        assert otel.get_level() == OtelCollectLevel.NONE
+
+    def test_restores_level_after_exception(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("SHINY_OTEL_COLLECT", "none")
+        _current_collect_level.set(None)
+        original = otel.get_level()
+
+        with pytest.raises(ValueError):
+            with otel.collect():
+                assert otel.get_level() == OtelCollectLevel.ALL
+                raise ValueError("boom")
+
+        assert otel.get_level() == original
+
+    def test_nested_collect_inside_suppress(self):
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with otel.suppress():
+                assert otel.get_level() == OtelCollectLevel.NONE
+                with otel.collect():
+                    assert otel.get_level() == OtelCollectLevel.ALL
+                assert otel.get_level() == OtelCollectLevel.NONE
+
+    def test_nested_suppress_inside_collect(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("SHINY_OTEL_COLLECT", "none")
+        _current_collect_level.set(None)
+
+        with otel.collect():
+            assert otel.get_level() == OtelCollectLevel.ALL
+            with otel.suppress():
+                assert otel.get_level() == OtelCollectLevel.NONE
+            assert otel.get_level() == OtelCollectLevel.ALL
+
+
+class TestCollectIntegration:
+    """Integration tests for otel.collect with the reactive system."""
+
+    def test_reactive_value_captures_all_at_init(self, monkeypatch: pytest.MonkeyPatch):
+        from shiny import reactive
+
+        monkeypatch.setenv("SHINY_OTEL_COLLECT", "none")
+        _current_collect_level.set(None)
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with otel.collect():
+                val = reactive.value(0)
+                assert val._otel_level == OtelCollectLevel.ALL
+
+    def test_calc_captures_all_level_from_decorator(self):
+        from shiny import reactive
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+
+            @reactive.calc
+            @otel.collect
+            def my_calc():
+                return 42
+
+            assert my_calc._otel_level == OtelCollectLevel.ALL
+
+    def test_collect_stamps_function_used_with_calc(self):
+        from shiny.otel._function_attrs import resolve_func_otel_level
+
+        @otel.collect
+        def plain_func():
+            return 99
+
+        assert resolve_func_otel_level(plain_func) == OtelCollectLevel.ALL
