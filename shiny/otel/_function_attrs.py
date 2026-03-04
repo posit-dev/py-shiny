@@ -25,8 +25,9 @@ def resolve_func_otel_level(
     """
     Resolve the OTel collect level for a function with automatic fallback.
 
-    Checks the function for an ``@otel.suppress`` decorator attribute, then falls
-    back to the provided default, or finally to the current context level.
+    Checks the function for an ``@otel.suppress`` or ``@otel.collect`` decorator
+    attribute, then falls back to the provided default, or finally to the current
+    context level.
 
     Parameters
     ----------
@@ -43,8 +44,8 @@ def resolve_func_otel_level(
 
     Notes
     -----
-    This attribute is set by the ``@otel.suppress`` decorator and is automatically
-    preserved through decorator chains when functools.wraps is used.
+    This attribute is set by the ``@otel.suppress`` and ``@otel.collect`` decorators
+    and is automatically preserved through decorator chains when functools.wraps is used.
 
     Reactive objects (Calc_, Effect_) check for this attribute to determine
     what collect level to use when creating spans for their execution.
@@ -76,9 +77,9 @@ def set_otel_collect_level_on_func(
     """
     Set the OTel collect level on a function object.
 
-    This is used by the ``@otel.suppress`` decorator to mark functions with their
-    desired collect level. The level will be used when the function is
-    executed as part of a reactive context (Calc, Effect, etc.).
+    This is used by the ``@otel.suppress`` and ``@otel.collect`` decorators to mark
+    functions with their desired collect level. The level will be used when the
+    function is executed as part of a reactive context (Calc, Effect, etc.).
 
     Parameters
     ----------
