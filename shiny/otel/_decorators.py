@@ -25,7 +25,7 @@ class _SuppressContext:
         self._token = _current_collect_level.set(OtelCollectLevel.NONE)
         return None
 
-    def __exit__(self, *_args: object) -> None:
+    def __exit__(self, *_: object) -> None:
         if self._token is not None:
             _current_collect_level.reset(self._token)
             self._token = None
@@ -146,7 +146,7 @@ class OtelCollect:
         self._token = _current_collect_level.set(self.level)
         return None
 
-    def __exit__(self, *_args: object) -> None:
+    def __exit__(self, *_: object) -> None:
         if self._token is not None:
             _current_collect_level.reset(self._token)
             self._token = None
