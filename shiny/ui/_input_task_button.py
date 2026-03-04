@@ -10,7 +10,7 @@ from htmltools import HTML, Tag, TagAttrValue, TagChild, css, tags
 from .._docstring import add_example
 from .._typing_extensions import ParamSpec
 from ..module import resolve_id
-from ..otel._decorators import no_otel_collect
+from ..otel._decorators import suppress as _otel_suppress
 from ..reactive._extended_task import ExtendedTask
 from ..reactive._reactives import effect
 from ..types import MISSING, MISSING_TYPE
@@ -214,7 +214,7 @@ def bind_task_button(
     button_id = resolve_id(button_id)
 
     @effect(priority=1000)
-    @no_otel_collect()
+    @_otel_suppress
     def effect_sync_button():
         if task.status() == "running":
             update_task_button(button_id, state="busy")

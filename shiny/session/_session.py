@@ -57,7 +57,7 @@ from ..otel._attributes import (
     get_session_id_attrs,
 )
 from ..otel._collect import OtelCollectLevel
-from ..otel._decorators import no_otel_collect
+from ..otel._decorators import suppress as _otel_suppress
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span
@@ -1892,7 +1892,7 @@ class Outputs:
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
-            @no_otel_collect()
+            @_otel_suppress
             async def output_obs():
                 if self._session.is_stub_session():
                     raise RuntimeError(
