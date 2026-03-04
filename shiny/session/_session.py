@@ -949,11 +949,12 @@ class AppSession(Session):
                                 attributes=otel_attrs,
                                 required_level=OtelCollectLevel.REACTIVITY,
                             ):
-                                return FileResponse(
+                                file_response = FileResponse(
                                     Path(contents),
                                     headers=headers,
                                     media_type=content_type,
                                 )
+                            return file_response
 
                         wrapped_contents: AsyncIterable[bytes]
 
