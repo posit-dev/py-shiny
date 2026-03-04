@@ -9,7 +9,7 @@ Tests cover:
 """
 
 import os
-from typing import AsyncIterator, Iterator, Tuple
+from typing import AsyncIterator, Iterator, Mapping, Tuple, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -65,7 +65,7 @@ class TestSpanStream:
         otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter],
     ):
         """All chunks from the inner iterable are yielded unchanged."""
-        provider, exporter = otel_tracer_provider
+        _ = otel_tracer_provider  # ensure exporter is cleared between tests
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 inner = _async_byte_iter(b"hello", b" ", b"world")
@@ -259,12 +259,11 @@ class TestDownloadHandlerSpans:
             call_args = mock_span.call_args
             assert call_args[0][0] == "download"
             assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
-            attrs = call_args[1]["attributes"]
+            raw_attrs = call_args[1]["attributes"]
             # Attributes may be a callable; resolve if needed
-            if callable(attrs):
-                attrs = attrs()
-            assert "download.id" in attrs
-            assert "download.filename" in attrs
+            resolved_attrs = cast(Mapping[str, object], raw_attrs() if callable(raw_attrs) else raw_attrs)
+            assert "download.id" in resolved_attrs
+            assert "download.filename" in resolved_attrs
 
     @pytest.mark.asyncio
     async def test_async_streaming_path_calls_shiny_otel_span_stream(self):
