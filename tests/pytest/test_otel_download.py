@@ -9,7 +9,7 @@ Tests cover:
 """
 
 import os
-from typing import AsyncIterator, Iterator, Mapping, Tuple, cast
+from typing import AsyncIterable, AsyncIterator, Iterator, Mapping, Tuple, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -240,22 +240,24 @@ class TestDownloadHandlerSpans:
         mock_request = MagicMock()
         mock_request.method = "GET"
 
-        with patch(
-            "shiny.session._session.shiny_otel_span"
-        ) as mock_span:
-            # Configure mock as async context manager
-            mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
-            mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+                with patch(
+                    "shiny.session._session.shiny_otel_span"
+                ) as mock_span:
+                    # Configure mock as async context manager
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
 
-            # Call the handler code path directly
-            from shiny.session._session import AppSession
+                    # Call the handler code path directly
+                    from shiny.session._session import AppSession
 
-            await AppSession._handle_request_impl(
-                mock_session, mock_request, "download", "my_file"
-            )
+                    await AppSession._handle_request_impl(
+                        mock_session, mock_request, "download", "my_file"
+                    )
 
-            # Verify shiny_otel_span was called for the download
-            mock_span.assert_called()
+                    # Verify shiny_otel_span was called for the download
+                    mock_span.assert_called_once()
             call_args = mock_span.call_args
             assert call_args[0][0] == "download"
             assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
@@ -292,11 +294,14 @@ class TestDownloadHandlerSpans:
         mock_request = MagicMock()
         mock_request.method = "GET"
 
+        def _passthrough(name: str, inner: AsyncIterable[bytes], **kw: object) -> AsyncIterable[bytes]:
+            return inner
+
         with patch(
             "shiny.session._session.shiny_otel_span_stream", create=True
         ) as mock_stream_span:
             # Return the inner iterable unchanged so the response can be created
-            mock_stream_span.side_effect = lambda name, inner, **kw: inner
+            mock_stream_span.side_effect = _passthrough
 
             from shiny.session._session import AppSession
 
@@ -336,10 +341,13 @@ class TestDownloadHandlerSpans:
         mock_request = MagicMock()
         mock_request.method = "GET"
 
+        def _passthrough(name: str, inner: AsyncIterable[bytes], **kw: object) -> AsyncIterable[bytes]:
+            return inner
+
         with patch(
             "shiny.session._session.shiny_otel_span_stream", create=True
         ) as mock_stream_span:
-            mock_stream_span.side_effect = lambda name, inner, **kw: inner
+            mock_stream_span.side_effect = _passthrough
 
             from shiny.session._session import AppSession
 
