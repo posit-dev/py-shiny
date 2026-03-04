@@ -1013,11 +1013,11 @@ class TestCollectionLevelNone:
 
     def test_calc_respects_none_level(self):
         """Verify Calc_ correctly handles OtelCollectLevel.NONE (value 0)"""
-        from shiny.otel import otel_collect
+        from shiny import otel
 
         with patch_otel_tracing_state(tracing_enabled=True):
 
-            @otel_collect("none")
+            @otel.suppress
             def my_calc():
                 return 42
 
@@ -1029,11 +1029,11 @@ class TestCollectionLevelNone:
 
     def test_effect_respects_none_level(self):
         """Verify Effect_ correctly handles OtelCollectLevel.NONE (value 0)"""
-        from shiny.otel import otel_collect
+        from shiny import otel
 
         with patch_otel_tracing_state(tracing_enabled=True):
 
-            @otel_collect("none")
+            @otel.suppress
             def my_effect():
                 pass
 
