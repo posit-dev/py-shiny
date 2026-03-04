@@ -77,7 +77,7 @@ class ExtendedTask(Generic[P, R]):
             "extended_task", "extended_task queued", 1
         )
 
-        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # Extract collection level from function attribute (set by @otel.suppress decorator)
         # If not set, capture the current collection level at initialization time
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(func)
 

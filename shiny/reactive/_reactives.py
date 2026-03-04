@@ -519,7 +519,7 @@ class Calc_(Generic[T]):
             modifier=get_otel_label_modifier(fn),
         )
 
-        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # Extract collection level from function attribute (set by @otel.suppress decorator)
         # If not set, capture the current collection level at initialization time
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
@@ -792,7 +792,7 @@ class Effect_:
             modifier=get_otel_label_modifier(fn),
         )
 
-        # Extract collection level from function attribute (set by @otel_collect decorator)
+        # Extract collection level from function attribute (set by @otel.suppress decorator)
         # If not set, capture the current collection level at initialization time
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
