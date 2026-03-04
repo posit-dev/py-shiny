@@ -44,27 +44,65 @@ Before using this command, check if the gh pr-review extension is installed:
 gh extension list | grep -q pr-review || gh extension install agynio/gh-pr-review
 ```
 
-## Key Commands Used
+## CLI Reference
 
-### List Unresolved Threads
+### List Review Threads
+
+Enumerate all review threads with filtering:
+
 ```bash
-gh pr-review threads list --pr <number> --unresolved --repo <owner/repo>
+gh pr-review threads list --pr <number> --repo <owner/repo>
 ```
 
-### View Unresolved Comments with Details
+**Common filters:**
+
+- `--unresolved` — Show only unresolved threads
+- `--resolved` — Show only resolved threads
+
+### View PR Reviews and Comments
+
+Display reviews, inline comments, and replies with full context:
+
 ```bash
-gh pr-review review view --pr <number> --unresolved --not_outdated --repo <owner/repo>
+gh pr-review review view --pr <number> --repo <owner/repo>
 ```
 
-### Resolve a Thread
+**Common filters:**
+
+- `--reviewer <login>` — Filter by specific reviewer
+- `--states <list>` — Filter by review state (APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED)
+- `--unresolved` — Show only unresolved threads
+- `--not_outdated` — Exclude outdated threads
+- `--tail <n>` — Show only the last n replies per thread
+- `--include-comment-node-id` — Include GraphQL node IDs for replies
+
+### Resolve / Unresolve Threads
+
+Toggle thread resolution status:
+
 ```bash
+# Resolve a thread
 gh pr-review threads resolve --thread-id <PRRT_...> --repo <owner/repo>
+
+# Unresolve a thread
+gh pr-review threads unresolve --thread-id <PRRT_...> --repo <owner/repo>
 ```
 
 ### Bulk Resolve Example
+
 ```bash
 # Get all unresolved thread IDs and resolve them
 gh pr-review threads list --pr 42 --unresolved --repo owner/repo | \
   jq -r '.threads[].id' | \
   xargs -I {} gh pr-review threads resolve --thread-id {} --repo owner/repo
 ```
+
+## Usage Notes
+
+1. **Repository Context**: Always include `--repo owner/repo` to ensure correct repository context, or run commands from within a local clone of the repository.
+
+2. **Thread IDs**: Thread IDs (format `PRRT_...`) can be obtained from `review view --include-comment-node-id` or `threads list` commands.
+
+3. **State Filters**: When using `--states`, provide a comma-separated list: `--states APPROVED,CHANGES_REQUESTED`
+
+4. **Unresolved Focus**: Use `--unresolved --not_outdated` together to focus on actionable comments that need attention.

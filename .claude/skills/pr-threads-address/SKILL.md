@@ -48,19 +48,48 @@ Before using this command, check if the gh pr-review extension is installed:
 gh extension list | grep -q pr-review || gh extension install agynio/gh-pr-review
 ```
 
-## Key Commands Used
+## CLI Reference
 
-### View Unresolved Threads
+### View PR Reviews and Comments
+
+Display all reviews, inline comments, and replies for a pull request:
+
 ```bash
-gh pr-review review view --pr <number> --unresolved --not_outdated --repo <owner/repo>
+gh pr-review review view --pr <number> --repo <owner/repo>
 ```
 
-### Reply to Review Thread
+**Common filters:**
+
+- `--reviewer <login>` — Filter by specific reviewer
+- `--states <list>` — Filter by review state (APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED)
+- `--unresolved` — Show only unresolved threads
+- `--not_outdated` — Exclude outdated threads
+- `--tail <n>` — Show only the last n replies per thread
+- `--include-comment-node-id` — Include GraphQL node IDs for replies
+
+**Examples:**
+
 ```bash
-gh pr-review comments reply --thread-id <PRRT_...> --body "<reply-text>" --repo <owner/repo>
+# View all unresolved comments
+gh pr-review review view --pr 42 --unresolved --repo owner/repo
+
+# View comments from a specific reviewer
+gh pr-review review view --pr 42 --reviewer username --repo owner/repo
+
+# View only change requests, excluding outdated threads
+gh pr-review review view --pr 42 --states CHANGES_REQUESTED --not_outdated --repo owner/repo
 ```
 
-### Multi-line Reply Example
+### Reply to Review Threads
+
+Respond to specific review comment threads:
+
+```bash
+gh pr-review comments reply --thread-id <PRRT_...> --body "<reply-text>" --repo <owner/repo> --pr <number>
+```
+
+**Multi-line replies** use heredoc syntax:
+
 ```bash
 gh pr-review comments reply --thread-id PRRT_xyz789 --body "$(cat <<'EOF'
 Fixed in commit abc123.
@@ -70,5 +99,62 @@ The changes include:
 - Added error handling
 - Updated tests
 EOF
-)" --repo owner/repo
+)" --repo owner/repo --pr 42
 ```
+
+### Resolve a Thread
+
+```bash
+gh pr-review threads resolve --thread-id <PRRT_...> --repo <owner/repo>
+```
+
+### Start a Pending Review
+
+Create a new pending review to add comments before submission:
+
+```bash
+gh pr-review review --start --pr <number> --repo <owner/repo>
+```
+
+This returns a review ID (format: `PRR_...`) needed for adding comments.
+
+### Add Review Comments
+
+Add inline comments to a pending review:
+
+```bash
+gh pr-review review --add-comment --review-id <PRR_...> --path <file-path> --line <number> --body "<comment-text>" --repo <owner/repo>
+```
+
+**Flags:**
+
+- `--review-id` — Review ID from `--start` command (required)
+- `--path` — File path in the repository (required)
+- `--line` — Line number for the comment (required)
+- `--body` — Comment text (required)
+
+### Submit a Review
+
+Finalize and submit a pending review:
+
+```bash
+gh pr-review review --submit --review-id <PRR_...> --event <EVENT_TYPE> --body "<summary>" --repo <owner/repo>
+```
+
+**Event types:**
+
+- `APPROVE` — Approve the changes
+- `REQUEST_CHANGES` — Request changes before merging
+- `COMMENT` — Submit general feedback without explicit approval
+
+## Usage Notes
+
+1. **Repository Context**: Always include `--repo owner/repo` to ensure correct repository context, or run commands from within a local clone of the repository.
+
+2. **Thread IDs**: Thread IDs (format `PRRT_...`) can be obtained from `review view --include-comment-node-id` or `threads list` commands.
+
+3. **Review IDs**: Review IDs (format `PRR_...`) are returned by the `review --start` command and must be used for adding comments to that review.
+
+4. **State Filters**: When using `--states`, provide a comma-separated list: `--states APPROVED,CHANGES_REQUESTED`
+
+5. **Unresolved Focus**: Use `--unresolved --not_outdated` together to focus on actionable comments that need attention.
