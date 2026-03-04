@@ -30,11 +30,11 @@ class OtelCollectLevel(IntEnum):
     python app.py
     ```
 
-    Or programmatically:
+    Or suppress telemetry programmatically:
     ```python
-    from shiny.otel import otel_collect
+    from shiny import otel
 
-    with otel_collect("none"):
+    with otel.suppress():
         # No telemetry in this block
         pass
     ```
@@ -58,7 +58,7 @@ def get_level() -> OtelCollectLevel:
     Get the current OpenTelemetry collect level.
 
     The collect level is determined in the following order:
-    1. Context variable (set via otel_collect context manager)
+    1. Context variable (set via ``otel.suppress()`` context manager)
     2. SHINY_OTEL_COLLECT environment variable
     3. Default: ALL
 
@@ -72,27 +72,27 @@ def get_level() -> OtelCollectLevel:
     Check the current collection level:
 
     ```python
-    from shiny.otel import get_level
+    from shiny import otel
 
     # Get the current level
-    level = get_level()
+    level = otel.get_level()
     print(f"Current level: {level.name}")  # e.g., "ALL", "SESSION", "NONE"
     ```
 
-    Use with context manager:
+    Use with suppress context manager:
 
     ```python
-    from shiny.otel import get_level, otel_collect
+    from shiny import otel
 
-    print(get_level().name)  # "ALL" (default)
+    print(otel.get_level().name)  # "ALL" (default)
 
-    with otel_collect("session"):
-        print(get_level().name)  # "SESSION"
+    with otel.suppress():
+        print(otel.get_level().name)  # "NONE"
 
-    print(get_level().name)  # "ALL" (restored)
+    print(otel.get_level().name)  # "ALL" (restored)
     ```
     """
-    # Check context variable first (set by otel_collect context manager)
+    # Check context variable first (set by otel.suppress() context manager)
     level = _current_collect_level.get()
     if level is not None:
         return level
