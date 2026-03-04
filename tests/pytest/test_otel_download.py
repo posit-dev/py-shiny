@@ -24,7 +24,6 @@ from shiny.session._session import DownloadInfo
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -242,9 +241,7 @@ class TestDownloadHandlerSpans:
 
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
-                with patch(
-                    "shiny.session._session.shiny_otel_span"
-                ) as mock_span:
+                with patch("shiny.session._session.shiny_otel_span") as mock_span:
                     # Configure mock as async context manager
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -263,7 +260,9 @@ class TestDownloadHandlerSpans:
             assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
             raw_attrs = call_args[1]["attributes"]
             # Attributes may be a callable; resolve if needed
-            resolved_attrs = cast(Mapping[str, object], raw_attrs() if callable(raw_attrs) else raw_attrs)
+            resolved_attrs = cast(
+                Mapping[str, object], raw_attrs() if callable(raw_attrs) else raw_attrs
+            )
             assert "download.id" in resolved_attrs
             assert "download.filename" in resolved_attrs
 
@@ -294,7 +293,9 @@ class TestDownloadHandlerSpans:
         mock_request = MagicMock()
         mock_request.method = "GET"
 
-        def _passthrough(name: str, inner: AsyncIterable[bytes], **kw: object) -> AsyncIterable[bytes]:
+        def _passthrough(
+            name: str, inner: AsyncIterable[bytes], **kw: object
+        ) -> AsyncIterable[bytes]:
             return inner
 
         with patch(
@@ -341,7 +342,9 @@ class TestDownloadHandlerSpans:
         mock_request = MagicMock()
         mock_request.method = "GET"
 
-        def _passthrough(name: str, inner: AsyncIterable[bytes], **kw: object) -> AsyncIterable[bytes]:
+        def _passthrough(
+            name: str, inner: AsyncIterable[bytes], **kw: object
+        ) -> AsyncIterable[bytes]:
             return inner
 
         with patch(
