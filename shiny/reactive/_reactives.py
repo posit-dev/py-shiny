@@ -36,7 +36,7 @@ from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
 from ..otel._attributes import SourceRefAttrs, extract_source_ref, get_session_id_attrs
-from ..otel._collect import OtelCollectLevel, get_otel_collect_level
+from ..otel._collect import OtelCollectLevel, get_level
 from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import (
@@ -165,7 +165,7 @@ class Value(Generic[T]):
         # Capture collection level at initialization time
         # This determines whether value updates will emit OTel logs
         session = get_current_session()
-        self._otel_level: OtelCollectLevel = get_otel_collect_level()
+        self._otel_level: OtelCollectLevel = get_level()
         self._otel_attrs: dict[str, Any] = {**get_session_id_attrs(session)}
         if read_only:
             self._otel_attrs["read-only"] = True

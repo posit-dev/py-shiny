@@ -738,7 +738,7 @@ pip install "shiny[otel]"
 
 from __future__ import annotations
 
-from ._collect import get_otel_collect_level as get_level
+from ._collect import get_level
 from ._decorators import otel_collect  # Backward-compatible; removed in Task 5
 from ._decorators import suppress
 

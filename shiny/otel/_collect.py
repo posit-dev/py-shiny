@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from enum import IntEnum
 from typing import Optional
 
-__all__ = ("OtelCollectLevel", "get_otel_collect_level")
+__all__ = ("OtelCollectLevel", "get_level")
 
 
 class OtelCollectLevel(IntEnum):
@@ -53,7 +53,7 @@ _current_collect_level: ContextVar[Optional[OtelCollectLevel]] = ContextVar(
 )
 
 
-def get_otel_collect_level() -> OtelCollectLevel:
+def get_level() -> OtelCollectLevel:
     """
     Get the current OpenTelemetry collect level.
 
@@ -72,24 +72,24 @@ def get_otel_collect_level() -> OtelCollectLevel:
     Check the current collection level:
 
     ```python
-    from shiny.otel import get_otel_collect_level
+    from shiny.otel import get_level
 
     # Get the current level
-    level = get_otel_collect_level()
+    level = get_level()
     print(f"Current level: {level.name}")  # e.g., "ALL", "SESSION", "NONE"
     ```
 
     Use with context manager:
 
     ```python
-    from shiny.otel import get_otel_collect_level, otel_collect
+    from shiny.otel import get_level, otel_collect
 
-    print(get_otel_collect_level().name)  # "ALL" (default)
+    print(get_level().name)  # "ALL" (default)
 
     with otel_collect("session"):
-        print(get_otel_collect_level().name)  # "SESSION"
+        print(get_level().name)  # "SESSION"
 
-    print(get_otel_collect_level().name)  # "ALL" (restored)
+    print(get_level().name)  # "ALL" (restored)
     ```
     """
     # Check context variable first (set by otel_collect context manager)

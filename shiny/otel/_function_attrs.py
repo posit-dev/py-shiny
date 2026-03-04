@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from ._collect import OtelCollectLevel, get_otel_collect_level
+from ._collect import OtelCollectLevel, get_level
 from ._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
 
 __all__ = (
@@ -67,7 +67,7 @@ def resolve_func_otel_level(
     if default is not None:
         return default
 
-    return get_otel_collect_level()
+    return get_level()
 
 
 def set_otel_collect_level_on_func(

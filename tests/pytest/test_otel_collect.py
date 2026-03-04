@@ -11,7 +11,7 @@ Tests cover:
 import pytest
 
 from shiny.otel import otel_collect
-from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
+from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import is_otel_tracing_enabled
 from shiny.otel._decorators import no_otel_collect
 
@@ -37,87 +37,87 @@ class TestOtelCollectContextManager:
         """Test context manager with string level argument."""
         with patch_otel_tracing_state(tracing_enabled=True):
             # Default should be ALL (from env var or default)
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+            assert get_level() >= OtelCollectLevel.REACTIVITY
 
             with otel_collect("none"):
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
+                assert get_level() == OtelCollectLevel.NONE
                 assert not (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                    and get_level() >= OtelCollectLevel.SESSION
                 )
 
             # Should restore after context
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+            assert get_level() >= OtelCollectLevel.REACTIVITY
 
     def test_context_manager_with_session_level(self):
         """Test context manager with session level string."""
         with patch_otel_tracing_state(tracing_enabled=True):
             with otel_collect("session"):
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
+                assert get_level() == OtelCollectLevel.SESSION
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                    and get_level() >= OtelCollectLevel.SESSION
                 )
                 assert not (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                    and get_level() >= OtelCollectLevel.REACTIVE_UPDATE
                 )
 
     def test_nested_context_managers(self):
         """Test nested context managers work correctly."""
         with patch_otel_tracing_state(tracing_enabled=True):
             with otel_collect("session"):
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
+                assert get_level() == OtelCollectLevel.SESSION
 
                 with otel_collect("none"):
-                    assert get_otel_collect_level() == OtelCollectLevel.NONE
+                    assert get_level() == OtelCollectLevel.NONE
 
                     with otel_collect("all"):
-                        assert get_otel_collect_level() == OtelCollectLevel.ALL
+                        assert get_level() == OtelCollectLevel.ALL
 
                     # Back to none
-                    assert get_otel_collect_level() == OtelCollectLevel.NONE
+                    assert get_level() == OtelCollectLevel.NONE
 
                 # Back to session
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
+                assert get_level() == OtelCollectLevel.SESSION
 
             # Back to original
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+            assert get_level() >= OtelCollectLevel.REACTIVITY
 
     def test_context_manager_exception_handling(self):
         """Test context manager restores level even on exception."""
         with patch_otel_tracing_state(tracing_enabled=True):
-            original_level = get_otel_collect_level()
+            original_level = get_level()
 
             with pytest.raises(ValueError):
                 with otel_collect("none"):
-                    assert get_otel_collect_level() == OtelCollectLevel.NONE
+                    assert get_level() == OtelCollectLevel.NONE
                     raise ValueError("Test exception")
 
             # Should restore despite exception
-            assert get_otel_collect_level() == original_level
+            assert get_level() == original_level
 
     def test_all_string_levels(self):
         """Test all valid string level values."""
         with patch_otel_tracing_state(tracing_enabled=True):
             # Explicitly test each level to maintain type safety
             with otel_collect("none"):
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
+                assert get_level() == OtelCollectLevel.NONE
             with otel_collect("session"):
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
+                assert get_level() == OtelCollectLevel.SESSION
             with otel_collect("reactive_update"):
-                assert get_otel_collect_level() == OtelCollectLevel.REACTIVE_UPDATE
+                assert get_level() == OtelCollectLevel.REACTIVE_UPDATE
             with otel_collect("reactivity"):
-                assert get_otel_collect_level() == OtelCollectLevel.REACTIVITY
+                assert get_level() == OtelCollectLevel.REACTIVITY
             with otel_collect("all"):
-                assert get_otel_collect_level() == OtelCollectLevel.ALL
+                assert get_level() == OtelCollectLevel.ALL
 
     def test_case_sensitive_strings(self):
         """Test string levels must be lowercase (enforced at runtime)."""
         with patch_otel_tracing_state(tracing_enabled=True):
             # Lowercase should work (matches Literal type hint)
             with otel_collect("none"):
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
+                assert get_level() == OtelCollectLevel.NONE
 
             # Non-lowercase should raise ValueError
             with pytest.raises(ValueError, match="must be lowercase"):
@@ -273,7 +273,7 @@ class TestOtelCollectEnvironmentVariable:
 
             _current_collect_level.set(None)
 
-            assert get_otel_collect_level() == OtelCollectLevel.SESSION
+            assert get_level() == OtelCollectLevel.SESSION
 
     def test_context_manager_overrides_env_var(
         self, monkeypatch: pytest.MonkeyPatch
@@ -288,14 +288,14 @@ class TestOtelCollectEnvironmentVariable:
             _current_collect_level.set(None)
 
             # Env var should set to SESSION
-            assert get_otel_collect_level() == OtelCollectLevel.SESSION
+            assert get_level() == OtelCollectLevel.SESSION
 
             # Context manager should override
             with otel_collect("none"):
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
+                assert get_level() == OtelCollectLevel.NONE
 
             # Should restore to env var value
-            assert get_otel_collect_level() == OtelCollectLevel.SESSION
+            assert get_level() == OtelCollectLevel.SESSION
 
     def test_invalid_env_var_defaults_with_warning(
         self, monkeypatch: pytest.MonkeyPatch
@@ -311,7 +311,7 @@ class TestOtelCollectEnvironmentVariable:
 
             # Should default to ALL and emit a warning
             with pytest.warns(UserWarning, match="Invalid SHINY_OTEL_COLLECT"):
-                level = get_otel_collect_level()
+                level = get_level()
                 assert level == OtelCollectLevel.ALL
 
 
@@ -326,18 +326,18 @@ class TestNoOtelCollect:
         """Test no_otel_collect() works as context manager."""
         with patch_otel_tracing_state(tracing_enabled=True):
             # Should be at default level outside
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+            assert get_level() >= OtelCollectLevel.REACTIVITY
 
             with no_otel_collect():
                 # Should be at NONE level inside
-                assert get_otel_collect_level() == OtelCollectLevel.NONE
+                assert get_level() == OtelCollectLevel.NONE
                 assert not (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                    and get_level() >= OtelCollectLevel.SESSION
                 )
 
             # Should restore after context
-            assert get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+            assert get_level() >= OtelCollectLevel.REACTIVITY
 
     def test_no_otel_collect_as_decorator(self):
         """Test no_otel_collect() marks function with NONE collection level."""
@@ -363,10 +363,10 @@ class TestNoOtelCollect:
         with patch_otel_tracing_state(tracing_enabled=True):
             # Both should set level to NONE
             with no_otel_collect():
-                level1 = get_otel_collect_level()
+                level1 = get_level()
 
             with otel_collect("none"):
-                level2 = get_otel_collect_level()
+                level2 = get_level()
 
             assert level1 == level2 == OtelCollectLevel.NONE
 
@@ -374,13 +374,13 @@ class TestNoOtelCollect:
         """Test no_otel_collect() can be nested."""
         with patch_otel_tracing_state(tracing_enabled=True):
             with otel_collect("session"):
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
+                assert get_level() == OtelCollectLevel.SESSION
 
                 with no_otel_collect():
-                    assert get_otel_collect_level() == OtelCollectLevel.NONE
+                    assert get_level() == OtelCollectLevel.NONE
 
                 # Back to session
-                assert get_otel_collect_level() == OtelCollectLevel.SESSION
+                assert get_level() == OtelCollectLevel.SESSION
 
 
 class TestOtelCollectIntegrationWithRealBackend:
@@ -613,6 +613,11 @@ class TestSuppress:
 
         with pytest.raises(TypeError, match="@reactive.effect"):
             otel.suppress(my_effect)  # type: ignore[arg-type]
+
+    def test_get_level_is_directly_importable(self):
+        from shiny.otel._collect import get_level
+        from shiny.otel._collect import OtelCollectLevel
+        assert get_level() == OtelCollectLevel.ALL
 
     def test_rejects_renderer_object(self):
         import pytest
