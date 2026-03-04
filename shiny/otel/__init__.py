@@ -13,18 +13,24 @@ app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 1, 100, 50),
     ui.output_text("result"),
     ui.output_text("result_private"),
+    ui.output_text("result_instrumented"),
 )
 
 def server(input, output, session):
     @render.text
     def result():
-        # Full telemetry for this output
+        # Full Shiny telemetry for this output
         return f"Value: {input.n()}"
 
     @render.text
-    @otel.suppress  # Suppress telemetry for sensitive operations
+    @otel.suppress  # Disables Shiny's internal telemetry for sensitive operations
     def result_private():
         return f"Private value: {input.n()}"
+
+    @render.text
+    @otel.collect  # Enables Shiny's internal telemetry even when default is suppressed
+    def result_instrumented():
+        return f"Instrumented value: {input.n()}"
 
 app = App(app_ui, server)
 ```
@@ -35,7 +41,7 @@ export SHINY_OTEL_COLLECT=all
 python app.py
 ```
 
-Watch the console output to see Shiny's spans for `result` but not for `result_private`.
+Watch the console output to see Shiny's spans for `result` and `result_instrumented` but not for `result_private`.
 
 ## Table of Contents
 
@@ -325,6 +331,45 @@ def my_calc():
     with otel.suppress():
         sensitive_data = load_secrets()
     return sensitive_data
+```
+
+### `otel.collect` Decorator
+
+Use `otel.collect` as a decorator to enable Shiny's internal telemetry for a reactive
+function when the default level is suppressed:
+
+```python
+from shiny import otel
+
+@reactive.calc
+@otel.collect
+def instrumented_computation():
+    \"""This calc always runs with Shiny telemetry, regardless of context.\"""
+    return load_public_data()
+```
+
+### `otel.collect` Context Manager (Initialization Time Only)
+
+Use `otel.collect()` as a context manager to enable telemetry during reactive object
+creation. Any reactive objects defined inside the `with` block will have telemetry
+enabled:
+
+```python
+from shiny import otel
+
+with otel.suppress():
+    # Reactive objects created here have telemetry suppressed
+
+    with otel.collect():
+        @reactive.calc
+        def public_calc():
+            # This calc has telemetry enabled despite the outer suppress
+            return load_public_data()
+
+    @reactive.calc
+    def private_calc():
+        # Back to suppressed
+        return load_private_data()
 ```
 
 ## Best Practices
@@ -652,6 +697,17 @@ exporter = ConsoleSpanExporter()
 3. Enable error sanitization:
    ```python
    app = App(app_ui, server, sanitize_errors=True)
+   ```
+
+4. Use `otel.collect` to re-enable telemetry for specific calcs inside a broad suppress block:
+   ```python
+   with otel.suppress():
+       # Most of the app has telemetry suppressed
+
+       with otel.collect():
+           @reactive.calc
+           def public_calc():
+               return load_public_data()
    ```
 
 ### Spans Not Nested Correctly
