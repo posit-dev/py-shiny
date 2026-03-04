@@ -19,6 +19,9 @@ The `otel.suppress` API allows you to dynamically control which **Shiny internal
 
 **Important**: `otel.suppress` only affects Shiny's internal spans and logs (session lifecycle, reactive execution, value updates, etc.). Any OpenTelemetry spans you create manually in your application code are unaffected and will continue to be recorded normally.
 
+`otel.collect` is the counterpart — it re-enables Shiny's internal telemetry for specific
+reactive objects, even when initialized inside a broad `otel.suppress()` block.
+
 ### Timing
 
 The suppression setting is captured when reactive objects (`reactive.value`, `reactive.calc`, `reactive.effect`) are **created**, not when they are executed. This means the setting used for Shiny's internal spans (reactive execution, value updates) is **permanently set** at object creation time:
@@ -104,6 +107,23 @@ with otel.suppress():
 # Back to default telemetry level
 ```
 
+### 4. `otel.collect` Usage
+
+Re-enable telemetry inside a suppressed block:
+
+```python
+from shiny import otel
+
+with otel.suppress():
+    # Most reactive objects here have telemetry suppressed
+
+    with otel.collect():
+        @reactive.calc
+        def public_calc():
+            # Telemetry enabled despite the outer suppress
+            return load_public_data()
+```
+
 ## Collection Levels
 
 The following collection levels control **Shiny's internal telemetry** (from least to most detailed):
@@ -140,7 +160,7 @@ python app.py
 
 The app will open in your browser. As you interact with the buttons:
 
-- **"Compute (Normal Telemetry)"**: Creates spans for reactive execution
+- **"Compute (Normal Telemetry)"**: Creates Shiny spans for reactive execution
 - **"Compute (No Telemetry)"**: Suppresses all telemetry using `@otel.suppress`
 
 Watch the console output to see which spans are created.
