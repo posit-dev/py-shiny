@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, Type
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
-from ..otel._collect import OtelCollectLevel
+from ..otel._collect import OtelCollectLevel, _get_env_level
 from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
 
@@ -180,6 +180,7 @@ class ReactiveEnvironment:
         async with shiny_otel_span(
             "reactive_update",
             required_level=OtelCollectLevel.REACTIVE_UPDATE,
+            collection_level=_get_env_level(),
         ):
             await self._flush_sequential()
             await self._flushed_callbacks.invoke()

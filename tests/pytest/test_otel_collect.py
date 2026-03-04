@@ -165,6 +165,28 @@ class TestGetLevel:
         assert _get_env_level() == OtelCollectLevel.ALL
 
 
+class TestInfrastructureSpanIsolation:
+    """Infrastructure spans must not be affected by otel.suppress / otel.collect."""
+
+    def test_get_env_level_inside_suppress_returns_env_not_none(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setenv("SHINY_OTEL_COLLECT", "reactive_update")
+        _current_collect_level.set(None)
+
+        with otel.suppress():
+            assert otel.get_level() == OtelCollectLevel.NONE
+            assert _get_env_level() == OtelCollectLevel.REACTIVE_UPDATE
+
+    def test_get_env_level_inside_collect_returns_env_not_all(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setenv("SHINY_OTEL_COLLECT", "session")
+        _current_collect_level.set(None)
+
+        assert _get_env_level() == OtelCollectLevel.SESSION
+
+
 class TestSuppressIntegration:
     """Integration tests for otel.suppress with the reactive system."""
 

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 from .._docstring import add_example
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
 from ..otel._decorators import suppress as _otel_suppress
+from ..otel._collect import _get_env_level
 from ..otel._span_wrappers import OtelCollectLevel, shiny_otel_span
 from ._button import BOOKMARK_ID
 from ._restore_state import RestoreState
@@ -410,6 +411,7 @@ class BookmarkApp(Bookmark):
                                 async with shiny_otel_span(
                                     "restore_bookmark_callbacks",
                                     required_level=OtelCollectLevel.REACTIVE_UPDATE,
+                                    collection_level=_get_env_level(),
                                 ):
                                     restore_state = self._restore_context.as_state()
                                     await self._on_restore_callbacks.invoke(
@@ -452,6 +454,7 @@ class BookmarkApp(Bookmark):
                                 async with shiny_otel_span(
                                     "restored_bookmark_callbacks",
                                     required_level=OtelCollectLevel.REACTIVE_UPDATE,
+                                    collection_level=_get_env_level(),
                                 ):
                                     restore_state = self._restore_context.as_state()
                                     await self._on_restored_callbacks.invoke(
