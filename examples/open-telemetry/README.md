@@ -2,7 +2,7 @@
 
 This example demonstrates OpenTelemetry integration with Shiny, including:
 - Console exporter setup for viewing traces
-- Collection level control with `@otel_collect`
+- Collection level control with `@otel.suppress`
 - Reactive value logging
 - Side-by-side comparison of normal vs. suppressed telemetry
 
@@ -10,42 +10,46 @@ For comprehensive documentation, please see the [Shiny OpenTelemetry documentati
 
 ## Overview
 
-The `otel_collect` function allows you to dynamically control which **Shiny internal telemetry** is collected. This is useful for:
+The `otel.suppress` API allows you to dynamically control which **Shiny internal telemetry** is collected. This is useful for:
 
 - **Privacy**: Suppress Shiny telemetry for sensitive operations
 - **Performance**: Reduce overhead by disabling Shiny telemetry for specific code paths
 - **Debugging**: Enable detailed Shiny telemetry only for specific areas
 - **Compliance**: Ensure sensitive data isn't inadvertently sent to telemetry backends
 
-**Important**: `otel_collect` only affects Shiny's internal spans and logs (session lifecycle, reactive execution, value updates, etc.). Any OpenTelemetry spans you create manually in your application code are unaffected and will continue to be recorded normally.
+**Important**: `otel.suppress` only affects Shiny's internal spans and logs (session lifecycle, reactive execution, value updates, etc.). Any OpenTelemetry spans you create manually in your application code are unaffected and will continue to be recorded normally.
 
 ### Timing
 
-Collection levels are captured when reactive objects (`reactive.value`, `reactive.calc`, `reactive.effect`) are **created**, not when they are executed. This means the level used for Shiny's internal spans (reactive execution, value updates) is **permanently set** at object creation time:
+The suppression setting is captured when reactive objects (`reactive.value`, `reactive.calc`, `reactive.effect`) are **created**, not when they are executed. This means the setting used for Shiny's internal spans (reactive execution, value updates) is **permanently set** at object creation time:
 
 ```python
-# Collection level is captured when reactive.calc() creates the Calc object
-with otel_collect("none"):
+from shiny import otel
+
+# Suppression is captured when reactive.calc() creates the Calc object
+with otel.suppress():
     @reactive.calc
     def my_calc():
         return expensive_computation()
 
-# Later execution of my_calc() ALWAYS uses "none" for Shiny's internal spans,
-# regardless of what the current otel_collect level is
+# Later execution of my_calc() ALWAYS has telemetry suppressed,
+# regardless of the current context
 ```
 
-Using `otel_collect` inside a reactive function body will **not** affect Shiny's internal spans for that reactive - the level was already captured at object creation. To dynamically control collection levels, use the decorator on render functions, which are created at app initialization:
+Using `otel.suppress()` inside a reactive function body will **not** affect Shiny's internal spans for that reactive - the setting was already captured at object creation. To suppress telemetry, use the decorator on render functions, which are created at app initialization:
 
 ```python
+from shiny import otel
+
 # Incorrect - this does NOT change Shiny's internal span level for my_calc
 @reactive.calc
 def my_calc():
-    with otel_collect("none" if is_sensitive() else "all"):
+    with otel.suppress():
         return expensive_computation()  # Shiny still uses level from creation time
 
 # Correct - use decorator on render functions to suppress telemetry
 @render.text
-@otel_collect("none")
+@otel.suppress
 def result_private():
     # Entire render function runs without Shiny telemetry
     return compute_private_data()
@@ -56,16 +60,16 @@ def result_public():
     return compute_public_data()
 ```
 
-**Note**: Using `otel_collect` inside a reactive function body *will* affect any manual spans you create with `shiny_otel_span()`, just not Shiny's automatic internal spans.
+**Note**: Using `otel.suppress()` inside a reactive function body *will* affect any manual spans you create with `shiny_otel_span()`, just not Shiny's automatic internal spans.
 
 ## Features Demonstrated
 
 ### 1. Context Manager Usage
 
 ```python
-from shiny.otel import otel_collect
+from shiny import otel
 
-with otel_collect("none"):
+with otel.suppress():
     # No Shiny telemetry collected in this block
     # (your own spans are still recorded)
     sensitive_result = process_sensitive_data()
@@ -74,33 +78,30 @@ with otel_collect("none"):
 ### 2. Decorator Usage
 
 ```python
-from shiny.otel import otel_collect
+from shiny import otel
 
 @render.text
-@otel_collect("none")
+@otel.suppress
 def result_private():
     # Entire function runs without Shiny telemetry
     # (your own spans are still recorded)
     return compute_private_data()
 ```
 
-### 3. Nested Collection Levels
+### 3. Nested Suppression
 
 ```python
-from shiny.otel import otel_collect
+from shiny import otel
 
-with otel_collect("all"):
-    # Only session-level Shiny telemetry
-    with otel_collect("none"):
+with otel.suppress():
+    # No Shiny telemetry in this block
+    @render.text
+    def result_private():
+        # Entire function runs without Shiny telemetry
+        # (your own spans are still recorded)
+        return compute_private_data()
 
-        # No Shiny telemetry in this inner block
-        @render.text
-        def result_private():
-            # Entire function runs without Shiny telemetry
-            # (your own spans are still recorded)
-            return compute_private_data()
-
-    # Back to session-level Shiny telemetry
+# Back to default telemetry level
 ```
 
 ## Collection Levels
@@ -140,7 +141,7 @@ python app.py
 The app will open in your browser. As you interact with the buttons:
 
 - **"Compute (Normal Telemetry)"**: Creates spans for reactive execution
-- **"Compute (No Telemetry)"**: Suppresses all telemetry using `@otel_collect("none")`
+- **"Compute (No Telemetry)"**: Suppresses all telemetry using `@otel.suppress`
 
 Watch the console output to see which spans are created.
 
@@ -153,7 +154,7 @@ export SHINY_OTEL_COLLECT=session
 python app.py
 ```
 
-The `otel_collect` context manager and decorator will override this default.
+The `otel.suppress` decorator and context manager will override this default.
 
 ## Key Concepts
 
@@ -162,7 +163,7 @@ The `otel_collect` context manager and decorator will override this default.
 The default collection level is set by:
 
 1. The `SHINY_OTEL_COLLECT` environment variable (defaults to `all`)
-2. Can be overridden programmatically with `otel_collect()`
+2. Can be overridden programmatically with `otel.suppress` / `otel.suppress()`
 
 ### Span Hierarchy
 
@@ -173,12 +174,12 @@ session.start
   └─ reactive_update
       ├─ reactive.calc result
       ├─ reactive.effect <lambda>
-      └─ output result_private (suppressed with @otel_collect("none"))
+      └─ output result_private (suppressed with @otel.suppress)
 ```
 
 ### Privacy Considerations
 
-Use `otel_collect("none")` to wrap code that:
+Use `otel.suppress` to wrap code that:
 
 - Processes passwords, API keys, or other secrets
 - Handles personally identifiable information (PII)
