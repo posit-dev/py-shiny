@@ -13,7 +13,7 @@ import os
 from unittest.mock import Mock, patch
 
 from shiny.otel._attributes import extract_http_attributes
-from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
+from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import is_otel_tracing_enabled
 
 from .otel_helpers import patch_otel_tracing_state
@@ -101,11 +101,11 @@ class TestSessionSpans:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                    and get_level() >= OtelCollectLevel.SESSION
                 ) is True
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                    and get_level() >= OtelCollectLevel.REACTIVE_UPDATE
                 ) is False
 
     def test_collection_disabled_at_none_level(self):
@@ -114,7 +114,7 @@ class TestSessionSpans:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "none"}):
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                    and get_level() >= OtelCollectLevel.SESSION
                 ) is False
 
     def test_session_level_collection_enabled_at_all_level(self):
@@ -123,7 +123,7 @@ class TestSessionSpans:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                    and get_level() >= OtelCollectLevel.SESSION
                 ) is True
 
 
@@ -137,7 +137,7 @@ class TestSessionInstrumentation:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 result = (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                    and get_level() >= OtelCollectLevel.SESSION
                 )
                 assert result is True
 
@@ -148,6 +148,6 @@ class TestSessionInstrumentation:
             # Without SDK configured, should always return False
             result = (
                 is_otel_tracing_enabled()
-                and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                and get_level() >= OtelCollectLevel.SESSION
             )
             assert result is False

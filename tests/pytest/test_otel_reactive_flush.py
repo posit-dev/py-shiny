@@ -15,7 +15,7 @@ import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
+from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import is_otel_tracing_enabled
 from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive._core import ReactiveEnvironment
@@ -32,11 +32,11 @@ class TestReactiveFlushSpans:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                    and get_level() >= OtelCollectLevel.REACTIVE_UPDATE
                 ) is True
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVITY
+                    and get_level() >= OtelCollectLevel.REACTIVITY
                 ) is False
 
     def test_reactive_update_collection_enabled_at_all_level(self):
@@ -45,7 +45,7 @@ class TestReactiveFlushSpans:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                    and get_level() >= OtelCollectLevel.REACTIVE_UPDATE
                 ) is True
 
     def test_reactive_update_collection_disabled_at_session_level(self):
@@ -54,7 +54,7 @@ class TestReactiveFlushSpans:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                    and get_level() >= OtelCollectLevel.REACTIVE_UPDATE
                 ) is False
 
     def test_collection_disabled_at_none_level(self):
@@ -63,11 +63,11 @@ class TestReactiveFlushSpans:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "none"}):
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.SESSION
+                    and get_level() >= OtelCollectLevel.SESSION
                 ) is False
                 assert (
                     is_otel_tracing_enabled()
-                    and get_otel_collect_level() >= OtelCollectLevel.REACTIVE_UPDATE
+                    and get_level() >= OtelCollectLevel.REACTIVE_UPDATE
                 ) is False
 
 
