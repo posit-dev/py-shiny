@@ -742,7 +742,8 @@ from ._collect import get_otel_collect_level as get_level
 from ._decorators import otel_collect  # Backward-compatible; removed in Task 5
 from ._decorators import suppress
 
-__all__ = ("suppress",)
-
-# get_level is intentionally not in __all__ — undocumented escape hatch.
-# otel_collect is backward-compatible; will be removed when callers are updated.
+__all__ = (
+    "get_level",
+    "otel_collect",
+    "suppress",
+)
