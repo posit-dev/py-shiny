@@ -61,9 +61,6 @@ def _get_env_level() -> OtelCollectLevel:
     """
     env_level = os.getenv("SHINY_OTEL_COLLECT", "all").strip().upper()
 
-    if env_level == "REACTIVE":
-        env_level = "REACTIVITY"
-
     try:
         return OtelCollectLevel[env_level]
     except KeyError:
