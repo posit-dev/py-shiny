@@ -1,5 +1,6 @@
 """
-User-facing decorator and context manager for OpenTelemetry collection control.
+User-facing OpenTelemetry collection control APIs (``suppress`` and ``collect``)
+usable as decorators or context managers.
 """
 
 from __future__ import annotations

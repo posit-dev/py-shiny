@@ -765,10 +765,11 @@ pip install "shiny[otel]"
 
 from __future__ import annotations
 
-from ._collect import get_level  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from ._collect import get_level
 from ._decorators import collect, suppress
 
 __all__ = (
     "collect",
+    "get_level",
     "suppress",
 )

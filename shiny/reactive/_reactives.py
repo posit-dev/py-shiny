@@ -519,8 +519,9 @@ class Calc_(Generic[T]):
             modifier=get_otel_label_modifier(fn),
         )
 
-        # Extract collection level from function attribute (set by @otel.suppress decorator)
-        # If not set, capture the current collection level at initialization time
+        # Extract collection level from function attributes (set by shiny.otel
+        # decorators like @otel.suppress and @otel.collect). If not set, capture
+        # the current collection level at initialization time.
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
     def __call__(self) -> T:
@@ -792,8 +793,7 @@ class Effect_:
             modifier=get_otel_label_modifier(fn),
         )
 
-        # Extract collection level from function attribute (set by @otel.suppress decorator)
-        # If not set, capture the current collection level at initialization time
+        # Extract collection level from function attribute (e.g., set by `@otel.suppress` or `@otel.collect` decorators)
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
         # Defer the first running of this until flushReact is called
