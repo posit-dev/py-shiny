@@ -116,11 +116,12 @@ class TestGetOtelCollectLevel:
             level = get_level()
             assert level == expected
 
-    def test_env_var_reactive_alias(self):
-        """Test that 'reactive' is aliased to 'reactivity'."""
+    def test_env_var_reactive_is_invalid(self):
+        """Test that 'reactive' is not a supported alias; it warns and defaults to ALL."""
         with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive"}):
-            level = get_level()
-            assert level == OtelCollectLevel.REACTIVITY
+            with pytest.warns(UserWarning, match="Invalid SHINY_OTEL_COLLECT"):
+                level = get_level()
+                assert level == OtelCollectLevel.ALL
 
     def test_invalid_env_var_defaults_to_all(self):
         """Test that invalid env var value defaults to ALL with warning."""
