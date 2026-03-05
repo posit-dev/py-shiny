@@ -1,5 +1,5 @@
 """
-User-facing decorator and context manager for OpenTelemetry collection suppression.
+User-facing decorator and context manager for OpenTelemetry collection control.
 """
 
 from __future__ import annotations
@@ -15,14 +15,15 @@ __all__ = ("collect", "suppress")
 T = TypeVar("T", bound=Callable[..., Any])
 
 
-class _SuppressContext:
-    """Per-use context manager returned by suppress(). Owns its own Token."""
+class _OtelContext:
+    """Per-use context manager returned by suppress() or collect(). Owns its own Token."""
 
-    def __init__(self) -> None:
+    def __init__(self, level: OtelCollectLevel) -> None:
+        self._level = level
         self._token: Token[OtelCollectLevel | None] | None = None
 
     def __enter__(self) -> None:
-        self._token = _current_collect_level.set(OtelCollectLevel.NONE)
+        self._token = _current_collect_level.set(self._level)
         return None
 
     def __exit__(self, *_: object) -> None:
@@ -31,194 +32,111 @@ class _SuppressContext:
             self._token = None
 
 
-class _CollectContext:
-    """Per-use context manager returned by collect(). Owns its own Token."""
+def _stamp_or_raise(func: Any, level: OtelCollectLevel, name: str) -> Any:
+    """Validate func and stamp it with level, or raise a descriptive TypeError."""
+    # Reject reactive objects — decorator must wrap the plain function.
+    # These checks must come before the callable() check because some
+    # reactive objects (e.g., Effect_) are not callable.
+    from shiny.reactive._reactives import Calc_, Effect_
+    from shiny.render.renderer import Renderer
 
-    def __init__(self) -> None:
-        self._token: Token[OtelCollectLevel | None] | None = None
+    if isinstance(func, Calc_):
+        raise TypeError(
+            f"otel.{name} cannot be used on @reactive.calc objects. "
+            f"Apply @otel.{name} before @reactive.calc:\n"
+            f"  @reactive.calc\n"
+            f"  @otel.{name}\n"
+            f"  def my_calc(): ..."
+        )
 
-    def __enter__(self) -> None:
-        self._token = _current_collect_level.set(OtelCollectLevel.ALL)
-        return None
+    if isinstance(func, Effect_):
+        raise TypeError(
+            f"otel.{name} cannot be used on @reactive.effect objects. "
+            f"Apply @otel.{name} before @reactive.effect:\n"
+            f"  @reactive.effect\n"
+            f"  @otel.{name}\n"
+            f"  def my_effect(): ..."
+        )
 
-    def __exit__(self, *_: object) -> None:
-        if self._token is not None:
-            _current_collect_level.reset(self._token)
-            self._token = None
+    if isinstance(func, Renderer):
+        raise TypeError(
+            f"otel.{name} cannot be used on render objects. "
+            f"Apply @otel.{name} before the @render.func decorator:\n"
+            f"  @render.text\n"
+            f"  @otel.{name}\n"
+            f"  def my_output(): ..."
+        )
+
+    if not callable(func):
+        raise TypeError(
+            f"otel.{name} received a non-callable argument: {type(func).__name__!r}. "
+            f"Use @otel.{name} (no parens) as a decorator, "
+            f"or otel.{name}() (with parens) as a context manager."
+        )
+
+    set_otel_collect_level_on_func(func, level)
+    return func
 
 
-class _Suppress:
+@overload
+def suppress(func: T) -> T: ...  # @otel.suppress
+
+
+@overload
+def suppress() -> _OtelContext: ...  # with otel.suppress():
+
+
+def suppress(func: Any = None) -> Any:
     """
-    Singleton that suppresses Shiny's internal OTel instrumentation.
+    Disable Shiny's internal OTel instrumentation for a function or block.
 
-    Use as a no-parens decorator or a parens context manager:
+    Use as a no-parens decorator:
 
         @reactive.calc
         @otel.suppress
         def sensitive_calc(): ...
 
+    Use as a context manager (parens required):
+
         with otel.suppress():
             @reactive.effect
             def my_effect(): ...
+
+    Note: This only affects spans and logs created by Shiny itself. Your own custom
+    OpenTelemetry spans and logs are unaffected.
     """
-
-    @overload
-    def __call__(self, func: T) -> T: ...  # @otel.suppress
-
-    @overload
-    def __call__(self) -> _SuppressContext: ...  # with otel.suppress():
-
-    def __call__(self, func: Any = None) -> Any:
-        if func is None:
-            return _SuppressContext()
-
-        # Reject reactive objects — suppress must wrap the plain function.
-        # These checks must come before the callable() check because some
-        # reactive objects (e.g., Effect_) are not callable.
-        from shiny.reactive._reactives import Calc_, Effect_
-        from shiny.render.renderer import Renderer
-
-        if isinstance(func, Calc_):
-            raise TypeError(
-                "otel.suppress cannot be used on @reactive.calc objects. "
-                "Apply @otel.suppress before @reactive.calc:\n"
-                "  @reactive.calc\n"
-                "  @otel.suppress\n"
-                "  def my_calc(): ..."
-            )
-
-        if isinstance(func, Effect_):
-            raise TypeError(
-                "otel.suppress cannot be used on @reactive.effect objects. "
-                "Apply @otel.suppress before @reactive.effect:\n"
-                "  @reactive.effect\n"
-                "  @otel.suppress\n"
-                "  def my_effect(): ..."
-            )
-
-        if isinstance(func, Renderer):
-            raise TypeError(
-                "otel.suppress cannot be used on render objects. "
-                "Apply @otel.suppress before the @render.func decorator:\n"
-                "  @render.text\n"
-                "  @otel.suppress\n"
-                "  def my_output(): ..."
-            )
-
-        if not callable(func):
-            raise TypeError(
-                f"otel.suppress received a non-callable argument: {type(func).__name__!r}. "
-                f"Use @otel.suppress (no parens) as a decorator, "
-                f"or otel.suppress() (with parens) as a context manager."
-            )
-
-        set_otel_collect_level_on_func(func, OtelCollectLevel.NONE)
-        return func
+    if func is None:
+        return _OtelContext(OtelCollectLevel.NONE)
+    return _stamp_or_raise(func, OtelCollectLevel.NONE, "suppress")
 
 
-suppress = _Suppress()
-"""
-Suppress Shiny's internal OTel instrumentation for a function or block.
-
-Use as a no-parens decorator:
-
-    @reactive.calc
-    @otel.suppress
-    def sensitive_calc(): ...
-
-Use as a context manager (parens required):
-
-    with otel.suppress():
-        @reactive.effect
-        def my_effect(): ...
-
-Note: This only affects spans and logs created by Shiny itself. Your own custom
-OpenTelemetry spans and logs are unaffected.
-"""
+@overload
+def collect(func: T) -> T: ...  # @otel.collect
 
 
-class _Collect:
+@overload
+def collect() -> _OtelContext: ...  # with otel.collect():
+
+
+def collect(func: Any = None) -> Any:
     """
-    Singleton that enables Shiny's internal OTel instrumentation.
+    Enable Shiny's internal OTel instrumentation for a function or block.
 
-    Use as a no-parens decorator or a parens context manager:
+    Use as a no-parens decorator:
 
         @reactive.calc
         @otel.collect
         def instrumented_calc(): ...
 
+    Use as a context manager (parens required):
+
         with otel.collect():
             @reactive.effect
             def my_effect(): ...
+
+    Note: This only affects Shiny's internal spans and logs. Your own custom
+    OpenTelemetry spans and logs are unaffected.
     """
-
-    @overload
-    def __call__(self, func: T) -> T: ...  # @otel.collect
-
-    @overload
-    def __call__(self) -> _CollectContext: ...  # with otel.collect():
-
-    def __call__(self, func: Any = None) -> Any:
-        if func is None:
-            return _CollectContext()
-
-        from shiny.reactive._reactives import Calc_, Effect_
-        from shiny.render.renderer import Renderer
-
-        if isinstance(func, Calc_):
-            raise TypeError(
-                "otel.collect cannot be used on @reactive.calc objects. "
-                "Apply @otel.collect before @reactive.calc:\n"
-                "  @reactive.calc\n"
-                "  @otel.collect\n"
-                "  def my_calc(): ..."
-            )
-
-        if isinstance(func, Effect_):
-            raise TypeError(
-                "otel.collect cannot be used on @reactive.effect objects. "
-                "Apply @otel.collect before @reactive.effect:\n"
-                "  @reactive.effect\n"
-                "  @otel.collect\n"
-                "  def my_effect(): ..."
-            )
-
-        if isinstance(func, Renderer):
-            raise TypeError(
-                "otel.collect cannot be used on render objects. "
-                "Apply @otel.collect before the @render.func decorator:\n"
-                "  @render.text\n"
-                "  @otel.collect\n"
-                "  def my_output(): ..."
-            )
-
-        if not callable(func):
-            raise TypeError(
-                f"otel.collect received a non-callable argument: {type(func).__name__!r}. "
-                f"Use @otel.collect (no parens) as a decorator, "
-                f"or otel.collect() (with parens) as a context manager."
-            )
-
-        set_otel_collect_level_on_func(func, OtelCollectLevel.ALL)
-        return func
-
-
-collect = _Collect()
-"""
-Enables Shiny's internal telemetry for a function or block.
-
-Use as a no-parens decorator:
-
-    @reactive.calc
-    @otel.collect
-    def instrumented_calc(): ...
-
-Use as a context manager (parens required):
-
-    with otel.collect():
-        @reactive.effect
-        def my_effect(): ...
-
-Note: This only affects Shiny's internal spans and logs. Your own custom
-OpenTelemetry spans and logs are unaffected.
-"""
+    if func is None:
+        return _OtelContext(OtelCollectLevel.ALL)
+    return _stamp_or_raise(func, OtelCollectLevel.ALL, "collect")
