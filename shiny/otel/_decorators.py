@@ -122,8 +122,8 @@ def suppress(func: Any = None) -> Any:
         object (``@otel.suppress`` must come before those decorators), or to
         any non-callable.
 
-    Notes
-    -----
+    Note
+    ----
     Only affects spans and logs created by Shiny itself (reactive calculations and value
     updates). User-defined OpenTelemetry spans are unaffected.
 
@@ -180,8 +180,8 @@ def suppress(func: Any = None) -> Any:
 
     See Also
     --------
-    * `otel.collect` - Re-enable Shiny's internal telemetry when the default has been lowered
-    * `otel.get_level` - Inspect the current collection level
+    * :func:`~shiny.otel.collect` - Re-enable Shiny's internal telemetry when the default has been lowered
+    * :func:`~shiny.otel.get_level` - Inspect the current collection level
     """
     if func is None:
         return _OtelContext(OtelCollectLevel.NONE)
@@ -200,8 +200,8 @@ def collect(func: Any = None) -> Any:
     """
     Enable Shiny's internal OTel instrumentation for a function or block.
 
-    Counterpart to ``otel.suppress``. Useful when the global default has been
-    lowered via ``SHINY_OTEL_COLLECT`` or when inside a
+    Counterpart to :func:`~shiny.otel.suppress`. Useful when the global default
+    has been lowered via ``SHINY_OTEL_COLLECT`` or when inside a
     ``with otel.suppress():`` block and a specific reactive object needs
     telemetry re-enabled.
 
@@ -239,8 +239,8 @@ def collect(func: Any = None) -> Any:
         object (``@otel.collect`` must come before those decorators), or to
         any non-callable.
 
-    Notes
-    -----
+    Note
+    ----
     Only affects spans and logs created by Shiny itself. User-defined
     OpenTelemetry spans are unaffected.
 
@@ -285,8 +285,8 @@ def collect(func: Any = None) -> Any:
 
     See Also
     --------
-    * `otel.suppress` - Disable Shiny's internal telemetry for sensitive operations
-    * `otel.get_level` - Inspect the current collection level
+    * :func:`~shiny.otel.suppress` - Disable Shiny's internal telemetry for sensitive operations
+    * :func:`~shiny.otel.get_level` - Inspect the current collection level
     """
     if func is None:
         return _OtelContext(OtelCollectLevel.ALL)
