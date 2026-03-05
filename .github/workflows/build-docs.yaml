@@ -3,10 +3,16 @@ name: Build API docs and Shinylive for GitHub Pages
 # Allow for `main` branch to build full website and deploy (with shinylive, saved as artifact)
 # Allow branches that start with `docs-` to build full website, but not deploy (with shinylive, not saved as artifact)
 # Allow for PRs to build quartodoc only. (No shinylive, no site build, no deploy)
-# Manual workflow_dispatch builds shinylive and saves as artifact
+# Manual workflow_dispatch can build only shinylive (skip docs) or full build
 
 on:
   workflow_dispatch:
+    inputs:
+      build_only_shinylive:
+        description: 'Build only shinylive (skip docs/site)'
+        required: false
+        type: boolean
+        default: false
   push:
     branches: ["main", "docs-**"]
   pull_request:
@@ -33,15 +39,18 @@ jobs:
       # API docs
       # =====================================================
       - name: Install Quarto
+        if: github.event_name != 'workflow_dispatch' || inputs.build_only_shinylive != true
         uses: quarto-dev/quarto-actions/setup@v2
         with:
           version: 1.4.549
 
       - name: Install dependencies
+        if: github.event_name != 'workflow_dispatch' || inputs.build_only_shinylive != true
         run: |
           make ci-install-docs
 
       - name: Run quartodoc
+        if: github.event_name != 'workflow_dispatch' || inputs.build_only_shinylive != true
         run: |
           make docs-quartodoc
 
@@ -49,7 +58,7 @@ jobs:
       # Shinylive
       # =====================================================
       - name: Check out shinylive
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' || github.event_name != 'pull_request'
         uses: actions/checkout@v4
         with:
           repository: rstudio/shinylive
@@ -57,7 +66,7 @@ jobs:
           path: shinylive-repo
 
       - name: Update shinylive's copy of shiny and htmltools
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' || github.event_name != 'pull_request'
         run: |
           cd shinylive-repo
           make submodules
@@ -65,7 +74,7 @@ jobs:
           make submodules-pull-htmltools
 
       - name: Build shinylive
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' || github.event_name != 'pull_request'
         run: |
           cd shinylive-repo
           make all
@@ -79,7 +88,7 @@ jobs:
           retention-days: 30
 
       - name: Use local build of shinylive for building docs
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.build_only_shinylive != true)
         run: |
           cd shinylive-repo && shinylive assets install-from-local ./build
 
@@ -88,7 +97,7 @@ jobs:
       # =====================================================
 
       - name: Build site
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.build_only_shinylive != true)
         run: |
           cd docs
           make site
@@ -98,20 +107,20 @@ jobs:
       # =====================================================
 
       - name: Move built API docs and shinylive to single directory
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.build_only_shinylive != true)
         run: |
           mkdir deploy
           mv docs/_site deploy/docs
           mv shinylive-repo/_shinylive deploy/shinylive
 
       - name: Upload site artifact
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.build_only_shinylive != true)
         uses: actions/upload-pages-artifact@v3
         with:
           path: "deploy"
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.build_only_shinylive != true)
     needs: build-docs
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
