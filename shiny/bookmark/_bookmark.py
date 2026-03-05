@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from .._docstring import add_example
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
-from ..otel._decorators import no_otel_collect
+from ..otel._decorators import suppress as otel_suppress
 from ._button import BOOKMARK_ID
 from ._restore_state import RestoreState
 from ._save_state import BookmarkState
@@ -376,14 +376,14 @@ class BookmarkApp(Bookmark):
             # Fires when the bookmark button is clicked.
             @reactive.effect
             @reactive.event(root_session.input[BOOKMARK_ID])
-            @no_otel_collect()
+            @otel_suppress
             async def _():
                 await root_session.bookmark()
 
             # If there was an error initializing the current restore context, show
             # notification in the client.
             @reactive.effect
-            @no_otel_collect()
+            @otel_suppress
             def init_error_message():
                 if self._restore_context and self._restore_context._init_error_msg:
                     notification_show(
@@ -396,7 +396,7 @@ class BookmarkApp(Bookmark):
             # Run the on_restore function at the beginning of the flush cycle, but after
             # the server function has been executed.
             @reactive.effect(priority=1000000)
-            @no_otel_collect()
+            @otel_suppress
             async def invoke_on_restore_callbacks():
                 if self._on_restore_callbacks.count() == 0:
                     return

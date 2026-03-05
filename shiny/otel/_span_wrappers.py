@@ -58,7 +58,7 @@ from typing import Any, AsyncIterable, AsyncIterator, Callable, Dict, Mapping, U
 
 from opentelemetry.trace import Span, Status, StatusCode
 
-from ._collect import OtelCollectLevel, get_otel_collect_level
+from ._collect import OtelCollectLevel, get_level
 from ._core import get_otel_tracer, is_otel_tracing_enabled
 
 __all__ = ("shiny_otel_span", "shiny_otel_span_stream")
@@ -143,9 +143,7 @@ async def shiny_otel_span(
         return
 
     # Use provided collection_level or get current level
-    current_level = (
-        collection_level if collection_level is not None else get_otel_collect_level()
-    )
+    current_level = collection_level if collection_level is not None else get_level()
 
     # Check if we should collect based on current level vs required threshold
     if current_level < required_level:

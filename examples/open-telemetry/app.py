@@ -2,9 +2,9 @@
 Example demonstrating OpenTelemetry collection level control and value logging.
 
 This app shows:
-1. How to use `otel_collect` to control Shiny telemetry collection
+1. How to use `otel.suppress` to control Shiny's telemetry collection
 2. Automatic logging of reactive value updates
-3. How `otel_collect("none")` suppresses both spans and value logs
+3. How `otel.suppress` suppresses both Shiny's internal spans and value logs
 
 Run with:
     SHINY_OTEL_COLLECT=all python app.py
@@ -16,6 +16,7 @@ Or with shinylive:
 Watch the console for spans and log events as you interact with the app.
 """
 
+# Set up OpenTelemetry logging to the console
 from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.sdk._logs import LoggerProvider
@@ -24,35 +25,38 @@ from opentelemetry.sdk._logs.export import (
     SimpleLogRecordProcessor,
 )
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (
-    ConsoleSpanExporter,
-    SimpleSpanProcessor,
-)
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
-from shiny import App, reactive, render, ui
-from shiny.otel import otel_collect
+from shiny import App, otel, reactive, render, ui
 
-# Set up tracing
+# Set up debug OpenTelemetry tracing/logging to the console
+# NOT recommended for production use
 trace_provider = TracerProvider()
 trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 trace.set_tracer_provider(trace_provider)
-
-# Set up logging (for value update logs)
 log_provider = LoggerProvider()
 log_provider.add_log_record_processor(
     SimpleLogRecordProcessor(ConsoleLogRecordExporter())
 )
 set_logger_provider(log_provider)
 
+# # Typical setup behavior:
+# import logfire
+# logfire.configure(
+#     token="fake-token-for-demo",
+#     service_name="shiny-open-telemetry-demo",
+#     environment="development",
+# )
+
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),
     ui.markdown("""
-        This demo shows how `otel_collect` controls **both spans and value logs**.
+        This demo shows how `otel.suppress` controls **Shiny's internal spans and value logs**.
 
         Watch the console to see:
         - **Spans**: Session lifecycle, reactive execution
         - **Logs**: Reactive value updates with source references
-        - **Control**: How `@otel_collect("none")` suppresses both
+        - **Control**: How `@otel.suppress` suppresses both Shiny's internal
         """),
     ui.hr(),
     ui.layout_columns(
@@ -62,8 +66,8 @@ app_ui = ui.page_fluid(
             ui.input_action_button("normal_increment", "Increment Counter"),
             ui.output_text_verbatim("normal_counter_display"),
             ui.markdown("""
-                **Telemetry:** ✅ Spans + value logs
-                This section generates full telemetry.
+                **Telemetry:** ✅ Shiny spans + value logs
+                This section generates full Shiny telemetry.
                 """),
         ),
         ui.card(
@@ -72,8 +76,19 @@ app_ui = ui.page_fluid(
             ui.input_action_button("private_increment", "Increment Counter"),
             ui.output_text_verbatim("private_counter_display"),
             ui.markdown("""
-                **Telemetry:** ❌ No spans, no value logs
-                Uses `@otel_collect("none")` to suppress all Shiny telemetry.
+                **Telemetry:** ❌ No Shiny spans, no value logs
+                Uses `@otel.suppress` to suppress all Shiny telemetry.
+                """),
+        ),
+        ui.card(
+            ui.card_header("Re-enabled Telemetry (otel.collect)"),
+            ui.input_slider("collect_slider", "Slider", 0, 100, 50),
+            ui.input_action_button("collect_increment", "Increment Counter"),
+            ui.output_text_verbatim("collect_counter_display"),
+            ui.markdown("""
+                **Telemetry:** ✅ Shiny spans + value logs
+                Uses `@otel.collect` to re-enable Shiny telemetry inside
+                a broad `otel.suppress()` block.
                 """),
         ),
     ),
@@ -112,7 +127,7 @@ def server(input, output, session):
         return f"Slider: {slider_val}\nCounter: {counter_val}\n\n✅ Full telemetry"
 
     # Suppresses ALL shiny telemetry for objects defined within this context
-    with otel_collect("none"):
+    with otel.suppress():
         # Private section: Suppressed telemetry (no spans, no value logs)
         private_counter = reactive.value(0)
 
@@ -132,6 +147,24 @@ def server(input, output, session):
             counter_val = private_counter()
             return f"Slider: {slider_val}\nCounter: {counter_val}\n\n❌ No telemetry"
 
+        with otel.collect():
+            # Demonstrates re-enabling telemetry within a suppressed context
+            collect_counter = reactive.value(0)
+
+            @reactive.effect
+            @reactive.event(input.collect_increment)
+            def _():
+                collect_counter.set(collect_counter.get() + 1)
+                print(
+                    f"\n>>> Collect counter updated to: {collect_counter.get()} (TELEMETRY RE-ENABLED)"
+                )
+
+            @render.text
+            def collect_counter_display():
+                slider_val = input.collect_slider()
+                counter_val = collect_counter()
+                return f"Slider: {slider_val}\nCounter: {counter_val}\n\n✅ Telemetry re-enabled"
+
     # Computation examples
     compute_counter = reactive.value(0)
     compute_counter_private = reactive.value(0)
@@ -143,7 +176,7 @@ def server(input, output, session):
 
     @reactive.effect
     @reactive.event(input.compute_private)
-    @otel_collect("none")  # Explicitly disable Shiny OTel for this effect
+    @otel.suppress  # Explicitly disable Shiny OTel for this effect
     def _():
         compute_counter_private.set(compute_counter_private.get() + 1)
 
@@ -152,23 +185,23 @@ def server(input, output, session):
         """Normal computation with full telemetry."""
         count = compute_counter.get()
         if count == 0:
-            return "Click 'Compute (Normal)' to run\n\n✅ Spans + value logs"
+            return "Click 'Compute (Normal)' to run\n\n✅ Shiny spans + value logs"
 
         # Simple computation (telemetry enabled)
         total = sum(range(1, 101))
-        return f"Sum 1..100 = {total:,}\nRun #{count}\n\n✅ Spans + value logs"
+        return f"Sum 1..100 = {total:,}\nRun #{count}\n\n✅ Shiny spans + value logs"
 
     @render.text
-    @otel_collect("none")  # Explicitly disable Shiny OTel for this output
+    @otel.suppress  # Explicitly disable Shiny OTel for this output
     def result_private():
         """Private computation with no telemetry."""
         count = compute_counter_private.get()
         if count == 0:
-            return "Click 'Compute (Private)' to run\n\n❌ No spans, no logs"
+            return "Click 'Compute (Private)' to run\n\n❌ No Shiny spans, no logs"
 
         # Simple computation (no telemetry)
         total = sum(range(1, 101))
-        return f"Sum 1..100 = {total:,}\nRun #{count}\n\n❌ No spans, no logs"
+        return f"Sum 1..100 = {total:,}\nRun #{count}\n\n❌ No Shiny spans, no logs"
 
 
 app = App(app_ui, server)

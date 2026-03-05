@@ -56,8 +56,8 @@ from ..otel._attributes import (
     extract_source_ref,
     get_session_id_attrs,
 )
-from ..otel._collect import OtelCollectLevel
-from ..otel._decorators import no_otel_collect
+from ..otel._collect import OtelCollectLevel, _get_env_level
+from ..otel._decorators import suppress as otel_suppress
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
@@ -599,6 +599,7 @@ class AppSession(Session):
             "session.end",
             attributes=get_session_id_attrs(self),
             required_level=OtelCollectLevel.SESSION,
+            collection_level=_get_env_level(),
         ):
             try:
                 await self._on_ended_callbacks.invoke()
@@ -697,6 +698,7 @@ class AppSession(Session):
                                     **extract_http_attributes(self.http_conn),
                                 },
                                 required_level=OtelCollectLevel.SESSION,
+                                collection_level=_get_env_level(),
                             ):
                                 with session_context(self):
                                     self.app.server(self.input, self.output, self)
@@ -1914,7 +1916,7 @@ class Outputs:
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
-            @no_otel_collect()
+            @otel_suppress
             async def output_obs():
                 if self._session.is_stub_session():
                     raise RuntimeError(

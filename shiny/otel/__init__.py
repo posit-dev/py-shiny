@@ -6,33 +6,31 @@ OpenTelemetry support for observing Shiny application behavior, performance, and
 ## Quick Start Example
 
 ```python
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 from shiny import App, ui, render, reactive
-from shiny.otel import otel_collect
-
-# Configure OpenTelemetry
-provider = TracerProvider()
-provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-trace.set_tracer_provider(provider)
+from shiny import otel
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 1, 100, 50),
     ui.output_text("result"),
     ui.output_text("result_private"),
+    ui.output_text("result_instrumented"),
 )
 
 def server(input, output, session):
     @render.text
     def result():
-        # Full telemetry for this output
+        # Full Shiny telemetry for this output
         return f"Value: {input.n()}"
 
     @render.text
-    @otel_collect("none")  # Suppress telemetry for sensitive operations
+    @otel.suppress  # Disables Shiny's internal telemetry for sensitive operations
     def result_private():
         return f"Private value: {input.n()}"
+
+    @render.text
+    @otel.collect  # Enables Shiny's internal telemetry even when default is suppressed
+    def result_instrumented():
+        return f"Instrumented value: {input.n()}"
 
 app = App(app_ui, server)
 ```
@@ -43,7 +41,7 @@ export SHINY_OTEL_COLLECT=all
 python app.py
 ```
 
-Watch the console output to see spans for `result` but not for `result_private`.
+Watch the console output to see Shiny's spans for `result` and `result_instrumented` but not for `result_private`.
 
 ## Table of Contents
 
@@ -170,31 +168,31 @@ You'll see OpenTelemetry spans printed to the console showing Shiny's internal e
 
 Shiny provides five collection levels to control the granularity of telemetry:
 
-### `none` (0)
+### `none`
 No Shiny telemetry collected. Use when you want to completely disable Shiny's instrumentation while keeping your own custom spans.
 
 **Overhead**: None
 **Use case**: Disabling telemetry entirely
 
-### `session` (1)
+### `session`
 Only session lifecycle spans (session start/end, HTTP/WebSocket connections).
 
 **Overhead**: Minimal (1-2 spans per session)
 **Use case**: Basic session tracking in production
 
-### `reactive_update` (2)
+### `reactive_update`
 Session spans + reactive update cycle spans (one span per flush cycle).
 
 **Overhead**: Low (1 span per reactive flush)
 **Use case**: Understanding how many update cycles occur
 
-### `reactivity` (3)
+### `reactivity`
 Everything from `reactive_update` + individual reactive execution spans (calcs, effects, outputs, extended tasks) + value update logs.
 
 **Overhead**: Moderate (1 span per reactive computation)
 **Use case**: Detailed debugging and development
 
-### `all` (4)
+### `all`
 All available telemetry (currently equivalent to `reactivity`). Reserved for future expansion.
 
 **Overhead**: Moderate
@@ -255,41 +253,41 @@ See [OpenTelemetry SDK Configuration](https://opentelemetry.io/docs/languages/sd
 
 ## Programmatic Control
 
-**Important**: The collection level for a reactive object (calc, effect, output) is
+**Important**: The suppression setting for a reactive object (calc, effect, output) is
 captured at **initialization time** -- when the reactive object is created -- not
-when the reactive function executes. This means `otel_collect` affects which level
-is stored on the reactive object during its definition, and that level is used for
-all subsequent executions.
+when the reactive function executes. This means `otel.suppress` affects whether
+telemetry is suppressed on the reactive object during its definition, and that
+setting is used for all subsequent executions.
 
 ### Decorator
 
-Use `otel_collect` as a decorator to set the collection level for a reactive function.
-The decorator stamps the collection level on the function, and the reactive object
+Use `otel.suppress` as a decorator to disable Shiny telemetry for a reactive function.
+The decorator stamps the suppression setting on the function, and the reactive object
 reads it when it is created:
 
 ```python
-from shiny.otel import otel_collect
+from shiny import otel
 
 @reactive.calc
-@otel_collect("none")
+@otel.suppress
 def sensitive_computation():
     \"""This entire calc runs without Shiny telemetry on every execution.\"""
     api_key = input.api_key()
     return validate_api_key(api_key)
 ```
 
-**Important**: When decorating reactive objects, apply `otel_collect` **before** (i.e., closer to the function than) the reactive decorator:
+**Important**: When decorating reactive objects, apply `otel.suppress` **before** (i.e., closer to the function than) the reactive decorator:
 
 ```python
-# Correct order -- otel_collect is applied to the function first,
-# then @reactive.calc reads the stamped level at initialization time
+# Correct order -- otel.suppress is applied to the function first,
+# then @reactive.calc reads the stamped setting at initialization time
 @reactive.calc
-@otel_collect("none")
+@otel.suppress
 def my_calc():
     pass
 
 # Incorrect - will raise TypeError
-@otel_collect("none")  # Cannot wrap a reactive object
+@otel.suppress  # Cannot wrap a reactive object
 @reactive.calc
 def my_calc():
     pass
@@ -297,63 +295,81 @@ def my_calc():
 
 ### Context Manager (Initialization Time Only)
 
-Use `otel_collect` as a context manager to set the collection level during
+Use `otel.suppress()` as a context manager to suppress telemetry during
 **reactive object creation**. Any reactive objects defined inside the `with` block
-will capture that level at initialization time:
+will have telemetry suppressed:
 
 ```python
-from shiny.otel import otel_collect
+from shiny import otel
 
-with otel_collect("none"):
-    # Reactive objects created inside this block capture "none" as their level
+with otel.suppress():
+    # Reactive objects created here are never instrumented
     @reactive.calc
     def sensitive_calc():
-        \"""Telemetry is disabled for this calc (level captured at init).\"""
         return load_secrets()
 
-# Reactive objects created outside the block use the default level
+# Reactive objects created outside use the default level
 @reactive.calc
 def normal_calc():
-    \"""Telemetry uses the default level.\"""
     return load_public_data()
 ```
 
-**Does NOT work at runtime**: Using `with otel_collect(...)` inside a reactive
+**Does NOT work at runtime**: Using `with otel.suppress()` inside a reactive
 function body has no effect on Shiny's internal telemetry for that reactive object,
-because the collection level was already captured when the object was created:
+because the suppression setting was already captured when the object was created:
 
 ```python
 @reactive.calc
+def load_secrets():
+    ...  # This part is instrumented with Shiny telemetry
+
+@reactive.calc
 def my_calc():
     # THIS DOES NOT WORK as intended for Shiny telemetry.
-    # The calc's collection level was already set at initialization time.
-    with otel_collect("none"):
-        # Shiny's span for this calc was already started with
-        # the level captured at init, so this block cannot suppress it.
+    # `load_secrets()` will still generate spans/logs because
+    # reactive objects are captured at initialization time.
+    with otel.suppress():
         sensitive_data = load_secrets()
     return sensitive_data
 ```
 
-### Nested Context Managers (Initialization Time)
+### `otel.collect` Decorator
 
-Context managers can be nested during initialization, with the innermost taking precedence:
+Use `otel.collect` as a decorator to enable Shiny's internal telemetry for a reactive
+function when the default level is suppressed:
 
 ```python
-from shiny.otel import otel_collect
+from shiny import otel
 
-with otel_collect("session"):
-    # Reactive objects created here capture "session" level
+@reactive.calc
+@otel.collect
+def instrumented_computation():
+    \"""This calc always runs with Shiny telemetry, regardless of context.\"""
+    return load_public_data()
+```
 
-    with otel_collect("none"):
-        # Reactive objects created here capture "none" level
+### `otel.collect` Context Manager (Initialization Time Only)
+
+Use `otel.collect()` as a context manager to enable telemetry during reactive object
+creation. Any reactive objects defined inside the `with` block will have telemetry
+enabled:
+
+```python
+from shiny import otel
+
+with otel.suppress():
+    # Reactive objects created here have telemetry suppressed
+
+    with otel.collect():
         @reactive.calc
-        def no_telemetry_calc():
-            return "no spans"
+        def public_calc():
+            # This calc has telemetry enabled despite the outer suppress
+            return load_public_data()
 
-    # Back to "session" level for objects created here
     @reactive.calc
-    def session_only_calc():
-        return "session spans only"
+    def private_calc():
+        # Back to suppressed
+        return load_private_data()
 ```
 
 ## Best Practices
@@ -407,13 +423,13 @@ provider = TracerProvider(resource=resource)
 
 ### 4. Protect Sensitive Data
 
-Use `otel_collect("none")` for operations involving sensitive data:
+Use `otel.suppress` for operations involving sensitive data:
 
 ```python
-from shiny.otel import otel_collect
+from shiny import otel
 
 @reactive.calc
-@otel_collect("none")
+@otel.suppress
 def process_credentials():
     \"""Disable telemetry for credential handling.\"""
     username = input.username()
@@ -421,7 +437,7 @@ def process_credentials():
     return authenticate(username, password)
 ```
 
-**Remember**: `otel_collect` only disables **Shiny's internal telemetry**. Your own custom OpenTelemetry spans are unaffected.
+**Remember**: `otel.suppress` only disables **Shiny's internal telemetry**. Your own custom OpenTelemetry spans are unaffected.
 
 ### 5. Enable Error Sanitization
 
@@ -646,10 +662,10 @@ exporter = ConsoleSpanExporter()
    provider = TracerProvider(sampler=ParentBasedTraceIdRatio(0.1))
    ```
 
-4. Use `otel_collect("none")` for high-frequency operations:
+4. Use `@otel.suppress` for high-frequency operations:
    ```python
    @reactive.calc
-   @otel_collect("none")
+   @otel.suppress
    def high_frequency_calc():
        pass
    ```
@@ -659,19 +675,19 @@ exporter = ConsoleSpanExporter()
 **Problem**: Passwords or API keys appearing in span attributes.
 
 **Solutions**:
-1. Use `@otel_collect("none")` decorator on sensitive reactive functions:
+1. Use `@otel.suppress` decorator on sensitive reactive functions:
    ```python
    @reactive.calc
-   @otel_collect("none")
+   @otel.suppress
    def process_api_keys():
        api_key = input.api_key()
        return validate(api_key)
    ```
 
-2. Use `with otel_collect("none"):` when defining reactive objects that handle sensitive data
-   (the level is captured at initialization time):
+2. Use `with otel.suppress():` when defining reactive objects that handle sensitive data
+   (the setting is captured at initialization time):
    ```python
-   with otel_collect("none"):
+   with otel.suppress():
        @reactive.calc
        def handle_password():
            password = input.password()
@@ -681,6 +697,17 @@ exporter = ConsoleSpanExporter()
 3. Enable error sanitization:
    ```python
    app = App(app_ui, server, sanitize_errors=True)
+   ```
+
+4. Use `otel.collect` to re-enable telemetry for specific calcs inside a broad suppress block:
+   ```python
+   with otel.suppress():
+       # Most of the app has telemetry suppressed
+
+       with otel.collect():
+           @reactive.calc
+           def public_calc():
+               return load_public_data()
    ```
 
 ### Spans Not Nested Correctly
@@ -738,12 +765,11 @@ pip install "shiny[otel]"
 
 from __future__ import annotations
 
-from ._collect import get_otel_collect_level
-from ._decorators import otel_collect
+from ._collect import get_level
+from ._decorators import collect, suppress
 
 __all__ = (
-    # Collect level management
-    "get_otel_collect_level",
-    # User-facing API
-    "otel_collect",
+    "collect",
+    "get_level",
+    "suppress",
 )

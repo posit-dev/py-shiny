@@ -15,7 +15,7 @@ import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from shiny.otel._collect import OtelCollectLevel, get_otel_collect_level
+from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import get_otel_logger, get_otel_tracer, is_otel_tracing_enabled
 from shiny.otel._span_wrappers import shiny_otel_span
 
@@ -85,14 +85,14 @@ class TestOtelCollectLevel:
 
 
 class TestGetOtelCollectLevel:
-    """get_otel_collect_level() function tests"""
+    """get_level() function tests"""
 
     def test_default_level(self):
         """Test that default collection level is ALL when no env var set."""
         with patch.dict(os.environ, {}, clear=True):
             # Clear the env var if it exists
             os.environ.pop("SHINY_OTEL_COLLECT", None)
-            level = get_otel_collect_level()
+            level = get_level()
             assert level == OtelCollectLevel.ALL
 
     @pytest.mark.parametrize(
@@ -113,20 +113,21 @@ class TestGetOtelCollectLevel:
     def test_env_var_levels(self, env_value: str, expected: OtelCollectLevel) -> None:
         """Test that SHINY_OTEL_COLLECT environment variable is respected."""
         with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": env_value}):
-            level = get_otel_collect_level()
+            level = get_level()
             assert level == expected
 
-    def test_env_var_reactive_alias(self):
-        """Test that 'reactive' is aliased to 'reactivity'."""
+    def test_env_var_reactive_is_invalid(self):
+        """Test that 'reactive' is not a supported alias; it warns and defaults to ALL."""
         with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive"}):
-            level = get_otel_collect_level()
-            assert level == OtelCollectLevel.REACTIVITY
+            with pytest.warns(UserWarning, match="Invalid SHINY_OTEL_COLLECT"):
+                level = get_level()
+                assert level == OtelCollectLevel.ALL
 
     def test_invalid_env_var_defaults_to_all(self):
         """Test that invalid env var value defaults to ALL with warning."""
         with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "invalid_value"}):
             with pytest.warns(UserWarning, match="Invalid SHINY_OTEL_COLLECT"):
-                level = get_otel_collect_level()
+                level = get_level()
                 assert level == OtelCollectLevel.ALL
 
 

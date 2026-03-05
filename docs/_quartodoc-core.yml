@@ -334,8 +334,9 @@ quartodoc:
             desc: "Observability and telemetry instrumentation for Shiny applications"
           contents:
             - otel
-            - otel.otel_collect
-            - otel.get_otel_collect_level
+            - otel.suppress
+            - otel.collect
+            - otel.get_level
     - title: Types
       desc: ""
       contents:

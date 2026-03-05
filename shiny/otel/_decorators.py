@@ -1,234 +1,294 @@
 """
-User-facing decorators and context managers for OpenTelemetry collection control.
+User-facing OpenTelemetry collection control APIs (``suppress`` and ``collect``)
+usable as decorators or context managers.
 """
 
 from __future__ import annotations
 
 from contextvars import Token
-from typing import Any, Callable, Literal, TypeVar
+from typing import Any, Callable, TypeVar, overload
 
 from ._collect import OtelCollectLevel, _current_collect_level
 from ._function_attrs import set_otel_collect_level_on_func
 
-__all__ = ("otel_collect", "no_otel_collect")
+__all__ = ("collect", "suppress")
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Callable[..., Any])
 
 
-class OtelCollect:
-    """
-    Helper class that can be used as both context manager and decorator.
+class _OtelContext:
+    """Per-use context manager returned by suppress() or collect(). Owns its own Token."""
 
-    This class wraps the collect level management functionality, allowing
-    the same object to be used with `with` statements or as a function decorator.
-    """
-
-    def __init__(
-        self,
-        level: OtelCollectLevel,
-    ) -> None:
-        self.level = level
+    def __init__(self, level: OtelCollectLevel) -> None:
+        self._level = level
         self._token: Token[OtelCollectLevel | None] | None = None
 
     def __enter__(self) -> None:
-        """Set the collect level for the duration of the context."""
-        self._token = _current_collect_level.set(self.level)
+        self._token = _current_collect_level.set(self._level)
         return None
 
-    def __exit__(self, *args: Any) -> None:
-        """Reset the collect level to its previous value."""
+    def __exit__(self, *_: object) -> None:
         if self._token is not None:
             _current_collect_level.reset(self._token)
             self._token = None
 
-    def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
-        """Decorator implementation."""
-        # Reject reactive objects - otel_collect should decorate functions, not objects
-        from shiny.reactive._reactives import Calc_, Effect_
-        from shiny.render.renderer import Renderer
 
-        if isinstance(func, Calc_):
-            raise TypeError(
-                f"otel_collect() cannot be used on @reactive.calc objects. "
-                f"Apply @otel_collect before @reactive.calc:\n"
-                f"  @reactive.calc\n"
-                f'  @otel_collect("{self.level.name.lower()}")\n'
-                f"  def my_calc(): ..."
-            )
+def _stamp_or_raise(func: Any, level: OtelCollectLevel, name: str) -> Any:
+    """Validate func and stamp it with level, or raise a descriptive TypeError."""
+    # Reject reactive objects — decorator must wrap the plain function.
+    # These checks must come before the callable() check because some
+    # reactive objects (e.g., Effect_) are not callable.
+    from shiny.reactive._reactives import Calc_, Effect_
+    from shiny.render.renderer import Renderer
 
-        if isinstance(func, Effect_):
-            raise TypeError(
-                f"otel_collect() cannot be used on @reactive.effect objects. "
-                f"Apply @otel_collect before @reactive.effect:\n"
-                f"  @reactive.effect\n"
-                f'  @otel_collect("{self.level.name.lower()}")\n'
-                f"  def my_effect(): ..."
-            )
+    if isinstance(func, Calc_):
+        raise TypeError(
+            f"otel.{name} cannot be used on @reactive.calc objects. "
+            f"Apply @otel.{name} before @reactive.calc:\n"
+            f"  @reactive.calc\n"
+            f"  @otel.{name}\n"
+            f"  def my_calc(): ..."
+        )
 
-        if isinstance(func, Renderer):
-            raise TypeError(
-                f"otel_collect() cannot be used on render objects. "
-                f"Apply @otel_collect before the @render.func decorator:\n"
-                f"  @render.text  # or @render.plot, etc.\n"
-                f'  @otel_collect("{self.level.name.lower()}")\n'
-                f"  def my_output(): ..."
-            )
+    if isinstance(func, Effect_):
+        raise TypeError(
+            f"otel.{name} cannot be used on @reactive.effect objects. "
+            f"Apply @otel.{name} before @reactive.effect:\n"
+            f"  @reactive.effect\n"
+            f"  @otel.{name}\n"
+            f"  def my_effect(): ..."
+        )
 
-        # Mark the function with the desired collect level.
-        # This will be read by reactive objects (Calc_, Effect_) when they
-        # create spans for their execution.
-        set_otel_collect_level_on_func(func, self.level)
-        return func
+    if isinstance(func, Renderer):
+        raise TypeError(
+            f"otel.{name} cannot be used on render objects. "
+            f"Apply @otel.{name} before the @render.func decorator:\n"
+            f"  @render.text\n"
+            f"  @otel.{name}\n"
+            f"  def my_output(): ..."
+        )
+
+    if not callable(func):
+        raise TypeError(
+            f"otel.{name} received a non-callable argument: {type(func).__name__!r}. "
+            f"Use @otel.{name} (no parens) as a decorator, "
+            f"or otel.{name}() (with parens) as a context manager."
+        )
+
+    set_otel_collect_level_on_func(func, level)
+    return func
 
 
-def otel_collect(
-    level: Literal["none", "session", "reactive_update", "reactivity", "all"],
-) -> OtelCollect:
+@overload
+def suppress(func: T) -> T: ...  # @otel.suppress
+
+
+@overload
+def suppress() -> _OtelContext: ...  # with otel.suppress():
+
+
+def suppress(func: Any = None) -> Any:
     """
-    Control Shiny's OpenTelemetry collect level for a block of code or function.
+    Disable Shiny's internal OTel instrumentation for a function or block.
 
-    This can be used as either a context manager or a decorator to temporarily
-    set the collect level for **Shiny's internal telemetry only**, overriding
-    the default level from the `SHINY_OTEL_COLLECT` environment variable.
+    Serves a dual purpose depending on how it is called:
 
-    Note: This only affects spans and logs created by Shiny itself (session lifecycle,
-    reactive execution, value updates, etc.). Any OpenTelemetry spans you create
-    manually in your application code are unaffected and will continue to be
-    recorded normally.
+    - **As a no-parens decorator** (``@otel.suppress``): Stamps the plain function
+      with ``OtelCollectLevel.NONE`` at definition time. Reactive objects created
+      from the function will not emit Shiny internal spans or logs.
+    - **As a context manager** (``with otel.suppress():``): Sets the collection
+      level to ``NONE`` for the duration of the block. Reactive objects *created*
+      inside the block capture ``NONE`` as their level.
 
     Parameters
     ----------
-    level
-        Collect level to use. Must be one of: `"none"`, `"session"`,
-        `"reactive_update"`, `"reactivity"`, or `"all"`.
+    func
+        The plain function to suppress. Only provided when used as a decorator
+        (``@otel.suppress``, no parens). Must be a plain callable — passing a
+        ``reactive.calc``, ``reactive.effect``, or renderer object raises
+        ``TypeError`` with instructions for the correct decorator ordering.
 
     Returns
     -------
-    OtelCollect
-        A context manager when used with `with` statement, or a decorator when
-        applied to a function.
+    :
+        When used as a decorator: the original function, unchanged except for
+        the ``_shiny_otel_collect_level`` attribute being set.
+        When used as a context manager: an ``_OtelContext`` instance whose
+        ``__exit__`` restores the previous level via ``ContextVar.reset``.
+
+    Raises
+    ------
+    TypeError
+        If applied to a ``reactive.calc``, ``reactive.effect``, or renderer
+        object (``@otel.suppress`` must come before those decorators), or to
+        any non-callable.
+
+    Note
+    ----
+    Only affects spans and logs created by Shiny itself (reactive calculations and value
+    updates). User-defined OpenTelemetry spans are unaffected.
+
+    Collection level is captured at **initialization time** for reactive
+    objects — when ``reactive.calc``, ``reactive.effect``, or
+    ``reactive.value`` is instantiated. Changing the context variable after
+    initialization has no effect on already-created reactive objects.
+
+    Both ``otel.suppress`` and ``otel.collect`` are backed by a
+    ``ContextVar`` and are async-safe: concurrent tasks each see their own
+    level independently.
 
     Examples
     --------
-    **As a context manager:**
+    **Decorator (no parens):**
 
     ```python
-    from shiny.otel import otel_collect
+    from shiny import reactive, otel
 
-    # Disable telemetry for a specific block
-    with otel_collect("none"):
-        # No telemetry collected in this block
-        my_value = reactive.value(0)
-        my_value.set(10)
+    @reactive.calc
+    @otel.suppress
+    def sensitive_calc():
+        return load_api_key()
     ```
 
-    **As a decorator:**
+    **Context manager (parens required):**
 
     ```python
-    from shiny.otel import otel_collect
+    from shiny import reactive, otel
 
-    @otel_collect("none")
-    def expensive_computation():
-        # No telemetry collected when this function runs
-        result = do_something()
-        return result
+    with otel.suppress():
+        private_counter = reactive.value(0)
+
+        @reactive.calc
+        def private_calc():
+            return private_counter() * 2
     ```
 
-    **Nested context managers:**
+    **Nested with** ``otel.collect`` **to re-enable for one object:**
 
     ```python
-    from shiny.otel import otel_collect
+    from shiny import reactive, otel
 
-    with otel_collect("session"):
-        # Only session-level telemetry collected
-        with otel_collect("none"):
-            # No telemetry collected in this inner block
-            do_something()
-        # Back to session-level collection
+    with otel.suppress():
+        @reactive.calc
+        def private_calc():  # suppressed
+            return load_private_data()
+
+        with otel.collect():
+            @reactive.calc
+            def public_calc():  # re-enabled
+                return load_public_data()
     ```
-
-    **Available collect levels:**
-
-    - `"none"`: No telemetry collected
-    - `"session"`: Session lifecycle spans only
-    - `"reactive_update"`: Session + reactive update cycles
-    - `"reactivity"`: Session + reactive cycles + individual reactive executions and value logs
-    - `"all"`: All telemetry (same as `"reactivity"` currently)
 
     See Also
     --------
-    * `shiny.otel.OtelCollectLevel` - Enum defining collect levels (internal use)
+    * :func:`~shiny.otel.collect` - Re-enable Shiny's internal telemetry when the default has been lowered
+    * :func:`~shiny.otel.get_level` - Inspect the current collection level
     """
-    # Validate type
-    if not isinstance(level, str):
-        raise TypeError(f"level must be a string, got {type(level).__name__}")
-
-    # Enforce lowercase (matching Literal type hint)
-    valid_levels_list = ["none", "session", "reactive_update", "reactivity", "all"]
-    if level not in valid_levels_list:
-        valid_levels = ", ".join(f'"{lvl}"' for lvl in valid_levels_list)
-        raise ValueError(
-            f"Invalid collect level: {level!r}. "
-            f"Valid levels are: {valid_levels} (must be lowercase)"
-        )
-
-    # Convert string to enum (now guaranteed to be valid lowercase)
-    enum_level = OtelCollectLevel[level.upper()]
-
-    return OtelCollect(enum_level)
+    if func is None:
+        return _OtelContext(OtelCollectLevel.NONE)
+    return _stamp_or_raise(func, OtelCollectLevel.NONE, "suppress")
 
 
-def no_otel_collect() -> OtelCollect:
+@overload
+def collect(func: T) -> T: ...  # @otel.collect
+
+
+@overload
+def collect() -> _OtelContext: ...  # with otel.collect():
+
+
+def collect(func: Any = None) -> Any:
     """
-    Disable Shiny's OpenTelemetry collection for a block of code or function.
+    Enable Shiny's internal OTel instrumentation for a function or block.
 
-    This is a convenience function equivalent to `otel_collect("none")`. It can be
-    used as either a context manager or a decorator to temporarily disable all
-    **Shiny internal telemetry** collection.
+    Counterpart to :func:`~shiny.otel.suppress`. Useful when the global default
+    has been lowered via ``SHINY_OTEL_COLLECT`` or when inside a
+    ``with otel.suppress():`` block and a specific reactive object needs
+    telemetry re-enabled.
 
-    Note: This only affects spans and logs created by Shiny itself. Any OpenTelemetry
-    spans you create manually in your application code are unaffected.
+    Serves a dual purpose depending on how it is called:
+
+    - **As a no-parens decorator** (``@otel.collect``): Stamps the plain
+      function with ``OtelCollectLevel.ALL`` at definition time. Reactive
+      objects created from the function will emit Shiny internal spans and
+      logs regardless of the surrounding context.
+    - **As a context manager** (``with otel.collect():``): Sets the
+      collection level to ``ALL`` for the duration of the block. Reactive
+      objects *created* inside the block capture ``ALL`` as their level.
+
+    Parameters
+    ----------
+    func
+        The plain function to enable collection for. Only provided when used
+        as a decorator (``@otel.collect``, no parens). Must be a plain
+        callable — passing a ``reactive.calc``, ``reactive.effect``, or
+        renderer object raises ``TypeError`` with instructions for the
+        correct decorator ordering.
 
     Returns
     -------
-    OtelCollect
-        A context manager when used with `with` statement, or a decorator when
-        applied to a function.
+    :
+        When used as a decorator: the original function, unchanged except for
+        the ``_shiny_otel_collect_level`` attribute being set.
+        When used as a context manager: an ``_OtelContext`` instance whose
+        ``__exit__`` restores the previous level via ``ContextVar.reset``.
+
+    Raises
+    ------
+    TypeError
+        If applied to a ``reactive.calc``, ``reactive.effect``, or renderer
+        object (``@otel.collect`` must come before those decorators), or to
+        any non-callable.
+
+    Note
+    ----
+    Only affects spans and logs created by Shiny itself. User-defined
+    OpenTelemetry spans are unaffected.
+
+    Collection level is captured at **initialization time** for reactive
+    objects. ``otel.collect`` overrides the surrounding context level —
+    including a ``SHINY_OTEL_COLLECT=none`` environment variable — for
+    reactive objects created within its scope.
+
+    Both ``otel.collect`` and ``otel.suppress`` are backed by a
+    ``ContextVar`` and are async-safe: concurrent tasks each see their own
+    level independently.
 
     Examples
     --------
-    **As a context manager:**
+    **Decorator (no parens) — override a low global default:**
 
     ```python
-    from shiny.otel import no_otel_collect
+    from shiny import reactive, otel
 
-    # Disable telemetry for sensitive operations
-    with no_otel_collect():
-        # No telemetry collected in this block
-        api_key = load_secret()
-        process_sensitive_data(api_key)
+    # Even with SHINY_OTEL_COLLECT=none, this calc is always instrumented
+    @reactive.calc
+    @otel.collect
+    def public_calc():
+        return load_public_data()
     ```
 
-    **As a decorator:**
+    **Context manager — re-enable within a suppress block:**
 
     ```python
-    from shiny.otel import no_otel_collect
+    from shiny import reactive, otel
 
-    @no_otel_collect()
-    def handle_passwords():
-        # No telemetry collected when this function runs
-        validate_and_store_password()
+    with otel.suppress():
+        @reactive.calc
+        def private_calc():
+            return load_private_data()   # suppressed
+
+        with otel.collect():
+            @reactive.calc
+            def public_calc():
+                return load_public_data()  # re-enabled
     ```
-
-    **Common use cases:**
-
-    - Processing sensitive data (passwords, API keys, PII)
-    - High-frequency operations where telemetry overhead matters
-    - Compliance requirements to avoid sending certain data to external systems
 
     See Also
     --------
-    * `shiny.otel.otel_collect` - Full control over collect levels
-    * `shiny.otel.OtelCollectLevel` - Enum defining all collect levels
+    * :func:`~shiny.otel.suppress` - Disable Shiny's internal telemetry for sensitive operations
+    * :func:`~shiny.otel.get_level` - Inspect the current collection level
     """
-    return otel_collect("none")
+    if func is None:
+        return _OtelContext(OtelCollectLevel.ALL)
+    return _stamp_or_raise(func, OtelCollectLevel.ALL, "collect")
