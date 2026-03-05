@@ -1,7 +1,7 @@
 name: Build API docs and Shinylive for GitHub Pages
 
-# Allow for `main` branch to build full website and deploy (with shinylive, saved as artifact)
-# Allow branches that start with `docs-` to build full website, but not deploy (with shinylive, not saved as artifact)
+# Allow for `main` branch to build full website and deploy (saving dev shinylive assets as an artifact)
+# Allow branches that start with `docs-` to build full website, but not deploy (builds dev shinylive assets, no artifact)
 # Allow for PRs to build quartodoc only. (No shinylive, no site build, no deploy)
 # Manual workflow_dispatch can build only shinylive (skip docs) or full build
 
