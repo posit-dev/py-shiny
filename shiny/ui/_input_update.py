@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 _note = """
     The input updater functions send a message to the client, telling it to change the
     settings of an input object. The messages are collected and sent after all the
-    observers (including outputs) have finished running.
+    reactive effects (including outputs) have finished running.
 
     The syntax of these functions is similar to the functions that created the inputs in
     the first place. For example, :func:`~shiny.ui.input_numeric` and

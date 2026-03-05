@@ -326,6 +326,17 @@ quartodoc:
             - reactive.ExtendedTask.invoke
             - reactive.ExtendedTask.result
             - reactive.ExtendedTask.cancel
+        - kind: page
+          path: OpenTelemetry
+          flatten: true
+          summary:
+            name: "OpenTelemetry"
+            desc: "Observability and telemetry instrumentation for Shiny applications"
+          contents:
+            - otel
+            - otel.suppress
+            - otel.collect
+            - otel.get_level
     - title: Types
       desc: ""
       contents:
