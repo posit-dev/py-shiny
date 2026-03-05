@@ -222,4 +222,3 @@ Use as a context manager (parens required):
 Note: This only affects Shiny's internal spans and logs. Your own custom
 OpenTelemetry spans and logs are unaffected.
 """
-
