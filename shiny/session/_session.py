@@ -57,13 +57,12 @@ from ..otel._attributes import (
     get_session_id_attrs,
 )
 from ..otel._collect import OtelCollectLevel, _get_env_level
-from ..otel._decorators import suppress as _otel_suppress
+from ..otel._decorators import suppress as otel_suppress
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
-from ..reactive import Effect_, Value, effect
+from ..reactive import Effect_, Value, effect, isolate
 from ..reactive import flush as reactive_flush
-from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
@@ -1916,7 +1915,7 @@ class Outputs:
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
-            @_otel_suppress
+            @otel_suppress
             async def output_obs():
                 if self._session.is_stub_session():
                     raise RuntimeError(
