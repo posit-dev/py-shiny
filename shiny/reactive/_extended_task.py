@@ -23,7 +23,7 @@ from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span
-from ._core import Context, flush, lock
+from ._core import Context, flush
 from ._reactives import Value, isolate
 
 P = ParamSpec("P")
@@ -193,22 +193,21 @@ class ExtendedTask(Generic[P, R]):
         self._task = None
 
         async def _impl():
-            async with lock():
-                if task.cancelled():
-                    self.status.set("cancelled")
-                elif task.exception() is not None:
-                    self.error.set(cast(BaseException, task.exception()))
-                    self.status.set("error")
-                else:
-                    self.value.set(task.result())
-                    self.status.set("success")
+            if task.cancelled():
+                self.status.set("cancelled")
+            elif task.exception() is not None:
+                self.error.set(cast(BaseException, task.exception()))
+                self.status.set("error")
+            else:
+                self.value.set(task.result())
+                self.status.set("success")
 
+            await flush()
+
+            if len(self._invocation_queue) > 0:
+                next_invocation = self._invocation_queue.pop(0)
+                next_invocation()
                 await flush()
-
-                if len(self._invocation_queue) > 0:
-                    next_invocation = self._invocation_queue.pop(0)
-                    next_invocation()
-                    await flush()
 
         asyncio.create_task(_impl())
 
