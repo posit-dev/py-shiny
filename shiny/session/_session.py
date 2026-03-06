@@ -1015,7 +1015,7 @@ class AppSession(Session):
                             # aren't invoked until after handle_request() returns.
                             async def wrap_content_async() -> AsyncIterable[bytes]:
                                 async with self._reactive_lock:
-                                    with session_context(self), isolate():
+                                    with session_context(self):
                                         with isolate():
                                             async for chunk in contents:
                                                 if isinstance(chunk, str):
