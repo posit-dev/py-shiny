@@ -166,8 +166,8 @@ class ReactiveEnvironment:
             required_level=OtelCollectLevel.REACTIVE_UPDATE,
             collection_level=_get_env_level(),
         ):
-          await self._flush_concurrent()
-          await self._flushed_callbacks.invoke()
+            await self._flush_concurrent()
+            await self._flushed_callbacks.invoke()
 
     async def _flush_concurrent(self) -> None:
         """Start pending flush callbacks concurrently, one at a time from the
@@ -183,32 +183,33 @@ class ReactiveEnvironment:
         ``create_task`` adds the coroutine's first step, then ``sleep(0)`` adds
         our resume callback after it, so the task's sync portion always runs
         before we dequeue the next context.
-        """
-        tasks: list[asyncio.Task[None]] = []
-        while not self._pending_flush_queue.empty():
-            ctx = self._pending_flush_queue.get()
-            task = asyncio.create_task(ctx.execute_flush_callbacks())
-            tasks.append(task)
-            # Yield to the event loop so the task's synchronous portion runs
-            # before we dequeue the next context. This is what allows newly-
-            # invalidated effects to enter the queue in priority order.
-            await asyncio.sleep(0)
 
-        # Wait for all started tasks to finish (their async tails).
-        if tasks:
+        Loops until the queue is fully drained, including any new effects
+        invalidated during the async portions of already-started tasks.
+        """
+        while not self._pending_flush_queue.empty():
+            tasks: list[asyncio.Task[None]] = []
+
+            while not self._pending_flush_queue.empty():
+                ctx = self._pending_flush_queue.get()
+                task = asyncio.create_task(ctx.execute_flush_callbacks())
+                tasks.append(task)
+                # Yield to the event loop so the task's synchronous portion runs
+                # before we dequeue the next context. This is what allows newly-
+                # invalidated effects to enter the queue in priority order.
+                await asyncio.sleep(0)
+
+            # Wait for all started tasks to finish (their async tails).
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for result in results:
                 if isinstance(result, BaseException):
                     # Log the exception but don't re-raise; effects handle
                     # their own errors internally
                     traceback.print_exception(
-                        type(result), result, result.__traceback__
+                        type(result),
+                        result,
+                        result.__traceback__,
                     )
-
-        # If any tasks invalidated new effects during their async portions,
-        # flush those too (recursive).
-        if not self._pending_flush_queue.empty():
-            await self._flush_concurrent()
 
     async def _flush_sequential(self) -> None:
         # Sequential flush: instead of storing the tasks in a list and calling gather()

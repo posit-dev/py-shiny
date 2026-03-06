@@ -719,7 +719,6 @@ class AppSession(Session):
 
                             # Progress messages may have queued up; let them drain
                             await asyncio.sleep(0)
-
                             await reactive_flush()
 
                     elif message_obj["method"] == "update":
@@ -736,6 +735,7 @@ class AppSession(Session):
                                 # Set the session context for otel logging purposes
                                 with session_context(self):
                                     self._manage_inputs(_data)
+
                                 await asyncio.sleep(0)
                                 await reactive_flush()
 
