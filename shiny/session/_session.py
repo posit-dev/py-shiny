@@ -587,7 +587,8 @@ class AppSession(Session):
         # Per-session reactive lock (replaces the old global lock)
         self._reactive_lock: asyncio.Lock = asyncio.Lock()
 
-        # Cycle start action queue: holds callbacks to run when no effects are busy.
+        # Cycle start action queue: Stores callbacks while effects are busy; they
+        # can run when everything in this session is idle.
         # Input processing is deferred here while effects are executing, ensuring
         # input values remain stable during effect execution (R Shiny-style).
         self._cycle_start_action_queue: list[Callable[[], Awaitable[None]]] = []
