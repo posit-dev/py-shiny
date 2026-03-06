@@ -944,6 +944,22 @@ class AppSession(Session):
 
                         wrapped_contents: AsyncIterable[bytes]
 
+                        # Concurrency note: The reactive lock was held above for the
+                        # initial handler invocation (calling download.handler(),
+                        # resolving filename/content_type thunks). For streaming
+                        # downloads, the lock is then released when the outer `async
+                        # with` block exits, and re-acquired below for each iteration
+                        # of the content generator. This means the lock is
+                        # acquired-released-acquired-released for each chunk yielded.
+                        #
+                        # TODO: Consider whether we need to hold the reactive lock for
+                        # the entire streaming iteration, or only for the first chunk.
+                        # The common pattern is: do some reactive/async computation
+                        # before the first yield, then stream pure I/O after that. If
+                        # so, we could acquire the lock once, yield the first chunk,
+                        # then release it and stream the rest without the lock. This
+                        # would reduce contention for long-running downloads.
+
                         if isinstance(contents, AsyncIterable):
                             # Need to wrap the app-author-provided iterator in a
                             # callback that installs the appropriate context mgrs.
@@ -952,7 +968,7 @@ class AppSession(Session):
                             # aren't invoked until after handle_request() returns.
                             async def wrap_content_async() -> AsyncIterable[bytes]:
                                 async with self._reactive_lock:
-                                    with session_context(self):
+                                    with session_context(self), isolate():
                                         with isolate():
                                             async for chunk in contents:
                                                 if isinstance(chunk, str):
