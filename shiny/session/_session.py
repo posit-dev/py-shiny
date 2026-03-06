@@ -51,9 +51,8 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
-from ..reactive import Effect_, Value, effect
+from ..reactive import Effect_, Value, effect, isolate
 from ..reactive import flush as reactive_flush
-from ..reactive import isolate
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
 from ..types import (
@@ -899,46 +898,49 @@ class AppSession(Session):
         elif action == "download" and request.method == "GET" and subpath:
             download_id = subpath
             if download_id in self._downloads:
-                with session_context(self):
-                    with isolate():
-                        download = self._downloads[download_id]
-                        filename = read_thunk_opt(download.filename)
-                        content_type = read_thunk_opt(download.content_type)
-                        contents = download.handler()
+                async with self._reactive_lock:
+                    with session_context(self):
+                        with isolate():
+                            download = self._downloads[download_id]
+                            filename = read_thunk_opt(download.filename)
+                            content_type = read_thunk_opt(download.content_type)
+                            contents = download.handler()
 
-                        if filename is None:
-                            if isinstance(contents, str):
-                                filename = os.path.basename(contents)
+                            if filename is None:
+                                if isinstance(contents, str):
+                                    filename = os.path.basename(contents)
+                                else:
+                                    warnings.warn(
+                                        "Unable to infer a filename for the "
+                                        f"'{download_id}' download handler; please use "
+                                        "@render.download(filename=) to specify one "
+                                        "manually",
+                                        SessionWarning,
+                                        stacklevel=2,
+                                    )
+                                    filename = download_id
+
+                            if content_type is None:
+                                content_type = _utils.guess_mime_type(filename)
+                            content_disposition_filename = urllib.parse.quote(filename)
+                            if content_disposition_filename != filename:
+                                content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"
                             else:
-                                warnings.warn(
-                                    "Unable to infer a filename for the "
-                                    f"'{download_id}' download handler; please use "
-                                    "@render.download(filename=) to specify one "
-                                    "manually",
-                                    SessionWarning,
-                                    stacklevel=2,
+                                content_disposition = (
+                                    f'attachment; filename="{filename}"'
                                 )
-                                filename = download_id
+                            headers = {
+                                "Content-Disposition": content_disposition,
+                                "Cache-Control": "no-store",
+                            }
 
-                        if content_type is None:
-                            content_type = _utils.guess_mime_type(filename)
-                        content_disposition_filename = urllib.parse.quote(filename)
-                        if content_disposition_filename != filename:
-                            content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"
-                        else:
-                            content_disposition = f'attachment; filename="{filename}"'
-                        headers = {
-                            "Content-Disposition": content_disposition,
-                            "Cache-Control": "no-store",
-                        }
-
-                        if isinstance(contents, str):
-                            # contents is the path to a file
-                            return FileResponse(
-                                Path(contents),
-                                headers=headers,
-                                media_type=content_type,
-                            )
+                            if isinstance(contents, str):
+                                # contents is the path to a file
+                                return FileResponse(
+                                    Path(contents),
+                                    headers=headers,
+                                    media_type=content_type,
+                                )
 
                         wrapped_contents: AsyncIterable[bytes]
 
@@ -949,27 +951,39 @@ class AppSession(Session):
                             # implementation of handle_request(), but the iterators
                             # aren't invoked until after handle_request() returns.
                             async def wrap_content_async() -> AsyncIterable[bytes]:
-                                with session_context(self):
-                                    with isolate():
-                                        async for chunk in contents:
-                                            if isinstance(chunk, str):
-                                                yield chunk.encode(download.encoding)
-                                            else:
-                                                yield chunk
+                                async with self._reactive_lock:
+                                    with session_context(self):
+                                        with isolate():
+                                            async for chunk in contents:
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
 
+                            # Note that this does NOT start execution of
+                            # wrap_content_async; in Python, async functions are lazily
+                            # executed
                             wrapped_contents = wrap_content_async()
 
                         else:  # isinstance(contents, Iterable):
 
                             async def wrap_content_sync() -> AsyncIterable[bytes]:
-                                with session_context(self):
-                                    with isolate():
-                                        for chunk in contents:
-                                            if isinstance(chunk, str):
-                                                yield chunk.encode(download.encoding)
-                                            else:
-                                                yield chunk
+                                async with self._reactive_lock:
+                                    with session_context(self):
+                                        with isolate():
+                                            for chunk in contents:
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
 
+                            # Note that this does NOT start execution of
+                            # wrap_content_async; in Python, async functions are lazily
+                            # executed
                             wrapped_contents = wrap_content_sync()
 
                         # In streaming downloads, we send a 200 response, but if an
