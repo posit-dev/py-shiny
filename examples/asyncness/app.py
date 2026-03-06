@@ -2,7 +2,7 @@ import asyncio
 import time
 from pathlib import Path
 
-from shiny import App, reactive, render, req, ui
+from shiny import App, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.p(
