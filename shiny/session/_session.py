@@ -153,6 +153,9 @@ class OutBoundMessageQueues:
         self.errors: dict[str, Any] = {}
         self.input_messages: list[dict[str, Any]] = []
 
+    def is_empty(self) -> bool:
+        return not self.values and not self.errors and not self.input_messages
+
     def reset(self) -> None:
         self.values.clear()
         self.errors.clear()
@@ -1164,16 +1167,17 @@ class AppSession(Session):
         try:
             omq = self._outbound_message_queues
 
-            message: dict[str, object] = {
-                "values": omq.values,
-                "inputMessages": omq.input_messages,
-                "errors": omq.errors,
-            }
+            if not omq.is_empty():
+                message: dict[str, object] = {
+                    "values": omq.values,
+                    "inputMessages": omq.input_messages,
+                    "errors": omq.errors,
+                }
 
-            try:
-                await self._send_message(message)
-            finally:
-                self._outbound_message_queues.reset()
+                try:
+                    await self._send_message(message)
+                finally:
+                    self._outbound_message_queues.reset()
         finally:
             with session_context(self):
                 await self._flushed_callbacks.invoke()
