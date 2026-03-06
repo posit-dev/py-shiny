@@ -78,3 +78,44 @@ async def test_noop_lock_locked_returns_false():
         warnings.simplefilter("always")
         lock = reactive.lock()
     assert lock.locked() is False
+
+
+# =============================================================================
+# _flush_concurrent: outer loop catches newly-invalidated effects
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_concurrent_flush_runs_newly_invalidated_chain():
+    """
+    Effect A sets a Value, which invalidates Effect B.
+    Both must run within the same flush() call.
+    Regression test for the batch-gather-without-outer-loop bug: without the
+    outer while-loop in _flush_concurrent, Effect B would be silently dropped.
+    """
+    from shiny.reactive import Value, effect, flush
+
+    x: Value[int] = Value(1)
+    y: Value[int] = Value(0)
+    b_ran_with: list[int] = []
+
+    @effect()
+    def effect_a():
+        val = x()
+        y.set(val * 10)
+
+    @effect()
+    def effect_b():
+        b_ran_with.append(y())
+
+    # Initial flush: both effects run
+    await flush()
+    assert b_ran_with == [10]
+
+    # Now invalidate x; effect_a runs (sets y), then effect_b must also run
+    # in the SAME flush — not be dropped
+    x.set(2)
+    b_ran_with.clear()
+    await flush()
+
+    assert b_ran_with == [20]
