@@ -23,6 +23,9 @@ from ._deprecated import *
 
 from . import module
 
+# OpenTelemetry support
+from . import otel
+
 if _is_pyodide:
     # In pyodide, avoid importing _main because it imports packages that aren't
     # available.
@@ -44,6 +47,7 @@ __all__ = (
     "render",
     "session",
     "ui",
+    "otel",
     # _app.py
     "App",
     # _main.py

@@ -51,6 +51,16 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
+from ..otel._attributes import (
+    extract_http_attributes,
+    extract_source_ref,
+    get_session_id_attrs,
+)
+from ..otel._collect import OtelCollectLevel, _get_env_level
+from ..otel._decorators import suppress as otel_suppress
+from ..otel._function_attrs import resolve_func_otel_level
+from ..otel._labels import create_otel_span_name
+from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
 from ..reactive import Effect_, Value, effect, isolate
 from ..reactive import flush as reactive_flush
 from ..reactive._core import on_flushed as reactive_on_flushed
@@ -594,10 +604,17 @@ class AppSession(Session):
         self._cycle_start_action_queue.clear()
         self._busy_count = 0
 
-        try:
-            await self._on_ended_callbacks.invoke()
-        finally:
-            self.app._remove_session(self)
+        # Wrap session cleanup in session.end span (or no-op if not collecting)
+        async with shiny_otel_span(
+            "session.end",
+            attributes=get_session_id_attrs(self),
+            required_level=OtelCollectLevel.SESSION,
+            collection_level=_get_env_level(),
+        ):
+            try:
+                await self._on_ended_callbacks.invoke()
+            finally:
+                self.app._remove_session(self)
 
     def is_stub_session(self) -> Literal[False]:
         return False
@@ -607,6 +624,10 @@ class AppSession(Session):
         await self._run_session_ended_tasks()
 
     async def _run(self) -> None:
+        await self._run_impl()
+
+    async def _run_impl(self) -> None:
+        """Implementation of session execution loop."""
         conn_state: ConnectionState = ConnectionState.Start
 
         def verify_state(expected_state: ConnectionState) -> None:
@@ -680,18 +701,23 @@ class AppSession(Session):
                             message_obj = typing.cast(ClientMessageInit, message_obj)
                             self._manage_inputs(message_obj["data"])
 
-                            with session_context(self):
-                                self.app.server(self.input, self.output, self)
+                            # Wrap server function initialization in session.start span
+                            async with shiny_otel_span(
+                                "session.start",
+                                attributes=lambda: {
+                                    **get_session_id_attrs(self),
+                                    **extract_http_attributes(self.http_conn),
+                                },
+                                required_level=OtelCollectLevel.SESSION,
+                                collection_level=_get_env_level(),
+                            ):
+                                with session_context(self):
+                                    self.app.server(self.input, self.output, self)
 
                             # Progress messages may have queued up; let them drain
                             await asyncio.sleep(0)
 
                             await reactive_flush()
-
-                            # TODO: Remove this call to reactive_flush() once https://github.com/posit-dev/py-shiny/issues/1889 is fixed
-                            # Workaround: Any `on_flushed()` calls from bookmark's `on_restored()` will be flushed here
-                            if self.bookmark.store != "disable":
-                                await reactive_flush()
 
                     elif message_obj["method"] == "update":
                         # Queue input updates via cycle start action
@@ -704,7 +730,9 @@ class AppSession(Session):
                         ) -> None:
                             async with self._reactive_lock:
                                 verify_state(ConnectionState.Running)
-                                self._manage_inputs(_data)
+                                # Set the session context for otel logging purposes
+                                with session_context(self):
+                                    self._manage_inputs(_data)
                                 await asyncio.sleep(0)
                                 await reactive_flush()
 
@@ -934,13 +962,29 @@ class AppSession(Session):
                                 "Cache-Control": "no-store",
                             }
 
-                            if isinstance(contents, str):
-                                # contents is the path to a file
-                                return FileResponse(
+                        otel_attrs = {
+                            **get_session_id_attrs(self),
+                            "download.id": download_id,
+                            "download.filename": filename,
+                        }
+
+                        if isinstance(contents, str):
+                            # contents is the path to a file
+
+                            # Span captures download initiation; the actual file
+                            # transfer is handled by Starlette's ASGI layer after
+                            # we return the FileResponse object.
+                            async with shiny_otel_span(
+                                "download",
+                                attributes=otel_attrs,
+                                required_level=OtelCollectLevel.REACTIVITY,
+                            ):
+                                file_response = FileResponse(
                                     Path(contents),
                                     headers=headers,
                                     media_type=content_type,
                                 )
+                            return file_response
 
                         wrapped_contents: AsyncIterable[bytes]
 
@@ -1001,6 +1045,13 @@ class AppSession(Session):
                             # wrap_content_async; in Python, async functions are lazily
                             # executed
                             wrapped_contents = wrap_content_sync()
+
+                        wrapped_contents = shiny_otel_span_stream(
+                            "download",
+                            wrapped_contents,
+                            attributes=otel_attrs,
+                            required_level=OtelCollectLevel.REACTIVITY,
+                        )
 
                         # In streaming downloads, we send a 200 response, but if an
                         # error occurs in the middle of it, the client needs to know.
@@ -1485,7 +1536,7 @@ class Inputs:
     """
 
     def __init__(
-        self, values: dict[str, Value[Any]], ns: Callable[[str], str] = Root
+        self, values: dict[str, Value[Any]], ns: Callable[[str], ResolvedId] = Root
     ) -> None:
         self._map = values
         self._ns = ns
@@ -1495,15 +1546,35 @@ class Inputs:
         if not isinstance(value, reactive.Value):
             raise TypeError("`value` must be a reactive.Value object.")
 
+        # Set the name on the Value for OpenTelemetry logging (before namespacing)
+        # The module ns will be included separately
+        # Keys starting with "." (like .clientdata_*) use the full key as the name
+        if key.startswith("."):
+            value._name = key
+        else:
+            value._name = f"input.{key}"
         self._map[self._ns(key)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
+        original_key = key
         key = self._ns(key)
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value[Any](read_only=True)
+            # Set the name for OpenTelemetry logging (before namespacing)
+            # The module ns will be included separately
+            # Exclude things like `.clientData`
+            value_name = (
+                original_key
+                if original_key.startswith(".")
+                else f"input.{original_key}"
+            )
+
+            new_value = Value[Any](read_only=True, name=value_name)
+
+            # Do not call __setitem__ directly here. The _name would be undone
+            self._map[key] = new_value
 
         return self._map[key]
 
@@ -1806,7 +1877,12 @@ class ClientData:
                 f"ClientData value '{key}' not found. Please report this issue."
             )
 
-        return self._session.root_scope().input[id]()
+        val = self._session.root_scope().input[id]
+        if val._name is None:
+            # No leading `.`
+            val._name = str(id).removeprefix(".")
+
+        return val()
 
     def _read_output(self, id: Id | None, key: str) -> str | None:
         self._check_current_context(f"output_{key}")
@@ -1822,12 +1898,17 @@ class ClientData:
             )
 
         # Module support
+        non_namespace_id = id
         if not isinstance(id, ResolvedId):
             id = self._session.ns(id)
 
         input_id = ResolvedId(f".clientdata_output_{id}_{key}")
         if input_id in self._session.root_scope().input:
-            return self._session.root_scope().input[input_id]()
+            val = self._session.root_scope().input[input_id]
+            if val._name is None:
+                # No leading `.`
+                val._name = f"clientdata_output_{non_namespace_id}_{key}"
+            return val()
         else:
             return None
 
@@ -1929,6 +2010,16 @@ class Outputs:
             # renderer is a Renderer object. Give it a bit of metadata.
             renderer._set_output_metadata(output_id=output_id)
 
+            # Gather otel info for inner method
+            renderer_func = getattr(renderer.fn, "_orig_fn", renderer.fn)
+            output_otel_label = create_otel_span_name(
+                func=renderer_func,
+                label_type="output",
+                session=self._session,
+            )
+            output_otel_attrs = extract_source_ref(renderer_func)
+            output_otel_level = resolve_func_otel_level(renderer_func)
+
             renderer._on_register()
 
             self.remove(output_name)
@@ -1937,6 +2028,7 @@ class Outputs:
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
+            @otel_suppress
             async def output_obs():
                 if self._session.is_stub_session():
                     raise RuntimeError(
@@ -1950,9 +2042,15 @@ class Outputs:
                 )
 
                 try:
-                    with session.clientdata._output_name_ctx(output_name):
-                        # Call the app's renderer function
-                        value = await renderer.render()
+                    async with shiny_otel_span(
+                        output_otel_label,
+                        attributes=output_otel_attrs,
+                        required_level=OtelCollectLevel.REACTIVITY,
+                        collection_level=output_otel_level,
+                    ):
+                        with session.clientdata._output_name_ctx(output_name):
+                            # Call the app's renderer function
+                            value = await renderer.render()
 
                     session._outbound_message_queues.set_value(output_name, value)
 

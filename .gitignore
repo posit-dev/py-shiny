@@ -133,3 +133,4 @@ tests/inspect-ai/scripts/test_metadata.json
 
 # Claude
 /.claude/*.local.*
+docs/plans/

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from .._docstring import add_example
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
+from ..otel._decorators import suppress as otel_suppress
 from ._button import BOOKMARK_ID
 from ._restore_state import RestoreState
 from ._save_state import BookmarkState
@@ -375,12 +376,14 @@ class BookmarkApp(Bookmark):
             # Fires when the bookmark button is clicked.
             @reactive.effect
             @reactive.event(root_session.input[BOOKMARK_ID])
+            @otel_suppress
             async def _():
                 await root_session.bookmark()
 
             # If there was an error initializing the current restore context, show
             # notification in the client.
             @reactive.effect
+            @otel_suppress
             def init_error_message():
                 if self._restore_context and self._restore_context._init_error_msg:
                     notification_show(
@@ -393,14 +396,13 @@ class BookmarkApp(Bookmark):
             # Run the on_restore function at the beginning of the flush cycle, but after
             # the server function has been executed.
             @reactive.effect(priority=1000000)
+            @otel_suppress
             async def invoke_on_restore_callbacks():
                 if self._on_restore_callbacks.count() == 0:
                     return
 
                 with session_context(root_session):
-
                     try:
-                        # ?withLogErrors
                         with reactive.isolate():
                             if self._restore_context and self._restore_context.active:
                                 restore_state = self._restore_context.as_state()
@@ -432,7 +434,7 @@ class BookmarkApp(Bookmark):
                     except Exception as e:
                         warnings.warn(
                             f"Error calling on_restored callback: {e}",
-                            stacklevel=1,
+                            stacklevel=2,
                         )
                         notification_show(
                             f"Error calling on_restored callback: {e}",
@@ -476,7 +478,6 @@ class BookmarkApp(Bookmark):
         if self.store == "disable":
             return None
 
-        # ?withLogErrors
         from ..bookmark._bookmark import BookmarkState
         from ..session import session_context
 
@@ -547,9 +548,9 @@ class BookmarkApp(Bookmark):
                 with session_context(self._root_session):
                     await self._on_bookmarked_callbacks.invoke(full_url)
             else:
-                # Barret:
-                # This action feels weird. I don't believe it should occur
-                # Instead, I believe it should update the query string and set the user's clipboard with a UI notification in the corner.
+                # TODO: Consider improving default bookmarking UX
+                # Currently shows modal dialog, but could instead update query string
+                # and copy to clipboard with a non-blocking notification
                 with session_context(self._root_session):
                     await self.show_bookmark_url_modal(full_url)
 
