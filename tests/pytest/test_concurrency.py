@@ -119,3 +119,138 @@ async def test_concurrent_flush_runs_newly_invalidated_chain():
     await flush()
 
     assert b_ran_with == [20]
+
+
+# =============================================================================
+# _cycle_start_action_queue / _start_cycle
+# =============================================================================
+
+
+def _make_session():
+    from shiny import App, ui
+    from shiny._connection import MockConnection
+
+    conn = MockConnection()
+    return App(ui.TagList(), None)._create_session(conn)
+
+
+@pytest.mark.asyncio
+async def test_cycle_action_runs_immediately_when_idle():
+    """Action queued when busy_count==0 executes without waiting."""
+    session = _make_session()
+    ran: list[str] = []
+
+    async def action() -> None:
+        ran.append("done")
+
+    assert session._busy_count == 0
+    await session._cycle_start_action(action)
+    assert ran == ["done"]
+
+
+@pytest.mark.asyncio
+async def test_cycle_action_deferred_while_busy():
+    """Action queued when busy_count>0 does NOT run until busy_count returns to 0."""
+    import asyncio
+
+    session = _make_session()
+    ran: list[str] = []
+
+    async def action() -> None:
+        ran.append("done")
+
+    session._increment_busy_count()
+    assert session._busy_count == 1
+
+    await session._cycle_start_action(action)
+    assert ran == []  # still deferred
+
+    session._decrement_busy_count()
+
+    # Two yields: one for create_task scheduling, one for the task body
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+
+    assert ran == ["done"]
+
+
+@pytest.mark.asyncio
+async def test_cycle_actions_execute_in_fifo_order():
+    """Two actions queued while busy execute in the order they were added."""
+    import asyncio
+
+    session = _make_session()
+    order: list[int] = []
+
+    async def action1() -> None:
+        order.append(1)
+
+    async def action2() -> None:
+        order.append(2)
+
+    session._increment_busy_count()
+    await session._cycle_start_action(action1)
+    await session._cycle_start_action(action2)
+    assert order == []
+
+    session._decrement_busy_count()
+    # action1 runs; then _start_cycle schedules action2 via create_task
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+
+    assert order == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_start_cycle_aborts_if_busy_count_nonzero():
+    """
+    _start_cycle is scheduled via create_task, but before it runs a new
+    effect increments busy_count. _start_cycle should abort.
+    """
+    import asyncio
+
+    session = _make_session()
+    ran: list[str] = []
+
+    async def action() -> None:
+        ran.append("done")
+
+    # First effect finishes, scheduling _start_cycle
+    session._increment_busy_count()
+    await session._cycle_start_action(action)
+    session._decrement_busy_count()
+    # _start_cycle is now scheduled but hasn't run yet
+
+    # New effect starts before _start_cycle runs
+    session._increment_busy_count()
+
+    # Let _start_cycle run — it should bail because busy_count == 1
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    assert ran == []
+
+    # Second effect finishes
+    session._decrement_busy_count()
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    assert ran == ["done"]
+
+
+@pytest.mark.asyncio
+async def test_cycle_queue_cleared_on_session_end():
+    """Pending cycle actions are discarded when the session ends."""
+    session = _make_session()
+    ran: list[str] = []
+
+    async def action() -> None:
+        ran.append("done")
+
+    session._increment_busy_count()
+    await session._cycle_start_action(action)
+    assert len(session._cycle_start_action_queue) == 1
+
+    await session._run_session_ended_tasks()
+    assert len(session._cycle_start_action_queue) == 0
+    assert session._busy_count == 0
