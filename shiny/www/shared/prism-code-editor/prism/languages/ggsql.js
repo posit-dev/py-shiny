@@ -19,7 +19,7 @@ Object.keys(sql).forEach(function(k) { ggsql[k] = sql[k]; });
 
 // ggsql clause keywords
 ggsql["ggsql-keyword"] = {
-  pattern: /\b(?:VISUALISE|VISUALIZE|DRAW|SCALE|FACET|PROJECT|LABEL|THEME|MAPPING|REMAPPING|SETTING|FILTER|FROM|ORDER|BY|PARTITION|RENAMING|TO|VIA)\b/i,
+  pattern: /\b(?:VISUALISE|VISUALIZE|DRAW|SCALE|FACET|PROJECT|LABEL|THEME|MAPPING|REMAPPING|SETTING|FILTER|FROM|ORDER|BY|PARTITION|RENAMING|AS|TO|VIA)\b/i,
   alias: "keyword",
 };
 
