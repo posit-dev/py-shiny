@@ -12,6 +12,7 @@ CodeEditorBundledLanguage = Literal[
     "css",
     "diff",
     "docker",
+    "ggsql",
     "ini",
     "javascript",
     "json",
