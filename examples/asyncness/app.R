@@ -5,7 +5,7 @@ library(promises)
 
 ui <- fluidPage(
   p(
-    "Launch this app in two different tabs. In one tab, press the button and see if ",
+    "Launch this Shiny for R app in two different tabs. In one tab, press the button and see if ",
     "the clock stops in the other tab."
   ),
   input_task_button("block", "Perform blocking operation"),
@@ -17,22 +17,24 @@ server <- function(input, output, session) {
     message("[", substr(session$token, 1, 5), "] ", ...)
   }
   output$fast <- renderText({
-    invalidateLater(1000)
+    invalidateLater(100)
     format(Sys.time(), "%H:%M:%S")
   })
 
-  observe({
-    invalidateLater(1000)
-    msg("Fast observer is running")
-  })
+  # observe({
+  #   invalidateLater(1000)
+  #   msg("Fast observer is running")
+  # })
 
   # Observe button clicks and perform slow operation
-  observeEvent(input$block, {
-    msg("Starting slow operation")
-    async_sleep(3) %...>%
-      {
-        msg("Slow operation completed")
-      }
+  lapply(seq_len(3), function(i) {
+    observeEvent(input$block, {
+      msg("Starting slow operation: ", i)
+      async_sleep(3) %...>%
+        {
+          msg("Slow operation completed: ", i)
+        }
+    })
   })
 }
 
