@@ -64,7 +64,6 @@ from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
-from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
 from ..types import (
@@ -154,6 +153,9 @@ class OutBoundMessageQueues:
         self.values: dict[str, Any] = {}
         self.errors: dict[str, Any] = {}
         self.input_messages: list[dict[str, Any]] = []
+
+    def is_empty(self) -> bool:
+        return not self.values and not self.errors and not self.input_messages
 
     def reset(self) -> None:
         self.values.clear()
@@ -582,6 +584,15 @@ class AppSession(Session):
         self._flush_callbacks = _utils.AsyncCallbacks()
         self._flushed_callbacks = _utils.AsyncCallbacks()
 
+        # Per-session reactive lock (replaces the old global lock)
+        self._reactive_lock: asyncio.Lock = asyncio.Lock()
+
+        # Cycle start action queue: Stores callbacks while effects are busy; they
+        # can run when everything in this session is idle.
+        # Input processing is deferred here while effects are executing, ensuring
+        # input values remain stable during effect execution (R Shiny-style).
+        self._cycle_start_action_queue: list[Callable[[], Awaitable[None]]] = []
+
     def _register_session_ended_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
         # that are called when a session ends.
@@ -593,6 +604,10 @@ class AppSession(Session):
         if self._has_run_session_ended_tasks:
             return
         self._has_run_session_ended_tasks = True
+
+        # Clear any queued cycle start actions and reset busy count
+        self._cycle_start_action_queue.clear()
+        self._busy_count = 0
 
         # Wrap session cleanup in session.end span (or no-op if not collecting)
         async with shiny_otel_span(
@@ -657,8 +672,9 @@ class AppSession(Session):
                         )
                         return
 
-                    async with lock():
-                        if message_obj["method"] == "init":
+                    if message_obj["method"] == "init":
+                        # Init must run immediately (session setup)
+                        async with self._reactive_lock:
                             verify_state(ConnectionState.Start)
 
                             # BOOKMARKS!
@@ -703,38 +719,48 @@ class AppSession(Session):
                                 with session_context(self):
                                     self.app.server(self.input, self.output, self)
 
-                                    # Flush here to attempt a reactive_update within `session.start` otel span.
-                                    # Might also fix https://github.com/posit-dev/py-shiny/issues/1889
-                                    await reactive_flush()
+                            # Progress messages may have queued up; let them drain
+                            await asyncio.sleep(0)
+                            await reactive_flush()
 
-                        elif message_obj["method"] == "update":
+                    elif message_obj["method"] == "update":
+                        # Queue input updates via cycle start action
+                        message_data = typing.cast(ClientMessageUpdate, message_obj)[
+                            "data"
+                        ]
+
+                        async def process_update(
+                            _data: dict[str, object] = message_data,
+                        ) -> None:
+                            async with self._reactive_lock:
+                                verify_state(ConnectionState.Running)
+                                # Set the session context for otel logging purposes
+                                with session_context(self):
+                                    self._manage_inputs(_data)
+
+                                await asyncio.sleep(0)
+                                await reactive_flush()
+
+                        await self._cycle_start_action(process_update)
+
+                    elif "tag" in message_obj and "args" in message_obj:
+                        # Dispatch messages (e.g. uploadInit, uploadEnd,
+                        # makeRequest) run immediately, NOT deferred through the
+                        # cycle start action queue. This matches R Shiny, where
+                        # only input updates are deferred. Dispatches need prompt
+                        # handling for things like ExtendedTask invocations and
+                        # data frame cell edits via makeRequest.
+                        message_other = typing.cast(ClientMessageOther, message_obj)
+                        async with self._reactive_lock:
                             verify_state(ConnectionState.Running)
+                            await self._dispatch(message_other)
+                            await asyncio.sleep(0)
+                            await reactive_flush()
 
-                            message_obj = typing.cast(ClientMessageUpdate, message_obj)
-                            # Set the session context for otel logging purposes
-                            with session_context(self):
-                                self._manage_inputs(message_obj["data"])
-
-                        elif "tag" in message_obj and "args" in message_obj:
-                            verify_state(ConnectionState.Running)
-
-                            message_obj = typing.cast(ClientMessageOther, message_obj)
-                            await self._dispatch(message_obj)
-
-                        else:
-                            raise ProtocolError(
-                                f"Unrecognized method {message_obj['method']}"
-                            )
-
-                        # Progress messages (of the "{binding: {id: xxx}}"" variety) may
-                        # have queued up at this point; let them drain before we send
-                        # the next message.
-                        # https://github.com/posit-dev/py-shiny/issues/1381
-                        await asyncio.sleep(0)
-
-                        self._request_flush()
-
-                        await reactive_flush()
+                    else:
+                        raise ProtocolError(
+                            f"Unrecognized method {message_obj['method']}"
+                        )
 
             except ConnectionClosed:
                 ...
@@ -905,38 +931,41 @@ class AppSession(Session):
         elif action == "download" and request.method == "GET" and subpath:
             download_id = subpath
             if download_id in self._downloads:
-                with session_context(self):
-                    with isolate():
-                        download = self._downloads[download_id]
-                        filename = read_thunk_opt(download.filename)
-                        content_type = read_thunk_opt(download.content_type)
-                        contents = download.handler()
+                async with self._reactive_lock:
+                    with session_context(self):
+                        with isolate():
+                            download = self._downloads[download_id]
+                            filename = read_thunk_opt(download.filename)
+                            content_type = read_thunk_opt(download.content_type)
+                            contents = download.handler()
 
-                        if filename is None:
-                            if isinstance(contents, str):
-                                filename = os.path.basename(contents)
+                            if filename is None:
+                                if isinstance(contents, str):
+                                    filename = os.path.basename(contents)
+                                else:
+                                    warnings.warn(
+                                        "Unable to infer a filename for the "
+                                        f"'{download_id}' download handler; please use "
+                                        "@render.download(filename=) to specify one "
+                                        "manually",
+                                        SessionWarning,
+                                        stacklevel=2,
+                                    )
+                                    filename = download_id
+
+                            if content_type is None:
+                                content_type = _utils.guess_mime_type(filename)
+                            content_disposition_filename = urllib.parse.quote(filename)
+                            if content_disposition_filename != filename:
+                                content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"
                             else:
-                                warnings.warn(
-                                    "Unable to infer a filename for the "
-                                    f"'{download_id}' download handler; please use "
-                                    "@render.download(filename=) to specify one "
-                                    "manually",
-                                    SessionWarning,
-                                    stacklevel=2,
+                                content_disposition = (
+                                    f'attachment; filename="{filename}"'
                                 )
-                                filename = download_id
-
-                        if content_type is None:
-                            content_type = _utils.guess_mime_type(filename)
-                        content_disposition_filename = urllib.parse.quote(filename)
-                        if content_disposition_filename != filename:
-                            content_disposition = f"attachment; filename*=utf-8''{content_disposition_filename}"
-                        else:
-                            content_disposition = f'attachment; filename="{filename}"'
-                        headers = {
-                            "Content-Disposition": content_disposition,
-                            "Cache-Control": "no-store",
-                        }
+                            headers = {
+                                "Content-Disposition": content_disposition,
+                                "Cache-Control": "no-store",
+                            }
 
                         otel_attrs = {
                             **get_session_id_attrs(self),
@@ -946,6 +975,7 @@ class AppSession(Session):
 
                         if isinstance(contents, str):
                             # contents is the path to a file
+
                             # Span captures download initiation; the actual file
                             # transfer is handled by Starlette's ASGI layer after
                             # we return the FileResponse object.
@@ -963,6 +993,22 @@ class AppSession(Session):
 
                         wrapped_contents: AsyncIterable[bytes]
 
+                        # Concurrency note: The reactive lock was held above for the
+                        # initial handler invocation (calling download.handler(),
+                        # resolving filename/content_type thunks). For streaming
+                        # downloads, the lock is then released when the outer `async
+                        # with` block exits, and re-acquired below for each iteration
+                        # of the content generator. This means the lock is
+                        # acquired-released-acquired-released for each chunk yielded.
+                        #
+                        # TODO: Consider whether we need to hold the reactive lock for
+                        # the entire streaming iteration, or only for the first chunk.
+                        # The common pattern is: do some reactive/async computation
+                        # before the first yield, then stream pure I/O after that. If
+                        # so, we could acquire the lock once, yield the first chunk,
+                        # then release it and stream the rest without the lock. This
+                        # would reduce contention for long-running downloads.
+
                         if isinstance(contents, AsyncIterable):
                             # Need to wrap the app-author-provided iterator in a
                             # callback that installs the appropriate context mgrs.
@@ -970,27 +1016,39 @@ class AppSession(Session):
                             # implementation of handle_request(), but the iterators
                             # aren't invoked until after handle_request() returns.
                             async def wrap_content_async() -> AsyncIterable[bytes]:
-                                with session_context(self):
-                                    with isolate():
-                                        async for chunk in contents:
-                                            if isinstance(chunk, str):
-                                                yield chunk.encode(download.encoding)
-                                            else:
-                                                yield chunk
+                                async with self._reactive_lock:
+                                    with session_context(self):
+                                        with isolate():
+                                            async for chunk in contents:
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
 
+                            # Note that this does NOT start execution of
+                            # wrap_content_async; in Python, async functions are lazily
+                            # executed
                             wrapped_contents = wrap_content_async()
 
                         else:  # isinstance(contents, Iterable):
 
                             async def wrap_content_sync() -> AsyncIterable[bytes]:
-                                with session_context(self):
-                                    with isolate():
-                                        for chunk in contents:
-                                            if isinstance(chunk, str):
-                                                yield chunk.encode(download.encoding)
-                                            else:
-                                                yield chunk
+                                async with self._reactive_lock:
+                                    with session_context(self):
+                                        with isolate():
+                                            for chunk in contents:
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
 
+                            # Note that this does NOT start execution of
+                            # wrap_content_async; in Python, async functions are lazily
+                            # executed
                             wrapped_contents = wrap_content_sync()
 
                         wrapped_contents = shiny_otel_span_stream(
@@ -1030,7 +1088,6 @@ class AppSession(Session):
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
         self._outbound_message_queues.add_input_message(id, message)
-        self._request_flush()
 
     def _send_insert_ui(
         self, selector: str, multiple: bool, where: str, content: RenderedDeps
@@ -1101,9 +1158,6 @@ class AppSession(Session):
     ) -> Callable[[], None]:
         return self._flushed_callbacks.register(wrap_async(fn), once)
 
-    def _request_flush(self) -> None:
-        self.app._request_flush(self)
-
     async def _flush(self) -> None:
         with session_context(self):
             # This is the only place in the session where the RestoreContext is flushed.
@@ -1115,29 +1169,93 @@ class AppSession(Session):
         try:
             omq = self._outbound_message_queues
 
-            message: dict[str, object] = {
-                "values": omq.values,
-                "inputMessages": omq.input_messages,
-                "errors": omq.errors,
-            }
+            if not omq.is_empty():
+                message: dict[str, object] = {
+                    "values": omq.values,
+                    "inputMessages": omq.input_messages,
+                    "errors": omq.errors,
+                }
 
-            try:
-                await self._send_message(message)
-            finally:
-                self._outbound_message_queues.reset()
+                try:
+                    await self._send_message(message)
+                finally:
+                    self._outbound_message_queues.reset()
         finally:
             with session_context(self):
                 await self._flushed_callbacks.invoke()
 
     def _increment_busy_count(self) -> None:
+        """
+        Increment the busy count.
+
+        Called when an effect is scheduled for execution. When count goes from 0 to 1,
+        sends 'busy' message to client.
+        """
         self._busy_count += 1
         if self._busy_count == 1:
             self._send_message_sync({"busy": "busy"})
 
     def _decrement_busy_count(self) -> None:
+        """
+        Decrement the busy count.
+
+        When count reaches 0, sends 'idle' message and starts processing any queued
+        cycle start actions (deferred input updates, etc.).
+        """
         self._busy_count -= 1
         if self._busy_count == 0:
             self._send_message_sync({"busy": "idle"})
+            # Start processing queued actions now that no effects are busy
+            if self._cycle_start_action_queue:
+                asyncio.create_task(self._start_cycle())
+
+    async def _cycle_start_action(
+        self, callback: Callable[[], Awaitable[None]]
+    ) -> None:
+        """
+        Schedule an action to execute when no effects are busy.
+
+        This is used to defer input processing until effects complete, ensuring that
+        input values remain stable during effect execution (R Shiny-style concurrency).
+        If no effects are running (busy_count == 0), the action executes immediately.
+        """
+        self._cycle_start_action_queue.append(callback)
+
+        # If no effects are running, start processing immediately
+        if self._busy_count == 0:
+            await self._start_cycle()
+
+    async def _start_cycle(self) -> None:
+        """
+        Process one action from the cycle start queue.
+
+        Called when busy_count reaches 0, or when an action is added while idle.
+        After executing an action, if busy_count is still 0 and there are more
+        actions, schedules the next cycle via create_task to avoid deep recursion.
+
+        Re-checks busy_count before dequeueing, because between scheduling
+        (via create_task) and execution, new effects may have been invalidated
+        and incremented busy_count. This matches R Shiny's guard in both
+        decrementBusyCount's later() callback and startCycle's on.exit.
+        """
+        if not self._cycle_start_action_queue:
+            return
+        if self._busy_count != 0:
+            return
+
+        # Get one action from the queue
+        callback = self._cycle_start_action_queue.pop(0)
+
+        # Execute it
+        try:
+            await callback()
+        except Exception:
+            traceback.print_exc()
+
+        # After execution, if busy_count is still 0 and there are more actions,
+        # schedule the next cycle (use create_task to avoid deep recursion)
+        if self._busy_count == 0 and self._cycle_start_action_queue:
+            asyncio.create_task(self._start_cycle())
 
     # ==========================================================================
     # On session ended
