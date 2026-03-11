@@ -8,7 +8,8 @@ Tests cover:
 """
 
 import os
-from typing import Tuple
+from contextlib import asynccontextmanager
+from typing import Any, Tuple
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -17,11 +18,18 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import is_otel_tracing_enabled
-from shiny.otel._span_wrappers import shiny_otel_span
+from shiny.otel._span_wrappers import shiny_otel_span as _shiny_otel_span
 from shiny.reactive._core import ReactiveEnvironment
 from shiny.session._utils import session_context
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
+
+
+@asynccontextmanager
+async def shiny_otel_span(*args: Any, **kwargs: Any):
+    kwargs.setdefault("infer_session_id", True)
+    async with _shiny_otel_span(*args, **kwargs) as span:
+        yield span
 
 
 class TestReactiveFlushSpans:

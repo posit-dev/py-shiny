@@ -9,18 +9,26 @@ Tests cover:
 
 import asyncio
 import sys
-from typing import Tuple
+from contextlib import asynccontextmanager
+from typing import Any, Tuple
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from shiny.otel._collect import OtelCollectLevel
-from shiny.otel._span_wrappers import shiny_otel_span
+from shiny.otel._span_wrappers import shiny_otel_span as _shiny_otel_span
 from shiny.reactive import Calc_
 from shiny.reactive._core import ReactiveEnvironment
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
+
+
+@asynccontextmanager
+async def shiny_otel_span(*args: Any, **kwargs: Any):
+    kwargs.setdefault("infer_session_id", True)
+    async with _shiny_otel_span(*args, **kwargs) as span:
+        yield span
 
 
 class TestAsyncSpanPropagation:

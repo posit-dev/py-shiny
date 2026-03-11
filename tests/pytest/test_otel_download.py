@@ -10,7 +10,7 @@ Tests cover:
 
 import os
 from pathlib import Path
-from typing import AsyncIterable, AsyncIterator, Iterator, Mapping, Tuple, cast
+from typing import Any, AsyncIterable, AsyncIterator, Iterator, Mapping, Tuple, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,10 +20,16 @@ from opentelemetry.trace import StatusCode
 
 from shiny._namespaces import Root
 from shiny.otel._collect import OtelCollectLevel
-from shiny.otel._span_wrappers import shiny_otel_span_stream
+from shiny.otel._span_wrappers import shiny_otel_span_stream as _shiny_otel_span_stream
 from shiny.session._session import DownloadInfo
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
+
+
+def shiny_otel_span_stream(*args: Any, **kwargs: Any) -> AsyncIterator[bytes]:
+    kwargs.setdefault("infer_session_id", True)
+    return _shiny_otel_span_stream(*args, **kwargs)
+
 
 # ---------------------------------------------------------------------------
 # Helpers

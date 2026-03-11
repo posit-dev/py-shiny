@@ -12,7 +12,8 @@ Tests cover:
 """
 
 import os
-from typing import Tuple
+from contextlib import asynccontextmanager
+from typing import Any, Tuple
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -22,10 +23,17 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from shiny.otel._attributes import extract_source_ref
 from shiny.otel._collect import OtelCollectLevel
 from shiny.otel._labels import create_otel_span_name
-from shiny.otel._span_wrappers import shiny_otel_span
+from shiny.otel._span_wrappers import shiny_otel_span as _shiny_otel_span
 from shiny.reactive import Calc_, Effect_
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
+
+
+@asynccontextmanager
+async def shiny_otel_span(*args: Any, **kwargs: Any):
+    kwargs.setdefault("infer_session_id", True)
+    async with _shiny_otel_span(*args, **kwargs) as span:
+        yield span
 
 
 class TestLabelGeneration:

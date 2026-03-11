@@ -9,6 +9,8 @@ Tests cover:
 """
 
 import os
+from contextlib import asynccontextmanager
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -17,10 +19,17 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import get_otel_logger, get_otel_tracer, is_otel_tracing_enabled
-from shiny.otel._span_wrappers import shiny_otel_span
+from shiny.otel._span_wrappers import shiny_otel_span as _shiny_otel_span
 from shiny.session._utils import session_context
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
+
+
+@asynccontextmanager
+async def shiny_otel_span(*args: Any, **kwargs: Any):
+    kwargs.setdefault("infer_session_id", True)
+    async with _shiny_otel_span(*args, **kwargs) as span:
+        yield span
 
 
 class TestCore:
