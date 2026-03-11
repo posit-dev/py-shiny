@@ -12,8 +12,6 @@ Tests cover:
 # pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false
 
 import asyncio
-from contextlib import asynccontextmanager
-from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -32,7 +30,7 @@ from shiny.otel._errors import (
     maybe_sanitize_error,
     should_sanitize_errors,
 )
-from shiny.otel._span_wrappers import shiny_otel_span as _shiny_otel_span
+from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.session import Session, session_context
 from shiny.types import (
     SafeException,
@@ -42,13 +40,6 @@ from shiny.types import (
 )
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
-
-
-@asynccontextmanager
-async def shiny_otel_span(*args: Any, **kwargs: Any):
-    kwargs.setdefault("infer_session_id", True)
-    async with _shiny_otel_span(*args, **kwargs) as span:
-        yield span
 
 
 @pytest.fixture

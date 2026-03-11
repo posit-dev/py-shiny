@@ -16,7 +16,7 @@ which don't have complete type stubs available.
 # pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportMissingParameterType=false
 
 import os
-from typing import Any, Iterator, Tuple
+from typing import Iterator, Tuple
 from unittest.mock import Mock, patch
 
 import pytest
@@ -29,15 +29,10 @@ from opentelemetry.sdk._logs.export import (
 
 from shiny import reactive
 from shiny._namespaces import ResolvedId
-from shiny.otel._core import emit_otel_log as _emit_otel_log
+from shiny.otel._core import emit_otel_log
 from shiny.session import Session, session_context
 
 from .otel_helpers import patch_otel_tracing_state, reset_otel_tracing_state
-
-
-def emit_otel_log(*args: Any, **kwargs: Any) -> None:
-    kwargs.setdefault("infer_session_id", True)
-    _emit_otel_log(*args, **kwargs)
 
 
 @pytest.fixture(scope="session")
@@ -131,7 +126,7 @@ class TestEmitLog:
     def test_emit_log_basic(self, otel_log_provider_and_exporter):
         """Test basic log emission"""
         provider, exporter = otel_log_provider_and_exporter
-        emit_otel_log("Test message")
+        emit_otel_log("Test message", infer_session_id=True)
 
         # Force flush and get logs
         provider.force_flush()
@@ -146,7 +141,9 @@ class TestEmitLog:
     def test_emit_log_with_severity(self, otel_log_provider_and_exporter):
         """Test log emission with custom severity"""
         provider, exporter = otel_log_provider_and_exporter
-        emit_otel_log("Debug message", severity_text="DEBUG")
+        emit_otel_log(
+            "Debug message", severity_text="DEBUG", infer_session_id=True
+        )
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -161,6 +158,7 @@ class TestEmitLog:
         emit_otel_log(
             "Test with attributes",
             attributes={"session.id": "test-123", "custom.key": "value"},
+            infer_session_id=True,
         )
 
         provider.force_flush()
@@ -181,7 +179,7 @@ class TestEmitLog:
         reset_otel_tracing_state()
 
         # Should not raise
-        emit_otel_log("Test message")
+        emit_otel_log("Test message", infer_session_id=True)
 
 
 class TestValueUpdateLogging:

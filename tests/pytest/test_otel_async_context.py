@@ -9,26 +9,18 @@ Tests cover:
 
 import asyncio
 import sys
-from contextlib import asynccontextmanager
-from typing import Any, Tuple
+from typing import Tuple
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from shiny.otel._collect import OtelCollectLevel
-from shiny.otel._span_wrappers import shiny_otel_span as _shiny_otel_span
+from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive import Calc_
 from shiny.reactive._core import ReactiveEnvironment
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
-
-
-@asynccontextmanager
-async def shiny_otel_span(*args: Any, **kwargs: Any):
-    kwargs.setdefault("infer_session_id", True)
-    async with _shiny_otel_span(*args, **kwargs) as span:
-        yield span
 
 
 class TestAsyncSpanPropagation:
@@ -45,6 +37,7 @@ class TestAsyncSpanPropagation:
             """Nested async function that should inherit parent span context"""
             async with shiny_otel_span(
                 "inner.operation",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 await asyncio.sleep(0.001)
@@ -52,6 +45,7 @@ class TestAsyncSpanPropagation:
         with patch_otel_tracing_state(tracing_enabled=True):
             async with shiny_otel_span(
                 "outer.operation",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 await inner_operation()
@@ -85,6 +79,7 @@ class TestAsyncSpanPropagation:
             """Background task that should inherit parent span context"""
             async with shiny_otel_span(
                 "background.task",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 await asyncio.sleep(0.001)
@@ -92,6 +87,7 @@ class TestAsyncSpanPropagation:
         with patch_otel_tracing_state(tracing_enabled=True):
             async with shiny_otel_span(
                 "main.operation",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 # Create task within parent span
@@ -152,6 +148,7 @@ class TestConcurrentReactiveExecutions:
             # Execute them concurrently within a reactive update span
             async with shiny_otel_span(
                 "reactive_update",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.REACTIVE_UPDATE,
             ):
                 # Start both calcs concurrently
@@ -229,6 +226,7 @@ class TestAsyncContextIsolation:
             """Create a span with a unique name"""
             async with shiny_otel_span(
                 f"task.{task_id}",
+                infer_session_id=True,
                 attributes={"task.id": task_id},
                 required_level=OtelCollectLevel.ALL,
             ):
@@ -238,6 +236,7 @@ class TestAsyncContextIsolation:
         with patch_otel_tracing_state(tracing_enabled=True):
             async with shiny_otel_span(
                 "parent.operation",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 # Run multiple tasks concurrently
@@ -289,6 +288,7 @@ class TestAsyncContextIsolation:
         async def level_3():
             async with shiny_otel_span(
                 "level.3",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 await asyncio.sleep(0.001)
@@ -296,6 +296,7 @@ class TestAsyncContextIsolation:
         async def level_2():
             async with shiny_otel_span(
                 "level.2",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 await level_3()
@@ -303,6 +304,7 @@ class TestAsyncContextIsolation:
         async def level_1():
             async with shiny_otel_span(
                 "level.1",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 await level_2()
@@ -310,6 +312,7 @@ class TestAsyncContextIsolation:
         with patch_otel_tracing_state(tracing_enabled=True):
             async with shiny_otel_span(
                 "level.0",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 await level_1()
@@ -362,6 +365,7 @@ class TestAsyncContextIsolation:
             """Create a span with a unique name"""
             async with shiny_otel_span(
                 f"taskgroup.{task_id}",
+                infer_session_id=True,
                 attributes={"task.id": task_id},
                 required_level=OtelCollectLevel.ALL,
             ):
@@ -371,6 +375,7 @@ class TestAsyncContextIsolation:
         with patch_otel_tracing_state(tracing_enabled=True):
             async with shiny_otel_span(
                 "parent.operation",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 # Run multiple tasks concurrently using TaskGroup (Python 3.11+)
@@ -419,6 +424,7 @@ class TestAsyncContextIsolation:
             """Create a span with a unique name and delay"""
             async with shiny_otel_span(
                 f"ascompleted.{task_id}",
+                infer_session_id=True,
                 attributes={"task.id": task_id},
                 required_level=OtelCollectLevel.ALL,
             ):
@@ -428,6 +434,7 @@ class TestAsyncContextIsolation:
         with patch_otel_tracing_state(tracing_enabled=True):
             async with shiny_otel_span(
                 "parent.operation",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 # Create tasks with different delays
@@ -475,6 +482,7 @@ class TestAsyncContextIsolation:
             """Create a span with a unique name"""
             async with shiny_otel_span(
                 f"precreated.{task_id}",
+                infer_session_id=True,
                 attributes={"task.id": task_id},
                 required_level=OtelCollectLevel.ALL,
             ):
@@ -489,6 +497,7 @@ class TestAsyncContextIsolation:
 
             async with shiny_otel_span(
                 "parent.operation",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
                 # Await the pre-created tasks inside the parent span
@@ -542,6 +551,7 @@ class TestReactiveUpdateConcurrency:
             # Execute within a reactive update span
             async with shiny_otel_span(
                 "reactive_update",
+                infer_session_id=True,
                 required_level=OtelCollectLevel.REACTIVE_UPDATE,
             ):
                 # Execute calcs concurrently
