@@ -513,7 +513,10 @@ class Calc_(Generic[T]):
         self._error: list[Exception] = []
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
+        self._otel_attrs = {
+            **self._extract_otel_attrs(fn),
+            **get_session_id_attrs(session),
+        }
 
         # Extract modifier from function attribute and generate label
         self._otel_label: str = create_otel_span_name(

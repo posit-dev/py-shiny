@@ -592,6 +592,68 @@ class TestCalcSpans:
                     assert "code.file.path" in attrs
                     assert "code.line.number" in attrs
 
+    def test_calc_session_id_in_otel_attrs(self):
+        """Test that Calc_ captures session.id in _otel_attrs when session is provided"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        def my_calc():
+            return 42
+
+        mock_session = Mock()
+        mock_session.id = "test-session-abc"
+        mock_session.ns = ResolvedId("")
+
+        calc = Calc_(my_calc, session=mock_session)
+
+        assert ATTR_SESSION_ID in calc._otel_attrs
+        assert calc._otel_attrs[ATTR_SESSION_ID] == "test-session-abc"
+
+    def test_calc_session_id_absent_without_session(self):
+        """Test that Calc_ has no session.id in _otel_attrs when no session is provided"""
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        def my_calc():
+            return 42
+
+        calc = Calc_(my_calc, session=None)
+
+        assert ATTR_SESSION_ID not in calc._otel_attrs
+
+    @pytest.mark.asyncio
+    async def test_calc_span_includes_session_id(self):
+        """Test that Calc span attributes include session.id when session is present"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+
+                def my_calc():
+                    return 42
+
+                mock_session = Mock()
+                mock_session.id = "test-session-xyz"
+                mock_session.ns = ResolvedId("")
+
+                calc = Calc_(my_calc, session=mock_session)
+
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    await calc.update_value()
+
+                    mock_span.assert_called_once()
+                    call_args = mock_span.call_args
+                    attrs = call_args[1]["attributes"]
+                    assert ATTR_SESSION_ID in attrs
+                    assert attrs[ATTR_SESSION_ID] == "test-session-xyz"
+
 
 class TestEffectSpans:
     """Reactive Effect execution span tests"""
@@ -677,6 +739,68 @@ class TestEffectSpans:
                     assert attrs["code.function.name"] == "my_effect"
                     assert "code.file.path" in attrs
                     assert "code.line.number" in attrs
+
+    def test_effect_session_id_in_otel_attrs(self):
+        """Test that Effect_ captures session.id in _otel_attrs when session is provided"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        def my_effect():
+            pass
+
+        mock_session = Mock()
+        mock_session.id = "test-session-abc"
+        mock_session.ns = ResolvedId("")
+
+        effect = Effect_(my_effect, session=mock_session)
+
+        assert ATTR_SESSION_ID in effect._otel_attrs
+        assert effect._otel_attrs[ATTR_SESSION_ID] == "test-session-abc"
+
+    def test_effect_session_id_absent_without_session(self):
+        """Test that Effect_ has no session.id in _otel_attrs when no session is provided"""
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        def my_effect():
+            pass
+
+        effect = Effect_(my_effect, session=None)
+
+        assert ATTR_SESSION_ID not in effect._otel_attrs
+
+    @pytest.mark.asyncio
+    async def test_effect_span_includes_session_id(self):
+        """Test that Effect span attributes include session.id when session is present"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+
+                def my_effect():
+                    pass
+
+                mock_session = Mock()
+                mock_session.id = "test-session-xyz"
+                mock_session.ns = ResolvedId("")
+
+                effect = Effect_(my_effect, session=mock_session)
+
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    await effect._run()
+
+                    mock_span.assert_called_once()
+                    call_args = mock_span.call_args
+                    attrs = call_args[1]["attributes"]
+                    assert ATTR_SESSION_ID in attrs
+                    assert attrs[ATTR_SESSION_ID] == "test-session-xyz"
 
 
 class TestOutputSpans:
@@ -947,6 +1071,134 @@ class TestExtendedTaskSpans:
                     mock_emit.assert_not_called()
 
                     # Clean up - cancel tasks
+                    task.cancel()
+
+    def test_extended_task_session_id_in_otel_attrs(self):
+        """Test that ExtendedTask captures session.id in _otel_attrs when session context is present"""
+        import asyncio
+        from unittest.mock import Mock, patch
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+        from shiny.reactive import ExtendedTask
+
+        async def my_task():
+            await asyncio.sleep(0.01)
+            return 42
+
+        mock_session = Mock()
+        mock_session.id = "test-session-abc"
+        mock_session.ns = ResolvedId("")
+
+        with patch("shiny.session.get_current_session", return_value=mock_session):
+            task = ExtendedTask(my_task)
+
+        assert ATTR_SESSION_ID in task._otel_attrs
+        assert task._otel_attrs[ATTR_SESSION_ID] == "test-session-abc"
+
+    def test_extended_task_session_id_absent_without_session(self):
+        """Test that ExtendedTask has no session.id in _otel_attrs when no session context"""
+        import asyncio
+
+        from shiny.otel._constants import ATTR_SESSION_ID
+        from shiny.reactive import ExtendedTask
+
+        async def my_task():
+            await asyncio.sleep(0.01)
+            return 42
+
+        # No session patch -- get_current_session() returns None outside session context
+        task = ExtendedTask(my_task)
+
+        assert ATTR_SESSION_ID not in task._otel_attrs
+
+    @pytest.mark.asyncio
+    async def test_extended_task_span_includes_session_id(self):
+        """Test that ExtendedTask span attributes include session.id when session context is present"""
+        import asyncio
+        from unittest.mock import Mock, patch
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+        from shiny.reactive import ExtendedTask, isolate
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+
+                async def my_task():
+                    await asyncio.sleep(0.01)
+                    return 42
+
+                mock_session = Mock()
+                mock_session.id = "test-session-xyz"
+                mock_session.ns = ResolvedId("")
+
+                with patch(
+                    "shiny.session.get_current_session", return_value=mock_session
+                ):
+                    task = ExtendedTask(my_task)
+
+                with patch(
+                    "shiny.reactive._extended_task.shiny_otel_span"
+                ) as mock_span:
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    task.invoke()
+
+                    while True:
+                        with isolate():
+                            if task.status() != "running":
+                                break
+                        await asyncio.sleep(0.01)
+
+                    with isolate():
+                        assert task.status() == "success"
+
+                    mock_span.assert_called_once()
+                    call_args = mock_span.call_args
+                    attrs = call_args[1]["attributes"]
+                    assert ATTR_SESSION_ID in attrs
+                    assert attrs[ATTR_SESSION_ID] == "test-session-xyz"
+
+    @pytest.mark.asyncio
+    async def test_extended_task_queued_log_includes_session_id(self):
+        """Test that ExtendedTask queued log attributes include session.id when session context is present"""
+        import asyncio
+        from unittest.mock import Mock, patch
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+        from shiny.reactive import ExtendedTask
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+
+                async def slow_task():
+                    await asyncio.sleep(0.1)
+                    return 42
+
+                mock_session = Mock()
+                mock_session.id = "test-session-xyz"
+                mock_session.ns = ResolvedId("")
+
+                with patch(
+                    "shiny.session.get_current_session", return_value=mock_session
+                ):
+                    task = ExtendedTask(slow_task)
+
+                with patch("shiny.reactive._extended_task.emit_otel_log") as mock_emit:
+                    task.invoke()  # First invocation -- starts running
+                    task.invoke()  # Second invocation -- queued, log emitted
+
+                    assert len(task._invocation_queue) == 1
+                    mock_emit.assert_called_once()
+
+                    call_args = mock_emit.call_args
+                    attrs = call_args[1]["attributes"]
+                    assert ATTR_SESSION_ID in attrs
+                    assert attrs[ATTR_SESSION_ID] == "test-session-xyz"
+
                     task.cancel()
 
 
