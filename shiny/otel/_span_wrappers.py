@@ -106,14 +106,11 @@ async def shiny_otel_span(
         that returns a dictionary. If a callable is provided, it will only be
         called if collection is enabled, allowing for lazy evaluation of
         expensive attribute extraction.
-
-        **Note:** `session.id` is automatically added from the current session
-        context if not already present in the attributes. This works because
-        session.id is consistent across sessions and modules (a SessionProxy
-        shares the same id as its parent AppSession).
     infer_session_id
         If ``True``, automatically add ``session.id`` from current
-        session context when not provided in ``attributes``. Set to ``False``
+        session context when not provided in ``attributes``. This works because
+        session.id is consistent across sessions and modules (a SessionProxy
+        shares the same id as its parent AppSession). Set to ``False``
         to opt out of automatic inference.
     required_level
         The minimum collect level required for this span. Defaults to SESSION.
@@ -129,18 +126,23 @@ async def shiny_otel_span(
     from shiny.otel._span_wrappers import shiny_otel_span
 
     async def my_async_function():
-        # Static attributes
-        async with shiny_otel_span("async_operation", attributes={"count": 42}) as span:
+        # Static attributes (no session.id inference needed)
+        async with shiny_otel_span(
+            "async_operation",
+            attributes={"count": 42},
+            infer_session_id=False,
+        ) as span:
             await some_async_call()
             if span:
                 span.set_attribute("completed", True)
 
-        # Lazy attributes (only computed if collecting)
+        # Lazy attributes with automatic session.id inference
         async with shiny_otel_span(
             "session_start",
-            attributes=lambda: {ATTR_SESSION_ID: session.id, **extract_http_attributes(conn)}
+            attributes=lambda: {**extract_http_attributes(conn)},
+            infer_session_id=True,
         ) as span:
-            # Attributes only extracted if span is created
+            # Attributes only extracted if span is created; session.id added automatically
             await session_work()
     ```
     """
@@ -265,6 +267,7 @@ async def shiny_otel_span_stream(
         "download",
         original_stream,
         attributes={"session.id": session_id, "download.id": download_id},
+        infer_session_id=False,
         required_level=OtelCollectLevel.REACTIVITY,
     )
     return StreamingResponse(wrapped, 200, headers=headers)
