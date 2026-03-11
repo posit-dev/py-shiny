@@ -35,7 +35,7 @@ from .. import _utils
 from .._docstring import add_example
 from .._utils import is_async_callable, run_coro_sync
 from .._validation import req
-from ..otel._attributes import SourceRefAttrs, extract_source_ref
+from ..otel._attributes import SourceRefAttrs, extract_source_ref, get_session_id_attrs
 from ..otel._collect import OtelCollectLevel, get_level
 from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
@@ -166,7 +166,7 @@ class Value(Generic[T]):
         # This determines whether value updates will emit OTel logs
         session = get_current_session()
         self._otel_level: OtelCollectLevel = get_level()
-        self._otel_attrs: dict[str, Any] = {}
+        self._otel_attrs: dict[str, Any] = {**get_session_id_attrs(session)}
         if read_only:
             self._otel_attrs["read-only"] = True
 
@@ -413,6 +413,7 @@ class Value(Generic[T]):
             self._otel_label,
             severity_text="INFO",
             attributes=attrs,
+            infer_session_id=False,
         )
 
     def unset(self) -> None:
@@ -563,6 +564,7 @@ class Calc_(Generic[T]):
             async with shiny_otel_span(
                 self._otel_label,
                 attributes=self._otel_attrs,
+                infer_session_id=False,
                 required_level=OtelCollectLevel.REACTIVITY,
                 collection_level=self._otel_level,
             ):
@@ -786,7 +788,10 @@ class Effect_:
             self._session.on_ended(self._on_session_ended_cb)
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
+        self._otel_attrs: dict[str, Any] = {
+            **get_session_id_attrs(self._session),
+            **self._extract_otel_attrs(fn),
+        }
 
         # Extract modifier from function attribute and generate label
         self._otel_label: str = create_otel_span_name(
@@ -851,6 +856,7 @@ class Effect_:
             async with shiny_otel_span(
                 self._otel_label,
                 attributes=self._otel_attrs,
+                infer_session_id=False,
                 required_level=OtelCollectLevel.REACTIVITY,
                 collection_level=self._otel_level,
             ):

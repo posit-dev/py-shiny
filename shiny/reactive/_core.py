@@ -179,6 +179,7 @@ class ReactiveEnvironment:
         # Wrap entire flush cycle in reactive_update span (or no-op if not collecting)
         async with shiny_otel_span(
             "reactive_update",
+            infer_session_id=True,
             required_level=OtelCollectLevel.REACTIVE_UPDATE,
             collection_level=_get_env_level(),
         ):

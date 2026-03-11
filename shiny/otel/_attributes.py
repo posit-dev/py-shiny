@@ -125,8 +125,10 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
     # Fill any missing fields from ASGI scope
     if hasattr(http_conn, "scope"):
         scope = http_conn.scope
-        if "server" in scope and scope["server"] and (
-            "server.address" not in attributes or "server.port" not in attributes
+        if (
+            "server" in scope
+            and scope["server"]
+            and ("server.address" not in attributes or "server.port" not in attributes)
         ):
             server_tuple = scope["server"]
             if isinstance(server_tuple, (list, tuple)) and len(server_tuple) >= 2:  # type: ignore[arg-type]

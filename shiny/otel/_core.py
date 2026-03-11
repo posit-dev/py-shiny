@@ -125,6 +125,8 @@ def emit_otel_log(
     body: str,
     severity_text: str = "INFO",
     attributes: Union[dict[str, Any], None] = None,
+    *,
+    infer_session_id: bool,
 ) -> None:
     """
     Emit an OpenTelemetry log record.
@@ -143,6 +145,10 @@ def emit_otel_log(
     attributes
         Optional dictionary of attributes to attach to the log record.
         These provide additional structured context about the event.
+    infer_session_id
+        If ``True``, automatically add ``session.id`` from current
+        session context when not provided in ``attributes``. Set to ``False``
+        to opt out of automatic inference.
 
     Examples
     --------
@@ -173,7 +179,7 @@ def emit_otel_log(
         # This works because session.id is consistent across sessions and modules
         # (a SessionProxy shares the same id as its parent AppSession).
         resolved_attrs = dict(attributes) if attributes else {}
-        if ATTR_SESSION_ID not in resolved_attrs:
+        if infer_session_id and ATTR_SESSION_ID not in resolved_attrs:
             from ..session._utils import get_current_session
 
             session = get_current_session()

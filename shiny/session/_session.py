@@ -54,6 +54,7 @@ from ..module import ResolvedId
 from ..otel._attributes import (
     extract_http_attributes,
     extract_source_ref,
+    get_session_id_attrs,
 )
 from ..otel._collect import OtelCollectLevel, _get_env_level
 from ..otel._decorators import suppress as otel_suppress
@@ -599,6 +600,7 @@ class AppSession(Session):
                 "session_end",
                 required_level=OtelCollectLevel.SESSION,
                 collection_level=_get_env_level(),
+                infer_session_id=True,
             ):
                 try:
                     await self._on_ended_callbacks.invoke()
@@ -698,6 +700,7 @@ class AppSession(Session):
                                     ),
                                     required_level=OtelCollectLevel.SESSION,
                                     collection_level=_get_env_level(),
+                                    infer_session_id=True,
                                 ):
                                     self.app.server(self.input, self.output, self)
 
@@ -953,6 +956,7 @@ class AppSession(Session):
                         )
 
                         otel_attrs = {
+                            **get_session_id_attrs(self),
                             "download.id": download_id,
                             "download.filename": filename,
                         }
@@ -965,6 +969,7 @@ class AppSession(Session):
                             async with shiny_otel_span(
                                 download_label,
                                 attributes=otel_attrs,
+                                infer_session_id=False,
                                 required_level=OtelCollectLevel.REACTIVITY,
                             ):
                                 file_response = FileResponse(
@@ -1010,6 +1015,7 @@ class AppSession(Session):
                             download_label,
                             wrapped_contents,
                             attributes=otel_attrs,
+                            infer_session_id=False,
                             required_level=OtelCollectLevel.REACTIVITY,
                         )
 
@@ -1937,6 +1943,10 @@ class Outputs:
                     )
 
                 session = require_real_session()
+                output_attrs = {
+                    **get_session_id_attrs(session),
+                    **output_otel_attrs,
+                }
 
                 await session._send_message(
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
@@ -1945,7 +1955,8 @@ class Outputs:
                 try:
                     async with shiny_otel_span(
                         output_otel_label,
-                        attributes=output_otel_attrs,
+                        attributes=output_attrs,
+                        infer_session_id=False,
                         required_level=OtelCollectLevel.REACTIVITY,
                         collection_level=output_otel_level,
                     ):

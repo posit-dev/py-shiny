@@ -74,6 +74,7 @@ async def shiny_otel_span(
     name: str,
     *,
     attributes: AttributesType = None,
+    infer_session_id: bool,
     required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
     collection_level: OtelCollectLevel | None = None,
 ) -> AsyncIterator[Span | None]:
@@ -110,6 +111,10 @@ async def shiny_otel_span(
         context if not already present in the attributes. This works because
         session.id is consistent across sessions and modules (a SessionProxy
         shares the same id as its parent AppSession).
+    infer_session_id
+        If ``True``, automatically add ``session.id`` from current
+        session context when not provided in ``attributes``. Set to ``False``
+        to opt out of automatic inference.
     required_level
         The minimum collect level required for this span. Defaults to SESSION.
 
@@ -164,7 +169,7 @@ async def shiny_otel_span(
     # Auto-add session.id if not already present and a session is available.
     # This works because session.id is consistent across sessions and modules
     # (a SessionProxy shares the same id as its parent AppSession).
-    if ATTR_SESSION_ID not in resolved_attrs:
+    if infer_session_id and ATTR_SESSION_ID not in resolved_attrs:
         from ..session._utils import get_current_session
 
         session = get_current_session()
@@ -221,6 +226,7 @@ async def shiny_otel_span_stream(
     inner: AsyncIterable[bytes],
     *,
     attributes: AttributesType = None,
+    infer_session_id: bool,
     required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
     collection_level: OtelCollectLevel | None = None,
 ) -> AsyncIterator[bytes]:
@@ -238,6 +244,10 @@ async def shiny_otel_span_stream(
         The async iterable of bytes to wrap.
     attributes
         Optional span attributes (dict or callable returning dict).
+    infer_session_id
+        If ``True``, automatically add ``session.id`` from current
+        session context when not provided in ``attributes``. Set to ``False``
+        to opt out of automatic inference.
     required_level
         Minimum collect level required for this span. Defaults to SESSION.
     collection_level
@@ -263,6 +273,7 @@ async def shiny_otel_span_stream(
     async with shiny_otel_span(
         name,
         attributes=attributes,
+        infer_session_id=infer_session_id,
         required_level=required_level,
         collection_level=collection_level,
     ):
