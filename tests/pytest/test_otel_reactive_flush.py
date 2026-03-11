@@ -19,6 +19,7 @@ from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import is_otel_tracing_enabled
 from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive._core import ReactiveEnvironment
+from shiny.session._utils import session_context
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
@@ -163,3 +164,29 @@ class TestReactiveFlushInstrumentation:
         assert (
             reactive_span.context.trace_id == session_span.context.trace_id
         ), "Spans should be in same trace"
+
+    @pytest.mark.asyncio
+    async def test_reactive_update_span_includes_session_id_from_context(
+        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that reactive_update span auto-includes session.id when session context is active."""
+        provider, memory_exporter = otel_tracer_provider
+        mock_session = Mock()
+        mock_session.id = "session-xyz"
+        mock_session.ns = ""
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
+                with session_context(mock_session):
+                    env = ReactiveEnvironment()
+                    await env.flush()
+
+        spans = get_exported_spans(provider, memory_exporter)
+        app_spans = [s for s in spans if not s.name.startswith("_otel")]
+        reactive_span = next(
+            (s for s in app_spans if s.name == "reactive_update"), None
+        )
+
+        assert reactive_span is not None, "reactive_update span should exist"
+        assert reactive_span.attributes is not None
+        assert reactive_span.attributes.get("session.id") == "session-xyz"

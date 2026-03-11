@@ -730,9 +730,11 @@ class AppSession(Session):
                         # https://github.com/posit-dev/py-shiny/issues/1381
                         await asyncio.sleep(0)
 
-                        self._request_flush()
-
-                        await reactive_flush()
+                        # Keep session context active for reactive flush so
+                        # reactive_update spans can consistently include session.id.
+                        with session_context(self):
+                            self._request_flush()
+                            await reactive_flush()
 
             except ConnectionClosed:
                 ...
