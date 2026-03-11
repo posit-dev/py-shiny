@@ -123,9 +123,9 @@ class TestReactiveFlushInstrumentation:
 
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
-                # Simulate session.start with reactive_flush inside
+                # Simulate session_start with reactive_flush inside
                 async with shiny_otel_span(
-                    "session.start",
+                    "session_start",
                     attributes={"session.id": "test123"},
                     required_level=OtelCollectLevel.SESSION,
                 ):
@@ -139,25 +139,25 @@ class TestReactiveFlushInstrumentation:
         # Filter out the _otel_is_recording span
         app_spans = [s for s in spans if not s.name.startswith("_otel")]
 
-        # Should have 2 spans: session.start and reactive_update
+        # Should have 2 spans: session_start and reactive_update
         assert len(app_spans) >= 2
 
-        # Find session.start and reactive_update spans
-        session_span = next((s for s in app_spans if s.name == "session.start"), None)
+        # Find session_start and reactive_update spans
+        session_span = next((s for s in app_spans if s.name == "session_start"), None)
         reactive_span = next(
             (s for s in app_spans if s.name == "reactive_update"), None
         )
 
-        assert session_span is not None, "session.start span should exist"
+        assert session_span is not None, "session_start span should exist"
         assert reactive_span is not None, "reactive_update span should exist"
 
         # Verify parent-child relationship
         assert reactive_span.parent is not None, "reactive_update should have a parent"
         assert reactive_span.context is not None, "reactive_update should have context"
-        assert session_span.context is not None, "session.start should have context"
+        assert session_span.context is not None, "session_start should have context"
         assert (
             reactive_span.parent.span_id == session_span.context.span_id
-        ), "reactive_update parent should be session.start"
+        ), "reactive_update parent should be session_start"
 
         # Verify they're in the same trace
         assert (

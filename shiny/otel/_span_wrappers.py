@@ -132,7 +132,7 @@ async def shiny_otel_span(
 
         # Lazy attributes (only computed if collecting)
         async with shiny_otel_span(
-            "session.start",
+            "session_start",
             attributes=lambda: {ATTR_SESSION_ID: session.id, **extract_http_attributes(conn)}
         ) as span:
             # Attributes only extracted if span is created

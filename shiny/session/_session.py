@@ -593,16 +593,17 @@ class AppSession(Session):
             return
         self._has_run_session_ended_tasks = True
 
-        # Wrap session cleanup in session.end span (or no-op if not collecting)
-        async with shiny_otel_span(
-            "session.end",
-            required_level=OtelCollectLevel.SESSION,
-            collection_level=_get_env_level(),
-        ):
-            try:
-                await self._on_ended_callbacks.invoke()
-            finally:
-                self.app._remove_session(self)
+        # Wrap session cleanup in session_end span (or no-op if not collecting)
+        with session_context(self):
+            async with shiny_otel_span(
+                "session_end",
+                required_level=OtelCollectLevel.SESSION,
+                collection_level=_get_env_level(),
+            ):
+                try:
+                    await self._on_ended_callbacks.invoke()
+                finally:
+                    self.app._remove_session(self)
 
     def is_stub_session(self) -> Literal[False]:
         return False
@@ -688,19 +689,19 @@ class AppSession(Session):
                             message_obj = typing.cast(ClientMessageInit, message_obj)
                             self._manage_inputs(message_obj["data"])
 
-                            # Wrap server function initialization in session.start span
-                            async with shiny_otel_span(
-                                "session.start",
-                                attributes=lambda: extract_http_attributes(
-                                    self.http_conn
-                                ),
-                                required_level=OtelCollectLevel.SESSION,
-                                collection_level=_get_env_level(),
-                            ):
-                                with session_context(self):
+                            # Wrap server function initialization in session_start span
+                            with session_context(self):
+                                async with shiny_otel_span(
+                                    "session_start",
+                                    attributes=lambda: extract_http_attributes(
+                                        self.http_conn
+                                    ),
+                                    required_level=OtelCollectLevel.SESSION,
+                                    collection_level=_get_env_level(),
+                                ):
                                     self.app.server(self.input, self.output, self)
 
-                                    # Flush here to attempt a reactive_update within `session.start` otel span.
+                                    # Flush here to attempt a reactive_update within `session_start` otel span.
                                     # Might also fix https://github.com/posit-dev/py-shiny/issues/1889
                                     await reactive_flush()
 
