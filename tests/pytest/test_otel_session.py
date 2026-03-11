@@ -116,6 +116,50 @@ class TestHttpAttributes:
         assert attributes["server.path"] == "/from-url"
         assert attributes["server.origin"] == "https://from-header"
 
+    def test_extract_http_attributes_fills_path_and_origin_from_scope(self):
+        """Test scope fills missing path/origin when URL/headers do not provide them."""
+        mock_url = Mock()
+        mock_url.hostname = "url-host"
+        mock_url.port = 9000
+        mock_url.path = None
+
+        mock_conn = Mock()
+        mock_conn.url = mock_url
+        mock_conn.headers = {}
+        mock_conn.scope = {
+            "path": "/from-scope",
+            "headers": [
+                (b"x-other", b"unused"),
+                (b"origin", b"https://scope-origin.example"),
+            ],
+        }
+
+        attributes = extract_http_attributes(mock_conn)
+
+        assert attributes["server.address"] == "url-host"
+        assert attributes["server.port"] == 9000
+        assert attributes["server.path"] == "/from-scope"
+        assert attributes["server.origin"] == "https://scope-origin.example"
+
+    def test_extract_http_attributes_omits_origin_when_not_present(self):
+        """Test origin is not emitted when neither HTTP headers nor scope include it."""
+        mock_url = Mock()
+        mock_url.hostname = "localhost"
+        mock_url.port = 8000
+        mock_url.path = "/test"
+
+        mock_conn = Mock()
+        mock_conn.url = mock_url
+        mock_conn.headers = {}
+        mock_conn.scope = {"headers": [(b"x-forwarded-for", b"127.0.0.1")]}
+
+        attributes = extract_http_attributes(mock_conn)
+
+        assert attributes["server.address"] == "localhost"
+        assert attributes["server.port"] == 8000
+        assert attributes["server.path"] == "/test"
+        assert "server.origin" not in attributes
+
 
 class TestSessionSpans:
     """OpenTelemetry Session Lifecycle Instrumentation Tests"""
