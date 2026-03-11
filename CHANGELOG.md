@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added the `SHINY_OTEL_COLLECT` environment variable to set the default collection level globally. Available levels: (#2143)
   * `"none"` - Disables all Shiny-specific telemetry collection. Use this for sensitive operations where you don't want Shiny to emit any spans or logs.
-  * `"session"` - Captures session lifecycle spans that track when user sessions start, end, and their duration. This provides basic visibility into session activity without detailed reactive execution information.
+  * `"session"` - Captures session lifecycle spans that track when user sessions are starting and ending. This provides basic visibility into session activity without detailed reactive execution information.
   * `"reactive_update"` - Captures everything from `"session"` plus reactive flush cycle spans that show when reactive invalidation and re-execution occurs. This helps identify performance bottlenecks in reactive updates without the overhead of per-reactive-component instrumentation.
   * `"reactivity"` - Captures everything from `"reactive_update"` plus individual reactive execution spans (`reactive.calc`, `reactive.effect`, `extended_task`), info-level logs for reactive value updates (including source file, line number, and column position), and debug-level logs for extended task queue operations. This provides comprehensive visibility into reactive execution flow and timing.
   * `"all"` \[Default\] - Currently equivalent to `"reactivity"` and represents the most comprehensive telemetry available. This is the default collection level when `SHINY_OTEL_COLLECT` is not set (or is explicitly set to `all`).

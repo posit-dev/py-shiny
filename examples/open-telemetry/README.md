@@ -190,10 +190,10 @@ The default collection level is set by:
 When telemetry is enabled (`all` level), you'll see spans like:
 
 ```text
-session.start
+session_start
   └─ reactive_update
       ├─ reactive.calc result
-      ├─ reactive.effect <lambda>
+      ├─ reactive.effect <anonymous>
       └─ output result_private (suppressed with @otel.suppress)
 ```
 
