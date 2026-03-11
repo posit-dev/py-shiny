@@ -93,6 +93,8 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
     # Returns: {
     #     "server.address": "localhost",
     #     "server.port": 8000,
+    #     "server.path": "/",
+    #     "server.origin": "https://example.com",
     # }
     ```
 
@@ -101,29 +103,52 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
     Following OTel semantic conventions:
     - `server.address`: Host name or IP address
     - `server.port`: Port number
+    - `server.path`: Request path
+    - `server.origin`: Origin of the request (if available)
     """
     attributes: Dict[str, Any] = {}
 
-    # Extract server address (hostname)
+    # Extract from HTTPConnection URL and headers first
     if hasattr(http_conn, "url") and http_conn.url:
-        if http_conn.url.hostname:
+        if http_conn.url.hostname and "server.address" not in attributes:
             attributes["server.address"] = http_conn.url.hostname
-        if http_conn.url.port:
+        if http_conn.url.port and "server.port" not in attributes:
             attributes["server.port"] = http_conn.url.port
+        if http_conn.url.path and "server.path" not in attributes:
+            attributes["server.path"] = http_conn.url.path
 
-    # Fallback: try to extract from scope (ASGI)
-    if not attributes and hasattr(http_conn, "scope"):
+    if hasattr(http_conn, "headers"):
+        origin = http_conn.headers.get("origin")
+        if origin and "server.origin" not in attributes:
+            attributes["server.origin"] = origin
+
+    # Fill any missing fields from ASGI scope
+    if hasattr(http_conn, "scope"):
         scope = http_conn.scope
-        if "server" in scope and scope["server"]:
+        if "server" in scope and scope["server"] and (
+            "server.address" not in attributes or "server.port" not in attributes
+        ):
             server_tuple = scope["server"]
             if isinstance(server_tuple, (list, tuple)) and len(server_tuple) >= 2:  # type: ignore[arg-type]
                 # ASGI scope server is tuple[str, int | None]
                 server_host = cast(str, server_tuple[0])
                 server_port = cast(int, server_tuple[1])
-                if server_host:
+                if server_host and "server.address" not in attributes:
                     attributes["server.address"] = server_host
-                if server_port:
+                if server_port and "server.port" not in attributes:
                     attributes["server.port"] = server_port
+
+        scope_path = scope.get("path")
+        if scope_path and "server.path" not in attributes:
+            attributes["server.path"] = scope_path
+
+        scope_origin = scope.get("headers")
+        if scope_origin and "server.origin" not in attributes:
+            # ASGI headers are list[tuple[bytes, bytes]]
+            for key, value in scope_origin:
+                if key == b"origin" and value:
+                    attributes["server.origin"] = value.decode("latin-1")
+                    break
 
     return attributes
 
