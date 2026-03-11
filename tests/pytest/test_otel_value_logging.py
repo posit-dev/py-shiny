@@ -141,9 +141,7 @@ class TestEmitLog:
     def test_emit_log_with_severity(self, otel_log_provider_and_exporter):
         """Test log emission with custom severity"""
         provider, exporter = otel_log_provider_and_exporter
-        emit_otel_log(
-            "Debug message", severity_text="DEBUG", infer_session_id=True
-        )
+        emit_otel_log("Debug message", severity_text="DEBUG", infer_session_id=True)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
