@@ -54,12 +54,11 @@ from ..module import ResolvedId
 from ..otel._attributes import (
     extract_http_attributes,
     extract_source_ref,
-    get_session_id_attrs,
 )
 from ..otel._collect import OtelCollectLevel, _get_env_level
 from ..otel._decorators import suppress as otel_suppress
 from ..otel._function_attrs import resolve_func_otel_level
-from ..otel._labels import create_otel_span_name
+from ..otel._labels import create_otel_label, create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
@@ -597,7 +596,6 @@ class AppSession(Session):
         # Wrap session cleanup in session.end span (or no-op if not collecting)
         async with shiny_otel_span(
             "session.end",
-            attributes=get_session_id_attrs(self),
             required_level=OtelCollectLevel.SESSION,
             collection_level=_get_env_level(),
         ):
@@ -693,10 +691,9 @@ class AppSession(Session):
                             # Wrap server function initialization in session.start span
                             async with shiny_otel_span(
                                 "session.start",
-                                attributes=lambda: {
-                                    **get_session_id_attrs(self),
-                                    **extract_http_attributes(self.http_conn),
-                                },
+                                attributes=lambda: extract_http_attributes(
+                                    self.http_conn
+                                ),
                                 required_level=OtelCollectLevel.SESSION,
                                 collection_level=_get_env_level(),
                             ):
@@ -938,8 +935,21 @@ class AppSession(Session):
                             "Cache-Control": "no-store",
                         }
 
+                        # Parse namespace and base id from download_id
+                        # IDs only contain \w characters, so "-" is exclusively
+                        # the namespace separator (from ResolvedId)
+                        if "-" in download_id:
+                            dl_namespace, _, dl_base_id = download_id.rpartition("-")
+                        else:
+                            dl_namespace, dl_base_id = None, download_id
+
+                        download_label = create_otel_label(
+                            "download",
+                            dl_base_id,
+                            namespace=dl_namespace or None,
+                        )
+
                         otel_attrs = {
-                            **get_session_id_attrs(self),
                             "download.id": download_id,
                             "download.filename": filename,
                         }
@@ -950,7 +960,7 @@ class AppSession(Session):
                             # transfer is handled by Starlette's ASGI layer after
                             # we return the FileResponse object.
                             async with shiny_otel_span(
-                                "download",
+                                download_label,
                                 attributes=otel_attrs,
                                 required_level=OtelCollectLevel.REACTIVITY,
                             ):
@@ -994,7 +1004,7 @@ class AppSession(Session):
                             wrapped_contents = wrap_content_sync()
 
                         wrapped_contents = shiny_otel_span_stream(
-                            "download",
+                            download_label,
                             wrapped_contents,
                             attributes=otel_attrs,
                             required_level=OtelCollectLevel.REACTIVITY,

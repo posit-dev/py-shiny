@@ -40,13 +40,13 @@ def is_user_code_frame(filename: str) -> bool:
     Notes
     -----
     The function considers these as user code:
-    - Any file outside the shiny package
+    - Any file outside the shiny package directory
     - Test files (files starting with "test_")
-    - Files in the shiny/tests directory
+    - Files in the shiny/api-examples directory
 
     The function filters out:
     - Special/generated frames (filename starts with "<")
-    - Internal shiny package code (except tests)
+    - Internal shiny package code (except api-examples and test files)
     """
     # Skip special/generated frames
     if not filename or filename.startswith("<"):
@@ -59,18 +59,14 @@ def is_user_code_frame(filename: str) -> bool:
 
     # Check if file is within shiny package directory
     try:
-        # Get the shiny repository directory (three levels up from this file)
-        # This file is at ./shiny/reactive/_utils.py, so we go up to ./
-        shiny_repo_dir = Path(__file__).parent.parent.parent
+        # Get the shiny package directory (two levels up from this file)
+        # This file is at ./shiny/reactive/_utils.py, so we go up to ./shiny/
+        shiny_pkg_dir = Path(__file__).parent.parent
 
         # Check if file is under shiny package
-        if file_path.is_relative_to(shiny_repo_dir):
-            # Allow tests and examples
-            if (
-                file_path.is_relative_to(shiny_repo_dir / "examples")
-                or file_path.is_relative_to(shiny_repo_dir / "tests")
-                or file_path.is_relative_to(shiny_repo_dir / "shiny" / "api-examples")
-            ):
+        if file_path.is_relative_to(shiny_pkg_dir):
+            # Allow api-examples within the shiny package
+            if file_path.is_relative_to(shiny_pkg_dir / "api-examples"):
                 return True
 
             return False

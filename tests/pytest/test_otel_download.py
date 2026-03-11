@@ -260,7 +260,7 @@ class TestDownloadHandlerSpans:
                     # Verify shiny_otel_span was called for the download
                     mock_span.assert_called_once()
             call_args = mock_span.call_args
-            assert call_args[0][0] == "download"
+            assert call_args[0][0] == "download my_file"
             assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
             raw_attrs = call_args[1]["attributes"]
             # Attributes may be a callable; resolve if needed
@@ -316,7 +316,7 @@ class TestDownloadHandlerSpans:
 
             mock_stream_span.assert_called_once()
             call_args = mock_stream_span.call_args
-            assert call_args[0][0] == "download"
+            assert call_args[0][0] == "download stream_file"
             assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY
 
     @pytest.mark.asyncio
@@ -364,5 +364,5 @@ class TestDownloadHandlerSpans:
 
             mock_stream_span.assert_called_once()
             call_args = mock_stream_span.call_args
-            assert call_args[0][0] == "download"
+            assert call_args[0][0] == "download sync_file"
             assert call_args[1]["required_level"] == OtelCollectLevel.REACTIVITY

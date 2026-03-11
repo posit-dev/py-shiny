@@ -28,9 +28,6 @@ class TestHttpAttributes:
         mock_url = Mock()
         mock_url.hostname = "localhost"
         mock_url.port = 8000
-        mock_url.path = "/test"
-        mock_url.scheme = "http"
-
         mock_conn = Mock()
         mock_conn.url = mock_url
 
@@ -38,8 +35,8 @@ class TestHttpAttributes:
 
         assert attributes["server.address"] == "localhost"
         assert attributes["server.port"] == 8000
-        assert attributes["url.path"] == "/test"
-        assert attributes["url.scheme"] == "http"
+        assert "url.path" not in attributes
+        assert "url.scheme" not in attributes
 
     def test_extract_http_attributes_from_scope(self):
         """Test extracting HTTP attributes from ASGI scope as fallback"""
@@ -56,8 +53,8 @@ class TestHttpAttributes:
 
         assert attributes["server.address"] == "127.0.0.1"
         assert attributes["server.port"] == 5000
-        assert attributes["url.path"] == "/api/data"
-        assert attributes["url.scheme"] == "https"
+        assert "url.path" not in attributes
+        assert "url.scheme" not in attributes
 
     def test_extract_http_attributes_empty(self):
         """Test extracting HTTP attributes when no data available"""
@@ -77,8 +74,6 @@ class TestHttpAttributes:
         mock_url = Mock()
         mock_url.hostname = "example.com"
         mock_url.port = None
-        mock_url.path = "/"
-        mock_url.scheme = None
 
         mock_conn = Mock()
         mock_conn.url = mock_url
@@ -86,10 +81,8 @@ class TestHttpAttributes:
         attributes = extract_http_attributes(mock_conn)
 
         assert attributes["server.address"] == "example.com"
-        assert attributes["url.path"] == "/"
-        # Port and scheme should not be in dict if None
+        # Port should not be in dict if None
         assert "server.port" not in attributes
-        assert "url.scheme" not in attributes
 
 
 class TestSessionSpans:

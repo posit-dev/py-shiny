@@ -17,7 +17,7 @@ from .._docstring import add_example
 from .._typing_extensions import ParamSpec
 from .._utils import is_async_callable
 from .._validation import req
-from ..otel._attributes import extract_source_ref, get_session_id_attrs
+from ..otel._attributes import extract_source_ref
 from ..otel._collect import OtelCollectLevel
 from ..otel._core import emit_otel_log, is_otel_tracing_enabled
 from ..otel._function_attrs import resolve_func_otel_level
@@ -66,7 +66,6 @@ class ExtendedTask(Generic[P, R]):
         session = get_current_session()
         self._otel_attrs: dict[str, Any] = {
             **extract_source_ref(func),
-            **get_session_id_attrs(session),
         }
 
         # Generate label for task execution span

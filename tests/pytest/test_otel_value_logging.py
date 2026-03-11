@@ -711,14 +711,14 @@ class TestValueSourceReference:
         # Check that source reference attributes are present
         attrs = value_logs[0].log_record.attributes
         assert attrs is not None
-        assert "code.filepath" in attrs
-        assert "code.lineno" in attrs
-        assert "code.function" in attrs
+        assert "code.file.path" in attrs
+        assert "code.line.number" in attrs
+        assert "code.function.name" in attrs
 
         # Verify the filepath points to this test file
-        assert "test_otel_value_logging.py" in attrs["code.filepath"]
+        assert "test_otel_value_logging.py" in attrs["code.file.path"]
         # Verify the function is this test
-        assert attrs["code.function"] == "test_source_ref_in_log_attributes"
+        assert attrs["code.function.name"] == "test_source_ref_in_log_attributes"
 
     def test_source_ref_without_session(self, otel_log_provider_and_exporter):
         """Test that NO logs are emitted without a session (too early)"""

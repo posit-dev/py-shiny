@@ -12,7 +12,7 @@ from opentelemetry import trace
 from opentelemetry._logs import get_logger_provider
 from opentelemetry.trace import Tracer
 
-from ._constants import TRACER_NAME
+from ._constants import ATTR_SESSION_ID, TRACER_NAME
 
 __all__ = (
     "get_otel_tracer",
@@ -169,11 +169,22 @@ def emit_otel_log(
     specification for log data model.
     """
     try:
+        # Auto-add session.id if not already present and a session is available.
+        # This works because session.id is consistent across sessions and modules
+        # (a SessionProxy shares the same id as its parent AppSession).
+        resolved_attrs = dict(attributes) if attributes else {}
+        if ATTR_SESSION_ID not in resolved_attrs:
+            from ..session._utils import get_current_session
+
+            session = get_current_session()
+            if session is not None and hasattr(session, "id"):
+                resolved_attrs[ATTR_SESSION_ID] = session.id
+
         logger = get_otel_logger()
         logger.emit(
             body=body,
             severity_text=severity_text,
-            attributes=attributes,
+            attributes=resolved_attrs if resolved_attrs else None,
         )
     except Exception:
         # Silently fail if OTel logging is not configured or fails

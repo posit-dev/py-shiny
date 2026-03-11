@@ -289,20 +289,20 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(my_func)
 
         # Should have code attributes
-        assert "code.function" in attrs
-        assert attrs["code.function"] == "my_func"
-        assert "code.filepath" in attrs
-        assert "code.lineno" in attrs
+        assert "code.function.name" in attrs
+        assert attrs["code.function.name"] == "my_func"
+        assert "code.file.path" in attrs
+        assert "code.line.number" in attrs
 
     def test_extract_source_ref_from_lambda(self):
         """Test extracting source reference from lambda"""
         attrs = extract_source_ref(lambda: 42)
 
         # Lambda should still have source info
-        assert "code.function" in attrs
-        assert attrs["code.function"] == "<lambda>"
-        assert "code.filepath" in attrs
-        assert "code.lineno" in attrs
+        assert "code.function.name" in attrs
+        assert attrs["code.function.name"] == "<lambda>"
+        assert "code.file.path" in attrs
+        assert "code.line.number" in attrs
 
     def test_extract_source_ref_from_builtin(self):
         """Test extracting source reference from built-in function"""
@@ -332,19 +332,19 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(wrapper_function)
 
         # Should extract from the ORIGINAL function, not the wrapper
-        assert "code.function" in attrs
+        assert "code.function.name" in attrs
         assert (
-            attrs["code.function"] == "original_function"
+            attrs["code.function.name"] == "original_function"
         ), f"Should have original function name, got: {attrs.get('code.function')}"
 
-        assert "code.filepath" in attrs
-        assert attrs["code.filepath"].endswith(
+        assert "code.file.path" in attrs
+        assert attrs["code.file.path"].endswith(
             "test_otel_reactive_execution.py"
         ), f"Should point to this test file, got: {attrs['code.filepath']}"
 
-        assert "code.lineno" in attrs
+        assert "code.line.number" in attrs
         assert (
-            attrs["code.lineno"] == original_line
+            attrs["code.line.number"] == original_line
         ), f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
 
     def test_extract_source_ref_from_nested_wrapped_functions(self):
@@ -371,10 +371,10 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(wrapper2)
 
         # Should unwrap all the way to the original
-        assert "code.function" in attrs
-        assert attrs["code.function"] == "original"
-        assert "code.lineno" in attrs
-        assert attrs["code.lineno"] == original_line
+        assert "code.function.name" in attrs
+        assert attrs["code.function.name"] == "original"
+        assert "code.line.number" in attrs
+        assert attrs["code.line.number"] == original_line
 
     def test_extract_source_ref_from_reactive_event_decorator(self):
         """Test that @reactive.event decorated functions unwrap correctly"""
@@ -396,14 +396,14 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(decorated)
 
         # Should extract from original function, not the event wrapper
-        assert "code.function" in attrs
+        assert "code.function.name" in attrs
         assert (
-            attrs["code.function"] == "my_effect"
+            attrs["code.function.name"] == "my_effect"
         ), f"Should have original function name, got: {attrs.get('code.function')}"
 
-        assert "code.lineno" in attrs
+        assert "code.line.number" in attrs
         assert (
-            attrs["code.lineno"] == original_line
+            attrs["code.line.number"] == original_line
         ), f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
 
     def test_extract_source_ref_from_unwrappable_function(self):
@@ -426,8 +426,8 @@ class TestSourceReferenceExtraction:
         # Should have attributes (even if they're from the inner function)
         assert isinstance(attrs, dict)
         # Function name should be what we set
-        if "code.function" in attrs:
-            assert attrs["code.function"] == "fake_name"
+        if "code.function.name" in attrs:
+            assert attrs["code.function.name"] == "fake_name"
 
     def test_extract_source_ref_from_deeply_nested_wrappers(self):
         """Test extract_source_ref with 3+ layers of wrapping"""
@@ -456,12 +456,12 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(wrapper3)
 
         # Should unwrap all the way to the original
-        assert "code.function" in attrs
+        assert "code.function.name" in attrs
         assert (
-            attrs["code.function"] == "original"
+            attrs["code.function.name"] == "original"
         ), "Should unwrap through 3 layers to original"
-        assert "code.lineno" in attrs
-        assert attrs["code.lineno"] == original_line
+        assert "code.line.number" in attrs
+        assert attrs["code.line.number"] == original_line
 
     def test_extract_source_ref_from_functools_partial(self):
         """Test extract_source_ref with functools.partial objects"""
@@ -505,8 +505,8 @@ class TestSourceReferenceExtraction:
         assert isinstance(attrs, dict)
         # With ValueError handling in both unwrap() and getsourcelines(),
         # we should get at least the function name
-        assert "code.function" in attrs
-        assert attrs["code.function"] == "func1"
+        assert "code.function.name" in attrs
+        assert attrs["code.function.name"] == "func1"
 
 
 class TestCalcSpans:
@@ -587,10 +587,10 @@ class TestCalcSpans:
                     call_args = mock_span.call_args
                     attrs = call_args[1]["attributes"]
                     # Attributes are stored on the calc instance at init time
-                    assert "code.function" in attrs
-                    assert attrs["code.function"] == "my_calc"
-                    assert "code.filepath" in attrs
-                    assert "code.lineno" in attrs
+                    assert "code.function.name" in attrs
+                    assert attrs["code.function.name"] == "my_calc"
+                    assert "code.file.path" in attrs
+                    assert "code.line.number" in attrs
 
 
 class TestEffectSpans:
@@ -673,10 +673,10 @@ class TestEffectSpans:
                     call_args = mock_span.call_args
                     attrs = call_args[1]["attributes"]
                     # Attributes are stored on the effect instance at init time
-                    assert "code.function" in attrs
-                    assert attrs["code.function"] == "my_effect"
-                    assert "code.filepath" in attrs
-                    assert "code.lineno" in attrs
+                    assert "code.function.name" in attrs
+                    assert attrs["code.function.name"] == "my_effect"
+                    assert "code.file.path" in attrs
+                    assert "code.line.number" in attrs
 
 
 class TestOutputSpans:
@@ -799,10 +799,10 @@ class TestExtendedTaskSpans:
                 task = ExtendedTask(my_task)
 
                 # Check that OTel attributes include source reference
-                assert "code.function" in task._otel_attrs
-                assert task._otel_attrs["code.function"] == "my_task"
-                assert "code.filepath" in task._otel_attrs
-                assert "code.lineno" in task._otel_attrs
+                assert "code.function.name" in task._otel_attrs
+                assert task._otel_attrs["code.function.name"] == "my_task"
+                assert "code.file.path" in task._otel_attrs
+                assert "code.line.number" in task._otel_attrs
 
     def test_extended_task_label_generation(self):
         """Test that ExtendedTask generates correct label"""

@@ -59,6 +59,7 @@ from typing import Any, AsyncIterable, AsyncIterator, Callable, Dict, Mapping, U
 from opentelemetry.trace import Span, Status, StatusCode
 
 from ._collect import OtelCollectLevel, get_level
+from ._constants import ATTR_SESSION_ID
 from ._core import get_otel_tracer, is_otel_tracing_enabled
 
 __all__ = ("shiny_otel_span", "shiny_otel_span_stream")
@@ -105,9 +106,10 @@ async def shiny_otel_span(
         called if collection is enabled, allowing for lazy evaluation of
         expensive attribute extraction.
 
-        **Important:** Session context attributes (like `session.id`) should be
-        explicitly passed in this parameter. They are NOT automatically added,
-        providing flexibility to choose which spans include session context.
+        **Note:** `session.id` is automatically added from the current session
+        context if not already present in the attributes. This works because
+        session.id is consistent across sessions and modules (a SessionProxy
+        shares the same id as its parent AppSession).
     required_level
         The minimum collect level required for this span. Defaults to SESSION.
 
@@ -158,6 +160,16 @@ async def shiny_otel_span(
             resolved_attrs = dict(attr_result) if attr_result else {}
         else:
             resolved_attrs = dict(attributes)
+
+    # Auto-add session.id if not already present and a session is available.
+    # This works because session.id is consistent across sessions and modules
+    # (a SessionProxy shares the same id as its parent AppSession).
+    if ATTR_SESSION_ID not in resolved_attrs:
+        from ..session._utils import get_current_session
+
+        session = get_current_session()
+        if session is not None and hasattr(session, "id"):
+            resolved_attrs[ATTR_SESSION_ID] = session.id
 
     tracer = get_otel_tracer()
     with tracer.start_as_current_span(
