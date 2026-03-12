@@ -5,7 +5,7 @@ import os
 from operator import eq
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, TypeVar, cast
 
-from .. import _utils, reactive
+from .. import _utils, otel, reactive
 from .._docstring import add_example
 from ..types import MISSING, MISSING_TYPE
 
@@ -97,110 +97,111 @@ def poll(
     * :func:`~shiny.reactive.file_reader`
     """
 
-    with reactive.isolate():
-        last_value: reactive.Value[Any] = reactive.Value(poll_func())
-        last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
+    with otel.suppress():
+        with reactive.isolate():
+            last_value: reactive.Value[Any] = reactive.Value(poll_func())
+            last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
 
-    @reactive.effect(priority=priority, session=session)
-    async def _():
-        try:
-            if _utils.is_async_callable(poll_func):
-                new = await poll_func()
-            else:
-                new = poll_func()
-
-            with reactive.isolate():
-                old = last_value.get()
-
+        @reactive.effect(priority=priority, session=session)
+        async def _():
             try:
-                is_equal = equals(old, new)
-            except Exception as e:
-                # For example, pandas DataFrame throws if you try to compare it to a
-                # non-comparable object
-                raise TypeError(
-                    "The reactive.poll polling function returned an object that "
-                    "couldn't be compared with a previously returned object. Try "
-                    "modifying your polling function to return a simpler type, like a "
-                    "str, float, list, or dict."
-                ) from e
-            if not isinstance(is_equal, bool):
-                # Comparison succeeded, but we don't understand the result
-                if equals is eq:
-                    # We used == but it didn't work
-                    raise TypeError(
-                        "The reactive.poll polling function returned an object "
-                        "that doesn't implement a simple == operator. Try "
-                        "modifying your polling function to return a simpler type, "
-                        "like a str, float, list, or dict."
-                    )
+                if _utils.is_async_callable(poll_func):
+                    new = await poll_func()
                 else:
-                    # The caller passed in a custom function
+                    new = poll_func()
+
+                with reactive.isolate():
+                    old = last_value.get()
+
+                try:
+                    is_equal = equals(old, new)
+                except Exception as e:
+                    # For example, pandas DataFrame throws if you try to compare it to a
+                    # non-comparable object
                     raise TypeError(
-                        "The reactive.poll `equals` function returned a non-bool "
-                        "value"
-                    )
+                        "The reactive.poll polling function returned an object that "
+                        "couldn't be compared with a previously returned object. Try "
+                        "modifying your polling function to return a simpler type, like a "
+                        "str, float, list, or dict."
+                    ) from e
+                if not isinstance(is_equal, bool):
+                    # Comparison succeeded, but we don't understand the result
+                    if equals is eq:
+                        # We used == but it didn't work
+                        raise TypeError(
+                            "The reactive.poll polling function returned an object "
+                            "that doesn't implement a simple == operator. Try "
+                            "modifying your polling function to return a simpler type, "
+                            "like a str, float, list, or dict."
+                        )
+                    else:
+                        # The caller passed in a custom function
+                        raise TypeError(
+                            "The reactive.poll `equals` function returned a non-bool "
+                            "value"
+                        )
 
-            # If we got here, the comparison succeeded. Need to make sure the error is
-            # cleared, but don't unnecessarily call last_error.set(); at the time of
-            # this writing, we haven't made a final decision on whether reactive.Value
-            # will ignore sets if the new value is identical to the existing one.
-            with reactive.isolate():
-                if last_error.get() is not None:
-                    last_error.set(None)
+                # If we got here, the comparison succeeded. Need to make sure the error is
+                # cleared, but don't unnecessarily call last_error.set(); at the time of
+                # this writing, we haven't made a final decision on whether reactive.Value
+                # will ignore sets if the new value is identical to the existing one.
+                with reactive.isolate():
+                    if last_error.get() is not None:
+                        last_error.set(None)
 
-            if not is_equal:
-                last_value.set(new)
-        except Exception as e:
-            # Either the polling function threw an error, or we failed to compare its
-            # result with a previous result. Either way, we failed; save the error so
-            # that it can be exposed to whoever's trying to use the poll object.
-            last_error.set(e)
-        finally:
-            reactive.invalidate_later(interval_secs)
+                if not is_equal:
+                    last_value.set(new)
+            except Exception as e:
+                # Either the polling function threw an error, or we failed to compare its
+                # result with a previous result. Either way, we failed; save the error so
+                # that it can be exposed to whoever's trying to use the poll object.
+                last_error.set(e)
+            finally:
+                reactive.invalidate_later(interval_secs)
 
-    def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
-        if _utils.is_async_callable(fn):
+        def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
+            if _utils.is_async_callable(fn):
 
-            @reactive.calc(session=session)
-            @functools.wraps(fn)
-            async def result_async() -> T:
-                # If an error occurred, raise it
-                err = last_error.get()
-                if err is not None:
-                    raise err
+                @reactive.calc(session=session)
+                @functools.wraps(fn)
+                async def result_async() -> T:
+                    # If an error occurred, raise it
+                    err = last_error.get()
+                    if err is not None:
+                        raise err
 
-                # Take dependency on polling result
-                last_value.get()
+                    # Take dependency on polling result
+                    last_value.get()
 
-                # Note that we also depend on the main function
-                return await fn()
+                    # Note that we also depend on the main function
+                    return await fn()
 
-            # In this code path, the cast is necessary because result_async() has an
-            # incorrect signature due to limitations in Python's type hints. In this
-            # path, T is already an Awaitable. The signature should really be `async def
-            # result_async() -> Awaited[T]`, but there's no Awaited type in Python. So
-            # instead we'll just cast() it.
-            return cast(Callable[[], T], result_async)
+                # In this code path, the cast is necessary because result_async() has an
+                # incorrect signature due to limitations in Python's type hints. In this
+                # path, T is already an Awaitable. The signature should really be `async def
+                # result_async() -> Awaited[T]`, but there's no Awaited type in Python. So
+                # instead we'll just cast() it.
+                return cast(Callable[[], T], result_async)
 
-        else:
+            else:
 
-            @reactive.calc(session=session)
-            @functools.wraps(fn)
-            def result_sync() -> T:
-                # If an error occurred, raise it
-                err = last_error.get()
-                if err is not None:
-                    raise err
+                @reactive.calc(session=session)
+                @functools.wraps(fn)
+                def result_sync() -> T:
+                    # If an error occurred, raise it
+                    err = last_error.get()
+                    if err is not None:
+                        raise err
 
-                # Take dependency on polling result
-                last_value.get()
+                    # Take dependency on polling result
+                    last_value.get()
 
-                # Note that we also depend on the main function
-                return fn()
+                    # Note that we also depend on the main function
+                    return fn()
 
-            return result_sync
+                return result_sync
 
-    return wrapper
+        return wrapper
 
 
 @add_example()
