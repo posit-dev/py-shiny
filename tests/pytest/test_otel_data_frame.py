@@ -68,3 +68,50 @@ class TestDataFrameInitReactivesSuppressed:
             assert effect._otel_level == OtelCollectLevel.NONE, (
                 f"Expected NONE but got {effect._otel_level} for {effect}"
             )
+
+
+class TestDataFramePrivateCalcsSuppressed:
+    """Private @reactive_calc_method calcs have OtelCollectLevel.NONE."""
+
+    def test_private_nw_data_otel_level_is_none(self):
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
+        from shiny.render._data_frame import data_frame
+
+        fn = data_frame._nw_data
+        assert getattr(fn, FUNC_ATTR_OTEL_COLLECT_LEVEL, None) == OtelCollectLevel.NONE
+
+    def test_private_nw_data_patched_otel_level_is_none(self):
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
+        from shiny.render._data_frame import data_frame
+
+        fn = data_frame._nw_data_patched
+        assert getattr(fn, FUNC_ATTR_OTEL_COLLECT_LEVEL, None) == OtelCollectLevel.NONE
+
+    def test_private_data_view_all_otel_level_is_none(self):
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
+        from shiny.render._data_frame import data_frame
+
+        fn = data_frame._data_view_all
+        assert getattr(fn, FUNC_ATTR_OTEL_COLLECT_LEVEL, None) == OtelCollectLevel.NONE
+
+    def test_private_data_view_selected_otel_level_is_none(self):
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
+        from shiny.render._data_frame import data_frame
+
+        fn = data_frame._data_view_selected
+        assert getattr(fn, FUNC_ATTR_OTEL_COLLECT_LEVEL, None) == OtelCollectLevel.NONE
+
+    def test_public_data_otel_level_unset(self):
+        """Public .data() has no suppression -- inherits ambient level."""
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
+        from shiny.render._data_frame import data_frame
+
+        fn = data_frame.data
+        assert getattr(fn, FUNC_ATTR_OTEL_COLLECT_LEVEL, None) is None
+
+    def test_public_cell_patches_otel_level_unset(self):
+        from shiny.otel._constants import FUNC_ATTR_OTEL_COLLECT_LEVEL
+        from shiny.render._data_frame import data_frame
+
+        fn = data_frame.cell_patches
+        assert getattr(fn, FUNC_ATTR_OTEL_COLLECT_LEVEL, None) is None

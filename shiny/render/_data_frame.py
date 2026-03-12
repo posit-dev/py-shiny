@@ -242,6 +242,7 @@ class data_frame(
         return self._req_value().data
 
     @reactive_calc_method
+    @otel.suppress
     def _nw_data(self) -> DataFrame[IntoDataFrameT]:
         """
         Reactive calculation of the data frame's data wrapped by narwhals.
@@ -330,6 +331,7 @@ class data_frame(
         return list(self._cell_patch_map().values())
 
     @reactive_calc_method
+    @otel.suppress
     def _nw_data_patched(self) -> DataFrame[IntoDataFrameT]:
         """
         Reactive calculation of the data frame's patched data.
@@ -405,6 +407,7 @@ class data_frame(
         return patched_subsetted_into_data
 
     @reactive_calc_method
+    @otel.suppress
     def _data_view_all(self) -> IntoDataFrameT:
         """
         Reactive calculation of the full (sorted and filtered) data.
@@ -417,6 +420,7 @@ class data_frame(
         return self._subset_data_view(selected=False)
 
     @reactive_calc_method
+    @otel.suppress
     def _data_view_selected(self) -> IntoDataFrameT:
         """
         Reactive calcuation of the selected rows of the (sorted and filtered) data.
