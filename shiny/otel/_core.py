@@ -6,6 +6,7 @@ import contextlib
 from contextvars import ContextVar
 from typing import Any, Generator, Union
 
+from opentelemetry import context as otel_context
 from opentelemetry import trace
 
 # There is no public API for get_logger_provider.
@@ -211,8 +212,6 @@ def detached_otel_context() -> Generator[None, None, None]:
     ongoing user action — for example, a ``reactive.poll`` flush that fires
     independently of the request/response cycle.
 
-    No-op when the ``opentelemetry`` package is not installed.
-
     Examples
     --------
     ```python
@@ -223,13 +222,8 @@ def detached_otel_context() -> Generator[None, None, None]:
         await flush()
     ```
     """
+    token = otel_context.attach(otel_context.Context())
     try:
-        from opentelemetry import context as otel_context
-
-        token = otel_context.attach(otel_context.Context())
-        try:
-            yield
-        finally:
-            otel_context.detach(token)
-    except ImportError:
         yield
+    finally:
+        otel_context.detach(token)

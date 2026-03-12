@@ -9,7 +9,6 @@ Tests cover:
 """
 
 import os
-import sys
 from unittest.mock import Mock, patch
 
 import pytest
@@ -106,15 +105,19 @@ class TestDetachedOtelContext:
                     pass
                 assert trace.get_current_span() is parent_span
 
-    def test_no_op_when_opentelemetry_not_installed(self):
-        """detached_otel_context() yields normally when opentelemetry is not installed."""
-        otel_modules = {k: v for k, v in sys.modules.items() if "opentelemetry" in k}
-        blocked = {k: None for k in otel_modules}
-        with patch.dict(sys.modules, blocked):
-            ran = False
-            with detached_otel_context():
-                ran = True
-            assert ran
+    def test_no_active_span_inside_block(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """No active span is visible inside detached_otel_context()."""
+        from opentelemetry.trace import INVALID_SPAN
+
+        provider, _ = otel_tracer_provider
+        tracer = provider.get_tracer("test")
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with tracer.start_as_current_span("outer"):
+                with detached_otel_context():
+                    assert trace.get_current_span() is INVALID_SPAN
 
 
 class TestOtelCollectLevel:
