@@ -54,19 +54,27 @@ def validate_api_key(provider: str) -> None:
             "env_var": "OPENAI_API_KEY",
             "url": "https://platform.openai.com/api-keys",
         },
+        "bedrock-anthropic": {
+            "env_var": None,
+            "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html",
+        },
     }
 
     if provider not in api_configs:
         raise ValidationError(f"Unsupported provider: {provider}")
 
     config = api_configs[provider]
-    if not os.getenv(config["env_var"]):
-        raise ValidationError(
-            f"{config['env_var']} environment variable is not set.\n"
-            f"Please set your {provider.title()} API key:\n"
-            f"  export {config['env_var']}='your-api-key-here'\n\n"
-            f"Get your API key from: {config['url']}"
-        )
+    if provider in ("anthropic", "openai"):
+        env_var = config["env_var"]  # type: ignore[assignment]
+        if not isinstance(env_var, str) or not os.getenv(env_var):
+            raise ValidationError(
+                f"{env_var} environment variable is not set.\n"
+                f"Please set your {provider.title()} API key:\n"
+                f"  export {env_var}='your-api-key-here'\n\n"
+                f"Get your API key from: {config['url']}"
+            )
+    else:
+        pass
 
 
 def get_app_file_path(app_file: str | None) -> Path:
