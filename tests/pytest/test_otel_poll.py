@@ -9,6 +9,7 @@ Tests cover:
 """
 
 import os
+from typing import Any, cast
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -19,25 +20,25 @@ from shiny.reactive import Calc_
 
 from .otel_helpers import patch_otel_tracing_state
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_poll(fn_name: str = "my_data"):
+def _make_poll(fn_name: str = "my_data") -> Calc_[Any]:
     """Return a poll-decorated Calc_ whose data function has the given name."""
     counter = 0
 
     # Build a named function dynamically so the name is exactly fn_name.
-    exec_globals: dict = {}
+    exec_globals: dict[str, Any] = {}
     exec(
         f"def {fn_name}(): return 'data'",
         exec_globals,
     )
     data_fn = exec_globals[fn_name]
 
-    return reactive.poll(lambda: counter)(data_fn)
+    result = cast(Calc_[Any], reactive.poll(lambda: counter)(data_fn))
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +59,7 @@ class TestPollCalcLabel:
         """@functools.wraps ensures the data fn name appears, not 'result_sync'."""
 
         @reactive.poll(lambda: 0)
-        def load_records():
+        def load_records() -> list[Any]:
             return []
 
         assert isinstance(load_records, Calc_)
@@ -70,9 +71,10 @@ class TestPollCalcLabel:
         """Label follows the 'reactive.calc <name>' format."""
 
         @reactive.poll(lambda: 0)
-        def query_db():
+        def query_db() -> dict[str, Any]:
             return {}
 
+        assert isinstance(query_db, Calc_)
         assert query_db._otel_label == "reactive.calc query_db"
 
 
@@ -91,14 +93,12 @@ class TestPollCalcSpan:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
 
                 @reactive.poll(lambda: 0)
-                def current_time():
+                def current_time() -> int:
                     return 42
 
                 assert isinstance(current_time, Calc_)
 
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -115,12 +115,12 @@ class TestPollCalcSpan:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
 
                 @reactive.poll(lambda: 0)
-                def get_latest():
+                def get_latest() -> str:
                     return "value"
 
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                assert isinstance(get_latest, Calc_)
+
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -138,12 +138,12 @@ class TestPollCalcSpan:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
 
                 @reactive.poll(lambda: 0)
-                def poll_fn():
+                def poll_fn() -> int:
                     return 1
 
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                assert isinstance(poll_fn, Calc_)
+
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -161,12 +161,12 @@ class TestPollCalcSpan:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "session"}):
 
                 @reactive.poll(lambda: 0)
-                def poll_fn():
+                def poll_fn() -> int:
                     return 1
 
-                with patch(
-                    "shiny.reactive._reactives.shiny_otel_span"
-                ) as mock_span:
+                assert isinstance(poll_fn, Calc_)
+
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
                     mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
                     mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
 
