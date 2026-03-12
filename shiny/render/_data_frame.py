@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, Union, cast
 
 from htmltools import Tag
 
-from .. import reactive, ui
+from .. import otel, reactive, ui
 from .._docstring import add_example
 from .._utils import wrap_async
 from .._validation import req
@@ -562,31 +562,32 @@ class data_frame(
         self._updated_data.unset()
 
     def _init_reactives(self) -> None:
+        with otel.suppress():
 
-        # Init
-        self._value = reactive.Value(None)
-        self._cell_patch_map = reactive.Value({})
-        self._updated_data = reactive.Value()  # Create with no value
+            # Init
+            self._value = reactive.Value(None)
+            self._cell_patch_map = reactive.Value({})
+            self._updated_data = reactive.Value()  # Create with no value
 
-        # Update the styles any time the cell patch map or new data updates
-        def should_update_styles():
-            return (
-                self._cell_patch_map(),
-                # If the udpated data is unset, use a `None` value which is not allowed.
-                self._updated_data() if self._updated_data.is_set() else None,
+            # Update the styles any time the cell patch map or new data updates
+            def should_update_styles():
+                return (
+                    self._cell_patch_map(),
+                    # If the udpated data is unset, use a `None` value which is not allowed.
+                    self._updated_data() if self._updated_data.is_set() else None,
+                )
+
+            @reactive.effect
+            @reactive.event(
+                should_update_styles,
+                # Do not run the first time through!
+                # The styles are being sent with the initial blob.
+                ignore_init=True,
             )
-
-        @reactive.effect
-        @reactive.event(
-            should_update_styles,
-            # Do not run the first time through!
-            # The styles are being sent with the initial blob.
-            ignore_init=True,
-        )
-        async def _():
-            # Be sure this is called within `isolate()` to isolate any reactivity
-            # It currently is, as `@reactive.event()` is being used
-            await self._attempt_update_cell_style()
+            async def _():
+                # Be sure this is called within `isolate()` to isolate any reactivity
+                # It currently is, as `@reactive.event()` is being used
+                await self._attempt_update_cell_style()
 
     def _get_session(self) -> Session:
         if self._session is None:
