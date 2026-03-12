@@ -59,6 +59,7 @@ from typing import Any, AsyncIterable, AsyncIterator, Callable, Dict, Mapping, U
 from opentelemetry.trace import Span, Status, StatusCode
 
 from ._collect import OtelCollectLevel, get_level
+from ._constants import ATTR_SESSION_ID
 from ._core import get_otel_tracer, is_otel_tracing_enabled
 
 __all__ = ("shiny_otel_span", "shiny_otel_span_stream")
@@ -73,6 +74,7 @@ async def shiny_otel_span(
     name: str,
     *,
     attributes: AttributesType = None,
+    infer_session_id: bool,
     required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
     collection_level: OtelCollectLevel | None = None,
 ) -> AsyncIterator[Span | None]:
@@ -104,10 +106,12 @@ async def shiny_otel_span(
         that returns a dictionary. If a callable is provided, it will only be
         called if collection is enabled, allowing for lazy evaluation of
         expensive attribute extraction.
-
-        **Important:** Session context attributes (like `session.id`) should be
-        explicitly passed in this parameter. They are NOT automatically added,
-        providing flexibility to choose which spans include session context.
+    infer_session_id
+        If ``True``, automatically add ``session.id`` from current
+        session context when not provided in ``attributes``. This works because
+        session.id is consistent across sessions and modules (a SessionProxy
+        shares the same id as its parent AppSession). Set to ``False``
+        to opt out of automatic inference.
     required_level
         The minimum collect level required for this span. Defaults to SESSION.
 
@@ -122,18 +126,23 @@ async def shiny_otel_span(
     from shiny.otel._span_wrappers import shiny_otel_span
 
     async def my_async_function():
-        # Static attributes
-        async with shiny_otel_span("async_operation", attributes={"count": 42}) as span:
+        # Static attributes (no session.id inference needed)
+        async with shiny_otel_span(
+            "async_operation",
+            attributes={"count": 42},
+            infer_session_id=False,
+        ) as span:
             await some_async_call()
             if span:
                 span.set_attribute("completed", True)
 
-        # Lazy attributes (only computed if collecting)
+        # Lazy attributes with automatic session.id inference
         async with shiny_otel_span(
-            "session.start",
-            attributes=lambda: {ATTR_SESSION_ID: session.id, **extract_http_attributes(conn)}
+            "session_start",
+            attributes=lambda: {**extract_http_attributes(conn)},
+            infer_session_id=True,
         ) as span:
-            # Attributes only extracted if span is created
+            # Attributes only extracted if span is created; session.id added automatically
             await session_work()
     ```
     """
@@ -158,6 +167,16 @@ async def shiny_otel_span(
             resolved_attrs = dict(attr_result) if attr_result else {}
         else:
             resolved_attrs = dict(attributes)
+
+    # Auto-add session.id if not already present and a session is available.
+    # This works because session.id is consistent across sessions and modules
+    # (a SessionProxy shares the same id as its parent AppSession).
+    if infer_session_id and ATTR_SESSION_ID not in resolved_attrs:
+        from ..session._utils import get_current_session
+
+        session = get_current_session()
+        if session is not None and hasattr(session, "id"):
+            resolved_attrs[ATTR_SESSION_ID] = session.id
 
     tracer = get_otel_tracer()
     with tracer.start_as_current_span(
@@ -209,6 +228,7 @@ async def shiny_otel_span_stream(
     inner: AsyncIterable[bytes],
     *,
     attributes: AttributesType = None,
+    infer_session_id: bool,
     required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
     collection_level: OtelCollectLevel | None = None,
 ) -> AsyncIterator[bytes]:
@@ -226,6 +246,10 @@ async def shiny_otel_span_stream(
         The async iterable of bytes to wrap.
     attributes
         Optional span attributes (dict or callable returning dict).
+    infer_session_id
+        If ``True``, automatically add ``session.id`` from current
+        session context when not provided in ``attributes``. Set to ``False``
+        to opt out of automatic inference.
     required_level
         Minimum collect level required for this span. Defaults to SESSION.
     collection_level
@@ -243,6 +267,7 @@ async def shiny_otel_span_stream(
         "download",
         original_stream,
         attributes={"session.id": session_id, "download.id": download_id},
+        infer_session_id=False,
         required_level=OtelCollectLevel.REACTIVITY,
     )
     return StreamingResponse(wrapped, 200, headers=headers)
@@ -251,6 +276,7 @@ async def shiny_otel_span_stream(
     async with shiny_otel_span(
         name,
         attributes=attributes,
+        infer_session_id=infer_session_id,
         required_level=required_level,
         collection_level=collection_level,
     ):

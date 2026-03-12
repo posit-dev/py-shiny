@@ -20,10 +20,10 @@ if TYPE_CHECKING:
 SourceRefAttrs = TypedDict(
     "SourceRefAttrs",
     {
-        "code.filepath": str,  # Full path to source file
-        "code.lineno": int,  # Line number in source file (1-indexed)
+        "code.file.path": str,  # Full path to source file
+        "code.line.number": int,  # Line number in source file (1-indexed)
         "code.column.number": int,  # Column number in source file (0-indexed)
-        "code.function": str,  # Function or method name
+        "code.function.name": str,  # Function or method name
     },
     total=False,
 )
@@ -93,8 +93,8 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
     # Returns: {
     #     "server.address": "localhost",
     #     "server.port": 8000,
-    #     "url.path": "/",
-    #     "url.scheme": "http"
+    #     "server.path": "/",
+    #     "server.origin": "https://example.com",
     # }
     ```
 
@@ -103,39 +103,54 @@ def extract_http_attributes(http_conn: HTTPConnection) -> Dict[str, Any]:
     Following OTel semantic conventions:
     - `server.address`: Host name or IP address
     - `server.port`: Port number
-    - `url.path`: Request path
-    - `url.scheme`: Protocol scheme (http, https, ws, wss)
+    - `server.path`: Request path
+    - `server.origin`: Origin of the request (if available)
     """
     attributes: Dict[str, Any] = {}
 
-    # Extract server address (hostname)
+    # Extract from HTTPConnection URL and headers first
     if hasattr(http_conn, "url") and http_conn.url:
-        if http_conn.url.hostname:
+        if http_conn.url.hostname and "server.address" not in attributes:
             attributes["server.address"] = http_conn.url.hostname
-        if http_conn.url.port:
+        if http_conn.url.port and "server.port" not in attributes:
             attributes["server.port"] = http_conn.url.port
-        if http_conn.url.path:
-            attributes["url.path"] = http_conn.url.path
-        if http_conn.url.scheme:
-            attributes["url.scheme"] = http_conn.url.scheme
+        if http_conn.url.path and "server.path" not in attributes:
+            attributes["server.path"] = http_conn.url.path
 
-    # Fallback: try to extract from scope (ASGI)
-    if not attributes and hasattr(http_conn, "scope"):
+    if hasattr(http_conn, "headers"):
+        origin = http_conn.headers.get("origin")
+        if origin and "server.origin" not in attributes:
+            attributes["server.origin"] = origin
+
+    # Fill any missing fields from ASGI scope
+    if hasattr(http_conn, "scope"):
         scope = http_conn.scope
-        if "server" in scope and scope["server"]:
+        if (
+            "server" in scope
+            and scope["server"]
+            and ("server.address" not in attributes or "server.port" not in attributes)
+        ):
             server_tuple = scope["server"]
             if isinstance(server_tuple, (list, tuple)) and len(server_tuple) >= 2:  # type: ignore[arg-type]
                 # ASGI scope server is tuple[str, int | None]
                 server_host = cast(str, server_tuple[0])
                 server_port = cast(int, server_tuple[1])
-                if server_host:
+                if server_host and "server.address" not in attributes:
                     attributes["server.address"] = server_host
-                if server_port:
+                if server_port and "server.port" not in attributes:
                     attributes["server.port"] = server_port
-        if "path" in scope:
-            attributes["url.path"] = scope["path"]
-        if "scheme" in scope:
-            attributes["url.scheme"] = scope["scheme"]
+
+        scope_path = scope.get("path")
+        if scope_path and "server.path" not in attributes:
+            attributes["server.path"] = scope_path
+
+        scope_origin = scope.get("headers")
+        if scope_origin and "server.origin" not in attributes:
+            # ASGI headers are list[tuple[bytes, bytes]]
+            for key, value in scope_origin:
+                if key == b"origin" and value:
+                    attributes["server.origin"] = value.decode("latin-1")
+                    break
 
     return attributes
 
@@ -168,20 +183,20 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
 
     attrs = extract_source_ref(my_calc)
     # Returns: {
-    #     "code.filepath": "/path/to/file.py",
-    #     "code.lineno": 42,
+    #     "code.file.path": "/path/to/file.py",
+    #     "code.line.number": 42,
     #     "code.column.number": 0,
-    #     "code.function": "my_calc"
+    #     "code.function.name": "my_calc"
     # }
     ```
 
     Notes
     -----
     Following OTel semantic conventions:
-    - `code.filepath`: Full path to source file
-    - `code.lineno`: Line number where function is defined (1-indexed)
+    - `code.file.path`: Full path to source file
+    - `code.line.number`: Line number where function is defined (1-indexed)
     - `code.column.number`: Column number where function is defined (0-indexed)
-    - `code.function`: Function name
+    - `code.function.name`: Function name
 
     Source information may not be available for:
     - Built-in functions
@@ -204,7 +219,7 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
     try:
         source_file = inspect.getsourcefile(unwrapped_func)
         if source_file:
-            attributes["code.filepath"] = source_file
+            attributes["code.file.path"] = source_file
     except (TypeError, OSError):
         # TypeError: built-in functions, C extensions
         # OSError: source file not found
@@ -216,15 +231,19 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
         if source_lines:
             # getsourcelines returns (lines, starting_line_number)
             lines, line_number = source_lines
-            attributes["code.lineno"] = line_number
 
-            # Extract column number from indentation of first line
+            # In Python 3.9+, getsourcelines may return the decorator line
+            # instead of the def/async def line. Scan forward to find it.
             if lines:
-                first_line = lines[0]
-                # Column is the number of leading whitespace characters
-                column = len(first_line) - len(first_line.lstrip())
-                # Where the initial `def` or `async def` starts
-                attributes["code.column.number"] = column
+                for i, source_line in enumerate(lines):
+                    stripped = source_line.lstrip()
+                    if stripped.startswith("def ") or stripped.startswith("async def "):
+                        line_number = line_number + i
+                        column = len(source_line) - len(source_line.lstrip())
+                        attributes["code.column.number"] = column
+                        break
+
+            attributes["code.line.number"] = line_number
     except (TypeError, OSError, ValueError):
         # TypeError: built-in functions, C extensions
         # OSError: source file not found
@@ -234,6 +253,6 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
     # Get function name (this rarely fails)
     func_name = getattr(func, "__name__", None)
     if func_name:
-        attributes["code.function"] = func_name
+        attributes["code.function.name"] = func_name
 
     return attributes

@@ -9,7 +9,7 @@ Tests cover:
 """
 
 import os
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
@@ -18,8 +18,9 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import get_otel_logger, get_otel_tracer, is_otel_tracing_enabled
 from shiny.otel._span_wrappers import shiny_otel_span
+from shiny.session._utils import session_context
 
-from .otel_helpers import patch_otel_tracing_state
+from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
 
 class TestCore:
@@ -149,6 +150,7 @@ class TestSpanWrappers:
         with patch_otel_tracing_state(tracing_enabled=True):
             async with shiny_otel_span(
                 "test_span_async",
+                infer_session_id=True,
                 attributes={"key": "value"},
                 required_level=OtelCollectLevel.SESSION,
             ) as span:
@@ -163,8 +165,34 @@ class TestSpanWrappers:
         with patch_otel_tracing_state(tracing_enabled=False):
             async with shiny_otel_span(
                 "test_span_async",
+                infer_session_id=True,
                 attributes={"key": "value"},
                 required_level=OtelCollectLevel.SESSION,
             ) as span:
                 # yields None when not collecting
                 assert span is None
+
+    @pytest.mark.asyncio
+    async def test_shiny_otel_span_auto_adds_session_id(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Test that shiny_otel_span auto-attaches session.id from active session context."""
+        provider, exporter = otel_tracer_provider
+        mock_session = Mock()
+        mock_session.id = "session-123"
+        mock_session.ns = ""
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with session_context(mock_session):
+                async with shiny_otel_span(
+                    "test_span_with_session",
+                    infer_session_id=True,
+                    required_level=OtelCollectLevel.SESSION,
+                ):
+                    pass
+
+        spans = get_exported_spans(provider, exporter)
+        app_spans = [s for s in spans if s.name == "test_span_with_session"]
+        assert len(app_spans) == 1
+        assert app_spans[0].attributes is not None
+        assert app_spans[0].attributes.get("session.id") == "session-123"

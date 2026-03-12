@@ -65,8 +65,8 @@ class ExtendedTask(Generic[P, R]):
 
         session = get_current_session()
         self._otel_attrs: dict[str, Any] = {
-            **extract_source_ref(func),
             **get_session_id_attrs(session),
+            **extract_source_ref(func),
         }
 
         # Generate label for task execution span
@@ -146,6 +146,7 @@ class ExtendedTask(Generic[P, R]):
                             **self._otel_attrs,
                             "queue.size": len(self._invocation_queue),
                         },
+                        infer_session_id=False,
                     )
             else:
                 self._invoke(*args, **kwargs)
@@ -171,6 +172,7 @@ class ExtendedTask(Generic[P, R]):
         async with shiny_otel_span(
             self._otel_label,
             attributes=self._otel_attrs,
+            infer_session_id=False,
             required_level=OtelCollectLevel.REACTIVITY,
             collection_level=self._otel_level,
         ):

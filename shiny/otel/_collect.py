@@ -56,7 +56,7 @@ _current_collect_level: ContextVar[Optional[OtelCollectLevel]] = ContextVar(
 def _get_env_level() -> OtelCollectLevel:
     """Read the collection level from the env var only, bypassing the contextvar.
 
-    Used by infrastructure spans (session.start, session.end, reactive_update)
+    Used by infrastructure spans (session_start, session_end, reactive_update)
     that must not be affected by otel.suppress() or otel.collect().
     """
     env_level = os.getenv("SHINY_OTEL_COLLECT", "all").strip().upper()

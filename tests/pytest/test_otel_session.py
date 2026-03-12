@@ -29,41 +29,43 @@ class TestHttpAttributes:
         mock_url.hostname = "localhost"
         mock_url.port = 8000
         mock_url.path = "/test"
-        mock_url.scheme = "http"
-
         mock_conn = Mock()
         mock_conn.url = mock_url
+        mock_conn.headers = {"origin": "https://example.com"}
+        mock_conn.scope = {}
 
         attributes = extract_http_attributes(mock_conn)
 
         assert attributes["server.address"] == "localhost"
         assert attributes["server.port"] == 8000
-        assert attributes["url.path"] == "/test"
-        assert attributes["url.scheme"] == "http"
+        assert attributes["server.path"] == "/test"
+        assert attributes["server.origin"] == "https://example.com"
 
     def test_extract_http_attributes_from_scope(self):
         """Test extracting HTTP attributes from ASGI scope as fallback"""
         # Create mock HTTP connection with scope but no url
         mock_conn = Mock()
         mock_conn.url = None
+        mock_conn.headers = {}
         mock_conn.scope = {
             "server": ("127.0.0.1", 5000),
             "path": "/api/data",
-            "scheme": "https",
+            "headers": [(b"origin", b"https://scope.example")],
         }
 
         attributes = extract_http_attributes(mock_conn)
 
         assert attributes["server.address"] == "127.0.0.1"
         assert attributes["server.port"] == 5000
-        assert attributes["url.path"] == "/api/data"
-        assert attributes["url.scheme"] == "https"
+        assert attributes["server.path"] == "/api/data"
+        assert attributes["server.origin"] == "https://scope.example"
 
     def test_extract_http_attributes_empty(self):
         """Test extracting HTTP attributes when no data available"""
         # Create mock HTTP connection with no url or scope
         mock_conn = Mock()
         mock_conn.url = None
+        mock_conn.headers = {}
         mock_conn.scope = {}
 
         attributes = extract_http_attributes(mock_conn)
@@ -78,18 +80,85 @@ class TestHttpAttributes:
         mock_url.hostname = "example.com"
         mock_url.port = None
         mock_url.path = "/"
-        mock_url.scheme = None
 
         mock_conn = Mock()
         mock_conn.url = mock_url
+        mock_conn.headers = {}
+        mock_conn.scope = {"server": ("example.com", 443)}
 
         attributes = extract_http_attributes(mock_conn)
 
         assert attributes["server.address"] == "example.com"
-        assert attributes["url.path"] == "/"
-        # Port and scheme should not be in dict if None
-        assert "server.port" not in attributes
-        assert "url.scheme" not in attributes
+        # Port should be filled from scope fallback when missing in URL
+        assert attributes["server.port"] == 443
+        assert attributes["server.path"] == "/"
+
+    def test_extract_http_attributes_prefers_url_over_scope(self):
+        """Test URL-derived values are not overwritten by scope values."""
+        mock_url = Mock()
+        mock_url.hostname = "url-host"
+        mock_url.port = 9000
+        mock_url.path = "/from-url"
+
+        mock_conn = Mock()
+        mock_conn.url = mock_url
+        mock_conn.headers = {"origin": "https://from-header"}
+        mock_conn.scope = {
+            "server": ("scope-host", 5000),
+            "path": "/from-scope",
+            "headers": [(b"origin", b"https://from-scope")],
+        }
+
+        attributes = extract_http_attributes(mock_conn)
+
+        assert attributes["server.address"] == "url-host"
+        assert attributes["server.port"] == 9000
+        assert attributes["server.path"] == "/from-url"
+        assert attributes["server.origin"] == "https://from-header"
+
+    def test_extract_http_attributes_fills_path_and_origin_from_scope(self):
+        """Test scope fills missing path/origin when URL/headers do not provide them."""
+        mock_url = Mock()
+        mock_url.hostname = "url-host"
+        mock_url.port = 9000
+        mock_url.path = None
+
+        mock_conn = Mock()
+        mock_conn.url = mock_url
+        mock_conn.headers = {}
+        mock_conn.scope = {
+            "path": "/from-scope",
+            "headers": [
+                (b"x-other", b"unused"),
+                (b"origin", b"https://scope-origin.example"),
+            ],
+        }
+
+        attributes = extract_http_attributes(mock_conn)
+
+        assert attributes["server.address"] == "url-host"
+        assert attributes["server.port"] == 9000
+        assert attributes["server.path"] == "/from-scope"
+        assert attributes["server.origin"] == "https://scope-origin.example"
+
+    def test_extract_http_attributes_omits_origin_when_not_present(self):
+        """Test origin is not emitted when neither HTTP headers nor scope include it."""
+        mock_url = Mock()
+        mock_url.hostname = "localhost"
+        mock_url.port = 8000
+        mock_url.path = "/test"
+
+        mock_conn = Mock()
+        mock_conn.url = mock_url
+        mock_conn.headers = {}
+        mock_conn.scope = {"headers": [(b"x-forwarded-for", b"127.0.0.1")]}
+
+        attributes = extract_http_attributes(mock_conn)
+
+        assert attributes["server.address"] == "localhost"
+        assert attributes["server.port"] == 8000
+        assert attributes["server.path"] == "/test"
+        assert "server.origin" not in attributes
 
 
 class TestSessionSpans:

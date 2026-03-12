@@ -289,20 +289,20 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(my_func)
 
         # Should have code attributes
-        assert "code.function" in attrs
-        assert attrs["code.function"] == "my_func"
-        assert "code.filepath" in attrs
-        assert "code.lineno" in attrs
+        assert "code.function.name" in attrs
+        assert attrs["code.function.name"] == "my_func"
+        assert "code.file.path" in attrs
+        assert "code.line.number" in attrs
 
     def test_extract_source_ref_from_lambda(self):
         """Test extracting source reference from lambda"""
         attrs = extract_source_ref(lambda: 42)
 
         # Lambda should still have source info
-        assert "code.function" in attrs
-        assert attrs["code.function"] == "<lambda>"
-        assert "code.filepath" in attrs
-        assert "code.lineno" in attrs
+        assert "code.function.name" in attrs
+        assert attrs["code.function.name"] == "<lambda>"
+        assert "code.file.path" in attrs
+        assert "code.line.number" in attrs
 
     def test_extract_source_ref_from_builtin(self):
         """Test extracting source reference from built-in function"""
@@ -332,20 +332,20 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(wrapper_function)
 
         # Should extract from the ORIGINAL function, not the wrapper
-        assert "code.function" in attrs
+        assert "code.function.name" in attrs
         assert (
-            attrs["code.function"] == "original_function"
-        ), f"Should have original function name, got: {attrs.get('code.function')}"
+            attrs["code.function.name"] == "original_function"
+        ), f"Should have original function name, got: {attrs.get('code.function.name')}"
 
-        assert "code.filepath" in attrs
-        assert attrs["code.filepath"].endswith(
+        assert "code.file.path" in attrs
+        assert attrs["code.file.path"].endswith(
             "test_otel_reactive_execution.py"
-        ), f"Should point to this test file, got: {attrs['code.filepath']}"
+        ), f"Should point to this test file, got: {attrs.get('code.file.path')}"
 
-        assert "code.lineno" in attrs
+        assert "code.line.number" in attrs
         assert (
-            attrs["code.lineno"] == original_line
-        ), f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
+            attrs["code.line.number"] == original_line
+        ), f"Should have original line number ({original_line}), got: {attrs.get('code.line.number')}"
 
     def test_extract_source_ref_from_nested_wrapped_functions(self):
         """Test extract_source_ref with multiple layers of wrapping"""
@@ -371,10 +371,10 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(wrapper2)
 
         # Should unwrap all the way to the original
-        assert "code.function" in attrs
-        assert attrs["code.function"] == "original"
-        assert "code.lineno" in attrs
-        assert attrs["code.lineno"] == original_line
+        assert "code.function.name" in attrs
+        assert attrs["code.function.name"] == "original"
+        assert "code.line.number" in attrs
+        assert attrs["code.line.number"] == original_line
 
     def test_extract_source_ref_from_reactive_event_decorator(self):
         """Test that @reactive.event decorated functions unwrap correctly"""
@@ -396,15 +396,15 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(decorated)
 
         # Should extract from original function, not the event wrapper
-        assert "code.function" in attrs
+        assert "code.function.name" in attrs
         assert (
-            attrs["code.function"] == "my_effect"
-        ), f"Should have original function name, got: {attrs.get('code.function')}"
+            attrs["code.function.name"] == "my_effect"
+        ), f"Should have original function name, got: {attrs.get('code.function.name')}"
 
-        assert "code.lineno" in attrs
+        assert "code.line.number" in attrs
         assert (
-            attrs["code.lineno"] == original_line
-        ), f"Should have original line number ({original_line}), got: {attrs.get('code.lineno')}"
+            attrs["code.line.number"] == original_line
+        ), f"Should have original line number ({original_line}), got: {attrs.get('code.line.number')}"
 
     def test_extract_source_ref_from_unwrappable_function(self):
         """Test that functions without __wrapped__ attribute still work"""
@@ -426,8 +426,8 @@ class TestSourceReferenceExtraction:
         # Should have attributes (even if they're from the inner function)
         assert isinstance(attrs, dict)
         # Function name should be what we set
-        if "code.function" in attrs:
-            assert attrs["code.function"] == "fake_name"
+        if "code.function.name" in attrs:
+            assert attrs["code.function.name"] == "fake_name"
 
     def test_extract_source_ref_from_deeply_nested_wrappers(self):
         """Test extract_source_ref with 3+ layers of wrapping"""
@@ -456,12 +456,12 @@ class TestSourceReferenceExtraction:
         attrs = extract_source_ref(wrapper3)
 
         # Should unwrap all the way to the original
-        assert "code.function" in attrs
+        assert "code.function.name" in attrs
         assert (
-            attrs["code.function"] == "original"
+            attrs["code.function.name"] == "original"
         ), "Should unwrap through 3 layers to original"
-        assert "code.lineno" in attrs
-        assert attrs["code.lineno"] == original_line
+        assert "code.line.number" in attrs
+        assert attrs["code.line.number"] == original_line
 
     def test_extract_source_ref_from_functools_partial(self):
         """Test extract_source_ref with functools.partial objects"""
@@ -505,8 +505,8 @@ class TestSourceReferenceExtraction:
         assert isinstance(attrs, dict)
         # With ValueError handling in both unwrap() and getsourcelines(),
         # we should get at least the function name
-        assert "code.function" in attrs
-        assert attrs["code.function"] == "func1"
+        assert "code.function.name" in attrs
+        assert attrs["code.function.name"] == "func1"
 
 
 class TestCalcSpans:
@@ -587,10 +587,72 @@ class TestCalcSpans:
                     call_args = mock_span.call_args
                     attrs = call_args[1]["attributes"]
                     # Attributes are stored on the calc instance at init time
-                    assert "code.function" in attrs
-                    assert attrs["code.function"] == "my_calc"
-                    assert "code.filepath" in attrs
-                    assert "code.lineno" in attrs
+                    assert "code.function.name" in attrs
+                    assert attrs["code.function.name"] == "my_calc"
+                    assert "code.file.path" in attrs
+                    assert "code.line.number" in attrs
+
+    def test_calc_session_id_in_otel_attrs(self):
+        """Test that Calc_ captures session.id in _otel_attrs when session is provided"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        def my_calc():
+            return 42
+
+        mock_session = Mock()
+        mock_session.id = "test-session-abc"
+        mock_session.ns = ResolvedId("")
+
+        calc = Calc_(my_calc, session=mock_session)
+
+        assert ATTR_SESSION_ID in calc._otel_attrs
+        assert calc._otel_attrs[ATTR_SESSION_ID] == "test-session-abc"
+
+    def test_calc_session_id_absent_without_session(self):
+        """Test that Calc_ has no session.id in _otel_attrs when no session is provided"""
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        def my_calc():
+            return 42
+
+        calc = Calc_(my_calc, session=None)
+
+        assert ATTR_SESSION_ID not in calc._otel_attrs
+
+    @pytest.mark.asyncio
+    async def test_calc_span_includes_session_id(self):
+        """Test that Calc span attributes include session.id when session is present"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+
+                def my_calc():
+                    return 42
+
+                mock_session = Mock()
+                mock_session.id = "test-session-xyz"
+                mock_session.ns = ResolvedId("")
+
+                calc = Calc_(my_calc, session=mock_session)
+
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    await calc.update_value()
+
+                    mock_span.assert_called_once()
+                    call_args = mock_span.call_args
+                    attrs = call_args[1]["attributes"]
+                    assert ATTR_SESSION_ID in attrs
+                    assert attrs[ATTR_SESSION_ID] == "test-session-xyz"
 
 
 class TestEffectSpans:
@@ -673,10 +735,72 @@ class TestEffectSpans:
                     call_args = mock_span.call_args
                     attrs = call_args[1]["attributes"]
                     # Attributes are stored on the effect instance at init time
-                    assert "code.function" in attrs
-                    assert attrs["code.function"] == "my_effect"
-                    assert "code.filepath" in attrs
-                    assert "code.lineno" in attrs
+                    assert "code.function.name" in attrs
+                    assert attrs["code.function.name"] == "my_effect"
+                    assert "code.file.path" in attrs
+                    assert "code.line.number" in attrs
+
+    def test_effect_session_id_in_otel_attrs(self):
+        """Test that Effect_ captures session.id in _otel_attrs when session is provided"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        def my_effect():
+            pass
+
+        mock_session = Mock()
+        mock_session.id = "test-session-abc"
+        mock_session.ns = ResolvedId("")
+
+        effect = Effect_(my_effect, session=mock_session)
+
+        assert ATTR_SESSION_ID in effect._otel_attrs
+        assert effect._otel_attrs[ATTR_SESSION_ID] == "test-session-abc"
+
+    def test_effect_session_id_absent_without_session(self):
+        """Test that Effect_ has no session.id in _otel_attrs when no session is provided"""
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        def my_effect():
+            pass
+
+        effect = Effect_(my_effect, session=None)
+
+        assert ATTR_SESSION_ID not in effect._otel_attrs
+
+    @pytest.mark.asyncio
+    async def test_effect_span_includes_session_id(self):
+        """Test that Effect span attributes include session.id when session is present"""
+        from unittest.mock import Mock
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactivity"}):
+
+                def my_effect():
+                    pass
+
+                mock_session = Mock()
+                mock_session.id = "test-session-xyz"
+                mock_session.ns = ResolvedId("")
+
+                effect = Effect_(my_effect, session=mock_session)
+
+                with patch("shiny.reactive._reactives.shiny_otel_span") as mock_span:
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    await effect._run()
+
+                    mock_span.assert_called_once()
+                    call_args = mock_span.call_args
+                    attrs = call_args[1]["attributes"]
+                    assert ATTR_SESSION_ID in attrs
+                    assert attrs[ATTR_SESSION_ID] == "test-session-xyz"
 
 
 class TestOutputSpans:
@@ -799,10 +923,10 @@ class TestExtendedTaskSpans:
                 task = ExtendedTask(my_task)
 
                 # Check that OTel attributes include source reference
-                assert "code.function" in task._otel_attrs
-                assert task._otel_attrs["code.function"] == "my_task"
-                assert "code.filepath" in task._otel_attrs
-                assert "code.lineno" in task._otel_attrs
+                assert "code.function.name" in task._otel_attrs
+                assert task._otel_attrs["code.function.name"] == "my_task"
+                assert "code.file.path" in task._otel_attrs
+                assert "code.line.number" in task._otel_attrs
 
     def test_extended_task_label_generation(self):
         """Test that ExtendedTask generates correct label"""
@@ -949,6 +1073,134 @@ class TestExtendedTaskSpans:
                     # Clean up - cancel tasks
                     task.cancel()
 
+    def test_extended_task_session_id_in_otel_attrs(self):
+        """Test that ExtendedTask captures session.id in _otel_attrs when session context is present"""
+        import asyncio
+        from unittest.mock import Mock, patch
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+        from shiny.reactive import ExtendedTask
+
+        async def my_task():
+            await asyncio.sleep(0.01)
+            return 42
+
+        mock_session = Mock()
+        mock_session.id = "test-session-abc"
+        mock_session.ns = ResolvedId("")
+
+        with patch("shiny.session.get_current_session", return_value=mock_session):
+            task = ExtendedTask(my_task)
+
+        assert ATTR_SESSION_ID in task._otel_attrs
+        assert task._otel_attrs[ATTR_SESSION_ID] == "test-session-abc"
+
+    def test_extended_task_session_id_absent_without_session(self):
+        """Test that ExtendedTask has no session.id in _otel_attrs when no session context"""
+        import asyncio
+
+        from shiny.otel._constants import ATTR_SESSION_ID
+        from shiny.reactive import ExtendedTask
+
+        async def my_task():
+            await asyncio.sleep(0.01)
+            return 42
+
+        # No session patch -- get_current_session() returns None outside session context
+        task = ExtendedTask(my_task)
+
+        assert ATTR_SESSION_ID not in task._otel_attrs
+
+    @pytest.mark.asyncio
+    async def test_extended_task_span_includes_session_id(self):
+        """Test that ExtendedTask span attributes include session.id when session context is present"""
+        import asyncio
+        from unittest.mock import Mock, patch
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+        from shiny.reactive import ExtendedTask, isolate
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+
+                async def my_task():
+                    await asyncio.sleep(0.01)
+                    return 42
+
+                mock_session = Mock()
+                mock_session.id = "test-session-xyz"
+                mock_session.ns = ResolvedId("")
+
+                with patch(
+                    "shiny.session.get_current_session", return_value=mock_session
+                ):
+                    task = ExtendedTask(my_task)
+
+                with patch(
+                    "shiny.reactive._extended_task.shiny_otel_span"
+                ) as mock_span:
+                    mock_span.return_value.__aenter__ = AsyncMock(return_value=None)
+                    mock_span.return_value.__aexit__ = AsyncMock(return_value=None)
+
+                    task.invoke()
+
+                    while True:
+                        with isolate():
+                            if task.status() != "running":
+                                break
+                        await asyncio.sleep(0.01)
+
+                    with isolate():
+                        assert task.status() == "success"
+
+                    mock_span.assert_called_once()
+                    call_args = mock_span.call_args
+                    attrs = call_args[1]["attributes"]
+                    assert ATTR_SESSION_ID in attrs
+                    assert attrs[ATTR_SESSION_ID] == "test-session-xyz"
+
+    @pytest.mark.asyncio
+    async def test_extended_task_queued_log_includes_session_id(self):
+        """Test that ExtendedTask queued log attributes include session.id when session context is present"""
+        import asyncio
+        from unittest.mock import Mock, patch
+
+        from shiny._namespaces import ResolvedId
+        from shiny.otel._constants import ATTR_SESSION_ID
+        from shiny.reactive import ExtendedTask
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
+
+                async def slow_task():
+                    await asyncio.sleep(0.1)
+                    return 42
+
+                mock_session = Mock()
+                mock_session.id = "test-session-xyz"
+                mock_session.ns = ResolvedId("")
+
+                with patch(
+                    "shiny.session.get_current_session", return_value=mock_session
+                ):
+                    task = ExtendedTask(slow_task)
+
+                with patch("shiny.reactive._extended_task.emit_otel_log") as mock_emit:
+                    task.invoke()  # First invocation -- starts running
+                    task.invoke()  # Second invocation -- queued, log emitted
+
+                    assert len(task._invocation_queue) == 1
+                    mock_emit.assert_called_once()
+
+                    call_args = mock_emit.call_args
+                    attrs = call_args[1]["attributes"]
+                    assert ATTR_SESSION_ID in attrs
+                    assert attrs[ATTR_SESSION_ID] == "test-session-xyz"
+
+                    task.cancel()
+
 
 class TestSpanHierarchy:
     """Test span parent-child relationships"""
@@ -972,6 +1224,7 @@ class TestSpanHierarchy:
                 # Manually create flush span and execute calc inside it
                 async with shiny_otel_span(
                     "reactive_update",
+                    infer_session_id=True,
                     required_level=OtelCollectLevel.REACTIVE_UPDATE,
                 ):
                     await calc.update_value()

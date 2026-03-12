@@ -59,7 +59,7 @@ from ..otel._attributes import (
 from ..otel._collect import OtelCollectLevel, _get_env_level
 from ..otel._decorators import suppress as otel_suppress
 from ..otel._function_attrs import resolve_func_otel_level
-from ..otel._labels import create_otel_span_name
+from ..otel._labels import create_otel_label, create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
@@ -594,17 +594,18 @@ class AppSession(Session):
             return
         self._has_run_session_ended_tasks = True
 
-        # Wrap session cleanup in session.end span (or no-op if not collecting)
-        async with shiny_otel_span(
-            "session.end",
-            attributes=get_session_id_attrs(self),
-            required_level=OtelCollectLevel.SESSION,
-            collection_level=_get_env_level(),
-        ):
-            try:
-                await self._on_ended_callbacks.invoke()
-            finally:
-                self.app._remove_session(self)
+        # Wrap session cleanup in session_end span (or no-op if not collecting)
+        with session_context(self):
+            async with shiny_otel_span(
+                "session_end",
+                required_level=OtelCollectLevel.SESSION,
+                collection_level=_get_env_level(),
+                infer_session_id=True,
+            ):
+                try:
+                    await self._on_ended_callbacks.invoke()
+                finally:
+                    self.app._remove_session(self)
 
     def is_stub_session(self) -> Literal[False]:
         return False
@@ -690,20 +691,20 @@ class AppSession(Session):
                             message_obj = typing.cast(ClientMessageInit, message_obj)
                             self._manage_inputs(message_obj["data"])
 
-                            # Wrap server function initialization in session.start span
-                            async with shiny_otel_span(
-                                "session.start",
-                                attributes=lambda: {
-                                    **get_session_id_attrs(self),
-                                    **extract_http_attributes(self.http_conn),
-                                },
-                                required_level=OtelCollectLevel.SESSION,
-                                collection_level=_get_env_level(),
-                            ):
-                                with session_context(self):
+                            # Wrap server function initialization in session_start span
+                            with session_context(self):
+                                async with shiny_otel_span(
+                                    "session_start",
+                                    attributes=lambda: extract_http_attributes(
+                                        self.http_conn
+                                    ),
+                                    required_level=OtelCollectLevel.SESSION,
+                                    collection_level=_get_env_level(),
+                                    infer_session_id=True,
+                                ):
                                     self.app.server(self.input, self.output, self)
 
-                                    # Flush here to attempt a reactive_update within `session.start` otel span.
+                                    # Flush here to attempt a reactive_update within `session_start` otel span.
                                     # Might also fix https://github.com/posit-dev/py-shiny/issues/1889
                                     await reactive_flush()
 
@@ -732,9 +733,11 @@ class AppSession(Session):
                         # https://github.com/posit-dev/py-shiny/issues/1381
                         await asyncio.sleep(0)
 
-                        self._request_flush()
-
-                        await reactive_flush()
+                        # Keep session context active for reactive flush so
+                        # reactive_update spans can consistently include session.id.
+                        with session_context(self):
+                            self._request_flush()
+                            await reactive_flush()
 
             except ConnectionClosed:
                 ...
@@ -938,6 +941,20 @@ class AppSession(Session):
                             "Cache-Control": "no-store",
                         }
 
+                        # Parse namespace and base id from download_id
+                        # IDs only contain \w characters, so "-" is exclusively
+                        # the namespace separator (from ResolvedId)
+                        if "-" in download_id:
+                            dl_namespace, _, dl_base_id = download_id.rpartition("-")
+                        else:
+                            dl_namespace, dl_base_id = None, download_id
+
+                        download_label = create_otel_label(
+                            "download",
+                            dl_base_id,
+                            namespace=dl_namespace or None,
+                        )
+
                         otel_attrs = {
                             **get_session_id_attrs(self),
                             "download.id": download_id,
@@ -950,8 +967,9 @@ class AppSession(Session):
                             # transfer is handled by Starlette's ASGI layer after
                             # we return the FileResponse object.
                             async with shiny_otel_span(
-                                "download",
+                                download_label,
                                 attributes=otel_attrs,
+                                infer_session_id=False,
                                 required_level=OtelCollectLevel.REACTIVITY,
                             ):
                                 file_response = FileResponse(
@@ -994,9 +1012,10 @@ class AppSession(Session):
                             wrapped_contents = wrap_content_sync()
 
                         wrapped_contents = shiny_otel_span_stream(
-                            "download",
+                            download_label,
                             wrapped_contents,
                             attributes=otel_attrs,
+                            infer_session_id=False,
                             required_level=OtelCollectLevel.REACTIVITY,
                         )
 
@@ -1924,6 +1943,10 @@ class Outputs:
                     )
 
                 session = require_real_session()
+                output_attrs = {
+                    **get_session_id_attrs(session),
+                    **output_otel_attrs,
+                }
 
                 await session._send_message(
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
@@ -1932,7 +1955,8 @@ class Outputs:
                 try:
                     async with shiny_otel_span(
                         output_otel_label,
-                        attributes=output_otel_attrs,
+                        attributes=output_attrs,
+                        infer_session_id=False,
                         required_level=OtelCollectLevel.REACTIVITY,
                         collection_level=output_otel_level,
                     ):

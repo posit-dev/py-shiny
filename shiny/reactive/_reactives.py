@@ -251,18 +251,18 @@ class Value(Generic[T]):
         Returns
         -------
         SourceRefAttrs
-            Dictionary with code.filepath, code.lineno, code.column.number, and
-            code.function keys. Returns empty dict if source information is
+            Dictionary with code.file.path, code.line.number, code.column.number, and
+            code.function.name keys. Returns empty dict if source information is
             unavailable.
 
         Notes
         -----
         Following OpenTelemetry semantic conventions for code attributes:
-        - code.filepath: Full path to source file
-        - code.lineno: Line number where _set() was called (1-indexed)
+        - code.file.path: Full path to source file
+        - code.line.number: Line number where _set() was called (1-indexed)
         - code.column.number: Column offset where _set() was called (0-indexed,
           Python 3.11+ only)
-        - code.function: Function name containing the call
+        - code.function.name: Function name containing the call
 
         The column.number attribute uses Python 3.11+ frame position information
         for accurate column offsets. On earlier Python versions, this attribute
@@ -284,10 +284,10 @@ class Value(Generic[T]):
 
                 # Found a user code frame - extract attributes
                 attrs: SourceRefAttrs = {}
-                attrs["code.filepath"] = filename
+                attrs["code.file.path"] = filename
 
                 if frame_info.lineno:
-                    attrs["code.lineno"] = frame_info.lineno
+                    attrs["code.line.number"] = frame_info.lineno
 
                 # Extract column number using Python 3.11+ position info when available
                 # Only include if we have accurate position information
@@ -297,7 +297,7 @@ class Value(Generic[T]):
                         attrs["code.column.number"] = frame_info.positions.col_offset  # type: ignore[typeddict-item, attr-defined]
 
                 if frame_info.function:
-                    attrs["code.function"] = frame_info.function
+                    attrs["code.function.name"] = frame_info.function
 
                 return attrs
 
@@ -402,14 +402,18 @@ class Value(Generic[T]):
                 namespace=self._otel_namespace,
             )
 
+        # Build attributes dict with session ID and source reference
+        # Skip source ref extraction for read-only values (inputs) since the
+        # caller is always internal framework code (starlette/asyncio), not user code
+        attrs: dict[str, Any] = {**self._otel_attrs}
+        if not self._read_only:
+            attrs.update(self._extract_caller_source_ref())
+
         emit_otel_log(
             self._otel_label,
             severity_text="INFO",
-            # Build attributes dict with session ID and source reference
-            attributes={
-                **self._otel_attrs,
-                **self._extract_caller_source_ref(),
-            },
+            attributes=attrs,
+            infer_session_id=False,
         )
 
     def unset(self) -> None:
@@ -509,7 +513,10 @@ class Calc_(Generic[T]):
         self._error: list[Exception] = []
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
+        self._otel_attrs = {
+            **self._extract_otel_attrs(fn),
+            **get_session_id_attrs(session),
+        }
 
         # Extract modifier from function attribute and generate label
         self._otel_label: str = create_otel_span_name(
@@ -560,6 +567,7 @@ class Calc_(Generic[T]):
             async with shiny_otel_span(
                 self._otel_label,
                 attributes=self._otel_attrs,
+                infer_session_id=False,
                 required_level=OtelCollectLevel.REACTIVITY,
                 collection_level=self._otel_level,
             ):
@@ -783,7 +791,10 @@ class Effect_:
             self._session.on_ended(self._on_session_ended_cb)
 
         # Extract OpenTelemetry attributes at initialization time
-        self._otel_attrs: SourceRefAttrs = self._extract_otel_attrs(fn)
+        self._otel_attrs: dict[str, Any] = {
+            **get_session_id_attrs(self._session),
+            **self._extract_otel_attrs(fn),
+        }
 
         # Extract modifier from function attribute and generate label
         self._otel_label: str = create_otel_span_name(
@@ -848,6 +859,7 @@ class Effect_:
             async with shiny_otel_span(
                 self._otel_label,
                 attributes=self._otel_attrs,
+                infer_session_id=False,
                 required_level=OtelCollectLevel.REACTIVITY,
                 collection_level=self._otel_level,
             ):

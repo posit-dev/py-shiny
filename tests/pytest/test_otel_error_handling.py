@@ -185,7 +185,9 @@ class TestSpanExceptionRecording:
 
             async def test_func():
                 async with shiny_otel_span(
-                    "test_span", required_level=OtelCollectLevel.SESSION
+                    "test_span",
+                    infer_session_id=True,
+                    required_level=OtelCollectLevel.SESSION,
                 ):
                     raise ValueError("Test error")
 
@@ -221,7 +223,9 @@ class TestSpanExceptionRecording:
 
             async def test_func():
                 async with shiny_otel_span(
-                    "test_span", required_level=OtelCollectLevel.SESSION
+                    "test_span",
+                    infer_session_id=True,
+                    required_level=OtelCollectLevel.SESSION,
                 ):
                     raise SilentException("Silent error")
 
@@ -260,7 +264,9 @@ class TestSpanExceptionRecording:
 
                 async def test_func():
                     async with shiny_otel_span(
-                        "test_span", required_level=OtelCollectLevel.SESSION
+                        "test_span",
+                        infer_session_id=True,
+                        required_level=OtelCollectLevel.SESSION,
                     ):
                         raise ValueError("Database password is 'secret123'")
 
@@ -302,7 +308,9 @@ class TestSpanExceptionRecording:
 
                 async def test_func():
                     async with shiny_otel_span(
-                        "test_span", required_level=OtelCollectLevel.SESSION
+                        "test_span",
+                        infer_session_id=True,
+                        required_level=OtelCollectLevel.SESSION,
                     ):
                         raise SafeException("This is safe to show")
 
@@ -345,6 +353,7 @@ class TestSpanExceptionRecording:
                     async with shiny_otel_span(
                         "test_span",
                         attributes={ATTR_SESSION_ID: mock_session.id},
+                        infer_session_id=True,
                         required_level=OtelCollectLevel.SESSION,
                     ):
                         raise ValueError("Test error")
@@ -392,11 +401,15 @@ class TestExceptionRecordingOnce:
             async def test_func():
                 # Parent span
                 async with shiny_otel_span(
-                    "parent_span", required_level=OtelCollectLevel.SESSION
+                    "parent_span",
+                    infer_session_id=True,
+                    required_level=OtelCollectLevel.SESSION,
                 ):
                     # Child span where error originates
                     async with shiny_otel_span(
-                        "child_span", required_level=OtelCollectLevel.SESSION
+                        "child_span",
+                        infer_session_id=True,
+                        required_level=OtelCollectLevel.SESSION,
                     ):
                         raise ValueError("Test error from child")
 
@@ -437,15 +450,21 @@ class TestExceptionRecordingOnce:
             async def test_func():
                 # Grandparent span
                 async with shiny_otel_span(
-                    "grandparent_span", required_level=OtelCollectLevel.SESSION
+                    "grandparent_span",
+                    infer_session_id=True,
+                    required_level=OtelCollectLevel.SESSION,
                 ):
                     # Parent span
                     async with shiny_otel_span(
-                        "parent_span", required_level=OtelCollectLevel.SESSION
+                        "parent_span",
+                        infer_session_id=True,
+                        required_level=OtelCollectLevel.SESSION,
                     ):
                         # Child span where error originates
                         async with shiny_otel_span(
-                            "child_span", required_level=OtelCollectLevel.SESSION
+                            "child_span",
+                            infer_session_id=True,
+                            required_level=OtelCollectLevel.SESSION,
                         ):
                             raise ValueError("Test error from child")
 

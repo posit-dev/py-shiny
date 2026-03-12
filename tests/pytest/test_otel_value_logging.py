@@ -126,7 +126,7 @@ class TestEmitLog:
     def test_emit_log_basic(self, otel_log_provider_and_exporter):
         """Test basic log emission"""
         provider, exporter = otel_log_provider_and_exporter
-        emit_otel_log("Test message")
+        emit_otel_log("Test message", infer_session_id=True)
 
         # Force flush and get logs
         provider.force_flush()
@@ -141,7 +141,7 @@ class TestEmitLog:
     def test_emit_log_with_severity(self, otel_log_provider_and_exporter):
         """Test log emission with custom severity"""
         provider, exporter = otel_log_provider_and_exporter
-        emit_otel_log("Debug message", severity_text="DEBUG")
+        emit_otel_log("Debug message", severity_text="DEBUG", infer_session_id=True)
 
         provider.force_flush()
         logs = exporter.get_finished_logs()
@@ -156,6 +156,7 @@ class TestEmitLog:
         emit_otel_log(
             "Test with attributes",
             attributes={"session.id": "test-123", "custom.key": "value"},
+            infer_session_id=True,
         )
 
         provider.force_flush()
@@ -176,7 +177,7 @@ class TestEmitLog:
         reset_otel_tracing_state()
 
         # Should not raise
-        emit_otel_log("Test message")
+        emit_otel_log("Test message", infer_session_id=True)
 
 
 class TestValueUpdateLogging:
@@ -711,14 +712,14 @@ class TestValueSourceReference:
         # Check that source reference attributes are present
         attrs = value_logs[0].log_record.attributes
         assert attrs is not None
-        assert "code.filepath" in attrs
-        assert "code.lineno" in attrs
-        assert "code.function" in attrs
+        assert "code.file.path" in attrs
+        assert "code.line.number" in attrs
+        assert "code.function.name" in attrs
 
         # Verify the filepath points to this test file
-        assert "test_otel_value_logging.py" in attrs["code.filepath"]
+        assert "test_otel_value_logging.py" in attrs["code.file.path"]
         # Verify the function is this test
-        assert attrs["code.function"] == "test_source_ref_in_log_attributes"
+        assert attrs["code.function.name"] == "test_source_ref_in_log_attributes"
 
     def test_source_ref_without_session(self, otel_log_provider_and_exporter):
         """Test that NO logs are emitted without a session (too early)"""
