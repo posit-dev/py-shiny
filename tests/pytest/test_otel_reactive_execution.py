@@ -1201,6 +1201,28 @@ class TestExtendedTaskSpans:
 
                     task.cancel()
 
+    def test_extended_task_internal_values_suppressed(self):
+        """ExtendedTask status/value/error Values have OtelCollectLevel.NONE."""
+        import asyncio
+
+        from shiny.otel._collect import OtelCollectLevel
+        from shiny.reactive import ExtendedTask
+
+        async def my_task():
+            return 42
+
+        task = ExtendedTask(my_task)
+
+        assert task.status._otel_level == OtelCollectLevel.NONE, (
+            f"status._otel_level should be NONE, got {task.status._otel_level}"
+        )
+        assert task.value._otel_level == OtelCollectLevel.NONE, (
+            f"value._otel_level should be NONE, got {task.value._otel_level}"
+        )
+        assert task.error._otel_level == OtelCollectLevel.NONE, (
+            f"error._otel_level should be NONE, got {task.error._otel_level}"
+        )
+
 
 class TestSpanHierarchy:
     """Test span parent-child relationships"""

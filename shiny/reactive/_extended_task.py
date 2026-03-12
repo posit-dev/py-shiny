@@ -13,6 +13,7 @@ from typing import (
     overload,
 )
 
+from .. import otel
 from .._docstring import add_example
 from .._typing_extensions import ParamSpec
 from .._utils import is_async_callable
@@ -80,29 +81,30 @@ class ExtendedTask(Generic[P, R]):
         # Extract collection level from function attribute (e.g., set by `@otel.suppress` or `@otel.collect` decorators)
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(func)
 
-        self.status: Value[Status] = Value("initial")
-        """
-        Reactive value that tracks the current status of the task. The value will be one
-        of "initial", "running", "success", "error", or "cancelled".
-        """
+        with otel.suppress():
+            self.status: Value[Status] = Value("initial")
+            """
+            Reactive value that tracks the current status of the task. The value will be one
+            of "initial", "running", "success", "error", or "cancelled".
+            """
 
-        self.value: Value[R] = Value()
-        """
-        Reactive value that tracks the result of the task, if the current status is
-        "success". If the status is not "success", the value will be unset, and a silent
-        exception will be raised if you try to read it. Calling code should generally
-        not read this value directly, but instead use the `result()` method, which is
-        designed to behave correctly regardless of the current status.
-        """
+            self.value: Value[R] = Value()
+            """
+            Reactive value that tracks the result of the task, if the current status is
+            "success". If the status is not "success", the value will be unset, and a silent
+            exception will be raised if you try to read it. Calling code should generally
+            not read this value directly, but instead use the `result()` method, which is
+            designed to behave correctly regardless of the current status.
+            """
 
-        self.error: Value[BaseException] = Value()
-        """
-        Reactive value that tracks the error raised by the task, if the current status
-        is "error". If the status is not "error", the value will be unset, and a silent
-        exception will be raised if you try to read it. Calling code should generally
-        not read this value directly, but instead use the `result()` method, which is
-        designed to behave correctly regardless of the current status.
-        """
+            self.error: Value[BaseException] = Value()
+            """
+            Reactive value that tracks the error raised by the task, if the current status
+            is "error". If the status is not "error", the value will be unset, and a silent
+            exception will be raised if you try to read it. Calling code should generally
+            not read this value directly, but instead use the `result()` method, which is
+            designed to behave correctly regardless of the current status.
+            """
 
         # If invoked while a previous invocation is still running, we queue up.
         self._invocation_queue: list[Callable[[], None]] = []
