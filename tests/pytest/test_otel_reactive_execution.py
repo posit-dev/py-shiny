@@ -1203,8 +1203,6 @@ class TestExtendedTaskSpans:
 
     def test_extended_task_internal_values_suppressed(self):
         """ExtendedTask status/value/error Values have OtelCollectLevel.NONE."""
-        import asyncio
-
         from shiny.otel._collect import OtelCollectLevel
         from shiny.reactive import ExtendedTask
 
