@@ -423,7 +423,7 @@ class data_frame(
     @otel.suppress
     def _data_view_selected(self) -> IntoDataFrameT:
         """
-        Reactive calcuation of the selected rows of the (sorted and filtered) data.
+        Reactive calculation of the selected rows of the (sorted and filtered) data.
 
         Returns
         -------
@@ -577,7 +577,7 @@ class data_frame(
             def should_update_styles():
                 return (
                     self._cell_patch_map(),
-                    # If the udpated data is unset, use a `None` value which is not allowed.
+                    # If the updated data is unset, use a `None` value which is not allowed.
                     self._updated_data() if self._updated_data.is_set() else None,
                 )
 

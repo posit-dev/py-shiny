@@ -23,9 +23,13 @@ os.environ["SHINY_OTEL_COLLECT"] = "reactivity"
 
 _span_exporter = TestExporter()
 
+# Only forward spans to Logfire when a token is explicitly present (local
+# debugging).  In CI — where no token is set — send_to_logfire=False avoids
+# any attempt to reach the Logfire backend.
 logfire.configure(
     service_name="shiny-otel-express-session-test",
     scrubbing=False,
+    send_to_logfire="if-token-present",
 )
 cast(TracerProvider, trace.get_tracer_provider()).add_span_processor(
     SimpleSpanProcessor(_span_exporter)
