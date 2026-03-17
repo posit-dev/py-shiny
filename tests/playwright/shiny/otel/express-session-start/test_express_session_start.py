@@ -10,9 +10,7 @@ re-executes the app module for each session (inside session_start), which can
 cause TracerProvider replacement to interfere with span closure.
 """
 
-import json
 from importlib.util import find_spec
-from typing import Any
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -29,25 +27,12 @@ def test_session_start_span_closes(page: Page, local_app: ShinyAppProc) -> None:
     show_spans_btn = InputActionButton(page, "show_spans")
     output = OutputCode(page, "span_summary")
 
+    # Before clicking, the initial render fires inside session_start's
+    # reactive_flush (before the span ends), so the count must be 0.
+    expect(output.loc).to_contain_text('"session_start_count": 0,')
+
     # Click after page load so the re-render fires *outside* session_start.
-    # (The initial render runs inside session_start's reactive_flush, before
-    # the span has ended, so session_start_count would be 0 on first render.)
     show_spans_btn.click()
 
-    # Wait for the output to reflect at least one session_start span.
-    expect(output.loc).to_contain_text("session_start")
-
-    raw = output.loc.text_content()
-    assert raw is not None, "span_summary output must not be None"
-
-    data: dict[str, Any] = json.loads(raw)
-
-    assert data["session_start_count"] >= 1, (
-        f"Expected at least one session_start span, got {data['session_start_count']}. "
-        f"Full output: {raw}"
-    )
-
-    assert data["all_closed"] is True, (
-        "One or more session_start spans have no end_time — they were never closed. "
-        f"Full output: {raw}"
-    )
+    expect(output.loc).to_contain_text('"session_start_count": 1,')
+    expect(output.loc).to_contain_text('"all_closed": true,')

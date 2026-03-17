@@ -14,11 +14,8 @@ so the now-closed span is visible in the exporter.
 import json
 import sys
 
+from shiny import reactive
 from shiny.express import input, render, ui
-
-# globals.py is loaded once by create_express_app; access it via sys.modules
-# so we always reference the same exporter even when this file is re-executed.
-_get_finished_spans = sys.modules["globals"].get_finished_spans
 
 ui.page_opts(title="OTel Express Session Start Test")
 
@@ -28,10 +25,15 @@ ui.input_action_button("show_spans", "Show Session Spans")
 "Logfire should only be configured once"
 
 
+# globals.py is loaded once by create_express_app; access it via sys.modules
+# so we always reference the same exporter even when this file is re-executed.
+_globals = sys.modules["globals"]
+_get_finished_spans = _globals.get_finished_spans
+
+
 @render.code
+@reactive.event(input.show_spans, ignore_none=False)
 def span_summary():
-    # Depend on the button so the output re-renders after each click.
-    input.show_spans()
 
     spans = _get_finished_spans()
     session_start_spans = [s for s in spans if s.name == "session_start"]

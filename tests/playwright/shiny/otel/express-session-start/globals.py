@@ -21,15 +21,12 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
 os.environ["SHINY_OTEL_COLLECT"] = "reactivity"
 
-# logfire's TestExporter stores finished spans in `.exported_spans`
 _span_exporter = TestExporter()
 
 logfire.configure(
     service_name="shiny-otel-express-session-test",
     scrubbing=False,
 )
-# Attach the TestExporter to logfire's provider so spans are accessible
-# from the app for Playwright test assertions.
 cast(TracerProvider, trace.get_tracer_provider()).add_span_processor(
     SimpleSpanProcessor(_span_exporter)
 )
@@ -38,3 +35,8 @@ cast(TracerProvider, trace.get_tracer_provider()).add_span_processor(
 def get_finished_spans() -> list[ReadableSpan]:
     """Return all finished spans captured by logfire's TestExporter."""
     return list(_span_exporter.exported_spans)
+
+
+def clear_spans() -> None:
+    """Clear all captured spans. Call once per session to reset the counter."""
+    _span_exporter.clear()
