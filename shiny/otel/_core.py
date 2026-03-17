@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 from contextvars import ContextVar
-from typing import Any, Union
+from typing import Any, Generator, Union
 
+from opentelemetry import context as otel_context
 from opentelemetry import trace
 
 # There is no public API for get_logger_provider.
@@ -19,6 +21,7 @@ __all__ = (
     "get_otel_logger",
     "is_otel_tracing_enabled",
     "emit_otel_log",
+    "detached_otel_context",
 )
 
 # Global state for lazy initialization
@@ -197,3 +200,30 @@ def emit_otel_log(
         # Silently fail if OTel logging is not configured or fails
         # We don't want telemetry issues to break the app
         pass
+
+
+@contextlib.contextmanager
+def detached_otel_context() -> Generator[None, None, None]:
+    """
+    Context manager that detaches from the current OpenTelemetry span context.
+
+    Any spans created within this block will appear as root spans (no parent).
+    This is useful for timer-driven work that is not causally related to any
+    ongoing user action — for example, a ``reactive.poll`` flush that fires
+    independently of the request/response cycle.
+
+    Examples
+    --------
+    ```python
+    from shiny.otel._core import detached_otel_context
+
+    with detached_otel_context():
+        ctx.invalidate()
+        await flush()
+    ```
+    """
+    token = otel_context.attach(otel_context.Context())
+    try:
+        yield
+    finally:
+        otel_context.detach(token)

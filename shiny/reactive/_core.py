@@ -24,6 +24,7 @@ from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
 from ..otel._collect import OtelCollectLevel, _get_env_level
+from ..otel._core import detached_otel_context
 from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
 
@@ -374,8 +375,12 @@ def invalidate_later(
                 # ctx.on_invalidate doesn't currently allow unregistration.)
                 cancellable = False
 
-                ctx.invalidate()
-                await flush()
+                # Detach from any active OTel span so the flush's reactive_update
+                # span starts as a root span. The flush is timer-driven, not
+                # caused by a user action, so it should have no parent.
+                with detached_otel_context():
+                    ctx.invalidate()
+                    await flush()
 
         except BaseException:
             traceback.print_exc()

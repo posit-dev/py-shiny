@@ -12,11 +12,17 @@ import os
 from unittest.mock import Mock, patch
 
 import pytest
+from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from shiny.otel._collect import OtelCollectLevel, get_level
-from shiny.otel._core import get_otel_logger, get_otel_tracer, is_otel_tracing_enabled
+from shiny.otel._core import (
+    detached_otel_context,
+    get_otel_logger,
+    get_otel_tracer,
+    is_otel_tracing_enabled,
+)
 from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.session._utils import session_context
 
@@ -64,6 +70,54 @@ class TestCore:
         # Verify no spans were created
         spans = get_exported_spans(provider, exporter)
         assert len(spans) == 0, "is_otel_tracing_enabled() should not create any spans"
+
+
+class TestDetachedOtelContext:
+    """Tests for detached_otel_context()"""
+
+    def test_spans_inside_have_no_parent(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """Spans created inside detached_otel_context() are root spans (no parent)."""
+        provider, exporter = otel_tracer_provider
+        tracer = provider.get_tracer("test")
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with tracer.start_as_current_span("parent"):
+                with detached_otel_context():
+                    with tracer.start_as_current_span("child"):
+                        pass
+
+        spans = get_exported_spans(provider, exporter)
+        child = next(s for s in spans if s.name == "child")
+        assert child.parent is None
+
+    def test_outer_context_restored_after(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """The outer span context is restored after exiting detached_otel_context()."""
+        provider, _ = otel_tracer_provider
+        tracer = provider.get_tracer("test")
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with tracer.start_as_current_span("parent") as parent_span:
+                with detached_otel_context():
+                    pass
+                assert trace.get_current_span() is parent_span
+
+    def test_no_active_span_inside_block(
+        self, otel_tracer_provider: tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """No active span is visible inside detached_otel_context()."""
+        from opentelemetry.trace import INVALID_SPAN
+
+        provider, _ = otel_tracer_provider
+        tracer = provider.get_tracer("test")
+
+        with patch_otel_tracing_state(tracing_enabled=True):
+            with tracer.start_as_current_span("outer"):
+                with detached_otel_context():
+                    assert trace.get_current_span() is INVALID_SPAN
 
 
 class TestOtelCollectLevel:
