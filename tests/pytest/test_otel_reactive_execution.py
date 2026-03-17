@@ -1211,15 +1211,15 @@ class TestExtendedTaskSpans:
 
         task = ExtendedTask(my_task)
 
-        assert task.status._otel_level == OtelCollectLevel.NONE, (
-            f"status._otel_level should be NONE, got {task.status._otel_level}"
-        )
-        assert task.value._otel_level == OtelCollectLevel.NONE, (
-            f"value._otel_level should be NONE, got {task.value._otel_level}"
-        )
-        assert task.error._otel_level == OtelCollectLevel.NONE, (
-            f"error._otel_level should be NONE, got {task.error._otel_level}"
-        )
+        assert (
+            task.status._otel_level == OtelCollectLevel.NONE
+        ), f"status._otel_level should be NONE, got {task.status._otel_level}"
+        assert (
+            task.value._otel_level == OtelCollectLevel.NONE
+        ), f"value._otel_level should be NONE, got {task.value._otel_level}"
+        assert (
+            task.error._otel_level == OtelCollectLevel.NONE
+        ), f"error._otel_level should be NONE, got {task.error._otel_level}"
 
 
 class TestSpanHierarchy:
