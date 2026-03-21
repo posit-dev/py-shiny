@@ -65,6 +65,26 @@ async def test_renderer_works_with_args():
     assert val == "42 42 42 42"
 
 
+def test_renderer_rejects_function_with_params():
+    with pytest.raises(TypeError, match="no required parameters"):
+
+        @render.text
+        def bad_render(x):
+            return str(x)
+
+
+def test_renderer_accepts_function_with_no_params():
+    @render.text
+    def good_render():
+        return "hello"
+
+
+def test_renderer_accepts_function_with_default_params():
+    @render.text
+    def good_render(x="hello"):
+        return x
+
+
 def test_effect():
     with pytest.raises(TypeError):
 

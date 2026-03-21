@@ -156,10 +156,13 @@ class Renderer(Generic[IT]):
         :
             Original renderer instance.
         """
+        from ..._utils import validate_no_params
         from ...session import get_current_session
 
         if not callable(_fn):
             raise TypeError("Value function must be callable")
+
+        validate_no_params(_fn, type(self).__name__)
 
         # Set value function with extra meta information
         self.fn = AsyncValueFn(_fn)

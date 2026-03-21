@@ -1365,3 +1365,43 @@ async def test_observer_async_suspended_resumed_observers_run_at_most_once():
     a.set(4)
     await flush()
     assert obs._exec_count == 2
+
+
+def test_calc_rejects_function_with_params():
+    with pytest.raises(TypeError, match="no required parameters"):
+
+        @calc
+        def bad_calc(x):
+            return x
+
+
+def test_calc_accepts_function_with_no_params():
+    @calc
+    def good_calc():
+        return 1
+
+
+def test_calc_accepts_function_with_default_params():
+    @calc
+    def good_calc(x=1):
+        return x
+
+
+def test_effect_rejects_function_with_params():
+    with pytest.raises(TypeError, match="no required parameters"):
+
+        @effect
+        def bad_effect(x):
+            pass
+
+
+def test_effect_accepts_function_with_no_params():
+    @effect
+    def good_effect():
+        pass
+
+
+def test_effect_accepts_function_with_default_params():
+    @effect
+    def good_effect(x=1):
+        pass

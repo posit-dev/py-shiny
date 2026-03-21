@@ -640,3 +640,37 @@ def import_module_from_path(module_name: str, path: Path):
             sys.modules[module_name] = prev_module
         raise
     return module
+
+
+def validate_no_params(fn: Callable[..., Any], decorator_name: str) -> None:
+    """
+    Validate that a decorated function has no required parameters.
+
+    Parameters
+    ----------
+    fn
+        The function to validate.
+    decorator_name
+        The name of the decorator (e.g., ``"reactive.calc"``) for error messages.
+
+    Raises
+    ------
+    TypeError
+        If the function has required parameters (excluding ``self`` and ``cls``).
+    """
+    sig = inspect.signature(fn)
+    params = [
+        p
+        for p in sig.parameters.values()
+        if p.default is inspect.Parameter.empty
+        and p.kind
+        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+    ]
+    if params:
+        param_names = [p.name for p in params]
+        raise TypeError(
+            f"@{decorator_name} expected a function with no required parameters, "
+            f"but {fn.__name__}() has required parameter(s): "
+            f"{', '.join(param_names)}. "
+            f"Reactive functions and render functions should take no arguments."
+        )
