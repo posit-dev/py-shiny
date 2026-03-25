@@ -162,8 +162,11 @@ shiny-test = "shiny.pytest._pytest"
 testpaths = ["tests"]
 
 [tool.flake8]
-extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev"]
+extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev", ".context"]
 ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
+
+[tool.black]
+extend-exclude = ".context"
 
 [tool.isort]
 profile = "black"
@@ -171,6 +174,7 @@ skip = [
     "__init__.py",
     "typings/",
     "_dev/",
+    ".context/",
     ".venv",
     "venv",
     ".tox",
