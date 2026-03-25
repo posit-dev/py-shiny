@@ -23,11 +23,20 @@ MIN_EXAMPLES = 50
 def fetch_examples() -> list[str]:
     """Dynamically fetch the list of Python examples from the shinylive repo."""
     result = subprocess.run(
-        ["gh", "api", "repos/posit-dev/shinylive/contents/examples/python",
-         "--jq", ".[].name"],
-        capture_output=True, text=True, check=True,
+        [
+            "gh",
+            "api",
+            "repos/posit-dev/shinylive/contents/examples/python",
+            "--jq",
+            ".[].name",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     )
-    examples = sorted(line.strip() for line in result.stdout.strip().splitlines() if line.strip())
+    examples = sorted(
+        line.strip() for line in result.stdout.strip().splitlines() if line.strip()
+    )
     assert len(examples) >= MIN_EXAMPLES, (
         f"Expected at least {MIN_EXAMPLES} examples, but found {len(examples)}. "
         f"Check the shinylive repo for issues."
@@ -45,12 +54,15 @@ async def test_example(browser, base_url, example_name, timeout_ms=45000):
     def on_console(msg):
         if msg.type == "error":
             text = msg.text
-            if any(skip in text for skip in [
-                "favicon.ico",
-                "Failed to load resource",
-                "net::ERR_",
-                "ResizeObserver",
-            ]):
+            if any(
+                skip in text
+                for skip in [
+                    "favicon.ico",
+                    "Failed to load resource",
+                    "net::ERR_",
+                    "ResizeObserver",
+                ]
+            ):
                 return
             errors.append(text)
 
@@ -102,7 +114,10 @@ async def main():
         batch_size = 5
         for i in range(0, len(examples), batch_size):
             batch = examples[i : i + batch_size]
-            print(f"Testing batch {i // batch_size + 1}: {', '.join(batch)}...", flush=True)
+            print(
+                f"Testing batch {i // batch_size + 1}: {', '.join(batch)}...",
+                flush=True,
+            )
             tasks = [test_example(browser, base_url, name) for name in batch]
             batch_results = await asyncio.gather(*tasks)
             results.extend(batch_results)
@@ -111,12 +126,14 @@ async def main():
 
     output = []
     for name, status, errors in results:
-        output.append({
-            "example": name,
-            "url": f"{base_url}#{name}",
-            "status": status,
-            "errors": errors,
-        })
+        output.append(
+            {
+                "example": name,
+                "url": f"{base_url}#{name}",
+                "status": status,
+                "errors": errors,
+            }
+        )
 
     if output_path:
         with open(output_path, "w") as f:
