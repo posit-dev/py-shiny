@@ -4,6 +4,14 @@
 
 - [ ] Check if any Shiny HTML Dependencies were updated or added
 - [ ] If yes, show the user which files changed (e.g., `git diff main -- shiny/www/shared/`) and ask if py-shinyswatch and/or py-shinywidgets need to be updated before proceeding
+- [ ] **Python version check**: Look up the current [Python release schedule](https://devguide.python.org/versions/) and check if any Python versions have reached end-of-life since the last release. If so, ask the user whether to drop them from the following packages during this release cycle:
+  - py-shiny (`pyproject.toml`, CI workflow)
+  - py-htmltools (`pyproject.toml`, CI workflow)
+  - py-shinyswatch (`setup.cfg` or `pyproject.toml`, CI workflow)
+  - py-shinywidgets (`setup.cfg` or `pyproject.toml`, CI workflow)
+  - py-shinylive (`setup.cfg`, CI workflow)
+
+  Also check if a new Python version should be added to test matrices (e.g., 3.13, 3.14).
 
 Ask the user: "Were any Shiny HTML Dependencies updated or added in this release cycle? Here are the changed files: [show diff]. Does py-shinyswatch or py-shinywidgets need updating?"
 
@@ -52,38 +60,36 @@ Repo: `posit-dev/py-shiny`
 - [ ] **PRE-RELEASE GATE**: Present release summary (package, version, CI status, changelog, dep check, shinylive test results) and get explicit user confirmation before proceeding
 - [ ] Squash merge the RC PR into main via GitHub (this is the release commit)
 - [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
-- [ ] Create GH Release (copy changelog content, mark as Latest)
+- [ ] Create GH Release (title: `shiny X.Y.Z`, copy changelog content, mark as Latest). **Important**: The release title must be `shiny X.Y.Z` (not `vX.Y.Z`) — the PyPI publish workflow depends on this naming convention.
 - [ ] Wait for PyPI publish to succeed
 
 ### Shinylive example testing procedure
 
-Dynamically retrieve the current example list and test each app:
+A reusable Playwright test script is available at [`references/test_shinylive_site.py`](references/test_shinylive_site.py). It:
+- Takes a base URL as argument (works for local, github.io, or shinylive.io)
+- Uses fresh browser contexts per example (no cached state)
+- Appends a cache-busting `?v={timestamp}` query param
+- Tests all Python examples in parallel batches of 5
+- Reports pass/fail with console errors
 
-1. Fetch the example list from the GitHub API:
-   ```bash
-   gh api repos/posit-dev/shinylive/contents/examples/python \
-     --jq '.[].name' | sort
-   ```
-2. The base URL for each example is:
-   `https://posit-dev.github.io/py-shiny/shinylive/py/examples/#EXAMPLE_NAME`
-3. For each example, use Playwright MCP tools to:
-   a. Navigate to the example URL (`browser_navigate`)
-   b. Wait for the app to load (`browser_wait_for` - wait for the shinylive app iframe or output to appear)
-   c. Check browser console messages (`browser_console_messages`) for Python errors/tracebacks
-   d. Record the result (pass/fail + any error text)
-4. After visiting all examples, present a summary table:
-   ```
-   | Example | URL | Status | Errors |
-   |---------|-----|--------|--------|
-   | basic_app | <link> | OK | - |
-   | cpuinfo | <link> | ERROR | TypeError: ... |
-   ```
-5. If any apps have errors, present the broken app links prominently for user verification:
-   ```
-   Broken apps found (please verify manually):
-   - cpuinfo: https://posit-dev.github.io/py-shiny/shinylive/py/examples/#cpuinfo
-     Error: TypeError: ...
-   ```
+**Usage:**
+```bash
+# Local (during Phase 6 build)
+python references/test_shinylive_site.py "http://localhost:3000/examples/"
+
+# github.io (after main branch deploy)
+python references/test_shinylive_site.py "https://posit-dev.github.io/shinylive/py/examples/"
+
+# shinylive.io (after deploy branch push)
+python references/test_shinylive_site.py "https://shinylive.io/py/examples/"
+
+# Phase 3: py-shiny docs site shinylive
+python references/test_shinylive_site.py "https://posit-dev.github.io/py-shiny/shinylive/py/examples/"
+```
+
+**Requires:** `pip install playwright && playwright install chromium`
+
+After running, present results to the user:
 
 Ask user: "I've tested all N shinylive examples. X passed, Y had errors. Here are the broken apps for you to verify: [links]. Should we proceed or investigate the errors?"
 
@@ -125,13 +131,16 @@ Repo: `posit-dev/shinylive`
 - [ ] Check `shinylive_lock.json` for released package versions
 - [ ] Add and/or edit examples to use new features or API
 - [ ] Run `make serve` and automatically test all local shinylive examples for errors (see procedure below)
-- [ ] Commit and push
-- [ ] **PRE-RELEASE GATE**: Present release summary (package, version, submodule versions, build output) and get explicit user confirmation before tagging
-- [ ] Tag commit and push tag
-- [ ] Push to `main` branch (for github.io)
-- [ ] After deploy to github.io finishes, test apps on github.io using the same Playwright-based example testing procedure
-- [ ] Only after github.io apps pass: push to `deploy` branch (for shinylive.io)
-- [ ] After deploy to shinylive.io finishes, test apps on shinylive.io
+- [ ] Commit and push RC branch
+- [ ] Open a PR from `rc-vX.Y.Z` → `main` for visibility and CI
+- [ ] Wait for CI to pass (if any)
+- [ ] **PRE-RELEASE GATE**: Present release summary (package, version, submodule versions, build output, local test results) and get explicit user confirmation before proceeding
+- [ ] Squash merge the RC PR into `main` via GitHub
+- [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
+- [ ] **DEPLOY GATE 1 (github.io)**: Wait for the `main` branch deploy to github.io to finish. Then bust all browser caches and verify apps work on github.io using the Playwright-based example testing procedure. **Important**: When testing, always append a cache-busting query parameter (e.g., `?v={timestamp}`) to URLs or use a fresh incognito/private browser context to ensure you're testing the newly deployed version, not a cached old version. **Do NOT push to `deploy` until github.io is verified.**
+- [ ] Ask user: "github.io apps have been tested — X passed, Y failed. Ready to push to `deploy` (shinylive.io)?" Get explicit confirmation.
+- [ ] Only after github.io verification passes and user confirms: push to `deploy` branch (for shinylive.io)
+- [ ] **DEPLOY GATE 2 (shinylive.io)**: Wait for the `deploy` branch deploy to shinylive.io to finish. Then bust all browser caches and verify apps work on shinylive.io using the same testing procedure with cache-busting (fresh incognito context or `?v={timestamp}` query params).
 - [ ] Create GH Release
 - [ ] Wait for release to succeed and build artifact to appear in GH Release page
 
@@ -228,9 +237,11 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 ## Phase 11: Conda-forge
 
 - [ ] Check `conda-forge/py-htmltools-feedstock` for auto-created PR from bot
+- [ ] Check `conda-forge/py-htmltools-feedstock` for auto-created PR from bot (only if py-htmltools was released)
 - [ ] Check `conda-forge/py-shiny-feedstock` for auto-created PR from bot
-- [ ] If PRs exist and tests pass, they should auto-merge
+- [ ] If PRs exist and tests pass, they should auto-merge (look for `[bot-automerge]` prefix)
 - [ ] If auto-merge doesn't happen, create an issue with the appropriate bot command
+- [ ] Note: Only py-htmltools and py-shiny have conda-forge feedstocks. py-shinyswatch, py-shinywidgets, and py-shinylive do NOT have feedstocks as of 2026-03.
 
 Ask user: "Have the conda-forge bot PRs appeared? Any issues with auto-merge?"
 
@@ -253,3 +264,15 @@ Repo: shiny-dev-center
 - [ ] Merge and publish
 
 Ask user: "The blog post should be written in a fresh Claude session to avoid context bloat from this release skill. Please start a new session and use `/release-post` to draft the blog post. Let me know when it's done so we can mark this phase complete."
+
+---
+
+## Post-release: Cross-reference PRs
+
+After all phases are complete, go back and comment on every PR created during this release train linking it to the original py-shiny release PR for traceability. Use:
+
+```bash
+gh pr comment <PR_NUMBER> --repo <REPO> --body "This PR is part of the py-shiny v<VERSION> release train. See posit-dev/py-shiny#<RELEASE_PR_NUMBER> for the originating release."
+```
+
+Do this for all PRs created across repos (py-shinyswatch, shinylive, py-shinylive, r-shinylive, py-shiny docs bump, py-shiny-site, etc.).
