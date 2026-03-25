@@ -141,10 +141,10 @@ async def main():
 
     ok = sum(1 for r in results if r[1] == "OK")
     err = sum(1 for r in results if r[1] == "ERROR")
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Site: {base_url}")
     print(f"Results: {ok} passed, {err} errors out of {len(results)} examples")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     if err > 0:
         print("\nFailed examples:")
