@@ -10,28 +10,29 @@ Examples:
 
 import asyncio
 import json
+import subprocess
 import sys
 import time
 
 from playwright.async_api import async_playwright
 
-EXAMPLES = [
-    "altair", "app_with_plot", "basic_app", "brand", "camera", "cpuinfo",
-    "extra_packages", "fetch", "file_download", "file_download_core",
-    "file_upload", "hello_world", "input_checkbox", "input_checkbox_group",
-    "input_date", "input_date_range", "input_numeric", "input_password",
-    "input_radio", "input_select", "input_slider", "input_switch",
-    "input_text", "input_text_area", "input_update", "insert_ui",
-    "ipyleaflet", "layout_sidebar", "layout_two_column", "modules",
-    "multiple_source_files", "orbit", "output_code", "output_data_frame_grid",
-    "output_plot", "output_table", "output_text", "output_ui",
-    "plot_interact_basic", "plot_interact_exclude", "plot_interact_select",
-    "plotly", "reactive_calc", "reactive_effect", "reactive_event",
-    "reactive_value", "read_local_csv_file", "regularization", "shinyswatch",
-    "static_content", "wordle",
-]
-
 CACHE_BUSTER = str(int(time.time()))
+MIN_EXAMPLES = 50
+
+
+def fetch_examples() -> list[str]:
+    """Dynamically fetch the list of Python examples from the shinylive repo."""
+    result = subprocess.run(
+        ["gh", "api", "repos/posit-dev/shinylive/contents/examples/python",
+         "--jq", ".[].name"],
+        capture_output=True, text=True, check=True,
+    )
+    examples = sorted(line.strip() for line in result.stdout.strip().splitlines() if line.strip())
+    assert len(examples) >= MIN_EXAMPLES, (
+        f"Expected at least {MIN_EXAMPLES} examples, but found {len(examples)}. "
+        f"Check the shinylive repo for issues."
+    )
+    return examples
 
 
 async def test_example(browser, base_url, example_name, timeout_ms=45000):
@@ -87,17 +88,20 @@ async def main():
     base_url = sys.argv[1].rstrip("/") + "/"
     output_path = sys.argv[2] if len(sys.argv) > 2 else None
 
+    print("Fetching example list from GitHub...", flush=True)
+    examples = fetch_examples()
+
     print(f"Testing site: {base_url}")
     print(f"Cache buster: ?v={CACHE_BUSTER}")
-    print(f"Examples: {len(EXAMPLES)}\n")
+    print(f"Examples: {len(examples)}\n")
 
     results = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
 
         batch_size = 5
-        for i in range(0, len(EXAMPLES), batch_size):
-            batch = EXAMPLES[i : i + batch_size]
+        for i in range(0, len(examples), batch_size):
+            batch = examples[i : i + batch_size]
             print(f"Testing batch {i // batch_size + 1}: {', '.join(batch)}...", flush=True)
             tasks = [test_example(browser, base_url, name) for name in batch]
             batch_results = await asyncio.gather(*tasks)
