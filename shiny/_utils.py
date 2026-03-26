@@ -659,18 +659,35 @@ def validate_no_params(fn: Callable[..., Any], decorator_name: str) -> None:
         If the function has required parameters (excluding ``self`` and ``cls``).
     """
     sig = inspect.signature(fn)
-    params = [
-        p
-        for p in sig.parameters.values()
-        if p.default is inspect.Parameter.empty
-        and p.kind
-        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-    ]
-    if params:
-        param_names = [p.name for p in params]
+    skip_names = {"self", "cls"}
+    skip_kinds = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+
+    required_params: list[str] = []
+    defaulted_params: list[str] = []
+    for p in sig.parameters.values():
+        if p.name in skip_names or p.kind in skip_kinds:
+            continue
+        if p.default is inspect.Parameter.empty:
+            required_params.append(p.name)
+        else:
+            defaulted_params.append(p.name)
+
+    if required_params:
         raise TypeError(
             f"@{decorator_name} expected a function with no required parameters, "
             f"but {fn.__name__}() has required parameter(s): "
-            f"{', '.join(param_names)}. "
+            f"{', '.join(required_params)}. "
             f"Reactive functions and render functions should take no arguments."
+        )
+
+    # Warn about parameters with defaults — they will never be used by Shiny
+    if defaulted_params:
+        warnings.warn(
+            f"@{decorator_name} decorated function {fn.__name__}() has parameter(s) "
+            f"with default values: {', '.join(defaulted_params)}. "
+            f"These parameters will never be supplied by Shiny and will always use "
+            f"their defaults. Consider removing them or wrapping the function call "
+            f"in a lambda, e.g., @{decorator_name}\\ndef fn(): return "
+            f"your_function({', '.join(f'{n}={n}' for n in defaulted_params)})",
+            stacklevel=3,
         )

@@ -5,6 +5,12 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### Bug fixes
+
+* `@reactive.calc`, `@reactive.effect`, and render decorators (e.g. `@render.text`) now raise a `TypeError` if the decorated function has required parameters, since Shiny never supplies arguments to these functions. Functions with default parameter values emit a warning, as the defaults will always be used. (Thanks, @mvanhorn!) (#2200)
+
 ## [1.6.0] - 2026-03-20
 
 ### OpenTelemetry

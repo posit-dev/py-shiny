@@ -68,8 +68,8 @@ async def test_renderer_works_with_args():
 def test_renderer_rejects_function_with_params():
     with pytest.raises(TypeError, match="no required parameters"):
 
-        @render.text
-        def bad_render(x):
+        @render.text  # pyright: ignore[reportArgumentType]
+        def bad_render(x: int) -> str:
             return str(x)
 
 
@@ -79,10 +79,12 @@ def test_renderer_accepts_function_with_no_params():
         return "hello"
 
 
-def test_renderer_accepts_function_with_default_params():
-    @render.text
-    def good_render(x="hello"):
-        return x
+def test_renderer_warns_function_with_default_params():
+    with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+        @render.text
+        def good_render(x: str = "hello") -> str:
+            return x
 
 
 def test_effect():

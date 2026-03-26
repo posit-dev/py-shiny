@@ -4,7 +4,13 @@ from typing import List, Set
 
 import pytest
 
-from shiny._utils import AsyncCallbacks, Callbacks, private_seed, random_port
+from shiny._utils import (
+    AsyncCallbacks,
+    Callbacks,
+    private_seed,
+    random_port,
+    validate_no_params,
+)
 from shiny.ui._utils import extract_js_keys, js_eval
 
 
@@ -242,3 +248,121 @@ def test_extract_js_keys():
         "key3.subkey1",
         "key3.subkey3.subsubkey1",
     ]
+
+
+# -- validate_no_params tests -------------------------------------------------
+
+
+def test_validate_no_params_no_params():
+    def fn() -> None:
+        pass
+
+    validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_required_param_raises():
+    def fn(x: int) -> None:
+        pass
+
+    with pytest.raises(TypeError, match="no required parameters"):
+        validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_multiple_required_params():
+    def fn(x: int, y: str) -> None:
+        pass
+
+    with pytest.raises(TypeError, match="x, y"):
+        validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_default_param_warns():
+    def fn(x: int = 1) -> None:
+        pass
+
+    with pytest.warns(UserWarning, match="default values: x"):
+        validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_multiple_default_params():
+    def fn(x: int = 1, y: str = "a") -> None:
+        pass
+
+    with pytest.warns(UserWarning, match="default values: x, y"):
+        validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_skips_self():
+    def fn(self: object) -> None:  # type: ignore[reportSelfClsParameterName]
+        pass
+
+    validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_skips_cls():
+    def fn(cls: type) -> None:  # type: ignore[reportSelfClsParameterName]
+        pass
+
+    validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_skips_var_positional():
+    def fn(*args: int) -> None:
+        pass
+
+    validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_skips_var_keyword():
+    def fn(**kwargs: int) -> None:
+        pass
+
+    validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_self_with_required_raises():
+    def fn(self: object, x: int) -> None:  # type: ignore[reportSelfClsParameterName]
+        pass
+
+    with pytest.raises(TypeError, match="x"):
+        validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_self_with_default_warns():
+    def fn(self: object, x: int = 1) -> None:  # type: ignore[reportSelfClsParameterName]
+        pass
+
+    with pytest.warns(UserWarning, match="default values: x"):
+        validate_no_params(fn, "test.decorator")
+
+
+def test_validate_no_params_decorator_name_in_error():
+    def fn(x: int) -> None:
+        pass
+
+    with pytest.raises(TypeError, match="@my.decorator"):
+        validate_no_params(fn, "my.decorator")
+
+
+def test_validate_no_params_decorator_name_in_warning():
+    def fn(x: int = 1) -> None:
+        pass
+
+    with pytest.warns(UserWarning, match="@my.decorator"):
+        validate_no_params(fn, "my.decorator")
+
+
+def test_validate_no_params_function_name_in_error():
+    def my_special_fn(x: int) -> None:
+        pass
+
+    with pytest.raises(TypeError, match="my_special_fn"):
+        validate_no_params(my_special_fn, "test.decorator")
+
+
+def test_validate_no_params_function_name_in_warning():
+    def my_special_fn(x: int = 1) -> None:
+        pass
+
+    with pytest.warns(UserWarning, match="my_special_fn"):
+        validate_no_params(my_special_fn, "test.decorator")

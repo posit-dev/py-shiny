@@ -1370,8 +1370,8 @@ async def test_observer_async_suspended_resumed_observers_run_at_most_once():
 def test_calc_rejects_function_with_params():
     with pytest.raises(TypeError, match="no required parameters"):
 
-        @calc
-        def bad_calc(x):
+        @calc  # pyright: ignore[reportArgumentType,reportCallIssue,reportUntypedFunctionDecorator]
+        def bad_calc(x: int) -> int:
             return x
 
 
@@ -1381,17 +1381,19 @@ def test_calc_accepts_function_with_no_params():
         return 1
 
 
-def test_calc_accepts_function_with_default_params():
-    @calc
-    def good_calc(x=1):
-        return x
+def test_calc_warns_function_with_default_params():
+    with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+        @calc
+        def good_calc(x: int = 1) -> int:
+            return x
 
 
 def test_effect_rejects_function_with_params():
     with pytest.raises(TypeError, match="no required parameters"):
 
-        @effect
-        def bad_effect(x):
+        @effect  # pyright: ignore[reportArgumentType]
+        def bad_effect(x: int) -> None:
             pass
 
 
@@ -1401,7 +1403,9 @@ def test_effect_accepts_function_with_no_params():
         pass
 
 
-def test_effect_accepts_function_with_default_params():
-    @effect
-    def good_effect(x=1):
-        pass
+def test_effect_warns_function_with_default_params():
+    with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+        @effect
+        def good_effect(x: int = 1) -> None:
+            pass
