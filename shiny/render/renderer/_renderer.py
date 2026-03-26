@@ -162,7 +162,7 @@ class Renderer(Generic[IT]):
         if not callable(_fn):
             raise TypeError("Value function must be callable")
 
-        validate_no_params(_fn, type(self).__name__)
+        validate_no_params(_fn, f"render.{type(self).__name__}", stacklevel=5)
 
         # Set value function with extra meta information
         self.fn = AsyncValueFn(_fn)
