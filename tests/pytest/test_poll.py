@@ -247,6 +247,148 @@ async def test_file_reader():
 
 
 @pytest.mark.asyncio
+async def test_poll_rejects_function_with_params():
+    async with OnEndedSessionCallbacks():
+
+        def poll_func():
+            return 0
+
+        with pytest.raises(TypeError, match="no required parameters"):
+
+            @poll(poll_func)  # pyright: ignore[reportArgumentType]
+            def bad_reader(x: int) -> None:
+                pass
+
+
+@pytest.mark.asyncio
+async def test_poll_accepts_function_with_no_params():
+    async with OnEndedSessionCallbacks():
+
+        def poll_func():
+            return 0
+
+        @poll(poll_func)
+        def good_reader():
+            return "data"
+
+
+@pytest.mark.asyncio
+async def test_poll_warns_function_with_default_params():
+    async with OnEndedSessionCallbacks():
+
+        def poll_func():
+            return 0
+
+        with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+            @poll(poll_func)
+            def good_reader(x: int = 1):
+                return x
+
+
+@pytest.mark.asyncio
+async def test_poll_warning_stacklevel_points_to_caller():
+    import warnings
+
+    async with OnEndedSessionCallbacks():
+
+        def poll_func():
+            return 0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+
+            @poll(poll_func)
+            def my_reader(x: int = 1):
+                return x
+
+        assert len(w) == 1
+        assert w[0].filename == __file__
+        assert "reactive.poll" in str(w[0].message)
+
+
+@pytest.mark.asyncio
+async def test_file_reader_rejects_function_with_params():
+    tmpfile = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        tmpfile.write(b"data")
+        tmpfile.flush()
+        tmpfile.close()
+
+        async with OnEndedSessionCallbacks():
+            with pytest.raises(TypeError, match="no required parameters"):
+
+                @file_reader(tmpfile.name)  # pyright: ignore[reportArgumentType]
+                def bad_reader(x: int) -> str:
+                    return "data"
+
+    finally:
+        os.unlink(tmpfile.name)
+
+
+@pytest.mark.asyncio
+async def test_file_reader_accepts_function_with_no_params():
+    tmpfile = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        tmpfile.write(b"data")
+        tmpfile.flush()
+        tmpfile.close()
+
+        async with OnEndedSessionCallbacks():
+
+            @file_reader(tmpfile.name)
+            def good_reader():
+                return "data"
+
+    finally:
+        os.unlink(tmpfile.name)
+
+
+@pytest.mark.asyncio
+async def test_file_reader_warns_function_with_default_params():
+    tmpfile = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        tmpfile.write(b"data")
+        tmpfile.flush()
+        tmpfile.close()
+
+        async with OnEndedSessionCallbacks():
+            with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+                @file_reader(tmpfile.name)
+                def good_reader(x: int = 1):
+                    return x
+
+    finally:
+        os.unlink(tmpfile.name)
+
+
+@pytest.mark.asyncio
+async def test_file_reader_warning_stacklevel_points_to_caller():
+    import warnings
+
+    tmpfile = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        tmpfile.write(b"data")
+        tmpfile.flush()
+        tmpfile.close()
+
+        async with OnEndedSessionCallbacks():
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+
+                @file_reader(tmpfile.name)
+                def my_reader(x: int = 1):
+                    return x
+
+            assert len(w) == 1
+            assert w[0].filename == __file__
+            assert "reactive.file_reader" in str(w[0].message)
+    finally:
+        os.unlink(tmpfile.name)
+
+
+@pytest.mark.asyncio
 async def test_file_reader_error():
     async with OnEndedSessionCallbacks():
         tmpfile1 = tempfile.NamedTemporaryFile(delete=False)

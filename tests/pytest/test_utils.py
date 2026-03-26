@@ -366,3 +366,19 @@ def test_validate_no_params_function_name_in_warning():
 
     with pytest.warns(UserWarning, match="my_special_fn"):
         validate_no_params(my_special_fn, "test.decorator")
+
+
+def test_validate_no_params_warning_suggestion_uses_function_name():
+    def my_calc(x: int = 1) -> None:
+        pass
+
+    with pytest.warns(UserWarning, match=r"my_calc\(x=x\)"):
+        validate_no_params(my_calc, "reactive.calc")
+
+
+def test_validate_no_params_custom_stacklevel():
+    def fn(x: int = 1) -> None:
+        pass
+
+    with pytest.warns(UserWarning, match="default values: x"):
+        validate_no_params(fn, "test.decorator", stacklevel=2)

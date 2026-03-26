@@ -87,6 +87,75 @@ def test_renderer_warns_function_with_default_params():
             return x
 
 
+def test_renderer_warning_includes_render_prefix():
+    with pytest.warns(UserWarning, match="@render.text"):
+
+        @render.text
+        def good_render(x: str = "hello") -> str:
+            return x
+
+
+def test_renderer_error_includes_render_prefix():
+    with pytest.raises(TypeError, match="@render.text"):
+
+        @render.text  # pyright: ignore[reportArgumentType]
+        def bad_render(x: int) -> str:
+            return str(x)
+
+
+# -- render.download validation -----------------------------------------------
+
+
+def test_download_rejects_function_with_params():
+    with pytest.raises(TypeError, match="no required parameters"):
+
+        @render.download  # pyright: ignore[reportArgumentType]
+        def bad_download(x: int) -> str:
+            return str(x)
+
+
+def test_download_accepts_function_with_no_params():
+    @render.download
+    def good_download():
+        return "file.txt"
+
+
+def test_download_warns_function_with_default_params():
+    with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+        @render.download
+        def good_download(x: str = "file.txt") -> str:
+            return x
+
+
+def test_renderer_warning_stacklevel_points_to_caller():
+    import warnings
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @render.text
+        def my_render(x: str = "hello") -> str:
+            return x
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+
+
+def test_download_warning_stacklevel_points_to_caller():
+    import warnings
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @render.download
+        def my_download(x: str = "file.txt") -> str:
+            return x
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+
+
 def test_effect():
     with pytest.raises(TypeError):
 

@@ -1409,3 +1409,115 @@ def test_effect_warns_function_with_default_params():
         @effect
         def good_effect(x: int = 1) -> None:
             pass
+
+
+def test_calc_warning_stacklevel_points_to_caller():
+    import warnings
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @calc
+        def my_calc(x: int = 1) -> int:
+            return x
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+
+
+def test_effect_warning_stacklevel_points_to_caller():
+    import warnings
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @effect
+        def my_effect(x: int = 1) -> None:
+            pass
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+
+
+# -- reactive.event validation ------------------------------------------------
+
+
+def test_event_rejects_function_with_params():
+    trigger = Value(0)
+
+    with pytest.raises(TypeError, match="no required parameters"):
+
+        @event(trigger)  # pyright: ignore[reportArgumentType]
+        def bad_event(x: int) -> None:
+            pass
+
+
+def test_event_accepts_function_with_no_params():
+    trigger = Value(0)
+
+    @event(trigger)
+    def good_event():
+        pass
+
+
+def test_event_warns_function_with_default_params():
+    trigger = Value(0)
+
+    with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+        @event(trigger)
+        def good_event(x: int = 1) -> None:
+            pass
+
+
+def test_event_warning_stacklevel_points_to_caller():
+    import warnings
+
+    trigger = Value(0)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @event(trigger)
+        def my_event(x: int = 1) -> None:
+            pass
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+
+
+def test_event_calc_stacked_warns_only_once():
+    import warnings
+
+    trigger = Value(0)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @calc
+        @event(trigger)
+        def my_calc(x: int = 1) -> int:
+            return x
+
+    assert len(w) == 1
+    assert "reactive.event" in str(w[0].message)
+
+
+def test_event_effect_stacked_warns_only_once():
+    import warnings
+
+    trigger = Value(0)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @effect
+        @event(trigger)
+        def my_effect(x: int = 1) -> None:
+            pass
+
+    assert len(w) == 1
+    assert "reactive.event" in str(w[0].message)
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
