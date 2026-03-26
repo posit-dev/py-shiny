@@ -160,6 +160,8 @@ def poll(
                 reactive.invalidate_later(interval_secs)
 
         def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
+            _utils.validate_no_params(fn, "reactive.poll")
+
             if _utils.is_async_callable(fn):
 
                 @reactive.calc(session=session)
@@ -302,6 +304,8 @@ def file_reader(
         return (path, os.path.getmtime(path), os.path.getsize(path))
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
+        _utils.validate_no_params(fn, "reactive.file_reader")
+
         if _utils.is_async_callable(fn):
 
             @poll(
