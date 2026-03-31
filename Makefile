@@ -192,10 +192,6 @@ AI_TEST_FILE:=tests/playwright/ai_generated_apps/$(SUB_FILE)
 install-playwright: FORCE
 	playwright install --with-deps
 
-# CI version: install browsers without apt deps (deps pre-installed on runner)
-install-playwright-ci: FORCE
-	playwright install
-
 install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 

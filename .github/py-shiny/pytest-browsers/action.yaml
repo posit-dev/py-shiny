@@ -39,10 +39,10 @@ runs:
           path: ~/.cache/ms-playwright
           key: playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
-      - name: Install Playwright browsers (without apt deps)
+      - name: Install Playwright browsers
         shell: bash
         run: |
-          make install-playwright-ci
+          make install-playwright
 
       - name: Determine browsers to use
         shell: bash
