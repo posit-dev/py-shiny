@@ -110,6 +110,7 @@ jobs:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1, 2, 3]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
@@ -140,11 +141,11 @@ jobs:
       - name: Run End-to-End tests
         timeout-minutes: 60
         run: |
-          make playwright-shiny SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+          make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
-          name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
           path: test-results/
           retention-days: 5
 
@@ -155,6 +156,7 @@ jobs:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1, 2, 3]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
@@ -203,11 +205,11 @@ jobs:
       - name: Run example app tests
         timeout-minutes: 60
         run: |
-          make playwright-examples SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+          make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
-          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
           path: test-results/
           retention-days: 5
 
@@ -218,6 +220,7 @@ jobs:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
@@ -247,11 +250,11 @@ jobs:
       - name: Run playwright tests for AI generated apps
         timeout-minutes: 60
         run: |
-          make playwright-ai SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+          make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v4
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
-          name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
           path: test-results/
           retention-days: 5
 
