@@ -192,12 +192,17 @@ AI_TEST_FILE:=tests/playwright/ai_generated_apps/$(SUB_FILE)
 install-playwright: FORCE
 	playwright install --with-deps
 
+# CI version: install browsers without apt deps (deps pre-installed on runner)
+install-playwright-ci: FORCE
+	playwright install
+
 install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
 
 # All end-to-end tests with playwright
-playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
+# In CI, browser install is handled by the pytest-browsers action
+playwright: $(if $(CI),,install-playwright) ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
 	pytest $(TEST_FILE) $(PYTEST_BROWSERS)
 
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (TEST_FILE="" from root of repo)
