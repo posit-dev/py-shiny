@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -70,11 +70,11 @@ jobs:
     if: github.event_name == 'release'
     needs: [check]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: "Set up Python 3.10"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.10"
       - name: Install dependencies
@@ -121,7 +121,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -142,7 +142,7 @@ jobs:
         timeout-minutes: 60
         run: |
           make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
           name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
@@ -167,7 +167,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -184,7 +184,7 @@ jobs:
           disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
       - name: Install node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           cache: npm
           cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
@@ -193,7 +193,7 @@ jobs:
         run: |
           npm ci
       - name: Checkout py-shiny-templates repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: posit-dev/py-shiny-templates
           path: py-shiny-templates
@@ -206,7 +206,7 @@ jobs:
         timeout-minutes: 60
         run: |
           make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
           name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
@@ -231,7 +231,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -251,7 +251,7 @@ jobs:
         timeout-minutes: 60
         run: |
           make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
           name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
@@ -268,7 +268,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -288,7 +288,7 @@ jobs:
         run: |
           make playwright-deploys
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-results"
@@ -298,7 +298,7 @@ jobs:
   test-narwhals-integration:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny

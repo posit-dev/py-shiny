@@ -476,6 +476,8 @@ class Calc_(Generic[T]):
         *,
         session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
+        _utils.validate_no_params(fn, "reactive.calc", stacklevel=5)
+
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
 
@@ -752,6 +754,8 @@ class Effect_:
                 "`@reactive.effect` can not be combined with `@render.xx`.\n"
                 + "Please remove your call of `@reactive.effect`."
             )
+
+        _utils.validate_no_params(fn, "reactive.effect", stacklevel=5)
 
         # The EffectAsync subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
@@ -1126,6 +1130,8 @@ def event(
                 + "It should usually be applied before `@Calc`,` @Effect`, or `@render.xx` function.\n"
                 + "In other words, `@reactive.event()` goes below the other decorators."
             )
+
+        _utils.validate_no_params(user_fn, "reactive.event", stacklevel=3)
 
         if isinstance(user_fn, Calc_):
             raise TypeError(
