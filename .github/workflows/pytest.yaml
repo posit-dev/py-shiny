@@ -304,6 +304,11 @@ jobs:
       - name: Setup py-shiny
         id: install
         uses: ./.github/py-shiny/setup
+      - name: Determine browsers for testing
+        uses: ./.github/py-shiny/pytest-browsers
+        id: browsers
+        with:
+          browser: chromium
       - name: Run test commands
         env:
           UV_SYSTEM_PYTHON: 1
