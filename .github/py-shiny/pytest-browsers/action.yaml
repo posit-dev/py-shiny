@@ -33,16 +33,10 @@ runs:
           PLAYWRIGHT_VERSION=$(python3 -c "import playwright; print(playwright.__version__)" 2>/dev/null || playwright --version 2>/dev/null | awk '{print $2}')
           echo "version=$PLAYWRIGHT_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
+      - name: Start Playwright Docker server
+        uses: dtinth/setup-playwright-test-docker@main
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
-      - name: Install Playwright browsers
-        shell: bash
-        run: |
-          make install-playwright
+          version: ${{ steps.playwright-version.outputs.version }}
 
       - name: Determine browsers to use
         shell: bash
