@@ -67,6 +67,7 @@ test = [
     "pytest-playwright>=0.5.2",
     "playwright>=1.48.0",
     "pytest-xdist",
+    "pytest-shard",
     "pytest-timeout",
     "pytest-rerunfailures",
     "pytest-cov",

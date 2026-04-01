@@ -289,6 +289,7 @@ upgrade-html-deps: FORCE ## Upgrade Shiny's HTMLDependencies
 narwhals-install-shiny: FORCE
 	@echo "-------- Install py-shiny ----------"
 	$(MAKE) ci-install-deps
+	playwright install --with-deps chromium
 narwhals-test-integration: FORCE
 	@echo "-------- Running py-shiny format, lint, typing, and unit tests ----------"
 	$(MAKE) check
