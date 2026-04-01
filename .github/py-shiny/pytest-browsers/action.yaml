@@ -26,24 +26,17 @@ outputs:
 runs:
   using: "composite"
   steps:
-      - name: Get Playwright version
-        shell: bash
-        id: playwright-version
-        run: |
-          PLAYWRIGHT_VERSION=$(python3 -c "import playwright; print(playwright.__version__)" 2>/dev/null || playwright --version 2>/dev/null | awk '{print $2}')
-          echo "version=$PLAYWRIGHT_VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Start Playwright Docker server
-        uses: dtinth/setup-playwright-test-docker@main
-        with:
-          version: ${{ steps.playwright-version.outputs.version }}
-
-      - name: Debug Playwright env vars
+      - name: Install Playwright browsers
         shell: bash
         run: |
-          echo "PW_TEST_CONNECT_WS_ENDPOINT=${PW_TEST_CONNECT_WS_ENDPOINT:-<not set>}"
-          echo "PW_TEST_CONNECT_EXPOSE_NETWORK=${PW_TEST_CONNECT_EXPOSE_NETWORK:-<not set>}"
-          docker ps --filter name=playwright --format '{{.Names}} {{.Status}}' || echo "No docker containers"
+          # Inside a container, system deps are pre-installed; skip --with-deps
+          # Outside a container (local/non-container CI), install everything
+          if [ -f /.dockerenv ]; then
+            echo "Running inside Docker container, skipping apt deps"
+            playwright install
+          else
+            make install-playwright
+          fi
 
       - name: Determine browsers to use
         shell: bash

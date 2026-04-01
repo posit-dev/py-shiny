@@ -2,9 +2,7 @@
 # such as examples/example_apps.py
 from __future__ import annotations
 
-import os
 from pathlib import PurePath
-from typing import Optional
 
 import pytest
 from playwright.sync_api import BrowserContext, Page
@@ -18,14 +16,6 @@ __all__ = (
     "create_doc_example_core_fixture",
     "create_doc_example_express_fixture",
 )
-
-
-@pytest.fixture(scope="session")
-def connect_options() -> Optional[dict]:
-    ws_endpoint = os.environ.get("PW_TEST_CONNECT_WS_ENDPOINT")
-    if ws_endpoint:
-        return {"ws_endpoint": ws_endpoint}
-    return None
 
 
 here = PurePath(__file__).parent
