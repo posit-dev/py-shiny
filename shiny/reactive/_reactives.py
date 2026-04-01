@@ -275,9 +275,7 @@ class Value(Generic[T]):
         return None
 
     @staticmethod
-    def _try_infer_name_from_preceding_lines(
-        filename: str, lineno: int
-    ) -> str | None:
+    def _try_infer_name_from_preceding_lines(filename: str, lineno: int) -> str | None:
         """
         Look at preceding source lines to find the assignment target for a
         multiline reactive.Value() assignment.

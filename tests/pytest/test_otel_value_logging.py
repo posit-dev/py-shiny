@@ -575,9 +575,7 @@ class TestValueNaming:
 
         class Container:
             def __init__(self):
-                self._messages: reactive.Value[tuple[str, ...]] = (
-                    reactive.Value(())
-                )
+                self._messages: reactive.Value[tuple[str, ...]] = reactive.Value(())
 
         obj = Container()
         assert obj._messages._name == "_messages"
@@ -587,17 +585,14 @@ class TestValueNaming:
 
         class Container:
             def __init__(self):
-                self._latest: reactive.Value[
-                    str | None
-                ] = reactive.Value(None)
+                self._latest: reactive.Value[str | None] = reactive.Value(None)
 
         obj = Container()
         assert obj._latest._name == "_latest"
 
     def test_inferred_name_multiline_backslash_continuation(self):
         """Test name inference for backslash line continuation."""
-        my_val = \
-            reactive.Value(10)
+        my_val = reactive.Value(10)
         assert my_val._name == "my_val"
 
     def test_explicit_name_overrides_inference(self):
