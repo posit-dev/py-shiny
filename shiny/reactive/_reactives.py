@@ -196,6 +196,8 @@ class Value(Generic[T]):
         - self.counter = reactive.value(0) → "counter"
         - self.counter = Value(0) → "counter"
         - self.counter = value(0) → "counter"
+        - counter: reactive.Value[int] = reactive.Value(0) → "counter"
+        - self._messages: reactive.Value[tuple[str, ...]] = reactive.Value(()) → "_messages"
 
         Examples of what doesn't work (returns None):
         - values = [reactive.Value(0), reactive.Value(1)]
@@ -219,20 +221,41 @@ class Value(Generic[T]):
                     line = frame_info.code_context[0].strip()
 
                     # Pattern 1: var_name = [reactive.]Value(...) or [reactive.]value(...)
-                    # The \( at the end anchors to a function call, preventing matches
+                    # Also handles type annotations: var_name: Type = [reactive.]Value(...)
+                    # [\[\(] at the end anchors to either a function call `Value(`
+                    # or a generic subscript `Value[int](`, preventing matches
                     # against identifiers like ValueFactory or value2
-                    match = re.match(r"^(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line)
-                    if match:
-                        return match.group(1)
-
-                    # Pattern 2: self.var_name = [reactive.]Value(...) or [reactive.]value(...)
                     match = re.match(
-                        r"^\w+\.(\w+)\s*=\s*(?:reactive\.)?[Vv]alue\s*\(", line
+                        r"^(\w+)\s*(?::[^=]+)?\s*=\s*(?:reactive\.)?[Vv]alue\s*[\[\(]",
+                        line,
                     )
                     if match:
                         return match.group(1)
 
-                # Stop after first user code frame
+                    # Pattern 2: self.var_name = [reactive.]Value(...) or [reactive.]value(...)
+                    # Also handles type annotations: self.var_name: Type = [reactive.]Value(...)
+                    # [\[\(] at the end anchors to either a function call `Value(`
+                    # or a generic subscript `Value[int](`, preventing matches
+                    # against identifiers like ValueFactory or value2
+                    match = re.match(
+                        r"^\w+\.(\w+)\s*(?::[^=]+)?\s*=\s*(?:reactive\.)?[Vv]alue\s*[\[\(]",
+                        line,
+                    )
+                    if match:
+                        return match.group(1)
+
+                    # If the line mentions Value/value, this is the assignment
+                    # frame even if our patterns didn't match (e.g., unusual
+                    # syntax) — stop searching to avoid false matches in
+                    # outer scopes.
+                    # If it doesn't mention Value at all, this is an
+                    # intermediate frame (e.g., typing.py for Value[int]())
+                    # — skip it and keep walking the stack.
+                    if re.search(r"\b[Vv]alue\b", line):
+                        break
+                    continue
+
+                # Stop after first user code frame with no source context
                 break
 
         except Exception:
