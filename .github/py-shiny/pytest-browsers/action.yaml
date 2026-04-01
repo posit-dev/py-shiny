@@ -26,17 +26,23 @@ outputs:
 runs:
   using: "composite"
   steps:
+      - name: Get Playwright version
+        shell: bash
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(python3 -c "import playwright; print(playwright.__version__)" 2>/dev/null || playwright --version 2>/dev/null | awk '{print $2}')
+          echo "version=$PLAYWRIGHT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
       - name: Install Playwright browsers
         shell: bash
         run: |
-          # Inside a container, system deps are pre-installed; skip --with-deps
-          # Outside a container (local/non-container CI), install everything
-          if [ -f /.dockerenv ]; then
-            echo "Running inside Docker container, skipping apt deps"
-            playwright install
-          else
-            make install-playwright
-          fi
+          make install-playwright
 
       - name: Determine browsers to use
         shell: bash

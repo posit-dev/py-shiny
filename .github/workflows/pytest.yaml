@@ -106,8 +106,6 @@ jobs:
   playwright-shiny:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.58.0-noble
     strategy:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
@@ -154,8 +152,6 @@ jobs:
   playwright-examples:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.58.0-noble
     strategy:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
@@ -220,8 +216,6 @@ jobs:
   playwright-ai:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.58.0-noble
     strategy:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
@@ -267,8 +261,6 @@ jobs:
   playwright-deploys-precheck:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.58.0-noble
     strategy:
       matrix:
         # Matches deploy server python version
