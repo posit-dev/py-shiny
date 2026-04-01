@@ -38,6 +38,13 @@ runs:
         with:
           version: ${{ steps.playwright-version.outputs.version }}
 
+      - name: Debug Playwright env vars
+        shell: bash
+        run: |
+          echo "PW_TEST_CONNECT_WS_ENDPOINT=${PW_TEST_CONNECT_WS_ENDPOINT:-<not set>}"
+          echo "PW_TEST_CONNECT_EXPOSE_NETWORK=${PW_TEST_CONNECT_EXPOSE_NETWORK:-<not set>}"
+          docker ps --filter name=playwright --format '{{.Names}} {{.Status}}' || echo "No docker containers"
+
       - name: Determine browsers to use
         shell: bash
         id: browsers
