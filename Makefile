@@ -197,8 +197,7 @@ install-rsconnect: FORCE
 
 
 # All end-to-end tests with playwright
-# In CI, browser install is handled by the pytest-browsers action
-playwright: $(if $(CI),,install-playwright) ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
+playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
 	pytest $(TEST_FILE) $(PYTEST_BROWSERS)
 
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (TEST_FILE="" from root of repo)
