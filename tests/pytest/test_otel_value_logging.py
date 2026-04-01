@@ -570,6 +570,31 @@ class TestValueNaming:
         obj = Container()
         assert obj.counter_lower_no_prefix._name == "counter_lower_no_prefix"
 
+    def test_inferred_name_multiline_parens_assignment(self):
+        """Test name inference for multiline assignment with parenthesized Value."""
+
+        class Container:
+            def __init__(self):
+                self._messages: reactive.Value[tuple[str, ...]] = reactive.Value(())
+
+        obj = Container()
+        assert obj._messages._name == "_messages"
+
+    def test_inferred_name_multiline_type_annotation(self):
+        """Test name inference when type annotation spans multiple lines."""
+
+        class Container:
+            def __init__(self):
+                self._latest: reactive.Value[str | None] = reactive.Value(None)
+
+        obj = Container()
+        assert obj._latest._name == "_latest"
+
+    def test_inferred_name_multiline_backslash_continuation(self):
+        """Test name inference for backslash line continuation."""
+        my_val = reactive.Value(10)
+        assert my_val._name == "my_val"
+
     def test_explicit_name_overrides_inference(self):
         """Test that explicit name takes priority over inference"""
         explicit_name = reactive.Value(0, name="custom_name")

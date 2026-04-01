@@ -198,6 +198,14 @@ class Value(Generic[T]):
         - self.counter = value(0) → "counter"
         - counter: reactive.Value[int] = reactive.Value(0) → "counter"
         - self._messages: reactive.Value[tuple[str, ...]] = reactive.Value(()) → "_messages"
+        - Multiline assignments (Value call on continuation line):
+          self._messages: reactive.Value[tuple[str, ...]] = (
+              reactive.Value(())
+          ) → "_messages"
+        - Multiline type annotations:
+          self._latest: reactive.Value[
+              str | None
+          ] = reactive.Value(None) → "_latest"
 
         Examples of what doesn't work (returns None):
         - values = [reactive.Value(0), reactive.Value(1)]
@@ -244,14 +252,16 @@ class Value(Generic[T]):
                     if match:
                         return match.group(1)
 
-                    # If the line mentions Value/value, this is the assignment
-                    # frame even if our patterns didn't match (e.g., unusual
-                    # syntax) — stop searching to avoid false matches in
-                    # outer scopes.
-                    # If it doesn't mention Value at all, this is an
-                    # intermediate frame (e.g., typing.py for Value[int]())
-                    # — skip it and keep walking the stack.
+                    # If the line is a bare Value/value call (e.g., from a
+                    # multiline assignment where the target is on a previous
+                    # line), look backwards in the source file for the
+                    # assignment target.
                     if re.search(r"\b[Vv]alue\b", line):
+                        name = self._try_infer_name_from_preceding_lines(
+                            filename, frame_info.lineno
+                        )
+                        if name is not None:
+                            return name
                         break
                     continue
 
@@ -261,6 +271,56 @@ class Value(Generic[T]):
         except Exception:
             # If anything fails, silently return None
             pass
+
+        return None
+
+    @staticmethod
+    def _try_infer_name_from_preceding_lines(filename: str, lineno: int) -> str | None:
+        """
+        Look at preceding source lines to find the assignment target for a
+        multiline reactive.Value() assignment.
+
+        Handles patterns like::
+
+            self._messages: reactive.Value[tuple[str, ...]] = (
+                reactive.Value(())
+            )
+
+        where the Value() call is on a continuation line.
+        """
+        import linecache
+        import re
+
+        # Collect preceding lines to find the assignment target.
+        # This handles cases where the type annotation or assignment spans
+        # multiple lines, e.g.:
+        #   self._messages: reactive.Value[tuple[str, ...]] = (
+        #       reactive.Value(())
+        #   )
+        # or:
+        #   self._latest: reactive.Value[
+        #       str | None
+        #   ] = reactive.Value(None)
+        for offset in range(1, 6):
+            prev_line = linecache.getline(filename, lineno - offset).strip()
+            if not prev_line:
+                break
+
+            # Look for: var_name = ... or var_name: ... (start of assignment)
+            match = re.match(
+                r"^(\w+)\s*[:=]",
+                prev_line,
+            )
+            if match:
+                return match.group(1)
+
+            # Look for: self.var_name = ... or self.var_name: ...
+            match = re.match(
+                r"^\w+\.(\w+)\s*[:=]",
+                prev_line,
+            )
+            if match:
+                return match.group(1)
 
         return None
 
