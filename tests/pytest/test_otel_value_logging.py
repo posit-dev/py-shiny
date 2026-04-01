@@ -499,6 +499,41 @@ class TestValueNaming:
         obj = Container()
         assert obj.counter_lower._name == "counter_lower"
 
+    def test_inferred_name_type_annotated_assignment(self):
+        """Test that type-annotated assignment names are inferred"""
+        counter: reactive.Value[int] = reactive.Value(0)
+        assert counter._name == "counter"
+
+    def test_inferred_name_type_annotated_attribute_assignment(self):
+        """Test that type-annotated attribute assignment names are inferred (not anonymous)"""
+
+        class Container:
+            def __init__(self):
+                self._messages: reactive.Value[tuple[str, ...]] = reactive.Value(())
+
+        obj = Container()
+        assert obj._messages._name == "_messages"
+
+    def test_inferred_name_generic_subscript_assignment(self):
+        """Test that generic subscript Value[T](...) names are inferred.
+
+        Value[int](0) goes through typing.__class_getitem__, adding an
+        intermediate typing.py frame. The stack walk skips this frame
+        (it doesn't mention Value) and finds the real user assignment.
+        """
+        counter = reactive.Value[int](0)
+        assert counter._name == "counter"
+
+    def test_inferred_name_generic_subscript_attribute_assignment(self):
+        """Test that generic subscript Value[T](...) attribute names are inferred."""
+
+        class Container:
+            def __init__(self):
+                self._items = reactive.Value[list[str]]([])
+
+        obj = Container()
+        assert obj._items._name == "_items"
+
     def test_inferred_name_simple_assignment_no_prefix(self):
         """Test that simple assignment names are inferred with Value (no prefix)"""
         from shiny.reactive import Value
