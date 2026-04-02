@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from playwright.sync_api import Page
 
@@ -13,8 +15,12 @@ def test_dataframe_methods(page: Page, local_app: ShinyAppProc, tab_name: str) -
 
     tab = controller.NavsetUnderline(page, "tab")
     tab.set(tab_name)
+    tab.expect_value(tab_name)
 
     data_frame = controller.OutputDataFrame(page, f"{tab_name}-iris_df")
+    controller.OutputTextVerbatim(page, f"{tab_name}-df_type").expect_value(
+        re.compile(tab_name)
+    )
     data_view_rows = controller.OutputCode(page, f"{tab_name}-data_view_rows")
     data_view_selected_true = controller.OutputCode(
         page, f"{tab_name}-data_view_selected_true"
@@ -38,7 +44,7 @@ def test_dataframe_methods(page: Page, local_app: ShinyAppProc, tab_name: str) -
     reset_data_frame()
 
     # sort column by number descending
-    data_frame.set_sort(0)
+    data_frame.set_sort({"col": 0, "desc": True})
     data_view_rows.expect_value("(2, 3, 4, 5, 0, 1)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[50, 51, 100, 101, 0, 1]")
@@ -52,7 +58,7 @@ def test_dataframe_methods(page: Page, local_app: ShinyAppProc, tab_name: str) -
     cell_selection.expect_value("()")
 
     # sort column by text ascending
-    data_frame.set_sort([4])
+    data_frame.set_sort({"col": 4, "desc": False})
     data_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[0, 1, 50, 51, 100, 101]")
@@ -82,7 +88,7 @@ def test_dataframe_methods(page: Page, local_app: ShinyAppProc, tab_name: str) -
     data_view_selected_false.expect_value("[51, 100, 101]")
     cell_selection.expect_value("()")
 
-    data_frame.set_sort(3)
+    data_frame.set_sort({"col": 3, "desc": True})
     data_view_rows.expect_value("(4, 5, 3)")
     data_view_selected_true.expect_value("[]")
     data_view_selected_false.expect_value("[100, 101, 51]")
