@@ -190,7 +190,11 @@ EXAMPLES_TEST_FILE:=tests/playwright/examples/$(SUB_FILE)
 AI_TEST_FILE:=tests/playwright/ai_generated_apps/$(SUB_FILE)
 
 install-playwright: FORCE
-	playwright install --with-deps
+	@if [ -n "$$PW_TEST_CONNECT_WS_ENDPOINT" ]; then \
+		echo "Using remote Playwright server at $$PW_TEST_CONNECT_WS_ENDPOINT"; \
+	else \
+		playwright install --with-deps; \
+	fi
 
 install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
