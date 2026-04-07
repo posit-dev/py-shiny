@@ -620,3 +620,106 @@ def test_no_registration_without_session_proxy():
         return v() * 2
 
     assert doubled._torn_down is False
+
+
+@pytest.mark.asyncio
+async def test_session_teardown_end_to_end():
+    """session.teardown() destroys effects, tears down calcs, unsets values, removes inputs/outputs."""
+    root = _make_mock_root_session_non_stub()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("panel_1"))
+
+    with session_context(proxy):
+        # Create a reactive value
+        counter = Value(0)
+
+        # Create a calc
+        @calc()
+        def doubled():
+            return counter() * 2
+
+        # Force calc evaluation
+        with isolate():
+            assert doubled() == 0
+
+        # Create an effect
+        @effect()
+        def my_effect():
+            pass
+
+    # Simulate inputs being populated by client
+    root.input._map["panel_1-txt"] = Value("hello", read_only=True)
+    root.input._map[".clientdata_output_panel_1-plot_hidden"] = Value(
+        False, read_only=True
+    )
+
+    # Simulate output being registered
+    mock_effect = _make_mock_effect()
+    root.output._outputs["panel_1-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=mock_effect, suspend_when_hidden=True
+    )
+
+    # Teardown the module
+    proxy.teardown()
+
+    # Value is unset
+    with isolate():
+        assert counter.is_set() is False
+
+    # Calc raises DestroyedReactiveError
+    with pytest.raises(DestroyedReactiveError):
+        with isolate():
+            doubled()
+
+    # Effect is destroyed
+    assert my_effect._destroyed is True
+
+    # Input keys removed
+    assert "panel_1-txt" not in root.input._map
+    assert ".clientdata_output_panel_1-plot_hidden" not in root.input._map
+
+    # Output removed and its effect destroyed
+    assert "panel_1-plot" not in root.output._outputs
+    assert mock_effect._destroyed is True
+
+
+def test_nested_module_teardown():
+    """Parent teardown cleans up nested module inputs/outputs by prefix matching."""
+    root = _make_mock_root_session()
+    parent_proxy = SessionProxy(root_session=root, ns=ResolvedId("parent"))
+
+    # Simulate nested module inputs (parent-child-input)
+    root.input._map["parent-txt"] = Value("parent input", read_only=True)
+    root.input._map["parent-child-txt"] = Value("child input", read_only=True)
+    root.input._map["other-txt"] = Value("other input", read_only=True)
+
+    # Simulate nested module outputs
+    effect_parent = _make_mock_effect()
+    effect_child = _make_mock_effect()
+    effect_other = _make_mock_effect()
+    root.output._outputs["parent-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect_parent, suspend_when_hidden=True
+    )
+    root.output._outputs["parent-child-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect_child, suspend_when_hidden=True
+    )
+    root.output._outputs["other-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect_other, suspend_when_hidden=True
+    )
+
+    parent_proxy.teardown()
+
+    # Parent and child inputs removed
+    assert "parent-txt" not in root.input._map
+    assert "parent-child-txt" not in root.input._map
+    # Other namespace untouched
+    assert "other-txt" in root.input._map
+
+    # Parent and child outputs removed
+    assert "parent-plot" not in root.output._outputs
+    assert "parent-child-plot" not in root.output._outputs
+    assert "other-plot" in root.output._outputs
+
+    # Effects destroyed for parent and child, not other
+    assert effect_parent._destroyed is True
+    assert effect_child._destroyed is True
+    assert not effect_other._destroyed
