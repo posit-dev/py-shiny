@@ -177,6 +177,7 @@ class Value(Generic[T]):
                 self._otel_namespace = ns_str
         # Lazily initialized OTel label for value updates; Allows for `_name` to be adjusted manually after init (ex: Inputs class)
         self._otel_label: str | None = None
+        self._torn_down: bool = False
 
     def _try_infer_name(self) -> str | None:
         """
@@ -498,6 +499,12 @@ class Value(Generic[T]):
             attributes=attrs,
             infer_session_id=False,
         )
+
+    def _teardown(self) -> None:
+        if self._torn_down:
+            return
+        self._torn_down = True
+        self._set(MISSING)  # type: ignore
 
     def unset(self) -> None:
         """
