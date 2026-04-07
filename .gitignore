@@ -1,3 +1,9 @@
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Context files
+.context/
+
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
 *.py[cod]
