@@ -777,3 +777,225 @@ async def test_nested_module_teardown():
     assert cast(Any, effect_parent)._destroyed is True
     assert cast(Any, effect_child)._destroyed is True
     assert not cast(Any, effect_other)._destroyed
+
+
+# ---------------------------------------------------------------------------
+# ExpressStubSession teardown tests
+# ---------------------------------------------------------------------------
+def test_express_stub_session_on_teardown_is_noop():
+    """ExpressStubSession.on_teardown() silently does nothing."""
+    from shiny.express._stub_session import ExpressStubSession
+
+    stub = ExpressStubSession()
+
+    called: list[str] = []
+    # Should not raise, should not store anything
+    stub.on_teardown(lambda: called.append("x"))  # pyright: ignore[reportArgumentType]
+    assert called == []
+
+
+@pytest.mark.asyncio
+async def test_express_stub_session_teardown_is_noop():
+    """ExpressStubSession.teardown() silently does nothing."""
+    from shiny.express._stub_session import ExpressStubSession
+
+    stub = ExpressStubSession()
+    # Should not raise
+    await stub.teardown()
+
+
+def test_express_stub_session_has_no_teardown_state():
+    """ExpressStubSession does not have _teardown_callbacks or _torn_down_scopes."""
+    from shiny.express._stub_session import ExpressStubSession
+
+    stub = ExpressStubSession()
+    assert not hasattr(stub, "_teardown_callbacks")
+    assert not hasattr(stub, "_torn_down_scopes")
+
+
+@pytest.mark.asyncio
+async def test_express_stub_session_proxy_teardown_is_silent():
+    """SessionProxy created from ExpressStubSession silently does nothing on teardown."""
+    from shiny.express._stub_session import ExpressStubSession
+
+    stub = ExpressStubSession()
+    proxy = stub.make_scope("mod1")
+    assert isinstance(proxy, SessionProxy)
+
+    # on_teardown should not raise even though root has no _teardown_callbacks
+    proxy.on_teardown(lambda: None)
+    # teardown should not raise
+    await proxy.teardown()
+
+
+# ---------------------------------------------------------------------------
+# AppSession teardown guard tests
+# ---------------------------------------------------------------------------
+def test_app_session_has_teardown_methods():
+    """AppSession has on_teardown() and teardown() methods."""
+    from shiny.session._session import AppSession
+
+    assert hasattr(AppSession, "on_teardown")
+    assert hasattr(AppSession, "teardown")
+
+
+def _make_app_session_like_mock() -> Any:
+    """Create a mock that behaves like AppSession for teardown testing.
+
+    We can't easily instantiate a real AppSession (requires Connection, App),
+    so we call the unbound methods directly.
+    """
+    from shiny.session._session import AppSession
+
+    return AppSession
+
+
+def test_app_session_on_teardown_raises_runtime_error():
+    """AppSession.on_teardown() raises RuntimeError with descriptive message."""
+    from shiny.session._session import AppSession
+
+    # Call the unbound method with a dummy self
+    with pytest.raises(RuntimeError, match="only supported on SessionProxy"):
+        AppSession.on_teardown(cast(Any, None), lambda: None)
+
+
+@pytest.mark.asyncio
+async def test_app_session_teardown_raises_runtime_error():
+    """AppSession.teardown() raises RuntimeError with descriptive message."""
+    from shiny.session._session import AppSession
+
+    with pytest.raises(RuntimeError, match="only supported on SessionProxy"):
+        await AppSession.teardown(cast(Any, None))
+
+
+# ---------------------------------------------------------------------------
+# SessionProxy async callback tests
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_session_proxy_on_teardown_accepts_async_callback():
+    """on_teardown() accepts async callbacks and awaits them on teardown."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    called: list[str] = []
+
+    async def async_cb() -> None:
+        called.append("async")
+
+    proxy.on_teardown(async_cb)
+    await proxy.teardown()
+
+    assert called == ["async"]
+
+
+@pytest.mark.asyncio
+async def test_session_proxy_on_teardown_mixed_sync_async():
+    """on_teardown() handles a mix of sync and async callbacks."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    called: list[str] = []
+
+    def sync_cb() -> None:
+        called.append("sync")
+
+    async def async_cb() -> None:
+        called.append("async")
+
+    proxy.on_teardown(sync_cb)
+    proxy.on_teardown(async_cb)
+    proxy.on_teardown(lambda: None)  # no-op sync
+
+    await proxy.teardown()
+
+    assert called == ["sync", "async"]
+
+
+@pytest.mark.asyncio
+async def test_session_proxy_on_teardown_after_teardown_is_noop():
+    """Registering a callback after teardown does not fire it."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    await proxy.teardown()
+
+    called: list[str] = []
+    # Register after teardown — callback should not fire
+    proxy.on_teardown(
+        lambda: called.append("late")
+    )  # pyright: ignore[reportArgumentType]
+    assert called == []
+
+    # Second teardown should also be a no-op
+    await proxy.teardown()
+    assert called == []
+
+
+@pytest.mark.asyncio
+async def test_session_proxy_teardown_marks_scope_before_invoking_callbacks():
+    """The scope is marked as torn down before callbacks run."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    torn_down_during_callback: list[bool] = []
+
+    def check_state() -> None:
+        torn_down_during_callback.append(proxy._torn_down)
+
+    proxy.on_teardown(check_state)
+    await proxy.teardown()
+
+    assert torn_down_during_callback == [True]
+
+
+@pytest.mark.asyncio
+async def test_session_proxy_multiple_proxies_same_namespace():
+    """Multiple proxies for the same namespace share teardown state."""
+    root = _make_mock_root_session()
+    proxy1 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+    proxy2 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    called: list[str] = []
+    proxy1.on_teardown(
+        lambda: called.append("from_p1")
+    )  # pyright: ignore[reportArgumentType]
+    proxy2.on_teardown(
+        lambda: called.append("from_p2")
+    )  # pyright: ignore[reportArgumentType]
+
+    # Teardown via proxy1 should fire all callbacks for the namespace
+    await proxy1.teardown()
+
+    assert "from_p1" in called
+    assert "from_p2" in called
+
+    # proxy2 should also see it as torn down
+    assert proxy2._torn_down is True
+
+
+@pytest.mark.asyncio
+async def test_session_proxy_different_namespaces_independent():
+    """Tearing down one namespace does not affect another."""
+    root = _make_mock_root_session()
+    proxy_a = SessionProxy(root_session=root, ns=ResolvedId("mod_a"))
+    proxy_b = SessionProxy(root_session=root, ns=ResolvedId("mod_b"))
+
+    called_a: list[str] = []
+    called_b: list[str] = []
+    proxy_a.on_teardown(
+        lambda: called_a.append("a")
+    )  # pyright: ignore[reportArgumentType]
+    proxy_b.on_teardown(
+        lambda: called_b.append("b")
+    )  # pyright: ignore[reportArgumentType]
+
+    await proxy_a.teardown()
+
+    assert called_a == ["a"]
+    assert called_b == []
+    assert proxy_a._torn_down is True
+    assert proxy_b._torn_down is False
+
+    # proxy_b still works
+    _ = proxy_b.input
+    _ = proxy_b.output
