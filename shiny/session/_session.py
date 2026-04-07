@@ -203,6 +203,9 @@ class Session(ABC):
     _outbound_message_queues: OutBoundMessageQueues
     _downloads: dict[str, DownloadInfo]
 
+    _teardown_callbacks: dict[str, _utils.AsyncCallbacks]
+    _torn_down_scopes: set[str]
+
     @abstractmethod
     def is_stub_session(self) -> bool:
         """
@@ -241,6 +244,30 @@ class Session(ABC):
         -------
         :
             A function that can be used to cancel the registration.
+        """
+
+    @abstractmethod
+    def on_teardown(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        """
+        Register a callback to run when this module scope is torn down.
+
+        Parameters
+        ----------
+        fn
+            The function to call on teardown. Can be sync or async.
+        """
+
+    @abstractmethod
+    async def teardown(self) -> None:
+        """
+        Tear down this module scope.
+
+        Fires all registered teardown callbacks, which clean up reactive objects
+        (effects, calcs, values) and remove namespaced inputs and outputs.
+
+        Idempotent: calling teardown() more than once has no effect.
         """
 
     @abstractmethod
@@ -1172,6 +1199,20 @@ class AppSession(Session):
     ) -> Callable[[], None]:
         return self._on_ended_callbacks.register(wrap_async(fn))
 
+    def on_teardown(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        raise RuntimeError(
+            "on_teardown() is only supported on SessionProxy (module sessions), "
+            "not on the root AppSession."
+        )
+
+    async def teardown(self) -> None:
+        raise RuntimeError(
+            "teardown() is only supported on SessionProxy (module sessions), "
+            "not on the root AppSession."
+        )
+
     # ==========================================================================
     # Misc
     # ==========================================================================
@@ -1318,7 +1359,7 @@ class SessionProxy(Session):
     @property
     def _torn_down(self) -> bool:
         root = self._root_session
-        if hasattr(root, "_torn_down_scopes"):
+        if hasattr(root, "_teardown_callbacks"):
             return str(self.ns) in root._torn_down_scopes
         return False
 
@@ -1365,7 +1406,7 @@ class SessionProxy(Session):
 
         root = self._root_session
         ns_key = str(self.ns)
-        if hasattr(root, "_torn_down_scopes"):
+        if hasattr(root, "_teardown_callbacks"):
             root._torn_down_scopes.add(ns_key)
             callbacks = root._teardown_callbacks.pop(ns_key, None)
             if callbacks is not None:

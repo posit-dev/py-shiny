@@ -1,11 +1,17 @@
 """Tests for reactive teardown behavior."""
 
+from __future__ import annotations
+
+from typing import Any, cast
+
 import pytest
 
 from shiny import _utils
 from shiny._namespaces import ResolvedId
 from shiny.reactive import DestroyedReactiveError, Value, calc, effect, flush, isolate
-from shiny.session._session import Inputs, OutputInfo, Outputs, SessionProxy
+from shiny.reactive._reactives import Effect_
+from shiny.render.renderer import Renderer
+from shiny.session._session import Inputs, OutputInfo, Outputs, Session, SessionProxy
 from shiny.session._utils import session_context
 
 
@@ -209,7 +215,7 @@ async def test_calc_async_teardown():
 
 def test_inputs_teardown_removes_namespaced_keys():
     """_teardown() removes all keys matching the namespace prefix."""
-    shared_map: dict[str, Value] = {}
+    shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
@@ -226,7 +232,7 @@ def test_inputs_teardown_removes_namespaced_keys():
 
 def test_inputs_teardown_removes_clientdata_keys():
     """_teardown() removes per-output clientdata keys matching the namespace."""
-    shared_map: dict[str, Value] = {}
+    shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
@@ -245,7 +251,7 @@ def test_inputs_teardown_removes_clientdata_keys():
 
 def test_inputs_teardown_preserves_global_clientdata():
     """_teardown() does NOT remove global clientdata keys."""
-    shared_map: dict[str, Value] = {}
+    shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
@@ -264,7 +270,7 @@ def test_inputs_teardown_preserves_global_clientdata():
 
 def test_inputs_teardown_preserves_other_namespaces():
     """_teardown() does NOT remove keys from other namespaces."""
-    shared_map: dict[str, Value] = {}
+    shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
@@ -281,7 +287,7 @@ def test_inputs_teardown_preserves_other_namespaces():
 
 def test_inputs_teardown_calls_value_teardown():
     """_teardown() calls _teardown() on each removed value."""
-    shared_map: dict[str, Value] = {}
+    shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
@@ -297,7 +303,7 @@ def test_inputs_teardown_calls_value_teardown():
 
 def test_inputs_teardown_resurrection():
     """After teardown, new value for a removed key creates a fresh entry."""
-    shared_map: dict[str, Value] = {}
+    shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
@@ -305,7 +311,7 @@ def test_inputs_teardown_resurrection():
     inputs._teardown()
     assert "panel_1-txt" not in shared_map
 
-    new_value = Value(read_only=True)
+    new_value: Value[str] = Value(read_only=True)
     new_value._set("new")
     shared_map["panel_1-txt"] = new_value
 
@@ -313,32 +319,32 @@ def test_inputs_teardown_resurrection():
         assert shared_map["panel_1-txt"]() == "new"
 
 
-def _make_mock_effect():
+def _make_mock_effect() -> Effect_:
     """Create a minimal mock that tracks destroy() calls."""
 
     class MockEffect:
-        def __init__(self):
+        def __init__(self) -> None:
             self._destroyed = False
 
-        def destroy(self):
+        def destroy(self) -> None:
             self._destroyed = True
 
-    return MockEffect()
+    return cast(Effect_, MockEffect())
 
 
-def _make_mock_renderer():
+def _make_mock_renderer() -> Renderer[Any]:
     """Create a minimal mock renderer."""
 
     class MockRenderer:
         pass
 
-    return MockRenderer()
+    return cast(Renderer[Any], MockRenderer())
 
 
 class _StubSession:
     """Minimal session stub for Outputs constructor."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ns = ResolvedId("")
 
     def _is_hidden(self, name: str) -> bool:
@@ -349,8 +355,8 @@ def test_outputs_teardown_removes_namespaced_outputs():
     """_teardown() removes all outputs matching namespace prefix."""
     shared_outputs: dict[str, OutputInfo] = {}
     ns = ResolvedId("panel_1")
-    session = _StubSession()
-    outputs = Outputs(session, ns=ns, outputs=shared_outputs)
+    stub = cast(Session, _StubSession())
+    outputs = Outputs(stub, ns=ns, outputs=shared_outputs)
 
     effect1 = _make_mock_effect()
     effect2 = _make_mock_effect()
@@ -376,8 +382,8 @@ def test_outputs_teardown_preserves_other_namespaces():
     """_teardown() does NOT remove outputs from other namespaces."""
     shared_outputs: dict[str, OutputInfo] = {}
     ns = ResolvedId("panel_1")
-    session = _StubSession()
-    outputs = Outputs(session, ns=ns, outputs=shared_outputs)
+    stub = cast(Session, _StubSession())
+    outputs = Outputs(stub, ns=ns, outputs=shared_outputs)
 
     effect1 = _make_mock_effect()
     effect2 = _make_mock_effect()
@@ -392,15 +398,15 @@ def test_outputs_teardown_preserves_other_namespaces():
 
     assert "panel_1-plot" not in shared_outputs
     assert "other-plot" in shared_outputs
-    assert not effect2._destroyed
+    assert not cast(Any, effect2)._destroyed
 
 
 def test_outputs_teardown_destroys_effects():
     """_teardown() calls destroy() on each removed output's effect."""
     shared_outputs: dict[str, OutputInfo] = {}
     ns = ResolvedId("panel_1")
-    session = _StubSession()
-    outputs = Outputs(session, ns=ns, outputs=shared_outputs)
+    stub = cast(Session, _StubSession())
+    outputs = Outputs(stub, ns=ns, outputs=shared_outputs)
 
     effect1 = _make_mock_effect()
     shared_outputs["panel_1-plot"] = OutputInfo(
@@ -409,10 +415,10 @@ def test_outputs_teardown_destroys_effects():
 
     outputs._teardown()
 
-    assert effect1._destroyed is True
+    assert cast(Any, effect1)._destroyed is True
 
 
-def _make_mock_root_session():
+def _make_mock_root_session() -> Session:
     """Create a minimal mock root session for SessionProxy tests."""
 
     class MockApp:
@@ -422,18 +428,18 @@ def _make_mock_root_session():
         pass
 
     class MockBookmark:
-        def __init__(self):
-            self._on_get_exclude: list = []
+        def __init__(self) -> None:
+            self._on_get_exclude: list[Any] = []
 
     class MockRootSession:
-        def __init__(self):
+        def __init__(self) -> None:
             self.app = MockApp()
             self.id = "mock_session_id"
             self.ns = ResolvedId("")
             self.input = Inputs(values={}, ns=ResolvedId(""))
-            self.output = Outputs(self, ns=ResolvedId(""), outputs={})
+            self.output = Outputs(cast(Session, self), ns=ResolvedId(""), outputs={})
             self._outbound_message_queues = MockOutboundQueues()
-            self._downloads = {}
+            self._downloads: dict[str, Any] = {}
             self.bookmark = MockBookmark()
             self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
             self._torn_down_scopes: set[str] = set()
@@ -444,13 +450,15 @@ def _make_mock_root_session():
         def is_stub_session(self) -> bool:
             return True
 
-        def make_scope(self, id):
-            return SessionProxy(root_session=self, ns=ResolvedId(str(id)))
+        def make_scope(self, id: str) -> SessionProxy:
+            return SessionProxy(
+                root_session=cast(Session, self), ns=ResolvedId(str(id))
+            )
 
-        def root_scope(self):
+        def root_scope(self) -> MockRootSession:
             return self
 
-    return MockRootSession()
+    return cast(Session, MockRootSession())
 
 
 @pytest.mark.asyncio
@@ -459,9 +467,9 @@ async def test_session_proxy_on_teardown_fires_callbacks():
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
 
-    called = []
-    proxy.on_teardown(lambda: called.append("a"))
-    proxy.on_teardown(lambda: called.append("b"))
+    called: list[str] = []
+    proxy.on_teardown(lambda: called.append("a"))  # pyright: ignore[reportArgumentType]
+    proxy.on_teardown(lambda: called.append("b"))  # pyright: ignore[reportArgumentType]
 
     await proxy.teardown()
 
@@ -476,7 +484,7 @@ async def test_session_proxy_teardown_is_idempotent():
 
     call_count = 0
 
-    def cb():
+    def cb() -> None:
         nonlocal call_count
         call_count += 1
 
@@ -494,8 +502,7 @@ async def test_session_proxy_teardown_clears_callbacks():
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
 
-    large_obj = [0] * 10000
-    proxy.on_teardown(lambda: large_obj)
+    proxy.on_teardown(lambda: None)
 
     await proxy.teardown()
     # Callbacks are removed from root session after teardown
@@ -550,7 +557,7 @@ async def test_session_proxy_teardown_guards_output():
         _ = proxy.output
 
 
-def _make_mock_root_session_non_stub():
+def _make_mock_root_session_non_stub() -> Session:
     """Mock root session where is_stub_session() returns False (for Effect_ tests)."""
 
     class MockApp:
@@ -560,18 +567,18 @@ def _make_mock_root_session_non_stub():
         pass
 
     class MockBookmark:
-        def __init__(self):
-            self._on_get_exclude: list = []
+        def __init__(self) -> None:
+            self._on_get_exclude: list[Any] = []
 
     class MockRootSession:
-        def __init__(self):
+        def __init__(self) -> None:
             self.app = MockApp()
             self.id = "mock_session_id"
             self.ns = ResolvedId("")
             self.input = Inputs(values={}, ns=ResolvedId(""))
-            self.output = Outputs(self, ns=ResolvedId(""), outputs={})
+            self.output = Outputs(cast(Session, self), ns=ResolvedId(""), outputs={})
             self._outbound_message_queues = MockOutboundQueues()
-            self._downloads = {}
+            self._downloads: dict[str, Any] = {}
             self.bookmark = MockBookmark()
             self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
             self._torn_down_scopes: set[str] = set()
@@ -582,22 +589,24 @@ def _make_mock_root_session_non_stub():
         def is_stub_session(self) -> bool:
             return False
 
-        def on_ended(self, fn):
+        def on_ended(self, fn: Any) -> None:
             pass  # No-op for testing
 
-        def _increment_busy_count(self):
+        def _increment_busy_count(self) -> None:
             pass
 
-        def _decrement_busy_count(self):
+        def _decrement_busy_count(self) -> None:
             pass
 
-        def make_scope(self, id):
-            return SessionProxy(root_session=self, ns=ResolvedId(str(id)))
+        def make_scope(self, id: str) -> SessionProxy:
+            return SessionProxy(
+                root_session=cast(Session, self), ns=ResolvedId(str(id))
+            )
 
-        def root_scope(self):
+        def root_scope(self) -> MockRootSession:
             return self
 
-    return MockRootSession()
+    return cast(Session, MockRootSession())
 
 
 @pytest.mark.asyncio
@@ -723,7 +732,7 @@ async def test_session_teardown_end_to_end():
 
     # Output removed and its effect destroyed
     assert "panel_1-plot" not in root.output._outputs
-    assert mock_effect._destroyed is True
+    assert cast(Any, mock_effect)._destroyed is True
 
 
 @pytest.mark.asyncio
@@ -765,6 +774,6 @@ async def test_nested_module_teardown():
     assert "other-plot" in root.output._outputs
 
     # Effects destroyed for parent and child, not other
-    assert effect_parent._destroyed is True
-    assert effect_child._destroyed is True
-    assert not effect_other._destroyed
+    assert cast(Any, effect_parent)._destroyed is True
+    assert cast(Any, effect_child)._destroyed is True
+    assert not cast(Any, effect_other)._destroyed

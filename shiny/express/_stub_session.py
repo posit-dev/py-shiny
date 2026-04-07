@@ -64,6 +64,14 @@ class ExpressStubSession(Session):
     ) -> Callable[[], None]:
         return lambda: None
 
+    def on_teardown(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        return
+
+    async def teardown(self) -> None:
+        return
+
     def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
         return SessionProxy(root_session=self, ns=ns)

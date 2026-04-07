@@ -15,7 +15,10 @@ How to use:
   as cleaned up with their final state frozen.
 """
 
-from shiny import App, module, reactive, render, ui
+from collections.abc import Callable
+from typing import Any
+
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny.types import SilentException
 
 
@@ -38,7 +41,14 @@ def panel_ui():
 
 
 @module.server
-def panel_server(input, output, session, panel_num, tracker, on_remove):
+def panel_server(
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    panel_num: int,
+    tracker: reactive.Value[dict[str, Any]],
+    on_remove: Callable[[], None],
+):
     effect_counter = reactive.value(0)
 
     @render.text
@@ -160,10 +170,10 @@ app_ui = ui.page_sidebar(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     panel_counter = reactive.value(0)
-    tracker = reactive.value({})
-    active_panels = reactive.value(set())
+    tracker: reactive.Value[dict[str, Any]] = reactive.value({})
+    active_panels: reactive.Value[set[str]] = reactive.value(set())
 
     @reactive.effect
     @reactive.event(input.create_panel)
@@ -189,7 +199,7 @@ def server(input, output, session):
         )
 
         # Start the module server
-        def make_remove_callback(pid):
+        def make_remove_callback(pid: str):
             def on_remove():
                 panels = active_panels.get().copy()
                 panels.discard(pid)
@@ -214,7 +224,7 @@ def server(input, output, session):
         if not t:
             return ui.p("No panels created yet.", class_="text-muted fst-italic")
 
-        items = []
+        items: list[ui.Tag] = []
         for panel_key in sorted(t.keys()):
             info = t[panel_key]
             removed = info.get("removed", False)
