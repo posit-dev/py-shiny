@@ -229,7 +229,9 @@ def test_inputs_teardown_removes_clientdata_keys():
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
-    shared_map[".clientdata_output_panel_1-my_plot_hidden"] = Value(False, read_only=True)
+    shared_map[".clientdata_output_panel_1-my_plot_hidden"] = Value(
+        False, read_only=True
+    )
     shared_map[".clientdata_output_panel_1-my_plot_width"] = Value(800, read_only=True)
     shared_map[".clientdata_output_panel_1-my_plot_height"] = Value(600, read_only=True)
 
@@ -580,6 +582,7 @@ def test_calc_self_registers_with_session_proxy():
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
 
     with session_context(proxy):
+
         @calc()
         def doubled():
             return 42
@@ -602,6 +605,7 @@ def test_effect_self_registers_with_session_proxy():
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
 
     with session_context(proxy):
+
         @effect()
         def my_effect():
             pass

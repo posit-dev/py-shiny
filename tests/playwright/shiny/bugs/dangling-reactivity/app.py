@@ -238,7 +238,9 @@ def server(input, output, session):
             info = t[panel_key]
             removed = info.get("removed", False)
 
-            border_class = "border-danger bg-danger-subtle" if removed else "border-info"
+            border_class = (
+                "border-danger bg-danger-subtle" if removed else "border-info"
+            )
             label = " [REMOVED]" if removed else ""
             still_active = (
                 " — STILL UPDATING!" if removed and info["effect_count"] > 0 else ""

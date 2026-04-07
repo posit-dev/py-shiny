@@ -1306,7 +1306,7 @@ class SessionProxy(Session):
         self.on_teardown(self._output._teardown)
 
     @property
-    def input(self) -> Inputs:
+    def input(self) -> Inputs:  # pyright: ignore[reportIncompatibleVariableOverride]
         if self._torn_down:
             raise RuntimeError(
                 f"SessionProxy (ns='{self.ns}') has been torn down. "
@@ -1315,7 +1315,7 @@ class SessionProxy(Session):
         return self._input
 
     @property
-    def output(self) -> Outputs:
+    def output(self) -> Outputs:  # pyright: ignore[reportIncompatibleVariableOverride]
         if self._torn_down:
             raise RuntimeError(
                 f"SessionProxy (ns='{self.ns}') has been torn down. "
