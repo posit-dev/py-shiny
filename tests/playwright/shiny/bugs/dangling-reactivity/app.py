@@ -120,7 +120,7 @@ def panel_server(input, output, session, panel_num, tracker, on_remove):
     # Remove handler
     @reactive.effect
     @reactive.event(input.remove)
-    def handle_remove():
+    async def handle_remove():
         # Mark as removed in tracker BEFORE removing the UI
         t = tracker.get().copy()
         key = f"panel_{panel_num}"
@@ -131,7 +131,7 @@ def panel_server(input, output, session, panel_num, tracker, on_remove):
         # Remove the DOM element
         ui.remove_ui(selector=f"div#{session.ns('panel_ui_container')}")
         # Clean up all server-side reactive objects for this module
-        session.teardown()
+        await session.teardown()
         on_remove()
 
 

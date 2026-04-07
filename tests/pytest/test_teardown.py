@@ -2,6 +2,7 @@
 
 import pytest
 
+from shiny import _utils
 from shiny._namespaces import ResolvedId
 from shiny.reactive import DestroyedReactiveError, Value, calc, effect, flush, isolate
 from shiny.session._session import Inputs, OutputInfo, Outputs, SessionProxy
@@ -434,6 +435,8 @@ def _make_mock_root_session():
             self._outbound_message_queues = MockOutboundQueues()
             self._downloads = {}
             self.bookmark = MockBookmark()
+            self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
+            self._torn_down_scopes: set[str] = set()
 
         def _is_hidden(self, name: str) -> bool:
             return False
@@ -450,7 +453,8 @@ def _make_mock_root_session():
     return MockRootSession()
 
 
-def test_session_proxy_on_teardown_fires_callbacks():
+@pytest.mark.asyncio
+async def test_session_proxy_on_teardown_fires_callbacks():
     """on_teardown() registers callbacks that fire on teardown()."""
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
@@ -459,12 +463,13 @@ def test_session_proxy_on_teardown_fires_callbacks():
     proxy.on_teardown(lambda: called.append("a"))
     proxy.on_teardown(lambda: called.append("b"))
 
-    proxy.teardown()
+    await proxy.teardown()
 
     assert called == ["a", "b"]
 
 
-def test_session_proxy_teardown_is_idempotent():
+@pytest.mark.asyncio
+async def test_session_proxy_teardown_is_idempotent():
     """Second teardown() call does nothing."""
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
@@ -476,14 +481,15 @@ def test_session_proxy_teardown_is_idempotent():
         call_count += 1
 
     proxy.on_teardown(cb)
-    proxy.teardown()
+    await proxy.teardown()
     assert call_count == 1
 
-    proxy.teardown()
+    await proxy.teardown()
     assert call_count == 1
 
 
-def test_session_proxy_teardown_clears_callbacks():
+@pytest.mark.asyncio
+async def test_session_proxy_teardown_clears_callbacks():
     """Callbacks list is cleared after teardown (no reference retention)."""
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
@@ -491,25 +497,54 @@ def test_session_proxy_teardown_clears_callbacks():
     large_obj = [0] * 10000
     proxy.on_teardown(lambda: large_obj)
 
-    proxy.teardown()
-    assert len(proxy._on_teardown_callbacks) == 0
+    await proxy.teardown()
+    # Callbacks are removed from root session after teardown
+    assert "mod1" not in root._teardown_callbacks
 
 
-def test_session_proxy_teardown_guards_input():
+@pytest.mark.asyncio
+async def test_session_proxy_teardown_visible_from_new_proxy():
+    """A new proxy for the same namespace sees the torn-down state."""
+    root = _make_mock_root_session()
+    proxy1 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+    await proxy1.teardown()
+
+    proxy2 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+    assert proxy2._torn_down is True
+
+    with pytest.raises(RuntimeError, match="torn down"):
+        _ = proxy2.input
+
+
+def test_session_proxy_callbacks_stored_on_root():
+    """Teardown callbacks are stored on the root session, not on the proxy."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    proxy.on_teardown(lambda: None)
+
+    # Callbacks live on root, keyed by namespace
+    assert "mod1" in root._teardown_callbacks
+    assert not hasattr(proxy, "_on_teardown_callbacks")
+
+
+@pytest.mark.asyncio
+async def test_session_proxy_teardown_guards_input():
     """After teardown, accessing session.input raises RuntimeError."""
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-    proxy.teardown()
+    await proxy.teardown()
 
     with pytest.raises(RuntimeError, match="torn down"):
         _ = proxy.input
 
 
-def test_session_proxy_teardown_guards_output():
+@pytest.mark.asyncio
+async def test_session_proxy_teardown_guards_output():
     """After teardown, accessing session.output raises RuntimeError."""
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-    proxy.teardown()
+    await proxy.teardown()
 
     with pytest.raises(RuntimeError, match="torn down"):
         _ = proxy.output
@@ -538,6 +573,8 @@ def _make_mock_root_session_non_stub():
             self._outbound_message_queues = MockOutboundQueues()
             self._downloads = {}
             self.bookmark = MockBookmark()
+            self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
+            self._torn_down_scopes: set[str] = set()
 
         def _is_hidden(self, name: str) -> bool:
             return False
@@ -563,7 +600,8 @@ def _make_mock_root_session_non_stub():
     return MockRootSession()
 
 
-def test_value_self_registers_with_session_proxy():
+@pytest.mark.asyncio
+async def test_value_self_registers_with_session_proxy():
     """Value created within SessionProxy context registers _teardown."""
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
@@ -571,12 +609,13 @@ def test_value_self_registers_with_session_proxy():
     with session_context(proxy):
         v = Value(42)
 
-    proxy.teardown()
+    await proxy.teardown()
     with isolate():
         assert v.is_set() is False
 
 
-def test_calc_self_registers_with_session_proxy():
+@pytest.mark.asyncio
+async def test_calc_self_registers_with_session_proxy():
     """Calc_ created within SessionProxy context registers _teardown."""
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
@@ -592,14 +631,15 @@ def test_calc_self_registers_with_session_proxy():
     with isolate():
         assert doubled() == 42
 
-    proxy.teardown()
+    await proxy.teardown()
 
     with pytest.raises(DestroyedReactiveError):
         with isolate():
             doubled()
 
 
-def test_effect_self_registers_with_session_proxy():
+@pytest.mark.asyncio
+async def test_effect_self_registers_with_session_proxy():
     """Effect_ created within SessionProxy context registers destroy."""
     root = _make_mock_root_session_non_stub()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
@@ -610,7 +650,7 @@ def test_effect_self_registers_with_session_proxy():
         def my_effect():
             pass
 
-    proxy.teardown()
+    await proxy.teardown()
     assert my_effect._destroyed is True
 
 
@@ -663,7 +703,7 @@ async def test_session_teardown_end_to_end():
     )
 
     # Teardown the module
-    proxy.teardown()
+    await proxy.teardown()
 
     # Value is unset
     with isolate():
@@ -686,7 +726,8 @@ async def test_session_teardown_end_to_end():
     assert mock_effect._destroyed is True
 
 
-def test_nested_module_teardown():
+@pytest.mark.asyncio
+async def test_nested_module_teardown():
     """Parent teardown cleans up nested module inputs/outputs by prefix matching."""
     root = _make_mock_root_session()
     parent_proxy = SessionProxy(root_session=root, ns=ResolvedId("parent"))
@@ -710,7 +751,7 @@ def test_nested_module_teardown():
         renderer=_make_mock_renderer(), effect=effect_other, suspend_when_hidden=True
     )
 
-    parent_proxy.teardown()
+    await parent_proxy.teardown()
 
     # Parent and child inputs removed
     assert "parent-txt" not in root.input._map
