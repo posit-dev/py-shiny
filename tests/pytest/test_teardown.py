@@ -4,7 +4,7 @@ import pytest
 
 from shiny._namespaces import ResolvedId
 from shiny.reactive import DestroyedReactiveError, Value, calc, effect, flush, isolate
-from shiny.session._session import Inputs
+from shiny.session._session import Inputs, OutputInfo, Outputs
 
 
 def test_destroyed_reactive_error_is_exception():
@@ -307,3 +307,102 @@ def test_inputs_teardown_resurrection():
 
     with isolate():
         assert shared_map["panel_1-txt"]() == "new"
+
+
+def _make_mock_effect():
+    """Create a minimal mock that tracks destroy() calls."""
+
+    class MockEffect:
+        def __init__(self):
+            self._destroyed = False
+
+        def destroy(self):
+            self._destroyed = True
+
+    return MockEffect()
+
+
+def _make_mock_renderer():
+    """Create a minimal mock renderer."""
+
+    class MockRenderer:
+        pass
+
+    return MockRenderer()
+
+
+class _StubSession:
+    """Minimal session stub for Outputs constructor."""
+
+    def __init__(self):
+        self.ns = ResolvedId("")
+
+    def _is_hidden(self, name: str) -> bool:
+        return False
+
+
+def test_outputs_teardown_removes_namespaced_outputs():
+    """_teardown() removes all outputs matching namespace prefix."""
+    shared_outputs: dict[str, OutputInfo] = {}
+    ns = ResolvedId("panel_1")
+    session = _StubSession()
+    outputs = Outputs(session, ns=ns, outputs=shared_outputs)
+
+    effect1 = _make_mock_effect()
+    effect2 = _make_mock_effect()
+    effect3 = _make_mock_effect()
+    shared_outputs["panel_1-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect1, suspend_when_hidden=True
+    )
+    shared_outputs["panel_1-table"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect2, suspend_when_hidden=True
+    )
+    shared_outputs["panel_2-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect3, suspend_when_hidden=True
+    )
+
+    outputs._teardown()
+
+    assert "panel_1-plot" not in shared_outputs
+    assert "panel_1-table" not in shared_outputs
+    assert "panel_2-plot" in shared_outputs
+
+
+def test_outputs_teardown_preserves_other_namespaces():
+    """_teardown() does NOT remove outputs from other namespaces."""
+    shared_outputs: dict[str, OutputInfo] = {}
+    ns = ResolvedId("panel_1")
+    session = _StubSession()
+    outputs = Outputs(session, ns=ns, outputs=shared_outputs)
+
+    effect1 = _make_mock_effect()
+    effect2 = _make_mock_effect()
+    shared_outputs["panel_1-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect1, suspend_when_hidden=True
+    )
+    shared_outputs["other-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect2, suspend_when_hidden=True
+    )
+
+    outputs._teardown()
+
+    assert "panel_1-plot" not in shared_outputs
+    assert "other-plot" in shared_outputs
+    assert not effect2._destroyed
+
+
+def test_outputs_teardown_destroys_effects():
+    """_teardown() calls destroy() on each removed output's effect."""
+    shared_outputs: dict[str, OutputInfo] = {}
+    ns = ResolvedId("panel_1")
+    session = _StubSession()
+    outputs = Outputs(session, ns=ns, outputs=shared_outputs)
+
+    effect1 = _make_mock_effect()
+    shared_outputs["panel_1-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(), effect=effect1, suspend_when_hidden=True
+    )
+
+    outputs._teardown()
+
+    assert effect1._destroyed is True

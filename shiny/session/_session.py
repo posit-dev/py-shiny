@@ -2042,6 +2042,13 @@ class Outputs:
             self._outputs[output_name].effect.destroy()
             del self._outputs[output_name]
 
+    def _teardown(self) -> None:
+        prefix = str(self._ns) + "-"
+        keys_to_remove = [k for k in self._outputs if k.startswith(prefix)]
+        for key in keys_to_remove:
+            self._outputs[key].effect.destroy()
+            del self._outputs[key]
+
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."
         for name, output in self._outputs.items():
