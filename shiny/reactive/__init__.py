@@ -20,6 +20,7 @@ from ._reactives import (  # noqa: F401
     Effect_,  # pyright: ignore[reportUnusedImport]
     event,
 )
+from ._destroy import DestroyedReactiveError  # noqa: F401
 from ._extended_task import ExtendedTask, extended_task
 
 __all__ = (
@@ -38,6 +39,7 @@ __all__ = (
     "effect",
     "Effect",
     "event",
+    "DestroyedReactiveError",
     "ExtendedTask",
     "extended_task",
 )
