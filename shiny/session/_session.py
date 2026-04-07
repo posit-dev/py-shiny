@@ -204,7 +204,6 @@ class Session(ABC):
     _downloads: dict[str, DownloadInfo]
 
     _teardown_callbacks: dict[str, _utils.AsyncCallbacks]
-    _torn_down_scopes: set[str]
 
     @abstractmethod
     def is_stub_session(self) -> bool:
@@ -604,10 +603,9 @@ class AppSession(Session):
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
 
-        # Teardown state for module scopes, keyed by namespace string.
+        # Teardown callbacks for module scopes, keyed by namespace string.
         # Stored on root session because SessionProxy is a throwaway lens.
         self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
-        self._torn_down_scopes: set[str] = set()
 
         self._register_session_ended_callbacks()
 
@@ -1345,6 +1343,8 @@ class SessionProxy(Session):
 
         self.bookmark = BookmarkProxy(self)
 
+        self._torn_down: bool = False
+
         # Register input/output teardown on first proxy creation for this scope.
         # Subsequent proxies for the same ns reuse the existing callback list.
         ns_key = str(self.ns)
@@ -1355,13 +1355,6 @@ class SessionProxy(Session):
                 # These are scope-level cleanups that should run once per teardown
                 self.on_teardown(self._input._teardown)
                 self.on_teardown(self._output._teardown)
-
-    @property
-    def _torn_down(self) -> bool:
-        root = self._root_session
-        if hasattr(root, "_teardown_callbacks"):
-            return str(self.ns) in root._torn_down_scopes
-        return False
 
     @property
     def input(self) -> Inputs:  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -1384,7 +1377,16 @@ class SessionProxy(Session):
     def on_teardown(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
-        """Register a callback to run when this module scope is torn down."""
+        """
+        Register a callback to run when this module scope is torn down.
+
+        Parameters
+        ----------
+        fn
+            The function to call when teardown occurs.
+        """
+        if self._torn_down:
+            return
         root = self._root_session
         ns_key = str(self.ns)
         if hasattr(root, "_teardown_callbacks"):
@@ -1404,13 +1406,19 @@ class SessionProxy(Session):
         if self._torn_down:
             return
 
+        self._torn_down = True
+
         root = self._root_session
         ns_key = str(self.ns)
         if hasattr(root, "_teardown_callbacks"):
-            root._torn_down_scopes.add(ns_key)
             callbacks = root._teardown_callbacks.pop(ns_key, None)
             if callbacks is not None:
-                await callbacks.invoke()
+                for _id, (fn, _once) in list(callbacks._callbacks.items()):
+                    try:
+                        await fn()
+                    except Exception:
+                        traceback.print_exc()
+                callbacks._callbacks.clear()
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)

@@ -442,7 +442,6 @@ def _make_mock_root_session() -> Session:
             self._downloads: dict[str, Any] = {}
             self.bookmark = MockBookmark()
             self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
-            self._torn_down_scopes: set[str] = set()
 
         def _is_hidden(self, name: str) -> bool:
             return False
@@ -510,17 +509,21 @@ async def test_session_proxy_teardown_clears_callbacks():
 
 
 @pytest.mark.asyncio
-async def test_session_proxy_teardown_visible_from_new_proxy():
-    """A new proxy for the same namespace sees the torn-down state."""
+async def test_session_proxy_namespace_reusable_after_teardown():
+    """After teardown, a new proxy for the same namespace works normally."""
     root = _make_mock_root_session()
     proxy1 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
     await proxy1.teardown()
 
-    proxy2 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-    assert proxy2._torn_down is True
+    # The old proxy is torn down
+    assert proxy1._torn_down is True
 
-    with pytest.raises(RuntimeError, match="torn down"):
-        _ = proxy2.input
+    # A new proxy for the same namespace should work fine
+    proxy2 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+    assert proxy2._torn_down is False
+    # Can access input/output without error
+    _ = proxy2.input
+    _ = proxy2.output
 
 
 def test_session_proxy_callbacks_stored_on_root():
@@ -581,7 +584,6 @@ def _make_mock_root_session_non_stub() -> Session:
             self._downloads: dict[str, Any] = {}
             self.bookmark = MockBookmark()
             self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
-            self._torn_down_scopes: set[str] = set()
 
         def _is_hidden(self, name: str) -> bool:
             return False
@@ -805,12 +807,11 @@ async def test_express_stub_session_teardown_is_noop():
 
 
 def test_express_stub_session_has_no_teardown_state():
-    """ExpressStubSession does not have _teardown_callbacks or _torn_down_scopes."""
+    """ExpressStubSession does not have _teardown_callbacks."""
     from shiny.express._stub_session import ExpressStubSession
 
     stub = ExpressStubSession()
     assert not hasattr(stub, "_teardown_callbacks")
-    assert not hasattr(stub, "_torn_down_scopes")
 
 
 @pytest.mark.asyncio
@@ -969,8 +970,9 @@ async def test_session_proxy_multiple_proxies_same_namespace():
     assert "from_p1" in called
     assert "from_p2" in called
 
-    # proxy2 should also see it as torn down
-    assert proxy2._torn_down is True
+    # proxy1 is torn down; proxy2 is not (instance-level flag)
+    assert proxy1._torn_down is True
+    assert proxy2._torn_down is False
 
 
 @pytest.mark.asyncio
@@ -999,3 +1001,107 @@ async def test_session_proxy_different_namespaces_independent():
     # proxy_b still works
     _ = proxy_b.input
     _ = proxy_b.output
+
+
+# ---------------------------------------------------------------------------
+# Module re-creation after teardown
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_module_recreated_after_teardown():
+    """A module can be fully re-created under the same namespace after teardown."""
+    root = _make_mock_root_session()
+
+    # First lifecycle
+    proxy1 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+    called_1: list[str] = []
+    proxy1.on_teardown(
+        lambda: called_1.append("cleanup1")
+    )  # pyright: ignore[reportArgumentType]
+    await proxy1.teardown()
+    assert called_1 == ["cleanup1"]
+
+    # Second lifecycle — same namespace
+    proxy2 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+    assert proxy2._torn_down is False
+    _ = proxy2.input
+    _ = proxy2.output
+
+    # New callbacks can be registered and fire independently
+    called_2: list[str] = []
+    proxy2.on_teardown(
+        lambda: called_2.append("cleanup2")
+    )  # pyright: ignore[reportArgumentType]
+    await proxy2.teardown()
+
+    assert called_2 == ["cleanup2"]
+    # First lifecycle's callback was not re-invoked
+    assert called_1 == ["cleanup1"]
+
+
+@pytest.mark.asyncio
+async def test_module_recreated_with_new_inputs_outputs():
+    """Re-created module gets fresh inputs/outputs after teardown cleaned the old ones."""
+    root = _make_mock_root_session()
+
+    # First lifecycle — populate inputs and outputs
+    proxy1 = SessionProxy(root_session=root, ns=ResolvedId("panel_1"))
+    root.input._map["panel_1-txt"] = Value("old value", read_only=True)
+    root.output._outputs["panel_1-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(),
+        effect=_make_mock_effect(),
+        suspend_when_hidden=True,
+    )
+
+    await proxy1.teardown()
+
+    # Old inputs/outputs are cleaned up
+    assert "panel_1-txt" not in root.input._map
+    assert "panel_1-plot" not in root.output._outputs
+
+    # Second lifecycle — re-create under same namespace
+    proxy2 = SessionProxy(root_session=root, ns=ResolvedId("panel_1"))
+    assert proxy2._torn_down is False
+
+    # New inputs and outputs can be populated
+    root.input._map["panel_1-txt"] = Value("new value", read_only=True)
+    root.output._outputs["panel_1-plot"] = OutputInfo(
+        renderer=_make_mock_renderer(),
+        effect=_make_mock_effect(),
+        suspend_when_hidden=True,
+    )
+
+    with isolate():
+        assert root.input._map["panel_1-txt"]() == "new value"
+    assert "panel_1-plot" in root.output._outputs
+
+    # Second teardown cleans up the new state
+    await proxy2.teardown()
+    assert "panel_1-txt" not in root.input._map
+    assert "panel_1-plot" not in root.output._outputs
+
+
+@pytest.mark.asyncio
+async def test_module_recreated_with_reactive_objects():
+    """Re-created module can register new reactive objects that tear down independently."""
+    root = _make_mock_root_session_non_stub()
+
+    # First lifecycle
+    proxy1 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+    with session_context(proxy1):
+        v1 = Value(10)
+
+    await proxy1.teardown()
+    with isolate():
+        assert v1.is_set() is False
+
+    # Second lifecycle — new Value under same namespace
+    proxy2 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+    with session_context(proxy2):
+        v2 = Value(20)
+
+    with isolate():
+        assert v2() == 20
+
+    await proxy2.teardown()
+    with isolate():
+        assert v2.is_set() is False
