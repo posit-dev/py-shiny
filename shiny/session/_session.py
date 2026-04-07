@@ -1341,7 +1341,10 @@ class SessionProxy(Session):
         self._torn_down = True
 
         for fn in self._on_teardown_callbacks:
-            fn()
+            try:
+                fn()
+            except Exception:
+                traceback.print_exc()
         self._on_teardown_callbacks.clear()
 
     def _is_hidden(self, name: str) -> bool:
