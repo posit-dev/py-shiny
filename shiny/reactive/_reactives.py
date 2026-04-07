@@ -54,6 +54,7 @@ from ..types import (
     SilentException,
 )
 from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._destroy import DestroyedReactiveError
 from ._utils import is_user_code_frame
 
 if TYPE_CHECKING:
@@ -583,6 +584,7 @@ class Calc_(Generic[T]):
         self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
+        self._torn_down: bool = False
 
         self._session: Optional[Session]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
@@ -623,13 +625,29 @@ class Calc_(Generic[T]):
         # the current collection level at initialization time.
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
+    def _teardown(self) -> None:
+        if self._torn_down:
+            return
+        self._torn_down = True
+        if self._ctx is not None:
+            self._ctx.invalidate()
+        self._dependents.invalidate()
+
     def __call__(self) -> T:
+        if self._torn_down:
+            raise DestroyedReactiveError(
+                f"Reactive calc '{self._otel_label}' has been destroyed."
+            )
         # Run the Coroutine (synchronously), and then return the value.
         # If the Coroutine yields control, then an error will be raised.
         return _utils.run_coro_sync(self.get_value())
 
     # TODO: should this be private?
     async def get_value(self) -> T:
+        if self._torn_down:
+            raise DestroyedReactiveError(
+                f"Reactive calc '{self._otel_label}' has been destroyed."
+            )
         self._dependents.register()
 
         if self._invalidated or self._running:
