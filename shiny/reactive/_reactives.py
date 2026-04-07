@@ -180,6 +180,11 @@ class Value(Generic[T]):
         self._otel_label: str | None = None
         self._torn_down: bool = False
 
+        from ..session._session import SessionProxy
+
+        if isinstance(session, SessionProxy):
+            session.on_teardown(self._teardown)
+
     def _try_infer_name(self) -> str | None:
         """
         Attempt to infer the variable name from the call stack.
@@ -625,6 +630,11 @@ class Calc_(Generic[T]):
         # the current collection level at initialization time.
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
+        from ..session._session import SessionProxy
+
+        if isinstance(self._session, SessionProxy):
+            self._session.on_teardown(self._teardown)
+
     def _teardown(self) -> None:
         if self._torn_down:
             return
@@ -901,6 +911,11 @@ class Effect_:
 
         if self._session is not None:
             self._session.on_ended(self._on_session_ended_cb)
+
+        from ..session._session import SessionProxy
+
+        if isinstance(self._session, SessionProxy):
+            self._session.on_teardown(self.destroy)
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs: dict[str, Any] = {

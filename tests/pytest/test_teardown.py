@@ -5,6 +5,7 @@ import pytest
 from shiny._namespaces import ResolvedId
 from shiny.reactive import DestroyedReactiveError, Value, calc, effect, flush, isolate
 from shiny.session._session import Inputs, OutputInfo, Outputs, SessionProxy
+from shiny.session._utils import session_context
 
 
 def test_destroyed_reactive_error_is_exception():
@@ -510,3 +511,112 @@ def test_session_proxy_teardown_guards_output():
 
     with pytest.raises(RuntimeError, match="torn down"):
         _ = proxy.output
+
+
+def _make_mock_root_session_non_stub():
+    """Mock root session where is_stub_session() returns False (for Effect_ tests)."""
+
+    class MockApp:
+        pass
+
+    class MockOutboundQueues:
+        pass
+
+    class MockBookmark:
+        def __init__(self):
+            self._on_get_exclude: list = []
+
+    class MockRootSession:
+        def __init__(self):
+            self.app = MockApp()
+            self.id = "mock_session_id"
+            self.ns = ResolvedId("")
+            self.input = Inputs(values={}, ns=ResolvedId(""))
+            self.output = Outputs(self, ns=ResolvedId(""), outputs={})
+            self._outbound_message_queues = MockOutboundQueues()
+            self._downloads = {}
+            self.bookmark = MockBookmark()
+
+        def _is_hidden(self, name: str) -> bool:
+            return False
+
+        def is_stub_session(self) -> bool:
+            return False
+
+        def on_ended(self, fn):
+            pass  # No-op for testing
+
+        def _increment_busy_count(self):
+            pass
+
+        def _decrement_busy_count(self):
+            pass
+
+        def make_scope(self, id):
+            return SessionProxy(root_session=self, ns=ResolvedId(str(id)))
+
+        def root_scope(self):
+            return self
+
+    return MockRootSession()
+
+
+def test_value_self_registers_with_session_proxy():
+    """Value created within SessionProxy context registers _teardown."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    with session_context(proxy):
+        v = Value(42)
+
+    proxy.teardown()
+    with isolate():
+        assert v.is_set() is False
+
+
+def test_calc_self_registers_with_session_proxy():
+    """Calc_ created within SessionProxy context registers _teardown."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    with session_context(proxy):
+        @calc()
+        def doubled():
+            return 42
+
+    from shiny.reactive import isolate
+
+    with isolate():
+        assert doubled() == 42
+
+    proxy.teardown()
+
+    with pytest.raises(DestroyedReactiveError):
+        with isolate():
+            doubled()
+
+
+def test_effect_self_registers_with_session_proxy():
+    """Effect_ created within SessionProxy context registers destroy."""
+    root = _make_mock_root_session_non_stub()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    with session_context(proxy):
+        @effect()
+        def my_effect():
+            pass
+
+    proxy.teardown()
+    assert my_effect._destroyed is True
+
+
+def test_no_registration_without_session_proxy():
+    """Reactive objects created without SessionProxy do NOT register teardown."""
+    v = Value(42)
+    assert v._torn_down is False
+
+    @calc()
+    def doubled():
+        return v() * 2
+
+    assert doubled._torn_down is False
