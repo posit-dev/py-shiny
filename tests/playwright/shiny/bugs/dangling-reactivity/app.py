@@ -1,22 +1,18 @@
 """
-Dangling Reactivity Demo
-=========================
-Demonstrates three types of "dangling" reactive state that persist after dynamic
-UI is removed:
-
-1. **Dangling effects** — `reactive.effect` created for dynamic UI keeps firing
-   even after the UI is removed from the DOM.
-2. **Dangling calcs** — `reactive.calc` persists in memory with stale values.
-3. **Dangling input values** — `input.xxx()` still returns the last value for
-   inputs that no longer exist in the DOM.
+Session Teardown Demo
+=====================
+Demonstrates `session.teardown()` cleaning up reactive objects when dynamic UI
+is removed. Each panel creates effects, calcs, and inputs inside a module.
+When "Remove this panel" is clicked, `session.teardown()` destroys all
+server-side reactive state for that module.
 
 How to use:
 - Click "Create Panel" to add panels. Each panel has an auto-incrementing
   effect, a dynamic text input, and a calc derived from that input.
-- Toggle "Show dynamic UI" off — the effect keeps firing, input values persist.
-- Click "Remove this panel" — same thing, but now the whole panel is gone.
-- Watch the "Reactive State Monitor" in the sidebar: it shows server-side state
-  that should have been cleaned up but wasn't.
+- Click "Remove this panel" — the panel is removed and all its reactive
+  state is cleaned up via `session.teardown()`.
+- Watch the "Reactive State Monitor" in the sidebar: removed panels show
+  as cleaned up with their final state frozen.
 """
 
 from shiny import App, module, reactive, render, ui
@@ -49,11 +45,8 @@ def panel_server(input, output, session, panel_num, tracker, on_remove):
     def panel_title():
         return f"Panel {panel_num}"
 
-    # -----------------------------------------------------------------------
-    # DANGLING EFFECT: This reactive.effect uses invalidate_later to
-    # auto-increment a counter every second. When the panel is removed from
-    # the DOM, this effect is NOT destroyed — it keeps firing indefinitely.
-    # -----------------------------------------------------------------------
+    # Effect: auto-increments a counter every second.
+    # Destroyed by session.teardown() when the panel is removed.
     @reactive.effect
     def auto_increment():
         reactive.invalidate_later(1)
@@ -61,12 +54,8 @@ def panel_server(input, output, session, panel_num, tracker, on_remove):
             new_count = effect_counter.get() + 1
             effect_counter.set(new_count)
 
-    # -----------------------------------------------------------------------
-    # DANGLING CALC: This reactive.calc derives a value from the dynamic
-    # input. After the input is removed from the DOM, the calc still holds
-    # its last computed value and remains in the reactive graph.
-    # reactive.calc has NO destroy() method at all.
-    # -----------------------------------------------------------------------
+    # Calc: derives a value from the dynamic input.
+    # Torn down by session.teardown() when the panel is removed.
     @reactive.calc
     def derived_message():
         try:
@@ -80,15 +69,15 @@ def panel_server(input, output, session, panel_num, tracker, on_remove):
         if not input.show_dynamic():
             return ui.div(
                 ui.p(
-                    "Dynamic UI is hidden, but check the monitor — the effect "
-                    "is still firing and the input value persists!",
-                    class_="text-warning fst-italic",
+                    "Dynamic UI is hidden. The effect continues to fire "
+                    "since the module is still active.",
+                    class_="text-muted fst-italic",
                 ),
             )
         return ui.TagList(
             ui.input_text(
                 "dynamic_txt",
-                "Type something (this input value will dangle):",
+                "Type something:",
                 value=f"hello from panel {panel_num}",
                 width="100%",
             ),
@@ -106,26 +95,18 @@ def panel_server(input, output, session, panel_num, tracker, on_remove):
     def local_status():
         return f"Effect has fired {effect_counter.get()} times"
 
-    # -----------------------------------------------------------------------
     # Update the shared tracker so the global monitor can see our state.
-    # This effect ALSO dangles after removal — it keeps updating the tracker.
-    # -----------------------------------------------------------------------
+    # This effect is destroyed by session.teardown() when the panel is removed.
     @reactive.effect
     def update_tracker():
-        # Read reactive dependencies first (these trigger re-execution)
         count = effect_counter.get()
         calc_val = derived_message()
 
-        # Read the dynamic input value — this demonstrates DANGLING INPUTS:
-        # even after the input is removed from the DOM, this still returns
-        # the last value the input had.
         try:
             input_val = input.dynamic_txt()
         except SilentException:
             input_val = "(never set)"
 
-        # Use isolate to read tracker without creating a dependency on it
-        # (otherwise we'd have an infinite loop: read tracker -> set tracker -> invalidate)
         with reactive.isolate():
             t = tracker.get().copy()
             t[f"panel_{panel_num}"] = {
@@ -165,8 +146,8 @@ app_ui = ui.page_sidebar(
         ui.hr(),
         ui.h5("Reactive State Monitor"),
         ui.p(
-            "Server-side state for ALL panels, including removed ones. "
-            "Entries that keep updating after removal prove dangling reactivity.",
+            "Server-side state for all panels. Removed panels show "
+            "their final state, frozen after teardown.",
             class_="text-muted small",
         ),
         ui.output_ui("status_panel"),
@@ -174,7 +155,7 @@ app_ui = ui.page_sidebar(
         open="always",
     ),
     ui.div(id="panel_container"),
-    title="Dangling Reactivity Demo",
+    title="Session Teardown Demo",
     fillable=False,
 )
 
@@ -207,7 +188,7 @@ def server(input, output, session):
             ),
         )
 
-        # Start the module server — its effects will dangle after removal
+        # Start the module server
         def make_remove_callback(pid):
             def on_remove():
                 panels = active_panels.get().copy()
@@ -239,17 +220,13 @@ def server(input, output, session):
             removed = info.get("removed", False)
 
             border_class = (
-                "border-danger bg-danger-subtle" if removed else "border-info"
+                "border-success bg-success-subtle" if removed else "border-info"
             )
-            label = " [REMOVED]" if removed else ""
-            still_active = (
-                " — STILL UPDATING!" if removed and info["effect_count"] > 0 else ""
-            )
+            label = " [TORN DOWN]" if removed else ""
 
             items.append(
                 ui.div(
                     ui.strong(f"{panel_key}{label}"),
-                    ui.span(still_active, class_="text-danger fw-bold"),
                     ui.tags.table(
                         ui.tags.tr(
                             ui.tags.td("Effect fires:", class_="pe-2 small text-muted"),
