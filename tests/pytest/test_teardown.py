@@ -2,7 +2,9 @@
 
 import pytest
 
+from shiny._namespaces import ResolvedId
 from shiny.reactive import DestroyedReactiveError, Value, calc, effect, flush, isolate
+from shiny.session._session import Inputs
 
 
 def test_destroyed_reactive_error_is_exception():
@@ -201,3 +203,107 @@ async def test_calc_async_teardown():
 
     with pytest.raises(DestroyedReactiveError, match="has been destroyed"):
         await doubled()
+
+
+def test_inputs_teardown_removes_namespaced_keys():
+    """_teardown() removes all keys matching the namespace prefix."""
+    shared_map: dict[str, Value] = {}
+    ns = ResolvedId("panel_1")
+    inputs = Inputs(values=shared_map, ns=ns)
+
+    shared_map["panel_1-txt"] = Value("hello", read_only=True)
+    shared_map["panel_1-slider"] = Value(5, read_only=True)
+    shared_map["other-txt"] = Value("keep", read_only=True)
+
+    inputs._teardown()
+
+    assert "panel_1-txt" not in shared_map
+    assert "panel_1-slider" not in shared_map
+    assert "other-txt" in shared_map
+
+
+def test_inputs_teardown_removes_clientdata_keys():
+    """_teardown() removes per-output clientdata keys matching the namespace."""
+    shared_map: dict[str, Value] = {}
+    ns = ResolvedId("panel_1")
+    inputs = Inputs(values=shared_map, ns=ns)
+
+    shared_map[".clientdata_output_panel_1-my_plot_hidden"] = Value(False, read_only=True)
+    shared_map[".clientdata_output_panel_1-my_plot_width"] = Value(800, read_only=True)
+    shared_map[".clientdata_output_panel_1-my_plot_height"] = Value(600, read_only=True)
+
+    inputs._teardown()
+
+    assert ".clientdata_output_panel_1-my_plot_hidden" not in shared_map
+    assert ".clientdata_output_panel_1-my_plot_width" not in shared_map
+    assert ".clientdata_output_panel_1-my_plot_height" not in shared_map
+
+
+def test_inputs_teardown_preserves_global_clientdata():
+    """_teardown() does NOT remove global clientdata keys."""
+    shared_map: dict[str, Value] = {}
+    ns = ResolvedId("panel_1")
+    inputs = Inputs(values=shared_map, ns=ns)
+
+    shared_map[".clientdata_pixelratio"] = Value(2.0, read_only=True)
+    shared_map[".clientdata_url_protocol"] = Value("https:", read_only=True)
+    shared_map[".clientdata_singletons"] = Value("", read_only=True)
+    shared_map["panel_1-txt"] = Value("remove me", read_only=True)
+
+    inputs._teardown()
+
+    assert ".clientdata_pixelratio" in shared_map
+    assert ".clientdata_url_protocol" in shared_map
+    assert ".clientdata_singletons" in shared_map
+    assert "panel_1-txt" not in shared_map
+
+
+def test_inputs_teardown_preserves_other_namespaces():
+    """_teardown() does NOT remove keys from other namespaces."""
+    shared_map: dict[str, Value] = {}
+    ns = ResolvedId("panel_1")
+    inputs = Inputs(values=shared_map, ns=ns)
+
+    shared_map["panel_1-txt"] = Value("remove", read_only=True)
+    shared_map["panel_2-txt"] = Value("keep", read_only=True)
+    shared_map["panel_1_extra-txt"] = Value("keep too", read_only=True)
+
+    inputs._teardown()
+
+    assert "panel_1-txt" not in shared_map
+    assert "panel_2-txt" in shared_map
+    assert "panel_1_extra-txt" in shared_map
+
+
+def test_inputs_teardown_calls_value_teardown():
+    """_teardown() calls _teardown() on each removed value."""
+    shared_map: dict[str, Value] = {}
+    ns = ResolvedId("panel_1")
+    inputs = Inputs(values=shared_map, ns=ns)
+
+    v = Value(42, read_only=True)
+    shared_map["panel_1-txt"] = v
+
+    inputs._teardown()
+
+    assert v._torn_down is True
+    with isolate():
+        assert v.is_set() is False
+
+
+def test_inputs_teardown_resurrection():
+    """After teardown, new value for a removed key creates a fresh entry."""
+    shared_map: dict[str, Value] = {}
+    ns = ResolvedId("panel_1")
+    inputs = Inputs(values=shared_map, ns=ns)
+
+    shared_map["panel_1-txt"] = Value("old", read_only=True)
+    inputs._teardown()
+    assert "panel_1-txt" not in shared_map
+
+    new_value = Value(read_only=True)
+    new_value._set("new")
+    shared_map["panel_1-txt"] = new_value
+
+    with isolate():
+        assert shared_map["panel_1-txt"]() == "new"
