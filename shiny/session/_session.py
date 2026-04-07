@@ -1287,8 +1287,8 @@ class SessionProxy(Session):
         self.app = root_session.app
         self.id = root_session.id
         self.ns = ns
-        self.input = Inputs(values=root_session.input._map, ns=ns)
-        self.output = Outputs(
+        self._input = Inputs(values=root_session.input._map, ns=ns)
+        self._output = Outputs(
             self,
             ns=ns,
             outputs=root_session.output._outputs,
@@ -1298,6 +1298,51 @@ class SessionProxy(Session):
         self._downloads = root_session._downloads
 
         self.bookmark = BookmarkProxy(self)
+
+        self._on_teardown_callbacks: list[Callable[[], None]] = []
+        self._torn_down: bool = False
+
+        self.on_teardown(self._input._teardown)
+        self.on_teardown(self._output._teardown)
+
+    @property
+    def input(self) -> Inputs:
+        if self._torn_down:
+            raise RuntimeError(
+                f"SessionProxy (ns='{self.ns}') has been torn down. "
+                "Cannot access input."
+            )
+        return self._input
+
+    @property
+    def output(self) -> Outputs:
+        if self._torn_down:
+            raise RuntimeError(
+                f"SessionProxy (ns='{self.ns}') has been torn down. "
+                "Cannot access output."
+            )
+        return self._output
+
+    def on_teardown(self, fn: Callable[[], None]) -> None:
+        """Register a callback to run when this module scope is torn down."""
+        self._on_teardown_callbacks.append(fn)
+
+    def teardown(self) -> None:
+        """
+        Tear down this module scope.
+
+        Fires all registered teardown callbacks, which clean up reactive objects
+        (effects, calcs, values) and remove namespaced inputs and outputs.
+
+        Idempotent: calling teardown() more than once has no effect.
+        """
+        if self._torn_down:
+            return
+        self._torn_down = True
+
+        for fn in self._on_teardown_callbacks:
+            fn()
+        self._on_teardown_callbacks.clear()
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
