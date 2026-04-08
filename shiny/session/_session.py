@@ -1371,25 +1371,40 @@ class SessionProxy(Session):
 
     async def teardown(self) -> None:
         """
-        Tear down this module scope.
+        Tear down this module scope and all descendant module scopes.
 
         Fires all registered teardown callbacks, which clean up reactive objects
         (effects, calcs, values) and remove namespaced inputs and outputs.
 
         Idempotent: calling teardown() more than once has no effect.
         """
+        teardown_cbs = self._get_teardown_callbacks()
+        if teardown_cbs is not None:
+            ns_prefix = str(self.ns) + "-"
+            # Collect this namespace and all descendant namespaces (children,
+            # grandchildren, etc.) that share the prefix.
+            matching_keys = [
+                k
+                for k in teardown_cbs
+                if k == str(self.ns) or k.startswith(ns_prefix)
+            ]
+            # Sort deepest namespaces first (most dashes → most nested) so that
+            # children are torn down before parents, mirroring the reverse of
+            # construction order.
+            matching_keys.sort(key=lambda k: k.count("-"), reverse=True)
+
+            for ns_key in matching_keys:
+                callbacks = teardown_cbs.pop(ns_key, None)
+                if callbacks is not None:
+                    callbacks.on_error = lambda e: traceback.print_exc()
+                    await callbacks.invoke()
+
+        # Tear down inputs and outputs after callbacks, so that callback
+        # functions can still read input/output values during teardown.
         # Remove namespaced input keys and their values.
         self.input._teardown()
         # Remove namespaced output entries and destroy their effects.
         self.output._teardown()
-
-        teardown_cbs = self._get_teardown_callbacks()
-        if teardown_cbs is not None:
-            ns_key = str(self.ns)
-            callbacks = teardown_cbs.pop(ns_key, None)
-            if callbacks is not None:
-                callbacks.on_error = lambda e: traceback.print_exc()
-                await callbacks.invoke()
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
