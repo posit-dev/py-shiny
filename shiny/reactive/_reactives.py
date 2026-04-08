@@ -651,11 +651,15 @@ class Calc_(Generic[T]):
             return
         self._torn_down = True
         if self._ctx is not None:
+            # _on_invalidate_cb handles clearing _value, invalidating
+            # _dependents, and setting _ctx = None.
             self._ctx.invalidate()
-        self._dependents.invalidate()
-        self._ctx = None
+        else:
+            # Calc was never evaluated, so no context exists and
+            # _on_invalidate_cb won't fire. Clean up manually.
+            self._dependents.invalidate()
+            self._value.clear()
         self._error.clear()
-        self._value.clear()
 
     def __call__(self) -> T:
         if self._torn_down:
