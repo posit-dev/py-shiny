@@ -8,7 +8,8 @@ import pytest
 
 from shiny import _utils
 from shiny._namespaces import ResolvedId
-from shiny.reactive import DestroyedReactiveError, Value, calc, effect, flush, isolate
+from shiny.reactive import Value, calc, effect, flush, isolate
+from shiny.reactive._destroy import DestroyedReactiveError
 from shiny.reactive._reactives import Effect_
 from shiny.render.renderer import Renderer
 from shiny.session._session import Inputs, OutputInfo, Outputs, Session, SessionProxy
