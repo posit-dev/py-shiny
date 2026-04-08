@@ -640,6 +640,50 @@ async def test_effect_self_registers_with_session_proxy():
     assert my_effect._destroyed is True
 
 
+@pytest.mark.asyncio
+async def test_invalidate_later_cancelled_on_teardown():
+    """invalidate_later() timer is cancelled when its effect is destroyed via teardown."""
+    import asyncio
+
+    from shiny.reactive import invalidate_later
+
+    root = _make_mock_root_session_non_stub()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    exec_count = 0
+
+    with session_context(proxy):
+
+        @effect()
+        def ticking_effect():
+            nonlocal exec_count
+            # Schedule re-invalidation in 10 seconds (long enough to never fire in test)
+            invalidate_later(10)
+            exec_count += 1
+
+    # Flush to run the effect once and start the invalidate_later timer
+    await flush()
+    assert exec_count == 1
+
+    # Collect the asyncio tasks before teardown
+    tasks_before = {t for t in asyncio.all_tasks() if not t.done()}
+
+    # Teardown destroys the effect, which invalidates its context,
+    # which cancels the invalidate_later task via ctx.on_invalidate
+    await proxy.teardown()
+
+    # Give the event loop a tick to process the cancellation
+    await asyncio.sleep(0)
+
+    # The invalidate_later task should now be done (cancelled)
+    tasks_after = {t for t in asyncio.all_tasks() if not t.done()}
+    cancelled_tasks = tasks_before - tasks_after
+    assert len(cancelled_tasks) >= 1, "Expected at least one task to be cancelled"
+
+    # Effect should not have run again
+    assert exec_count == 1
+
+
 def test_no_registration_without_session_proxy():
     """Reactive objects created without SessionProxy do NOT register teardown."""
     v = Value(42)
