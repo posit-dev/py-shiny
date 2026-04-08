@@ -1258,66 +1258,6 @@ async def test_inputs_available_during_teardown_callbacks():
 
 
 @pytest.mark.asyncio
-async def test_calc_available_during_teardown_callbacks():
-    """Calc values can still be read inside teardown callbacks (before they are destroyed)."""
-    root = _make_mock_root_session()
-    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-
-    with session_context(proxy):
-        v = Value(21)
-
-        @calc()
-        def doubled():
-            return v() * 2
-
-        # Force evaluation
-        with isolate():
-            assert doubled() == 42
-
-    observed_value: list[int | None] = []
-
-    def read_calc() -> None:
-        with isolate():
-            try:
-                observed_value.append(doubled())
-            except DestroyedReactiveError:
-                observed_value.append(None)
-
-    # Register a callback that reads the calc BEFORE the self-registered
-    # _teardown callback destroys it. Since on_teardown appends to the list,
-    # this callback was registered after the calc's self-registration,
-    # so it will fire after the calc is already destroyed.
-    # Instead, we register it early by inserting into the callbacks directly.
-
-    # Actually, the calc self-registers its _teardown in __init__, and we
-    # register read_calc after that. Callbacks fire in registration order,
-    # so the calc's _teardown fires first, then read_calc.
-    # This means by the time read_calc runs, the calc is already destroyed.
-    # This is expected — the test verifies that input values (not calcs)
-    # survive through all callbacks since inputs are torn down after callbacks.
-
-    # Let's test that the Value is still readable during teardown instead.
-    observed_input: list[str | None] = []
-    root.input._map["mod1-slider"] = Value(99, read_only=True)
-
-    def read_input_during_teardown() -> None:
-        inp = root.input._map.get("mod1-slider")
-        if inp is not None:
-            with isolate():
-                observed_input.append(inp())
-        else:
-            observed_input.append(None)
-
-    proxy.on_teardown(read_input_during_teardown)
-    await proxy.teardown()
-
-    # Input was still readable during teardown callback
-    assert observed_input == [99]
-    # Input is cleaned up after callbacks
-    assert "mod1-slider" not in root.input._map
-
-
-@pytest.mark.asyncio
 async def test_outputs_available_during_teardown_callbacks():
     """Output entries still exist during teardown callbacks."""
     root = _make_mock_root_session()

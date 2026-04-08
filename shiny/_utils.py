@@ -601,7 +601,7 @@ class AsyncCallbacks:
                 if self.on_error is not None:
                     self.on_error(e)
                 else:
-                    raise e
+                    raise
             finally:
                 if once:
                     if id in self._callbacks:
