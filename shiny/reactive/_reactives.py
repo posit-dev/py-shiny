@@ -512,6 +512,9 @@ class Value(Generic[T]):
         if self._torn_down:
             return
         self._torn_down = True
+        # Uses _set() instead of unset() to bypass the read-only guard,
+        # since input values are read-only but still need teardown.
+        # Invalidates both value and is_set dependents, and frees the stored value.
         self._set(MISSING)  # type: ignore
 
     def unset(self) -> None:
