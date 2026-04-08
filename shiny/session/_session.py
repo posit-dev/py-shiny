@@ -1329,8 +1329,8 @@ class SessionProxy(Session):
         self.app = root_session.app
         self.id = root_session.id
         self.ns = ns
-        self._input = Inputs(values=root_session.input._map, ns=ns)
-        self._output = Outputs(
+        self.input = Inputs(values=root_session.input._map, ns=ns)
+        self.output = Outputs(
             self,
             ns=ns,
             outputs=root_session.output._outputs,
@@ -1349,9 +1349,9 @@ class SessionProxy(Session):
             if ns_key not in teardown_cbs:
                 teardown_cbs[ns_key] = _utils.AsyncCallbacks()
                 # Remove namespaced input keys and their values on teardown.
-                self.on_teardown(self._input._teardown)
+                self.on_teardown(self.input._teardown)
                 # Remove namespaced output entries and destroy their effects on teardown.
-                self.on_teardown(self._output._teardown)
+                self.on_teardown(self.output._teardown)
 
     def _get_teardown_callbacks(
         self,
@@ -1362,14 +1362,6 @@ class SessionProxy(Session):
             root, "_teardown_callbacks_by_ns", None
         )
         return cbs
-
-    @property
-    def input(self) -> Inputs:  # pyright: ignore[reportIncompatibleVariableOverride]
-        return self._input
-
-    @property
-    def output(self) -> Outputs:  # pyright: ignore[reportIncompatibleVariableOverride]
-        return self._output
 
     def on_teardown(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
