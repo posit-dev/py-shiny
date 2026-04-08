@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
-
 import asyncio
+from typing import Any, cast
 
 import pytest
 
