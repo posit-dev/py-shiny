@@ -178,6 +178,8 @@ class Value(Generic[T]):
                 self._otel_namespace = ns_str
         # Lazily initialized OTel label for value updates; Allows for `_name` to be adjusted manually after init (ex: Inputs class)
         self._otel_label: str | None = None
+        # Guards _teardown() idempotency — _set(MISSING) should only run once
+        # to avoid redundant invalidation of dependents.
         self._torn_down: bool = False
 
         from ..session._session import SessionProxy
@@ -589,6 +591,8 @@ class Calc_(Generic[T]):
         self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
+        # Guards _teardown() idempotency and __call__/get_value access.
+        # Once torn down, the calc raises DestroyedReactiveError on access.
         self._torn_down: bool = False
 
         self._session: Optional[Session]
