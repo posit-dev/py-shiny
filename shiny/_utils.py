@@ -558,8 +558,8 @@ class AsyncCallbacks:
         self.on_error: Callable[[Exception], None] | None = None
         """
         If set, called with the exception when a callback raises during
-        :meth:`invoke`, and iteration continues to the next callback.
-        If ``None`` (the default), exceptions propagate immediately.
+        `invoke()`, and iteration continues to the next callback.
+        If `None` (the default), exceptions propagate immediately.
         """
 
     def register(

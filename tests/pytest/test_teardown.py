@@ -4,14 +4,24 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+import asyncio
+
 import pytest
 
 from shiny import _utils
 from shiny._namespaces import ResolvedId
-from shiny.reactive import Value, calc, effect, flush, isolate
+from shiny.express._stub_session import ExpressStubSession
+from shiny.reactive import Value, calc, effect, flush, invalidate_later, isolate
 from shiny.reactive._reactives import DestroyedReactiveError, Effect_
 from shiny.render.renderer import Renderer
-from shiny.session._session import Inputs, OutputInfo, Outputs, Session, SessionProxy
+from shiny.session._session import (
+    AppSession,
+    Inputs,
+    OutputInfo,
+    Outputs,
+    Session,
+    SessionProxy,
+)
 from shiny.session._utils import session_context
 
 
@@ -611,8 +621,6 @@ async def test_calc_self_registers_with_session_proxy():
         def doubled():
             return 42
 
-    from shiny.reactive import isolate
-
     with isolate():
         assert doubled() == 42
 
@@ -642,10 +650,6 @@ async def test_effect_self_registers_with_session_proxy():
 @pytest.mark.asyncio
 async def test_invalidate_later_cancelled_on_teardown():
     """invalidate_later() timer is cancelled when its effect is destroyed via teardown."""
-    import asyncio
-
-    from shiny.reactive import invalidate_later
-
     root = _make_mock_root_session_non_stub()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
 
@@ -805,8 +809,6 @@ async def test_nested_module_teardown():
 # ---------------------------------------------------------------------------
 def test_express_stub_session_on_teardown_is_noop():
     """ExpressStubSession.on_teardown() silently does nothing."""
-    from shiny.express._stub_session import ExpressStubSession
-
     stub = ExpressStubSession()
 
     called: list[str] = []
@@ -818,8 +820,6 @@ def test_express_stub_session_on_teardown_is_noop():
 @pytest.mark.asyncio
 async def test_express_stub_session_teardown_is_noop():
     """ExpressStubSession.teardown() silently does nothing."""
-    from shiny.express._stub_session import ExpressStubSession
-
     stub = ExpressStubSession()
     # Should not raise
     await stub.teardown()
@@ -827,8 +827,6 @@ async def test_express_stub_session_teardown_is_noop():
 
 def test_express_stub_session_has_no_teardown_state():
     """ExpressStubSession does not have _teardown_callbacks_by_ns."""
-    from shiny.express._stub_session import ExpressStubSession
-
     stub = ExpressStubSession()
     assert not hasattr(stub, "_teardown_callbacks_by_ns")
 
@@ -836,8 +834,6 @@ def test_express_stub_session_has_no_teardown_state():
 @pytest.mark.asyncio
 async def test_express_stub_session_proxy_teardown_is_silent():
     """SessionProxy created from ExpressStubSession silently does nothing on teardown."""
-    from shiny.express._stub_session import ExpressStubSession
-
     stub = ExpressStubSession()
     proxy = stub.make_scope("mod1")
     assert isinstance(proxy, SessionProxy)
@@ -853,8 +849,6 @@ async def test_express_stub_session_proxy_teardown_is_silent():
 # ---------------------------------------------------------------------------
 def test_app_session_has_teardown_methods():
     """AppSession has on_teardown() and teardown() methods."""
-    from shiny.session._session import AppSession
-
     assert hasattr(AppSession, "on_teardown")
     assert hasattr(AppSession, "teardown")
 
@@ -865,15 +859,11 @@ def _make_app_session_like_mock() -> Any:
     We can't easily instantiate a real AppSession (requires Connection, App),
     so we call the unbound methods directly.
     """
-    from shiny.session._session import AppSession
-
     return AppSession
 
 
 def test_app_session_on_teardown_raises_runtime_error():
     """AppSession.on_teardown() raises RuntimeError with descriptive message."""
-    from shiny.session._session import AppSession
-
     # Call the unbound method with a dummy self
     with pytest.raises(RuntimeError, match="only supported on SessionProxy"):
         AppSession.on_teardown(cast(Any, None), lambda: None)
@@ -882,8 +872,6 @@ def test_app_session_on_teardown_raises_runtime_error():
 @pytest.mark.asyncio
 async def test_app_session_teardown_raises_runtime_error():
     """AppSession.teardown() raises RuntimeError with descriptive message."""
-    from shiny.session._session import AppSession
-
     with pytest.raises(RuntimeError, match="only supported on SessionProxy"):
         await AppSession.teardown(cast(Any, None))
 
