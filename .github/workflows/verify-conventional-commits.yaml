@@ -26,7 +26,7 @@ jobs:
             release
             style
             test
-      - uses: marocchino/sticky-pull-request-comment@v2
+      - uses: marocchino/sticky-pull-request-comment@v3
         if: always() && (steps.lint.outputs.error_message != null)
         with:
           header: lint-error
@@ -42,7 +42,7 @@ jobs:
             </details>
 
       - if: ${{ steps.lint.outputs.error_message == null }}
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: lint-error
           delete: true
