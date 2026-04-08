@@ -1348,8 +1348,9 @@ class SessionProxy(Session):
             ns_key = str(self.ns)
             if ns_key not in teardown_cbs:
                 teardown_cbs[ns_key] = _utils.AsyncCallbacks()
-                # These are scope-level cleanups that should run once per teardown
+                # Remove namespaced input keys and their values on teardown.
                 self.on_teardown(self._input._teardown)
+                # Remove namespaced output entries and destroy their effects on teardown.
                 self.on_teardown(self._output._teardown)
 
     def _get_teardown_callbacks(

@@ -185,6 +185,8 @@ class Value(Generic[T]):
         from ..session._session import SessionProxy
 
         if isinstance(session, SessionProxy):
+            # Unset the value on module teardown so dependents are invalidated
+            # and the stored value is freed.
             session.on_teardown(self._teardown)
 
     def _try_infer_name(self) -> str | None:
@@ -640,6 +642,8 @@ class Calc_(Generic[T]):
         from ..session._session import SessionProxy
 
         if isinstance(self._session, SessionProxy):
+            # Invalidate context and dependents on module teardown so the calc
+            # is permanently destroyed and references are freed.
             self._session.on_teardown(self._teardown)
 
     def _teardown(self) -> None:
@@ -925,6 +929,7 @@ class Effect_:
         from ..session._session import SessionProxy
 
         if isinstance(self._session, SessionProxy):
+            # Stop the effect from re-executing on module teardown.
             self._session.on_teardown(self.destroy)
 
         # Extract OpenTelemetry attributes at initialization time
