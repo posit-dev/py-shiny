@@ -54,8 +54,14 @@ from ..types import (
     SilentException,
 )
 from ._core import Context, Dependents, ReactiveWarning, isolate
-from ._destroy import DestroyedReactiveError
 from ._utils import is_user_code_frame
+
+
+class DestroyedReactiveError(Exception):
+    """Raised when accessing a destroyed reactive.calc."""
+
+    pass
+
 
 if TYPE_CHECKING:
     from .. import Session

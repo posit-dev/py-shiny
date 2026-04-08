@@ -9,8 +9,7 @@ import pytest
 from shiny import _utils
 from shiny._namespaces import ResolvedId
 from shiny.reactive import Value, calc, effect, flush, isolate
-from shiny.reactive._destroy import DestroyedReactiveError
-from shiny.reactive._reactives import Effect_
+from shiny.reactive._reactives import DestroyedReactiveError, Effect_
 from shiny.render.renderer import Renderer
 from shiny.session._session import Inputs, OutputInfo, Outputs, Session, SessionProxy
 from shiny.session._utils import session_context
@@ -1109,8 +1108,12 @@ async def test_teardown_cascades_to_child_namespaces():
     child = SessionProxy(root_session=root, ns=ResolvedId("parent-child"))
 
     called: list[str] = []
-    parent.on_teardown(lambda: called.append("parent"))  # pyright: ignore[reportArgumentType]
-    child.on_teardown(lambda: called.append("child"))  # pyright: ignore[reportArgumentType]
+    parent.on_teardown(
+        lambda: called.append("parent")
+    )  # pyright: ignore[reportArgumentType]
+    child.on_teardown(
+        lambda: called.append("child")
+    )  # pyright: ignore[reportArgumentType]
 
     await parent.teardown()
 
@@ -1127,9 +1130,15 @@ async def test_teardown_cascades_to_grandchild_namespaces():
     grandchild = SessionProxy(root_session=root, ns=ResolvedId("p-c-gc"))
 
     called: list[str] = []
-    parent.on_teardown(lambda: called.append("parent"))  # pyright: ignore[reportArgumentType]
-    child.on_teardown(lambda: called.append("child"))  # pyright: ignore[reportArgumentType]
-    grandchild.on_teardown(lambda: called.append("grandchild"))  # pyright: ignore[reportArgumentType]
+    parent.on_teardown(
+        lambda: called.append("parent")
+    )  # pyright: ignore[reportArgumentType]
+    child.on_teardown(
+        lambda: called.append("child")
+    )  # pyright: ignore[reportArgumentType]
+    grandchild.on_teardown(
+        lambda: called.append("grandchild")
+    )  # pyright: ignore[reportArgumentType]
 
     await parent.teardown()
 
@@ -1146,7 +1155,9 @@ async def test_teardown_children_before_parents():
     for ns in namespaces:
         proxy = SessionProxy(root_session=root, ns=ResolvedId(ns))
         # Capture ns in default arg to avoid closure issues
-        proxy.on_teardown(lambda n=ns: order.append(n))  # pyright: ignore[reportArgumentType]
+        proxy.on_teardown(
+            lambda n=ns: order.append(n)
+        )  # pyright: ignore[reportArgumentType]
 
     order: list[str] = []
     top = SessionProxy(root_session=root, ns=ResolvedId("a"))
@@ -1175,9 +1186,15 @@ async def test_teardown_does_not_cascade_to_sibling_namespaces():
     proxy_b_child = SessionProxy(root_session=root, ns=ResolvedId("b-child"))
 
     called: list[str] = []
-    proxy_a.on_teardown(lambda: called.append("a"))  # pyright: ignore[reportArgumentType]
-    proxy_b.on_teardown(lambda: called.append("b"))  # pyright: ignore[reportArgumentType]
-    proxy_b_child.on_teardown(lambda: called.append("b-child"))  # pyright: ignore[reportArgumentType]
+    proxy_a.on_teardown(
+        lambda: called.append("a")
+    )  # pyright: ignore[reportArgumentType]
+    proxy_b.on_teardown(
+        lambda: called.append("b")
+    )  # pyright: ignore[reportArgumentType]
+    proxy_b_child.on_teardown(
+        lambda: called.append("b-child")
+    )  # pyright: ignore[reportArgumentType]
 
     await proxy_a.teardown()
 
@@ -1195,8 +1212,12 @@ async def test_child_teardown_does_not_cascade_to_parent():
     child = SessionProxy(root_session=root, ns=ResolvedId("parent-child"))
 
     called: list[str] = []
-    parent.on_teardown(lambda: called.append("parent"))  # pyright: ignore[reportArgumentType]
-    child.on_teardown(lambda: called.append("child"))  # pyright: ignore[reportArgumentType]
+    parent.on_teardown(
+        lambda: called.append("parent")
+    )  # pyright: ignore[reportArgumentType]
+    child.on_teardown(
+        lambda: called.append("child")
+    )  # pyright: ignore[reportArgumentType]
 
     await child.teardown()
 
