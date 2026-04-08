@@ -1341,11 +1341,6 @@ class SessionProxy(Session):
 
         self.bookmark = BookmarkProxy(self)
 
-        # Remove namespaced input keys and their values on teardown.
-        self.on_teardown(self.input._teardown)
-        # Remove namespaced output entries and destroy their effects on teardown.
-        self.on_teardown(self.output._teardown)
-
     def _get_teardown_callbacks(
         self,
     ) -> dict[str, _utils.AsyncCallbacks] | None:
@@ -1391,6 +1386,11 @@ class SessionProxy(Session):
                 await callbacks.invoke(
                     on_error=lambda e: traceback.print_exc(),
                 )
+
+        # Remove namespaced input keys and their values.
+        self.input._teardown()
+        # Remove namespaced output entries and destroy their effects.
+        self.output._teardown()
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
