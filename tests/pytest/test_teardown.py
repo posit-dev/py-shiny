@@ -441,7 +441,7 @@ def _make_mock_root_session() -> Session:
             self._outbound_message_queues = MockOutboundQueues()
             self._downloads: dict[str, Any] = {}
             self.bookmark = MockBookmark()
-            self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
+            self._teardown_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
 
         def _is_hidden(self, name: str) -> bool:
             return False
@@ -505,7 +505,7 @@ async def test_session_proxy_teardown_clears_callbacks():
 
     await proxy.teardown()
     # Callbacks are removed from root session after teardown
-    assert "mod1" not in root._teardown_callbacks
+    assert "mod1" not in cast(Any, root)._teardown_callbacks_by_ns
 
 
 @pytest.mark.asyncio
@@ -515,12 +515,8 @@ async def test_session_proxy_namespace_reusable_after_teardown():
     proxy1 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
     await proxy1.teardown()
 
-    # The old proxy is torn down
-    assert proxy1._torn_down is True
-
     # A new proxy for the same namespace should work fine
     proxy2 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-    assert proxy2._torn_down is False
     # Can access input/output without error
     _ = proxy2.input
     _ = proxy2.output
@@ -534,30 +530,8 @@ def test_session_proxy_callbacks_stored_on_root():
     proxy.on_teardown(lambda: None)
 
     # Callbacks live on root, keyed by namespace
-    assert "mod1" in root._teardown_callbacks
-    assert not hasattr(proxy, "_on_teardown_callbacks")
-
-
-@pytest.mark.asyncio
-async def test_session_proxy_teardown_guards_input():
-    """After teardown, accessing session.input raises RuntimeError."""
-    root = _make_mock_root_session()
-    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-    await proxy.teardown()
-
-    with pytest.raises(RuntimeError, match="torn down"):
-        _ = proxy.input
-
-
-@pytest.mark.asyncio
-async def test_session_proxy_teardown_guards_output():
-    """After teardown, accessing session.output raises RuntimeError."""
-    root = _make_mock_root_session()
-    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-    await proxy.teardown()
-
-    with pytest.raises(RuntimeError, match="torn down"):
-        _ = proxy.output
+    assert "mod1" in cast(Any, root)._teardown_callbacks_by_ns
+    assert not hasattr(proxy, "_on_teardown_callbacks_by_ns")
 
 
 def _make_mock_root_session_non_stub() -> Session:
@@ -583,7 +557,7 @@ def _make_mock_root_session_non_stub() -> Session:
             self._outbound_message_queues = MockOutboundQueues()
             self._downloads: dict[str, Any] = {}
             self.bookmark = MockBookmark()
-            self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
+            self._teardown_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
 
         def _is_hidden(self, name: str) -> bool:
             return False
@@ -668,6 +642,7 @@ async def test_effect_self_registers_with_session_proxy():
 def test_no_registration_without_session_proxy():
     """Reactive objects created without SessionProxy do NOT register teardown."""
     v = Value(42)
+    # Value and Calc still have _torn_down for their own teardown logic
     assert v._torn_down is False
 
     @calc()
@@ -807,11 +782,11 @@ async def test_express_stub_session_teardown_is_noop():
 
 
 def test_express_stub_session_has_no_teardown_state():
-    """ExpressStubSession does not have _teardown_callbacks."""
+    """ExpressStubSession does not have _teardown_callbacks_by_ns."""
     from shiny.express._stub_session import ExpressStubSession
 
     stub = ExpressStubSession()
-    assert not hasattr(stub, "_teardown_callbacks")
+    assert not hasattr(stub, "_teardown_callbacks_by_ns")
 
 
 @pytest.mark.asyncio
@@ -823,7 +798,7 @@ async def test_express_stub_session_proxy_teardown_is_silent():
     proxy = stub.make_scope("mod1")
     assert isinstance(proxy, SessionProxy)
 
-    # on_teardown should not raise even though root has no _teardown_callbacks
+    # on_teardown should not raise even though root has no _teardown_callbacks_by_ns
     proxy.on_teardown(lambda: None)
     # teardown should not raise
     await proxy.teardown()
@@ -913,40 +888,23 @@ async def test_session_proxy_on_teardown_mixed_sync_async():
 
 
 @pytest.mark.asyncio
-async def test_session_proxy_on_teardown_after_teardown_is_noop():
-    """Registering a callback after teardown does not fire it."""
+async def test_session_proxy_on_teardown_after_teardown():
+    """Registering a callback after teardown creates a fresh callback set for the namespace."""
     root = _make_mock_root_session()
     proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
 
     await proxy.teardown()
 
     called: list[str] = []
-    # Register after teardown — callback should not fire
+    # Register after teardown — goes into a new AsyncCallbacks for this namespace
     proxy.on_teardown(
         lambda: called.append("late")
     )  # pyright: ignore[reportArgumentType]
     assert called == []
 
-    # Second teardown should also be a no-op
+    # A second teardown fires the newly registered callback
     await proxy.teardown()
-    assert called == []
-
-
-@pytest.mark.asyncio
-async def test_session_proxy_teardown_marks_scope_before_invoking_callbacks():
-    """The scope is marked as torn down before callbacks run."""
-    root = _make_mock_root_session()
-    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-
-    torn_down_during_callback: list[bool] = []
-
-    def check_state() -> None:
-        torn_down_during_callback.append(proxy._torn_down)
-
-    proxy.on_teardown(check_state)
-    await proxy.teardown()
-
-    assert torn_down_during_callback == [True]
+    assert called == ["late"]
 
 
 @pytest.mark.asyncio
@@ -970,10 +928,6 @@ async def test_session_proxy_multiple_proxies_same_namespace():
     assert "from_p1" in called
     assert "from_p2" in called
 
-    # proxy1 is torn down; proxy2 is not (instance-level flag)
-    assert proxy1._torn_down is True
-    assert proxy2._torn_down is False
-
 
 @pytest.mark.asyncio
 async def test_session_proxy_different_namespaces_independent():
@@ -995,12 +949,6 @@ async def test_session_proxy_different_namespaces_independent():
 
     assert called_a == ["a"]
     assert called_b == []
-    assert proxy_a._torn_down is True
-    assert proxy_b._torn_down is False
-
-    # proxy_b still works
-    _ = proxy_b.input
-    _ = proxy_b.output
 
 
 # ---------------------------------------------------------------------------
@@ -1022,7 +970,6 @@ async def test_module_recreated_after_teardown():
 
     # Second lifecycle — same namespace
     proxy2 = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
-    assert proxy2._torn_down is False
     _ = proxy2.input
     _ = proxy2.output
 
@@ -1060,7 +1007,6 @@ async def test_module_recreated_with_new_inputs_outputs():
 
     # Second lifecycle — re-create under same namespace
     proxy2 = SessionProxy(root_session=root, ns=ResolvedId("panel_1"))
-    assert proxy2._torn_down is False
 
     # New inputs and outputs can be populated
     root.input._map["panel_1-txt"] = Value("new value", read_only=True)

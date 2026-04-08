@@ -603,7 +603,7 @@ class AppSession(Session):
 
         # Teardown callbacks for module scopes, keyed by namespace string.
         # Stored on root session because SessionProxy is a throwaway lens.
-        self._teardown_callbacks: dict[str, _utils.AsyncCallbacks] = {}
+        self._teardown_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
 
         self._register_session_ended_callbacks()
 
@@ -1200,13 +1200,13 @@ class AppSession(Session):
     ) -> None:
         raise RuntimeError(
             "on_teardown() is only supported on SessionProxy (module sessions), "
-            "not on the root AppSession."
+            "not on the root AppSession. For teardown behavior that applies to the entire session, use on_ended() instead."
         )
 
     async def teardown(self) -> None:
         raise RuntimeError(
             "teardown() is only supported on SessionProxy (module sessions), "
-            "not on the root AppSession."
+            "not on the root AppSession. For teardown behavior that applies to the entire session, use on_ended() instead."
         )
 
     # ==========================================================================
@@ -1341,8 +1341,6 @@ class SessionProxy(Session):
 
         self.bookmark = BookmarkProxy(self)
 
-        self._torn_down: bool = False
-
         # Register input/output teardown on first proxy creation for this scope.
         # Subsequent proxies for the same ns reuse the existing callback list.
         teardown_cbs = self._get_teardown_callbacks()
@@ -1360,26 +1358,16 @@ class SessionProxy(Session):
         """Get the teardown callbacks dict from the root session, or None if unsupported."""
         root = self._root_session
         cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
-            root, "_teardown_callbacks", None
+            root, "_teardown_callbacks_by_ns", None
         )
         return cbs
 
     @property
     def input(self) -> Inputs:  # pyright: ignore[reportIncompatibleVariableOverride]
-        if self._torn_down:
-            raise RuntimeError(
-                f"SessionProxy (ns='{self.ns}') has been torn down. "
-                "Cannot access input."
-            )
         return self._input
 
     @property
     def output(self) -> Outputs:  # pyright: ignore[reportIncompatibleVariableOverride]
-        if self._torn_down:
-            raise RuntimeError(
-                f"SessionProxy (ns='{self.ns}') has been torn down. "
-                "Cannot access output."
-            )
         return self._output
 
     def on_teardown(
@@ -1393,8 +1381,6 @@ class SessionProxy(Session):
         fn
             The function to call when teardown occurs.
         """
-        if self._torn_down:
-            return
         teardown_cbs = self._get_teardown_callbacks()
         if teardown_cbs is not None:
             ns_key = str(self.ns)
@@ -1411,11 +1397,6 @@ class SessionProxy(Session):
 
         Idempotent: calling teardown() more than once has no effect.
         """
-        if self._torn_down:
-            return
-
-        self._torn_down = True
-
         teardown_cbs = self._get_teardown_callbacks()
         if teardown_cbs is not None:
             ns_key = str(self.ns)
@@ -1714,6 +1695,10 @@ class Inputs:
         return serialized_values
 
     def _teardown(self) -> None:
+        # This will cause all modules with the same module namespace prefix to have their inputs removed.
+        # So if one parent module is being torn down, all descendant modules will be torn down.
+        # Just like with Outputs
+
         prefix = str(self._ns) + "-"
         clientdata_prefix = f".clientdata_output_{self._ns}-"
         keys_to_remove = [
@@ -2169,6 +2154,10 @@ class Outputs:
             del self._outputs[output_name]
 
     def _teardown(self) -> None:
+        # This will cause all modules with the same module namespace prefix to have their outputs removed.
+        # So if one parent module is being torn down, all descendant modules will be torn down.
+        # Just like with Inputs
+
         prefix = str(self._ns) + "-"
         keys_to_remove = [k for k in self._outputs if k.startswith(prefix)]
         for key in keys_to_remove:
