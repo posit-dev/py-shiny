@@ -1384,9 +1384,7 @@ class SessionProxy(Session):
             # Collect this namespace and all descendant namespaces (children,
             # grandchildren, etc.) that share the prefix.
             matching_keys = [
-                k
-                for k in teardown_cbs
-                if k == str(self.ns) or k.startswith(ns_prefix)
+                k for k in teardown_cbs if k == str(self.ns) or k.startswith(ns_prefix)
             ]
             # Sort deepest namespaces first (most dashes → most nested) so that
             # children are torn down before parents, mirroring the reverse of
