@@ -575,6 +575,20 @@ class AsyncCallbacks:
         on_error: Callable[[Exception], None] | None = None,
         **kwargs: Any,
     ) -> None:
+        """
+        Invoke all registered callbacks with the given arguments.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to each callback.
+        on_error
+            If provided, called with the exception when a callback raises,
+            and iteration continues to the next callback. If ``None``
+            (the default), exceptions propagate immediately.
+        **kwargs
+            Keyword arguments passed to each callback.
+        """
         # The list() wrapper is necessary to force collection of all the items before
         # iteration begins. This is necessary because self._callbacks may be mutated
         # by callbacks.
