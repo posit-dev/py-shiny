@@ -572,7 +572,7 @@ class AsyncCallbacks:
     async def invoke(
         self,
         *args: Any,
-        on_error: Callable[[Exception], None] | None = None,
+        _on_error: Callable[[Exception], None] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -582,7 +582,7 @@ class AsyncCallbacks:
         ----------
         *args
             Positional arguments passed to each callback.
-        on_error
+        _on_error
             If provided, called with the exception when a callback raises,
             and iteration continues to the next callback. If ``None``
             (the default), exceptions propagate immediately.
@@ -597,8 +597,8 @@ class AsyncCallbacks:
             try:
                 await fn(*args, **kwargs)
             except Exception as e:
-                if on_error is not None:
-                    on_error(e)
+                if _on_error is not None:
+                    _on_error(e)
                 else:
                     raise e
             finally:

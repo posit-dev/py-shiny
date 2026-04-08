@@ -1378,19 +1378,19 @@ class SessionProxy(Session):
 
         Idempotent: calling teardown() more than once has no effect.
         """
+        # Remove namespaced input keys and their values.
+        self.input._teardown()
+        # Remove namespaced output entries and destroy their effects.
+        self.output._teardown()
+
         teardown_cbs = self._get_teardown_callbacks()
         if teardown_cbs is not None:
             ns_key = str(self.ns)
             callbacks = teardown_cbs.pop(ns_key, None)
             if callbacks is not None:
                 await callbacks.invoke(
-                    on_error=lambda e: traceback.print_exc(),
+                    _on_error=lambda e: traceback.print_exc(),
                 )
-
-        # Remove namespaced input keys and their values.
-        self.input._teardown()
-        # Remove namespaced output entries and destroy their effects.
-        self.output._teardown()
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
