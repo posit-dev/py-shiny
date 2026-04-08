@@ -1341,17 +1341,10 @@ class SessionProxy(Session):
 
         self.bookmark = BookmarkProxy(self)
 
-        # Register input/output teardown on first proxy creation for this scope.
-        # Subsequent proxies for the same ns reuse the existing callback list.
-        teardown_cbs = self._get_teardown_callbacks()
-        if teardown_cbs is not None:
-            ns_key = str(self.ns)
-            if ns_key not in teardown_cbs:
-                teardown_cbs[ns_key] = _utils.AsyncCallbacks()
-                # Remove namespaced input keys and their values on teardown.
-                self.on_teardown(self.input._teardown)
-                # Remove namespaced output entries and destroy their effects on teardown.
-                self.on_teardown(self.output._teardown)
+        # Remove namespaced input keys and their values on teardown.
+        self.on_teardown(self.input._teardown)
+        # Remove namespaced output entries and destroy their effects on teardown.
+        self.on_teardown(self.output._teardown)
 
     def _get_teardown_callbacks(
         self,
