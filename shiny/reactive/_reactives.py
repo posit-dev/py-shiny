@@ -642,6 +642,9 @@ class Calc_(Generic[T]):
         if self._ctx is not None:
             self._ctx.invalidate()
         self._dependents.invalidate()
+        self._ctx = None
+        self._error.clear()
+        self._value.clear()
 
     def __call__(self) -> T:
         if self._torn_down:

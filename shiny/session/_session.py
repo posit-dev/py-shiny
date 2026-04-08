@@ -203,8 +203,6 @@ class Session(ABC):
     _outbound_message_queues: OutBoundMessageQueues
     _downloads: dict[str, DownloadInfo]
 
-    _teardown_callbacks: dict[str, _utils.AsyncCallbacks]
-
     @abstractmethod
     def is_stub_session(self) -> bool:
         """
@@ -1347,14 +1345,24 @@ class SessionProxy(Session):
 
         # Register input/output teardown on first proxy creation for this scope.
         # Subsequent proxies for the same ns reuse the existing callback list.
-        ns_key = str(self.ns)
-        root = self._root_session
-        if hasattr(root, "_teardown_callbacks"):
-            if ns_key not in root._teardown_callbacks:
-                root._teardown_callbacks[ns_key] = _utils.AsyncCallbacks()
+        teardown_cbs = self._get_teardown_callbacks()
+        if teardown_cbs is not None:
+            ns_key = str(self.ns)
+            if ns_key not in teardown_cbs:
+                teardown_cbs[ns_key] = _utils.AsyncCallbacks()
                 # These are scope-level cleanups that should run once per teardown
                 self.on_teardown(self._input._teardown)
                 self.on_teardown(self._output._teardown)
+
+    def _get_teardown_callbacks(
+        self,
+    ) -> dict[str, _utils.AsyncCallbacks] | None:
+        """Get the teardown callbacks dict from the root session, or None if unsupported."""
+        root = self._root_session
+        cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
+            root, "_teardown_callbacks", None
+        )
+        return cbs
 
     @property
     def input(self) -> Inputs:  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -1387,12 +1395,12 @@ class SessionProxy(Session):
         """
         if self._torn_down:
             return
-        root = self._root_session
-        ns_key = str(self.ns)
-        if hasattr(root, "_teardown_callbacks"):
-            if ns_key not in root._teardown_callbacks:
-                root._teardown_callbacks[ns_key] = _utils.AsyncCallbacks()
-            root._teardown_callbacks[ns_key].register(wrap_async(fn))
+        teardown_cbs = self._get_teardown_callbacks()
+        if teardown_cbs is not None:
+            ns_key = str(self.ns)
+            if ns_key not in teardown_cbs:
+                teardown_cbs[ns_key] = _utils.AsyncCallbacks()
+            teardown_cbs[ns_key].register(wrap_async(fn))
 
     async def teardown(self) -> None:
         """
@@ -1408,17 +1416,14 @@ class SessionProxy(Session):
 
         self._torn_down = True
 
-        root = self._root_session
-        ns_key = str(self.ns)
-        if hasattr(root, "_teardown_callbacks"):
-            callbacks = root._teardown_callbacks.pop(ns_key, None)
+        teardown_cbs = self._get_teardown_callbacks()
+        if teardown_cbs is not None:
+            ns_key = str(self.ns)
+            callbacks = teardown_cbs.pop(ns_key, None)
             if callbacks is not None:
-                for _id, (fn, _once) in list(callbacks._callbacks.items()):
-                    try:
-                        await fn()
-                    except Exception:
-                        traceback.print_exc()
-                callbacks._callbacks.clear()
+                await callbacks.invoke(
+                    on_error=lambda e: traceback.print_exc(),
+                )
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)

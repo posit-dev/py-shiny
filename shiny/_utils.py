@@ -569,7 +569,12 @@ class AsyncCallbacks:
 
         return cancel_callback
 
-    async def invoke(self, *args: Any, **kwargs: Any) -> None:
+    async def invoke(
+        self,
+        *args: Any,
+        on_error: Callable[[Exception], None] | None = None,
+        **kwargs: Any,
+    ) -> None:
         # The list() wrapper is necessary to force collection of all the items before
         # iteration begins. This is necessary because self._callbacks may be mutated
         # by callbacks.
@@ -577,6 +582,11 @@ class AsyncCallbacks:
             fn, once = value
             try:
                 await fn(*args, **kwargs)
+            except Exception as e:
+                if on_error is not None:
+                    on_error(e)
+                else:
+                    raise e
             finally:
                 if once:
                     if id in self._callbacks:
