@@ -1388,9 +1388,8 @@ class SessionProxy(Session):
             ns_key = str(self.ns)
             callbacks = teardown_cbs.pop(ns_key, None)
             if callbacks is not None:
-                await callbacks.invoke(
-                    _on_error=lambda e: traceback.print_exc(),
-                )
+                callbacks.on_error = lambda e: traceback.print_exc()
+                await callbacks.invoke()
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
