@@ -295,6 +295,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 con.execute(
                     "select min(timestamp), max(timestamp) from accuracy_scores"
                 ).fetchone(),
+                format="ISO8601",
                 utc=True,
             )
             ui.update_slider(
