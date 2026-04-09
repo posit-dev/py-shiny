@@ -48,7 +48,7 @@ runs:
           --workdir /home/pwuser \
           --user pwuser \
           "mcr.microsoft.com/playwright:v${{ steps.resolve-version.outputs.version }}-noble" \
-          /bin/sh -c "npx -y playwright@${{ steps.resolve-version.outputs.version }} run-server --port ${{ inputs.port }} --host 0.0.0.0"
+          /bin/sh -c "npx playwright run-server --port ${{ inputs.port }} --host 0.0.0.0"
 
     - name: Wait for Playwright server
       shell: bash
