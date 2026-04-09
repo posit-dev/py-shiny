@@ -138,6 +138,9 @@ jobs:
           # Related: https://github.com/microsoft/playwright/issues/18119
           disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+
       - name: Run End-to-End tests
         timeout-minutes: 60
         run: |
@@ -202,6 +205,9 @@ jobs:
         run: |
           make ci-install-py-shiny-templates-deps
 
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+
       - name: Run example app tests
         timeout-minutes: 60
         run: |
@@ -247,6 +253,9 @@ jobs:
           # Related: https://github.com/microsoft/playwright/issues/18119
           disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+
       - name: Run playwright tests for AI generated apps
         timeout-minutes: 60
         run: |
@@ -280,6 +289,9 @@ jobs:
         id: browsers
         with:
           all-browsers: ${{ ! github.event.pull_request.draft }}
+
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
 
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally
