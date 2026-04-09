@@ -34,6 +34,25 @@ runs:
 
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+    - name: Cache Docker image
+      id: docker-cache
+      uses: actions/cache@v5
+      with:
+        path: /tmp/playwright-docker-image.tar
+        key: playwright-docker-${{ runner.os }}-${{ steps.resolve-version.outputs.version }}
+
+    - name: Load or pull Docker image
+      shell: bash
+      run: |
+        IMAGE="mcr.microsoft.com/playwright:v${{ steps.resolve-version.outputs.version }}-noble"
+
+        if [ "${{ steps.docker-cache.outputs.cache-hit }}" == "true" ]; then
+          docker load -i /tmp/playwright-docker-image.tar
+        else
+          docker pull "$IMAGE"
+          docker save "$IMAGE" -o /tmp/playwright-docker-image.tar
+        fi
+
     - name: Start Playwright server
       shell: bash
       run: |
