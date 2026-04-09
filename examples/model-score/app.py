@@ -285,7 +285,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     def update_time_range():
         """
-        Every 5 seconds, update the custom time range slider's min and max values to
+        Every 15 seconds, update the custom time range slider's min and max values to
         reflect the current min and max values in the database.
         """
 
@@ -295,6 +295,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 con.execute(
                     "select min(timestamp), max(timestamp) from accuracy_scores"
                 ).fetchone(),
+                format="ISO8601",
                 utc=True,
             )
             ui.update_slider(
