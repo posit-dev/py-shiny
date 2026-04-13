@@ -284,8 +284,10 @@ class Session(ABC):
 
         Examples
         --------
-        **Wrong** -- returning a reactive value from a module. After teardown,
-        the value is destroyed and can no longer be read:
+        Returning a reactive value from a module is fine when the module
+        lives for the entire session. However, if you plan to call
+        `session.teardown()`, the returned value will be destroyed and
+        can no longer be read:
 
         ```python
         @module.server
@@ -295,8 +297,9 @@ class Session(ABC):
             return result  # Destroyed when session.teardown() is called!
         ```
 
-        **Right** -- passing a reactive value into the module. The value
-        lives in the caller's scope and survives teardown:
+        If the module will be torn down, pass a reactive value **into**
+        the module instead. The value lives in the caller's scope and
+        survives teardown:
 
         ```python
         @module.server
