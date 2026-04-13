@@ -250,6 +250,10 @@ class Session(ABC):
         """
         Register a callback to run when this module scope is torn down.
 
+        Teardown callbacks are **not** automatically invoked when the session
+        ends. They only run when `session.teardown()` is explicitly called
+        (typically after removing dynamic module UI).
+
         Parameters
         ----------
         fn
@@ -263,6 +267,10 @@ class Session(ABC):
 
         Fires all registered teardown callbacks, which clean up reactive objects
         (effects, calcs, values) and remove namespaced inputs and outputs.
+
+        Teardown callbacks are **not** automatically invoked when the session
+        ends. This method must be called explicitly, typically after removing
+        dynamic module UI with `ui.remove_ui()`.
 
         Idempotent: calling teardown() more than once has no effect.
         """
@@ -1357,6 +1365,9 @@ class SessionProxy(Session):
         """
         Register a callback to run when this module scope is torn down.
 
+        Teardown callbacks are **not** automatically invoked when the session
+        ends. They only run when `teardown()` is explicitly called.
+
         Parameters
         ----------
         fn
@@ -1375,6 +1386,10 @@ class SessionProxy(Session):
 
         Fires all registered teardown callbacks, which clean up reactive objects
         (effects, calcs, values) and remove namespaced inputs and outputs.
+
+        Teardown callbacks are **not** automatically invoked when the session
+        ends. This method must be called explicitly, typically after removing
+        dynamic module UI with `ui.remove_ui()`.
 
         Idempotent: calling teardown() more than once has no effect.
         """
