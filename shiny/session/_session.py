@@ -1451,7 +1451,9 @@ class SessionProxy(Session):
             for ns_key in matching_keys:
                 callbacks = teardown_cbs.pop(ns_key, None)
                 if callbacks is not None:
-                    callbacks.on_error = lambda e: traceback.print_exc()
+                    callbacks.on_error = lambda e: traceback.print_exception(
+                        type(e), e, e.__traceback__
+                    )
                     await callbacks.invoke()
 
         # Tear down inputs and outputs after callbacks, so that callback
