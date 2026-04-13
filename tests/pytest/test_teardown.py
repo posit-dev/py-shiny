@@ -1267,3 +1267,60 @@ async def test_outputs_available_during_teardown_callbacks():
     assert output_existed == [True]
     # After teardown completes, the output is removed
     assert "mod1-plot" not in root.output._outputs
+
+
+# ---------------------------------------------------------------------------
+# Data persistence pattern tests
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_caller_owned_value_survives_teardown():
+    """A reactive value created outside the module survives module teardown.
+
+    This is the recommended pattern for persisting data after teardown:
+    create the value in the caller's scope and pass it into the module.
+    """
+    root = _make_mock_root_session()
+
+    # Caller creates and owns the value (outside any module)
+    saved_data: Value[str | None] = Value(None)
+
+    # Module sets the caller-owned value
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("editor"))
+    with session_context(proxy):
+        # Simulate module writing to the passed-in value
+        saved_data.set("user input")
+
+    with isolate():
+        assert saved_data() == "user input"
+
+    # Teardown the module
+    await proxy.teardown()
+
+    # The caller-owned value is still valid and readable
+    with isolate():
+        assert saved_data() == "user input"
+        assert saved_data.is_set() is True
+
+
+@pytest.mark.asyncio
+async def test_module_owned_value_destroyed_on_teardown():
+    """A reactive value created inside the module is destroyed on teardown.
+
+    This demonstrates why returning a reactive value from a module is
+    problematic — the value becomes invalid after teardown.
+    """
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("editor"))
+
+    with session_context(proxy):
+        # Module creates its own value (bad pattern for persistence)
+        module_data = Value("important data")
+
+    with isolate():
+        assert module_data() == "important data"
+
+    # Teardown destroys the module-owned value
+    await proxy.teardown()
+
+    with isolate():
+        assert module_data.is_set() is False

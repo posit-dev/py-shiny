@@ -273,6 +273,45 @@ class Session(ABC):
         dynamic module UI with `ui.remove_ui()`.
 
         Idempotent: calling teardown() more than once has no effect.
+
+        Note
+        ----
+        Reactive values and calcs created inside a module are destroyed on
+        teardown. If you need data to survive after a module is torn down,
+        create the reactive value **outside** the module and pass it in.
+        The module can set the value, and the caller can read it after
+        teardown.
+
+        Examples
+        --------
+        **Wrong** -- returning a reactive value from a module. After teardown,
+        the value is destroyed and can no longer be read:
+
+        ```python
+        @module.server
+        def my_module_server(input, output, session):
+            result = reactive.value(0)
+            # ... update result ...
+            return result  # Destroyed when session.teardown() is called!
+        ```
+
+        **Right** -- passing a reactive value into the module. The value
+        lives in the caller's scope and survives teardown:
+
+        ```python
+        @module.server
+        def my_module_server(input, output, session, result):
+            # Module writes to the caller-owned value
+            @reactive.effect
+            @reactive.event(input.save)
+            def _():
+                result.set(input.data())
+
+        # Caller creates and owns the value
+        saved_data = reactive.value(None)
+        my_module_server("editor", result=saved_data)
+        # saved_data is still valid after the module is torn down
+        ```
         """
 
     @abstractmethod
