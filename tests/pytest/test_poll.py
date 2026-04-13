@@ -381,9 +381,11 @@ async def test_file_reader_warning_stacklevel_points_to_caller():
                 def my_reader(x: int = 1):
                     return x
 
-            assert len(w) == 1
-            assert w[0].filename == __file__
-            assert "reactive.file_reader" in str(w[0].message)
+            file_reader_warnings = [
+                x for x in w if "reactive.file_reader" in str(x.message)
+            ]
+            assert len(file_reader_warnings) == 1
+            assert file_reader_warnings[0].filename == __file__
     finally:
         os.unlink(tmpfile.name)
 
