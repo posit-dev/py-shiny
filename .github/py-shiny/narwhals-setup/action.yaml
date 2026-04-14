@@ -15,9 +15,6 @@ runs:
           exit 1
         fi
 
-    - name: Setup remote Playwright
-      uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@main
-
     - name: Install py-shiny dependencies
       shell: bash
       working-directory: ${{ inputs.shiny-dir }}
@@ -25,3 +22,6 @@ runs:
         UV_SYSTEM_PYTHON: "1"
       run: |
         make narwhals-install-shiny
+
+    - name: Setup remote Playwright
+      uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@main
