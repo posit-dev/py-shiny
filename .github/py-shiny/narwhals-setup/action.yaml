@@ -4,10 +4,6 @@ inputs:
   shiny-dir:
     description: "Path to the py-shiny checkout"
     required: true
-  install-deps:
-    description: "Whether to install py-shiny dependencies. Set to 'false' if already installed."
-    required: false
-    default: "true"
 runs:
   using: "composite"
   steps:
@@ -19,14 +15,13 @@ runs:
           exit 1
         fi
 
+    - name: Setup remote Playwright
+      uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@main
+
     - name: Install py-shiny dependencies
-      if: inputs.install-deps == 'true'
       shell: bash
       working-directory: ${{ inputs.shiny-dir }}
       env:
         UV_SYSTEM_PYTHON: "1"
       run: |
-        make ci-install-deps
-
-    - name: Setup remote Playwright
-      uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@main
+        make narwhals-install-shiny
