@@ -313,15 +313,15 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Setup py-shiny
-        id: install
-        uses: ./.github/py-shiny/setup
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
 
       - name: Narwhals integration setup
         uses: ./.github/py-shiny/narwhals-setup
         with:
           shiny-dir: "."
-          install-deps: "false"
 
       - name: Narwhals integration test
         uses: ./.github/py-shiny/narwhals-test
