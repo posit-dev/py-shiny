@@ -4,6 +4,10 @@ inputs:
   shiny-dir:
     description: "Path to the py-shiny checkout"
     required: true
+  install-deps:
+    description: "Whether to install py-shiny dependencies. Set to 'false' if already installed."
+    required: false
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -16,6 +20,7 @@ runs:
         fi
 
     - name: Install py-shiny dependencies
+      if: inputs.install-deps == 'true'
       shell: bash
       working-directory: ${{ inputs.shiny-dir }}
       env:

@@ -321,6 +321,7 @@ jobs:
         uses: ./.github/py-shiny/narwhals-setup
         with:
           shiny-dir: "."
+          install-deps: "false"
 
       - name: Narwhals integration test
         uses: ./.github/py-shiny/narwhals-test
