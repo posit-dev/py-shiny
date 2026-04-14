@@ -316,9 +316,13 @@ jobs:
       - name: Setup py-shiny
         id: install
         uses: ./.github/py-shiny/setup
-      - name: Run test commands
-        env:
-          UV_SYSTEM_PYTHON: 1
-        run: |
-          make narwhals-install-shiny
-          make narwhals-test-integration
+
+      - name: Narwhals integration setup
+        uses: ./.github/py-shiny/narwhals-setup
+        with:
+          shiny-dir: "."
+
+      - name: Narwhals integration test
+        uses: ./.github/py-shiny/narwhals-test
+        with:
+          shiny-dir: "."
