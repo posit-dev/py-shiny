@@ -184,16 +184,16 @@ class Value(Generic[T]):
                 self._otel_namespace = ns_str
         # Lazily initialized OTel label for value updates; Allows for `_name` to be adjusted manually after init (ex: Inputs class)
         self._otel_label: str | None = None
-        # Guards _teardown() idempotency — _set(MISSING) should only run once
+        # Guards destroy() idempotency — _set(MISSING) should only run once
         # to avoid redundant invalidation of dependents.
-        self._torn_down: bool = False
+        self._destroyed: bool = False
 
         from ..session._session import SessionProxy
 
         if isinstance(session, SessionProxy):
-            # Unset the value on module teardown so dependents are invalidated
+            # Unset the value on module destroy so dependents are invalidated
             # and the stored value is freed.
-            session.on_teardown(self._teardown)
+            session.on_destroy(self.destroy)
 
     def _try_infer_name(self) -> str | None:
         """
@@ -516,12 +516,19 @@ class Value(Generic[T]):
             infer_session_id=False,
         )
 
-    def _teardown(self) -> None:
-        if self._torn_down:
+    def destroy(self) -> None:
+        """
+        Destroy this reactive value.
+
+        Unsets the value, invalidating all dependents and freeing the stored
+        value. Idempotent: calling ``destroy()`` more than once has no effect.
+        Works on read-only values (e.g., input values).
+        """
+        if self._destroyed:
             return
-        self._torn_down = True
+        self._destroyed = True
         # Uses _set() instead of unset() to bypass the read-only guard,
-        # since input values are read-only but still need teardown.
+        # since input values are read-only but still need cleanup.
         # Invalidates both value and is_set dependents, and frees the stored value.
         self._set(MISSING)  # type: ignore
 
@@ -602,9 +609,9 @@ class Calc_(Generic[T]):
         self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
-        # Guards _teardown() idempotency and __call__/get_value access.
-        # Once torn down, the calc raises DestroyedReactiveError on access.
-        self._torn_down: bool = False
+        # Guards destroy() idempotency and __call__/get_value access.
+        # Once destroyed, the calc raises DestroyedReactiveError on access.
+        self._destroyed: bool = False
 
         self._session: Optional[Session]
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
@@ -648,14 +655,21 @@ class Calc_(Generic[T]):
         from ..session._session import SessionProxy
 
         if isinstance(self._session, SessionProxy):
-            # Invalidate context and dependents on module teardown so the calc
+            # Invalidate context and dependents on module destroy so the calc
             # is permanently destroyed and references are freed.
-            self._session.on_teardown(self._teardown)
+            self._session.on_destroy(self.destroy)
 
-    def _teardown(self) -> None:
-        if self._torn_down:
+    def destroy(self) -> None:
+        """
+        Destroy this reactive calc.
+
+        Invalidates the calc's context and all downstream dependents, freeing
+        references. After destruction, calling the calc raises
+        :class:`DestroyedReactiveError`. Idempotent.
+        """
+        if self._destroyed:
             return
-        self._torn_down = True
+        self._destroyed = True
         if self._ctx is not None:
             # _on_invalidate_cb handles clearing _value, invalidating
             # _dependents, and setting _ctx = None.
@@ -668,7 +682,7 @@ class Calc_(Generic[T]):
         self._error.clear()
 
     def __call__(self) -> T:
-        if self._torn_down:
+        if self._destroyed:
             raise DestroyedReactiveError(
                 f"Reactive calc '{self._otel_label}' has been destroyed."
             )
@@ -678,7 +692,7 @@ class Calc_(Generic[T]):
 
     # TODO: should this be private?
     async def get_value(self) -> T:
-        if self._torn_down:
+        if self._destroyed:
             raise DestroyedReactiveError(
                 f"Reactive calc '{self._otel_label}' has been destroyed."
             )
@@ -939,8 +953,8 @@ class Effect_:
         from ..session._session import SessionProxy
 
         if isinstance(self._session, SessionProxy):
-            # Stop the effect from re-executing on module teardown.
-            self._session.on_teardown(self.destroy)
+            # Stop the effect from re-executing on module destroy.
+            self._session.on_destroy(self.destroy)
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs: dict[str, Any] = {

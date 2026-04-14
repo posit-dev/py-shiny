@@ -1,4 +1,4 @@
-"""Playwright tests for session.teardown() cleaning up dangling reactivity."""
+"""Playwright tests for session.destroy() cleaning up dangling reactivity."""
 
 import re
 
@@ -55,8 +55,8 @@ def test_remove_panel_cleans_up_dom(page: Page, local_app: ShinyAppProc):
     expect(page.locator("#panel_1-panel_ui_container")).to_have_count(0)
 
 
-def test_teardown_stops_effect_counter(page: Page, local_app: ShinyAppProc):
-    """After teardown, the effect counter stops incrementing in the status monitor."""
+def test_destroy_stops_effect_counter(page: Page, local_app: ShinyAppProc):
+    """After destroy, the effect counter stops incrementing in the status monitor."""
     page.goto(local_app.url)
 
     create_btn = controller.InputActionButton(page, "create_panel")
@@ -69,18 +69,18 @@ def test_teardown_stops_effect_counter(page: Page, local_app: ShinyAppProc):
     # Wait for the effect to fire a few times so we can capture the count
     page.wait_for_timeout(2000)
 
-    # Remove the panel (triggers teardown)
+    # Remove the panel (triggers destroy)
     remove_btn = controller.InputActionButton(page, "panel_1-remove")
     remove_btn.click()
 
-    # Wait for teardown to complete
+    # Wait for destroy to complete
     expect(page.locator("#panel_1-panel_ui_container")).to_have_count(0)
 
-    # The status monitor should show [TORN DOWN] for panel_1
+    # The status monitor should show [DESTROYED] for panel_1
     status_panel = page.locator("#status_panel")
-    expect(status_panel).to_contain_text("panel_1 [TORN DOWN]")
+    expect(status_panel).to_contain_text("panel_1 [DESTROYED]")
 
-    # Capture the effect count after teardown
+    # Capture the effect count after destroy
     effect_count_el = status_panel.locator(
         "xpath=.//div[contains(., 'panel_1')]//td[contains(@class, 'fw-bold')]"
     ).first
@@ -90,13 +90,13 @@ def test_teardown_stops_effect_counter(page: Page, local_app: ShinyAppProc):
     page.wait_for_timeout(3000)
     new_count = int(effect_count_el.inner_text())
     assert new_count == frozen_count, (
-        f"Effect counter should be frozen after teardown, "
+        f"Effect counter should be frozen after destroy, "
         f"but went from {frozen_count} to {new_count}"
     )
 
 
-def test_multiple_panels_independent_teardown(page: Page, local_app: ShinyAppProc):
-    """Tearing down one panel does not affect other active panels."""
+def test_multiple_panels_independent_destroy(page: Page, local_app: ShinyAppProc):
+    """Destroying one panel does not affect other active panels."""
     page.goto(local_app.url)
 
     create_btn = controller.InputActionButton(page, "create_panel")
@@ -135,13 +135,13 @@ def test_multiple_panels_independent_teardown(page: Page, local_app: ShinyAppPro
     assert match is not None
     count_after = int(match.group(1))
     assert count_after > count_before, (
-        f"Panel 2's effect should still be running after panel 1 teardown, "
+        f"Panel 2's effect should still be running after panel 1 destroy, "
         f"but count went from {count_before} to {count_after}"
     )
 
 
-def test_panel_recreation_after_teardown(page: Page, local_app: ShinyAppProc):
-    """A new panel can be created after a previous one was torn down."""
+def test_panel_recreation_after_destroy(page: Page, local_app: ShinyAppProc):
+    """A new panel can be created after a previous one was destroyed."""
     page.goto(local_app.url)
 
     create_btn = controller.InputActionButton(page, "create_panel")
@@ -181,5 +181,5 @@ def test_input_responds_after_creation(page: Page, local_app: ShinyAppProc):
     calc_output.expect_value("Derived: 'hello from panel 1'")
 
     # Type new value
-    txt_input.set("testing teardown")
-    calc_output.expect_value("Derived: 'testing teardown'")
+    txt_input.set("testing destroy")
+    calc_output.expect_value("Derived: 'testing destroy'")

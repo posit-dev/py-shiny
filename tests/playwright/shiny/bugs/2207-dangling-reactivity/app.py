@@ -1,9 +1,9 @@
 """
-Session Teardown Demo
-=====================
-Demonstrates `session.teardown()` cleaning up reactive objects when dynamic UI
+Session Destroy Demo
+====================
+Demonstrates `session.destroy()` cleaning up reactive objects when dynamic UI
 is removed. Each panel creates effects, calcs, and inputs inside a module.
-When "Remove this panel" is clicked, `session.teardown()` destroys all
+When "Remove this panel" is clicked, `session.destroy()` destroys all
 server-side reactive state for that module.
 
 How to use:
@@ -65,7 +65,7 @@ def panel_server(
             effect_counter.set(new_count)
 
     # Calc: derives a value from the dynamic input.
-    # Torn down by session.teardown() when the panel is removed.
+    # Destroyed by session.destroy() when the panel is removed.
     @reactive.calc
     def derived_message():
         try:
@@ -141,7 +141,7 @@ def panel_server(
         # Remove the DOM element
         ui.remove_ui(selector=f"div#{session.ns('panel_ui_container')}")
         # Clean up all server-side reactive objects for this module
-        await session.teardown()
+        await session.destroy()
         on_remove()
 
 
@@ -157,7 +157,7 @@ app_ui = ui.page_sidebar(
         ui.h5("Reactive State Monitor"),
         ui.p(
             "Server-side state for all panels. Removed panels show "
-            "their final state, frozen after teardown.",
+            "their final state, frozen after destroy.",
             class_="text-muted small",
         ),
         ui.output_ui("status_panel"),
@@ -165,7 +165,7 @@ app_ui = ui.page_sidebar(
         open="always",
     ),
     ui.div(id="panel_container"),
-    title="Session Teardown Demo",
+    title="Session Destroy Demo",
     fillable=False,
 )
 
@@ -232,7 +232,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             border_class = (
                 "border-success bg-success-subtle" if removed else "border-info"
             )
-            label = " [TORN DOWN]" if removed else ""
+            label = " [DESTROYED]" if removed else ""
 
             items.append(
                 ui.div(

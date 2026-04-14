@@ -64,12 +64,12 @@ class ExpressStubSession(Session):
     ) -> Callable[[], None]:
         return lambda: None
 
-    def on_teardown(
+    def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
         return
 
-    async def teardown(self) -> None:
+    async def destroy(self) -> None:
         return
 
     def make_scope(self, id: Id) -> Session:

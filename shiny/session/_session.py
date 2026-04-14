@@ -244,49 +244,49 @@ class Session(ABC):
         """
 
     @abstractmethod
-    def on_teardown(
+    def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
         """
-        Register a callback to run when this module scope is torn down.
+        Register a callback to run when this module scope is destroyed.
 
-        Teardown callbacks are **not** automatically invoked when the session
-        ends. They only run when `session.teardown()` is explicitly called
+        Destroy callbacks are **not** automatically invoked when the session
+        ends. They only run when `session.destroy()` is explicitly called
         (typically after removing dynamic module UI).
 
         Parameters
         ----------
         fn
-            The function to call on teardown. Can be sync or async.
+            The function to call on destroy. Can be sync or async.
         """
 
     @abstractmethod
-    async def teardown(self) -> None:
+    async def destroy(self) -> None:
         """
-        Tear down this module scope.
+        Destroy this module scope.
 
-        Fires all registered teardown callbacks, which clean up reactive objects
+        Fires all registered destroy callbacks, which destroy reactive objects
         (effects, calcs, values) and remove namespaced inputs and outputs.
 
-        Teardown callbacks are **not** automatically invoked when the session
+        Destroy callbacks are **not** automatically invoked when the session
         ends. This method must be called explicitly, typically after removing
         dynamic module UI with `ui.remove_ui()`.
 
-        Idempotent: calling teardown() more than once has no effect.
+        Idempotent: calling destroy() more than once has no effect.
 
         Note
         ----
-        Reactive values and calcs created inside a module are destroyed on
-        teardown. If you need data to survive after a module is torn down,
-        create the reactive value **outside** the module and pass it in.
-        The module can set the value, and the caller can read it after
-        teardown.
+        Reactive values and calcs created inside a module are destroyed when
+        this method is called. If you need data to survive after a module is
+        destroyed, create the reactive value **outside** the module and pass
+        it in. The module can set the value, and the caller can read it after
+        the module is destroyed.
 
         Examples
         --------
         Returning a reactive value from a module is fine when the module
         lives for the entire session. However, if you plan to call
-        `session.teardown()`, the returned value will be destroyed and
+        `session.destroy()`, the returned value will be destroyed and
         can no longer be read:
 
         ```python
@@ -294,12 +294,12 @@ class Session(ABC):
         def my_module_server(input, output, session):
             result = reactive.value(0)
             # ... update result ...
-            return result  # Destroyed when session.teardown() is called!
+            return result  # Destroyed when session.destroy() is called!
         ```
 
-        If the module will be torn down, pass a reactive value **into**
+        If the module will be destroyed, pass a reactive value **into**
         the module instead. The value lives in the caller's scope and
-        survives teardown:
+        survives destruction:
 
         ```python
         @module.server
@@ -313,7 +313,7 @@ class Session(ABC):
         # Caller creates and owns the value
         saved_data = reactive.value(None)
         my_module_server("editor", result=saved_data)
-        # saved_data is still valid after the module is torn down
+        # saved_data is still valid after the module is destroyed
         ```
         """
 
@@ -651,9 +651,9 @@ class AppSession(Session):
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
 
-        # Teardown callbacks for module scopes, keyed by namespace string.
+        # Destroy callbacks for module scopes, keyed by namespace string.
         # Stored on root session because SessionProxy is a throwaway lens.
-        self._teardown_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
+        self._destroy_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
 
         self._register_session_ended_callbacks()
 
@@ -1245,18 +1245,18 @@ class AppSession(Session):
     ) -> Callable[[], None]:
         return self._on_ended_callbacks.register(wrap_async(fn))
 
-    def on_teardown(
+    def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
         raise RuntimeError(
-            "on_teardown() is only supported on SessionProxy (module sessions), "
-            "not on the root AppSession. For teardown behavior that applies to the entire session, use on_ended() instead."
+            "on_destroy() is only supported on SessionProxy (module sessions), "
+            "not on the root AppSession. Use on_ended() instead."
         )
 
-    async def teardown(self) -> None:
+    async def destroy(self) -> None:
         raise RuntimeError(
-            "teardown() is only supported on SessionProxy (module sessions), "
-            "not on the root AppSession. For teardown behavior that applies to the entire session, use on_ended() instead."
+            "destroy() is only supported on SessionProxy (module sessions), "
+            "not on the root AppSession. Use on_ended() instead."
         )
 
     # ==========================================================================
@@ -1391,73 +1391,73 @@ class SessionProxy(Session):
 
         self.bookmark = BookmarkProxy(self)
 
-    def _get_teardown_callbacks(
+    def _get_destroy_callbacks(
         self,
     ) -> dict[str, _utils.AsyncCallbacks] | None:
-        """Get the teardown callbacks dict from the root session, or None if unsupported."""
+        """Get the destroy callbacks dict from the root session, or None if unsupported."""
         root = self._root_session
         cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
-            root, "_teardown_callbacks_by_ns", None
+            root, "_destroy_callbacks_by_ns", None
         )
         return cbs
 
-    def on_teardown(
+    def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
         """
-        Register a callback to run when this module scope is torn down.
+        Register a callback to run when this module scope is destroyed.
 
-        Teardown callbacks are **not** automatically invoked when the session
-        ends. They only run when `teardown()` is explicitly called.
+        Destroy callbacks are **not** automatically invoked when the session
+        ends. They only run when `destroy()` is explicitly called.
 
         Parameters
         ----------
         fn
-            The function to call when teardown occurs.
+            The function to call when destroy occurs.
         """
-        teardown_cbs = self._get_teardown_callbacks()
-        if teardown_cbs is not None:
+        destroy_cbs = self._get_destroy_callbacks()
+        if destroy_cbs is not None:
             ns_key = str(self.ns)
-            if ns_key not in teardown_cbs:
-                teardown_cbs[ns_key] = _utils.AsyncCallbacks()
-            teardown_cbs[ns_key].register(wrap_async(fn))
+            if ns_key not in destroy_cbs:
+                destroy_cbs[ns_key] = _utils.AsyncCallbacks()
+            destroy_cbs[ns_key].register(wrap_async(fn))
 
-    async def teardown(self) -> None:
+    async def destroy(self) -> None:
         """
-        Tear down this module scope and all descendant module scopes.
+        Destroy this module scope and all descendant module scopes.
 
-        Fires all registered teardown callbacks, which clean up reactive objects
+        Fires all registered destroy callbacks, which destroy reactive objects
         (effects, calcs, values) and remove namespaced inputs and outputs.
 
-        Teardown callbacks are **not** automatically invoked when the session
+        Destroy callbacks are **not** automatically invoked when the session
         ends. This method must be called explicitly, typically after removing
         dynamic module UI with `ui.remove_ui()`.
 
-        Idempotent: calling teardown() more than once has no effect.
+        Idempotent: calling destroy() more than once has no effect.
         """
-        teardown_cbs = self._get_teardown_callbacks()
-        if teardown_cbs is not None:
+        destroy_cbs = self._get_destroy_callbacks()
+        if destroy_cbs is not None:
             ns_prefix = str(self.ns) + "-"
             # Collect this namespace and all descendant namespaces (children,
             # grandchildren, etc.) that share the prefix.
             matching_keys = [
-                k for k in teardown_cbs if k == str(self.ns) or k.startswith(ns_prefix)
+                k for k in destroy_cbs if k == str(self.ns) or k.startswith(ns_prefix)
             ]
             # Sort deepest namespaces first (most dashes → most nested) so that
-            # children are torn down before parents, mirroring the reverse of
+            # children are destroyed before parents, mirroring the reverse of
             # construction order.
             matching_keys.sort(key=lambda k: k.count("-"), reverse=True)
 
             for ns_key in matching_keys:
-                callbacks = teardown_cbs.pop(ns_key, None)
+                callbacks = destroy_cbs.pop(ns_key, None)
                 if callbacks is not None:
                     callbacks.on_error = lambda e: traceback.print_exception(
                         type(e), e, e.__traceback__
                     )
                     await callbacks.invoke()
 
-        # Tear down inputs and outputs after callbacks, so that callback
-        # functions can still read input/output values during teardown.
+        # Destroy inputs and outputs after callbacks, so that callback
+        # functions can still read input/output values during destruction.
         # Remove namespaced input keys and their values.
         self.input._teardown()
         # Remove namespaced output entries and destroy their effects.
@@ -1765,7 +1765,7 @@ class Inputs:
         ]
         for key in keys_to_remove:
             value_obj = self._map[key]
-            value_obj._teardown()
+            value_obj.destroy()
             del self._map[key]
 
 
