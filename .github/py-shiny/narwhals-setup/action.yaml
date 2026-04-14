@@ -21,7 +21,7 @@ runs:
       env:
         UV_SYSTEM_PYTHON: "1"
       run: |
-        make narwhals-install-shiny
+        make ci-install-deps
 
     - name: Setup remote Playwright
       uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@main
