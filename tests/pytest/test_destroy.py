@@ -222,8 +222,8 @@ async def test_calc_async_destroy():
         await doubled()
 
 
-def test_inputs_teardown_removes_namespaced_keys():
-    """_teardown() removes all keys matching the namespace prefix."""
+def test_inputs_destroy_removes_namespaced_keys():
+    """destroy() removes all keys matching the namespace prefix."""
     shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
@@ -232,15 +232,15 @@ def test_inputs_teardown_removes_namespaced_keys():
     shared_map["panel_1-slider"] = Value(5, read_only=True)
     shared_map["other-txt"] = Value("keep", read_only=True)
 
-    inputs._teardown()
+    inputs._destroy()
 
     assert "panel_1-txt" not in shared_map
     assert "panel_1-slider" not in shared_map
     assert "other-txt" in shared_map
 
 
-def test_inputs_teardown_removes_clientdata_keys():
-    """_teardown() removes per-output clientdata keys matching the namespace."""
+def test_inputs_destroy_removes_clientdata_keys():
+    """_destroy() removes per-output clientdata keys matching the namespace."""
     shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
@@ -251,15 +251,15 @@ def test_inputs_teardown_removes_clientdata_keys():
     shared_map[".clientdata_output_panel_1-my_plot_width"] = Value(800, read_only=True)
     shared_map[".clientdata_output_panel_1-my_plot_height"] = Value(600, read_only=True)
 
-    inputs._teardown()
+    inputs._destroy()
 
     assert ".clientdata_output_panel_1-my_plot_hidden" not in shared_map
     assert ".clientdata_output_panel_1-my_plot_width" not in shared_map
     assert ".clientdata_output_panel_1-my_plot_height" not in shared_map
 
 
-def test_inputs_teardown_preserves_global_clientdata():
-    """_teardown() does NOT remove global clientdata keys."""
+def test_inputs_destroy_preserves_global_clientdata():
+    """_destroy() does NOT remove global clientdata keys."""
     shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
@@ -269,7 +269,7 @@ def test_inputs_teardown_preserves_global_clientdata():
     shared_map[".clientdata_singletons"] = Value("", read_only=True)
     shared_map["panel_1-txt"] = Value("remove me", read_only=True)
 
-    inputs._teardown()
+    inputs._destroy()
 
     assert ".clientdata_pixelratio" in shared_map
     assert ".clientdata_url_protocol" in shared_map
@@ -277,8 +277,8 @@ def test_inputs_teardown_preserves_global_clientdata():
     assert "panel_1-txt" not in shared_map
 
 
-def test_inputs_teardown_preserves_other_namespaces():
-    """_teardown() does NOT remove keys from other namespaces."""
+def test_inputs_destroy_preserves_other_namespaces():
+    """_destroy() does NOT remove keys from other namespaces."""
     shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
@@ -287,15 +287,15 @@ def test_inputs_teardown_preserves_other_namespaces():
     shared_map["panel_2-txt"] = Value("keep", read_only=True)
     shared_map["panel_1_extra-txt"] = Value("keep too", read_only=True)
 
-    inputs._teardown()
+    inputs._destroy()
 
     assert "panel_1-txt" not in shared_map
     assert "panel_2-txt" in shared_map
     assert "panel_1_extra-txt" in shared_map
 
 
-def test_inputs_teardown_calls_value_destroy():
-    """_teardown() calls destroy() on each removed value."""
+def test_inputs_destroy_calls_value_destroy():
+    """_destroy() calls destroy() on each removed value."""
     shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
@@ -303,21 +303,21 @@ def test_inputs_teardown_calls_value_destroy():
     v = Value(42, read_only=True)
     shared_map["panel_1-txt"] = v
 
-    inputs._teardown()
+    inputs._destroy()
 
     assert v._destroyed is True
     with isolate():
         assert v.is_set() is False
 
 
-def test_inputs_teardown_resurrection():
-    """After _teardown(), new value for a removed key creates a fresh entry."""
+def test_inputs_destroy_resurrection():
+    """After _destroy(), new value for a removed key creates a fresh entry."""
     shared_map: dict[str, Value[Any]] = {}
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
     shared_map["panel_1-txt"] = Value("old", read_only=True)
-    inputs._teardown()
+    inputs._destroy()
     assert "panel_1-txt" not in shared_map
 
     new_value: Value[str] = Value(read_only=True)
@@ -360,8 +360,8 @@ class _StubSession:
         return False
 
 
-def test_outputs_teardown_removes_namespaced_outputs():
-    """_teardown() removes all outputs matching namespace prefix."""
+def test_outputs_destroy_removes_namespaced_outputs():
+    """_destroy() removes all outputs matching namespace prefix."""
     shared_outputs: dict[str, OutputInfo] = {}
     ns = ResolvedId("panel_1")
     stub = cast(Session, _StubSession())
@@ -380,15 +380,15 @@ def test_outputs_teardown_removes_namespaced_outputs():
         renderer=_make_mock_renderer(), effect=effect3, suspend_when_hidden=True
     )
 
-    outputs._teardown()
+    outputs._destroy()
 
     assert "panel_1-plot" not in shared_outputs
     assert "panel_1-table" not in shared_outputs
     assert "panel_2-plot" in shared_outputs
 
 
-def test_outputs_teardown_preserves_other_namespaces():
-    """_teardown() does NOT remove outputs from other namespaces."""
+def test_outputs_destroy_preserves_other_namespaces():
+    """_destroy() does NOT remove outputs from other namespaces."""
     shared_outputs: dict[str, OutputInfo] = {}
     ns = ResolvedId("panel_1")
     stub = cast(Session, _StubSession())
@@ -403,15 +403,15 @@ def test_outputs_teardown_preserves_other_namespaces():
         renderer=_make_mock_renderer(), effect=effect2, suspend_when_hidden=True
     )
 
-    outputs._teardown()
+    outputs._destroy()
 
     assert "panel_1-plot" not in shared_outputs
     assert "other-plot" in shared_outputs
     assert not cast(Any, effect2)._destroyed
 
 
-def test_outputs_teardown_destroys_effects():
-    """_teardown() calls destroy() on each removed output's effect."""
+def test_outputs_destroy_destroys_effects():
+    """_destroy() calls destroy() on each removed output's effect."""
     shared_outputs: dict[str, OutputInfo] = {}
     ns = ResolvedId("panel_1")
     stub = cast(Session, _StubSession())
@@ -422,7 +422,7 @@ def test_outputs_teardown_destroys_effects():
         renderer=_make_mock_renderer(), effect=effect1, suspend_when_hidden=True
     )
 
-    outputs._teardown()
+    outputs._destroy()
 
     assert cast(Any, effect1)._destroyed is True
 
@@ -670,7 +670,7 @@ async def test_invalidate_later_cancelled_on_destroy():
     # Collect the asyncio tasks before destroy
     tasks_before = {t for t in asyncio.all_tasks() if not t.done()}
 
-    # Teardown destroys the effect, which invalidates its context,
+    # Destroy destroys the effect, which invalidates its context,
     # which cancels the invalidate_later task via ctx.on_invalidate
     await proxy.destroy()
 
@@ -735,7 +735,7 @@ async def test_session_destroy_end_to_end():
         renderer=_make_mock_renderer(), effect=mock_effect, suspend_when_hidden=True
     )
 
-    # Teardown the module
+    # Destroy the module
     await proxy.destroy()
 
     # Value is unset
@@ -953,7 +953,7 @@ async def test_session_proxy_multiple_proxies_same_namespace():
         lambda: called.append("from_p2")
     )  # pyright: ignore[reportArgumentType]
 
-    # Teardown via proxy1 should fire all callbacks for the namespace
+    # Destroy via proxy1 should fire all callbacks for the namespace
     await proxy1.destroy()
 
     assert "from_p1" in called
@@ -962,7 +962,7 @@ async def test_session_proxy_multiple_proxies_same_namespace():
 
 @pytest.mark.asyncio
 async def test_session_proxy_different_namespaces_independent():
-    """Tearing down one namespace does not affect another."""
+    """Destroying one namespace does not affect another."""
     root = _make_mock_root_session()
     proxy_a = SessionProxy(root_session=root, ns=ResolvedId("mod_a"))
     proxy_b = SessionProxy(root_session=root, ns=ResolvedId("mod_b"))
@@ -1293,7 +1293,7 @@ async def test_caller_owned_value_survives_destroy():
     with isolate():
         assert saved_data() == "user input"
 
-    # Teardown the module
+    # Destroy the module
     await proxy.destroy()
 
     # The caller-owned value is still valid and readable
@@ -1319,7 +1319,7 @@ async def test_module_owned_value_destroyed_on_destroy():
     with isolate():
         assert module_data() == "important data"
 
-    # Teardown destroys the module-owned value
+    # Destroy the module
     await proxy.destroy()
 
     with isolate():

@@ -10,7 +10,7 @@ How to use:
 - Click "Create Panel" to add panels. Each panel has an auto-incrementing
   effect, a dynamic text input, and a calc derived from that input.
 - Click "Remove this panel" — the panel is removed and all its reactive
-  state is cleaned up via `session.teardown()`.
+  state is cleaned up via `session.destroy()`.
 - Watch the "Reactive State Monitor" in the sidebar: removed panels show
   as cleaned up with their final state frozen.
 """
@@ -56,7 +56,7 @@ def panel_server(
         return f"Panel {panel_num}"
 
     # Effect: auto-increments a counter every second.
-    # Destroyed by session.teardown() when the panel is removed.
+    # Destroyed by session.destroy() when the panel is removed.
     @reactive.effect
     def auto_increment():
         reactive.invalidate_later(1)
@@ -106,7 +106,7 @@ def panel_server(
         return f"Effect has fired {effect_counter.get()} times"
 
     # Update the shared tracker so the global monitor can see our state.
-    # This effect is destroyed by session.teardown() when the panel is removed.
+    # This effect is destroyed by session.destroy() when the panel is removed.
     @reactive.effect
     def update_tracker():
         count = effect_counter.get()

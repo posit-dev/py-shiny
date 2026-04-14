@@ -1459,9 +1459,9 @@ class SessionProxy(Session):
         # Destroy inputs and outputs after callbacks, so that callback
         # functions can still read input/output values during destruction.
         # Remove namespaced input keys and their values.
-        self.input._teardown()
+        self.input._destroy()
         # Remove namespaced output entries and destroy their effects.
-        self.output._teardown()
+        self.output._destroy()
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
@@ -1751,7 +1751,7 @@ class Inputs:
 
         return serialized_values
 
-    def _teardown(self) -> None:
+    def _destroy(self) -> None:
         # This will cause all modules with the same module namespace prefix to have their inputs removed.
         # So if one parent module is being torn down, all descendant modules will be torn down.
         # Just like with Outputs
@@ -2210,7 +2210,7 @@ class Outputs:
             self._outputs[output_name].effect.destroy()
             del self._outputs[output_name]
 
-    def _teardown(self) -> None:
+    def _destroy(self) -> None:
         # This will cause all modules with the same module namespace prefix to have their outputs removed.
         # So if one parent module is being torn down, all descendant modules will be torn down.
         # Just like with Inputs
