@@ -295,7 +295,7 @@ narwhals-install-shiny: FORCE
 	$(MAKE) ci-install-deps
 	$(MAKE) install-playwright PLAYWRIGHT_BROWSERS=chromium
 narwhals-test-integration: FORCE
-	@echo "-------- Running py-shiny format, lint, typing, and unit tests ----------"
-	$(MAKE) check
+	@echo "-------- Running py-shiny typing and unit tests ----------"
+	$(MAKE) check-types check-tests
 	@echo "-------- Running py-shiny playwright tests ----------"
 	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/components/data_frame/data_type/" PYTEST_BROWSERS="--browser chromium"
