@@ -1448,11 +1448,14 @@ class SessionProxy(Session):
         fn
             The function to call when destroy occurs.
         """
-        destroy_cbs = self._root_session._destroy_callbacks_by_ns
-        ns_key = str(self.ns)
-        if ns_key not in destroy_cbs:
-            destroy_cbs[ns_key] = _utils.AsyncCallbacks()
-        destroy_cbs[ns_key].register(wrap_async(fn))
+        destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
+            self._root_session, "_destroy_callbacks_by_ns", None
+        )
+        if destroy_cbs is not None:
+            ns_key = str(self.ns)
+            if ns_key not in destroy_cbs:
+                destroy_cbs[ns_key] = _utils.AsyncCallbacks()
+            destroy_cbs[ns_key].register(wrap_async(fn))
 
     async def destroy(self) -> None:
         """
@@ -1467,9 +1470,11 @@ class SessionProxy(Session):
 
         Idempotent: calling destroy() more than once has no effect.
         """
-        await _invoke_destroy_callbacks(
-            self._root_session._destroy_callbacks_by_ns, str(self.ns)
+        destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
+            self._root_session, "_destroy_callbacks_by_ns", None
         )
+        if destroy_cbs is not None:
+            await _invoke_destroy_callbacks(destroy_cbs, str(self.ns))
 
         # Destroy inputs and outputs after callbacks, so that callback
         # functions can still read input/output values during destruction.
