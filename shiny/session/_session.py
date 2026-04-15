@@ -267,7 +267,9 @@ class Session(ABC):
         Destroy this session or module scope.
 
         Fires all registered destroy callbacks, which destroy reactive objects
-        (effects, calcs, values) and remove namespaced inputs and outputs.
+        (effects, calcs, values) and remove namespaced inputs and outputs from
+        the reactive graph. This does not alter the UI; use
+        :func:`~shiny.ui.remove_ui` to remove UI elements.
 
         For ``SessionProxy``, this must be called explicitly (typically after
         removing dynamic module UI). For ``AppSession``, this is called
