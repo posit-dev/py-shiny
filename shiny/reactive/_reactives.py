@@ -539,10 +539,11 @@ class Value(Generic[T]):
         value. Idempotent: calling ``destroy()`` more than once has no effect.
         Works on read-only values (e.g., input values).
 
-        .. note::
-            This method will only perform the minimum cleanup needed to
-            release resources and invalidate dependents — the same work that
-            would happen if this object were garbage collected.
+        Note
+        ----
+        This method will only perform the minimum cleanup needed to
+        release resources and invalidate dependents — the same work that
+        would happen if this object were garbage collected.
         """
         if self._destroyed:
             return
@@ -685,10 +686,11 @@ class Calc_(Generic[T]):
         references. After destruction, calling the calc raises
         :class:`DestroyedReactiveError`. Idempotent.
 
-        .. note::
-            This method will only perform the minimum cleanup needed to
-            release resources and invalidate dependents — the same work that
-            would happen if this object were garbage collected.
+        Note
+        ----
+        This method will only perform the minimum cleanup needed to
+        release resources and invalidate dependents — the same work that
+        would happen if this object were garbage collected.
         """
         if self._destroyed:
             return
@@ -1100,10 +1102,11 @@ class Effect_:
         Stops the effect from executing ever again, even if it is currently scheduled
         for re-execution.
 
-        .. note::
-            This method will only perform the minimum cleanup needed to
-            release resources and prevent future execution — the same work
-            that would happen if this object were garbage collected.
+        Note
+        ----
+        This method will only perform the minimum cleanup needed to
+        release resources and prevent future execution — the same work
+        that would happen if this object were garbage collected.
         """
         self._destroyed = True
 
