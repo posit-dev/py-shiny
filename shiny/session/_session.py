@@ -578,6 +578,48 @@ class Session(ABC):
     def _decrement_busy_count(self) -> None: ...
 
 
+async def _invoke_destroy_callbacks(
+    callbacks_by_ns: dict[str, _utils.AsyncCallbacks],
+    ns: str,
+) -> None:
+    """
+    Invoke destroy callbacks for a namespace and all its descendants.
+
+    Collects all namespaces matching ``ns`` (exact match) and any child
+    namespaces (``ns + "-"`` prefix), sorts them deepest-first, then pops
+    and invokes each set of callbacks.
+
+    Parameters
+    ----------
+    callbacks_by_ns
+        The dict mapping namespace strings to their ``AsyncCallbacks``.
+    ns
+        The namespace to destroy. Use ``""`` for the root session (destroys
+        all namespaces).
+    """
+    if ns == "":
+        # Root: destroy everything
+        matching_keys = list(callbacks_by_ns.keys())
+    else:
+        ns_prefix = ns + "-"
+        matching_keys = [
+            k for k in callbacks_by_ns if k == ns or k.startswith(ns_prefix)
+        ]
+
+    # Sort deepest namespaces first (most dashes → most nested) so that
+    # children are destroyed before parents, mirroring the reverse of
+    # construction order.
+    matching_keys.sort(key=lambda k: k.count("-"), reverse=True)
+
+    for ns_key in matching_keys:
+        callbacks = callbacks_by_ns.pop(ns_key, None)
+        if callbacks is not None:
+            callbacks.on_error = lambda e: traceback.print_exception(
+                type(e), e, e.__traceback__
+            )
+            await callbacks.invoke()
+
+
 # ======================================================================================
 # AppSession
 # ======================================================================================
@@ -1258,17 +1300,7 @@ class AppSession(Session):
         self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn))
 
     async def destroy(self) -> None:
-        # Destroy all namespaces: deepest first, then root ("")
-        all_keys = list(self._destroy_callbacks_by_ns.keys())
-        all_keys.sort(key=lambda k: k.count("-"), reverse=True)
-
-        for ns_key in all_keys:
-            callbacks = self._destroy_callbacks_by_ns.pop(ns_key, None)
-            if callbacks is not None:
-                callbacks.on_error = lambda e: traceback.print_exception(
-                    type(e), e, e.__traceback__
-                )
-                await callbacks.invoke()
+        await _invoke_destroy_callbacks(self._destroy_callbacks_by_ns, "")
 
     # ==========================================================================
     # Misc
@@ -1402,16 +1434,6 @@ class SessionProxy(Session):
 
         self.bookmark = BookmarkProxy(self)
 
-    def _get_destroy_callbacks(
-        self,
-    ) -> dict[str, _utils.AsyncCallbacks] | None:
-        """Get the destroy callbacks dict from the root session, or None if unsupported."""
-        root = self._root_session
-        cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
-            root, "_destroy_callbacks_by_ns", None
-        )
-        return cbs
-
     def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
@@ -1426,12 +1448,11 @@ class SessionProxy(Session):
         fn
             The function to call when destroy occurs.
         """
-        destroy_cbs = self._get_destroy_callbacks()
-        if destroy_cbs is not None:
-            ns_key = str(self.ns)
-            if ns_key not in destroy_cbs:
-                destroy_cbs[ns_key] = _utils.AsyncCallbacks()
-            destroy_cbs[ns_key].register(wrap_async(fn))
+        destroy_cbs = self._root_session._destroy_callbacks_by_ns
+        ns_key = str(self.ns)
+        if ns_key not in destroy_cbs:
+            destroy_cbs[ns_key] = _utils.AsyncCallbacks()
+        destroy_cbs[ns_key].register(wrap_async(fn))
 
     async def destroy(self) -> None:
         """
@@ -1446,26 +1467,9 @@ class SessionProxy(Session):
 
         Idempotent: calling destroy() more than once has no effect.
         """
-        destroy_cbs = self._get_destroy_callbacks()
-        if destroy_cbs is not None:
-            ns_prefix = str(self.ns) + "-"
-            # Collect this namespace and all descendant namespaces (children,
-            # grandchildren, etc.) that share the prefix.
-            matching_keys = [
-                k for k in destroy_cbs if k == str(self.ns) or k.startswith(ns_prefix)
-            ]
-            # Sort deepest namespaces first (most dashes → most nested) so that
-            # children are destroyed before parents, mirroring the reverse of
-            # construction order.
-            matching_keys.sort(key=lambda k: k.count("-"), reverse=True)
-
-            for ns_key in matching_keys:
-                callbacks = destroy_cbs.pop(ns_key, None)
-                if callbacks is not None:
-                    callbacks.on_error = lambda e: traceback.print_exception(
-                        type(e), e, e.__traceback__
-                    )
-                    await callbacks.invoke()
+        await _invoke_destroy_callbacks(
+            self._root_session._destroy_callbacks_by_ns, str(self.ns)
+        )
 
         # Destroy inputs and outputs after callbacks, so that callback
         # functions can still read input/output values during destruction.

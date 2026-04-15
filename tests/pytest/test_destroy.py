@@ -824,20 +824,20 @@ async def test_express_stub_session_destroy_is_noop():
     await stub.destroy()
 
 
-def test_express_stub_session_has_no_destroy_state():
-    """ExpressStubSession does not have _destroy_callbacks_by_ns."""
+def test_express_stub_session_has_destroy_state():
+    """ExpressStubSession has _destroy_callbacks_by_ns for SessionProxy support."""
     stub = ExpressStubSession()
-    assert not hasattr(stub, "_destroy_callbacks_by_ns")
+    assert hasattr(stub, "_destroy_callbacks_by_ns")
+    assert stub._destroy_callbacks_by_ns == {}
 
 
 @pytest.mark.asyncio
 async def test_express_stub_session_proxy_destroy_is_silent():
-    """SessionProxy created from ExpressStubSession silently does nothing on destroy."""
+    """SessionProxy created from ExpressStubSession works with destroy."""
     stub = ExpressStubSession()
     proxy = stub.make_scope("mod1")
     assert isinstance(proxy, SessionProxy)
 
-    # on_destroy should not raise even though root has no _destroy_callbacks_by_ns
     proxy.on_destroy(lambda: None)
     # destroy should not raise
     await proxy.destroy()
