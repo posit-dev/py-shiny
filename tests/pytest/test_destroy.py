@@ -686,8 +686,8 @@ async def test_invalidate_later_cancelled_on_destroy():
     assert exec_count == 1
 
 
-def test_no_registration_without_session_proxy():
-    """Reactive objects created without SessionProxy do NOT register destroy."""
+def test_no_registration_without_session():
+    """Reactive objects created without a session do NOT register destroy."""
     v = Value(42)
     # Value and Calc still have _destroyed for their own destroy logic
     assert v._destroyed is False
@@ -844,35 +844,12 @@ async def test_express_stub_session_proxy_destroy_is_silent():
 
 
 # ---------------------------------------------------------------------------
-# AppSession destroy guard tests
+# AppSession destroy tests
 # ---------------------------------------------------------------------------
 def test_app_session_has_destroy_methods():
     """AppSession has on_destroy() and destroy() methods."""
     assert hasattr(AppSession, "on_destroy")
     assert hasattr(AppSession, "destroy")
-
-
-def _make_app_session_like_mock() -> Any:
-    """Create a mock that behaves like AppSession for destroy testing.
-
-    We can't easily instantiate a real AppSession (requires Connection, App),
-    so we call the unbound methods directly.
-    """
-    return AppSession
-
-
-def test_app_session_on_destroy_raises_runtime_error():
-    """AppSession.on_destroy() raises RuntimeError with descriptive message."""
-    # Call the unbound method with a dummy self
-    with pytest.raises(RuntimeError, match="only supported on SessionProxy"):
-        AppSession.on_destroy(cast(Any, None), lambda: None)
-
-
-@pytest.mark.asyncio
-async def test_app_session_destroy_raises_runtime_error():
-    """AppSession.destroy() raises RuntimeError with descriptive message."""
-    with pytest.raises(RuntimeError, match="only supported on SessionProxy"):
-        await AppSession.destroy(cast(Any, None))
 
 
 # ---------------------------------------------------------------------------

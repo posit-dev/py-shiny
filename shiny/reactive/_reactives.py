@@ -188,11 +188,9 @@ class Value(Generic[T]):
         # to avoid redundant invalidation of dependents.
         self._destroyed: bool = False
 
-        from ..session._session import SessionProxy
-
-        if isinstance(session, SessionProxy):
-            # Unset the value on module destroy so dependents are invalidated
-            # and the stored value is freed.
+        if session is not None:
+            # Unset the value on session/module destroy so dependents are
+            # invalidated and the stored value is freed.
             session.on_destroy(self.destroy)
 
     def _try_infer_name(self) -> str | None:
@@ -657,11 +655,9 @@ class Calc_(Generic[T]):
         # the current collection level at initialization time.
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
-        from ..session._session import SessionProxy
-
-        if isinstance(self._session, SessionProxy):
-            # Invalidate context and dependents on module destroy so the calc
-            # is permanently destroyed and references are freed.
+        if self._session is not None:
+            # Invalidate context and dependents on session/module destroy so
+            # the calc is permanently destroyed and references are freed.
             self._session.on_destroy(self.destroy)
 
     def destroy(self) -> None:
@@ -958,12 +954,7 @@ class Effect_:
         self._session = session
 
         if self._session is not None:
-            self._session.on_ended(self._on_session_ended_cb)
-
-        from ..session._session import SessionProxy
-
-        if isinstance(self._session, SessionProxy):
-            # Stop the effect from re-executing on module destroy.
+            self._session.on_ended(self.destroy)
             self._session.on_destroy(self.destroy)
 
         # Extract OpenTelemetry attributes at initialization time
@@ -1144,9 +1135,6 @@ class Effect_:
         suspended, in which case the priority change will be effective upon resume.
         """
         self._priority = priority
-
-    def _on_session_ended_cb(self) -> None:
-        self.destroy()
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""

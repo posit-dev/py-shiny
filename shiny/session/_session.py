@@ -248,11 +248,12 @@ class Session(ABC):
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
         """
-        Register a callback to run when this module scope is destroyed.
+        Register a callback to run when this session or module scope is destroyed.
 
-        Destroy callbacks are **not** automatically invoked when the session
-        ends. They only run when `session.destroy()` is explicitly called
-        (typically after removing dynamic module UI).
+        For ``SessionProxy`` (module sessions), destroy callbacks fire when
+        ``session.destroy()`` is explicitly called. For ``AppSession`` (root
+        sessions), destroy callbacks fire automatically at session end, after
+        all ``on_ended`` callbacks have run.
 
         Parameters
         ----------
@@ -263,14 +264,14 @@ class Session(ABC):
     @abstractmethod
     async def destroy(self) -> None:
         """
-        Destroy this module scope.
+        Destroy this session or module scope.
 
         Fires all registered destroy callbacks, which destroy reactive objects
         (effects, calcs, values) and remove namespaced inputs and outputs.
 
-        Destroy callbacks are **not** automatically invoked when the session
-        ends. This method must be called explicitly, typically after removing
-        dynamic module UI with `ui.remove_ui()`.
+        For ``SessionProxy``, this must be called explicitly (typically after
+        removing dynamic module UI). For ``AppSession``, this is called
+        automatically at session end, after all ``on_ended`` callbacks.
 
         Idempotent: calling destroy() more than once has no effect.
 
@@ -647,6 +648,7 @@ class AppSession(Session):
 
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
+        self._on_destroy_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_ended_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
@@ -682,6 +684,9 @@ class AppSession(Session):
             ):
                 try:
                     await self._on_ended_callbacks.invoke()
+                    # Destroy callbacks run after on_ended callbacks so that
+                    # on_ended handlers can still read reactive state.
+                    await self.destroy()
                 finally:
                     self.app._remove_session(self)
 
@@ -1248,16 +1253,13 @@ class AppSession(Session):
     def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
-        raise RuntimeError(
-            "on_destroy() is only supported on SessionProxy (module sessions), "
-            "not on the root AppSession. Use on_ended() instead."
-        )
+        self._on_destroy_callbacks.register(wrap_async(fn))
 
     async def destroy(self) -> None:
-        raise RuntimeError(
-            "destroy() is only supported on SessionProxy (module sessions), "
-            "not on the root AppSession. Use on_ended() instead."
+        self._on_destroy_callbacks.on_error = lambda e: traceback.print_exception(
+            type(e), e, e.__traceback__
         )
+        await self._on_destroy_callbacks.invoke()
 
     # ==========================================================================
     # Misc
@@ -1407,8 +1409,8 @@ class SessionProxy(Session):
         """
         Register a callback to run when this module scope is destroyed.
 
-        Destroy callbacks are **not** automatically invoked when the session
-        ends. They only run when `destroy()` is explicitly called.
+        Destroy callbacks fire when ``destroy()`` is explicitly called, or
+        automatically at session end (after ``on_ended`` callbacks).
 
         Parameters
         ----------
@@ -1429,9 +1431,9 @@ class SessionProxy(Session):
         Fires all registered destroy callbacks, which destroy reactive objects
         (effects, calcs, values) and remove namespaced inputs and outputs.
 
-        Destroy callbacks are **not** automatically invoked when the session
-        ends. This method must be called explicitly, typically after removing
-        dynamic module UI with `ui.remove_ui()`.
+        This is called automatically at session end (after ``on_ended``
+        callbacks), or can be called explicitly after removing dynamic
+        module UI with ``ui.remove_ui()``.
 
         Idempotent: calling destroy() more than once has no effect.
         """
