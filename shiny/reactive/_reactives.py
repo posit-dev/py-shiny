@@ -525,11 +525,9 @@ class Value(Generic[T]):
         Works on read-only values (e.g., input values).
 
         .. note::
-            This method should only perform the minimum cleanup needed to
+            This method will only perform the minimum cleanup needed to
             release resources and invalidate dependents — the same work that
-            would happen if this object were garbage collected. Do not add
-            extra side effects here; callers should not observe any difference
-            between an explicit ``destroy()`` and a GC'd reactive value.
+            would happen if this object were garbage collected.
         """
         if self._destroyed:
             return
@@ -675,11 +673,9 @@ class Calc_(Generic[T]):
         :class:`DestroyedReactiveError`. Idempotent.
 
         .. note::
-            This method should only perform the minimum cleanup needed to
+            This method will only perform the minimum cleanup needed to
             release resources and invalidate dependents — the same work that
-            would happen if this object were garbage collected. Do not add
-            extra side effects here; callers should not observe any difference
-            between an explicit ``destroy()`` and a GC'd reactive calc.
+            would happen if this object were garbage collected.
         """
         if self._destroyed:
             return
@@ -1097,11 +1093,9 @@ class Effect_:
         for re-execution.
 
         .. note::
-            This method should only perform the minimum cleanup needed to
+            This method will only perform the minimum cleanup needed to
             release resources and prevent future execution — the same work
-            that would happen if this object were garbage collected. Do not
-            add extra side effects here; callers should not observe any
-            difference between an explicit ``destroy()`` and a GC'd effect.
+            that would happen if this object were garbage collected.
         """
         self._destroyed = True
 
