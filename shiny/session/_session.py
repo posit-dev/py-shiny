@@ -648,7 +648,6 @@ class AppSession(Session):
 
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
-        self._on_destroy_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_ended_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
@@ -1253,13 +1252,23 @@ class AppSession(Session):
     def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
-        self._on_destroy_callbacks.register(wrap_async(fn))
+        ns_key = ""
+        if ns_key not in self._destroy_callbacks_by_ns:
+            self._destroy_callbacks_by_ns[ns_key] = _utils.AsyncCallbacks()
+        self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn))
 
     async def destroy(self) -> None:
-        self._on_destroy_callbacks.on_error = lambda e: traceback.print_exception(
-            type(e), e, e.__traceback__
-        )
-        await self._on_destroy_callbacks.invoke()
+        # Destroy all namespaces: deepest first, then root ("")
+        all_keys = list(self._destroy_callbacks_by_ns.keys())
+        all_keys.sort(key=lambda k: k.count("-"), reverse=True)
+
+        for ns_key in all_keys:
+            callbacks = self._destroy_callbacks_by_ns.pop(ns_key, None)
+            if callbacks is not None:
+                callbacks.on_error = lambda e: traceback.print_exception(
+                    type(e), e, e.__traceback__
+                )
+                await callbacks.invoke()
 
     # ==========================================================================
     # Misc
