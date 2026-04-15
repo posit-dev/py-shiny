@@ -19,6 +19,7 @@ import asyncio
 import functools
 import traceback
 import warnings
+import weakref
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -55,6 +56,22 @@ from ..types import (
 )
 from ._core import Context, Dependents, ReactiveWarning, isolate
 from ._utils import is_user_code_frame
+
+
+def _weak_callback(method: Callable[[], None]) -> Callable[[], None]:
+    """
+    Wrap a bound method in a ``weakref.WeakMethod`` so the callback does not
+    prevent the owning object from being garbage collected. If the object has
+    been collected, the wrapper silently no-ops.
+    """
+    ref = weakref.WeakMethod(method)
+
+    def wrapper() -> None:
+        fn = ref()
+        if fn is not None:
+            fn()
+
+    return wrapper
 
 
 class DestroyedReactiveError(Exception):
@@ -191,7 +208,7 @@ class Value(Generic[T]):
         if session is not None:
             # Unset the value on session/module destroy so dependents are
             # invalidated and the stored value is freed.
-            session.on_destroy(self.destroy)
+            session.on_destroy(_weak_callback(self.destroy))
 
     def _try_infer_name(self) -> str | None:
         """
@@ -658,7 +675,7 @@ class Calc_(Generic[T]):
         if self._session is not None:
             # Invalidate context and dependents on session/module destroy so
             # the calc is permanently destroyed and references are freed.
-            self._session.on_destroy(self.destroy)
+            self._session.on_destroy(_weak_callback(self.destroy))
 
     def destroy(self) -> None:
         """
@@ -954,8 +971,8 @@ class Effect_:
         self._session = session
 
         if self._session is not None:
-            self._session.on_ended(self.destroy)
-            self._session.on_destroy(self.destroy)
+            self._session.on_ended(_weak_callback(self.destroy))
+            self._session.on_destroy(_weak_callback(self.destroy))
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs: dict[str, Any] = {

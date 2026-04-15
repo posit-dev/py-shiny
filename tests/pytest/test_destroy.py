@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import gc
+import weakref
 from typing import Any, cast
 
 import pytest
@@ -824,16 +826,15 @@ async def test_express_stub_session_destroy_is_noop():
     await stub.destroy()
 
 
-def test_express_stub_session_has_destroy_state():
-    """ExpressStubSession has _destroy_callbacks_by_ns for SessionProxy support."""
+def test_express_stub_session_has_no_destroy_state():
+    """ExpressStubSession does not have _destroy_callbacks_by_ns."""
     stub = ExpressStubSession()
-    assert hasattr(stub, "_destroy_callbacks_by_ns")
-    assert stub._destroy_callbacks_by_ns == {}
+    assert not hasattr(stub, "_destroy_callbacks_by_ns")
 
 
 @pytest.mark.asyncio
 async def test_express_stub_session_proxy_destroy_is_silent():
-    """SessionProxy created from ExpressStubSession works with destroy."""
+    """SessionProxy created from ExpressStubSession silently does nothing on destroy."""
     stub = ExpressStubSession()
     proxy = stub.make_scope("mod1")
     assert isinstance(proxy, SessionProxy)
@@ -1301,3 +1302,72 @@ async def test_module_owned_value_destroyed_on_destroy():
 
     with isolate():
         assert module_data.is_set() is False
+
+
+# ---------------------------------------------------------------------------
+# Garbage collection tests — session should not pin reactive objects
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_value_gc_after_session_registration():
+    """Value is garbage collected when unreachable, despite on_destroy registration."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("gc_test"))
+
+    with session_context(proxy):
+        v = Value(42)
+    ref = weakref.ref(v)
+    del v
+    gc.collect()
+    assert (
+        ref() is None
+    ), "Session should not prevent Value from being garbage collected"
+
+
+@pytest.mark.asyncio
+async def test_calc_gc_after_session_registration():
+    """Calc is garbage collected when unreachable, despite on_destroy registration."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("gc_test"))
+
+    with session_context(proxy):
+
+        @calc
+        def my_calc():
+            return 42
+
+    ref = weakref.ref(my_calc)
+    del my_calc
+    gc.collect()
+    assert ref() is None, "Session should not prevent Calc from being garbage collected"
+
+
+@pytest.mark.asyncio
+async def test_effect_gc_after_session_registration():
+    """Effect is garbage collected when unreachable, despite on_destroy registration."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("gc_test"))
+
+    with session_context(proxy):
+        eff = Effect_(lambda: None, suspended=True)
+    ref = weakref.ref(eff)
+    del eff
+    gc.collect()
+    assert (
+        ref() is None
+    ), "Session should not prevent Effect from being garbage collected"
+
+
+@pytest.mark.asyncio
+async def test_dead_destroy_callbacks_silently_skipped():
+    """Destroy callbacks for GC'd objects are silently skipped."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("gc_test"))
+
+    with session_context(proxy):
+        v = Value(42)
+    del v
+    gc.collect()
+
+    # Invoking destroy on the proxy should not raise, even though the Value's
+    # weak callback is now dead.
+    await proxy.destroy()
