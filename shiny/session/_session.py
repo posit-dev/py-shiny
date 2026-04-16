@@ -244,6 +244,109 @@ class Session(ABC):
         """
 
     @abstractmethod
+    def on_destroy(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        """
+        Register a callback to run when this session or module scope is destroyed.
+
+        For ``SessionProxy`` (module sessions), destroy callbacks fire when
+        ``session.destroy()`` is explicitly called. For ``AppSession`` (root
+        sessions), destroy callbacks fire automatically at session end, after
+        all ``on_ended`` callbacks have run.
+
+        Parameters
+        ----------
+        fn
+            The function to call on destroy. Can be sync or async.
+        """
+
+    @abstractmethod
+    async def destroy(self) -> None:
+        """
+        Destroy this session or module scope, including all descendant scopes.
+
+        Fires all registered destroy callbacks, then removes all namespaced
+        state from the session. This does not alter the UI; use
+        :func:`~shiny.ui.remove_ui` to remove UI elements.
+
+        The following categories of state are cleaned up:
+
+        - **Reactive objects** — Effects are stopped, calcs and values are
+          invalidated. After destruction, ``get()``/``set()`` on a destroyed
+          value raises ``DestroyedReactiveError``; ``is_set()`` returns
+          ``False``.
+        - **Inputs** — Namespaced input keys and their values are removed.
+          A new module with the same namespace gets fresh input values.
+        - **Outputs** — Namespaced output entries are removed and their
+          render effects are destroyed.
+        - **Message handlers, dynamic routes, downloads** — Namespaced
+          entries are removed from the root session.
+
+        For ``SessionProxy``, this must be called explicitly (typically after
+        removing dynamic module UI). For ``AppSession``, this is called
+        automatically at session end, after all ``on_ended`` callbacks.
+
+        Idempotent: calling destroy() more than once has no effect.
+
+        Composability
+        -------------
+        Every reactive object — values, calcs, and effects — is **scoped** to
+        the session (or module session) in which it was created. When you call
+        ``destroy()``, only the objects in that scope are torn down; the parent
+        session and sibling modules are unaffected.
+
+        This scoping is what makes modules safe to add and remove dynamically.
+        Without it, destroying one module could leak callbacks or invalidate
+        reactive objects that belong to another part of the app.
+
+        The key rule: **data that must outlive a module should live outside
+        it.** If a reactive value is created inside a module, it is destroyed
+        with the module. If it is created in the caller's scope and passed in,
+        the module can write to it, and the caller can continue reading it
+        after the module is destroyed.
+
+        Returning a reactive value from a module works when the module lives
+        for the entire session. However, if you plan to call
+        ``session.destroy()``, the returned value will be destroyed and can
+        no longer be read:
+
+        ```python
+        @module.server
+        def my_module_server(input, output, session):
+            result = reactive.value(0)
+            # ... update result ...
+            return result
+
+        returned_value = my_module_server("editor")
+        await session.destroy()
+        returned_value()  # Raises DestroyedReactiveError!
+        ```
+
+        Instead, pass a reactive value **into** the module. The value lives
+        in the caller's scope and survives destruction:
+
+        ```python
+        @module.server
+        def my_module_server(input, output, session, result):
+            # Module writes to the caller-owned value
+            @reactive.effect
+            @reactive.event(input.save)
+            def _():
+                result.set(input.data())
+
+        # Caller creates and owns the value
+        saved_data = reactive.value(None)
+        my_module_server("editor", result=saved_data)
+        # saved_data is still valid after the module is destroyed
+        ```
+
+        See Also
+        --------
+        * :func:`~shiny.ui.remove_ui`
+        """
+
+    @abstractmethod
     def make_scope(self, id: Id) -> Session: ...
 
     @abstractmethod
@@ -503,6 +606,53 @@ class Session(ABC):
     def _decrement_busy_count(self) -> None: ...
 
 
+def _print_exception(e: Exception) -> None:
+    traceback.print_exception(type(e), e, e.__traceback__)
+
+
+def _new_destroy_callbacks() -> _utils.AsyncCallbacks:
+    return _utils.AsyncCallbacks(on_error=_print_exception)
+
+
+async def _invoke_destroy_callbacks(
+    callbacks_by_ns: dict[str, _utils.AsyncCallbacks],
+    ns: str,
+) -> None:
+    """
+    Invoke destroy callbacks for a namespace and all its descendants.
+
+    Collects all namespaces matching ``ns`` (exact match) and any child
+    namespaces (``ns + "-"`` prefix), sorts them deepest-first, then pops
+    and invokes each set of callbacks.
+
+    Parameters
+    ----------
+    callbacks_by_ns
+        The dict mapping namespace strings to their ``AsyncCallbacks``.
+    ns
+        The namespace to destroy. Use ``""`` for the root session (destroys
+        all namespaces).
+    """
+    if ns == "":
+        # Root: destroy everything
+        matching_keys = list(callbacks_by_ns.keys())
+    else:
+        ns_prefix = ns + "-"
+        matching_keys = [
+            k for k in callbacks_by_ns if k == ns or k.startswith(ns_prefix)
+        ]
+
+    # Sort deepest namespaces first (most dashes → most nested) so that
+    # children are destroyed before parents, mirroring the reverse of
+    # construction order.
+    matching_keys.sort(key=lambda k: k.count("-"), reverse=True)
+
+    for ns_key in matching_keys:
+        callbacks = callbacks_by_ns.pop(ns_key, None)
+        if callbacks is not None:
+            await callbacks.invoke()
+
+
 # ======================================================================================
 # AppSession
 # ======================================================================================
@@ -577,6 +727,10 @@ class AppSession(Session):
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
 
+        # Destroy callbacks for module scopes, keyed by namespace string.
+        # Stored on root session because SessionProxy is a throwaway lens.
+        self._destroy_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
+
         self._register_session_ended_callbacks()
 
         self._flush_callbacks = _utils.AsyncCallbacks()
@@ -604,6 +758,9 @@ class AppSession(Session):
             ):
                 try:
                     await self._on_ended_callbacks.invoke()
+                    # Destroy callbacks run after on_ended callbacks so that
+                    # on_ended handlers can still read reactive state.
+                    await self.destroy()
                 finally:
                     self.app._remove_session(self)
 
@@ -1167,6 +1324,17 @@ class AppSession(Session):
     ) -> Callable[[], None]:
         return self._on_ended_callbacks.register(wrap_async(fn))
 
+    def on_destroy(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        ns_key = ""
+        if ns_key not in self._destroy_callbacks_by_ns:
+            self._destroy_callbacks_by_ns[ns_key] = _new_destroy_callbacks()
+        self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn))
+
+    async def destroy(self) -> None:
+        await _invoke_destroy_callbacks(self._destroy_callbacks_by_ns, "")
+
     # ==========================================================================
     # Misc
     # ==========================================================================
@@ -1298,6 +1466,60 @@ class SessionProxy(Session):
         self._downloads = root_session._downloads
 
         self.bookmark = BookmarkProxy(self)
+
+    def on_destroy(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        """
+        Register a callback to run when this module scope is destroyed.
+
+        Destroy callbacks fire when ``destroy()`` is explicitly called, or
+        automatically at session end (after ``on_ended`` callbacks).
+
+        Parameters
+        ----------
+        fn
+            The function to call when destroy occurs.
+        """
+        destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
+            self._root_session, "_destroy_callbacks_by_ns", None
+        )
+        if destroy_cbs is not None:
+            ns_key = str(self.ns)
+            if ns_key not in destroy_cbs:
+                destroy_cbs[ns_key] = _new_destroy_callbacks()
+            destroy_cbs[ns_key].register(wrap_async(fn))
+
+    async def destroy(self) -> None:
+        destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
+            self._root_session, "_destroy_callbacks_by_ns", None
+        )
+        if destroy_cbs is not None:
+            await _invoke_destroy_callbacks(destroy_cbs, str(self.ns))
+
+        # Destroy inputs and outputs after callbacks, so that callback
+        # functions can still read input/output values during destruction.
+        # Remove namespaced input keys and their values.
+        self.input._destroy()
+        # Remove namespaced output entries and destroy their effects.
+        self.output._destroy()
+
+        # Clean up namespaced registrations that the module made on the root
+        # session. These dicts use namespaced keys (via self.ns(name)), so
+        # entries from a destroyed module would otherwise persist for the
+        # session lifetime — leaking handler closures and preventing GC of
+        # objects they capture.
+        ns_str = str(self.ns)
+        ns_prefix = ns_str + "-"
+        for attr in ("_message_handlers", "_dynamic_routes", "_downloads"):
+            registry: dict[str, object] | None = getattr(self._root_session, attr, None)
+            if registry is None:
+                continue
+            keys_to_remove = [
+                k for k in registry if k == ns_str or k.startswith(ns_prefix)
+            ]
+            for k in keys_to_remove:
+                del registry[k]
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
@@ -1586,6 +1808,23 @@ class Inputs:
                 serialized_values[str(key)] = serialized_value
 
         return serialized_values
+
+    def _destroy(self) -> None:
+        # This will cause all modules with the same module namespace prefix to have their inputs removed.
+        # So if one parent module is being torn down, all descendant modules will be torn down.
+        # Just like with Outputs
+
+        prefix = str(self._ns) + "-"
+        clientdata_prefix = f".clientdata_output_{self._ns}-"
+        keys_to_remove = [
+            k
+            for k in self._map
+            if k.startswith(prefix) or k.startswith(clientdata_prefix)
+        ]
+        for key in keys_to_remove:
+            value_obj = self._map[key]
+            value_obj.destroy()
+            del self._map[key]
 
 
 @add_example()
@@ -2028,6 +2267,17 @@ class Outputs:
         if output_name in self._outputs:
             self._outputs[output_name].effect.destroy()
             del self._outputs[output_name]
+
+    def _destroy(self) -> None:
+        # This will cause all modules with the same module namespace prefix to have their outputs removed.
+        # So if one parent module is being torn down, all descendant modules will be torn down.
+        # Just like with Inputs
+
+        prefix = str(self._ns) + "-"
+        keys_to_remove = [k for k in self._outputs if k.startswith(prefix)]
+        for key in keys_to_remove:
+            self._outputs[key].effect.destroy()
+            del self._outputs[key]
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."

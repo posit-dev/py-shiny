@@ -18,6 +18,12 @@ from shiny.session._session import RenderedDeps
 class _MockSession:
     ns: ResolvedId = Root
 
+    def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
+        return lambda: None
+
+    def on_destroy(self, fn: Callable[[], None]) -> Callable[[], None]:
+        return lambda: None
+
     # Simplified version of `AppSession._process_ui()`
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
         res = TagList(ui).render()

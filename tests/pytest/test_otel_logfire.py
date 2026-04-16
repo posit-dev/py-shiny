@@ -100,9 +100,7 @@ class TestLogfireIntegration:
         This tests our detection logic for wrapped providers (like logfire's
         ProxyTracerProvider) without depending on logfire's implementation.
         """
-        _check_provider_not_already_set()
-
-        from unittest.mock import Mock
+        from unittest.mock import Mock, patch
 
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
@@ -111,14 +109,17 @@ class TestLogfireIntegration:
         mock_proxy_provider = Mock()
         mock_proxy_provider.provider = SDKTracerProvider()  # Wrapped SDK provider
 
-        # Set as global provider
-        trace.set_tracer_provider(mock_proxy_provider)
-        reset_otel_tracing_state()
-
-        # Verify our detection logic recognizes the proxy provider
-        assert (
-            is_otel_tracing_enabled() is True
-        ), "Should detect proxy provider with underlying SDK TracerProvider"
+        # Patch get_tracer_provider to avoid permanently setting the global OTel
+        # TracerProvider. Once set, OTel does not allow overriding it, which would
+        # contaminate subsequent tests in the same worker process.
+        with patch.object(
+            trace, "get_tracer_provider", return_value=mock_proxy_provider
+        ):
+            reset_otel_tracing_state()
+            # Verify our detection logic recognizes the proxy provider
+            assert (
+                is_otel_tracing_enabled() is True
+            ), "Should detect proxy provider with underlying SDK TracerProvider"
 
     def test_direct_sdk_provider_still_detected(self):
         """

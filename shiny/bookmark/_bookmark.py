@@ -582,8 +582,12 @@ class BookmarkProxy(Bookmark):
         self._root_session = session_proxy._root_session
 
         # Be sure root bookmark has access to proxy's excluded values
-        self._root_bookmark._on_get_exclude.append(
-            lambda: [str(self._ns(name)) for name in self.exclude]
+        def exclude_cb() -> list[str]:
+            return [str(self._ns(name)) for name in self.exclude]
+
+        self._root_bookmark._on_get_exclude.append(exclude_cb)
+        session_proxy.on_destroy(
+            lambda: self._root_bookmark._on_get_exclude.remove(exclude_cb)
         )
 
         # Note: This proxy bookmark class will not register a handler (`on_bookmark`,

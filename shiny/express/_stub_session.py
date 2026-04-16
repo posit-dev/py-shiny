@@ -64,6 +64,14 @@ class ExpressStubSession(Session):
     ) -> Callable[[], None]:
         return lambda: None
 
+    def on_destroy(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        return
+
+    async def destroy(self) -> None:
+        return
+
     def make_scope(self, id: Id) -> Session:
         ns = self.ns(id)
         return SessionProxy(root_session=self, ns=ns)

@@ -552,9 +552,19 @@ CancelCallback = Callable[[], None]
 
 
 class AsyncCallbacks:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        on_error: Callable[[Exception], None] | None = None,
+    ) -> None:
         self._callbacks: dict[int, tuple[Callable[..., Awaitable[None]], bool]] = {}
         self._id: int = 0
+        self._on_error = on_error
+        """
+        If set, called with the exception when a callback raises during
+        `invoke()`, and iteration continues to the next callback.
+        If `None` (the default), exceptions propagate immediately.
+        """
 
     def register(
         self, fn: Callable[..., Awaitable[None]], once: bool = False
@@ -569,7 +579,21 @@ class AsyncCallbacks:
 
         return cancel_callback
 
-    async def invoke(self, *args: Any, **kwargs: Any) -> None:
+    async def invoke(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Invoke all registered callbacks with the given arguments.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to each callback.
+        **kwargs
+            Keyword arguments passed to each callback.
+        """
         # The list() wrapper is necessary to force collection of all the items before
         # iteration begins. This is necessary because self._callbacks may be mutated
         # by callbacks.
@@ -577,6 +601,11 @@ class AsyncCallbacks:
             fn, once = value
             try:
                 await fn(*args, **kwargs)
+            except Exception as e:
+                if self._on_error is not None:
+                    self._on_error(e)
+                else:
+                    raise
             finally:
                 if once:
                     if id in self._callbacks:
