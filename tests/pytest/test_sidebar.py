@@ -80,3 +80,14 @@ def test_sidebar_throws_for_invalid_open():
 
     with pytest.raises(TypeError, match="widescreen"):
         ui.sidebar(open={"widescreen": "open"})  # pyright: ignore[reportArgumentType]
+
+
+def test_sidebar_resizable_attribute():
+    sb_default, _ = get_sidebar_tags(ui.sidebar(open="open"))
+    assert sb_default.attrs["data-resizable"] == ""
+
+    sb_true, _ = get_sidebar_tags(ui.sidebar(open="open", resizable=True))
+    assert sb_true.attrs["data-resizable"] == ""
+
+    sb_false, _ = get_sidebar_tags(ui.sidebar(open="open", resizable=False))
+    assert "data-resizable" not in sb_false.attrs
