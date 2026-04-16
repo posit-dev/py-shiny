@@ -32,6 +32,13 @@
     justify-content: center;
     line-height: 1; // Override Bootstrap's line-height to avoid too much vertical space
     height: var(--_toolbar-btn-size); // Keep square icon and label + icon button heights consistent
+    display: flex; // Prevent Shiny from overwriting flex centering
+
+    // Remove margins from action button elements
+    .action-icon,
+    .action-label {
+      margin: 0;
+    }
 
     &.btn-default:not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-danger):not(.btn-warning):not(.btn-info):not(.btn-light):not(.btn-dark) {
       background-color: transparent !important;
@@ -64,6 +71,13 @@
   .bslib-toolbar-input-button[data-type="label"] {
     .action-label {
       padding-left: 0;
+    }
+  }
+
+  // Add spacing between icon and label in buttons with both
+  .bslib-toolbar-input-button[data-type="both"] {
+    .action-icon {
+      margin-right: 0.35rem;
     }
   }
 

@@ -62,7 +62,11 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
   --_toggle-collective-height: calc(calc(var(--_icon-button-size) + 0.5em) * var(--_js-toggle-count-max-side, 1));
 
   // Resize handle variables
-  --_resize-handle-width: var(--bslib-sidebar-resize-handle-width, 12px);
+  --_resize-handle-width: var(--bslib-sidebar-resize-handle-width, 8px);
+
+  @media (any-pointer: coarse) {
+    --_resize-handle-width: var(--bslib-sidebar-resize-handle-width, 26px);
+  }
   --_resize-indicator-color: var(--_sidebar-fg, var(--bs-emphasis-color, black));
   --_resize-indicator-color-active: var(--bslib-sidebar-resize-indicator-color-active, var(--bs-primary, #0d6efd));
 
@@ -309,20 +313,45 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
     width: var(--_resize-handle-width);
     left: calc(calc(-1 * var(--_resize-handle-width)) - 2px);
     grid-column: 2;
-    cursor: ew-resize;
+    pointer-events: none;
     user-select: none;
     z-index: calc(#{$zindex-dropdown} + 1); // Above toggle button
 
-    // Make the handle easier to grab
+    // Trip area: a narrow strip at the sidebar outer edge that detects the
+    // mouse crossing the sidebar boundary. Positioned past the handle so
+    // it doesn't overlap the sidebar scrollbar beneath the handle.
+    // Expands when .handle-active is added to prevent accidental deactivation.
     &::before {
       content: "";
       position: absolute;
       top: 0;
       bottom: 0;
-      // Invisible expanded hit area
-      left: 0;
-      right: calc(-1 * var(--_resize-handle-width) - 2px);
-      z-index: calc(#{$zindex-dropdown} + 1); // Above toggle button
+      left: 100%;
+      width: 5px;
+      pointer-events: auto;
+    }
+
+    // When the mouse crosses the sidebar edge, JS adds .handle-active
+    // to show the resize cursor and expand the trip area.
+    &.handle-active {
+      cursor: ew-resize;
+
+      &::before {
+        left: calc(100% - 10px);
+        width: 24px;
+      }
+    }
+
+    // Touch users get the full handle + extended hit area
+    @media (any-pointer: coarse) {
+      pointer-events: auto;
+      cursor: ew-resize;
+
+      &::before {
+        left: 0;
+        width: auto;
+        right: calc(-1 * var(--_resize-handle-width) - 2px);
+      }
     }
 
     .resize-indicator {
@@ -338,14 +367,15 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
       transition: all 0.15s ease;
     }
 
-    &:hover, &:focus, &:active, &:focus {
+    &:hover, &:focus, &:active, &.handle-active {
       .resize-indicator {
         opacity: 1;
       }
     }
 
     &:hover .resize-indicator,
-    &:focus .resize-indicator {
+    &:focus .resize-indicator,
+    &.handle-active .resize-indicator {
       width: 3px;
       height: 40px;
     }
@@ -370,6 +400,20 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
   // Right sidebar resize handle positioning
   &.sidebar-right > .bslib-sidebar-resize-handle {
     left: 2px;
+
+    &::before {
+      left: auto;
+      right: 100%;
+    }
+
+    &.handle-active::before {
+      right: calc(100% - 10px);
+    }
+  }
+
+  // Hide resize handle when sidebar is not resizable
+  > .sidebar:not([data-resizable]) ~ .bslib-sidebar-resize-handle {
+    display: none;
   }
 
   // Hide resize handle during transitions and when collapsed
