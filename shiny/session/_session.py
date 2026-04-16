@@ -606,6 +606,14 @@ class Session(ABC):
     def _decrement_busy_count(self) -> None: ...
 
 
+def _print_exception(e: Exception) -> None:
+    traceback.print_exception(type(e), e, e.__traceback__)
+
+
+def _new_destroy_callbacks() -> _utils.AsyncCallbacks:
+    return _utils.AsyncCallbacks(on_error=_print_exception)
+
+
 async def _invoke_destroy_callbacks(
     callbacks_by_ns: dict[str, _utils.AsyncCallbacks],
     ns: str,
@@ -642,9 +650,6 @@ async def _invoke_destroy_callbacks(
     for ns_key in matching_keys:
         callbacks = callbacks_by_ns.pop(ns_key, None)
         if callbacks is not None:
-            callbacks.on_error = lambda e: traceback.print_exception(
-                type(e), e, e.__traceback__
-            )
             await callbacks.invoke()
 
 
@@ -1324,7 +1329,7 @@ class AppSession(Session):
     ) -> None:
         ns_key = ""
         if ns_key not in self._destroy_callbacks_by_ns:
-            self._destroy_callbacks_by_ns[ns_key] = _utils.AsyncCallbacks()
+            self._destroy_callbacks_by_ns[ns_key] = _new_destroy_callbacks()
         self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn))
 
     async def destroy(self) -> None:
@@ -1482,7 +1487,7 @@ class SessionProxy(Session):
         if destroy_cbs is not None:
             ns_key = str(self.ns)
             if ns_key not in destroy_cbs:
-                destroy_cbs[ns_key] = _utils.AsyncCallbacks()
+                destroy_cbs[ns_key] = _new_destroy_callbacks()
             destroy_cbs[ns_key].register(wrap_async(fn))
 
     async def destroy(self) -> None:

@@ -552,10 +552,14 @@ CancelCallback = Callable[[], None]
 
 
 class AsyncCallbacks:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        on_error: Callable[[Exception], None] | None = None,
+    ) -> None:
         self._callbacks: dict[int, tuple[Callable[..., Awaitable[None]], bool]] = {}
         self._id: int = 0
-        self.on_error: Callable[[Exception], None] | None = None
+        self._on_error = on_error
         """
         If set, called with the exception when a callback raises during
         `invoke()`, and iteration continues to the next callback.
@@ -598,8 +602,8 @@ class AsyncCallbacks:
             try:
                 await fn(*args, **kwargs)
             except Exception as e:
-                if self.on_error is not None:
-                    self.on_error(e)
+                if self._on_error is not None:
+                    self._on_error(e)
                 else:
                     raise
             finally:
