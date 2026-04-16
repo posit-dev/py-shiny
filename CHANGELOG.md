@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* Added `session.destroy()` and `session.on_destroy()` for cleaning up reactive objects (effects, calcs, values) when dynamically inserted module UI is removed. Calling `session.destroy()` on a module's session fires all registered destroy callbacks, which stop effects, invalidate calcs and values, and remove namespaced inputs and outputs from the reactive graph. Reactive objects automatically register weak destroy callbacks so they can be garbage collected when no longer referenced, even before session end. (#2209)
+
 ### Bug fixes
 
 * Fixed OpenTelemetry name inference for `reactive.Value` to handle type-annotated assignments (e.g., `counter: reactive.Value[int] = reactive.Value(0)`), generic subscript calls (e.g., `reactive.Value[int](0)`), and multiline assignments where the `Value()` call is on a continuation line (e.g., assignments split across lines with parentheses or multiline type annotations). This fixes anonymous OTel labels for packages like `shinychat` that use multiline `reactive.Value` assignments. (#2205)
