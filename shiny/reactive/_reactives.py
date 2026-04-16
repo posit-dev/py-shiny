@@ -560,10 +560,11 @@ class Value(Generic[T]):
         if self._destroyed:
             return
         self._destroyed = True
-        # Uses _set() instead of unset() to bypass the read-only guard,
-        # since input values are read-only but still need cleanup.
-        # Invalidates both value and is_set dependents, and frees the stored value.
-        self._set(MISSING)  # type: ignore
+        # Invalidate directly instead of calling _set(MISSING) because _set()
+        # short-circuits when the value is already MISSING (identity check).
+        self._value = MISSING  # type: ignore
+        self._value_dependents.invalidate()
+        self._is_set_dependents.invalidate()
 
     def unset(self) -> None:
         """
