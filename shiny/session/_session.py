@@ -264,12 +264,24 @@ class Session(ABC):
     @abstractmethod
     async def destroy(self) -> None:
         """
-        Destroy this session or module scope.
+        Destroy this session or module scope, including all descendant scopes.
 
-        Fires all registered destroy callbacks, which destroy reactive objects
-        (effects, calcs, values) and remove namespaced inputs and outputs from
-        the reactive graph. This does not alter the UI; use
+        Fires all registered destroy callbacks, then removes all namespaced
+        state from the session. This does not alter the UI; use
         :func:`~shiny.ui.remove_ui` to remove UI elements.
+
+        The following categories of state are cleaned up:
+
+        - **Reactive objects** — Effects are stopped, calcs and values are
+          invalidated. After destruction, ``get()``/``set()`` on a destroyed
+          value raises ``DestroyedReactiveError``; ``is_set()`` returns
+          ``False``.
+        - **Inputs** — Namespaced input keys and their values are removed.
+          A new module with the same namespace gets fresh input values.
+        - **Outputs** — Namespaced output entries are removed and their
+          render effects are destroyed.
+        - **Message handlers, dynamic routes, downloads** — Namespaced
+          entries are removed from the root session.
 
         For ``SessionProxy``, this must be called explicitly (typically after
         removing dynamic module UI). For ``AppSession``, this is called
@@ -277,20 +289,27 @@ class Session(ABC):
 
         Idempotent: calling destroy() more than once has no effect.
 
-        Note
-        ----
-        Reactive values and calcs created inside a module are destroyed when
-        this method is called. If you need data to survive after a module is
-        destroyed, create the reactive value **outside** the module and pass
-        it in. The module can set the value, and the caller can read it after
-        the module is destroyed.
+        Composability
+        -------------
+        Every reactive object — values, calcs, and effects — is **scoped** to
+        the session (or module session) in which it was created. When you call
+        ``destroy()``, only the objects in that scope are torn down; the parent
+        session and sibling modules are unaffected.
 
-        Examples
-        --------
-        Returning a reactive value from a module is fine when the module
-        lives for the entire session. However, if you plan to call
-        `session.destroy()`, the returned value will be destroyed and
-        can no longer be read:
+        This scoping is what makes modules safe to add and remove dynamically.
+        Without it, destroying one module could leak callbacks or invalidate
+        reactive objects that belong to another part of the app.
+
+        The key rule: **data that must outlive a module should live outside
+        it.** If a reactive value is created inside a module, it is destroyed
+        with the module. If it is created in the caller's scope and passed in,
+        the module can write to it, and the caller can continue reading it
+        after the module is destroyed.
+
+        Returning a reactive value from a module works when the module lives
+        for the entire session. However, if you plan to call
+        ``session.destroy()``, the returned value will be destroyed and can
+        no longer be read:
 
         ```python
         @module.server
@@ -300,9 +319,8 @@ class Session(ABC):
             return result  # Destroyed when session.destroy() is called!
         ```
 
-        If the module will be destroyed, pass a reactive value **into**
-        the module instead. The value lives in the caller's scope and
-        survives destruction:
+        Instead, pass a reactive value **into** the module. The value lives
+        in the caller's scope and survives destruction:
 
         ```python
         @module.server
@@ -318,6 +336,10 @@ class Session(ABC):
         my_module_server("editor", result=saved_data)
         # saved_data is still valid after the module is destroyed
         ```
+
+        See Also
+        --------
+        * :func:`~shiny.ui.remove_ui`
         """
 
     @abstractmethod
@@ -1460,29 +1482,6 @@ class SessionProxy(Session):
             destroy_cbs[ns_key].register(wrap_async(fn))
 
     async def destroy(self) -> None:
-        """
-        Destroy this module scope and all descendant module scopes.
-
-        Fires all registered destroy callbacks, then removes all namespaced
-        state from the root session:
-
-        - **Reactive objects** — Effects are stopped, calcs and values are
-          invalidated. After destruction, ``get()``/``set()`` on a destroyed
-          value raises ``DestroyedReactiveError``; ``is_set()`` returns
-          ``False``.
-        - **Inputs** — Namespaced input keys and their values are removed.
-          A new module with the same namespace gets fresh input values.
-        - **Outputs** — Namespaced output entries are removed and their
-          render effects are destroyed.
-        - **Message handlers, dynamic routes, downloads** — Namespaced
-          entries are removed from the root session.
-
-        This is called automatically at session end (after ``on_ended``
-        callbacks), or can be called explicitly after removing dynamic
-        module UI with ``ui.remove_ui()``.
-
-        Idempotent: calling destroy() more than once has no effect.
-        """
         destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
             self._root_session, "_destroy_callbacks_by_ns", None
         )
