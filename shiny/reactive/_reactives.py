@@ -998,7 +998,10 @@ class Effect_:
         self._session = session
 
         if self._session is not None:
-            self._session.on_ended(_weak_callback(self.destroy))
+            # TODO-future: Investigate using _weak_callback for on_ended too.
+            # Currently kept as a strong reference to preserve existing behavior
+            # where effects are guaranteed to be destroyed at session end.
+            self._session.on_ended(self.destroy)
             self._session.on_destroy(_weak_callback(self.destroy))
 
         # Extract OpenTelemetry attributes at initialization time
