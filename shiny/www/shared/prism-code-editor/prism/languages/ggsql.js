@@ -19,13 +19,13 @@ Object.keys(sql).forEach(function(k) { ggsql[k] = sql[k]; });
 
 // ggsql clause keywords
 ggsql["ggsql-keyword"] = {
-  pattern: /\b(?:VISUALISE|VISUALIZE|DRAW|SCALE|FACET|PROJECT|LABEL|THEME|MAPPING|REMAPPING|SETTING|FILTER|FROM|ORDER|BY|PARTITION|RENAMING|AS|TO|VIA)\b/i,
+  pattern: /\b(?:VISUALISE|VISUALIZE|DRAW|PLACE|SCALE|FACET|PROJECT|LABEL|MAPPING|REMAPPING|SETTING|FILTER|FROM|ORDER|BY|PARTITION|RENAMING|AS|TO|VIA)\b/i,
   alias: "keyword",
 };
 
 // Geom types
 ggsql["ggsql-geom"] = {
-  pattern: /\b(?:point|line|path|bar|col|area|tile|polygon|ribbon|histogram|density|smooth|boxplot|violin|text|label|segment|arrow|hline|vline|abline|errorbar)\b/,
+  pattern: /\b(?:point|line|path|bar|col|area|tile|polygon|ribbon|histogram|density|smooth|boxplot|violin|text|label|segment|arrow|rule|errorbar|rect)\b/,
   alias: "builtin",
 };
 
@@ -35,21 +35,27 @@ ggsql["ggsql-scale-type"] = {
   alias: "builtin",
 };
 
+// Scale type values
+ggsql["ggsql-scale-value"] = {
+  pattern: /\b(?:linear|log|log10|log2|sqrt|reverse|date|datetime|time|viridis|plasma|magma|inferno|cividis|diverging|sequential|identity)\b/,
+  alias: "string",
+};
+
 // Aesthetic names
 ggsql["ggsql-aesthetic"] = {
-  pattern: /\b(?:x|y|xmin|xmax|ymin|ymax|xend|yend|weight|color|colour|fill|stroke|opacity|size|shape|linetype|linewidth|width|height|label|family|fontface|hjust|vjust|panel|row|column)\b/,
+  pattern: /\b(?:x|y|xmin|xmax|ymin|ymax|xend|yend|theta|radius|thetamin|thetamax|radiusmin|radiusmax|thetaend|radiusend|color|colour|fill|stroke|opacity|size|shape|linetype|linewidth|width|height|label|family|fontface|hjust|vjust|weight|coef|intercept|offset|density|count|intensity|panel|row|column)\b/,
   alias: "attr-name",
 };
 
-// Theme names
-ggsql["ggsql-theme"] = {
-  pattern: /\b(?:minimal|classic|gray|grey|bw|dark|light|void)\b/,
-  alias: "class-name",
+// Property names
+ggsql["ggsql-property"] = {
+  pattern: /\b(?:type|limits|breaks|labels|expand|direction|na_value|palette|domain|range|free|ncol|missing|xlim|ylim|ratio|angle|clip|start|title|subtitle|x|y|caption|tag|color|colour|fill|size|shape|linetype)\b/,
+  alias: "property",
 };
 
 // Project types
 ggsql["ggsql-project"] = {
-  pattern: /\b(?:cartesian|polar|flip|fixed|trans|map|quickmap)\b/,
+  pattern: /\b(?:cartesian|polar)\b/,
   alias: "class-name",
 };
 
@@ -67,8 +73,8 @@ var ordered = {};
 ["comment", "variable", "string", "identifier"].forEach(function(k) {
   if (k in ggsql) ordered[k] = ggsql[k];
 });
-["ggsql-keyword", "ggsql-geom", "ggsql-scale-type", "ggsql-aesthetic",
- "ggsql-theme", "ggsql-project", "ggsql-arrow"].forEach(function(k) {
+["ggsql-keyword", "ggsql-geom", "ggsql-scale-type", "ggsql-scale-value",
+ "ggsql-aesthetic", "ggsql-property", "ggsql-project", "ggsql-arrow"].forEach(function(k) {
   if (k in ggsql) ordered[k] = ggsql[k];
 });
 Object.keys(ggsql).forEach(function(k) {
