@@ -101,6 +101,50 @@ async def test_value_destroy_invalidates_is_set_dependents():
 
 
 @pytest.mark.asyncio
+async def test_value_destroy_invalidates_unset_value_dependents():
+    """destroy() invalidates dependents even when the value was already unset."""
+    v: Value[int] = Value()
+    call_count = 0
+
+    @effect()
+    def _():
+        nonlocal call_count
+        try:
+            v()
+        except Exception:
+            pass
+        call_count += 1
+
+    await flush()
+    assert call_count == 1
+
+    v.destroy()
+    await flush()
+    assert call_count == 2, "Effect should re-run after destroying an unset Value"
+
+
+@pytest.mark.asyncio
+async def test_value_destroy_invalidates_unset_is_set_dependents():
+    """destroy() invalidates is_set() dependents even when already unset."""
+    v: Value[int] = Value()
+    is_set_results: list[bool] = []
+
+    @effect()
+    def _():
+        is_set_results.append(v.is_set())
+
+    await flush()
+    assert is_set_results == [False]
+
+    v.destroy()
+    await flush()
+    assert is_set_results == [
+        False,
+        False,
+    ], "is_set() dependents should be invalidated even when Value was already unset"
+
+
+@pytest.mark.asyncio
 async def test_value_destroy_is_idempotent():
     """Second destroy() call is a no-op."""
     v = Value(42)
@@ -706,6 +750,44 @@ async def test_destroy_cleans_up_child_namespace_registrations():
     assert "mod1-child-route" not in root._dynamic_routes
     assert "mod1-dl" not in root._downloads
     assert "mod1-child-dl" not in root._downloads
+
+
+@pytest.mark.asyncio
+async def test_destroy_cleans_up_bookmark_proxy_registrations():
+    """destroy() removes BookmarkProxy's _on_get_exclude entry from root session."""
+    root = _make_real_app_session()
+    exclude_count_before = len(root.bookmark._on_get_exclude)
+
+    # Creating a SessionProxy also creates a BookmarkProxy that appends
+    # a callback to root.bookmark._on_get_exclude
+    proxy = root.make_scope("mod1")
+    assert len(root.bookmark._on_get_exclude) == exclude_count_before + 1
+
+    await proxy.destroy()
+
+    assert (
+        len(root.bookmark._on_get_exclude) == exclude_count_before
+    ), "BookmarkProxy's _on_get_exclude entry should be removed on destroy"
+
+
+@pytest.mark.asyncio
+async def test_destroy_cleans_up_child_bookmark_proxy_registrations():
+    """Parent destroy() removes child entries but not sibling entries."""
+    root = _make_real_app_session()
+    exclude_count_before = len(root.bookmark._on_get_exclude)
+
+    parent = root.make_scope("mod1")
+    _child = parent.make_scope("inner")  # noqa: F841
+    _sibling = root.make_scope("mod2")  # noqa: F841
+    assert len(root.bookmark._on_get_exclude) == exclude_count_before + 3
+
+    # Destroying the parent should clean up parent and child, but not sibling
+    await parent.destroy()
+
+    assert len(root.bookmark._on_get_exclude) == exclude_count_before + 1, (
+        "Parent and child BookmarkProxy entries should be removed, "
+        "but sibling should remain"
+    )
 
 
 def test_session_proxy_callbacks_stored_on_root():
