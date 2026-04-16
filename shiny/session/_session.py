@@ -316,7 +316,11 @@ class Session(ABC):
         def my_module_server(input, output, session):
             result = reactive.value(0)
             # ... update result ...
-            return result  # Destroyed when session.destroy() is called!
+            return result
+
+        returned_value = my_module_server("editor")
+        await session.destroy()
+        returned_value()  # Raises DestroyedReactiveError!
         ```
 
         Instead, pass a reactive value **into** the module. The value lives
@@ -1503,9 +1507,7 @@ class SessionProxy(Session):
         ns_str = str(self.ns)
         ns_prefix = ns_str + "-"
         for attr in ("_message_handlers", "_dynamic_routes", "_downloads"):
-            registry: dict[str, object] | None = getattr(
-                self._root_session, attr, None
-            )
+            registry: dict[str, object] | None = getattr(self._root_session, attr, None)
             if registry is None:
                 continue
             keys_to_remove = [
