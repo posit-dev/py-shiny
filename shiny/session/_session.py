@@ -1463,8 +1463,19 @@ class SessionProxy(Session):
         """
         Destroy this module scope and all descendant module scopes.
 
-        Fires all registered destroy callbacks, which destroy reactive objects
-        (effects, calcs, values) and remove namespaced inputs and outputs.
+        Fires all registered destroy callbacks, then removes all namespaced
+        state from the root session:
+
+        - **Reactive objects** — Effects are stopped, calcs and values are
+          invalidated. After destruction, ``get()``/``set()`` on a destroyed
+          value raises ``DestroyedReactiveError``; ``is_set()`` returns
+          ``False``.
+        - **Inputs** — Namespaced input keys and their values are removed.
+          A new module with the same namespace gets fresh input values.
+        - **Outputs** — Namespaced output entries are removed and their
+          render effects are destroyed.
+        - **Message handlers, dynamic routes, downloads** — Namespaced
+          entries are removed from the root session.
 
         This is called automatically at session end (after ``on_ended``
         callbacks), or can be called explicitly after removing dynamic
@@ -1484,6 +1495,25 @@ class SessionProxy(Session):
         self.input._destroy()
         # Remove namespaced output entries and destroy their effects.
         self.output._destroy()
+
+        # Clean up namespaced registrations that the module made on the root
+        # session. These dicts use namespaced keys (via self.ns(name)), so
+        # entries from a destroyed module would otherwise persist for the
+        # session lifetime — leaking handler closures and preventing GC of
+        # objects they capture.
+        ns_str = str(self.ns)
+        ns_prefix = ns_str + "-"
+        for attr in ("_message_handlers", "_dynamic_routes", "_downloads"):
+            registry: dict[str, object] | None = getattr(
+                self._root_session, attr, None
+            )
+            if registry is None:
+                continue
+            keys_to_remove = [
+                k for k in registry if k == ns_str or k.startswith(ns_prefix)
+            ]
+            for k in keys_to_remove:
+                del registry[k]
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)

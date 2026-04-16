@@ -33,14 +33,28 @@ def test_destroyed_reactive_error_is_exception():
 
 
 @pytest.mark.asyncio
-async def test_value_destroy_unsets_value():
-    """After destroy(), value is unset."""
+async def test_value_destroy_raises_on_access():
+    """After destroy(), get/set/unset/freeze raise DestroyedReactiveError."""
     v = Value(42)
     with isolate():
         assert v.is_set() is True
     v.destroy()
+    # is_set() returns False (not an error — allows defensive checks)
     with isolate():
         assert v.is_set() is False
+    # get() raises
+    with pytest.raises(DestroyedReactiveError):
+        with isolate():
+            v()
+    # set() raises
+    with pytest.raises(DestroyedReactiveError):
+        v.set(99)
+    # unset() raises (calls set())
+    with pytest.raises(DestroyedReactiveError):
+        v.unset()
+    # freeze() raises
+    with pytest.raises(DestroyedReactiveError):
+        v.freeze()
 
 
 @pytest.mark.asyncio
@@ -318,16 +332,52 @@ def test_inputs_destroy_resurrection():
     ns = ResolvedId("panel_1")
     inputs = Inputs(values=shared_map, ns=ns)
 
-    shared_map["panel_1-txt"] = Value("old", read_only=True)
+    old_value = Value("old", read_only=True)
+    shared_map["panel_1-txt"] = old_value
     inputs._destroy()
     assert "panel_1-txt" not in shared_map
 
+    # Old value is destroyed and raises on access
+    with pytest.raises(DestroyedReactiveError):
+        with isolate():
+            old_value()
+
+    # New value under the same key works normally
     new_value: Value[str] = Value(read_only=True)
     new_value._set("new")
     shared_map["panel_1-txt"] = new_value
 
     with isolate():
         assert shared_map["panel_1-txt"]() == "new"
+
+
+@pytest.mark.asyncio
+async def test_module_input_destroyed_on_session_destroy():
+    """Module session destroy removes input from map; old reference raises."""
+    root = _make_mock_root_session_non_stub()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    # Simulate an input value arriving from the client
+    root.input._map["mod1-myobj"] = Value("hello", read_only=True)
+    root.input._map["mod1-myobj"]._set("hello")
+
+    # Grab a reference to the input Value before destroy
+    with session_context(proxy):
+        myobj = proxy.input["myobj"]
+
+    with isolate():
+        assert myobj() == "hello"
+
+    # Destroy the module session
+    await proxy.destroy()
+
+    # The key is gone from the shared input map — a new module gets a fresh Value
+    assert "mod1-myobj" not in root.input._map
+
+    # The old reference is destroyed and raises on get()
+    with pytest.raises(DestroyedReactiveError):
+        with isolate():
+            myobj()
 
 
 def _make_mock_effect() -> Effect_:
@@ -451,6 +501,8 @@ def _make_mock_root_session() -> Session:
             self.output = Outputs(cast(Session, self), ns=ResolvedId(""), outputs={})
             self._outbound_message_queues = MockOutboundQueues()
             self._downloads: dict[str, Any] = {}
+            self._message_handlers: dict[str, Any] = {}
+            self._dynamic_routes: dict[str, Any] = {}
             self.bookmark = MockBookmark()
             self._destroy_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
 
@@ -533,6 +585,79 @@ async def test_session_proxy_namespace_reusable_after_destroy():
     _ = proxy2.output
 
 
+@pytest.mark.asyncio
+async def test_destroy_cleans_up_message_handlers():
+    """destroy() removes namespaced message handlers from root session."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    # Simulate registering message handlers (normally done via set_message_handler)
+    cast(Any, root)._message_handlers["mod1-custom_msg"] = lambda: None
+    cast(Any, root)._message_handlers["mod1-another"] = lambda: None
+    cast(Any, root)._message_handlers["other-msg"] = lambda: None
+
+    await proxy.destroy()
+
+    assert "mod1-custom_msg" not in cast(Any, root)._message_handlers
+    assert "mod1-another" not in cast(Any, root)._message_handlers
+    assert "other-msg" in cast(Any, root)._message_handlers
+
+
+@pytest.mark.asyncio
+async def test_destroy_cleans_up_dynamic_routes():
+    """destroy() removes namespaced dynamic routes from root session."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    cast(Any, root)._dynamic_routes["mod1-upload"] = lambda: None
+    cast(Any, root)._dynamic_routes["other-upload"] = lambda: None
+
+    await proxy.destroy()
+
+    assert "mod1-upload" not in cast(Any, root)._dynamic_routes
+    assert "other-upload" in cast(Any, root)._dynamic_routes
+
+
+@pytest.mark.asyncio
+async def test_destroy_cleans_up_downloads():
+    """destroy() removes namespaced download entries from root session."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    cast(Any, root)._downloads["mod1-report"] = "mock_download_info"
+    cast(Any, root)._downloads["other-report"] = "mock_download_info"
+
+    await proxy.destroy()
+
+    assert "mod1-report" not in cast(Any, root)._downloads
+    assert "other-report" in cast(Any, root)._downloads
+
+
+@pytest.mark.asyncio
+async def test_destroy_cleans_up_child_namespace_registrations():
+    """destroy() removes child namespace entries from handlers/routes/downloads."""
+    root = _make_mock_root_session()
+    proxy = SessionProxy(root_session=root, ns=ResolvedId("mod1"))
+
+    # Parent and child namespace entries
+    cast(Any, root)._message_handlers["mod1-msg"] = lambda: None
+    cast(Any, root)._message_handlers["mod1-child-msg"] = lambda: None
+    cast(Any, root)._dynamic_routes["mod1-route"] = lambda: None
+    cast(Any, root)._dynamic_routes["mod1-child-route"] = lambda: None
+    cast(Any, root)._downloads["mod1-dl"] = "info"
+    cast(Any, root)._downloads["mod1-child-dl"] = "info"
+
+    await proxy.destroy()
+
+    # Both parent and child entries should be removed
+    assert "mod1-msg" not in cast(Any, root)._message_handlers
+    assert "mod1-child-msg" not in cast(Any, root)._message_handlers
+    assert "mod1-route" not in cast(Any, root)._dynamic_routes
+    assert "mod1-child-route" not in cast(Any, root)._dynamic_routes
+    assert "mod1-dl" not in cast(Any, root)._downloads
+    assert "mod1-child-dl" not in cast(Any, root)._downloads
+
+
 def test_session_proxy_callbacks_stored_on_root():
     """Destroy callbacks are stored on the root session, not on the proxy."""
     root = _make_mock_root_session()
@@ -567,6 +692,8 @@ def _make_mock_root_session_non_stub() -> Session:
             self.output = Outputs(cast(Session, self), ns=ResolvedId(""), outputs={})
             self._outbound_message_queues = MockOutboundQueues()
             self._downloads: dict[str, Any] = {}
+            self._message_handlers: dict[str, Any] = {}
+            self._dynamic_routes: dict[str, Any] = {}
             self.bookmark = MockBookmark()
             self._destroy_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
 
@@ -740,7 +867,7 @@ async def test_session_destroy_end_to_end():
     # Destroy the module
     await proxy.destroy()
 
-    # Value is unset
+    # Value is destroyed
     with isolate():
         assert counter.is_set() is False
 

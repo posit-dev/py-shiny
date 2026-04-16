@@ -436,11 +436,17 @@ class Value(Generic[T]):
 
         Raises
         ------
+        DestroyedReactiveError
+            If the value has been destroyed.
         :class:`~shiny.types.SilentException`
             If the value is not set.
         RuntimeError
             If called from outside a reactive function.
         """
+        if self._destroyed:
+            raise DestroyedReactiveError(
+                f"Reactive value '{self._name}' has been destroyed."
+            )
 
         self._value_dependents.register()
 
@@ -465,9 +471,15 @@ class Value(Generic[T]):
 
         Raises
         ------
+        DestroyedReactiveError
+            If the value has been destroyed.
         RuntimeError
             If called on a read-only reactive value.
         """
+        if self._destroyed:
+            raise DestroyedReactiveError(
+                f"Reactive value '{self._name}' has been destroyed."
+            )
         if self._read_only:
             raise RuntimeError(
                 "Can't set read-only Value. If you are trying to set an input value, use `update_xxx()` instead."
@@ -568,11 +580,15 @@ class Value(Generic[T]):
         """
         Check if the reactive value is set.
 
+        Returns ``False`` for destroyed values.
+
         Returns
         -------
         :
             ``True`` if the value is set, ``False`` otherwise.
         """
+        if self._destroyed:
+            return False
 
         self._is_set_dependents.register()
         return not isinstance(self._value, MISSING_TYPE)
@@ -583,7 +599,16 @@ class Value(Generic[T]):
 
         Freezing is equivalent to unsetting the value, but it does not invalidate
         dependents.
+
+        Raises
+        ------
+        DestroyedReactiveError
+            If the value has been destroyed.
         """
+        if self._destroyed:
+            raise DestroyedReactiveError(
+                f"Reactive value '{self._name}' has been destroyed."
+            )
         self._value = MISSING
 
 
