@@ -640,3 +640,79 @@ def import_module_from_path(module_name: str, path: Path):
             sys.modules[module_name] = prev_module
         raise
     return module
+
+
+def validate_no_params(
+    fn: Callable[..., Any],
+    decorator_name: str,
+    *,
+    stacklevel: int = 3,
+) -> None:
+    """
+    Validate that a decorated function has no required parameters.
+
+    Parameters
+    ----------
+    fn
+        The function to validate.
+    decorator_name
+        The name of the decorator (e.g., ``"reactive.calc"``) for error messages.
+    stacklevel
+        The ``stacklevel`` passed to :func:`warnings.warn` when issuing warnings
+        about parameters with default values. The default (3) is correct when
+        ``validate_no_params`` is called one frame below the user's code (e.g.,
+        from ``Renderer.__call__``). Callers with deeper call stacks (e.g.,
+        ``Calc_.__init__`` via ``reactive.calc()``) should pass a higher value.
+
+    Raises
+    ------
+    TypeError
+        If the function has required parameters (excluding ``self`` and ``cls``).
+    """
+    # Skip if this function has already been validated (e.g., by an outer decorator
+    # like @reactive.poll before the inner @reactive.calc).
+    if getattr(fn, "_shiny_params_validated", False):
+        return
+
+    sig = inspect.signature(fn)
+    skip_names = {"self", "cls"}
+    skip_kinds = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+
+    required_params: list[str] = []
+    defaulted_params: list[str] = []
+    for p in sig.parameters.values():
+        if p.name in skip_names or p.kind in skip_kinds:
+            continue
+        if p.default is inspect.Parameter.empty:
+            required_params.append(p.name)
+        else:
+            defaulted_params.append(p.name)
+
+    if required_params:
+        raise TypeError(
+            f"@{decorator_name} expected a function with no required parameters, "
+            f"but {fn.__name__}() has required parameter(s): "
+            f"{', '.join(required_params)}. "
+            f"Reactive functions and render functions should take no arguments."
+        )
+
+    # Warn about parameters with defaults — they will never be used by Shiny
+    if defaulted_params:
+        warnings.warn(
+            f"@{decorator_name} decorated function {fn.__name__}() has parameter(s) "
+            f"with default values: {', '.join(defaulted_params)}. "
+            f"These parameters will never be supplied by Shiny and will always use "
+            f"their defaults. Consider removing them or wrapping the function call "
+            f"in a lambda, e.g., @{decorator_name}\\ndef fn(): return "
+            f"{fn.__name__}({', '.join(f'{n}={n}' for n in defaulted_params)})",
+            stacklevel=stacklevel,
+        )
+
+    # Mark the function as validated so downstream decorators don't re-validate
+    # (e.g., @reactive.poll wraps with @functools.wraps which propagates the
+    # original signature to the inner @reactive.calc).
+    try:
+        fn._shiny_params_validated = True  # type: ignore[attr-defined]
+    except AttributeError:
+        # Some callables (e.g., built-ins) don't allow setting attributes
+        pass

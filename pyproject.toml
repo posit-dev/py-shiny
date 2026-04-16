@@ -55,16 +55,19 @@ dependencies = [
     "narwhals>=1.10.0",
     "orjson>=3.10.7",
     "shinychat>=0.1.0",
+    "opentelemetry-api>=1.20.0",
 ]
 
 [project.optional-dependencies]
 theme = ["libsass>=0.23.0", "brand_yml>=0.1.0"]
+otel = ["opentelemetry-sdk>=1.20.0"]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
     "pytest-playwright>=0.5.2",
     "playwright>=1.48.0",
     "pytest-xdist",
+    "pytest-shard",
     "pytest-timeout",
     "pytest-rerunfailures",
     "pytest-cov",
@@ -98,6 +101,8 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
+    "opentelemetry-sdk>=1.20.0",
+    "logfire>=4.0.0",
 ]
 dev = [
     "black>=26.1.0",
@@ -125,10 +130,10 @@ doc = [
     "jupyter",
     "jupyter_client < 8.0.0",
     "tabulate",
-    "shinylive",
+    "shinylive>=0.8.6",
     "pydantic>=2.7.4",
     "quartodoc>=0.8.1",
-    "griffe>=1.3.2",
+    "griffe>=1.3.2,<2.0.0",
 ]
 add-test = [
     "chatlas[anthropic,openai]",
@@ -158,8 +163,11 @@ shiny-test = "shiny.pytest._pytest"
 testpaths = ["tests"]
 
 [tool.flake8]
-extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev"]
+extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev", ".context"]
 ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
+
+[tool.black]
+extend-exclude = ".context"
 
 [tool.isort]
 profile = "black"
@@ -167,6 +175,7 @@ skip = [
     "__init__.py",
     "typings/",
     "_dev/",
+    ".context/",
     ".venv",
     "venv",
     ".tox",

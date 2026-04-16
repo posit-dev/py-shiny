@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from examples.example_apps import reruns, reruns_delay
 from mod_state import expect_default_mod_state, expect_mod_state
-from playwright.sync_api import Page
+from playwright.sync_api import Download, Page
 
 from shiny._utils import guess_mime_type
 from shiny.playwright import controller
@@ -90,9 +90,20 @@ def expect_default_outputs(page: Page, module_id: str):
     expect_outputs(page, module_id, "a", 0)
 
 
+def expect_download_contents(
+    download: Download,
+    destination: Path,
+    suggested_filename: str,
+    expected_contents: str,
+) -> None:
+    download.save_as(str(destination))
+    assert download.suggested_filename == suggested_filename
+    assert destination.read_text() == expected_contents
+
+
 # Sidebars do not seem to work on webkit. Skipping test on webkit
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
-def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
+def test_module_support(page: Page, local_app: ShinyAppProc, tmp_path: Path) -> None:
     page.set_viewport_size({"width": 3000, "height": 6000})
     page.goto(local_app.url)
 
@@ -112,22 +123,22 @@ def test_module_support(page: Page, local_app: ShinyAppProc) -> None:
             download_button = controller.DownloadButton(page, "mod2-download_button")
             download_button.click()
             download = download_button_info.value
-            # wait for download to complete
-            download_path = download.path()
-            assert download.suggested_filename == "download_button-mod2.csv"
-            assert download_path is not None
-            with open(download_path, "r") as f:
-                assert f.read() == f"session,type,count\nmod2,button,{i + 1}\n"
+            expect_download_contents(
+                download=download,
+                destination=tmp_path / f"download_button-mod2-{i + 1}.csv",
+                suggested_filename="download_button-mod2.csv",
+                expected_contents=f"session,type,count\nmod2,button,{i + 1}\n",
+            )
         with page.expect_download() as download_link_info:
             download_link = controller.DownloadLink(page, "mod2-download_link")
             download_link.click()
             download = download_link_info.value
-            # wait for download to complete
-            download_path = download.path()
-            assert download.suggested_filename == "download_link-mod2.csv"
-            assert download_path is not None
-            with open(download_path, "r") as f:
-                assert f.read() == f"session,type,count\nmod2,link,{i + 1}\n"
+            expect_download_contents(
+                download=download,
+                destination=tmp_path / f"download_link-mod2-{i + 1}.csv",
+                suggested_filename="download_link-mod2.csv",
+                expected_contents=f"session,type,count\nmod2,link,{i + 1}\n",
+            )
 
     controller.InputFile(page, "mod2-input_file").set(
         Path(__file__).parent / "test_file.txt"

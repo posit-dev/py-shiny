@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -58,7 +58,7 @@ jobs:
 
       - name: Comment on PR about testing docs update
         if: steps.check-docs-changes.outputs.docs_changed == 'true'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: testing-docs-update
           message: |
@@ -87,7 +87,7 @@ jobs:
 
       - name: Remove comment when no controller changes or docs are up to date
         if: steps.check-docs-changes.outputs.docs_changed == 'false'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: testing-docs-update
           delete: true

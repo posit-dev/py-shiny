@@ -156,10 +156,13 @@ class Renderer(Generic[IT]):
         :
             Original renderer instance.
         """
+        from ..._utils import validate_no_params
         from ...session import get_current_session
 
         if not callable(_fn):
             raise TypeError("Value function must be callable")
+
+        validate_no_params(_fn, f"render.{type(self).__name__}", stacklevel=5)
 
         # Set value function with extra meta information
         self.fn = AsyncValueFn(_fn)
@@ -247,7 +250,7 @@ class Renderer(Generic[IT]):
             " (of type `IT`) into a JSON-serializable object."
             " Ex: `dict`, `None`, `str`. (common)\n"
             "* `render(self)` method has full control of how an App author's value is"
-            " retrieved (`self._fn()`) and processed. (rare)"
+            " retrieved (`self.fn()`) and processed. (rare)"
         )
 
     async def render(self) -> Jsonifiable:

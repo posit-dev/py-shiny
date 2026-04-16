@@ -670,6 +670,10 @@ class download(Renderer[str]):
         self,
         fn: DownloadHandler,
     ) -> Self:
+        from .._utils import validate_no_params
+
+        validate_no_params(fn, "render.download", stacklevel=4)
+
         # For downloads, the value function (which is passed to `__call__()`) is
         # different than for other renderers. For normal renderers, the user supplies
         # the value function. This function returns a value which is transformed,

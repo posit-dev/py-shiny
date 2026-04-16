@@ -72,7 +72,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -100,6 +100,9 @@ jobs:
         if: ${{ ! matrix.config.pypi_rsconnect }}
         run: |
           make ci-install-rsconnect
+
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
 
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally

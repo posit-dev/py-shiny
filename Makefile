@@ -190,7 +190,11 @@ EXAMPLES_TEST_FILE:=tests/playwright/examples/$(SUB_FILE)
 AI_TEST_FILE:=tests/playwright/ai_generated_apps/$(SUB_FILE)
 
 install-playwright: FORCE
-	playwright install --with-deps
+	@if [ -n "$$PW_TEST_CONNECT_WS_ENDPOINT" ]; then \
+		echo "Using remote Playwright server at $$PW_TEST_CONNECT_WS_ENDPOINT"; \
+	else \
+		playwright install --with-deps $(PLAYWRIGHT_BROWSERS); \
+	fi
 
 install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
@@ -289,8 +293,9 @@ upgrade-html-deps: FORCE ## Upgrade Shiny's HTMLDependencies
 narwhals-install-shiny: FORCE
 	@echo "-------- Install py-shiny ----------"
 	$(MAKE) ci-install-deps
+	$(MAKE) install-playwright PLAYWRIGHT_BROWSERS=chromium
 narwhals-test-integration: FORCE
-	@echo "-------- Running py-shiny format, lint, typing, and unit tests ----------"
-	$(MAKE) check
+	@echo "-------- Running py-shiny typing and unit tests ----------"
+	$(MAKE) check-types check-tests
 	@echo "-------- Running py-shiny playwright tests ----------"
 	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/components/data_frame/data_type/" PYTEST_BROWSERS="--browser chromium"

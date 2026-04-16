@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -70,11 +70,11 @@ jobs:
     if: github.event_name == 'release'
     needs: [check]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: "Set up Python 3.10"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.10"
       - name: Install dependencies
@@ -110,6 +110,7 @@ jobs:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1, 2, 3]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
@@ -120,7 +121,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -137,14 +138,17 @@ jobs:
           # Related: https://github.com/microsoft/playwright/issues/18119
           disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+
       - name: Run End-to-End tests
         timeout-minutes: 60
         run: |
-          make playwright-shiny SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
+          make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+      - uses: actions/upload-artifact@v6
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
-          name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
           path: test-results/
           retention-days: 5
 
@@ -155,6 +159,7 @@ jobs:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1, 2, 3]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
@@ -165,7 +170,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -182,7 +187,7 @@ jobs:
           disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
       - name: Install node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           cache: npm
           cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
@@ -191,7 +196,7 @@ jobs:
         run: |
           npm ci
       - name: Checkout py-shiny-templates repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: posit-dev/py-shiny-templates
           path: py-shiny-templates
@@ -200,14 +205,17 @@ jobs:
         run: |
           make ci-install-py-shiny-templates-deps
 
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+
       - name: Run example app tests
         timeout-minutes: 60
         run: |
-          make playwright-examples SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
+          make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+      - uses: actions/upload-artifact@v6
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
-          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
           path: test-results/
           retention-days: 5
 
@@ -218,6 +226,7 @@ jobs:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
@@ -228,7 +237,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -244,14 +253,17 @@ jobs:
           # Related: https://github.com/microsoft/playwright/issues/18119
           disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+
       - name: Run playwright tests for AI generated apps
         timeout-minutes: 60
         run: |
-          make playwright-ai SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
+          make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
+      - uses: actions/upload-artifact@v6
         if: failure() && steps.browsers.outputs.has-playwright-diagnostics
         with:
-          name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
+          name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
           path: test-results/
           retention-days: 5
 
@@ -265,7 +277,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -278,6 +290,9 @@ jobs:
         with:
           all-browsers: ${{ ! github.event.pull_request.draft }}
 
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally
         env:
@@ -285,7 +300,7 @@ jobs:
         run: |
           make playwright-deploys
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-results"
@@ -295,15 +310,20 @@ jobs:
   test-narwhals-integration:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Setup py-shiny
-        id: install
-        uses: ./.github/py-shiny/setup
-      - name: Run test commands
-        env:
-          UV_SYSTEM_PYTHON: 1
-        run: |
-          make narwhals-install-shiny
-          make narwhals-test-integration
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Narwhals integration setup
+        uses: ./.github/py-shiny/narwhals-setup
+        with:
+          shiny-dir: "."
+
+      - name: Narwhals integration test
+        uses: ./.github/py-shiny/narwhals-test
+        with:
+          shiny-dir: "."

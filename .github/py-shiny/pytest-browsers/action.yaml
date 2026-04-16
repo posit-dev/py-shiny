@@ -26,6 +26,7 @@ outputs:
 runs:
   using: "composite"
   steps:
+
       - name: Determine browsers to use
         shell: bash
         id: browsers

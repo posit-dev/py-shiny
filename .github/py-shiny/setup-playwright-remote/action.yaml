@@ -1,0 +1,85 @@
+name: "Setup remote Playwright"
+description: "Start a Playwright server in Docker and configure pytest-playwright to connect to it"
+inputs:
+  version:
+    description: "Playwright version to use. Defaults to the installed Python package version."
+    required: false
+    default: ""
+  port:
+    description: "Port to expose the Playwright server on"
+    required: false
+    default: "43424"
+  container-name:
+    description: "Docker container name"
+    required: false
+    default: "playwright"
+outputs:
+  version:
+    description: "Resolved Playwright version"
+    value: ${{ steps.resolve-version.outputs.version }}
+  ws-endpoint:
+    description: "WebSocket endpoint for the Playwright server"
+    value: ${{ steps.set-env.outputs.ws-endpoint }}
+runs:
+  using: "composite"
+  steps:
+    - name: Resolve Playwright version
+      id: resolve-version
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        if [ -z "$VERSION" ]; then
+          VERSION=$(python3 -c "from importlib.metadata import version; print(version('playwright'))")
+        fi
+
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Start Playwright server
+      shell: bash
+      run: |
+        docker rm -f "${{ inputs.container-name }}" >/dev/null 2>&1 || true
+
+        docker run -d \
+          --name "${{ inputs.container-name }}" \
+          --ipc=host \
+          -p "127.0.0.1:${{ inputs.port }}:${{ inputs.port }}" \
+          --rm \
+          --init \
+          --workdir /home/pwuser \
+          --user pwuser \
+          "mcr.microsoft.com/playwright:v${{ steps.resolve-version.outputs.version }}-noble" \
+          /bin/sh -c "npx -y playwright@${{ steps.resolve-version.outputs.version }} run-server --port ${{ inputs.port }} --host 0.0.0.0"
+
+    - name: Wait for Playwright server
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        import socket
+        import time
+
+        host = "127.0.0.1"
+        port = int("${{ inputs.port }}")
+        deadline = time.time() + 30
+
+        while time.time() < deadline:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(1)
+                try:
+                    sock.connect((host, port))
+                except OSError:
+                    time.sleep(1)
+                    continue
+                else:
+                    break
+        else:
+            raise SystemExit(f"Timed out waiting for Playwright server on {host}:{port}")
+        PY
+
+    - name: Export Playwright connection env vars
+      id: set-env
+      shell: bash
+      run: |
+        WS_ENDPOINT="ws://127.0.0.1:${{ inputs.port }}/"
+        echo "PW_TEST_CONNECT_WS_ENDPOINT=$WS_ENDPOINT" >> "$GITHUB_ENV"
+        echo 'PW_TEST_CONNECT_EXPOSE_NETWORK=*' >> "$GITHUB_ENV"
+        echo "ws-endpoint=$WS_ENDPOINT" >> "$GITHUB_OUTPUT"
