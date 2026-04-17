@@ -6,6 +6,10 @@ app_ui = ui.page_fluid(
     ui.tags.button("Send 42 (event priority)", id="btn_int_event"),
     ui.output_text_verbatim("int_default_count"),
     ui.output_text_verbatim("int_event_count"),
+    ui.h3("String values (event priority) - regression test for #1600"),
+    ui.tags.button("Send '' (event priority)", id="btn_str_empty"),
+    ui.tags.button("Send 'x=1' (event priority)", id="btn_str_nonempty"),
+    ui.output_text_verbatim("str_event_count"),
     ui.h3("List value ([1, 2, 3])"),
     ui.tags.button("Send [1,2,3] (default)", id="btn_list_default"),
     ui.tags.button("Send [1,2,3] (event priority)", id="btn_list_event"),
@@ -18,6 +22,12 @@ app_ui = ui.page_fluid(
         });
         document.getElementById('btn_int_event').addEventListener('click', function() {
             Shiny.setInputValue('int_event_input', 42, {priority: 'event'});
+        });
+        document.getElementById('btn_str_empty').addEventListener('click', function() {
+            Shiny.setInputValue('str_event_input', '', {priority: 'event'});
+        });
+        document.getElementById('btn_str_nonempty').addEventListener('click', function() {
+            Shiny.setInputValue('str_event_input', 'x=1', {priority: 'event'});
         });
         document.getElementById('btn_list_default').addEventListener('click', function() {
             Shiny.setInputValue('list_default_input', [1, 2, 3]);
@@ -33,6 +43,7 @@ app_ui = ui.page_fluid(
 def server(input, output, session):
     int_default_counter = reactive.value(0)
     int_event_counter = reactive.value(0)
+    str_event_counter = reactive.value(0)
     list_default_counter = reactive.value(0)
     list_event_counter = reactive.value(0)
 
@@ -45,6 +56,11 @@ def server(input, output, session):
     @reactive.event(input.int_event_input)
     def _count_int_event():
         int_event_counter.set(int_event_counter() + 1)
+
+    @reactive.effect
+    @reactive.event(input.str_event_input)
+    def _count_str_event():
+        str_event_counter.set(str_event_counter() + 1)
 
     @reactive.effect
     @reactive.event(input.list_default_input)
@@ -63,6 +79,10 @@ def server(input, output, session):
     @render.text
     def int_event_count():
         return str(int_event_counter())
+
+    @render.text
+    def str_event_count():
+        return str(str_event_counter())
 
     @render.text
     def list_default_count():

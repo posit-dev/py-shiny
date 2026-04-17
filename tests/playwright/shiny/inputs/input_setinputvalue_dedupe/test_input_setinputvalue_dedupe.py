@@ -43,3 +43,28 @@ def test_setinputvalue_dedupe(page: Page, local_app: ShinyAppProc) -> None:
     for i in range(1, 4):
         btn_list_event.click()
         list_event_count.expect_value(str(i))
+
+
+def test_setinputvalue_event_priority_strings(
+    page: Page, local_app: ShinyAppProc
+) -> None:
+    """Regression test for https://github.com/posit-dev/py-shiny/issues/1600"""
+    page.goto(local_app.url)
+
+    result = controller.OutputTextVerbatim(page, "str_event_count")
+    result.expect_value("0")
+
+    btn_empty = page.locator("#btn_str_empty")
+    btn_nonempty = page.locator("#btn_str_nonempty")
+
+    # Empty string "" is interned by CPython, so repeated event-priority
+    # sends of "" must still fire the reactive effect each time.
+    for i in range(1, 4):
+        btn_empty.click()
+        result.expect_value(str(i))
+
+    # Non-empty string "x=1" may or may not be interned depending on
+    # context; either way it should fire every time.
+    for i in range(4, 7):
+        btn_nonempty.click()
+        result.expect_value(str(i))
