@@ -175,6 +175,53 @@ async def test_reactive_value_is_set():
 
 
 # ======================================================================
+# Value._set(force=True) does not spuriously invalidate is_set() dependents
+# ======================================================================
+@pytest.mark.asyncio
+async def test_reactive_value_force_set_preserves_is_set():
+    v = Value[int]()
+    v_is_set: bool = False
+    value_count: int = 0
+
+    @effect()
+    def is_set_observer():
+        nonlocal v_is_set
+        v_is_set = v.is_set()
+
+    @effect()
+    def value_observer():
+        nonlocal value_count
+        if v.is_set():
+            v()
+            value_count += 1
+
+    await flush()
+    assert is_set_observer._exec_count == 1
+    assert v_is_set is False
+    assert value_count == 0
+
+    # Initial set: both is_set and value dependents fire
+    v._set(1)
+    await flush()
+    assert is_set_observer._exec_count == 2
+    assert v_is_set is True
+    assert value_count == 1
+
+    # force=True with same value: value dependents fire, is_set does NOT
+    v._set(1, force=True)
+    await flush()
+    assert is_set_observer._exec_count == 2  # unchanged
+    assert v_is_set is True
+    assert value_count == 2  # re-ran
+
+    # force=True again: same behavior
+    v._set(1, force=True)
+    await flush()
+    assert is_set_observer._exec_count == 2  # still unchanged
+    assert value_count == 3  # re-ran again
+
+
+# ======================================================================
 # Recursive calls to calcs
 # ======================================================================
 @pytest.mark.asyncio
