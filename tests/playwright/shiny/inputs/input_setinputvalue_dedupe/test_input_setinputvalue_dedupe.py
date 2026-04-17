@@ -1,9 +1,11 @@
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
+@pytest.mark.only_browser("chromium")
 def test_setinputvalue_dedupe(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
@@ -45,6 +47,7 @@ def test_setinputvalue_dedupe(page: Page, local_app: ShinyAppProc) -> None:
         list_event_count.expect_value(str(i))
 
 
+@pytest.mark.only_browser("chromium")
 def test_setinputvalue_event_priority_strings(
     page: Page, local_app: ShinyAppProc
 ) -> None:
