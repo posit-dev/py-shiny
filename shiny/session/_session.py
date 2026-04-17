@@ -68,7 +68,6 @@ from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
 from ..types import (
-    MISSING,
     Jsonifiable,
     SafeException,
     SilentCancelOutputException,
@@ -927,16 +926,13 @@ class AppSession(Session):
             # The keys[0] value is already a fully namespaced id; make that explicit by
             # wrapping it in ResolvedId, otherwise self.input will throw an id
             # validation error.
-            input_val = self.input[ResolvedId(keys[0])]
-            # Clear the previous value so that _set() always invalidates.
             # The client sends a value over the wire in two cases: either it's a
             # genuinely new value, or it was sent with {priority: "event"} which
             # bypasses client-side deduplication (InputNoResendDecorator). Either
             # way, the server should accept this value as new and cause dependents
             # to recalculate. This achieves dedupe=FALSE behavior from R Shiny:
             # https://github.com/rstudio/shiny/blob/75a63716e578976965daeadde81af7166a50faac/R/shiny.R#L728
-            input_val._value = MISSING  # type: ignore[assignment]
-            input_val._set(val)
+            self.input[ResolvedId(keys[0])]._set(val, force=True)
 
         self.output._manage_hidden()
 

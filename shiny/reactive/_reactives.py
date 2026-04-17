@@ -488,8 +488,8 @@ class Value(Generic[T]):
 
     # The ._set() method allows setting read-only Value objects. This is used when the
     # Value is part of a session.Inputs object, and the session wants to set it.
-    def _set(self, value: T) -> bool:
-        if self._value is value:
+    def _set(self, value: T, *, force: bool = False) -> bool:
+        if not force and self._value is value:
             return False
 
         if isinstance(self._value, MISSING_TYPE) != isinstance(value, MISSING_TYPE):
