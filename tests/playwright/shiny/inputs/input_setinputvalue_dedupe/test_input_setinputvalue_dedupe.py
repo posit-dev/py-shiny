@@ -24,27 +24,22 @@ def test_setinputvalue_dedupe(page: Page, local_app: ShinyAppProc) -> None:
     btn_list_default = page.locator("#btn_list_default")
     btn_list_event = page.locator("#btn_list_event")
 
-    # Integer (42) with default priority: JS dedup suppresses repeats
-    for _ in range(3):
-        btn_int_default.click()
-        int_default_count.expect_value("1")
-
-    # Integer (42) with event priority: JS dedup is bypassed,
-    # and the server always invalidates for incoming wire messages.
+    # Click both default and event buttons in the same loop. The event-priority
+    # assertion (expect_value(str(i))) acts as a synchronization point: by the
+    # time the event counter has incremented on the server, the default-priority
+    # click from the same iteration has also been processed. If the default
+    # counter were to increment beyond 1, it would be caught here.
     for i in range(1, 4):
+        btn_int_default.click()
         btn_int_event.click()
         int_event_count.expect_value(str(i))
+        int_default_count.expect_value("1")
 
-    # List ([1,2,3]) with default priority: JS dedup suppresses repeats
-    for _ in range(3):
-        btn_list_default.click()
-        list_default_count.expect_value("1")
-
-    # List ([1,2,3]) with event priority: JS dedup bypassed, each JSON
-    # parse creates a new Python list so server-side `is` check fails.
     for i in range(1, 4):
+        btn_list_default.click()
         btn_list_event.click()
         list_event_count.expect_value(str(i))
+        list_default_count.expect_value("1")
 
 
 @pytest.mark.only_browser("chromium")
