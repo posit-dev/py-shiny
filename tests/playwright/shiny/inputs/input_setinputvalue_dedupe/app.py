@@ -1,4 +1,5 @@
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, reactive, render, ui
+from shiny.session import Session
 
 app_ui = ui.page_fluid(
     ui.h3("Integer value (42)"),
@@ -15,8 +16,7 @@ app_ui = ui.page_fluid(
     ui.tags.button("Send [1,2,3] (event priority)", id="btn_list_event"),
     ui.output_text_verbatim("list_default_count"),
     ui.output_text_verbatim("list_event_count"),
-    ui.tags.script(
-        """
+    ui.tags.script("""
         document.getElementById('btn_int_default').addEventListener('click', function() {
             Shiny.setInputValue('int_default_input', 42);
         });
@@ -35,12 +35,11 @@ app_ui = ui.page_fluid(
         document.getElementById('btn_list_event').addEventListener('click', function() {
             Shiny.setInputValue('list_event_input', [1, 2, 3], {priority: 'event'});
         });
-        """
-    ),
+        """),
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     int_default_counter = reactive.value(0)
     int_event_counter = reactive.value(0)
     str_event_counter = reactive.value(0)

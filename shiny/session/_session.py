@@ -43,7 +43,6 @@ from .._docstring import add_example
 from .._fileupload import FileInfo, FileUploadManager
 from .._namespaces import Id, Root
 from .._typing_extensions import NotRequired, TypedDict
-from ..types import MISSING
 from .._utils import wrap_async
 from ..bookmark import BookmarkApp, BookmarkProxy
 from ..bookmark._button import BOOKMARK_ID
@@ -69,6 +68,7 @@ from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
 from ..types import (
+    MISSING,
     Jsonifiable,
     SafeException,
     SilentCancelOutputException,
