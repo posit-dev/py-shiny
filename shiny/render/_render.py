@@ -393,7 +393,7 @@ class image(Renderer[ImgData]):
 
     Returns
     -------
-    :
+    Renderer[ImgData]
         A decorator for a function that returns an :func:`~shiny.types.ImgData` object.
 
     Tip

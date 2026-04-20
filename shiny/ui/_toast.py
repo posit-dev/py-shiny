@@ -334,7 +334,7 @@ def toast_header(
 
     Returns
     -------
-    :
+    ToastHeader
         A toast header object.
 
     Examples
