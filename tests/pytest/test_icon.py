@@ -55,8 +55,21 @@ def test_icon_bs_a11y_semantic_with_title():
     icon = ui.icon("star", lib="bs", title="Favorite", a11y="semantic")
     assert icon.attrs.get("aria-hidden") is None
     assert icon.attrs.get("role") == "img"
+    assert icon.attrs.get("aria-label") == "Favorite"
     rendered = str(icon)
     assert "<title>Favorite</title>" in rendered
+
+
+def test_icon_bs_a11y_semantic_without_title_derives_label():
+    import warnings
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        icon = ui.icon("heart-fill", lib="bs", a11y="semantic")
+    assert icon.attrs.get("aria-hidden") is None
+    assert icon.attrs.get("role") == "img"
+    assert icon.attrs.get("aria-label") == "heart fill"
+    assert len(w) == 1
+    assert "heart fill" in str(w[0].message)
 
 
 def test_icon_bs_defaults_to_decorative():

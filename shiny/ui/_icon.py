@@ -3,6 +3,7 @@ from __future__ import annotations
 __all__ = ("icon",)
 
 import re
+import warnings
 from typing import Literal, Optional, Union, cast
 
 from htmltools import HTML, Tag, TagAttrValue, css, html_escape, tags
@@ -257,7 +258,9 @@ def _icon_fa(
             + cast(str, w["unit"])
         )
 
-    # Apply defaults
+    # Apply defaults.
+    # margin_left/margin_right/position defaults match faicons.icon_svg() so that
+    # ui.icon() is a drop-in replacement for users migrating from that package.
     if fill is None:
         fill = "currentColor"
     if margin_left is None:
@@ -389,10 +392,25 @@ def _icon_bs(
     if svg_content:
         children.append(HTML(svg_content))
 
-    # Build accessibility attributes (decorative by default)
+    # Build accessibility attributes (decorative by default).
+    # For semantic mode, derive an accessible name from title if provided, otherwise
+    # fall back to the icon name (hyphens replaced with spaces). A bare role="img"
+    # with no accessible name is worse than aria-hidden, so we always provide one.
     a11y_attrs: dict[str, str] = {"role": "img"}
     if a11y == "decorative":
         a11y_attrs["aria_hidden"] = "true"
+    elif a11y == "semantic":
+        if title is not None:
+            a11y_attrs["aria-label"] = html_escape(title, attr=True)
+        else:
+            derived_label = name.replace("-", " ")
+            warnings.warn(
+                f"ui.icon('{name}', a11y='semantic') has no title. "
+                f"Using '{derived_label}' as the accessible label. "
+                f"Provide a title for a more descriptive label.",
+                stacklevel=3,
+            )
+            a11y_attrs["aria-label"] = derived_label
 
     # Build the SVG tag
     svg_tag = tags.svg(
