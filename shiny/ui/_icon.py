@@ -2,9 +2,10 @@ from __future__ import annotations
 
 __all__ = ("icon",)
 
+import re
 from typing import Literal, Optional, Union, cast
 
-from htmltools import Tag, TagAttrValue, tags
+from htmltools import HTML, Tag, TagAttrValue, css, html_escape, tags
 
 from .._docstring import add_example
 from .css._css_unit import CssUnit, as_css_unit
@@ -50,9 +51,8 @@ def icon(
     """
     Create an icon.
 
-    Create an icon from either FontAwesome or Bootstrap Icons libraries. FontAwesome
-    icons require the `faicons` package to be installed. Bootstrap Icons are bundled
-    with Shiny and work out of the box.
+    Create an icon from either FontAwesome or Bootstrap Icons libraries. Both icon
+    sets are bundled with Shiny and work out of the box.
 
     Icons are treated as decorative by default (hidden from screen readers). We recommend
     providing accessible labels on the icon's container (e.g., a button with `aria-label`)
@@ -165,6 +165,29 @@ def icon(
         raise ValueError(f"Unknown icon library: '{lib}'. Use 'fa' or 'bs'.")
 
 
+_CSS_LENGTH_UNITS = {
+    "cm", "mm", "in", "px", "pt", "pc",
+    "em", "ex", "ch", "rem",
+    "vw", "vh", "vmin", "vmax", "%",
+}
+
+
+def _parse_length_unit(x: Optional[str]) -> Optional[dict[str, object]]:
+    """Parse a CSS length string like '2em' into {'value': 2.0, 'unit': 'em'}."""
+    if x is None:
+        return None
+    if not re.search(r"^[0-9]*\.?[0-9]+[a-z%]+$", x):
+        raise ValueError(
+            "Values provided to `height` and `width` must have a numerical "
+            "value followed by a CSS length unit."
+        )
+    unit = re.sub(r"[0-9.]+?", "", x)
+    if unit not in _CSS_LENGTH_UNITS:
+        raise ValueError(f"{unit} is not a valid CSS length unit.")
+    value = float(re.sub(r"[a-z%]+$", "", x))
+    return {"value": value, "unit": unit}
+
+
 def _icon_fa(
     name: str,
     *,
@@ -175,17 +198,18 @@ def _icon_fa(
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
-    Create a FontAwesome icon using the faicons package.
+    Create a FontAwesome icon from bundled icon data.
 
     All icons are decorative by default (aria-hidden="true").
     """
-    try:
-        from faicons import icon_svg
-    except ImportError:
-        raise ImportError(
-            "FontAwesome icons require the 'faicons' package. "
-            "Install it with: pip install faicons"
-        ) from None
+    from ._icon_data import FA_ICONS
+
+    icon_data = FA_ICONS.get(name)
+    if icon_data is None:
+        raise ValueError(
+            f"Unknown FontAwesome icon: '{name}'. "
+            f"See https://fontawesome.com/icons for available icons."
+        )
 
     # Extract FA-specific and a11y parameters from kwargs
     style = cast(Optional[str], kwargs.pop("style", None))
@@ -199,10 +223,41 @@ def _icon_fa(
     title = cast(Optional[str], kwargs.pop("title", None))
     a11y = str(kwargs.pop("a11y", "decorative"))
 
-    # Convert size to CSS unit (handling semantic sizes)
-    height = width = _resolve_icon_size(size)
+    # Resolve icon style (solid, regular, brands, etc.)
+    styles = icon_data["styles"]
+    resolved_style = styles[0] if style is None else style
+    if resolved_style not in styles:
+        raise ValueError(
+            f"Style '{resolved_style}' not found for '{name}' icon. "
+            f"Possible styles are: {styles}"
+        )
 
-    # Apply faicons defaults for positioning
+    svg = icon_data["svg"][resolved_style]
+    svg_width = float(svg["width"])
+
+    # Convert size to CSS unit (handling semantic sizes)
+    resolved_size = _resolve_icon_size(size)
+    height = resolved_size
+    width = resolved_size
+
+    # Compute aspect-ratio-aware dimensions (matching faicons logic)
+    h = _parse_length_unit(height)
+    w = _parse_length_unit(width)
+    if h is None and w is None:
+        height = "1em"
+        width = str(round(svg_width / 512, 2)) + "em"
+    elif h is not None and w is None:
+        width = (
+            str(round(svg_width / 512 * cast(float, h["value"]), 2))
+            + cast(str, h["unit"])
+        )
+    elif h is None and w is not None:
+        height = (
+            str(round(cast(float, w["value"]) / (svg_width / 512), 2))
+            + cast(str, w["unit"])
+        )
+
+    # Apply defaults
     if fill is None:
         fill = "currentColor"
     if margin_left is None:
@@ -212,24 +267,41 @@ def _icon_fa(
     if position is None:
         position = "relative"
 
-    # Map a11y mode for faicons (decorative by default)
-    a11y_param = "deco" if a11y == "decorative" else "sem"
+    # Build SVG attributes
+    svg_attrs: dict[str, str] = {"viewBox": f"0 0 {svg['width']} 512"}
 
-    result = icon_svg(
-        name,
-        style=style,
-        fill=fill,
-        fill_opacity=fill_opacity,
-        stroke=stroke,
-        stroke_width=stroke_width,
-        stroke_opacity=stroke_opacity,
-        height=height,
-        width=width,
-        margin_left=margin_left,
-        margin_right=margin_right,
-        position=position,
-        title=title,
-        a11y=a11y_param,
+    if height is not None and width is not None:
+        svg_attrs["preserveAspectRatio"] = "none"
+
+    # Map a11y mode (decorative by default)
+    if a11y == "decorative":
+        svg_attrs["aria-hidden"] = "true"
+        svg_attrs["role"] = "img"
+    elif a11y == "semantic":
+        label_title = icon_data["label"] if title is None else title
+        svg_attrs["aria-label"] = html_escape(label_title, attr=True)
+        svg_attrs["role"] = "img"
+
+    # Build the SVG tag
+    result = tags.svg(
+        None if title is None else tags.title(html_escape(title)),
+        Tag("path", d=svg["path"]),
+        **svg_attrs,
+        class_="fa",
+        style=css(
+            fill=fill,
+            fill_opacity=fill_opacity,
+            stroke=stroke,
+            stroke_width=stroke_width,
+            stroke_opacity=stroke_opacity,
+            height=height,
+            width=width,
+            margin_left=margin_left,
+            margin_right=margin_right,
+            position=position,
+            vertical_align="-0.125em",
+            overflow="visible",
+        ),
     )
 
     # Apply class_ if provided
@@ -309,8 +381,6 @@ def _icon_bs(
         styles.append(style)
 
     # Build SVG children
-    from htmltools import HTML
-
     children: list[Tag | str | HTML] = []
     if title:
         children.append(tags.title(title))
