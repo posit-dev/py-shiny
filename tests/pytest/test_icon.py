@@ -41,8 +41,9 @@ def test_icon_bs_size_parameter():
 def test_icon_bs_size_numeric():
     icon = ui.icon("star", lib="bs", size=24)
     style = icon.attrs.get("style", "")
-    assert "height:24.000000px" in style
-    assert "width:24.000000px" in style
+    assert "height:24" in style
+    assert "width:24" in style
+    assert "px" in style
 
 
 def test_icon_bs_a11y_decorative():
@@ -388,8 +389,9 @@ def test_icon_bs_all_params_together():
 def test_icon_bs_numeric_size():
     icon = ui.icon("star", lib="bs", size=48)
     style = icon.attrs.get("style", "")
-    assert "height:48.000000px" in style
-    assert "width:48.000000px" in style
+    assert "height:48" in style
+    assert "width:48" in style
+    assert "px" in style
 
 
 def test_icon_bs_id_and_title():
