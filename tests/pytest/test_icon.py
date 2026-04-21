@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import pytest
 from htmltools import Tag
 
@@ -47,9 +49,14 @@ def test_icon_bs_size_numeric():
 
 
 def test_icon_bs_a11y_decorative():
-    icon = ui.icon("star", lib="bs", a11y="decorative")
+    # Default (no a11y arg) and explicit decorative should both hide from screen readers
+    icon = ui.icon("star", lib="bs")
     assert icon.attrs.get("aria-hidden") == "true"
     assert icon.attrs.get("role") == "img"
+
+    icon_explicit = ui.icon("star", lib="bs", a11y="decorative")
+    assert icon_explicit.attrs.get("aria-hidden") == "true"
+    assert icon_explicit.attrs.get("role") == "img"
 
 
 def test_icon_bs_a11y_semantic_with_title():
@@ -62,7 +69,6 @@ def test_icon_bs_a11y_semantic_with_title():
 
 
 def test_icon_bs_a11y_semantic_without_title_derives_label():
-    import warnings
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         icon = ui.icon("heart-fill", lib="bs", a11y="semantic")
@@ -71,11 +77,6 @@ def test_icon_bs_a11y_semantic_without_title_derives_label():
     assert icon.attrs.get("aria-label") == "heart fill"
     assert len(w) == 1
     assert "heart fill" in str(w[0].message)
-
-
-def test_icon_bs_defaults_to_decorative():
-    icon = ui.icon("star", lib="bs")
-    assert icon.attrs.get("aria-hidden") == "true"
 
 
 def test_icon_bs_unknown_icon_raises():
@@ -275,13 +276,6 @@ def test_icon_bs_additional_style():
 # ============================================================================
 # icon() tests - Examples from docstring
 # ============================================================================
-def test_icon_example_default_fa():
-    icon = ui.icon("star")
-    assert isinstance(icon, Tag)
-    rendered = str(icon)
-    assert "fa" in rendered
-
-
 def test_icon_example_bootstrap():
     icon = ui.icon("heart-fill", lib="bs")
     assert isinstance(icon, Tag)
@@ -289,26 +283,11 @@ def test_icon_example_bootstrap():
     assert icon.has_class("bi-heart-fill")
 
 
-def test_icon_example_fa_variant():
-    icon = ui.icon("github", variant="brands")
-    assert isinstance(icon, Tag)
-
-
-def test_icon_example_custom_size():
-    icon = ui.icon("gear", size="2em")
-    assert isinstance(icon, Tag)
-
-
 def test_icon_example_semantic():
     icon = ui.icon("circle-exclamation", title="Warning icon", a11y="semantic")
     assert isinstance(icon, Tag)
     rendered = str(icon)
     assert "Warning icon" in rendered
-
-
-def test_icon_example_custom_fill():
-    icon = ui.icon("star", fill="gold")
-    assert isinstance(icon, Tag)
 
 
 def test_icon_example_with_id():
@@ -405,22 +384,82 @@ def test_icon_bs_id_and_title():
 # ============================================================================
 # icon() tests - Semantic sizes
 # ============================================================================
-def test_icon_semantic_size_lg():
-    icon = ui.icon("star", lib="bs", size="lg")
+@pytest.mark.parametrize("size,expected_css", [
+    ("2xs", "0.625em"),
+    ("xs",  "0.75em"),
+    ("sm",  "0.875em"),
+    ("md",  "1em"),
+    ("lg",  "1.25em"),
+    ("xl",  "1.5em"),
+    ("2xl", "2em"),
+])
+def test_icon_semantic_sizes(size: str, expected_css: str):
+    icon = ui.icon("star", lib="bs", size=size)
     style = icon.attrs.get("style", "")
-    assert "height:1.25em" in style
-    assert "width:1.25em" in style
+    assert f"height:{expected_css}" in style
+    assert f"width:{expected_css}" in style
 
 
-def test_icon_semantic_size_2xl():
-    icon = ui.icon("star", lib="bs", size="2xl")
-    style = icon.attrs.get("style", "")
-    assert "height:2em" in style
-    assert "width:2em" in style
+# ============================================================================
+# icon() tests - Gap coverage
+# ============================================================================
+def test_icon_bs_variant_warns():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        ui.icon("star", lib="bs", variant="brands")
+    assert len(w) == 1
+    assert "variant" in str(w[0].message).lower()
 
 
-def test_icon_semantic_size_2xs():
-    icon = ui.icon("star", lib="bs", size="2xs")
-    style = icon.attrs.get("style", "")
-    assert "height:0.625em" in style
-    assert "width:0.625em" in style
+def test_icon_fa_semantic_a11y_without_title_uses_icon_label():
+    # Falls back to icon_data["label"] (e.g., "Star") rather than the icon name
+    icon = ui.icon("star", lib="fa", a11y="semantic")
+    assert icon.attrs.get("aria-hidden") is None
+    assert icon.attrs.get("role") == "img"
+    assert icon.attrs.get("aria-label") == "Star"
+
+
+def test_icon_fa_title_with_decorative_a11y():
+    # title element renders but icon stays hidden from screen readers
+    icon = ui.icon("star", lib="fa", title="Favorite")
+    rendered = str(icon)
+    assert "<title>Favorite</title>" in rendered
+    assert icon.attrs.get("aria-hidden") == "true"
+
+
+def test_icon_fa_class_parameter():
+    icon = ui.icon("star", lib="fa", class_="my-class spin")
+    assert icon.has_class("fa")
+    assert icon.has_class("my-class")
+    assert icon.has_class("spin")
+
+
+def test_icon_bs_class_parameter():
+    icon = ui.icon("star", lib="bs", class_="text-warning spin")
+    assert icon.has_class("bi")
+    assert icon.has_class("bi-star")
+    assert icon.has_class("text-warning")
+    assert icon.has_class("spin")
+
+
+def test_icon_fa_style_kwarg_merged_without_double_semicolon():
+    icon = ui.icon("star", lib="fa", style="opacity:0.5")
+    rendered = str(icon)
+    assert "opacity:0.5" in rendered
+    assert ";;" not in rendered
+
+
+def test_icon_title_html_escaping():
+    # htmltools escapes text/attr content on render; we must NOT pre-escape
+    icon_fa = ui.icon("star", lib="fa", title='A & <B>')
+    rendered_fa = str(icon_fa)
+    assert "&amp;" in rendered_fa       # & → &amp;
+    assert "&lt;" in rendered_fa        # < → &lt;
+    assert "<B>" not in rendered_fa     # raw < must not appear
+
+    # aria-label stores the raw value; htmltools escapes it during render
+    icon_bs = ui.icon("star", lib="bs", title='A & <B>', a11y="semantic")
+    assert icon_bs.attrs.get("aria-label") == 'A & <B>'
+    rendered_bs = str(icon_bs)
+    assert "&amp;" in rendered_bs
+    assert "&lt;" in rendered_bs

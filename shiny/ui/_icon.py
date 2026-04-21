@@ -6,7 +6,7 @@ import re
 import warnings
 from typing import Literal, Optional, Union, cast
 
-from htmltools import HTML, Tag, TagAttrValue, css, html_escape, tags
+from htmltools import HTML, Tag, TagAttrValue, css, tags
 
 from .._docstring import add_example
 from .css import CssUnit, as_css_unit
@@ -280,7 +280,7 @@ def _icon_fa(
         svg_attrs["role"] = "img"
     elif a11y == "semantic":
         label_title = icon_data["label"] if title is None else title
-        svg_attrs["aria-label"] = html_escape(label_title, attr=True)
+        svg_attrs["aria-label"] = label_title
         svg_attrs["role"] = "img"
 
     # Build generated CSS; merge with any user-supplied style string
@@ -299,7 +299,7 @@ def _icon_fa(
     # Build the SVG tag; remaining kwargs (stroke, fill_opacity, etc.) become
     # SVG presentation attributes directly on the element
     result = tags.svg(
-        None if title is None else tags.title(html_escape(title)),
+        None if title is None else tags.title(title),
         Tag("path", d=svg["path"]),
         **svg_attrs,
         class_="fa",
@@ -375,7 +375,7 @@ def _icon_bs(
         a11y_attrs["aria-hidden"] = "true"
     elif a11y == "semantic":
         if title is not None:
-            a11y_attrs["aria-label"] = html_escape(title, attr=True)
+            a11y_attrs["aria-label"] = title
         else:
             derived_label = name.replace("-", " ")
             warnings.warn(
