@@ -9,7 +9,7 @@ from typing import Literal, Optional, Union, cast
 from htmltools import HTML, Tag, TagAttrValue, css, html_escape, tags
 
 from .._docstring import add_example
-from .css._css_unit import CssUnit, as_css_unit
+from .css import CssUnit, as_css_unit
 
 # Type alias for icon sizes
 IconSize = Union[
@@ -161,6 +161,11 @@ def icon(
             **kwargs,
         )
     elif lib == "bs":
+        if variant is not None:
+            warnings.warn(
+                f"ui.icon('{name}', variant='{variant}') has no effect for Bootstrap Icons.",
+                stacklevel=2,
+            )
         return _icon_bs(
             name=name,
             fill=fill,
@@ -240,26 +245,16 @@ def _icon_fa(
     svg = icon_data["svg"][resolved_variant]
     svg_width = float(svg["width"])
 
-    # Compute aspect-ratio-aware dimensions (matching faicons logic)
+    # When no size is given, default to 1em height and scale width by the icon's
+    # aspect ratio (svg_width / 512) to preserve its natural proportions.
+    # When size is given, width equals height (preserveAspectRatio="none" is set below).
     resolved_size = _resolve_icon_size(size)
-    height = resolved_size
-    width = resolved_size
-
-    h = _parse_length_unit(height)
-    w = _parse_length_unit(width)
-    if h is None and w is None:
+    if resolved_size is None:
         height = "1em"
         width = str(round(svg_width / 512, 2)) + "em"
-    elif h is not None and w is None:
-        width = (
-            str(round(svg_width / 512 * cast(float, h["value"]), 2))
-            + cast(str, h["unit"])
-        )
-    elif h is None and w is not None:
-        height = (
-            str(round(cast(float, w["value"]) / (svg_width / 512), 2))
-            + cast(str, w["unit"])
-        )
+    else:
+        height = resolved_size
+        width = resolved_size
 
     # Apply defaults.
     # margin_left/margin_right/position defaults match faicons.icon_svg() so that
@@ -299,7 +294,7 @@ def _icon_fa(
         vertical_align="-0.125em",
         overflow="visible",
     )
-    merged_style = f"{generated_style};{user_style}" if user_style else generated_style
+    merged_style = f"{generated_style}{user_style}" if user_style else generated_style
 
     # Build the SVG tag; remaining kwargs (stroke, fill_opacity, etc.) become
     # SVG presentation attributes directly on the element
@@ -377,7 +372,7 @@ def _icon_bs(
     # with no accessible name is worse than aria-hidden, so we always provide one.
     a11y_attrs: dict[str, str] = {"role": "img"}
     if a11y == "decorative":
-        a11y_attrs["aria_hidden"] = "true"
+        a11y_attrs["aria-hidden"] = "true"
     elif a11y == "semantic":
         if title is not None:
             a11y_attrs["aria-label"] = html_escape(title, attr=True)
