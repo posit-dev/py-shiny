@@ -15,7 +15,7 @@ with ui.layout_columns():
         ui.icon("gear", size="3em")
         ui.br()
         ui.p("Brand icons:")
-        ui.icon("github", style="brands")
+        ui.icon("github", variant="brands")
 
     with ui.card():
         ui.card_header("Bootstrap Icons")

@@ -47,6 +47,7 @@ def icon(
     fill: Optional[str] = None,
     class_: Optional[str] = None,
     id: Optional[str] = None,
+    variant: Optional[str] = None,
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -86,16 +87,21 @@ def icon(
         Additional CSS classes to apply to the icon.
     id
         HTML id attribute for the SVG element.
+    variant
+        FontAwesome only. The icon variant to use (`"solid"`, `"regular"`,
+        `"brands"`, etc.). Defaults to the first available variant for the icon.
+        Has no effect for Bootstrap Icons.
     **kwargs
-        Additional HTML attributes or SVG styling parameters. Common parameters include:
+        Additional HTML attributes applied to the SVG element. Common uses:
 
-        - `style`: For FontAwesome icon styles (`"solid"`, `"regular"`, `"brands"`)
-        - `fill_opacity`: Icon fill opacity (0-1)
-        - `stroke`, `stroke_width`, `stroke_opacity`: SVG stroke properties
-        - `margin_left`, `margin_right`, `position`: FontAwesome positioning (advanced)
-        - `aria_label`: Make icon visible to screen readers with this label
-        - `data-*`: Data attributes for testing or JavaScript interaction
-        - Any standard HTML/SVG attributes
+        - `style`: Inline CSS string merged with the generated styles
+        - `stroke`, `stroke_width`, `stroke_opacity`: SVG stroke attributes
+        - `fill_opacity`: SVG fill opacity attribute
+        - `margin_left`, `margin_right`, `position`: FA layout CSS (advanced)
+        - `title`: Tooltip text; also used as accessible label when `a11y="semantic"`
+        - `a11y`: `"decorative"` (default, `aria-hidden`) or `"semantic"` (sets `aria-label`)
+        - `aria_label`: Override accessible label directly
+        - `data_*`: Data attributes for testing or JavaScript interaction
 
     Returns
     -------
@@ -124,8 +130,8 @@ def icon(
     # Icon with custom size and color
     ui.icon("star", size="2em", fill="gold")
 
-    # FontAwesome brand icon (via kwargs)
-    ui.icon("github", style="brands")
+    # FontAwesome brand icon
+    ui.icon("github", variant="brands")
 
     # Icon with custom CSS classes
     ui.icon("star", lib="bs", class_="text-warning spin-animation")
@@ -151,6 +157,7 @@ def icon(
             size=size,
             class_=class_,
             id=id,
+            variant=variant,
             **kwargs,
         )
     elif lib == "bs":
@@ -196,6 +203,7 @@ def _icon_fa(
     size: Optional[CssUnit],
     class_: Optional[str],
     id: Optional[str],
+    variant: Optional[str],
     **kwargs: TagAttrValue,
 ) -> Tag:
     """
@@ -212,36 +220,31 @@ def _icon_fa(
             f"See https://fontawesome.com/icons for available icons."
         )
 
-    # Extract FA-specific and a11y parameters from kwargs
-    style = cast(Optional[str], kwargs.pop("style", None))
-    fill_opacity = cast(Optional[str], kwargs.pop("fill_opacity", None))
-    stroke = cast(Optional[str], kwargs.pop("stroke", None))
-    stroke_width = cast(Optional[str], kwargs.pop("stroke_width", None))
-    stroke_opacity = cast(Optional[str], kwargs.pop("stroke_opacity", None))
+    # Extract layout/a11y kwargs that need special handling
+    user_style = cast(Optional[str], kwargs.pop("style", None))
     margin_left = cast(Optional[str], kwargs.pop("margin_left", None))
     margin_right = cast(Optional[str], kwargs.pop("margin_right", None))
     position = cast(Optional[str], kwargs.pop("position", None))
     title = cast(Optional[str], kwargs.pop("title", None))
     a11y = str(kwargs.pop("a11y", "decorative"))
 
-    # Resolve icon style (solid, regular, brands, etc.)
-    styles = icon_data["styles"]
-    resolved_style = styles[0] if style is None else style
-    if resolved_style not in styles:
+    # Resolve icon variant (solid, regular, brands, etc.)
+    available = icon_data["styles"]
+    resolved_variant = available[0] if variant is None else variant
+    if resolved_variant not in available:
         raise ValueError(
-            f"Style '{resolved_style}' not found for '{name}' icon. "
-            f"Possible styles are: {styles}"
+            f"Variant '{resolved_variant}' not found for '{name}' icon. "
+            f"Available variants: {available}"
         )
 
-    svg = icon_data["svg"][resolved_style]
+    svg = icon_data["svg"][resolved_variant]
     svg_width = float(svg["width"])
 
-    # Convert size to CSS unit (handling semantic sizes)
+    # Compute aspect-ratio-aware dimensions (matching faicons logic)
     resolved_size = _resolve_icon_size(size)
     height = resolved_size
     width = resolved_size
 
-    # Compute aspect-ratio-aware dimensions (matching faicons logic)
     h = _parse_length_unit(height)
     w = _parse_length_unit(width)
     if h is None and w is None:
@@ -285,39 +288,35 @@ def _icon_fa(
         svg_attrs["aria-label"] = html_escape(label_title, attr=True)
         svg_attrs["role"] = "img"
 
-    # Build the SVG tag
+    # Build generated CSS; merge with any user-supplied style string
+    generated_style = css(
+        fill=fill,
+        height=height,
+        width=width,
+        margin_left=margin_left,
+        margin_right=margin_right,
+        position=position,
+        vertical_align="-0.125em",
+        overflow="visible",
+    )
+    merged_style = f"{generated_style};{user_style}" if user_style else generated_style
+
+    # Build the SVG tag; remaining kwargs (stroke, fill_opacity, etc.) become
+    # SVG presentation attributes directly on the element
     result = tags.svg(
         None if title is None else tags.title(html_escape(title)),
         Tag("path", d=svg["path"]),
         **svg_attrs,
         class_="fa",
-        style=css(
-            fill=fill,
-            fill_opacity=fill_opacity,
-            stroke=stroke,
-            stroke_width=stroke_width,
-            stroke_opacity=stroke_opacity,
-            height=height,
-            width=width,
-            margin_left=margin_left,
-            margin_right=margin_right,
-            position=position,
-            vertical_align="-0.125em",
-            overflow="visible",
-        ),
+        style=merged_style,
+        **kwargs,
     )
 
-    # Apply class_ if provided
     if class_ is not None:
         result.add_class(class_)
 
-    # Apply id if provided
     if id is not None:
         result.attrs["id"] = id
-
-    # Apply remaining kwargs as HTML attributes
-    if kwargs:
-        result.attrs.update(kwargs)
 
     return result
 
@@ -346,42 +345,22 @@ def _icon_bs(
 
     icon_data = BS_ICONS[name]
 
-    # Extract BS-specific and a11y parameters from kwargs
-    style = cast(Optional[str], kwargs.pop("style", None))
-    fill_opacity = cast(Optional[str], kwargs.pop("fill_opacity", None))
-    stroke = cast(Optional[str], kwargs.pop("stroke", None))
-    stroke_width = cast(Optional[str], kwargs.pop("stroke_width", None))
-    stroke_opacity = cast(Optional[str], kwargs.pop("stroke_opacity", None))
+    # Extract a11y/style kwargs that need special handling
+    user_style = cast(Optional[str], kwargs.pop("style", None))
     title = cast(Optional[str], kwargs.pop("title", None))
     a11y = str(kwargs.pop("a11y", "decorative"))
 
-    # Build inline styles
-    styles: list[str] = []
+    # Build inline CSS; remaining kwargs (stroke, fill_opacity, etc.) become
+    # SVG presentation attributes directly on the element
+    styles: list[str] = [f"fill:{fill}" if fill is not None else "fill:currentColor"]
 
-    # Apply fill (default to currentColor)
-    if fill is not None:
-        styles.append(f"fill:{fill}")
-    else:
-        styles.append("fill:currentColor")
-
-    if fill_opacity is not None:
-        styles.append(f"fill-opacity:{fill_opacity}")
-    if stroke is not None:
-        styles.append(f"stroke:{stroke}")
-    if stroke_width is not None:
-        styles.append(f"stroke-width:{stroke_width}")
-    if stroke_opacity is not None:
-        styles.append(f"stroke-opacity:{stroke_opacity}")
-
-    # Convert size to CSS unit (handling semantic sizes)
     css_size = _resolve_icon_size(size)
     if css_size is not None:
         styles.append(f"height:{css_size}")
         styles.append(f"width:{css_size}")
 
-    # Allow additional inline CSS via style parameter
-    if style is not None:
-        styles.append(style)
+    if user_style is not None:
+        styles.append(user_style)
 
     # Build SVG children
     children: list[Tag | str | HTML] = []
@@ -412,7 +391,6 @@ def _icon_bs(
             )
             a11y_attrs["aria-label"] = derived_label
 
-    # Build the SVG tag
     svg_tag = tags.svg(
         *children,
         {
@@ -422,14 +400,12 @@ def _icon_bs(
         xmlns="http://www.w3.org/2000/svg",
         viewBox=icon_data["viewBox"],
         **a11y_attrs,
-        **kwargs,  # Apply remaining kwargs as HTML attributes
+        **kwargs,
     )
 
-    # Apply class_ if provided (merges with bi classes)
     if class_ is not None:
         svg_tag.add_class(class_)
 
-    # Apply id if provided
     if id is not None:
         svg_tag.attrs["id"] = id
 

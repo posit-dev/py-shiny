@@ -107,14 +107,14 @@ def test_icon_fa_defaults_to_decorative():
     assert icon.attrs.get("role") == "img"
 
 
-def test_icon_fa_style_parameter():
-    icon = ui.icon("github", lib="fa", style="brands")
+def test_icon_fa_variant_parameter():
+    icon = ui.icon("github", lib="fa", variant="brands")
     assert isinstance(icon, Tag)
 
 
-def test_icon_fa_invalid_style_raises():
-    with pytest.raises(ValueError, match="Style .* not found"):
-        ui.icon("star", lib="fa", style="brands")
+def test_icon_fa_invalid_variant_raises():
+    with pytest.raises(ValueError, match="Variant .* not found"):
+        ui.icon("star", lib="fa", variant="brands")
 
 
 def test_icon_fa_unknown_icon_raises():
@@ -176,16 +176,16 @@ def test_icon_fa_semantic_a11y():
 def test_icon_fa_stroke_params():
     icon = ui.icon("star", lib="fa", stroke="red", stroke_width="2", stroke_opacity="0.5")
     rendered = str(icon)
-    assert "stroke:red" in rendered
-    assert "stroke-width:2" in rendered
-    assert "stroke-opacity:0.5" in rendered
+    assert 'stroke="red"' in rendered
+    assert 'stroke-width="2"' in rendered
+    assert 'stroke-opacity="0.5"' in rendered
 
 
 def test_icon_fa_fill_opacity():
     icon = ui.icon("star", lib="fa", fill="blue", fill_opacity="0.8")
     rendered = str(icon)
     assert "fill:blue" in rendered
-    assert "fill-opacity:0.8" in rendered
+    assert 'fill-opacity="0.8"' in rendered
 
 
 def test_icon_fa_aspect_ratio():
@@ -207,7 +207,7 @@ def test_icon_fa_all_params_together():
     icon = ui.icon(
         "github",
         lib="fa",
-        style="brands",
+        variant="brands",
         fill="black",
         fill_opacity="0.9",
         stroke="white",
@@ -229,10 +229,10 @@ def test_icon_fa_all_params_together():
 
     rendered = str(icon)
     assert "fill:black" in rendered
-    assert "fill-opacity:0.9" in rendered
-    assert "stroke:white" in rendered
-    assert "stroke-width:0.5" in rendered
-    assert "stroke-opacity:0.3" in rendered
+    assert 'fill-opacity="0.9"' in rendered
+    assert 'stroke="white"' in rendered
+    assert 'stroke-width="0.5"' in rendered
+    assert 'stroke-opacity="0.3"' in rendered
     assert "height:2.5em" in rendered
     assert "width:2.5em" in rendered
     assert "margin-left:1em" in rendered
@@ -260,9 +260,9 @@ def test_icon_bs_custom_fill():
 
 def test_icon_bs_stroke_params():
     icon = ui.icon("star", lib="bs", stroke="blue", stroke_width="2")
-    style_attr = icon.attrs.get("style", "")
-    assert "stroke:blue" in style_attr
-    assert "stroke-width:2" in style_attr
+    rendered = str(icon)
+    assert 'stroke="blue"' in rendered
+    assert 'stroke-width="2"' in rendered
 
 
 def test_icon_bs_additional_style():
@@ -289,8 +289,8 @@ def test_icon_example_bootstrap():
     assert icon.has_class("bi-heart-fill")
 
 
-def test_icon_example_fa_style():
-    icon = ui.icon("github", style="brands")
+def test_icon_example_fa_variant():
+    icon = ui.icon("github", variant="brands")
     assert isinstance(icon, Tag)
 
 
@@ -332,10 +332,11 @@ def test_icon_bs_all_fill_and_stroke():
     )
     style = icon.attrs.get("style", "")
     assert "fill:purple" in style
-    assert "fill-opacity:0.7" in style
-    assert "stroke:orange" in style
-    assert "stroke-width:3" in style
-    assert "stroke-opacity:0.9" in style
+    rendered = str(icon)
+    assert 'fill-opacity="0.7"' in rendered
+    assert 'stroke="orange"' in rendered
+    assert 'stroke-width="3"' in rendered
+    assert 'stroke-opacity="0.9"' in rendered
 
 
 def test_icon_bs_default_fill_not_overridden():
@@ -374,15 +375,15 @@ def test_icon_bs_all_params_together():
 
     style = icon.attrs.get("style", "")
     assert "fill:red" in style
-    assert "fill-opacity:0.5" in style
-    assert "stroke:blue" in style
-    assert "stroke-width:1" in style
-    assert "stroke-opacity:0.8" in style
     assert "height:2rem" in style
     assert "width:2rem" in style
     assert "opacity: 0.9" in style
 
     rendered = str(icon)
+    assert 'fill-opacity="0.5"' in rendered
+    assert 'stroke="blue"' in rendered
+    assert 'stroke-width="1"' in rendered
+    assert 'stroke-opacity="0.8"' in rendered
     assert "<title>Settings</title>" in rendered
 
 

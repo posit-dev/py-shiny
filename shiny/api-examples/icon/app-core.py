@@ -17,7 +17,7 @@ app_ui = ui.page_fluid(
             ui.icon("gear", size="3em"),
             ui.br(),
             ui.p("Brand icons:"),
-            ui.icon("github", style="brands"),
+            ui.icon("github", variant="brands"),
         ),
         ui.card(
             ui.card_header("Bootstrap Icons"),
