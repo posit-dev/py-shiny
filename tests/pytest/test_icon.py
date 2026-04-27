@@ -89,6 +89,26 @@ def test_icon_bs_id_attribute():
     assert icon.attrs.get("id") == "my-star-icon"
 
 
+def test_icon_bs_default_margins():
+    icon = ui.icon("star", lib="bs")
+    style = icon.attrs.get("style", "")
+    assert "margin-left:auto" in style
+    assert "margin-right:0.2em" in style
+
+
+def test_icon_bs_default_position():
+    icon = ui.icon("star", lib="bs")
+    style = icon.attrs.get("style", "")
+    assert "position:relative" in style
+
+
+def test_icon_bs_custom_margins():
+    icon = ui.icon("star", lib="bs", margin_left="0.5em", margin_right="0.5em")
+    style = icon.attrs.get("style", "")
+    assert "margin-left:0.5em" in style
+    assert "margin-right:0.5em" in style
+
+
 # ============================================================================
 # icon() tests - FontAwesome
 # ============================================================================
@@ -154,6 +174,15 @@ def test_icon_fa_default_position():
     icon = ui.icon("star", lib="fa")
     rendered = str(icon)
     assert "position:relative" in rendered
+
+
+def test_icon_fa_semantic_a11y_without_title_warns():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        icon = ui.icon("star", lib="fa", a11y="semantic")
+    assert len(w) == 1
+    assert "Star" in str(w[0].message)
+    assert icon.attrs.get("aria-label") == "Star"
 
 
 def test_icon_fa_id_attribute():
@@ -412,11 +441,15 @@ def test_icon_bs_variant_warns():
 
 
 def test_icon_fa_semantic_a11y_without_title_uses_icon_label():
-    # Falls back to icon_data["label"] (e.g., "Star") rather than the icon name
-    icon = ui.icon("star", lib="fa", a11y="semantic")
+    # Falls back to icon_data["label"] (e.g., "Star") and warns, matching BS behaviour
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        icon = ui.icon("star", lib="fa", a11y="semantic")
     assert icon.attrs.get("aria-hidden") is None
     assert icon.attrs.get("role") == "img"
     assert icon.attrs.get("aria-label") == "Star"
+    assert len(w) == 1
+    assert "Star" in str(w[0].message)
 
 
 def test_icon_fa_title_with_decorative_a11y():

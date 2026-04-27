@@ -32,9 +32,9 @@ with ui.layout_columns():
         ui.icon("heart-fill", lib="bs", fill="crimson")
         ui.br()
         ui.p("Styled with CSS classes:")
-        ui.icon("exclamation-triangle-fill", lib="bs", class_="text-warning")
-        ui.icon("check-circle-fill", lib="bs", class_="text-success")
-        ui.icon("x-circle-fill", lib="bs", class_="text-danger")
+        ui.icon("exclamation-triangle-fill", lib="bs", size="1.25em", class_="text-warning")
+        ui.icon("check-circle-fill", lib="bs", size="1.25em", class_="text-success")
+        ui.icon("x-circle-fill", lib="bs", size="1.25em", class_="text-danger")
 
 with ui.layout_columns():
     with ui.card():

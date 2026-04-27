@@ -2,7 +2,6 @@ from __future__ import annotations
 
 __all__ = ("icon",)
 
-import re
 import warnings
 from typing import Literal, Optional, Union, cast
 
@@ -57,9 +56,9 @@ def icon(
     sets are bundled with Shiny and work out of the box.
 
     Icons are treated as decorative by default (hidden from screen readers). We recommend
-    providing accessible labels on the icon's container (e.g., a button with `aria-label`)
-    rather than the icon itself. If you need the icon to communicate meaning directly,
-    pass `aria_label` via kwargs to make it visible to screen readers.
+    labeling the icon's container instead (e.g., a button with ``aria_label``). If the
+    icon conveys meaning that has no other label nearby, use ``a11y="semantic"`` and
+    provide a ``title`` for the accessible name.
 
     Parameters
     ----------
@@ -98,9 +97,8 @@ def icon(
         - `stroke`, `stroke_width`, `stroke_opacity`: SVG stroke attributes
         - `fill_opacity`: SVG fill opacity attribute
         - `margin_left`, `margin_right`, `position`: FA layout CSS (advanced)
-        - `title`: Tooltip text; also used as accessible label when `a11y="semantic"`
+        - `title`: Tooltip text; also used as the accessible label when `a11y="semantic"`
         - `a11y`: `"decorative"` (default, `aria-hidden`) or `"semantic"` (sets `aria-label`)
-        - `aria_label`: Override accessible label directly
         - `data_*`: Data attributes for testing or JavaScript interaction
 
     Returns
@@ -139,10 +137,10 @@ def icon(
     # Icon with data attributes for testing
     ui.icon("gear", lib="bs", data_testid="settings-icon")
 
-    # Icon with accessible label (when icon conveys unique meaning)
-    ui.icon("exclamation-triangle", lib="bs", aria_label="Warning")
+    # Semantic icon — the icon itself conveys unique meaning
+    ui.icon("circle-exclamation", title="Warning", a11y="semantic")
 
-    # Recommended: Label the container, not the icon
+    # Recommended: label the container, not the icon
     ui.input_action_button(
         "delete_btn",
         ui.icon("trash", lib="bs"),
@@ -178,34 +176,11 @@ def icon(
         raise ValueError(f"Unknown icon library: '{lib}'. Use 'fa' or 'bs'.")
 
 
-_CSS_LENGTH_UNITS = {
-    "cm", "mm", "in", "px", "pt", "pc",
-    "em", "ex", "ch", "rem",
-    "vw", "vh", "vmin", "vmax", "%",
-}
-
-
-def _parse_length_unit(x: Optional[str]) -> Optional[dict[str, object]]:
-    """Parse a CSS length string like '2em' into {'value': 2.0, 'unit': 'em'}."""
-    if x is None:
-        return None
-    if not re.search(r"^[0-9]*\.?[0-9]+[a-z%]+$", x):
-        raise ValueError(
-            "Values provided to `height` and `width` must have a numerical "
-            "value followed by a CSS length unit."
-        )
-    unit = re.sub(r"[0-9.]+?", "", x)
-    if unit not in _CSS_LENGTH_UNITS:
-        raise ValueError(f"{unit} is not a valid CSS length unit.")
-    value = float(re.sub(r"[a-z%]+$", "", x))
-    return {"value": value, "unit": unit}
-
-
 def _icon_fa(
     name: str,
     *,
     fill: Optional[str],
-    size: Optional[CssUnit],
+    size: Optional[IconSize],
     class_: Optional[str],
     id: Optional[str],
     variant: Optional[str],
@@ -256,9 +231,6 @@ def _icon_fa(
         height = resolved_size
         width = resolved_size
 
-    # Apply defaults.
-    # margin_left/margin_right/position defaults match faicons.icon_svg() so that
-    # ui.icon() is a drop-in replacement for users migrating from that package.
     if fill is None:
         fill = "currentColor"
     if margin_left is None:
@@ -271,7 +243,10 @@ def _icon_fa(
     # Build SVG attributes
     svg_attrs: dict[str, str] = {"viewBox": f"0 0 {svg['width']} 512"}
 
-    if height is not None and width is not None:
+    # When size is explicit both dimensions are equal, so disable aspect-ratio
+    # scaling in the SVG viewport. When size is default the CSS dimensions already
+    # encode the correct ratio, so preserveAspectRatio is not needed.
+    if resolved_size is not None:
         svg_attrs["preserveAspectRatio"] = "none"
 
     # Map a11y mode (decorative by default)
@@ -279,7 +254,16 @@ def _icon_fa(
         svg_attrs["aria-hidden"] = "true"
         svg_attrs["role"] = "img"
     elif a11y == "semantic":
-        label_title = icon_data["label"] if title is None else title
+        if title is None:
+            label_title = icon_data["label"]
+            warnings.warn(
+                f"ui.icon('{name}', a11y='semantic') has no title. "
+                f"Using '{label_title}' as the accessible label. "
+                f"Provide a title for a more descriptive label.",
+                stacklevel=3,
+            )
+        else:
+            label_title = title
         svg_attrs["aria-label"] = label_title
         svg_attrs["role"] = "img"
 
@@ -320,7 +304,7 @@ def _icon_bs(
     name: str,
     *,
     fill: Optional[str],
-    size: Optional[CssUnit],
+    size: Optional[IconSize],
     class_: Optional[str],
     id: Optional[str],
     **kwargs: TagAttrValue,
@@ -340,19 +324,36 @@ def _icon_bs(
 
     icon_data = BS_ICONS[name]
 
-    # Extract a11y/style kwargs that need special handling
+    # Extract layout/a11y/style kwargs that need special handling
     user_style = cast(Optional[str], kwargs.pop("style", None))
+    margin_left = cast(Optional[str], kwargs.pop("margin_left", None))
+    margin_right = cast(Optional[str], kwargs.pop("margin_right", None))
+    position = cast(Optional[str], kwargs.pop("position", None))
     title = cast(Optional[str], kwargs.pop("title", None))
     a11y = str(kwargs.pop("a11y", "decorative"))
 
+    if fill is None:
+        fill = "currentColor"
+    if margin_left is None:
+        margin_left = "auto"
+    if margin_right is None:
+        margin_right = "0.2em"
+    if position is None:
+        position = "relative"
+
     # Build inline CSS; remaining kwargs (stroke, fill_opacity, etc.) become
     # SVG presentation attributes directly on the element
-    styles: list[str] = [f"fill:{fill}" if fill is not None else "fill:currentColor"]
-
-    css_size = _resolve_icon_size(size)
-    if css_size is not None:
-        styles.append(f"height:{css_size}")
-        styles.append(f"width:{css_size}")
+    css_size = _resolve_icon_size(size) or "1em"
+    styles: list[str] = [
+        f"fill:{fill}",
+        f"height:{css_size}",
+        f"width:{css_size}",
+        f"margin-left:{margin_left}",
+        f"margin-right:{margin_right}",
+        f"position:{position}",
+        "vertical-align:-0.125em",
+        "overflow:visible",
+    ]
 
     if user_style is not None:
         styles.append(user_style)
