@@ -65,6 +65,10 @@ typings/uvicorn:
 typings/seaborn:
 	@echo "Creating seaborn stubs"
 	pyright --createstub seaborn
+typings/sass.pyi: scripts/typing-stubs/sass.pyi
+	@echo "Creating sass stubs"
+	mkdir -p typings
+	cp scripts/typing-stubs/sass.pyi typings/sass.pyi
 typings/matplotlib/__init__.pyi:
 	@echo "Creating matplotlib stubs"
 	mkdir -p typings
@@ -72,7 +76,7 @@ typings/matplotlib/__init__.pyi:
 	mv typings/python-type-stubs/stubs/matplotlib typings/
 	rm -rf typings/python-type-stubs
 
-pyright-typings: typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
+pyright-typings: typings/folium typings/uvicorn typings/seaborn typings/sass.pyi typings/matplotlib/__init__.pyi
 
 check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
