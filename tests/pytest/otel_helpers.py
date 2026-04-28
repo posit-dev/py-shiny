@@ -6,7 +6,7 @@ OpenTelemetry TracerProvider in tests.
 """
 
 from contextlib import contextmanager
-from typing import Iterator, Tuple, Union
+from typing import Generator, Tuple, Union
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
@@ -63,7 +63,9 @@ def reset_otel_tracing_state() -> None:
 
 
 @contextmanager
-def patch_otel_tracing_state(*, tracing_enabled: Union[bool, None]) -> Iterator[None]:
+def patch_otel_tracing_state(
+    *, tracing_enabled: Union[bool, None]
+) -> Generator[None, None, None]:
     """
     Context manager to temporarily set the tracing state for testing.
 
@@ -171,7 +173,7 @@ def get_exported_spans(provider: TracerProvider, exporter: InMemorySpanExporter)
 
 
 def otel_tracer_provider_impl() -> (
-    Iterator[Tuple[TracerProvider, InMemorySpanExporter]]
+    Generator[Tuple[TracerProvider, InMemorySpanExporter], None, None]
 ):
     """
     Implementation for OpenTelemetry TracerProvider fixture.

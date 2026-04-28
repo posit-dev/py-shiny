@@ -5,7 +5,7 @@ import pathlib
 import re
 import tempfile
 import textwrap
-from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar, cast
 
 if TYPE_CHECKING:
     from brand_yml import Brand
@@ -513,7 +513,7 @@ class Theme:
             return self._css
 
         check_theme_pkg_installed("libsass", "sass")
-        import sass
+        import sass  # pyright: ignore[reportMissingTypeStubs]
 
         args: SassCompileArgs = {} if compile_args is None else compile_args
 
@@ -529,7 +529,12 @@ class Theme:
             **args,
         }
 
-        self._css = sass.compile(string=self.to_sass(), **args)
+        self._css = cast(
+            str,
+            sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+                string=self.to_sass(), **args
+            ),
+        )
 
         return self._css
 
