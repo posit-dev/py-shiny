@@ -16,8 +16,7 @@ app_ui = ui.page_fluid(
     ui.input_action_button("toggle_theme", "Toggle theme"),
     ui.input_action_button("toggle_dynamic_mount", "Toggle dynamic mount"),
     ui.input_action_button("toggle_dynamic_size", "Toggle dynamic size"),
-    ui.tags.style(
-        """
+    ui.tags.style("""
         #probe.theme-warm {
           background-color: rgb(250, 250, 248);
           color: rgb(34, 39, 46);
@@ -48,8 +47,7 @@ app_ui = ui.page_fluid(
           padding: 0;
           border: 0;
         }
-        """
-    ),
+        """),
     ui.output_text_verbatim("probe")
     .add_class("shiny-report-size shiny-report-theme theme-warm")
     .add_style(
@@ -68,8 +66,7 @@ app_ui = ui.page_fluid(
     ui.div(dynamic_probe_ui(), id="dynamic_slot"),
     ui.tags.template(dynamic_probe_ui(), id="dynamic_probe_template"),
     ui.output_text_verbatim("dynamic_info"),
-    ui.tags.script(
-        """
+    ui.tags.script("""
         (() => {
           const toggleSize = document.getElementById("toggle_size");
           const toggleVisibility = document.getElementById("toggle_visibility");
@@ -144,8 +141,7 @@ app_ui = ui.page_fluid(
             });
           }
         })();
-    """
-    ),
+    """),
 )
 
 
