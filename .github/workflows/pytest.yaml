@@ -140,6 +140,8 @@ jobs:
 
       - name: Setup remote Playwright
         uses: ./.github/py-shiny/setup-playwright-remote
+        with:
+          browser: ${{ matrix.browser }}
 
       - name: Run End-to-End tests
         timeout-minutes: 60
@@ -207,6 +209,8 @@ jobs:
 
       - name: Setup remote Playwright
         uses: ./.github/py-shiny/setup-playwright-remote
+        with:
+          browser: ${{ matrix.browser }}
 
       - name: Run example app tests
         timeout-minutes: 60
@@ -255,6 +259,8 @@ jobs:
 
       - name: Setup remote Playwright
         uses: ./.github/py-shiny/setup-playwright-remote
+        with:
+          browser: ${{ matrix.browser }}
 
       - name: Run playwright tests for AI generated apps
         timeout-minutes: 60

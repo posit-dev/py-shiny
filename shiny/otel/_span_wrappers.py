@@ -54,7 +54,7 @@ See Also
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterable, AsyncIterator, Callable, Dict, Mapping, Union
+from typing import Any, AsyncGenerator, AsyncIterable, Callable, Dict, Mapping, Union
 
 from opentelemetry.trace import Span, Status, StatusCode
 
@@ -77,7 +77,7 @@ async def shiny_otel_span(
     infer_session_id: bool,
     required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
     collection_level: OtelCollectLevel | None = None,
-) -> AsyncIterator[Span | None]:
+) -> AsyncGenerator[Span | None, None]:
     """
     Context manager for creating and managing a Shiny OpenTelemetry span.
 
@@ -231,7 +231,7 @@ async def shiny_otel_span_stream(
     infer_session_id: bool,
     required_level: OtelCollectLevel = OtelCollectLevel.SESSION,
     collection_level: OtelCollectLevel | None = None,
-) -> AsyncIterator[bytes]:
+) -> AsyncGenerator[bytes, None]:
     """
     Async generator that wraps a byte stream in a Shiny OpenTelemetry span.
 
