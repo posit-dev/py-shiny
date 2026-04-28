@@ -5,6 +5,10 @@ inputs:
     description: "Playwright version to use. Defaults to the installed Python package version."
     required: false
     default: ""
+  browser:
+    description: "Browser to use when verifying the remote Playwright server is ready"
+    required: false
+    default: "chromium"
   port:
     description: "Port to expose the Playwright server on"
     required: false
@@ -54,12 +58,16 @@ runs:
       shell: bash
       run: |
         python3 - <<'PY'
+        from playwright.sync_api import Error, sync_playwright
         import socket
         import time
 
         host = "127.0.0.1"
         port = int("${{ inputs.port }}")
-        deadline = time.time() + 30
+        browser_name = "${{ inputs.browser }}"
+        ws_endpoint = f"ws://{host}:{port}/"
+        deadline = time.time() + 60
+        last_error = None
 
         while time.time() < deadline:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -69,11 +77,31 @@ runs:
                 except OSError:
                     time.sleep(1)
                     continue
-                else:
+            try:
+                with sync_playwright() as playwright:
+                    browser_type = getattr(playwright, browser_name)
+                    browser = browser_type.connect(
+                        ws_endpoint=ws_endpoint,
+                        expose_network="*",
+                        timeout=10000,
+                    )
+                    browser.close()
                     break
+            except Error as err:
+                last_error = err
+                time.sleep(1)
         else:
-            raise SystemExit(f"Timed out waiting for Playwright server on {host}:{port}")
+            raise SystemExit(
+                f"Timed out waiting for Playwright {browser_name} server "
+                f"on {ws_endpoint}: {last_error}"
+            )
         PY
+
+    - name: Show Playwright server logs on failure
+      if: failure()
+      shell: bash
+      run: |
+        docker logs "${{ inputs.container-name }}" || true
 
     - name: Export Playwright connection env vars
       id: set-env
