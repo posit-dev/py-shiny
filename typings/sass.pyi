@@ -1,5 +1,6 @@
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import Any, Literal, overload
+
 
 @overload
 def compile(
@@ -18,5 +19,7 @@ def compile(
     importers: Any = ...,
     custom_import_extensions: Any = ...,
 ) -> str: ...
+
+
 @overload
 def compile(**kwargs: Any) -> str | tuple[str, str] | None: ...
