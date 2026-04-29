@@ -24,4 +24,4 @@ runs:
         make ci-install-deps
 
     - name: Setup remote Playwright
-      uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@a7f74bbfbdbaa2477cb513c52d7655e176fcad3b
+      uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@main
