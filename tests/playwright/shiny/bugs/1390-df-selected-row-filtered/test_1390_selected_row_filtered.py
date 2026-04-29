@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import platform
-
 from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
@@ -82,7 +80,7 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     selected_rows.expect_value("(8,)")
 
     # Remove selection
-    modifier = "Meta" if platform.system() == "Darwin" else "Control"
+    modifier = my_df._multi_select_modifier()
     for row in (8,):
         my_df.cell_locator(row=row, col=0).click(
             modifiers=[modifier]

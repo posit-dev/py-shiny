@@ -38,6 +38,25 @@ runs:
 
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+    - name: Pull Playwright image
+      shell: bash
+      run: |
+        IMAGE="mcr.microsoft.com/playwright:v${{ steps.resolve-version.outputs.version }}-noble"
+        # MCR (Azure Front Door) intermittently returns "The request is blocked"
+        # for GitHub Actions runners. Retry a few times before giving up.
+        attempt=1
+        max_attempts=5
+        until docker pull "$IMAGE"; do
+          if [ "$attempt" -ge "$max_attempts" ]; then
+            echo "Failed to pull $IMAGE after $attempt attempts" >&2
+            exit 1
+          fi
+          sleep_seconds=$((attempt * 10))
+          echo "docker pull failed (attempt $attempt/$max_attempts); retrying in ${sleep_seconds}s..." >&2
+          sleep "$sleep_seconds"
+          attempt=$((attempt + 1))
+        done
+
     - name: Start Playwright server
       shell: bash
       run: |
@@ -81,7 +100,7 @@ runs:
                 with sync_playwright() as playwright:
                     browser_type = getattr(playwright, browser_name)
                     browser = browser_type.connect(
-                        ws_endpoint=ws_endpoint,
+                        ws_endpoint,
                         expose_network="*",
                         timeout=10000,
                     )
