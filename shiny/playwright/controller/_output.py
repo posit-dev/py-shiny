@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import platform
 from typing import Literal, Protocol
 
 from playwright.sync_api import Locator, Page
@@ -915,6 +914,14 @@ class OutputDataFrame(UiWithContainer):
                 break
         cell.scroll_into_view_if_needed(timeout=timeout)
 
+    def _multi_select_modifier(self) -> Literal["Control", "Meta"]:
+        platform = self.page.evaluate(
+            "() => window.navigator.userAgentData?.platform ?? window.navigator.platform"
+        )
+        if isinstance(platform, str) and platform.lower().startswith("mac"):
+            return "Meta"
+        return "Control"
+
     def _expect_column_label(
         self,
         value: ListPatternOrStr,
@@ -1016,18 +1023,13 @@ class OutputDataFrame(UiWithContainer):
                 self.cell_locator(row=value[-1], col=0).click(timeout=timeout)
                 self.page.keyboard.up("Shift")
             else:
-                # if operating system is MacOs use Meta (Cmd) else use Ctrl key
-                if platform.system() == "Darwin":
-                    self.page.keyboard.down("Meta")
-                else:
-                    self.page.keyboard.down("Control")
+                modifier = self._multi_select_modifier()
                 for row in value:
                     self._cell_scroll_if_needed(row=row, col=0, timeout=timeout)
-                    self.cell_locator(row=row, col=0).click(timeout=timeout)
-                if platform.system() == "Darwin":
-                    self.page.keyboard.up("Meta")
-                else:
-                    self.page.keyboard.up("Control")
+                    self.cell_locator(row=row, col=0).click(
+                        timeout=timeout,
+                        modifiers=[modifier],
+                    )
         else:
             self.cell_locator(row=value[0], col=0).click(timeout=timeout)
 
