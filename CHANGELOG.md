@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed a caret drift issue in `ui.input_code_editor()` where the cursor would appear to the right of the actual text insertion point when certain themes or on some operating systems. (#2223)
+
 * Fixed server-side input deduplication so that all values received from the client always trigger reactive invalidation. (#1600, #2219)
 
 * Fixed OpenTelemetry name inference for `reactive.Value` to handle type-annotated assignments (e.g., `counter: reactive.Value[int] = reactive.Value(0)`), generic subscript calls (e.g., `reactive.Value[int](0)`), and multiline assignments where the `Value()` call is on a continuation line (e.g., assignments split across lines with parentheses or multiline type annotations). This fixes anonymous OTel labels for packages like `shinychat` that use multiline `reactive.Value` assignments. (#2205)

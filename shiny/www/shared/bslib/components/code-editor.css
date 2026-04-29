@@ -55,6 +55,7 @@ bslib-code-editor .code-editor textarea {
 
 /* Ensure proper font rendering */
 bslib-code-editor .code-editor,
+bslib-code-editor .code-editor .prism-code-editor,
 bslib-code-editor .code-editor textarea,
 bslib-code-editor .code-editor pre,
 bslib-code-editor .code-editor code {
