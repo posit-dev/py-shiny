@@ -100,7 +100,7 @@ runs:
                 with sync_playwright() as playwright:
                     browser_type = getattr(playwright, browser_name)
                     browser = browser_type.connect(
-                        ws_endpoint=ws_endpoint,
+                        ws_endpoint,
                         expose_network="*",
                         timeout=10000,
                     )
