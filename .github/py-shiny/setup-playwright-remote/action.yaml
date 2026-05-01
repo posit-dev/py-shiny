@@ -62,16 +62,24 @@ runs:
         key: ${{ steps.image-cache-key.outputs.cache-key }}
 
     - name: Load cached Playwright image
+      id: load-image-cache
       if: steps.restore-image-cache.outputs.cache-hit == 'true'
       shell: bash
       run: |
         CACHE_FILE="${{ steps.image-cache-key.outputs.cache-file }}"
+        LOADED=false
         if [ -f "$CACHE_FILE" ]; then
           echo "Loading cached image from $CACHE_FILE"
-          docker load -i "$CACHE_FILE"
+          if docker load -i "$CACHE_FILE"; then
+            LOADED=true
+          else
+            echo "Cached image tar at $CACHE_FILE is invalid or corrupted; deleting it and pulling instead." >&2
+            rm -f "$CACHE_FILE"
+          fi
         else
           echo "Cache hit reported but $CACHE_FILE is missing; will pull instead." >&2
         fi
+        echo "loaded=$LOADED" >> "$GITHUB_OUTPUT"
 
     - name: Pull Playwright image
       id: pull-image
