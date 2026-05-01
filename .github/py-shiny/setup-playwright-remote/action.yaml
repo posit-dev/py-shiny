@@ -110,7 +110,7 @@ runs:
         echo "pulled=true" >> "$GITHUB_OUTPUT"
 
     - name: Save Playwright image to cache
-      if: steps.restore-image-cache.outputs.cache-hit != 'true' && steps.pull-image.outputs.pulled == 'true'
+      if: steps.pull-image.outputs.pulled == 'true'
       shell: bash
       run: |
         IMAGE="${{ steps.image-cache-key.outputs.image }}"
@@ -119,7 +119,7 @@ runs:
         docker save "$IMAGE" -o "$CACHE_FILE"
 
     - name: Persist Playwright image cache
-      if: steps.restore-image-cache.outputs.cache-hit != 'true' && steps.pull-image.outputs.pulled == 'true'
+      if: steps.pull-image.outputs.pulled == 'true'
       uses: actions/cache/save@v4
       with:
         path: ${{ steps.image-cache-key.outputs.cache-dir }}
