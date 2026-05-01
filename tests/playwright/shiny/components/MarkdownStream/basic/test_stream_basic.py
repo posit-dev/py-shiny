@@ -3,7 +3,6 @@ from playwright.sync_api import Page, expect
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
-
 SCROLLED_TO_BOTTOM_SCRIPT = """(selector) => {
     const element = document.querySelector(selector);
     if (!element) return false;
