@@ -5,21 +5,29 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [1.6.1] - 2026-05-01
 
 ### New features
 
 * Added `session.destroy()` and `session.on_destroy()` for cleaning up reactive objects (effects, calcs, values) when dynamically inserted module UI is removed. Calling `session.destroy()` on a module's session fires all registered destroy callbacks, which stop effects, invalidate calcs and values, and remove namespaced inputs and outputs from the reactive graph. Reactive objects automatically register weak destroy callbacks so they can be garbage collected when no longer referenced, even before session end. (#2209)
 
-### Bug fixes
+### Improvements
 
-* Fixed a caret drift issue in `ui.input_code_editor()` where the cursor would appear to the right of the actual text insertion point when certain themes or on some operating systems. (#2223)
+* `@reactive.calc`, `@reactive.effect`, and render decorators (e.g. `@render.text`) now raise a `TypeError` if the decorated function has required parameters, since Shiny never supplies arguments to these functions. Functions with default parameter values emit a warning, as the defaults will always be used. (Thanks, @mvanhorn!) (#2200)
+
+* Output resize/visibility detection now uses native browser observers (`ResizeObserver`, `IntersectionObserver`) instead of relying on jQuery `shown`/`hidden` events and `window.resize`. This makes Shiny's client-side output-info pipeline (image/plot sizing, hidden-state tracking, theme reporting) work automatically in any layout — including CSS-only show/hide, third-party tab components, and non-Bootstrap frameworks — without requiring custom event hooks. This also introduces a `shiny:themechange` event for code that needs to trigger theme clientdata refreshes after changing surrounding visual theme context. (rstudio/shiny#3682)
+
+* `panel_conditional()` no longer briefly flashes its contents on app start
+  when the condition is initially `False`. (rstudio/shiny#3505)
+
+### Bug fixes
 
 * Fixed server-side input deduplication so that all values received from the client always trigger reactive invalidation. (#1600, #2219)
 
+* Fixed a caret drift issue in `ui.input_code_editor()` where the cursor would appear to the right of the actual text insertion point when certain themes or on some operating systems. (#2223)
+
 * Fixed OpenTelemetry name inference for `reactive.Value` to handle type-annotated assignments (e.g., `counter: reactive.Value[int] = reactive.Value(0)`), generic subscript calls (e.g., `reactive.Value[int](0)`), and multiline assignments where the `Value()` call is on a continuation line (e.g., assignments split across lines with parentheses or multiline type annotations). This fixes anonymous OTel labels for packages like `shinychat` that use multiline `reactive.Value` assignments. (#2205)
 
-* `@reactive.calc`, `@reactive.effect`, and render decorators (e.g. `@render.text`) now raise a `TypeError` if the decorated function has required parameters, since Shiny never supplies arguments to these functions. Functions with default parameter values emit a warning, as the defaults will always be used. (Thanks, @mvanhorn!) (#2200)
 
 ## [1.6.0] - 2026-03-20
 
