@@ -27,16 +27,18 @@ Follow the general package release pattern:
 
 - [ ] Checkout branch `rc-vX.Y.Z`
 - [ ] Verify `pyproject.toml` has no git-based dependencies
-- [ ] Bump version in `htmltools/__init__.py`
-- [ ] Bump version in changelog
+- [ ] Bump version in `htmltools/__init__.py` (from dev version like `0.6.0.9000` to release like `0.6.1`)
+- [ ] Update `CHANGELOG.md`: rename `[UNRELEASED]` to `[X.Y.Z] - YYYY-MM-DD`
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
 - [ ] Verify no additional commits were added beyond release prep
 - [ ] **PRE-RELEASE GATE**: Present release summary (package, version, CI status, changelog, dep check) and get explicit user confirmation before proceeding
 - [ ] Squash merge the RC PR into main via GitHub (this is the release commit)
-- [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
-- [ ] Create GH Release (copy changelog content, mark as Latest)
+- [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z`
+- [ ] Push the tag first (before pushing main): `git push origin vX.Y.Z`
+- [ ] Create GH Release. **Important**: The release title must start with `htmltools` (e.g., `htmltools 0.6.1`) — the PyPI publish workflow depends on this naming convention.
 - [ ] Wait for PyPI publish to succeed
+- [ ] Only after PyPI succeeds: push main to origin (`git push origin main`)
 
 If CI fails, fix issues before continuing. If PyPI fails, delete tag and release, fix, redo.
 
@@ -123,25 +125,41 @@ Ask user: "Is py-shinywidgets being released this cycle? What version?"
 
 Repo: `posit-dev/shinylive`
 
+### Submodule updates
+
 - [ ] **Confirm version**: Look up the current version (`gh api repos/posit-dev/shinylive/releases/latest --jq .tag_name`), suggest the next minor bump, and ask the user to confirm the release version
 - [ ] Checkout branch `rc-vX.Y.Z`
 - [ ] Bump version in `package.json`
-- [ ] Run `make submodules submodules-pull-shiny` to init all submodules and then update py-shiny submodule
+- [ ] Run `make submodules` to init all submodules
+- [ ] Update **all** Python package submodules to their latest released versions — not just py-shiny:
+  - `packages/py-shiny` → latest py-shiny tag
+  - `packages/py-htmltools` → latest py-htmltools tag (if released this cycle)
+  - `packages/py-shinywidgets` → latest py-shinywidgets tag
+  - `packages/py-faicons` → check if update needed
 - [ ] Run `make clean && make all`
-- [ ] Check `shinylive_lock.json` for released package versions
+- [ ] **Verify `shinylive_lock.json`** — check that ALL package versions match their latest releases. The lockfile reflects what's actually bundled. Don't trust that updating one submodule will cascade to others.
+- [ ] Run `npm install --package-lock-only` to sync `package-lock.json` version with `package.json`
+
+### Local testing and PR
+
 - [ ] Add and/or edit examples to use new features or API
 - [ ] Run `make serve` and automatically test all local shinylive examples for errors (see procedure below)
 - [ ] Commit and push RC branch
 - [ ] Open a PR from `rc-vX.Y.Z` → `main` for visibility and CI
 - [ ] Wait for CI to pass (if any)
 - [ ] **PRE-RELEASE GATE**: Present release summary (package, version, submodule versions, build output, local test results) and get explicit user confirmation before proceeding
+- [ ] Update the PR description to reflect the final set of changes (package versions, Makefile changes, etc.)
+- [ ] Check PR reviews/feedback (e.g., Copilot) and address before merging
+
+### Release and deploy
+
 - [ ] Squash merge the RC PR into `main` via GitHub
 - [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
 - [ ] **DEPLOY GATE 1 (github.io)**: Wait for the `main` branch deploy to github.io to finish. Then bust all browser caches and verify apps work on github.io using the Playwright-based example testing procedure. **Important**: When testing, always append a cache-busting query parameter (e.g., `?v={timestamp}`) to URLs or use a fresh incognito/private browser context to ensure you're testing the newly deployed version, not a cached old version. **Do NOT push to `deploy` until github.io is verified.**
 - [ ] Ask user: "github.io apps have been tested — X passed, Y failed. Ready to push to `deploy` (shinylive.io)?" Get explicit confirmation.
-- [ ] Only after github.io verification passes and user confirms: push to `deploy` branch (for shinylive.io)
+- [ ] Only after github.io verification passes and user confirms: push to `deploy` branch (for shinylive.io) using `git push origin main:deploy`
 - [ ] **DEPLOY GATE 2 (shinylive.io)**: Wait for the `deploy` branch deploy to shinylive.io to finish. Then bust all browser caches and verify apps work on shinylive.io using the same testing procedure with cache-busting (fresh incognito context or `?v={timestamp}` query params).
-- [ ] Create GH Release
+- [ ] Create GH Release. Check existing release note conventions (`gh api repos/posit-dev/shinylive/releases --jq '.[:3] | .[] | .body'`) and match the format used by recent releases.
 - [ ] Wait for release to succeed and build artifact to appear in GH Release page
 
 ### Local shinylive example testing procedure
@@ -172,16 +190,16 @@ Repo: `posit-dev/py-shinylive`
 
 - [ ] **Confirm version**: Look up the current version (`gh api repos/posit-dev/py-shinylive/releases/latest --jq .tag_name`), suggest the next minor bump, and ask the user to confirm the release version
 - [ ] Checkout branch `rc-vX.Y.Z`
-- [ ] Bump version of the package
-- [ ] Bump version of the shinylive (JS) bundle dependency
-- [ ] Update changelog
+- [ ] Bump `SHINYLIVE_PACKAGE_VERSION` in `shinylive/_version/__init__.py`
+- [ ] Bump `SHINYLIVE_ASSETS_VERSION` in `shinylive/_version/__init__.py` to the Phase 6 shinylive JS version
+- [ ] Update `CHANGELOG.md`
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
 - [ ] Verify no additional commits were added beyond release prep
 - [ ] **PRE-RELEASE GATE**: Present release summary (package, version, shinylive JS version, changelog) and get explicit user confirmation before proceeding
 - [ ] Squash merge the RC PR into main via GitHub (this is the release commit)
 - [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
-- [ ] Create GH Release
+- [ ] Create GH Release. **Important**: The release title must start with `shinylive` (e.g., `shinylive 0.8.7`) — the PyPI publish workflow only triggers when the release name matches this pattern.
 - [ ] Wait for PyPI publish to succeed
 
 If PyPI fails, delete tag and release, fix, redo.
@@ -197,11 +215,14 @@ Repo: `posit-dev/r-shinylive`
 Use the shinylive JS version from Phase 6 (already known at this point).
 
 - [ ] Check for any existing open PRs that bump `SHINYLIVE_ASSETS_VERSION` (`gh pr list --repo posit-dev/r-shinylive --state open --search "SHINYLIVE_ASSETS_VERSION"`). If found, close them.
-- [ ] Create a branch with the `SHINYLIVE_ASSETS_VERSION` update to the Phase 6 shinylive JS version
+- [ ] Create a branch with the following changes:
+  - Update `SHINYLIVE_ASSETS_VERSION` in `R/version.R` to the Phase 6 shinylive JS version
+  - Bump `Version` in `DESCRIPTION` to the next dev version (e.g., `0.4.1.9000`)
+  - Add a `NEWS.md` entry under the dev version heading (e.g., `# shinylive 0.4.1.9000`) noting the assets update
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
 - [ ] Ask user to confirm before merging the PR
-- [ ] Merge PR
+- [ ] Merge PR (squash merge)
 
 ---
 
@@ -209,7 +230,7 @@ Use the shinylive JS version from Phase 6 (already known at this point).
 
 Repo: `posit-dev/py-shiny`
 
-- [ ] Create a branch to bump shinylive `[docs]` version to the latest py-shinylive release
+- [ ] Create a branch to bump shinylive version in the `[doc]` extras of `pyproject.toml` (e.g., `"shinylive>=0.8.7"`)
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
 - [ ] Ask user to confirm before merging the PR
@@ -236,12 +257,25 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 
 ## Phase 11: Conda-forge
 
-- [ ] Check `conda-forge/py-htmltools-feedstock` for auto-created PR from bot
 - [ ] Check `conda-forge/py-htmltools-feedstock` for auto-created PR from bot (only if py-htmltools was released)
 - [ ] Check `conda-forge/py-shiny-feedstock` for auto-created PR from bot
 - [ ] If PRs exist and tests pass, they should auto-merge (look for `[bot-automerge]` prefix)
 - [ ] If auto-merge doesn't happen, create an issue with the appropriate bot command
 - [ ] Note: Only py-htmltools and py-shiny have conda-forge feedstocks. py-shinyswatch, py-shinywidgets, and py-shinylive do NOT have feedstocks as of 2026-03.
+
+### Known issue: license_file references
+
+The feedstock `recipe/meta.yaml` has an `about/license_file` section that lists bundled license files from py-shiny (e.g., `shiny/www/shared/highlight/LICENSE`, `shiny/www/shared/showdown/license.txt`, `shiny/www/shared/jqueryui/LICENSE.txt`). If py-shiny removes or renames any vendored dependency between releases, these paths become stale and the conda-forge build will fail with `ValueError: License file ... does not exist`.
+
+**If a build fails for this reason:**
+1. Identify which license files no longer exist by checking `shiny/www/shared/` in the current release
+2. Comment on the bot PR explaining which line(s) to remove from `license_file`
+3. The feedstock maintainers (currently `wch` and `sugatoray`) can push the fix to the bot's branch or request a `bot-rerun` after updating `meta.yaml` on main
+4. Note: Carson (cpsievert) is **not** a feedstock maintainer and cannot push directly — if this is needed, ask to be added or request a maintainer to act
+
+### Bot PR timing
+
+The conda-forge bot (`regro-cf-autotick-bot`) typically creates PRs within a few hours of a PyPI release, but it can sometimes take up to a day. If no PR appears after 24 hours, check the bot's [status page](https://github.com/regro/cf-scripts) for outages.
 
 Ask user: "Have the conda-forge bot PRs appeared? Any issues with auto-merge?"
 
@@ -251,7 +285,13 @@ Ask user: "Have the conda-forge bot PRs appeared? Any issues with auto-merge?"
 
 Repo: https://huggingface.co/spaces/posit/shiny-for-python-template
 
-- [ ] Update `requirements.txt` with new package versions
+This is a Hugging Face Space (not a GitHub repo), so `gh` CLI cannot be used. The Space runs a Shiny Express app (`app.py`) with a `Dockerfile` that installs from `requirements.txt`.
+
+- [ ] Check the Space's current `requirements.txt` via the HF web UI or `WebFetch` on `https://huggingface.co/spaces/posit/shiny-for-python-template/raw/main/requirements.txt`
+- [ ] The `requirements.txt` currently does **not** pin versions — `shiny`, `shinywidgets`, etc. are listed without version specifiers. This means a container restart will pull the latest versions from PyPI automatically.
+- [ ] If the Space shows a "Runtime error", try **restarting the Space** from the HF Settings page first — this often resolves stale container issues after upstream packages are updated.
+- [ ] If the restart doesn't fix it, investigate the container logs for dependency conflicts or app errors.
+- [ ] Verify the Space loads and the dashboard works after the restart.
 
 ---
 
