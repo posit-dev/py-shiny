@@ -3,25 +3,33 @@ from playwright.sync_api import Page, expect
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
+SCROLLED_TO_BOTTOM_SCRIPT = """(selector) => {
+    const element = document.querySelector(selector);
+    if (!element) return false;
 
-def is_element_scrolled_to_bottom(page: Page, selector: str) -> bool:
-    return page.evaluate(
-        """(selector) => {
-        const element = document.querySelector(selector);
-        if (!element) return false;
+    // Get the exact scroll values (rounded to handle float values)
+    const scrollTop = Math.round(element.scrollTop);
+    const scrollHeight = Math.round(element.scrollHeight);
+    const clientHeight = Math.round(element.clientHeight);
 
-        // Get the exact scroll values (rounded to handle float values)
-        const scrollTop = Math.round(element.scrollTop);
-        const scrollHeight = Math.round(element.scrollHeight);
-        const clientHeight = Math.round(element.clientHeight);
+    // Check if the element is scrollable
+    if (scrollHeight <= clientHeight) return false;
 
-        // Check if the element is scrollable
-        if (scrollHeight <= clientHeight) return false;
+    // Check if we're at the bottom (allowing for 1px difference due to rounding)
+    return Math.abs((scrollTop + clientHeight) - scrollHeight) <= 1;
+}"""
 
-        // Check if we're at the bottom (allowing for 1px difference due to rounding)
-        return Math.abs((scrollTop + clientHeight) - scrollHeight) <= 1;
-    }""",
-        selector,
+
+def expect_element_scrolled_to_bottom(
+    page: Page,
+    selector: str,
+    *,
+    timeout: float = 30_000,
+) -> None:
+    page.wait_for_function(
+        SCROLLED_TO_BOTTOM_SCRIPT,
+        arg=selector,
+        timeout=timeout,
     )
 
 
@@ -35,8 +43,7 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
 
     # Check that the card body container (the parent of the markdown stream) is scrolled
     # all the way to the bottom
-    is_scrolled = is_element_scrolled_to_bottom(page, ".card-body")
-    assert is_scrolled, "The card body container should be scrolled to the bottom"
+    expect_element_scrolled_to_bottom(page, ".card-body")
 
     stream2 = page.locator("#shiny_readme_err")
     expect(stream2).to_be_visible(timeout=30_000)
