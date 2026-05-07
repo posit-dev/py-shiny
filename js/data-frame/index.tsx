@@ -244,6 +244,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
             }
           },
           enableSorting,
+          ...(colname === "" && { id: findUnusedColumnName(columns, " ") }),
         };
       }),
     [columns, typeHints]
@@ -1017,6 +1018,21 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     </>
   );
 };
+
+/**
+ * Solves the problem arising when there's more than one column with the same name (or when
+ * the column name is illegal, like in the case of an empty name) by returning a name with
+ * enough spaces appended so that it becomes unique.
+ * @param columns Names of existing columns.
+ * @param initName String to start the search with.
+ * @returns A string that does not exist in columns and thus can be used as column ID.
+ */
+function findUnusedColumnName(columns: ReadonlyArray<string>, initName = " "): string {
+  while (columns.includes(initName)) {
+    initName += " ";
+  }
+  return initName;
+}
 
 function findKeysBetween<TData>(
   rowModel: RowModel<TData>,
