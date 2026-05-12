@@ -5,6 +5,12 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### Bug fixes
+
+* Bumped `lodash`/`lodash-es` to `4.18.1` in the `js-react` template lockfile for CVE-2025-13465. (#2233)
+
 ## [1.6.1] - 2026-05-01
 
 ### New features
