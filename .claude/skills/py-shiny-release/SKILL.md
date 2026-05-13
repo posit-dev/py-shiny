@@ -101,6 +101,37 @@ Many phases (2-5, 7) follow this common flow:
 10. Wait for PyPI publish to succeed
 11. If publish fails: delete tag + GH Release, fix, redo
 
+### GH Release naming conventions
+
+Each repo's PyPI publish workflow triggers based on the GH Release **title** matching a specific
+prefix. Always check the workflow file if unsure, but the known patterns are:
+
+| Repo | Release title must start with | Example |
+|------|-------------------------------|---------|
+| py-htmltools | `htmltools` | `htmltools 0.6.1` |
+| py-shiny | `shiny` | `shiny 1.6.1` |
+| py-shinyswatch | `shinyswatch` | `shinyswatch 0.10.0` |
+| py-shinywidgets | `shinywidgets` | `shinywidgets 0.8.0` |
+| py-shinylive | `shinylive` | `shinylive 0.8.7` |
+
+Also, before writing release notes, check existing releases for format conventions:
+`gh api repos/<org>/<repo>/releases --jq '.[:3] | .[] | .body'`
+
+## Parallelism
+
+Once the PyPI packages are published (phases 2-7), several later phases can run concurrently
+since they are independent:
+
+- **Phases 8, 9, 10** (r-shinylive, py-shiny docs bump, py-shiny-site) can all be started
+  in parallel — they don't depend on each other, only on the earlier PyPI releases.
+- **Phase 11** (conda-forge) is passive — just checking for bot PRs — and can be monitored
+  alongside other work.
+- **Phase 12** (Huggingface) is a quick restart/check and can be done anytime after py-shiny
+  is on PyPI.
+
+When the user asks to skip ahead or work on multiple phases, take advantage of this. Open PRs
+for independent phases, watch CI in the background, and report results as they come in.
+
 ## On Failure
 
 - For PyPI failures: remind user to delete the tag and GH Release before retrying
