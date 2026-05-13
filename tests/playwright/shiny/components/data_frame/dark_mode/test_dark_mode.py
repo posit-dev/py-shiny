@@ -94,9 +94,7 @@ def test_data_grid_row_hover_readable_in_dark_mode(
     )
     # Some browsers report transparent on the <tr> when the rule targets <td>.
     if hover_bg in ("rgba(0, 0, 0, 0)", "transparent"):
-        hover_bg = first_row_cell.evaluate(
-            "el => getComputedStyle(el).backgroundColor"
-        )
+        hover_bg = first_row_cell.evaluate("el => getComputedStyle(el).backgroundColor")
     cell_color = first_row_cell.evaluate("el => getComputedStyle(el).color")
 
     hover_bg_luminance = _relative_luminance(hover_bg)
