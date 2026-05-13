@@ -42,25 +42,6 @@ def _contrast_ratio(fg: str, bg: str) -> float:
     return (lighter + 0.05) / (darker + 0.05)
 
 
-def _resolved_var(page: Page, selector: str, var_name: str) -> str:
-    """Get the resolved value of a CSS custom property, as a real rgb() color."""
-    return page.evaluate(
-        """([selector, varName]) => {
-            const el = document.querySelector(selector);
-            const raw = getComputedStyle(el).getPropertyValue(varName).trim();
-            // Resolve the variable into a concrete color by applying it as a
-            // background on a probe element and reading back computedStyle.
-            const probe = document.createElement('div');
-            probe.style.background = raw;
-            document.body.appendChild(probe);
-            const resolved = getComputedStyle(probe).backgroundColor;
-            probe.remove();
-            return resolved;
-        }""",
-        [selector, var_name],
-    )
-
-
 def test_data_grid_header_readable_in_dark_mode(
     page: Page, local_app: ShinyAppProc
 ) -> None:
@@ -73,13 +54,9 @@ def test_data_grid_header_readable_in_dark_mode(
     grid = page.locator("#grid")
     expect(grid.locator("table thead th").first).to_be_visible()
 
-    header_bg = _resolved_var(
-        page, "shiny-data-frame", "--shiny-datagrid-grid-header-bgcolor"
-    )
     header_th = grid.locator("table thead tr:first-child th").first
-    header_color = header_th.evaluate(
-        "el => getComputedStyle(el).color"
-    )
+    header_bg = header_th.evaluate("el => getComputedStyle(el).backgroundColor")
+    header_color = header_th.evaluate("el => getComputedStyle(el).color")
 
     # In dark mode the header background should itself be dark — the fix
     # routes it through `--bs-tertiary-bg`, which flips with the theme.
