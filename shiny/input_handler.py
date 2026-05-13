@@ -149,10 +149,6 @@ def _(value: int, name: ResolvedId, session: Session) -> ActionButtonValue:
     return ActionButtonValue(value)
 
 
-# The inputs handlers below currently do nothing, but still need to be defined,
-# otherwise there will be an error when the input value is handled.
-
-
 @input_handlers.add("shiny.number")
 def _(value: str, name: ResolvedId, session: Session) -> str:
     return value

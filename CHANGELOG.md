@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug fixes
 
 * Bumped `lodash`/`lodash-es` to `4.18.1` in the `js-react` template lockfile for CVE-2025-13465. (#2233)
+* Fixed `render.DataGrid()` column headers and hovered rows not adapting to dark mode when `ui.input_dark_mode()` is enabled. The data grid now uses Bootstrap 5.3 mode-aware color tokens (`--bs-tertiary-bg`, `--bs-primary-bg-subtle`, `--bs-emphasis-color`, `--bs-secondary-color`), with the legacy values preserved as fallbacks. (#1635)
 
 ## [1.6.1] - 2026-05-01
 
