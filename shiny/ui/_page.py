@@ -14,7 +14,7 @@ __all__ = (
 )
 
 from copy import copy
-from typing import Any, Callable, Literal, Optional, Sequence
+from typing import Any, Callable, Literal, Optional, Sequence, cast
 
 from htmltools import (
     MetadataNode,
@@ -441,8 +441,9 @@ def page_fillable(
     body = page.children[1]
     if not isinstance(body, Tag) or body.name != "body":
         raise ValueError("Expected a <body> tag")
+    body_tag = cast(Tag, body)
 
-    page.children[1] = as_fillable_container(body)
+    page.children[1] = as_fillable_container(body_tag)
 
     return page
 
