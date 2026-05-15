@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, cast
 
 import pytest
 from htmltools import Tag, TagAttrValue
@@ -28,7 +28,11 @@ def get_sidebar_tags(sb: ui.Sidebar) -> tuple[Tag, Tag]:
     sidebar, collapse = sb.tagify()
     assert isinstance(sidebar, Tag)
     assert isinstance(collapse, Tag)
-    return sidebar, collapse
+    # cast: isinstance(Tag) narrows from the TagifiedTagList items
+    # (`TagifiedNode = TagifiedTag | TagLeaf`) to `Tag[Unknown] |
+    # Tag[TagifiedNode]`. Re-widen to bare `Tag` so the return type
+    # check passes.
+    return cast(Tag, sidebar), cast(Tag, collapse)
 
 
 def test_sidebar_assigns_input_binding_class_if_id_provided():
