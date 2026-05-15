@@ -12,6 +12,7 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
+    Tagified,
     TagList,
     css,
     div,
@@ -404,7 +405,7 @@ class NavSet:
         self.header = header
         self.footer = footer
 
-    def tagify(self) -> TagList | Tag:
+    def tagify(self) -> Tagified:
         id = self.id
         ul_class = self.ul_class
         if id is not None:
@@ -1428,12 +1429,13 @@ def _make_tabs_fillable(
         # Only work on Tags
         if not isinstance(child, Tag):
             continue
+        child_tag = cast(Tag, child)
         # Only work on .tab-pane children
-        if not child.has_class("tab-pane"):
+        if not child_tag.has_class("tab-pane"):
             continue
         # If `fillable` is a list, only fill the .tab-pane if its data-value is contained in `fillable`
         if isinstance(fillable, list):
-            child_attr = child.attrs.get("data-value")
+            child_attr = child_tag.attrs.get("data-value")
             if child_attr is None or child_attr not in fillable:
                 continue
         styles = css(
@@ -1441,11 +1443,11 @@ def _make_tabs_fillable(
             padding=as_css_padding(padding),
             __bslib_navbar_margin="0;" if navbar else None,
         )
-        child = as_fillable_container(as_fill_item(child))
-        child.add_style(cast(str, styles))
-        child.add_class("bslib-gap-spacing")
+        child_tag = as_fillable_container(as_fill_item(child_tag))
+        child_tag.add_style(cast(str, styles))
+        child_tag.add_class("bslib-gap-spacing")
 
-        content.children[i] = child
+        content.children[i] = child_tag
 
     return content
 

@@ -11,7 +11,7 @@ __all__ = (
 )
 
 import warnings
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 
 from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
 
@@ -355,8 +355,9 @@ def _extract_text(x: TagChild) -> str:
     if isinstance(x, (list, tuple)):
         return " ".join(_extract_text(item) for item in x)
     if isinstance(x, Tag):
-        if hasattr(x, "children"):
-            return _extract_text(x.children)
+        x_tag = cast(Tag, x)
+        if hasattr(x_tag, "children"):
+            return _extract_text(cast(TagChild, x_tag.children))
     return ""
 
 

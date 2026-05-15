@@ -1,4 +1,5 @@
 import sys
+from typing import cast
 
 from htmltools import Tag, Tagifiable, TagList
 
@@ -8,6 +9,6 @@ from htmltools import Tag, Tagifiable, TagList
 # the current sys.displayhook.
 def _expressify_decorator_function_def(fn: object) -> object:
     if isinstance(fn, (Tag, TagList, Tagifiable)) or hasattr(fn, "_repr_html_"):
-        sys.displayhook(fn)
+        sys.displayhook(cast(object, fn))
 
-    return fn
+    return cast(object, fn)

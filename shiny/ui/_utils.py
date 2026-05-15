@@ -58,10 +58,13 @@ def get_window_title(
 
 
 def _find_child_strings(x: TagList | TagNode) -> str:
-    if isinstance(x, Tag) and x.name not in ("script", "style"):
-        x = x.children
+    if isinstance(x, Tag):
+        x_tag = cast(Tag, x)
+        if x_tag.name not in ("script", "style"):
+            x = x_tag.children
     if isinstance(x, TagList):
-        strings = [_find_child_strings(y) for y in x]
+        x_taglist = cast(TagList, x)
+        strings = [_find_child_strings(y) for y in x_taglist]
         return " ".join(filter(lambda x: x != "", strings))
     if isinstance(x, str):
         return x

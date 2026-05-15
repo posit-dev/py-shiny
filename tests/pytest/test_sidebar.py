@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, cast
 
 import pytest
-from htmltools import Tag, TagAttrValue
+from htmltools import Tag, TagAttrValue, TagList
 
 from shiny import ui
 from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue
@@ -25,10 +25,13 @@ def test_sidebar_open_string_values(
 
 
 def get_sidebar_tags(sb: ui.Sidebar) -> tuple[Tag, Tag]:
-    sidebar, collapse = sb.tagify()
+    tagified = sb.tagify()
+    assert isinstance(tagified, TagList)
+    sidebar = cast(object, tagified[0])
+    collapse = cast(object, tagified[1])
     assert isinstance(sidebar, Tag)
     assert isinstance(collapse, Tag)
-    return sidebar, collapse
+    return cast(Tag, sidebar), cast(Tag, collapse)
 
 
 def test_sidebar_assigns_input_binding_class_if_id_provided():
