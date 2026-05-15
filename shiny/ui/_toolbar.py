@@ -11,9 +11,9 @@ __all__ = (
 )
 
 import warnings
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 
-from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
+from htmltools import Tag, TagAttrValue, TagChild, TagNode, css, div, span, tags
 
 from .._docstring import add_example
 from .._utils import drop_none, private_random_int
@@ -355,8 +355,12 @@ def _extract_text(x: TagChild) -> str:
     if isinstance(x, (list, tuple)):
         return " ".join(_extract_text(item) for item in x)
     if isinstance(x, Tag):
-        if hasattr(x, "children"):
-            return _extract_text(x.children)
+        # cast: narrowing TagChild via isinstance(Tag) leaves a
+        # Tag[Unknown] arm; widen back to the default Tag[TagNode]
+        # so subsequent attribute access and recursion don't leak Unknown.
+        x_tag = cast("Tag[TagNode]", x)
+        if hasattr(x_tag, "children"):
+            return _extract_text(x_tag.children)
     return ""
 
 

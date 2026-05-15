@@ -18,6 +18,8 @@ from htmltools import (
     HTMLTextDocument,
     RenderedHTML,
     Tag,
+    TagifiedTag,
+    TagifiedTagList,
     TagList,
 )
 from starlette.requests import Request
@@ -133,7 +135,14 @@ class App:
 
     def __init__(
         self,
-        ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
+        ui: (
+            Tag
+            | TagifiedTag
+            | TagList
+            | TagifiedTagList
+            | Callable[[Request], Tag | TagifiedTag | TagList | TagifiedTagList]
+            | Path
+        ),
         server: (
             Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
         ),
@@ -531,7 +540,16 @@ class App:
         self._bookmark_restore_dir_fn = as_bookmark_dir_fn(bookmark_restore_dir_fn)
 
 
-def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
+def is_uifunc(
+    x: (
+        Path
+        | Tag
+        | TagifiedTag
+        | TagList
+        | TagifiedTagList
+        | Callable[[Request], Tag | TagifiedTag | TagList | TagifiedTagList]
+    ),
+) -> bool:
     if (
         isinstance(x, Path)
         or isinstance(x, Tag)

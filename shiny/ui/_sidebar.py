@@ -10,6 +10,7 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
+    TagifiedTagList,
     TagList,
     css,
     div,
@@ -458,7 +459,7 @@ class Sidebar:
 
         return sidebar_tag
 
-    def tagify(self) -> TagList:
+    def tagify(self) -> TagifiedTagList:
         id = self._get_sidebar_id()
         taglist = TagList(self._sidebar_tag(id), self._collapse_tag(id))
         return taglist.tagify()

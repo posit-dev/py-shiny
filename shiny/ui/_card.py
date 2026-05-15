@@ -9,6 +9,7 @@ from htmltools import (
     TagAttrValue,
     TagChild,
     TagFunction,
+    TagifiedTagList,
     TagList,
     css,
     div,
@@ -429,7 +430,7 @@ class CardItem:
         """
         return self._item
 
-    def tagify(self) -> TagList:
+    def tagify(self) -> TagifiedTagList:
         """
         Tagify the `item`
 
