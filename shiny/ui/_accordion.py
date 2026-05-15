@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, Optional, TypeVar
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagifiedTag, css, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
@@ -159,7 +159,7 @@ class AccordionPanel:
             ),
         )
 
-    def tagify(self) -> Tag:
+    def tagify(self) -> TagifiedTag:
         """
         Resolve the :class:`~shiny.ui.AccordionPanel` into a
         :class:`~htmltools.Tag`.

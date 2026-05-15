@@ -12,7 +12,10 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
+    TagifiedTag,
+    TagifiedTagList,
     TagList,
+    TagNode,
     css,
     div,
     tags,
@@ -404,7 +407,7 @@ class NavSet:
         self.header = header
         self.footer = footer
 
-    def tagify(self) -> TagList | Tag:
+    def tagify(self) -> TagifiedTagList | TagifiedTag:
         id = self.id
         ul_class = self.ul_class
         if id is not None:
@@ -1428,6 +1431,9 @@ def _make_tabs_fillable(
         # Only work on Tags
         if not isinstance(child, Tag):
             continue
+        # Narrow `Tag[Unknown] | Tag[TagifiedNode]` back to the default
+        # `Tag[TagNode]` so the surrounding generic-Tag helpers compose.
+        child = cast("Tag[TagNode]", child)
         # Only work on .tab-pane children
         if not child.has_class("tab-pane"):
             continue
