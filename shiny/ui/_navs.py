@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections.abc
 import copy
 import re
-from typing import Any, Literal, Optional, Sequence, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar, cast
 
 from htmltools import (
     HTML,
@@ -12,14 +12,18 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
-    TagifiedTag,
-    TagifiedTagList,
     TagList,
     TagNode,
     css,
     div,
     tags,
 )
+
+if TYPE_CHECKING:
+    # `Tagified` is only available in htmltools >= 0.7.0
+    # (posit-dev/py-htmltools#105). Guard the import so this module
+    # still loads against the released htmltools.
+    from htmltools import Tagified
 
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
@@ -407,7 +411,7 @@ class NavSet:
         self.header = header
         self.footer = footer
 
-    def tagify(self) -> TagifiedTagList | TagifiedTag:
+    def tagify(self) -> Tagified:
         id = self.id
         ul_class = self.ul_class
         if id is not None:

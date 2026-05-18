@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from typing import TYPE_CHECKING, Optional, Protocol
 
 from htmltools import (
     HTML,
@@ -9,12 +9,18 @@ from htmltools import (
     TagAttrValue,
     TagChild,
     TagFunction,
-    TagifiedTagList,
     TagList,
     css,
     div,
     tags,
 )
+
+if TYPE_CHECKING:
+    # `Tagified` is only available in htmltools >= 0.7.0
+    # (posit-dev/py-htmltools#105). Guard the import so this module
+    # still loads against the released htmltools; `from __future__
+    # import annotations` defers annotation evaluation.
+    from htmltools import Tagified
 
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
@@ -430,7 +436,7 @@ class CardItem:
         """
         return self._item
 
-    def tagify(self) -> TagifiedTagList:
+    def tagify(self) -> Tagified:
         """
         Tagify the `item`
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, Optional, TypeVar
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagifiedTag, css, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
@@ -15,6 +15,12 @@ from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
 
 if TYPE_CHECKING:
+    # `Tagified` is only available in htmltools >= 0.7.0
+    # (posit-dev/py-htmltools#105). Guard the import so this module
+    # still loads against the released htmltools; `from __future__
+    # import annotations` defers annotation evaluation.
+    from htmltools import Tagified
+
     from ..session import Session
 
 __all__ = (
@@ -159,7 +165,7 @@ class AccordionPanel:
             ),
         )
 
-    def tagify(self) -> TagifiedTag:
+    def tagify(self) -> Tagified:
         """
         Resolve the :class:`~shiny.ui.AccordionPanel` into a
         :class:`~htmltools.Tag`.

@@ -10,7 +10,6 @@ from htmltools import (
     TagAttrs,
     TagAttrValue,
     TagChild,
-    TagifiedTagList,
     TagList,
     css,
     div,
@@ -33,6 +32,11 @@ from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
 if TYPE_CHECKING:
+    # `Tagified` is only available in htmltools >= 0.7.0
+    # (posit-dev/py-htmltools#105). Guard the import so this module
+    # still loads against the released htmltools.
+    from htmltools import Tagified
+
     from ..session import Session
 
 __all__ = (
@@ -459,7 +463,7 @@ class Sidebar:
 
         return sidebar_tag
 
-    def tagify(self) -> TagifiedTagList:
+    def tagify(self) -> Tagified:
         id = self._get_sidebar_id()
         taglist = TagList(self._sidebar_tag(id), self._collapse_tag(id))
         return taglist.tagify()

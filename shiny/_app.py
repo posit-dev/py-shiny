@@ -6,7 +6,7 @@ import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Literal, Mapping, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping, Optional, TypeVar, cast
 
 import starlette.applications
 import starlette.middleware
@@ -18,10 +18,16 @@ from htmltools import (
     HTMLTextDocument,
     RenderedHTML,
     Tag,
-    TagifiedTag,
-    TagifiedTagList,
     TagList,
 )
+
+if TYPE_CHECKING:
+    # `Tagified` is only available in htmltools >= 0.7.0
+    # (posit-dev/py-htmltools#105). Guard the import so this module
+    # still loads against the released htmltools; the
+    # `from __future__ import annotations` line above defers the
+    # annotation evaluation to type-check time only.
+    from htmltools import Tagified
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -137,10 +143,9 @@ class App:
         self,
         ui: (
             Tag
-            | TagifiedTag
             | TagList
-            | TagifiedTagList
-            | Callable[[Request], Tag | TagifiedTag | TagList | TagifiedTagList]
+            | Tagified
+            | Callable[[Request], Tag | TagList | Tagified]
             | Path
         ),
         server: (
@@ -544,10 +549,9 @@ def is_uifunc(
     x: (
         Path
         | Tag
-        | TagifiedTag
         | TagList
-        | TagifiedTagList
-        | Callable[[Request], Tag | TagifiedTag | TagList | TagifiedTagList]
+        | Tagified
+        | Callable[[Request], Tag | TagList | Tagified]
     ),
 ) -> bool:
     if (
