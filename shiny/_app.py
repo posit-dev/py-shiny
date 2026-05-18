@@ -6,7 +6,16 @@ import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping, Optional, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Literal,
+    Mapping,
+    Optional,
+    TypeVar,
+    cast,
+)
 
 import starlette.applications
 import starlette.middleware
@@ -546,13 +555,7 @@ class App:
 
 
 def is_uifunc(
-    x: (
-        Path
-        | Tag
-        | TagList
-        | Tagified
-        | Callable[[Request], Tag | TagList | Tagified]
-    ),
+    x: Path | Tag | TagList | Tagified | Callable[[Request], Tag | TagList | Tagified],
 ) -> bool:
     if (
         isinstance(x, Path)
