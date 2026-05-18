@@ -443,7 +443,7 @@ def page_fillable(
     if not isinstance(body, Tag) or body.name != "body":
         raise ValueError("Expected a <body> tag")
 
-    # Narrow `Tag[Unknown] | Tag[TagifiedNode]` back to the default
+    # Widen the post-tagify `Tag` shape back to the default
     # `Tag[TagNode]` so the surrounding generic-Tag helpers compose.
     body = cast("Tag[TagNode]", body)
     page.children[1] = as_fillable_container(body)

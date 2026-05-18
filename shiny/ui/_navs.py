@@ -1435,7 +1435,7 @@ def _make_tabs_fillable(
         # Only work on Tags
         if not isinstance(child, Tag):
             continue
-        # Narrow `Tag[Unknown] | Tag[TagifiedNode]` back to the default
+        # Widen the post-tagify `Tag` shape back to the default
         # `Tag[TagNode]` so the surrounding generic-Tag helpers compose.
         child = cast("Tag[TagNode]", child)
         # Only work on .tab-pane children
