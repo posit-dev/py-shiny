@@ -258,7 +258,13 @@ install-deps: FORCE ## install dependencies
 ci-install-deps: FORCE
 	uv pip install -e ".[dev,test]"
 ci-install-py-shiny-templates-deps: FORCE
-	uv pip install -r py-shiny-templates/requirements.txt
+	# TODO(htmltools-105): drop the explicit htmltools URL once 0.7.0
+	# ships on PyPI and py-shiny's pyproject.toml no longer pins it to
+	# a git branch. uv refuses to resolve the templates requirements
+	# while a transitive URL dep isn't repeated as a direct requirement.
+	uv pip install \
+		"htmltools @ git+https://github.com/posit-dev/py-htmltools.git@schloerke/tagify-tag-class-issue" \
+		-r py-shiny-templates/requirements.txt
 
 install-docs: FORCE
 	pip install -e ".[dev,test,doc]"
