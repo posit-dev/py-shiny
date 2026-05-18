@@ -263,7 +263,7 @@ ci-install-py-shiny-templates-deps: FORCE
 	# branch. uv refuses to resolve the templates requirements while a
 	# transitive URL dep isn't repeated as a direct requirement.
 	uv pip install \
-		"htmltools @ git+https://github.com/posit-dev/py-htmltools.git@schloerke/tagify-tag-class-issue" \
+		"htmltools @ git+https://github.com/posit-dev/py-htmltools.git@main" \
 		-r py-shiny-templates/requirements.txt
 
 install-docs: FORCE
