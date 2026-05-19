@@ -140,6 +140,7 @@ theme_files_used <- function(theme_sass_lines) {
   }
 
   imports <- trimws(imports)
+  imports <- sub("\\s*//.*$", "", imports)
   imports <- gsub("^@import \"([^\"]+?)\";", "\\1", imports)
   imports <- gsub("^@import '([^']+?)';", "\\1", imports)
 
