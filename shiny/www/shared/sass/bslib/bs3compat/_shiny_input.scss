@@ -62,4 +62,33 @@ $form-group-margin-bottom: 1rem !default;
       margin-top: calc(#{-($line-height-base - $form-check-input-width) * .5} - #{$input-btn-border-width});
     }
   }
+
+  // Shiny's selectInput(selectize=FALSE) renders <select class="form-control">.
+  // BS5 strips the native chevron from .form-control (via `appearance: none`)
+  // and provides a replacement chevron only on its new .form-select class,
+  // which Shiny doesn't use. Re-apply .form-select's chevron treatment to
+  // select.form-control here.
+  // Source: https://github.com/twbs/bootstrap/blob/v5.3.8/scss/forms/_form-select.scss
+  select.form-control {
+    --#{$prefix}form-select-bg-img: #{escape-svg($form-select-indicator)};
+    padding-right: $form-select-indicator-padding;
+    background-image: var(--#{$prefix}form-select-bg-img), var(--#{$prefix}form-select-bg-icon, none);
+    background-repeat: no-repeat;
+    background-position: $form-select-bg-position;
+    background-size: $form-select-bg-size;
+
+    &[multiple],
+    &[size]:not([size="1"]) {
+      padding-right: $form-select-padding-x;
+      background-image: none;
+    }
+  }
+
+  @if $enable-dark-mode {
+    @include color-mode(dark) {
+      select.form-control {
+        --#{$prefix}form-select-bg-img: #{escape-svg($form-select-indicator-dark)};
+      }
+    }
+  }
 }

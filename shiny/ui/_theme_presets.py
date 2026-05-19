@@ -7,6 +7,7 @@ from typing import Literal
 ShinyThemePreset = Literal[
     "bootstrap",
     "shiny",
+    "brite",
     "cerulean",
     "cosmo",
     "cyborg",
@@ -37,6 +38,7 @@ ShinyThemePreset = Literal[
 shiny_theme_presets: tuple[ShinyThemePreset, ...] = (
     "bootstrap",
     "shiny",
+    "brite",
     "cerulean",
     "cosmo",
     "cyborg",
@@ -70,6 +72,7 @@ shiny_theme_presets_bundled: tuple[ShinyThemePreset, ...] = (
 )
 
 shiny_theme_presets_bootswatch: tuple[ShinyThemePreset, ...] = (
+    "brite",
     "cerulean",
     "cosmo",
     "cyborg",
