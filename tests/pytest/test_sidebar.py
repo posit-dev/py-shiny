@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Literal, cast
+from typing import Literal
 
 import pytest
-from htmltools import Tag, TagAttrValue, TagList
+from htmltools import TagAttrValue, TagifiedTag, TagifiedTagList
 
 from shiny import ui
 from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue
@@ -24,14 +24,13 @@ def test_sidebar_open_string_values(
     assert ui.sidebar(open=open_value).open() == ui.sidebar(open=expected).open()
 
 
-def get_sidebar_tags(sb: ui.Sidebar) -> tuple[Tag, Tag]:
-    # cast: `.tagify()` is typed `Tagified`, which is a union including
-    # non-iterable arms. We know `Sidebar.tagify()` returns a TagList
-    # of two Tags at runtime, so narrow before unpacking.
-    tagified = cast(TagList, sb.tagify())
+def get_sidebar_tags(sb: ui.Sidebar) -> tuple[TagifiedTag, TagifiedTag]:
+    # Sidebar.tagify() returns a TagifiedTagList of two TagifiedTags.
+    tagified = sb.tagify()
+    assert isinstance(tagified, TagifiedTagList)
     sidebar, collapse = tagified
-    assert isinstance(sidebar, Tag)
-    assert isinstance(collapse, Tag)
+    assert isinstance(sidebar, TagifiedTag)
+    assert isinstance(collapse, TagifiedTag)
     return sidebar, collapse
 
 
