@@ -14,7 +14,7 @@ __all__ = (
 )
 
 from copy import copy
-from typing import Any, Callable, Literal, Optional, Sequence, cast
+from typing import Any, Callable, Literal, Optional, Sequence
 
 from htmltools import (
     MetadataNode,
@@ -23,7 +23,6 @@ from htmltools import (
     TagAttrValue,
     TagChild,
     TagList,
-    TagNode,
     css,
     div,
     head_content,
@@ -443,9 +442,6 @@ def page_fillable(
     if not isinstance(body, Tag) or body.name != "body":
         raise ValueError("Expected a <body> tag")
 
-    # Widen the post-tagify `Tag` shape back to the default
-    # `Tag[TagNode]` so the surrounding generic-Tag helpers compose.
-    body = cast("Tag[TagNode]", body)
     page.children[1] = as_fillable_container(body)
 
     return page

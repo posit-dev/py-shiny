@@ -32,7 +32,7 @@ def get_sidebar_tags(sb: ui.Sidebar) -> tuple[Tag, Tag]:
     sidebar, collapse = tagified
     assert isinstance(sidebar, Tag)
     assert isinstance(collapse, Tag)
-    return cast(Tag, sidebar), cast(Tag, collapse)
+    return sidebar, collapse
 
 
 def test_sidebar_assigns_input_binding_class_if_id_provided():

@@ -13,7 +13,6 @@ from htmltools import (
     TagAttrValue,
     TagChild,
     TagList,
-    TagNode,
     css,
     div,
     tags,
@@ -1435,9 +1434,6 @@ def _make_tabs_fillable(
         # Only work on Tags
         if not isinstance(child, Tag):
             continue
-        # Widen the post-tagify `Tag` shape back to the default
-        # `Tag[TagNode]` so the surrounding generic-Tag helpers compose.
-        child = cast("Tag[TagNode]", child)
         # Only work on .tab-pane children
         if not child.has_class("tab-pane"):
             continue

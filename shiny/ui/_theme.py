@@ -5,7 +5,7 @@ import pathlib
 import re
 import tempfile
 import textwrap
-from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar
 
 if TYPE_CHECKING:
     from brand_yml import Brand
@@ -529,11 +529,9 @@ class Theme:
             **args,
         }
 
-        self._css = cast(
-            str,
-            sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-                string=self.to_sass(), **args
-            ),
+        self._css = sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            string=self.to_sass(),
+            **args,
         )
 
         return self._css
