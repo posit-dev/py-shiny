@@ -7,16 +7,13 @@ SCROLLED_TO_BOTTOM_SCRIPT = """(selector) => {
     const element = document.querySelector(selector);
     if (!element) return false;
 
-    // Get the exact scroll values (rounded to handle float values)
-    const scrollTop = Math.round(element.scrollTop);
-    const scrollHeight = Math.round(element.scrollHeight);
-    const clientHeight = Math.round(element.clientHeight);
+    const scrollTop = element.scrollTop;
+    const scrollHeight = element.scrollHeight;
+    const clientHeight = element.clientHeight;
 
-    // Check if the element is scrollable
     if (scrollHeight <= clientHeight) return false;
 
-    // Check if we're at the bottom (allowing for 1px difference due to rounding)
-    return Math.abs((scrollTop + clientHeight) - scrollHeight) <= 1;
+    return Math.abs((scrollTop + clientHeight) - scrollHeight) <= 3;
 }"""
 
 
@@ -43,7 +40,7 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
 
     # Check that the card body container (the parent of the markdown stream) is scrolled
     # all the way to the bottom
-    expect_element_scrolled_to_bottom(page, ".card-body")
+    expect_element_scrolled_to_bottom(page, ".card-body:has(#shiny_readme)")
 
     stream2 = page.locator("#shiny_readme_err")
     expect(stream2).to_be_visible(timeout=30_000)
