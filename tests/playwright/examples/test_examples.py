@@ -13,7 +13,6 @@ def test_examples(page: Page, ex_app_path: str) -> None:
 
     skip_on_windows_with_timezonefinder(ex_app_path)
     skip_airmass_on_3_9(ex_app_path)
-    skip_brand_examples_on_old_brand_yml(ex_app_path)
 
     validate_example(page, ex_app_path)
 
@@ -34,38 +33,6 @@ def skip_on_windows_with_timezonefinder(ex_app_path: str) -> None:
     except ImportError:
         pytest.skip(
             "timezonefinder has difficulty compiling on windows. Skipping example app. posit-dev/py-shiny#1651"
-        )
-
-
-def skip_brand_examples_on_old_brand_yml(ex_app_path: str) -> None:
-    """Skip brand examples when brand_yml predates the htmltools 0.7.0 fix.
-
-    brand_yml <= 0.1.1 returns a bare ``Tag`` from
-    ``BrandLogoResource.tagify()``. htmltools 0.7.0 (posit-dev/py-htmltools#105)
-    tightened the ``Tagifiable`` contract to require a fully-tagified return,
-    so rendering a brand logo with an old brand_yml + new htmltools raises
-    ``TypeError`` at the render boundary. Drop this skip once py-shiny's
-    floor for ``brand_yml`` is raised past 0.1.1 (see posit-dev/brand-yml#115).
-    """
-    if not ex_app_path.startswith("examples/brand/"):
-        return
-
-    from importlib.metadata import PackageNotFoundError, version
-
-    from packaging.version import Version
-
-    try:
-        installed = Version(version("brand_yml"))
-    except PackageNotFoundError:
-        pytest.skip("brand_yml not installed")
-        return
-
-    min_version = Version("0.1.2")
-    if installed < min_version:
-        pytest.skip(
-            f"brand_yml {installed} predates the htmltools 0.7.0 Tagifiable"
-            f" fix; requires brand_yml >= {min_version}"
-            " (posit-dev/brand-yml#115)."
         )
 
 

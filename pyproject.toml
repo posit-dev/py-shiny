@@ -59,7 +59,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-theme = ["libsass>=0.23.0", "brand_yml>=0.1.0"]
+theme = ["libsass>=0.23.0", "brand_yml>=0.2.0"]
 otel = ["opentelemetry-sdk>=1.20.0"]
 test = [
     "pytest>=6.2.4",
@@ -111,7 +111,7 @@ dev = [
     "Flake8-pyproject>=1.2.3",
     "isort>=5.10.1",
     "libsass>=0.23.0",
-    "brand_yml>=0.1.0",
+    "brand_yml>=0.2.0",
     "pyright>=1.1.407",
     "pre-commit>=2.15.0",
     "wheel",
