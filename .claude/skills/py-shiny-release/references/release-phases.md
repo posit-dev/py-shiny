@@ -181,10 +181,10 @@ Repo: `posit-dev/py-shinylive`
 - [ ] **PRE-RELEASE GATE**: Present release summary (package, version, shinylive JS version, changelog) and get explicit user confirmation before proceeding
 - [ ] Squash merge the RC PR into main via GitHub (this is the release commit)
 - [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
-- [ ] Create GH Release
+- [ ] Create GH Release with title **`shinylive X.Y.Z`** (NOT `py-shinylive X.Y.Z` and NOT `vX.Y.Z`). The `.github/workflows/build.yml` "Deploy to PyPI" step is gated by `if: startsWith(github.event.release.name, 'shinylive')` — if the release title does not start with `shinylive`, the publish step silently skips and the package never reaches PyPI even though the workflow reports success.
 - [ ] Wait for PyPI publish to succeed
 
-If PyPI fails, delete tag and release, fix, redo.
+If PyPI fails, delete tag and release, fix, redo. If the publish step was skipped because of a mistitled release (e.g. `py-shinylive X.Y.Z`), delete the GH Release object only (keep the tag) and recreate it with title `shinylive X.Y.Z` — this re-fires the `release: published` event and the publish step will then match the `startsWith('shinylive')` predicate.
 
 Ask user: "Is py-shinylive being released this cycle?"
 
