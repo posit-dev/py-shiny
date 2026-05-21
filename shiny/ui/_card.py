@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from typing import Optional, Protocol, cast
 
 from htmltools import (
     HTML,
@@ -438,7 +438,7 @@ class CardItem:
         :
             A tagified :class:`~htmltools.TagList` object.
         """
-        return TagList(self.resolve()).tagify()
+        return cast(TagList, TagList(self.resolve()).tagify())
 
 
 @add_example()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, TypeVar
+from typing import TYPE_CHECKING, Literal, Optional, TypeVar, cast
 
 from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
@@ -169,7 +169,7 @@ class AccordionPanel:
         :
             A tagified `resolve()`d value.
         """
-        return self.resolve().tagify()
+        return cast(Tag, self.resolve().tagify())
 
 
 @add_example()

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional, cast
 
 from htmltools import (
     HTML,
@@ -461,7 +461,7 @@ class Sidebar:
     def tagify(self) -> TagList:
         id = self._get_sidebar_id()
         taglist = TagList(self._sidebar_tag(id), self._collapse_tag(id))
-        return taglist.tagify()
+        return cast(TagList, taglist.tagify())
 
 
 @add_example()

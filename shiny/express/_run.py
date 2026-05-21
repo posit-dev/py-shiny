@@ -131,7 +131,7 @@ def create_express_app(file: Path, package_name: str) -> App:
             # catch them here and convert them to a different type of error, because uvicorn
             # specifically catches AttributeErrors and prints an error message that is
             # misleading for Shiny Express. https://github.com/posit-dev/py-shiny/issues/937
-            app_ui = run_express(file, package_name).tagify()
+            app_ui = cast("Tag | TagList", run_express(file, package_name).tagify())
 
     except AttributeError as e:
         raise RuntimeError(e) from e
@@ -143,7 +143,7 @@ def create_express_app(file: Path, package_name: str) -> App:
         def app_ui_wrapper(request: Request):
             # Stub session used to pass `app_opts()` checks.
             with session_context(ExpressStubSession()):
-                return run_express(file, package_name).tagify()
+                return cast("Tag | TagList", run_express(file, package_name).tagify())
 
         app_ui = app_ui_wrapper
 
