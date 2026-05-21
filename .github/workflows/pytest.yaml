@@ -201,13 +201,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: posit-dev/py-shiny-templates
-          # TODO: drop this ref once py-shiny-templates#54 merges. That
-          # PR fixes monitor-database/scoredata.py to use
-          # `asyncio.get_running_loop()` instead of
-          # `asyncio.get_event_loop()`, which raises on Python 3.14 at
-          # app startup and times out every job in the
-          # playwright-examples matrix.
-          ref: schloerke/fix-asyncio-get-event-loop
           path: py-shiny-templates
 
       - name: Install py-shiny-templates dependencies
