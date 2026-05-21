@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import os
 import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
