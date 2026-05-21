@@ -39,7 +39,7 @@ def init_db(con: sqlite3.Connection) -> None:
         cur.close()
 
 
-conn = sqlite3.connect(":memory:")
+conn = sqlite3.connect(":memory:", check_same_thread=False)
 init_db(conn)
 
 
