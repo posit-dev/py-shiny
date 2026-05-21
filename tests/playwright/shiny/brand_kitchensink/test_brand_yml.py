@@ -1,11 +1,34 @@
 import re
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Callable, Dict
 
+import pytest
 from conftest import create_example_fixture
+from packaging.version import Version
 from playwright.sync_api import Locator, Page, expect
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
+
+# brand_yml <= 0.1.1 returns a bare `Tag` from `BrandLogoResource.tagify()`.
+# htmltools 0.7.0 (posit-dev/py-htmltools#105) tightened the Tagifiable
+# contract to require a fully-tagified return, so rendering a brand logo
+# with old brand_yml + new htmltools raises `TypeError` at the render
+# boundary. Drop this module-level skip — and bump py-shiny's `brand_yml`
+# floor — once brand_yml 0.1.2 (posit-dev/brand-yml#115) ships to PyPI.
+try:
+    _brand_yml_version = Version(version("brand_yml"))
+except PackageNotFoundError:
+    _brand_yml_version = None  # pyright: ignore[reportAssignmentType]
+_brand_yml_min = Version("0.1.2")
+pytestmark = pytest.mark.skipif(
+    _brand_yml_version is None or _brand_yml_version < _brand_yml_min,
+    reason=(
+        f"brand_yml {_brand_yml_version} predates the htmltools 0.7.0"
+        f" Tagifiable fix; requires brand_yml >= {_brand_yml_min}"
+        " (posit-dev/brand-yml#115)."
+    ),
+)
 
 app = create_example_fixture("brand")
 
