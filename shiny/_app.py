@@ -30,11 +30,6 @@ from htmltools import (
 )
 
 if TYPE_CHECKING:
-    # `Tagified` is only available in htmltools >= 0.7.0
-    # (posit-dev/py-htmltools#105). Guard the import so this module
-    # still loads against the released htmltools; the
-    # `from __future__ import annotations` line above defers the
-    # annotation evaluation to type-check time only.
     from htmltools import Tagified
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response

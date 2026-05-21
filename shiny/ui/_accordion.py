@@ -15,10 +15,6 @@ from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
 
 if TYPE_CHECKING:
-    # `Tagified` is only available in htmltools >= 0.7.0
-    # (posit-dev/py-htmltools#105). Guard the import so this module
-    # still loads against the released htmltools; `from __future__
-    # import annotations` defers annotation evaluation.
     from htmltools import Tagified
 
     from ..session import Session

@@ -32,9 +32,6 @@ from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
 if TYPE_CHECKING:
-    # `Tagified` is only available in htmltools >= 0.7.0
-    # (posit-dev/py-htmltools#105). Guard the import so this module
-    # still loads against the released htmltools.
     from htmltools import Tagified
 
     from ..session import Session
