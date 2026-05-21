@@ -20,6 +20,12 @@ from ..._utils import is_async_callable, wrap_async
 from ...types import Jsonifiable
 
 if TYPE_CHECKING:
+    # `Tagified` is only available in htmltools >= 0.7.0
+    # (posit-dev/py-htmltools#105). Guard the import so this module
+    # still loads against the released htmltools; `from __future__
+    # import annotations` defers annotation evaluation.
+    from htmltools import Tagified
+
     from ...session import Session
 
 # TODO-barret-docs: Double check docs are rendererd
@@ -287,14 +293,18 @@ class Renderer(Generic[IT]):
             return None
         return TagList(rendered_ui)._repr_html_()
 
-    def tagify(self) -> DefaultUIFnResult:
+    def tagify(self) -> Tagified:
         rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             raise TypeError(
                 "No output UI exists for this type of render function: ",
                 self.__class__.__name__,
             )
-        return rendered_ui
+        # Wrap in TagList so str/MetadataNode/Tag/TagList all normalize
+        # through a single `.tagify()` call, satisfying the new
+        # Tagifiable contract (every `.tagify()` must return a fully
+        # tagified value).
+        return TagList(rendered_ui).tagify()
 
     def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
         from ...session import session_context

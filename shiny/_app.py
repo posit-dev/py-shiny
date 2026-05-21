@@ -498,17 +498,19 @@ class App:
         self._registered_dependencies[dep_name] = dep
 
     def _render_page(self, ui: Tag | TagList, lib_prefix: str) -> RenderedHTML:
-        ui_res = copy.copy(ui)
         # Use presence of the Bootstrap dependency as a signal that the UI uses a
         # shiny.ui.page_*() function, in which case the Shiny CSS is already included.
-        has_bootstrap = any(
-            [dep.name == "bootstrap" for dep in ui_res.get_dependencies()]
-        )
+        has_bootstrap = any(dep.name == "bootstrap" for dep in ui.get_dependencies())
         # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
         # (see require_deps() for a comment about why we even include it)
-        ui_res.insert(
-            0,
-            [require_deps(), jquery_deps(), *shiny_deps(include_css=not has_bootstrap)],
+        # Compose a new TagList so this works for any UI input shape, including
+        # pre-tagified (and immutable) TagifiedTag/TagifiedTagList values that
+        # express mode produces (`run_express(...).tagify()` in `express/_run.py`).
+        ui_res = TagList(
+            require_deps(),
+            jquery_deps(),
+            *shiny_deps(include_css=not has_bootstrap),
+            ui,
         )
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
