@@ -42,7 +42,7 @@ dependencies = [
     # TODO(htmltools-116): revert to "htmltools>=0.7.0" before merging.
     # Pins to the PR #120 branch (sibling-classes refactor for
     # tagified content). Flip back once it ships.
-    "htmltools @ git+https://github.com/posit-dev/py-htmltools.git@schloerke/issue-116-sibling-classes",
+    "htmltools @ git+https://github.com/posit-dev/py-htmltools.git@main",
     "click>=8.1.4;platform_system!='Emscripten'",
     "markdown-it-py>=1.1.0",
     "mdit-py-plugins>=0.3.0",
