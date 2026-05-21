@@ -35,15 +35,21 @@ bslib_bs_theme <- function(version, preset = "shiny") {
 bs_full_theme <- function(theme, path_sass_markers) {
   bs_version <- bslib::theme_version(theme)
 
-  bs_bundle(
-    theme,
-    bslib = bslib_component_sass(),
-    shiny = shiny_sass(bs_version),
-    selectize = shiny_sass_selectize(bs_version),
-    ionrangeslider = shiny_sass_ionrangeslider(),
-    daterange = shiny_sass_daterange_picker(),
-    # The next layer must come last so that its text appears where a user layer would
-    marker = sass_layer_file(path_sass_markers),
+  # `shiny` before `theme` so bslib's bs3compat (baked into `theme`) wins cascade
+  # ties against R-shiny's shiny.scss. bs_bundle() requires theme-first, so call
+  # sass::sass_bundle() directly and reapply the bs_theme class.
+  structure(
+    sass::sass_bundle(
+      shiny = shiny_sass(bs_version),
+      theme,
+      bslib = bslib_component_sass(),
+      selectize = shiny_sass_selectize(bs_version),
+      ionrangeslider = shiny_sass_ionrangeslider(),
+      daterange = shiny_sass_daterange_picker(),
+      # The next layer must come last so that its text appears where a user layer would
+      marker = sass_layer_file(path_sass_markers),
+    ),
+    class = class(theme)
   )
 }
 
