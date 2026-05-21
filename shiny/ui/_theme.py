@@ -532,7 +532,8 @@ class Theme:
         self._css = cast(
             str,
             sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-                string=self.to_sass(), **args
+                string=self.to_sass(),
+                **args,
             ),
         )
 
