@@ -94,6 +94,8 @@ app_allow_external_errors: typing.List[str] = [
     # yfinance deprecation warning (Pandas 4.0 compatibility)
     "Pandas4Warning: Timestamp.utcnow is deprecated",
     "dt_now = pd.Timestamp.utcnow()",  # continuation of line above
+    "RequestsDependencyWarning: urllib3",
+    "warnings.warn(",
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "examples/brownian": ["Failed to acquire camera feed:"],

@@ -69,7 +69,17 @@ async def update_db_task(con: sqlite3.Connection) -> Awaitable[None]:
         update_db(con)
 
 
-_ = asyncio.create_task(update_db_task(conn))
+try:
+    loop = asyncio.get_running_loop()
+except RuntimeError:
+    loop = None
+
+if loop and loop.is_running():
+    _ = asyncio.create_task(update_db_task(conn))
+else:
+    from threading import Thread
+
+    Thread(target=lambda: asyncio.run(update_db_task(conn)), daemon=True).start()
 
 
 # === Create the reactive.poll object ===============================
