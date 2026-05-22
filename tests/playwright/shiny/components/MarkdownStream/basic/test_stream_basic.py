@@ -7,13 +7,30 @@ SCROLLED_TO_BOTTOM_SCRIPT = """(selector) => {
     const element = document.querySelector(selector);
     if (!element) return false;
 
+    // Get the exact scroll values
     const scrollTop = element.scrollTop;
     const scrollHeight = element.scrollHeight;
     const clientHeight = element.clientHeight;
 
+    // Check if the element is scrollable
     if (scrollHeight <= clientHeight) return false;
 
-    return Math.abs((scrollTop + clientHeight) - scrollHeight) <= 3;
+    // Check if we're at the bottom. Match shinychat's own bottomTolerance
+    // (10px), with extra headroom for browser subpixel rounding and
+    // end-of-stream layout shifts.
+    return (scrollTop + clientHeight) >= (scrollHeight - 15);
+}"""
+
+# shinychat auto-scrolls via scrollTo({behavior: "smooth"}), so after the last
+# stream chunk arrives the scroll animation may still be running. Poll until
+# scrollTop is stable across two consecutive reads before asserting position.
+SCROLL_SETTLED_SCRIPT = """(selector) => {
+    const el = document.querySelector(selector);
+    if (!el) return false;
+    const now = el.scrollTop;
+    if (el.__lastScrollTop === now) return true;
+    el.__lastScrollTop = now;
+    return false;
 }"""
 
 
@@ -23,6 +40,12 @@ def expect_element_scrolled_to_bottom(
     *,
     timeout: float = 30_000,
 ) -> None:
+    page.wait_for_function(
+        SCROLL_SETTLED_SCRIPT,
+        arg=selector,
+        polling=250,
+        timeout=10_000,
+    )
     page.wait_for_function(
         SCROLLED_TO_BOTTOM_SCRIPT,
         arg=selector,
