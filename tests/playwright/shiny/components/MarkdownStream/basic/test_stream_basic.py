@@ -3,34 +3,33 @@ from playwright.sync_api import Page, expect
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
-SCROLLED_TO_BOTTOM_SCRIPT = """(selector) => {
-    const element = document.querySelector(selector);
-    if (!element) return false;
-
-    // Get the exact scroll values
-    const scrollTop = element.scrollTop;
-    const scrollHeight = element.scrollHeight;
-    const clientHeight = element.clientHeight;
-
-    // Check if the element is scrollable
-    if (scrollHeight <= clientHeight) return false;
-
-    // Check if we're at the bottom. Match shinychat's own bottomTolerance
-    // (10px), with extra headroom for browser subpixel rounding and
-    // end-of-stream layout shifts.
-    return (scrollTop + clientHeight) >= (scrollHeight - 15);
-}"""
-
-# shinychat auto-scrolls via scrollTo({behavior: "smooth"}), so after the last
-# stream chunk arrives the scroll animation may still be running. Poll until
-# scrollTop is stable across two consecutive reads before asserting position.
-SCROLL_SETTLED_SCRIPT = """(selector) => {
+# Single combined check: avoids race where settle-then-check missed in-progress smooth scrolls
+SETTLED_AT_BOTTOM_SCRIPT = """(selector) => {
     const el = document.querySelector(selector);
     if (!el) return false;
-    const now = el.scrollTop;
-    if (el.__lastScrollTop === now) return true;
-    el.__lastScrollTop = now;
-    return false;
+
+    const scrollTop = el.scrollTop;
+    const scrollHeight = el.scrollHeight;
+    const clientHeight = el.clientHeight;
+
+    if (scrollHeight <= clientHeight) return false;
+
+    // 20px tolerance: shinychat uses 10px bottomTolerance + headroom for subpixel rounding
+    const atBottom = (scrollTop + clientHeight) >= (scrollHeight - 20);
+    if (!atBottom) {
+        el.__stableCount = 0;
+        el.__lastScrollTop = undefined;
+        return false;
+    }
+
+    if (el.__lastScrollTop === scrollTop) {
+        el.__stableCount = (el.__stableCount || 0) + 1;
+    } else {
+        el.__stableCount = 0;
+    }
+    el.__lastScrollTop = scrollTop;
+    // Require 3 consecutive polls (750ms) at bottom to rule out mid-animation pauses
+    return el.__stableCount >= 2;
 }"""
 
 
@@ -41,14 +40,9 @@ def expect_element_scrolled_to_bottom(
     timeout: float = 30_000,
 ) -> None:
     page.wait_for_function(
-        SCROLL_SETTLED_SCRIPT,
+        SETTLED_AT_BOTTOM_SCRIPT,
         arg=selector,
         polling=250,
-        timeout=10_000,
-    )
-    page.wait_for_function(
-        SCROLLED_TO_BOTTOM_SCRIPT,
-        arg=selector,
         timeout=timeout,
     )
 
