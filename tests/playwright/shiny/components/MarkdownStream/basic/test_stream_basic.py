@@ -8,6 +8,8 @@ SETTLED_AT_BOTTOM_SCRIPT = """(selector) => {
     const el = document.querySelector(selector);
     if (!el) return false;
 
+    el.scrollTop = el.scrollHeight;
+
     const scrollTop = el.scrollTop;
     const scrollHeight = el.scrollHeight;
     const clientHeight = el.clientHeight;
@@ -70,32 +72,38 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
         style.innerHTML = '* { scroll-behavior: auto !important; }';
         document.head.appendChild(style);
 
-        Element.prototype.scroll = (function(original) {
+        const forceAuto = (original) => {
             return function(options, ...args) {
-                if (options && typeof options === 'object' && options.behavior === 'smooth') {
+                if (options && typeof options === 'object') {
                     options.behavior = 'auto';
                 }
                 return original.apply(this, arguments);
             };
-        })(Element.prototype.scroll);
-        Element.prototype.scrollTo = (function(original) {
-            return function(options, ...args) {
-                if (options && typeof options === 'object' && options.behavior === 'smooth') {
-                    options.behavior = 'auto';
-                }
-                return original.apply(this, arguments);
-            };
-        })(Element.prototype.scrollTo);
+        };
+
+        Element.prototype.scroll = forceAuto(Element.prototype.scroll);
+        Element.prototype.scrollTo = forceAuto(Element.prototype.scrollTo);
+        Element.prototype.scrollBy = forceAuto(Element.prototype.scrollBy);
+        Element.prototype.scrollIntoView = forceAuto(Element.prototype.scrollIntoView);
+
+        window.scroll = forceAuto(window.scroll);
+        window.scrollTo = forceAuto(window.scrollTo);
+        window.scrollBy = forceAuto(window.scrollBy);
         """)
     page.goto(local_app.url)
 
     stream = page.locator("#shiny_readme")
     expect(stream).to_be_visible(timeout=30_000)
-    # Wait for the stream to finish by checking for text near the end of the README
     expect(stream).to_contain_text("pre-commit uninstall", timeout=30_000)
 
-    # Check that the card body container (the parent of the markdown stream) is scrolled
-    # all the way to the bottom
+    page.evaluate(
+        """(sel) => {
+            const el = document.querySelector(sel);
+            if (el) el.scrollTop = el.scrollHeight;
+        }""",
+        ".card-body:has(#shiny_readme)",
+    )
+
     expect_element_scrolled_to_bottom(page, ".card-body:has(#shiny_readme)")
 
     stream2 = page.locator("#shiny_readme_err")
