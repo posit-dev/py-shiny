@@ -39,15 +39,53 @@ def expect_element_scrolled_to_bottom(
     *,
     timeout: float = 30_000,
 ) -> None:
-    page.wait_for_function(
-        SETTLED_AT_BOTTOM_SCRIPT,
-        arg=selector,
-        polling=250,
-        timeout=timeout,
-    )
+    try:
+        page.wait_for_function(
+            SETTLED_AT_BOTTOM_SCRIPT,
+            arg=selector,
+            polling=250,
+            timeout=timeout,
+        )
+    except Exception as e:
+        details = page.evaluate(
+            """(sel) => {
+                const el = document.querySelector(sel);
+                if (!el) return "Element not found";
+                return {
+                    scrollTop: el.scrollTop,
+                    scrollHeight: el.scrollHeight,
+                    clientHeight: el.clientHeight,
+                    stableCount: el.__stableCount,
+                    lastScrollTop: el.__lastScrollTop
+                };
+            }""",
+            selector,
+        )
+        raise RuntimeError(f"Scroll assertion failed for {selector}: {details}") from e
 
 
 def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
+    # Disable smooth scrolling globally so it completes instantly and deterministically under CI load
+    page.add_init_script(
+        """
+        Element.prototype.scroll = (function(original) {
+            return function(options, ...args) {
+                if (options && typeof options === 'object' && options.behavior === 'smooth') {
+                    options.behavior = 'auto';
+                }
+                return original.apply(this, arguments);
+            };
+        })(Element.prototype.scroll);
+        Element.prototype.scrollTo = (function(original) {
+            return function(options, ...args) {
+                if (options && typeof options === 'object' && options.behavior === 'smooth') {
+                    options.behavior = 'auto';
+                }
+                return original.apply(this, arguments);
+            };
+        })(Element.prototype.scrollTo);
+        """
+    )
     page.goto(local_app.url)
 
     stream = page.locator("#shiny_readme")
