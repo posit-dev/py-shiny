@@ -580,6 +580,27 @@ def test_toolbar_in_text_area_label():
     assert "<label" in rendered
 
 
+def test_input_submit_textarea_inside_module():
+    """Regression test: input_submit_textarea must not double-resolve the namespace.
+
+    The internal submit button's ID is built from the raw `id` argument so that
+    `input_task_button` can apply the module namespace exactly once. If
+    `resolved_id` were used instead, the namespace separator would appear in the
+    raw ID string, causing `validate_id` to raise a ValueError.
+    """
+    from shiny import module
+
+    @module.ui
+    def my_ui():
+        return ui.input_submit_textarea("my_input", "Type here")
+
+    # Should not raise ValueError like 'test_mod-my_input_submit' is not a valid id
+    result = my_ui("test_mod")
+    rendered = str(result)
+    assert "test_mod-my_input" in rendered
+    assert "test_mod-my_input_submit" in rendered
+
+
 def test_toolbar_in_submit_textarea():
     """Test that toolbar works in input_submit_textarea."""
     submit_textarea = ui.input_submit_textarea(
