@@ -580,6 +580,24 @@ def test_toolbar_in_text_area_label():
     assert "<label" in rendered
 
 
+def test_input_submit_textarea_inside_module():
+    """Regression test: input_submit_textarea must not double-namespace the button ID.
+
+    The internal submit button's ID should be namespaced exactly once. A previous
+    bug built the button ID from the already-resolved (namespaced) textarea ID,
+    so `input_task_button` would namespace it a second time.
+    """
+    from shiny import module
+
+    @module.ui
+    def my_ui():
+        return ui.input_submit_textarea("my_input", "Type here")
+
+    rendered = str(my_ui("test_mod"))
+    assert "test_mod-my_input_submit" in rendered
+    assert "test_mod-test_mod-my_input_submit" not in rendered
+
+
 def test_toolbar_in_submit_textarea():
     """Test that toolbar works in input_submit_textarea."""
     submit_textarea = ui.input_submit_textarea(
