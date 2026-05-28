@@ -1,4 +1,4 @@
-// Zephyr 5.3.1
+// Zephyr 5.3.8
 // Bootswatch
 
 $theme: "zephyr" !default;
@@ -47,7 +47,7 @@ $enable-shadows:              true !default;
 
 $body-color:                $gray-700 !default;
 
-$headings-color:              $gray-900 !default;
+$headings-color:              var(--bs-primary-color) !default;
 
 // Fonts
 
@@ -62,6 +62,8 @@ $box-shadow:                  0 1px 2px rgba($black, .05) !default;
 $box-shadow-lg:               0 1px 3px 0 rgba(0, 0, 0, .1), 0 1px 2px 0 rgba(0, 0, 0, .06) !default;
 
 // Tables
+
+$table-color:                 initial !default;
 
 $table-cell-padding-y:        1rem !default;
 $table-cell-padding-x:        1rem !default;
@@ -88,8 +90,6 @@ $btn-active-box-shadow:       $box-shadow !default;
 $form-label-font-weight:                500 !default;
 
 $input-box-shadow:                      $box-shadow !default;
-
-$input-group-addon-bg:                  $gray-100 !default;
 
 // Navs
 
@@ -122,12 +122,15 @@ $dropdown-item-padding-x:           1rem !default;
 $pagination-padding-y:              .5rem !default;
 $pagination-padding-x:              1rem !default;
 
-$pagination-color:                  $gray-700 !default;
+$pagination-color:                  var(--bs-primary-bg) !default;
 
 $pagination-focus-color:            $pagination-color !default;
 
 $pagination-hover-color:            $pagination-color !default;
-$pagination-hover-bg:               $gray-100 !default;
+$pagination-hover-bg:               var(--bs-secondary-bg) !default;
+
+$pagination-disabled-color:         var(--bs-tertiary-color) !default;
+$pagination-disabled-bg:            var(--bs-tertiary-bg) !default;
 
 // Cards
 $card-spacer-x:                     1.5rem !default;
@@ -140,7 +143,6 @@ $toast-header-color:                $headings-color !default;
 
 // Modals
 
-$modal-content-border-color:        $gray-300 !default;
 $modal-header-border-width:         0 !default;
 
 // List group

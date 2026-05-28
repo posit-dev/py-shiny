@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-VERSION_PRISM_CODE_EDITOR = "0.10.0.9000"
+VERSION_PRISM_CODE_EDITOR = "0.11.0.9000"
 
 CodeEditorBundledLanguage = Literal[
     "bash",
