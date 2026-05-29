@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* `session.destroy()` now accepts an optional module `id`. The parent that inserted a module's UI under an `id` can tear down that module's scope with `session.destroy(id)`, without the module having to hand back a cleanup handle. (#TODO)
+* `session.destroy()` now accepts an optional module `id`. The parent that inserted a module's UI under an `id` can tear down that module's scope with `session.destroy(id)`, without the module having to hand back a cleanup handle. (#2264)
 
 ### Bug fixes
 
