@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* `session.destroy()` now accepts an optional module `id`. The parent that inserted a module's UI under an `id` can tear down that module's scope with `session.destroy(id)`, without the module having to hand back a cleanup handle. (#TODO)
+
 ### Bug fixes
 
 * Fixed `ui.input_submit_textarea()` failing inside module namespaces. The internal submit button's ID was built from the already-resolved (namespaced) textarea ID, causing a double-namespace when `input_task_button` resolved it again. (#2262)
