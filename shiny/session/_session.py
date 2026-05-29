@@ -262,13 +262,32 @@ class Session(ABC):
         """
 
     @abstractmethod
-    async def destroy(self) -> None:
+    async def destroy(self, id: Id | None = None) -> None:
         """
         Destroy this session or module scope, including all descendant scopes.
 
         Fires all registered destroy callbacks, then removes all namespaced
         state from the session. This does not alter the UI; use
         :func:`~shiny.ui.remove_ui` to remove UI elements.
+
+        Pass an ``id`` to tear down a **child** module scope instead of this
+        one. The parent that inserted a module's UI under an ``id`` can tear it
+        down by that same ``id`` with ``session.destroy(id)``, without the
+        module having to hand anything back:
+
+        ```python
+        @reactive.effect
+        @reactive.event(input.add)
+        def _():
+            ui.insert_ui(my_module_ui("editor"), selector="#container")
+            my_module_server("editor")
+
+        @reactive.effect
+        @reactive.event(input.remove)
+        async def _():
+            ui.remove_ui(selector="#editor")
+            await session.destroy("editor")
+        ```
 
         The following categories of state are cleaned up:
 
@@ -340,6 +359,12 @@ class Session(ABC):
         my_module_server("editor", result=saved_data)
         # saved_data is still valid after the module is destroyed
         ```
+
+        Parameters
+        ----------
+        id
+            Optional module ``id`` whose child scope should be destroyed. When
+            ``None`` (the default), the current scope is destroyed.
 
         See Also
         --------
@@ -651,6 +676,22 @@ async def _invoke_destroy_callbacks(
         callbacks = callbacks_by_ns.pop(ns_key, None)
         if callbacks is not None:
             await callbacks.invoke()
+
+
+def _validate_destroy_id(id: Id) -> None:
+    """
+    Validate the ``id`` passed to ``session.destroy(id)``.
+
+    Must be a single, non-empty string. (When ``id`` is a plain ``str``, the
+    permitted character set is additionally enforced by ``make_scope()`` via
+    ``validate_id()``.)
+    """
+    if not isinstance(id, str) or id == "":
+        raise ValueError(
+            "`id` must be a single, non-empty string. Pass a module `id` to "
+            'tear down that scope (e.g. `session.destroy("my_module")`), or '
+            "call `destroy()` with no `id` to destroy the current scope."
+        )
 
 
 # ======================================================================================
@@ -1338,8 +1379,12 @@ class AppSession(Session):
             self._destroy_callbacks_by_ns[ns_key] = _new_destroy_callbacks()
         self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn))
 
-    async def destroy(self) -> None:
-        await _invoke_destroy_callbacks(self._destroy_callbacks_by_ns, "")
+    async def destroy(self, id: Id | None = None) -> None:
+        if id is None:
+            await _invoke_destroy_callbacks(self._destroy_callbacks_by_ns, "")
+        else:
+            _validate_destroy_id(id)
+            await self.make_scope(id).destroy()
 
     # ==========================================================================
     # Misc
@@ -1496,7 +1541,13 @@ class SessionProxy(Session):
                 destroy_cbs[ns_key] = _new_destroy_callbacks()
             destroy_cbs[ns_key].register(wrap_async(fn))
 
-    async def destroy(self) -> None:
+    async def destroy(self, id: Id | None = None) -> None:
+        # When `id` is given, destroy that child scope rather than this scope.
+        if id is not None:
+            _validate_destroy_id(id)
+            await self.make_scope(id).destroy()
+            return
+
         destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
             self._root_session, "_destroy_callbacks_by_ns", None
         )

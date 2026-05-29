@@ -1582,3 +1582,120 @@ async def test_dead_destroy_callbacks_silently_skipped():
     # Invoking destroy on the proxy should not raise, even though the Value's
     # weak callback is now dead.
     await proxy.destroy()
+
+
+# ---------------------------------------------------------------------------
+# session.destroy(id) — tear down a child module scope by id
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_root_destroy_by_id_fires_scope_callbacks():
+    """root.destroy(id) tears down the named module scope using only its id."""
+    root = _make_real_app_session()
+    scope = root.make_scope("mod1")
+
+    called: list[str] = []
+    scope.on_destroy(lambda: called.append("x"))  # pyright: ignore[reportArgumentType]
+
+    assert called == []
+    # Destroy the scope from the root session using only its id
+    await root.destroy("mod1")
+    assert called == ["x"]
+
+
+@pytest.mark.asyncio
+async def test_root_destroy_by_id_destroys_reactive_state():
+    """root.destroy(id) destroys reactive objects created in that scope."""
+    root = _make_real_app_session()
+    scope = root.make_scope("mod1")
+
+    with session_context(scope):
+        counter = Value(0)
+
+        @effect()
+        def my_effect():
+            pass
+
+    await root.destroy("mod1")
+
+    # Value is destroyed
+    with isolate():
+        assert counter.is_set() is False
+    # Effect is destroyed
+    assert my_effect._destroyed is True
+
+
+@pytest.mark.asyncio
+async def test_destroy_by_id_equivalent_to_make_scope_destroy():
+    """root.destroy(id) removes the scope's namespaced inputs, leaving others."""
+    root = _make_real_app_session()
+    root.make_scope("mymod")
+
+    root.input._map["mymod-x"] = Value(1, read_only=True)
+    root.input._map["other"] = Value(2, read_only=True)
+
+    await root.destroy("mymod")
+
+    assert "mymod-x" not in root.input._map
+    assert "other" in root.input._map
+
+
+@pytest.mark.asyncio
+async def test_module_destroy_by_id_tears_down_nested_child():
+    """parent.destroy(child_id) destroys the child scope, leaving the parent."""
+    root = _make_real_app_session()
+    parent = root.make_scope("parent")
+    child = parent.make_scope("child")
+
+    child_called: list[str] = []
+    parent_called: list[str] = []
+    child.on_destroy(
+        lambda: child_called.append("c")
+    )  # pyright: ignore[reportArgumentType]
+    parent.on_destroy(
+        lambda: parent_called.append("p")
+    )  # pyright: ignore[reportArgumentType]
+
+    # Destroy the child from the parent session using only its (local) id
+    await parent.destroy("child")
+    assert child_called == ["c"]
+    # Parent itself remains alive
+    assert parent_called == []
+
+
+@pytest.mark.asyncio
+async def test_destroy_by_id_unknown_is_noop():
+    """Destroying an unknown id is a harmless no-op."""
+    root = _make_real_app_session()
+    # Should not raise
+    await root.destroy("never_created")
+
+
+@pytest.mark.asyncio
+async def test_destroy_by_id_validates_id():
+    """destroy(id) rejects non-string and empty-string ids."""
+    root = _make_real_app_session()
+    with pytest.raises(ValueError, match="single, non-empty string"):
+        await root.destroy("")
+    with pytest.raises(ValueError, match="single, non-empty string"):
+        await root.destroy(cast(Any, 1))
+    with pytest.raises(ValueError, match="single, non-empty string"):
+        await root.destroy(cast(Any, ["a", "b"]))
+
+
+@pytest.mark.asyncio
+async def test_module_destroy_by_id_validates_id():
+    """SessionProxy.destroy(id) validates the id too."""
+    root = _make_real_app_session()
+    proxy = root.make_scope("parent")
+    with pytest.raises(ValueError, match="single, non-empty string"):
+        await proxy.destroy("")
+
+
+@pytest.mark.asyncio
+async def test_destroy_by_id_does_not_leak_bookmark_exclude():
+    """make_scope + destroy(id) leaves the root bookmark exclude list unchanged."""
+    root = _make_real_app_session()
+    before = len(root.bookmark._on_get_exclude)
+    root.make_scope("mod1")
+    await root.destroy("mod1")
+    assert len(root.bookmark._on_get_exclude) == before
