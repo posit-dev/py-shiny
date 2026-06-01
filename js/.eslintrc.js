@@ -17,11 +17,15 @@ module.exports = {
   parserOptions: {
     ecmaVersion: "latest",
     sourceType: "module",
+    project: "./tsconfig.json",
+    tsconfigRootDir: __dirname,
   },
   plugins: ["react", "@typescript-eslint"],
   rules: {
     "@typescript-eslint/no-unused-vars": "off",
     "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-misused-promises": "error",
   },
   settings: {
     react: {
