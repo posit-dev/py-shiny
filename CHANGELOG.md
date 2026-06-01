@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## [1.6.3] - 2026-06-01
+
 ### New features
 
 * `session.destroy()` now accepts an optional module `id`. The parent that inserted a module's UI under an `id` can tear down that module's scope with `session.destroy(id)`, without the module having to hand back a cleanup handle. (#2264)
 
+* Added the `brite` theme preset, available wherever Shiny theme presets are accepted (e.g. `ui.Theme()` and `ui.page_*(theme=)`). (#2246)
+
 ### Bug fixes
+
+* Fixed output resize/visibility detection for nested HTML outputs. The `IntersectionObserver` now observes the nearest non-`shiny-html-output` ancestor, so the native-observer pipeline introduced in 1.6.1 works correctly when outputs are nested inside other dynamic UI. (#2246)
 
 * Fixed `ui.input_submit_textarea()` failing inside module namespaces. The internal submit button's ID was built from the already-resolved (namespaced) textarea ID, causing a double-namespace when `input_task_button` resolved it again. (#2262)
 
