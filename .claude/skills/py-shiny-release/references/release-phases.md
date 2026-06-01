@@ -27,7 +27,7 @@ Follow the general package release pattern:
 
 - [ ] Checkout branch `rc-vX.Y.Z`
 - [ ] Verify `pyproject.toml` has no git-based dependencies
-- [ ] Bump `__version__` in `htmltools/__init__.py` to the release version (e.g., `0.7.1`); `pyproject.toml` reads it dynamically via `[tool.setuptools.dynamic]`
+- [ ] Bump `__version__` in `htmltools/__init__.py` to the release version (e.g., `0.7.1`). `pyproject.toml` resolves the version from this attribute at build time (via `[tool.setuptools.dynamic]`) — it is **not** derived from the git tag, so this manual bump is required.
 - [ ] Update `CHANGELOG.md`: rename `[UNRELEASED]` to `[X.Y.Z] - YYYY-MM-DD`
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
