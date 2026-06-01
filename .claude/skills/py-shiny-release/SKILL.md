@@ -112,7 +112,7 @@ prefix. Always check the workflow file if unsure, but the known patterns are:
 | py-shiny | `shiny` | `shiny 1.6.1` |
 | py-shinyswatch | `shinyswatch` | `shinyswatch 0.10.0` |
 | py-shinywidgets | `shinywidgets` | `shinywidgets 0.8.0` |
-| py-shinylive | `shinylive` | `shinylive 0.8.7` |
+| py-shinylive | `shinylive` | `shinylive 0.8.8` |
 
 Also, before writing release notes, check existing releases for format conventions:
 `gh api repos/<org>/<repo>/releases --jq '.[:3] | .[] | .body'`

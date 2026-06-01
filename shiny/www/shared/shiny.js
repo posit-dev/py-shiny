@@ -3066,9 +3066,11 @@
     }
     renderValue(el, data) {
       el.setAttribute("href", data);
-      el.classList.remove("disabled");
-      el.removeAttribute("aria-disabled");
-      el.removeAttribute("tabindex");
+      if (!el.hasAttribute("data-shiny-disable-auto-enable") && !el.classList.contains("shinyjs-disabled")) {
+        el.classList.remove("disabled");
+        el.removeAttribute("aria-disabled");
+        el.removeAttribute("tabindex");
+      }
     }
     // Progress shouldn't be shown on the download button
     // (progress will be shown as a page level pulse instead)
@@ -3082,9 +3084,14 @@
     "click.shinyDownloadLink",
     "a.shiny-download-link",
     function(e4) {
+      const el = e4.currentTarget;
+      if (el.classList.contains("disabled") || !el.getAttribute("href")) {
+        e4.preventDefault();
+        return;
+      }
       const evt = import_jquery25.default.Event("shiny:filedownload");
-      evt.name = this.id;
-      evt.href = this.href;
+      evt.name = el.id;
+      evt.href = el.href;
       (0, import_jquery25.default)(document).trigger(evt);
       return;
       e4;
@@ -7508,6 +7515,22 @@ ${duplicateIdMsg}`;
           scheduleThemeInfoRefresh();
         });
       }
+      function resolveObservableTarget(el) {
+        if (!el.classList.contains("shiny-html-output")) {
+          return el;
+        }
+        let candidate = el.parentElement;
+        while (candidate) {
+          if (!candidate.classList.contains("shiny-html-output")) {
+            return candidate;
+          }
+          if (candidate === document.documentElement) {
+            break;
+          }
+          candidate = candidate.parentElement;
+        }
+        return el;
+      }
       function ensureObservers(el) {
         const $el = (0, import_jquery40.default)(el);
         if (!$el.data("shiny-resize-observer")) {
@@ -7526,7 +7549,7 @@ ${duplicateIdMsg}`;
             () => refreshOutputInfo(el)
           );
           const io = new IntersectionObserver(() => onIntersect());
-          io.observe(el);
+          io.observe(resolveObservableTarget(el));
           $el.data("shiny-intersection-observer-callback", onIntersect);
           $el.data("shiny-intersection-observer", io);
         }

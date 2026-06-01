@@ -32,6 +32,8 @@ from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
 if TYPE_CHECKING:
+    from htmltools import Tagified
+
     from ..session import Session
 
 __all__ = (
@@ -458,7 +460,7 @@ class Sidebar:
 
         return sidebar_tag
 
-    def tagify(self) -> TagList:
+    def tagify(self) -> Tagified:
         id = self._get_sidebar_id()
         taglist = TagList(self._sidebar_tag(id), self._collapse_tag(id))
         return taglist.tagify()

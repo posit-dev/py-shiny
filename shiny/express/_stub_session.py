@@ -69,7 +69,7 @@ class ExpressStubSession(Session):
     ) -> None:
         return
 
-    async def destroy(self) -> None:
+    async def destroy(self, id: Id | None = None) -> None:
         return
 
     def make_scope(self, id: Id) -> Session:

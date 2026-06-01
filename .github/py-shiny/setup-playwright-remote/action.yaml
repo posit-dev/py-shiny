@@ -38,10 +38,61 @@ runs:
 
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-    - name: Pull Playwright image
+    - name: Compute Playwright image cache key
+      id: image-cache-key
       shell: bash
       run: |
-        IMAGE="mcr.microsoft.com/playwright:v${{ steps.resolve-version.outputs.version }}-noble"
+        VERSION="${{ steps.resolve-version.outputs.version }}"
+        IMAGE="mcr.microsoft.com/playwright:v${VERSION}-noble"
+        # Slugify the image reference for safe filesystem use.
+        SLUG=$(echo "$IMAGE" | tr '/:' '__')
+        CACHE_DIR="${RUNNER_TEMP:-/tmp}/playwright-image-cache"
+        CACHE_FILE="${CACHE_DIR}/${SLUG}.tar"
+        mkdir -p "$CACHE_DIR"
+        echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+        echo "cache-dir=$CACHE_DIR" >> "$GITHUB_OUTPUT"
+        echo "cache-file=$CACHE_FILE" >> "$GITHUB_OUTPUT"
+        echo "cache-key=playwright-docker-image-${{ runner.os }}-${{ runner.arch }}-v${VERSION}-noble" >> "$GITHUB_OUTPUT"
+
+    - name: Restore cached Playwright image
+      id: restore-image-cache
+      uses: actions/cache/restore@v5
+      with:
+        path: ${{ steps.image-cache-key.outputs.cache-dir }}
+        key: ${{ steps.image-cache-key.outputs.cache-key }}
+
+    - name: Load cached Playwright image
+      id: load-image-cache
+      if: steps.restore-image-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        CACHE_FILE="${{ steps.image-cache-key.outputs.cache-file }}"
+        LOADED=false
+        if [ -f "$CACHE_FILE" ]; then
+          echo "Loading cached image from $CACHE_FILE"
+          if docker load -i "$CACHE_FILE"; then
+            LOADED=true
+          else
+            echo "Cached image tar at $CACHE_FILE is invalid or corrupted; deleting it and pulling instead." >&2
+            rm -f "$CACHE_FILE"
+          fi
+        else
+          echo "Cache hit reported but $CACHE_FILE is missing; will pull instead." >&2
+        fi
+        echo "loaded=$LOADED" >> "$GITHUB_OUTPUT"
+
+    - name: Pull Playwright image
+      id: pull-image
+      shell: bash
+      run: |
+        IMAGE="${{ steps.image-cache-key.outputs.image }}"
+        # If the cached image was loaded successfully, skip the pull entirely.
+        if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+          echo "Image $IMAGE already present locally; skipping pull."
+          echo "pulled=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
         # MCR (Azure Front Door) intermittently returns "The request is blocked"
         # for GitHub Actions runners. Retry a few times before giving up.
         attempt=1
@@ -56,6 +107,23 @@ runs:
           sleep "$sleep_seconds"
           attempt=$((attempt + 1))
         done
+        echo "pulled=true" >> "$GITHUB_OUTPUT"
+
+    - name: Save Playwright image to cache
+      if: steps.pull-image.outputs.pulled == 'true'
+      shell: bash
+      run: |
+        IMAGE="${{ steps.image-cache-key.outputs.image }}"
+        CACHE_FILE="${{ steps.image-cache-key.outputs.cache-file }}"
+        echo "Saving $IMAGE to $CACHE_FILE"
+        docker save "$IMAGE" -o "$CACHE_FILE"
+
+    - name: Persist Playwright image cache
+      if: steps.pull-image.outputs.pulled == 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ${{ steps.image-cache-key.outputs.cache-dir }}
+        key: ${{ steps.image-cache-key.outputs.cache-key }}
 
     - name: Start Playwright server
       shell: bash

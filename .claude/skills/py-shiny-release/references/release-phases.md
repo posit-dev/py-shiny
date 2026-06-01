@@ -199,10 +199,10 @@ Repo: `posit-dev/py-shinylive`
 - [ ] **PRE-RELEASE GATE**: Present release summary (package, version, shinylive JS version, changelog) and get explicit user confirmation before proceeding
 - [ ] Squash merge the RC PR into main via GitHub (this is the release commit)
 - [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
-- [ ] Create GH Release. **Important**: The release title must start with `shinylive` (e.g., `shinylive 0.8.7`) — the PyPI publish workflow only triggers when the release name matches this pattern.
+- [ ] Create GH Release with title **`shinylive X.Y.Z`** (NOT `py-shinylive X.Y.Z` and NOT `vX.Y.Z`). The `.github/workflows/build.yml` "Deploy to PyPI" step is gated by `if: startsWith(github.event.release.name, 'shinylive')` — if the release title does not start with `shinylive`, the publish step silently skips and the package never reaches PyPI even though the workflow reports success.
 - [ ] Wait for PyPI publish to succeed
 
-If PyPI fails, delete tag and release, fix, redo.
+If PyPI fails, delete tag and release, fix, redo. If the publish step was skipped because of a mistitled release (e.g. `py-shinylive X.Y.Z`), delete the GH Release object only (keep the tag) and recreate it with title `shinylive X.Y.Z` — this re-fires the `release: published` event and the publish step will then match the `startsWith('shinylive')` predicate.
 
 Ask user: "Is py-shinylive being released this cycle?"
 
@@ -230,7 +230,7 @@ Use the shinylive JS version from Phase 6 (already known at this point).
 
 Repo: `posit-dev/py-shiny`
 
-- [ ] Create a branch to bump shinylive version in the `[doc]` extras of `pyproject.toml` (e.g., `"shinylive>=0.8.7"`)
+- [ ] Create a branch to bump shinylive version in the `[doc]` extras of `pyproject.toml` (e.g., `"shinylive>=0.8.8"`)
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
 - [ ] Ask user to confirm before merging the PR
@@ -265,7 +265,7 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 
 ### Known issue: license_file references
 
-The feedstock `recipe/meta.yaml` has an `about/license_file` section that lists bundled license files from py-shiny (e.g., `shiny/www/shared/highlight/LICENSE`, `shiny/www/shared/showdown/license.txt`, `shiny/www/shared/jqueryui/LICENSE.txt`). If py-shiny removes or renames any vendored dependency between releases, these paths become stale and the conda-forge build will fail with `ValueError: License file ... does not exist`.
+The feedstock `recipe/meta.yaml` has an `about/license_file` section that lists bundled license files from py-shiny (e.g., `shiny/www/shared/highlight/LICENSE`, `shiny/www/shared/busy-indicators/spinners/LICENSE`, `shiny/www/shared/jqueryui/LICENSE.txt`). If py-shiny removes or renames any vendored dependency between releases, these paths become stale and the conda-forge build will fail with `ValueError: License file ... does not exist`.
 
 **If a build fails for this reason:**
 1. Identify which license files no longer exist by checking `shiny/www/shared/` in the current release

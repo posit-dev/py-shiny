@@ -68,7 +68,16 @@ async def update_db_task(con: sqlite3.Connection) -> Awaitable[None]:
         update_db(con)
 
 
-asyncio.create_task(update_db_task(conn))
+# Started lazily on the first session connect — scheduling
+# `asyncio.create_task` at module import time fails on Python 3.14+
+# because no event loop is running yet.
+_update_task: asyncio.Task[Any] | None = None
+
+
+def _ensure_update_task() -> None:
+    global _update_task
+    if _update_task is None:
+        _update_task = asyncio.create_task(update_db_task(conn))
 
 
 # === Create the reactive.poll object ===============================
@@ -104,6 +113,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
+    _ensure_update_task()
+
     def filtered_quotes():
         df = stock_quotes()
         if input.symbols():

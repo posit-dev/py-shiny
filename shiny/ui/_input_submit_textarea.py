@@ -112,7 +112,7 @@ def input_submit_textarea(
 
     if button is None:
         button = input_task_button(
-            id=f"{resolved_id}_submit",
+            id=f"{id}_submit",
             class_="btn-sm",
             label=span("\u23ce", class_="bslib-submit-key"),
             icon="Submit",

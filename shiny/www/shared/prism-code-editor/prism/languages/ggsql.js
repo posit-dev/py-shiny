@@ -25,7 +25,7 @@ ggsql["ggsql-keyword"] = {
 
 // Geom types
 ggsql["ggsql-geom"] = {
-  pattern: /\b(?:point|line|path|bar|col|area|tile|polygon|ribbon|histogram|density|smooth|boxplot|violin|text|label|segment|arrow|rule|range)\b/,
+  pattern: /\b(?:point|line|path|bar|col|area|tile|polygon|ribbon|histogram|density|smooth|boxplot|violin|text|label|segment|arrow|rule|range|spatial)\b/,
   alias: "builtin",
 };
 
@@ -43,7 +43,7 @@ ggsql["ggsql-scale-value"] = {
 
 // Aesthetic names
 ggsql["ggsql-aesthetic"] = {
-  pattern: /\b(?:x|y|xmin|xmax|ymin|ymax|xend|yend|theta|radius|thetamin|thetamax|radiusmin|radiusmax|thetaend|radiusend|color|colour|fill|stroke|opacity|size|shape|linetype|linewidth|width|height|label|family|fontface|hjust|vjust|weight|coef|intercept|offset|density|count|intensity|panel|row|column)\b/,
+  pattern: /\b(?:x|y|xmin|xmax|ymin|ymax|xend|yend|theta|radius|thetamin|thetamax|radiusmin|radiusmax|thetaend|radiusend|color|colour|fill|stroke|opacity|size|shape|linetype|linewidth|width|height|label|family|fontface|hjust|vjust|weight|coef|intercept|offset|density|count|intensity|geometry|panel|row|column)\b/,
   alias: "attr-name",
 };
 

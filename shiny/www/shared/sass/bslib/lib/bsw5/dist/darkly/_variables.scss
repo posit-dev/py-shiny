@@ -1,4 +1,4 @@
-// Darkly 5.3.1
+// Darkly 5.3.8
 // Bootswatch
 
 $theme: "darkly" !default;
@@ -67,6 +67,8 @@ $text-muted:                  body-mix(75%) !default;
 
 // Tables
 
+$table-color:                 $body-color !default;
+
 $table-border-color:          body-mix(85%) !default;
 
 $table-bg-scale:              0% !default;
@@ -101,11 +103,15 @@ $dropdown-link-hover-bg:            $primary !default;
 // Navs
 
 $nav-link-padding-x:                2rem !default;
-$nav-link-disabled-color:           body-mix(65%) !default;
+$nav-link-color:                    $body-color !default;
+$nav-link-hover-color:              $body-color !default;
+$nav-link-disabled-color:           body-mix(75%) !default;
 $nav-tabs-border-color:             body-mix(85%) !default;
 $nav-tabs-link-hover-border-color:  $nav-tabs-border-color $nav-tabs-border-color transparent !default;
 $nav-tabs-link-active-color:        $body-color !default;
 $nav-tabs-link-active-border-color: $nav-tabs-border-color $nav-tabs-border-color transparent !default;
+
+$nav-underline-link-active-color:   $body-color !default;
 
 // Navbar
 
