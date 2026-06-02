@@ -31,6 +31,7 @@ from typing import (
     overload,
 )
 
+import orjson
 from htmltools import TagChild, TagList
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
@@ -1750,6 +1751,21 @@ class SessionProxy(Session):
 # ======================================================================================
 # Inputs
 # ======================================================================================
+
+
+def _snapshot_safe_value(value: Any) -> Any:
+    """
+    Coerce a value into something JSON-serializable for a test snapshot.
+
+    Best-effort: values that orjson cannot encode are stringified via
+    `default=str`. If serialization still fails (e.g. `str()` raises), a visible,
+    non-fatal marker is returned so a single bad value never fails the whole
+    snapshot.
+    """
+    try:
+        return orjson.loads(orjson.dumps(value, default=str))
+    except Exception as e:
+        return {"__shiny_serialization_error__": str(e)}
 
 
 def _is_internal_snapshot_input(key: str) -> bool:

@@ -179,3 +179,26 @@ def test_serialize_test_mode_collects_and_skips() -> None:
 
     result = inputs._serialize_test_mode()
     assert result == {"x": 5, "name": "hi"}
+
+
+def test_snapshot_safe_value() -> None:
+    from shiny.session._session import _snapshot_safe_value
+
+    # JSON-native passes through
+    assert _snapshot_safe_value({"a": 1, "b": [1, 2]}) == {"a": 1, "b": [1, 2]}
+
+    # Non-native coerced via str()
+    class Stringy:
+        def __str__(self) -> str:
+            return "stringy-value"
+
+    assert _snapshot_safe_value(Stringy()) == "stringy-value"
+
+    # Unconvertible -> visible, non-fatal marker
+    class Bad:
+        def __str__(self) -> str:
+            raise RuntimeError("nope")
+
+    out = _snapshot_safe_value(Bad())
+    assert isinstance(out, dict)
+    assert "__shiny_serialization_error__" in out
