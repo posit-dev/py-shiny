@@ -202,3 +202,14 @@ def test_snapshot_safe_value() -> None:
     out = _snapshot_safe_value(Bad())
     assert isinstance(out, dict)
     assert "__shiny_serialization_error__" in out
+
+
+def test_get_test_snapshot_url() -> None:
+    session = _make_app_session()
+    url = session.get_test_snapshot_url()
+    assert url.startswith(f"session/{session.id}/dataobj/shinytest?nonce=")
+
+    # Proxy delegates to the root session (no namespacing of the URL)
+    proxy = session.make_scope("mod1")
+    purl = proxy.get_test_snapshot_url()
+    assert purl.startswith(f"session/{session.id}/dataobj/shinytest?nonce=")

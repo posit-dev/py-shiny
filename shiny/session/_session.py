@@ -613,6 +613,23 @@ class Session(ABC):
         """
 
     @abstractmethod
+    def get_test_snapshot_url(self) -> str:
+        """
+        Return the URL of this session's test-mode snapshot endpoint.
+
+        The URL (with a fresh cache-busting `nonce`) points at the
+        `dataobj/shinytest` endpoint, which returns a JSON snapshot of this
+        session's `input`, `output`, and `export` values. The endpoint only
+        responds when test mode is enabled (`SHINY_TESTMODE=1`); otherwise it
+        returns a 404.
+
+        Returns
+        -------
+        :
+            The URL path for the snapshot endpoint.
+        """
+
+    @abstractmethod
     def set_message_handler(
         self,
         name: str,
@@ -1479,6 +1496,13 @@ class AppSession(Session):
             return
         self._test_value_exports.update(kwargs)
 
+    def get_test_snapshot_url(self) -> str:
+        nonce = _utils.rand_hex(8)
+        return (
+            f"session/{urllib.parse.quote(self.id)}"
+            f"/dataobj/shinytest?nonce={urllib.parse.quote(nonce)}"
+        )
+
     def set_message_handler(
         self,
         name: str,
@@ -1725,6 +1749,9 @@ class SessionProxy(Session):
         # `ns` prefix so values exported from different modules don't collide.
         namespaced = {str(self.ns(name)): value for name, value in kwargs.items()}
         self._root_session.export_test_values(**namespaced)
+
+    def get_test_snapshot_url(self) -> str:
+        return self._root_session.get_test_snapshot_url()
 
     async def _unhandled_error(self, e: Exception) -> None:
         await self._root_session._unhandled_error(e)

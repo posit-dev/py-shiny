@@ -142,6 +142,9 @@ class ExpressStubSession(Session):
     def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
         return
 
+    def get_test_snapshot_url(self) -> str:
+        return ""
+
     async def _unhandled_error(self, e: Exception) -> None:
         return
 
