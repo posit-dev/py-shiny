@@ -1752,6 +1752,20 @@ class SessionProxy(Session):
 # ======================================================================================
 
 
+def _is_internal_snapshot_input(key: str) -> bool:
+    """
+    Whether an input key is client-internal and excluded from snapshots.
+
+    Used by both bookmark serialization and test-mode snapshots to skip
+    client-data inputs (`.clientdata_*`) and the bookmark machinery inputs.
+    """
+    if key.startswith(".clientdata_"):
+        return True
+    if key == BOOKMARK_ID or key.endswith(f"{ResolvedId._sep}{BOOKMARK_ID}"):
+        return True
+    return False
+
+
 # TODO: provide a real input typing example when we have an answer for that
 # https://github.com/posit-dev/py-shiny/issues/70
 class Inputs:
@@ -1895,13 +1909,7 @@ class Inputs:
         with reactive.isolate():
 
             for key, value in self._map.items():
-                # TODO: Barret - Q: Should this be ignoring any Input key that starts with a "."?
-                if key.startswith(".clientdata_"):
-                    continue
-                # Ignore all bookmark inputs
-                if key == BOOKMARK_ID or key.endswith(
-                    f"{ResolvedId._sep}{BOOKMARK_ID}"
-                ):
+                if _is_internal_snapshot_input(str(key)):
                     continue
                 if key in exclude_set:
                     continue
@@ -1921,6 +1929,27 @@ class Inputs:
                 serialized_values[str(key)] = serialized_value
 
         return serialized_values
+
+    def _serialize_test_mode(self) -> dict[str, Any]:
+        """
+        Collect current input values for a test-mode snapshot.
+
+        Unlike `_serialize` (used for bookmarking), this applies no bookmark
+        serializers and never touches the filesystem; raw values are returned for
+        best-effort JSON serialization by the snapshot handler. Client-internal
+        and bookmark inputs are skipped.
+        """
+        out: dict[str, Any] = {}
+        with reactive.isolate():
+            for key, value in self._map.items():
+                if _is_internal_snapshot_input(str(key)):
+                    continue
+                try:
+                    val = value()
+                except SilentException:
+                    continue
+                out[str(key)] = val
+        return out
 
     def _destroy(self) -> None:
         # This will cause all modules with the same module namespace prefix to have their inputs removed.

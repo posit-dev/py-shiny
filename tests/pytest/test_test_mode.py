@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from starlette.requests import Request
 
-from shiny import reactive  # noqa: F401  # shared import for later test-mode tasks
+from shiny import reactive
 from shiny import App, ui
 from shiny._connection import MockConnection
 from shiny._utils import is_test_mode
@@ -159,3 +159,23 @@ def test_module_level_export_requires_session(
 
     with pytest.raises(RuntimeError):
         export_test_values(foo=lambda: 1)
+
+
+def test_is_internal_snapshot_input() -> None:
+    from shiny.session._session import _is_internal_snapshot_input
+
+    assert _is_internal_snapshot_input(".clientdata_output_x_hidden") is True
+    assert _is_internal_snapshot_input(".shinybookmarkstate") is False  # not the id
+    assert _is_internal_snapshot_input("x") is False
+
+
+def test_serialize_test_mode_collects_and_skips() -> None:
+    from shiny.session._session import Inputs
+
+    inputs = Inputs(dict())
+    inputs["x"] = reactive.Value(5)
+    inputs["name"] = reactive.Value("hi")
+    inputs[".clientdata_output_x_hidden"] = reactive.Value(True)
+
+    result = inputs._serialize_test_mode()
+    assert result == {"x": 5, "name": "hi"}
