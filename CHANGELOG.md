@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* Added experimental test mode, enabled with the `SHINY_TESTMODE=1` environment variable. When enabled, each session serves a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.export_test_values()` / `session.export_test_values()`. (#2269)
+
 ## [1.6.3] - 2026-06-01
 
 ### New features
