@@ -34,7 +34,12 @@ from typing import (
 import orjson
 from htmltools import TagChild, TagList
 from starlette.requests import HTTPConnection, Request
-from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
+from starlette.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    Response,
+    StreamingResponse,
+)
 from starlette.types import ASGIApp
 
 from .. import _utils, reactive, render
@@ -1311,7 +1316,40 @@ class AppSession(Session):
                     else:
                         return handler(request)
 
+        elif action == "dataobj" and subpath == "shinytest" and request.method == "GET":
+            if not self.app._test_mode:
+                return HTMLResponse("<h1>Not Found</h1>", 404)
+            return self._handle_test_snapshot(request)
+
         return HTMLResponse("<h1>Not Found</h1>", 404)
+
+    def _handle_test_snapshot(self, request: Request) -> ASGIApp:
+        with session_context(self):
+            with isolate():
+                inputs = {
+                    key: _snapshot_safe_value(val)
+                    for key, val in self.input._serialize_test_mode().items()
+                }
+
+                omq = self._outbound_message_queues
+                outputs: dict[str, Any] = {
+                    key: _snapshot_safe_value(val)
+                    for key, val in omq.test_values.items()
+                }
+                for key, err in omq.test_errors.items():
+                    message = err.get("message") if isinstance(err, dict) else str(err)
+                    outputs[key] = {"__shiny_output_error__": message}
+
+                exports: dict[str, Any] = {}
+                for name, fn in self._test_value_exports.items():
+                    try:
+                        exports[name] = _snapshot_safe_value(fn())
+                    except Exception as e:
+                        exports[name] = {"__shiny_serialization_error__": str(e)}
+
+        payload = {"input": inputs, "output": outputs, "export": exports}
+        body = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
+        return Response(content=body, media_type="application/json")
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
         self._outbound_message_queues.add_input_message(id, message)

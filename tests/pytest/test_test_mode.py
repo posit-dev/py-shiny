@@ -5,8 +5,7 @@ from __future__ import annotations
 import pytest
 from starlette.requests import Request
 
-from shiny import reactive
-from shiny import App, ui
+from shiny import App, reactive, ui
 from shiny._connection import MockConnection
 from shiny._utils import is_test_mode
 from shiny.session._session import AppSession, OutBoundMessageQueues
@@ -213,3 +212,69 @@ def test_get_test_snapshot_url() -> None:
     proxy = session.make_scope("mod1")
     purl = proxy.get_test_snapshot_url()
     assert purl.startswith(f"session/{session.id}/dataobj/shinytest?nonce=")
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_returns_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    session.input["x"] = reactive.Value(10)
+    session._outbound_message_queues.set_value("out1", "hello")
+    session._outbound_message_queues.set_error("out2", {"message": "boom"})
+    session.export_test_values(myexp=lambda: 123)
+
+    resp = await session._handle_request_impl(
+        _snapshot_request(), "dataobj", "shinytest"
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+
+    assert body["input"]["x"] == 10
+    assert body["output"]["out1"] == "hello"
+    assert body["output"]["out2"] == {"__shiny_output_error__": "boom"}
+    assert body["export"]["myexp"] == 123
+
+    # OPT_SORT_KEYS -> top-level keys are emitted in sorted order
+    assert list(body.keys()) == ["export", "input", "output"]
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_404_when_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("SHINY_TESTMODE", raising=False)
+    session = _make_app_session()
+    resp = await session._handle_request_impl(
+        _snapshot_request(), "dataobj", "shinytest"
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_export_error_marker(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    class Bad:
+        def __str__(self) -> str:
+            raise RuntimeError("nope")
+
+    def raises() -> object:
+        raise RuntimeError("export boom")
+
+    session.export_test_values(bad_value=lambda: Bad(), raises=raises)
+
+    resp = await session._handle_request_impl(
+        _snapshot_request(), "dataobj", "shinytest"
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert "__shiny_serialization_error__" in body["export"]["bad_value"]
+    assert "__shiny_serialization_error__" in body["export"]["raises"]
