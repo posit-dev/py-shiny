@@ -39,7 +39,7 @@ from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
-from ._utils import guess_mime_type, is_async_callable, sort_keys_length
+from ._utils import guess_mime_type, is_async_callable, is_test_mode, sort_keys_length
 from .bookmark._global import as_bookmark_dir_fn
 from .bookmark._restore_state import RestoreContext, restore_context
 from .bookmark._types import (
@@ -180,6 +180,8 @@ class App:
         self._init_bookmarking(bookmark_store=bookmark_store, ui=ui)
 
         self._debug: bool = debug
+        self._test_mode: bool = is_test_mode()
+        """Whether Shiny test mode is enabled (via the ``SHINY_TESTMODE`` env var)."""
 
         # Settings that the user can change after creating the App object.
         self.lib_prefix: str = LIB_PREFIX
