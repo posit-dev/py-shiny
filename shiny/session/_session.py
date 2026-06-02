@@ -150,10 +150,18 @@ class DownloadInfo:
 
 
 class OutBoundMessageQueues:
-    def __init__(self):
+    def __init__(self, record_test_values: bool = False):
         self.values: dict[str, Any] = {}
         self.errors: dict[str, Any] = {}
         self.input_messages: list[dict[str, Any]] = []
+
+        # Test-mode (`SHINY_TESTMODE`) persistent record of the last value/error
+        # sent for each output. Unlike `values`/`errors`, these are NOT cleared
+        # by `reset()`, so a test snapshot can report the last computed value of
+        # every output even though the transient queues are flushed each cycle.
+        self._record_test_values = record_test_values
+        self.test_values: dict[str, Any] = {}
+        self.test_errors: dict[str, Any] = {}
 
     def reset(self) -> None:
         self.values.clear()
@@ -165,12 +173,18 @@ class OutBoundMessageQueues:
         # remove from self.errors
         if id in self.errors:
             del self.errors[id]
+        if self._record_test_values:
+            self.test_values[id] = value
+            self.test_errors.pop(id, None)
 
     def set_error(self, id: str, error: Any) -> None:
         self.errors[id] = error
         # remove from self.values
         if id in self.values:
             del self.values[id]
+        if self._record_test_values:
+            self.test_errors[id] = error
+            self.test_values.pop(id, None)
 
     def add_input_message(self, id: str, message: dict[str, Any]) -> None:
         self.input_messages.append({"id": id, "message": message})
@@ -760,7 +774,9 @@ class AppSession(Session):
             except Exception as e:
                 print("Error parsing credentials header: " + str(e), file=sys.stderr)
 
-        self._outbound_message_queues = OutBoundMessageQueues()
+        self._outbound_message_queues = OutBoundMessageQueues(
+            record_test_values=app._test_mode
+        )
 
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
