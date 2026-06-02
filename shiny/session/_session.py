@@ -589,6 +589,29 @@ class Session(ABC):
         """
 
     @abstractmethod
+    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        """
+        Register named values to include in the test-mode snapshot.
+
+        Each value must be a zero-argument callable (a plain function/`lambda` or
+        a `reactive.calc`); it is evaluated lazily, in a reactive isolate, when a
+        test snapshot is requested. Registered values appear under the ``export``
+        block of the snapshot returned by the ``dataobj/shinytest`` endpoint.
+
+        Has no effect unless test mode is enabled (``SHINY_TESTMODE=1``), so calls
+        can be left in production code. Re-registering a name overwrites it.
+
+        Parameters
+        ----------
+        **kwargs
+            Named zero-argument callables whose return values are exported.
+
+        See Also
+        --------
+        * `shiny.export_test_values`
+        """
+
+    @abstractmethod
     def set_message_handler(
         self,
         name: str,
@@ -783,6 +806,11 @@ class AppSession(Session):
         self._has_run_session_ended_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
+
+        # Test-mode (`SHINY_TESTMODE`) registry of values to include in the
+        # `export` block of the snapshot. Keys are (namespaced) export names;
+        # values are zero-arg callables evaluated lazily at snapshot time.
+        self._test_value_exports: dict[str, Callable[[], Any]] = {}
 
         # Destroy callbacks for module scopes, keyed by namespace string.
         # Stored on root session because SessionProxy is a throwaway lens.
@@ -1445,6 +1473,11 @@ class AppSession(Session):
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
+    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        if not self.app._test_mode:
+            return
+        self._test_value_exports.update(kwargs)
+
     def set_message_handler(
         self,
         name: str,
@@ -1684,6 +1717,13 @@ class SessionProxy(Session):
 
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         return self._root_session.dynamic_route(self.ns(name), handler)
+
+    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        # NOTE: Deviation from R Shiny's `exportTestValues()`, which does NOT
+        # namespace export names. py-shiny namespaces them with this module's
+        # `ns` prefix so values exported from different modules don't collide.
+        namespaced = {str(self.ns(name)): value for name, value in kwargs.items()}
+        self._root_session.export_test_values(**namespaced)
 
     async def _unhandled_error(self, e: Exception) -> None:
         await self._root_session._unhandled_error(e)

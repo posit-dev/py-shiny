@@ -95,3 +95,32 @@ def test_app_session_wires_record_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SHINY_TESTMODE", raising=False)
     session_off = _make_app_session()
     assert session_off._outbound_message_queues._record_test_values is False
+
+
+def test_export_test_values_registers(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    session.export_test_values(foo=lambda: 1, bar=lambda: 2)
+    assert set(session._test_value_exports) == {"foo", "bar"}
+
+    # last-registration-wins on duplicate name
+    session.export_test_values(foo=lambda: 99)
+    assert session._test_value_exports["foo"]() == 99
+
+
+def test_export_test_values_noop_when_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SHINY_TESTMODE", raising=False)
+    session = _make_app_session()
+    session.export_test_values(foo=lambda: 1)
+    assert session._test_value_exports == {}
+
+
+def test_export_test_values_namespaced(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    root = _make_app_session()
+    proxy = root.make_scope("mod1")
+    proxy.export_test_values(foo=lambda: 1)
+    # DEVIATION from R: export names are namespaced with the module prefix.
+    assert "mod1-foo" in root._test_value_exports
+    assert "foo" not in root._test_value_exports

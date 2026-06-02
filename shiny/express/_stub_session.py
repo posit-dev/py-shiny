@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, Optional
 
 from htmltools import TagChild
 
@@ -138,6 +138,9 @@ class ExpressStubSession(Session):
 
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         return ""
+
+    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        return
 
     async def _unhandled_error(self, e: Exception) -> None:
         return
