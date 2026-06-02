@@ -10,7 +10,7 @@ from shiny import App, ui
 from shiny._connection import MockConnection
 from shiny._utils import is_test_mode
 from shiny.session._session import AppSession, OutBoundMessageQueues
-from shiny.session._utils import (  # noqa: F401  # shared import for later tasks
+from shiny.session._utils import (
     session_context,
 )
 
@@ -124,3 +124,38 @@ def test_export_test_values_namespaced(monkeypatch: pytest.MonkeyPatch) -> None:
     # DEVIATION from R: export names are namespaced with the module prefix.
     assert "mod1-foo" in root._test_value_exports
     assert "foo" not in root._test_value_exports
+
+
+def test_module_level_export_uses_current_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    from shiny import export_test_values
+
+    session = _make_app_session()
+    with session_context(session):
+        export_test_values(foo=lambda: 1)
+    assert "foo" in session._test_value_exports
+
+
+def test_module_level_export_targets_other_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    from shiny import export_test_values
+
+    other = _make_app_session()
+    # No active session here; target `other` explicitly via its context.
+    with session_context(other):
+        export_test_values(bar=lambda: 2)
+    assert "bar" in other._test_value_exports
+
+
+def test_module_level_export_requires_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    from shiny import export_test_values
+
+    with pytest.raises(RuntimeError):
+        export_test_values(foo=lambda: 1)
