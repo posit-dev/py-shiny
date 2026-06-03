@@ -84,6 +84,11 @@ class App:
         must be a directory, and it will be mounted at `/`. If this is a dictionary,
         each key is a mount point and each value is a file or directory to be served at
         that mount point.
+    hard_disconnect_message
+        Default text shown to end users in the closed-state overlay after a hard
+        disconnect (see :meth:`~shiny.Session.close`). Used as the fallback when
+        ``session.close(hard=True)`` is invoked without a ``message`` argument.
+        ``None`` selects the framework default, ``"This app has closed."``.
     debug
         Whether to enable debug mode.
 
@@ -158,6 +163,7 @@ class App:
         static_assets: Optional[str | Path | Mapping[str, str | Path]] = None,
         # Document type as Literal to have clearer type hints to App author
         bookmark_store: Literal["url", "server", "disable"] = "disable",
+        hard_disconnect_message: str | None = None,
         debug: bool = False,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
@@ -180,6 +186,8 @@ class App:
         self._init_bookmarking(bookmark_store=bookmark_store, ui=ui)
 
         self._debug: bool = debug
+
+        self._hard_disconnect_message: str | None = hard_disconnect_message
 
         # Settings that the user can change after creating the App object.
         self.lib_prefix: str = LIB_PREFIX

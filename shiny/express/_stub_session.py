@@ -51,7 +51,13 @@ class ExpressStubSession(Session):
     def is_stub_session(self) -> Literal[True]:
         return True
 
-    async def close(self, code: int = 1001) -> None:
+    async def close(
+        self,
+        code: int = 1001,
+        *,
+        hard: bool = False,
+        message: str | None = None,
+    ) -> None:
         return
 
     # This is needed so that Outputs don't throw an error.
