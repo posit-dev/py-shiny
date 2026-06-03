@@ -69,6 +69,7 @@ from ._card import (
 )
 from ._chat import Chat, chat_ui
 from ._download_button import download_button, download_link
+from ._icon import icon
 from ._include_helpers import include_css, include_js
 from ._input_action_button import input_action_button, input_action_link
 from ._input_check_radio import (
@@ -230,6 +231,8 @@ __all__ = (
     # _download_button
     "download_button",
     "download_link",
+    # _icon
+    "icon",
     # _plot_output_opts
     "brush_opts",
     "click_opts",
