@@ -43,6 +43,25 @@ def export_test_values(**kwargs: Callable[[], Any]) -> None:
     RuntimeError
         If there is no active session.
 
+    Examples
+    --------
+    ```python
+    from shiny import App, Inputs, Outputs, Session, export_test_values, reactive, ui
+
+    app_ui = ui.page_fluid(ui.input_slider("n", "n", 0, 100, 20))
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @reactive.calc
+        def doubled():
+            return input.n() * 2
+
+        # Surface an internal reactive value in the test-mode snapshot.
+        # No effect unless `SHINY_TESTMODE=1` is set.
+        export_test_values(doubled=doubled)
+
+    app = App(app_ui, server)
+    ```
+
     See Also
     --------
     * `shiny.Session.export_test_values`
