@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 from starlette.requests import Request
+from starlette.responses import Response
 
 from shiny import App, reactive, ui
 from shiny._connection import MockConnection
@@ -226,8 +229,9 @@ async def test_snapshot_endpoint_returns_state(
     session._outbound_message_queues.set_error("out2", {"message": "boom"})
     session.export_test_values(myexp=lambda: 123)
 
-    resp = await session._handle_request_impl(
-        _snapshot_request(), "dataobj", "shinytest"
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
     )
     import orjson
 
@@ -248,8 +252,9 @@ async def test_snapshot_endpoint_404_when_off(
 ) -> None:
     monkeypatch.delenv("SHINY_TESTMODE", raising=False)
     session = _make_app_session()
-    resp = await session._handle_request_impl(
-        _snapshot_request(), "dataobj", "shinytest"
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
     )
     assert resp.status_code == 404
 
@@ -270,8 +275,9 @@ async def test_snapshot_endpoint_export_error_marker(
 
     session.export_test_values(bad_value=lambda: Bad(), raises=raises)
 
-    resp = await session._handle_request_impl(
-        _snapshot_request(), "dataobj", "shinytest"
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
     )
     import orjson
 

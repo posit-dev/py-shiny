@@ -1337,7 +1337,10 @@ class AppSession(Session):
                     for key, val in omq.test_values.items()
                 }
                 for key, err in omq.test_errors.items():
-                    message = err.get("message") if isinstance(err, dict) else str(err)
+                    if isinstance(err, dict):
+                        message = cast("dict[str, Any]", err).get("message")
+                    else:
+                        message = str(err)
                     outputs[key] = {"__shiny_output_error__": message}
 
                 exports: dict[str, Any] = {}
