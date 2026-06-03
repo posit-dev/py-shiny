@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* `session.close()` now accepts `hard=True` and `message=...` keyword arguments for ending a session terminally from server code (e.g., after a Submit or Log Out action). A hard close sends a `hardDisconnectConfig` custom message to the client carrying the closed-overlay text, closes the websocket with application code `4001` and reason `shiny-hard-disconnect` (which hosting platforms can recognize as "release this worker without holding for reconnect"), and additionally clears the root-level `input`, `_downloads`, `_dynamic_routes`, and `_message_handlers` collections that a soft close leaves in place. `on_ended` callbacks fire **before** the hard cleanup, so teardown code can still read session state. The default closed-overlay text can be set app-wide via `App(hard_disconnect_message=...)`; the per-call `message` argument overrides it. Existing callers of `session.close()` with no arguments are unaffected. The distinct client-side closed-state overlay activates once `shiny.js` is vendored from an R Shiny release that includes the matching client-side handling; until then, the server-side teardown and `4001` close-code emission run as designed.
+
 ## [1.6.3] - 2026-06-01
 
 ### New features

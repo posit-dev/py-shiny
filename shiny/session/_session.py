@@ -82,6 +82,15 @@ if TYPE_CHECKING:
     from ..bookmark._serializers import Unserializable
 
 
+# WebSocket close code used by `session.close(hard=True)`. In the private
+# application range (4000-4999); reserved for "this session is terminal — do
+# not reconnect or reattach." Hosting platforms (Shiny Server, Connect) can
+# recognize this to release worker pools without waiting for a reconnect grace.
+HARD_DISCONNECT_CLOSE_CODE: int = 4001
+HARD_DISCONNECT_REASON: str = "shiny-hard-disconnect"
+HARD_DISCONNECT_DEFAULT_MESSAGE: str = "This app has closed."
+
+
 class ConnectionState(enum.Enum):
     Start = 0
     Running = 1
@@ -215,9 +224,54 @@ class Session(ABC):
 
     @add_example("session_close")
     @abstractmethod
-    async def close(self, code: int = 1001) -> None:
+    async def close(
+        self,
+        code: int = 1001,
+        *,
+        hard: bool = False,
+        message: str | None = None,
+    ) -> None:
         """
         Close the session.
+
+        By default, performs a soft close: the websocket is shut down and Shiny
+        tears down output observers and reactive scopes, but root inputs,
+        client data, downloads, dynamic routes, and message handlers survive
+        in memory until the session is garbage-collected.
+
+        When ``hard=True``, performs a complete teardown:
+
+        - Sends a closed-overlay message (``hardDisconnectConfig`` custom
+          message) to the browser so the page can render a distinct
+          "this app has closed" state.
+        - Closes the websocket with application close code ``4001`` and
+          reason ``"shiny-hard-disconnect"`` so hosting platforms can
+          recognize "do not hold this worker for a reconnect grace period."
+        - Additionally clears the root-level ``input``, ``clientdata``,
+          ``_downloads``, ``_dynamic_routes``, and ``_message_handlers``
+          collections, which a soft close leaves in place.
+
+        ``on_ended`` callbacks fire **before** the hard-cleanup step, so
+        teardown code can still read session state.
+
+        Parameters
+        ----------
+        code
+            WebSocket close code. Ignored when ``hard=True`` (which always
+            sends code ``4001``). Defaults to ``1001`` for soft closes.
+        hard
+            If ``True``, perform a hard close (see above). Default ``False``
+            preserves today's behavior for callers that pass no arguments.
+        message
+            Text shown in the browser's closed-state overlay. Falls back to
+            the ``hard_disconnect_message`` argument of :class:`~shiny.App`,
+            then to ``"This app has closed."``. Only meaningful when
+            ``hard=True``; ignored on a soft close.
+
+        See Also
+        --------
+        * :meth:`~shiny.Session.on_ended` - callbacks run before close completes
+        * :meth:`~shiny.Session.destroy` - module-scope teardown without ending the session
         """
 
     @abstractmethod
@@ -765,6 +819,7 @@ class AppSession(Session):
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_ended_tasks: bool = False
+        self._was_hard_close: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
 
@@ -802,14 +857,64 @@ class AppSession(Session):
                     # Destroy callbacks run after on_ended callbacks so that
                     # on_ended handlers can still read reactive state.
                     await self.destroy()
+                    if self._was_hard_close:
+                        # Hard close: also clear the root-level collections
+                        # that the standard destroy walk leaves in place.
+                        self._hard_close_cleanup()
                 finally:
                     self.app._remove_session(self)
+
+    def _hard_close_cleanup(self) -> None:
+        # Destroy any remaining root-level reactive input values (the standard
+        # destroy walk is namespaced and skips root).
+        for key in list(self.input._map.keys()):
+            value_obj = self.input._map[key]
+            try:
+                value_obj.destroy()
+            except Exception:
+                pass
+            del self.input._map[key]
+
+        self._downloads.clear()
+        self._dynamic_routes.clear()
+        self._message_handlers.clear()
 
     def is_stub_session(self) -> Literal[False]:
         return False
 
-    async def close(self, code: int = 1001) -> None:
-        await self._conn.close(code, None)
+    async def close(
+        self,
+        code: int = 1001,
+        *,
+        hard: bool = False,
+        message: str | None = None,
+    ) -> None:
+        if hard:
+            self._was_hard_close = True
+            effective_message = (
+                message
+                if message is not None
+                else (
+                    self.app._hard_disconnect_message
+                    if self.app._hard_disconnect_message is not None
+                    else HARD_DISCONNECT_DEFAULT_MESSAGE
+                )
+            )
+            # Send the closed-overlay text via the custom-message channel
+            # before closing the socket. WebSocket message ordering is FIFO so
+            # the client receives this and stashes the text before the close
+            # frame arrives.
+            try:
+                await self._send_message(
+                    {"custom": {"hardDisconnectConfig": {"message": effective_message}}}
+                )
+            except Exception:
+                # Best-effort: if the send fails (e.g., client already gone),
+                # still proceed with the hard teardown.
+                pass
+            await self._conn.close(HARD_DISCONNECT_CLOSE_CODE, HARD_DISCONNECT_REASON)
+        else:
+            await self._conn.close(code, None)
         await self._run_session_ended_tasks()
 
     async def _run(self) -> None:
@@ -1590,8 +1695,14 @@ class SessionProxy(Session):
     def is_stub_session(self) -> bool:
         return self._root_session.is_stub_session()
 
-    async def close(self, code: int = 1001) -> None:
-        await self._root_session.close(code)
+    async def close(
+        self,
+        code: int = 1001,
+        *,
+        hard: bool = False,
+        message: str | None = None,
+    ) -> None:
+        await self._root_session.close(code, hard=hard, message=message)
 
     def make_scope(self, id: str) -> Session:
         return self._root_session.make_scope(self.ns(id))
