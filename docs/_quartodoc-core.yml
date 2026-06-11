@@ -276,6 +276,7 @@ quartodoc:
           contents:
             - session.get_current_session
             - session.require_active_session
+            - export_test_values
             - session.session_context
             - reactive.get_current_context
             - session.ClientData
@@ -285,6 +286,8 @@ quartodoc:
             - session.Session.on_flushed
             - session.Session.on_ended
             - session.Session.dynamic_route
+            - session.Session.export_test_values
+            - session.Session.get_test_snapshot_url
             - session.Session.close
             - input_handler.input_handlers
         - kind: page

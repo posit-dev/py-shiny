@@ -37,6 +37,7 @@ def create_app_fixture(
     app: PurePath | str | list[PurePath | str],
     scope: ScopeName = "module",
     timeout_secs: float = 30,
+    env: dict[str, str] | None = None,
 ):
     """
     Create a fixture for a local Shiny app directory.
@@ -73,6 +74,11 @@ def create_app_fixture(
         for more details.
     timeout_secs
         The maximum number of seconds to wait for the app to become ready.
+    env
+        Extra environment variables for the launched app subprocess, merged over the
+        parent environment. When ``None`` (the default), ``{"SHINY_TESTMODE": "1"}``
+        is used so the app runs in Shiny test mode (enabling the `AppTestValues`
+        controller). Pass an explicit dict (e.g. ``{}``) to override.
 
     Returns
     -------
@@ -124,6 +130,10 @@ def create_app_fixture(
     ```
     """
 
+    # Launched apps run in Shiny test mode by default so the `AppTestValues`
+    # controller works out of the box. Pass `env={}` (or a custom dict) to opt out.
+    effective_env = {"SHINY_TESTMODE": "1"} if env is None else env
+
     def get_app_path(request: pytest.FixtureRequest, app: PurePath | str):
         app_purepath_exists = isinstance(app, PurePath) and Path(app).is_file()
         app_path = app if app_purepath_exists else request.path.parent / app
@@ -136,7 +146,9 @@ def create_app_fixture(
         @pytest.fixture(scope=scope, params=app)
         def fixture_func(request: pytest.FixtureRequest):
             app_path = get_app_path(request, request.param)
-            sa_gen = shiny_app_gen(app_path, timeout_secs=timeout_secs)
+            sa_gen = shiny_app_gen(
+                app_path, timeout_secs=timeout_secs, env=effective_env
+            )
             yield next(sa_gen)
 
     else:
@@ -145,7 +157,9 @@ def create_app_fixture(
         @pytest.fixture(scope=scope)
         def fixture_func(request: pytest.FixtureRequest):
             app_path = get_app_path(request, app)
-            sa_gen = shiny_app_gen(app_path, timeout_secs=timeout_secs)
+            sa_gen = shiny_app_gen(
+                app_path, timeout_secs=timeout_secs, env=effective_env
+            )
             yield next(sa_gen)
 
     return fixture_func

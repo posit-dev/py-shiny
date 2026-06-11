@@ -31,9 +31,15 @@ from typing import (
     overload,
 )
 
+import orjson
 from htmltools import TagChild, TagList
 from starlette.requests import HTTPConnection, Request
-from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
+from starlette.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    Response,
+    StreamingResponse,
+)
 from starlette.types import ASGIApp
 
 from .. import _utils, reactive, render
@@ -150,10 +156,18 @@ class DownloadInfo:
 
 
 class OutBoundMessageQueues:
-    def __init__(self):
+    def __init__(self, record_test_values: bool = False):
         self.values: dict[str, Any] = {}
         self.errors: dict[str, Any] = {}
         self.input_messages: list[dict[str, Any]] = []
+
+        # Test-mode (`SHINY_TESTMODE`) persistent record of the last value/error
+        # sent for each output. Unlike `values`/`errors`, these are NOT cleared
+        # by `reset()`, so a test snapshot can report the last computed value of
+        # every output even though the transient queues are flushed each cycle.
+        self._record_test_values = record_test_values
+        self.test_values: dict[str, Any] = {}
+        self.test_errors: dict[str, Any] = {}
 
     def reset(self) -> None:
         self.values.clear()
@@ -165,12 +179,18 @@ class OutBoundMessageQueues:
         # remove from self.errors
         if id in self.errors:
             del self.errors[id]
+        if self._record_test_values:
+            self.test_values[id] = value
+            self.test_errors.pop(id, None)
 
     def set_error(self, id: str, error: Any) -> None:
         self.errors[id] = error
         # remove from self.values
         if id in self.values:
             del self.values[id]
+        if self._record_test_values:
+            self.test_errors[id] = error
+            self.test_values.pop(id, None)
 
     def add_input_message(self, id: str, message: dict[str, Any]) -> None:
         self.input_messages.append({"id": id, "message": message})
@@ -575,6 +595,46 @@ class Session(ABC):
         """
 
     @abstractmethod
+    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        """
+        Register named values to include in the test-mode snapshot.
+
+        Each value must be a zero-argument callable (a plain function/`lambda` or
+        a `reactive.calc`); it is evaluated lazily, in a reactive isolate, when a
+        test snapshot is requested. Registered values appear under the ``export``
+        block of the snapshot returned by the ``dataobj/shinytest`` endpoint.
+
+        Has no effect unless test mode is enabled (``SHINY_TESTMODE=1``), so calls
+        can be left in production code. Re-registering a name overwrites it.
+
+        Parameters
+        ----------
+        **kwargs
+            Named zero-argument callables whose return values are exported.
+
+        See Also
+        --------
+        * `shiny.export_test_values`
+        """
+
+    @abstractmethod
+    def get_test_snapshot_url(self) -> str:
+        """
+        Return the URL of this session's test-mode snapshot endpoint.
+
+        The URL (with a fresh cache-busting `nonce`) points at the
+        `dataobj/shinytest` endpoint, which returns a JSON snapshot of this
+        session's `input`, `output`, and `export` values. The endpoint only
+        responds when test mode is enabled (`SHINY_TESTMODE=1`); otherwise it
+        returns a 404.
+
+        Returns
+        -------
+        :
+            The URL path for the snapshot endpoint.
+        """
+
+    @abstractmethod
     def set_message_handler(
         self,
         name: str,
@@ -760,13 +820,20 @@ class AppSession(Session):
             except Exception as e:
                 print("Error parsing credentials header: " + str(e), file=sys.stderr)
 
-        self._outbound_message_queues = OutBoundMessageQueues()
+        self._outbound_message_queues = OutBoundMessageQueues(
+            record_test_values=app._test_mode
+        )
 
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_ended_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
+
+        # Test-mode (`SHINY_TESTMODE`) registry of values to include in the
+        # `export` block of the snapshot. Keys are (namespaced) export names;
+        # values are zero-arg callables evaluated lazily at snapshot time.
+        self._test_value_exports: dict[str, Callable[[], Any]] = {}
 
         # Destroy callbacks for module scopes, keyed by namespace string.
         # Stored on root session because SessionProxy is a throwaway lens.
@@ -1249,7 +1316,43 @@ class AppSession(Session):
                     else:
                         return handler(request)
 
+        elif action == "dataobj" and subpath == "shinytest" and request.method == "GET":
+            if not self.app._test_mode:
+                return HTMLResponse("<h1>Not Found</h1>", 404)
+            return self._handle_test_snapshot(request)
+
         return HTMLResponse("<h1>Not Found</h1>", 404)
+
+    def _handle_test_snapshot(self, request: Request) -> ASGIApp:
+        with session_context(self):
+            with isolate():
+                inputs = {
+                    str(key): _snapshot_safe_value(val)
+                    for key, val in self.input._serialize_test_mode().items()
+                }
+
+                omq = self._outbound_message_queues
+                outputs: dict[str, Any] = {
+                    str(key): _snapshot_safe_value(val)
+                    for key, val in omq.test_values.items()
+                }
+                for key, err in omq.test_errors.items():
+                    if isinstance(err, dict):
+                        message = cast("dict[str, Any]", err).get("message")
+                    else:
+                        message = str(err)
+                    outputs[str(key)] = {"__shiny_output_error__": message}
+
+                exports: dict[str, Any] = {}
+                for name, fn in self._test_value_exports.items():
+                    try:
+                        exports[name] = _snapshot_safe_value(fn())
+                    except Exception as e:
+                        exports[name] = {"__shiny_serialization_error__": str(e)}
+
+        payload = {"input": inputs, "output": outputs, "export": exports}
+        body = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
+        return Response(content=body, media_type="application/json")
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
         self._outbound_message_queues.add_input_message(id, message)
@@ -1428,6 +1531,18 @@ class AppSession(Session):
         self._dynamic_routes.update({name: handler})
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
+
+    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        if not self.app._test_mode:
+            return
+        self._test_value_exports.update(kwargs)
+
+    def get_test_snapshot_url(self) -> str:
+        nonce = _utils.rand_hex(8)
+        return (
+            f"session/{urllib.parse.quote(self.id)}"
+            f"/dataobj/shinytest?nonce={urllib.parse.quote(nonce)}"
+        )
 
     def set_message_handler(
         self,
@@ -1669,6 +1784,16 @@ class SessionProxy(Session):
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         return self._root_session.dynamic_route(self.ns(name), handler)
 
+    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        # NOTE: Deviation from R Shiny's `exportTestValues()`, which does NOT
+        # namespace export names. py-shiny namespaces them with this module's
+        # `ns` prefix so values exported from different modules don't collide.
+        namespaced = {str(self.ns(name)): value for name, value in kwargs.items()}
+        self._root_session.export_test_values(**namespaced)
+
+    def get_test_snapshot_url(self) -> str:
+        return self._root_session.get_test_snapshot_url()
+
     async def _unhandled_error(self, e: Exception) -> None:
         await self._root_session._unhandled_error(e)
 
@@ -1694,6 +1819,35 @@ class SessionProxy(Session):
 # ======================================================================================
 # Inputs
 # ======================================================================================
+
+
+def _snapshot_safe_value(value: Any) -> Any:
+    """
+    Coerce a value into something JSON-serializable for a test snapshot.
+
+    Best-effort: values that orjson cannot encode are stringified via
+    `default=str`. If serialization still fails (e.g. `str()` raises), a visible,
+    non-fatal marker is returned so a single bad value never fails the whole
+    snapshot.
+    """
+    try:
+        return orjson.loads(orjson.dumps(value, default=str))
+    except Exception as e:
+        return {"__shiny_serialization_error__": str(e)}
+
+
+def _is_internal_snapshot_input(key: str) -> bool:
+    """
+    Whether an input key is client-internal and excluded from snapshots.
+
+    Used by both bookmark serialization and test-mode snapshots to skip
+    client-data inputs (`.clientdata_*`) and the bookmark machinery inputs.
+    """
+    if key.startswith(".clientdata_"):
+        return True
+    if key == BOOKMARK_ID or key.endswith(f"{ResolvedId._sep}{BOOKMARK_ID}"):
+        return True
+    return False
 
 
 # TODO: provide a real input typing example when we have an answer for that
@@ -1839,13 +1993,7 @@ class Inputs:
         with reactive.isolate():
 
             for key, value in self._map.items():
-                # TODO: Barret - Q: Should this be ignoring any Input key that starts with a "."?
-                if key.startswith(".clientdata_"):
-                    continue
-                # Ignore all bookmark inputs
-                if key == BOOKMARK_ID or key.endswith(
-                    f"{ResolvedId._sep}{BOOKMARK_ID}"
-                ):
+                if _is_internal_snapshot_input(str(key)):
                     continue
                 if key in exclude_set:
                     continue
@@ -1865,6 +2013,27 @@ class Inputs:
                 serialized_values[str(key)] = serialized_value
 
         return serialized_values
+
+    def _serialize_test_mode(self) -> dict[str, Any]:
+        """
+        Collect current input values for a test-mode snapshot.
+
+        Unlike `_serialize` (used for bookmarking), this applies no bookmark
+        serializers and never touches the filesystem; raw values are returned for
+        best-effort JSON serialization by the snapshot handler. Client-internal
+        and bookmark inputs are skipped.
+        """
+        out: dict[str, Any] = {}
+        with reactive.isolate():
+            for key, value in self._map.items():
+                if _is_internal_snapshot_input(str(key)):
+                    continue
+                try:
+                    val = value()
+                except SilentException:
+                    continue
+                out[str(key)] = val
+        return out
 
     def _destroy(self) -> None:
         # This will cause all modules with the same module namespace prefix to have their inputs removed.
