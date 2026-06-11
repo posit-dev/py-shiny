@@ -86,6 +86,11 @@ class App:
         that mount point.
     debug
         Whether to enable debug mode.
+    test_mode
+        Whether to enable Shiny test mode. When ``None`` (the default), this follows
+        the ``SHINY_TESTMODE`` environment variable. When test mode is enabled, the
+        session records output values and serves a JSON snapshot at
+        ``/session/{id}/dataobj/shinytest``.
 
     Examples
     --------
@@ -159,6 +164,7 @@ class App:
         # Document type as Literal to have clearer type hints to App author
         bookmark_store: Literal["url", "server", "disable"] = "disable",
         debug: bool = False,
+        test_mode: bool | None = None,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
         # to the ASGI lifespan protocol)
@@ -180,8 +186,11 @@ class App:
         self._init_bookmarking(bookmark_store=bookmark_store, ui=ui)
 
         self._debug: bool = debug
-        self._test_mode: bool = is_test_mode()
-        """Whether Shiny test mode is enabled (via the ``SHINY_TESTMODE`` env var)."""
+        self._test_mode: bool = is_test_mode() if test_mode is None else test_mode
+        """Whether Shiny test mode is enabled.
+
+        Defaults to the ``SHINY_TESTMODE`` env var when ``test_mode`` is ``None``.
+        """
 
         # Settings that the user can change after creating the App object.
         self.lib_prefix: str = LIB_PREFIX

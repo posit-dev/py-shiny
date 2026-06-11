@@ -284,3 +284,21 @@ async def test_snapshot_endpoint_export_error_marker(
     body = orjson.loads(resp.body)
     assert "__shiny_serialization_error__" in body["export"]["bad_value"]
     assert "__shiny_serialization_error__" in body["export"]["raises"]
+
+
+def test_app_test_mode_arg_overrides_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Explicit True wins even when the env var is unset.
+    monkeypatch.delenv("SHINY_TESTMODE", raising=False)
+    assert App(ui.TagList(), None, test_mode=True)._test_mode is True
+
+    # Explicit False wins even when the env var says on.
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    assert App(ui.TagList(), None, test_mode=False)._test_mode is False
+
+
+def test_app_test_mode_none_follows_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    assert App(ui.TagList(), None, test_mode=None)._test_mode is True
+
+    monkeypatch.delenv("SHINY_TESTMODE", raising=False)
+    assert App(ui.TagList(), None)._test_mode is False  # default is None
