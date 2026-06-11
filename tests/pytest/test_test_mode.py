@@ -322,9 +322,7 @@ async def test_snapshot_endpoint_handles_resolved_id_output_keys(
 
     resp = cast(
         Response,
-        await session._handle_request_impl(
-            _snapshot_request(), "dataobj", "shinytest"
-        ),
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
     )
     body = orjson.loads(resp.body)
     assert body["output"]["greeting"] == "hi"

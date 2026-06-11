@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import cast
 from unittest import mock
 
 import pytest
@@ -48,8 +49,9 @@ def test_run_shiny_app_passes_env_to_popen() -> None:
     assert "env" in captured
     env_arg = captured["env"]
     assert isinstance(env_arg, dict)
-    assert env_arg["SHINY_TESTMODE"] == "1"
-    assert env_arg.get("PATH") == os.environ.get("PATH")  # merged with parent env
+    env_dict = cast("dict[str, str]", env_arg)
+    assert env_dict["SHINY_TESTMODE"] == "1"
+    assert env_dict.get("PATH") == os.environ.get("PATH")  # merged with parent env
 
 
 def test_create_app_fixture_accepts_env_param() -> None:
