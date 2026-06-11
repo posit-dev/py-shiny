@@ -50,3 +50,17 @@ def test_run_shiny_app_passes_env_to_popen() -> None:
     assert isinstance(env_arg, dict)
     assert env_arg["SHINY_TESTMODE"] == "1"
     assert env_arg.get("PATH") == os.environ.get("PATH")  # merged with parent env
+
+
+def test_create_app_fixture_accepts_env_param() -> None:
+    """create_app_fixture exposes an `env` override and returns a fixture."""
+    import inspect
+
+    from shiny.pytest import create_app_fixture
+
+    sig = inspect.signature(create_app_fixture)
+    assert "env" in sig.parameters
+
+    # Returns a callable (a pytest fixture function) without launching anything.
+    fixture = create_app_fixture("app.py")
+    assert callable(fixture)
