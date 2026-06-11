@@ -140,5 +140,6 @@ tests/inspect-ai/scripts/test_metadata.json
 # Claude
 /.claude/*.local.*
 /.claude/scheduled_tasks.lock
+/.claude/plans/
 docs/plans/
 docs/superpowers/
