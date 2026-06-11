@@ -87,6 +87,10 @@ quartodoc:
         - playwright.controller.OutputText
         - playwright.controller.OutputTextVerbatim
         - playwright.controller.OutputUi
+    - title: App test values
+      desc: Read a session's test-mode snapshot of input, output, and export values.
+      contents:
+        - playwright.controller.AppTestValues
     - title: "Playwright Expect"
       desc: "Methods for testing the state of a locator within a Shiny app."
       contents:
