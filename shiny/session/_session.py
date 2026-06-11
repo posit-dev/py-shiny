@@ -1327,13 +1327,13 @@ class AppSession(Session):
         with session_context(self):
             with isolate():
                 inputs = {
-                    key: _snapshot_safe_value(val)
+                    str(key): _snapshot_safe_value(val)
                     for key, val in self.input._serialize_test_mode().items()
                 }
 
                 omq = self._outbound_message_queues
                 outputs: dict[str, Any] = {
-                    key: _snapshot_safe_value(val)
+                    str(key): _snapshot_safe_value(val)
                     for key, val in omq.test_values.items()
                 }
                 for key, err in omq.test_errors.items():
@@ -1341,7 +1341,7 @@ class AppSession(Session):
                         message = cast("dict[str, Any]", err).get("message")
                     else:
                         message = str(err)
-                    outputs[key] = {"__shiny_output_error__": message}
+                    outputs[str(key)] = {"__shiny_output_error__": message}
 
                 exports: dict[str, Any] = {}
                 for name, fn in self._test_value_exports.items():

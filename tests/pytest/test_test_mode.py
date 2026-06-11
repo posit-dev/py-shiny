@@ -302,3 +302,29 @@ def test_app_test_mode_none_follows_env(monkeypatch: pytest.MonkeyPatch) -> None
 
     monkeypatch.delenv("SHINY_TESTMODE", raising=False)
     assert App(ui.TagList(), None)._test_mode is False  # default is None
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_handles_resolved_id_output_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Output ids are `ResolvedId` (a `str` subclass). orjson rejects `str`
+    # subclasses as dict keys ("Dict key must be str"), so the snapshot handler
+    # must coerce them to plain `str` before serializing.
+    import orjson
+
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    key = session.ns("greeting")
+    assert type(key) is not str  # ResolvedId, not a plain str
+    session._outbound_message_queues.set_value(key, "hi")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(
+            _snapshot_request(), "dataobj", "shinytest"
+        ),
+    )
+    body = orjson.loads(resp.body)
+    assert body["output"]["greeting"] == "hi"
