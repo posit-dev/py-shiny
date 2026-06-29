@@ -196,8 +196,14 @@ class Session(ABC):
     # iterate over all modules and check the `.bookmark_exclude` list of each proxy
     # session.
     bookmark: Bookmark
-    user: str | None
-    groups: list[str] | None
+
+    @property
+    @abstractmethod
+    def user(self) -> str | None: ...
+
+    @property
+    @abstractmethod
+    def groups(self) -> list[str] | None: ...
 
     # TODO: not sure these should be directly exposed
     _outbound_message_queues: OutBoundMessageQueues
@@ -740,8 +746,8 @@ class AppSession(Session):
 
         self.bookmark: Bookmark = BookmarkApp(self)
 
-        self.user: str | None = None
-        self.groups: list[str] | None = None
+        self._user: str | None = None
+        self._groups: list[str] | None = None
 
         credentials_json: str = ""
         if "shiny-server-credentials" in self.http_conn.headers:
@@ -755,8 +761,8 @@ class AppSession(Session):
         if credentials_json:
             try:
                 creds = json.loads(credentials_json)
-                self.user = creds["user"]
-                self.groups = creds["groups"]
+                self._user = creds["user"]
+                self._groups = creds["groups"]
             except Exception as e:
                 print("Error parsing credentials header: " + str(e), file=sys.stderr)
 
@@ -807,6 +813,14 @@ class AppSession(Session):
 
     def is_stub_session(self) -> Literal[False]:
         return False
+
+    @property
+    def user(self) -> str | None:
+        return self._user
+
+    @property
+    def groups(self) -> list[str] | None:
+        return self._groups
 
     async def close(self, code: int = 1001) -> None:
         await self._conn.close(code, None)
@@ -1517,6 +1531,14 @@ class SessionProxy(Session):
         self._downloads = root_session._downloads
 
         self.bookmark = BookmarkProxy(self)
+
+    @property
+    def user(self) -> str | None:
+        return self._root_session.user
+
+    @property
+    def groups(self) -> list[str] | None:
+        return self._root_session.groups
 
     def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
