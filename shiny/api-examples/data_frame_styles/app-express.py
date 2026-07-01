@@ -40,9 +40,7 @@ ui.hr()
 
 ui.h2("Custom styles applied to all cells within a data frame ", ui.HTML("&#128075;"))
 
-ui.tags.style(
-    ui.HTML(
-        """
+ui.tags.style(ui.HTML("""
     .posit-bg {
         background-color: #242a26 ;
     }
@@ -52,9 +50,7 @@ ui.tags.style(
     .posit-orange-bg {
         background-color: #ED642F ;
     }
-    """
-    )
-)
+    """))
 
 hi_styles = [
     {

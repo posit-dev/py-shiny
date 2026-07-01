@@ -5,8 +5,7 @@ app_ui = ui.page_fillable(
     # Card with all possible parameters
     ui.card(
         ui.card_header("Card Demo", "This demonstrates all card parameters"),
-        ui.markdown(
-            """
+        ui.markdown("""
             This is the main content of the card.
             The card has various parameters set including:
 
@@ -14,8 +13,7 @@ app_ui = ui.page_fillable(
             * height='300px' - sets fixed height
             * fill=True - allows card to grow/shrink
             * class_='my-4' - adds custom CSS classes
-            """
-        ),
+            """),
         ui.card_footer("Card Footer", class_="text-muted"),
         id="demo_card",
         full_screen=True,  # Allow card to be expanded to full screen

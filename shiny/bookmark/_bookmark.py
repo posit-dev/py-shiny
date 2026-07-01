@@ -268,9 +268,7 @@ class Bookmark(ABC):
         # (scrollHeight will be reported as zero). The shown listener selects the
         # text; it's needed because because selection has to be done after the fade-
         # in is completed.
-        modal_js = tags.script(
-            textwrap.dedent(
-                """
+        modal_js = tags.script(textwrap.dedent("""
             $('#shiny-modal').
                 one('show.bs.modal', function() {
                 setTimeout(function() {
@@ -290,9 +288,7 @@ class Bookmark(ABC):
                     return 'Press Ctrl-C to copy.';
                 }
             });
-            """
-            )
-        )
+            """))
 
         url_modal = modal(
             tags.textarea(

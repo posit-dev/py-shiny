@@ -35,8 +35,7 @@ outer2 = fill.as_fillable_container(outer2)
 outer2.children[0] = fill.as_fill_item(outer2.children[0])
 
 app_ui = ui.page_fluid(
-    ui.markdown(
-        """\
+    ui.markdown("""\
         # `as_fillable_container()`
 
         For an item to fill its parent element,
@@ -44,8 +43,7 @@ app_ui = ui.page_fluid(
         * the parent container must have `as_fillable_container()` called on it
 
         If both methods are called, the inner child will naturally expand into its parent container.
-        """
-    ),
+        """),
     ui.row(
         ui.column(4, ui.h5("Default behavior")),
         ui.column(4, ui.h5(ui.markdown("`as_fillable_container(red)`"))),

@@ -5,8 +5,7 @@ from htmltools import Tag, css
 from shiny.express import ui
 from shiny.express.ui import fill
 
-ui.markdown(
-    """\
+ui.markdown("""\
     # `as_fill_item()`
 
     For an item to fill its parent element,
@@ -14,8 +13,7 @@ ui.markdown(
     * the parent container must have `as_fillable_container()` called on it
 
     If both methods are called, the inner child will naturally expand into its parent container.
-    """
-)
+    """)
 
 
 def outer_inner() -> Tag:

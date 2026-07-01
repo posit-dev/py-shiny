@@ -67,8 +67,7 @@ def expect_element_scrolled_to_bottom(
 
 
 def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
-    page.add_init_script(
-        """
+    page.add_init_script("""
         const style = document.createElement('style');
         style.innerHTML = '* { scroll-behavior: auto !important; }';
         document.head.appendChild(style);
@@ -90,8 +89,7 @@ def test_validate_stream_basic(page: Page, local_app: ShinyAppProc) -> None:
         window.scroll = forceAuto(window.scroll);
         window.scrollTo = forceAuto(window.scrollTo);
         window.scrollBy = forceAuto(window.scrollBy);
-        """
-    )
+        """)
     page.goto(local_app.url)
 
     stream = page.locator("#shiny_readme")
