@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 
 import pytest
-from htmltools import Tag, TagList, tags
+from htmltools import TagList, tags
 
 from shiny import ui
 from shiny.ui._offcanvas import Offcanvas
