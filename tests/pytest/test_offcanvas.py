@@ -19,7 +19,7 @@ def test_offcanvas_returns_offcanvas_instance():
 
 
 def test_offcanvas_kwargs_become_html_attrs():
-    oc = ui.offcanvas(id="x", title="T", **{"data-foo": "bar"})
+    oc = ui.offcanvas(id="x", title="T", data_foo="bar")
     rendered = str(oc.tagify())
     assert 'data-foo="bar"' in rendered
 
@@ -96,7 +96,7 @@ def test_offcanvas_no_title_no_aria_label_warns():
 
 
 def test_offcanvas_with_aria_label_no_warning():
-    oc = ui.offcanvas(id="x", **{"aria-label": "My panel"})
+    oc = ui.offcanvas(id="x", aria_label="My panel")
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         oc.tagify()
@@ -129,7 +129,7 @@ def test_offcanvas_close_button_false():
 
 
 def test_offcanvas_header_omitted_when_no_title_and_no_close_button():
-    oc = ui.offcanvas(id="x", **{"aria-label": "panel"}, close_button=False)
+    oc = ui.offcanvas(id="x", aria_label="panel", close_button=False)
     rendered = str(oc.tagify())
     assert "offcanvas-header" not in rendered
 
