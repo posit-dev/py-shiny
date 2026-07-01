@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#XXXX)
+
 ## [1.6.3] - 2026-06-01
 
 ### New features
