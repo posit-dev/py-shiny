@@ -8,7 +8,8 @@ from shiny import App, reactive, render, ui
 
 app_ui = ui.page_fillable(
     {"class": "p-3"},
-    ui.markdown("""
+    ui.markdown(
+        """
         #### Instructions:
         * Run the app locally so that the edits to the underlying CSV file will persist.
         * Edit the cells in the table.
@@ -17,7 +18,8 @@ app_ui = ui.page_fillable(
         The data frame will not be re-rendered as the result of `df()` has not updated.
 
         Once the `df()` is invalidated, all local edits are forgotten, and the data frame will be re-rendered. However, since the edits were saved to the CSV file, the edits will persist between refreshes (when run locally).
-        """),
+        """
+    ),
     ui.card(
         ui.output_data_frame("my_data_frame"),
     ),

@@ -50,14 +50,16 @@ set_logger_provider(log_provider)
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),
-    ui.markdown("""
+    ui.markdown(
+        """
         This demo shows how `otel.suppress` controls **Shiny's internal spans and value logs**.
 
         Watch the console to see:
         - **Spans**: Session lifecycle, reactive execution
         - **Logs**: Reactive value updates with source references
         - **Control**: How `@otel.suppress` suppresses both Shiny's internal
-        """),
+        """
+    ),
     ui.hr(),
     ui.layout_columns(
         ui.card(
@@ -65,31 +67,37 @@ app_ui = ui.page_fluid(
             ui.input_slider("normal_slider", "Slider", 0, 100, 50),
             ui.input_action_button("normal_increment", "Increment Counter"),
             ui.output_text_verbatim("normal_counter_display"),
-            ui.markdown("""
+            ui.markdown(
+                """
                 **Telemetry:** ✅ Shiny spans + value logs
                 This section generates full Shiny telemetry.
-                """),
+                """
+            ),
         ),
         ui.card(
             ui.card_header("Suppressed Telemetry (No Collection)"),
             ui.input_slider("private_slider", "Slider", 0, 100, 50),
             ui.input_action_button("private_increment", "Increment Counter"),
             ui.output_text_verbatim("private_counter_display"),
-            ui.markdown("""
+            ui.markdown(
+                """
                 **Telemetry:** ❌ No Shiny spans, no value logs
                 Uses `@otel.suppress` to suppress all Shiny telemetry.
-                """),
+                """
+            ),
         ),
         ui.card(
             ui.card_header("Re-enabled Telemetry (otel.collect)"),
             ui.input_slider("collect_slider", "Slider", 0, 100, 50),
             ui.input_action_button("collect_increment", "Increment Counter"),
             ui.output_text_verbatim("collect_counter_display"),
-            ui.markdown("""
+            ui.markdown(
+                """
                 **Telemetry:** ✅ Shiny spans + value logs
                 Uses `@otel.collect` to re-enable Shiny telemetry inside
                 a broad `otel.suppress()` block.
-                """),
+                """
+            ),
         ),
     ),
     ui.hr(),

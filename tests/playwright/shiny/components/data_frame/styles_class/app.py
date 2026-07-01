@@ -28,7 +28,8 @@ df_styles: list[StyleInfo] = [
 ]
 
 app_ui = ui.page_fillable(
-    ui.tags.style("""
+    ui.tags.style(
+        """
         .everywhere {
             color: darkorange !important;
             font-weight: bold;
@@ -36,7 +37,8 @@ app_ui = ui.page_fillable(
         .species {
             background-color: lightblue !important;
         }
-        """),
+        """
+    ),
     {"class": "p-3"},
     ui.card(
         ui.card_header("Pandas Styles List:"),

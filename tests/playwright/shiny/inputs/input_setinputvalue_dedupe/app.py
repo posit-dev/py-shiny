@@ -16,7 +16,8 @@ app_ui = ui.page_fluid(
     ui.tags.button("Send [1,2,3] (event priority)", id="btn_list_event"),
     ui.output_text_verbatim("list_default_count"),
     ui.output_text_verbatim("list_event_count"),
-    ui.tags.script("""
+    ui.tags.script(
+        """
         document.getElementById('btn_int_default').addEventListener('click', function() {
             Shiny.setInputValue('int_default_input', 42);
         });
@@ -35,7 +36,8 @@ app_ui = ui.page_fluid(
         document.getElementById('btn_list_event').addEventListener('click', function() {
             Shiny.setInputValue('list_event_input', [1, 2, 3], {priority: 'event'});
         });
-        """),
+        """
+    ),
 )
 
 

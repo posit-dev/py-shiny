@@ -27,7 +27,8 @@ app_ui = ui.page_fluid(
         # Panel with longer content
         ui.accordion_panel(
             "Panel D",
-            ui.markdown("""
+            ui.markdown(
+                """
                 This panel contains longer content to demonstrate scrolling:
 
                 - Item 1
@@ -36,7 +37,8 @@ app_ui = ui.page_fluid(
 
                 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
                 eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                """),
+                """
+            ),
         ),
         id="acc_demo",
         open=["Panel B", "Panel D"],

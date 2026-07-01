@@ -20,11 +20,13 @@ def server(input: Inputs, output: Outputs, session: Session):
         print("Serving at: ", path)
 
         ui.insert_ui(
-            ui.tags.script(f"""
+            ui.tags.script(
+                f"""
                 fetch('{path}')
                   .then(r => r.json())
                   .then(x => {{ $('#messages').text(`Clicked ${{x.n_clicks}} times`); }});
-                """),
+                """
+            ),
             selector="body",
         )
 

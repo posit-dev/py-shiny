@@ -12,11 +12,13 @@ df = pd.DataFrame(
     }
 )
 
-ui.markdown("""
+ui.markdown(
+    """
     * Edit a cell in column `b`.
     * Column `a` should be updated to `a value`
     * The edited cell should be back to a `ready` state
-    """)
+    """
+)
 
 
 @render.data_frame

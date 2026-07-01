@@ -6,7 +6,8 @@ from typing import List
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    ui.markdown("""
+    ui.markdown(
+        """
         # `session.on_flush` and `session.on_flushed` Reprex
 
         Verify that `on_flush` and `on_flushed` are called in the correct order, and that they can be cancelled, handle, synchronous functions, and handle asynchronous functions.
@@ -27,7 +28,8 @@ app_ui = ui.page_fluid(
         Without something to continuously trigger the reactive graph, the `K` value will be `1` less than the click count. To combat this, a reactive event will trigger every 250ms to invoke session `flush` / `flushed` callback.
 
         ## Automated Reprex:
-        """),
+        """
+    ),
     ui.input_action_button("btn", "Click me!"),
     ui.tags.br(),
     ui.tags.span("Counter: "),
@@ -40,7 +42,8 @@ app_ui = ui.page_fluid(
     ui.output_text_verbatim("flushed_txt", placeholder=True),
     ui.tags.span("Session end events (refresh App to add events): "),
     ui.output_text_verbatim("session_end_txt", placeholder=True),
-    ui.tags.script("""
+    ui.tags.script(
+        """
         $(document).on('shiny:connected', function(event) {
             const n = 250
             document.querySelector("#btn").click();
@@ -51,7 +54,8 @@ app_ui = ui.page_fluid(
                 document.querySelector("#btn").click();
             }, 2 * n)
         });
-        """),
+        """
+    ),
 )
 
 session_ended_messages: List[str] = []

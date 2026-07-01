@@ -22,11 +22,13 @@ def location_ui(
         ui.input_numeric("long", "Longitude", value=long),
         ui.help_text("Click to select location"),
         output_widget("map", height="200px"),
-        ui.tags.style("""
+        ui.tags.style(
+            """
             .jupyter-widgets.leaflet-widgets {
                 height: 100% !important;
             }
-            """),
+            """
+        ),
     )
 
 
@@ -43,7 +45,8 @@ def location_server(
                 "Searching for location...", duration=99999, id="searching"
             )
             ui.insert_ui(
-                ui.tags.script("""
+                ui.tags.script(
+                    """
                     navigator.geolocation.getCurrentPosition(
                         ({coords}) => {
                             const {latitude, longitude, altitude} = coords;
@@ -54,7 +57,10 @@ def location_server(
                         },
                         {maximumAge: Infinity, timeout: Infinity}
                     )
-                    """.replace("#HERE#", module.resolve_id("here"))),
+                    """.replace(
+                        "#HERE#", module.resolve_id("here")
+                    )
+                ),
                 selector="body",
                 where="beforeEnd",
                 immediate=True,

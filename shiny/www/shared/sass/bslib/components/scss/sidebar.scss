@@ -409,6 +409,11 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
     &.handle-active::before {
       right: calc(100% - 10px);
     }
+
+    .resize-indicator {
+      right: auto;
+      left: 2px;
+    }
   }
 
   // Hide resize handle when sidebar is not resizable

@@ -12,10 +12,12 @@ my_theme = (
         bar_color="$purple",
         select_color_text="$orange",
     )
-    .add_rules("""
+    .add_rules(
+        """
         em { color: $warning; }
         .sidebar-title { color: $danger; }
-        """)
+        """
+    )
     .add_rules('@import "css/rules.scss";')
 )
 

@@ -15,7 +15,8 @@ def test_markdown():
     )
 
     assert (
-        markdown("""
+        markdown(
+            """
         # Hello World
 
         This is **markdown** and here is some `code`:
@@ -23,20 +24,23 @@ def test_markdown():
         ```python
         print('Hello world!')
         ```
-        """)
+        """
+        )
         == HTML(
             "<h1>Hello World</h1>\n<p>This is <strong>markdown</strong> and here is some <code>code</code>:</p>\n<pre><code class=\"language-python\">print('Hello world!')\n</code></pre>\n"
         )
     )
 
     assert (
-        markdown("""
+        markdown(
+            """
         # Hello World
 
         This is **markdown** and here is some `code`:
 
             print('Hello world!')
-        """)
+        """
+        )
         == HTML(
             "<h1>Hello World</h1>\n<p>This is <strong>markdown</strong> and here is some <code>code</code>:</p>\n<pre><code>print('Hello world!')\n</code></pre>\n"
         )

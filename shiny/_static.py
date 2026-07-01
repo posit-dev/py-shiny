@@ -54,8 +54,10 @@ def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> list[
 
 
 def print_shinylive_local_info() -> None:
-    print(f"""    Local shinylive dir:
+    print(
+        f"""    Local shinylive dir:
         {get_default_shinylive_dir()}
 
     Installed versions:
-        {", ".join(_installed_shinylive_versions())}""")
+        {", ".join(_installed_shinylive_versions())}"""
+    )

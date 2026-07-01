@@ -13,14 +13,16 @@ def test_output_size_updates(page: Page, local_app: ShinyAppProc) -> None:
     expect(size_info).to_contain_text(re.compile(r'"width":\s*240(\.0+)?'))
     expect(size_info).to_contain_text(re.compile(r'"height":\s*120(\.0+)?'))
 
-    page.evaluate("""
+    page.evaluate(
+        """
         () => {
             window.__resizeEvents = 0;
             window.addEventListener("resize", () => {
                 window.__resizeEvents += 1;
             });
         }
-        """)
+        """
+    )
 
     page.get_by_role("button", name="Toggle size").click()
 

@@ -23,14 +23,16 @@ df_edit = pd.DataFrame(
 # mounts, letting an external screenshot driver switch themes
 # deterministically via `?theme=light|dark` without animating the
 # `input_dark_mode` toggle.
-_theme_shim = ui.tags.script("""
+_theme_shim = ui.tags.script(
+    """
     (function () {
       var p = new URLSearchParams(window.location.search).get('theme');
       if (p === 'dark' || p === 'light') {
         document.documentElement.setAttribute('data-bs-theme', p);
       }
     })();
-    """)
+    """
+)
 
 app_ui = ui.page_fluid(
     ui.head_content(_theme_shim),
