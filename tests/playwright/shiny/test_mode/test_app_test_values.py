@@ -45,3 +45,8 @@ def test_app_test_values(page: Page, local_app: ShinyAppProc) -> None:
     # both "name" and "n"), so a short timeout keeps the negative check quick.
     with pytest.raises(AssertionError):
         app_values.expect_inputs({"name": "xyz"}, match="exact", timeout=1)
+
+    # "exact" also verifies values, not just the key set: the key matches but
+    # the expected value is wrong, so this must fail.
+    with pytest.raises(AssertionError):
+        app_values.expect_exports({"doubled": 999}, match="exact", timeout=1)

@@ -126,36 +126,37 @@ class AppTestValues:
         match: Literal["subset", "exact"],
         timeout: float | None,
     ) -> None:
+        if match not in ("subset", "exact"):
+            raise ValueError(f"`match` must be 'subset' or 'exact', not {match!r}.")
+
         @retry_with_timeout(timeout if timeout is not None else _DEFAULT_TIMEOUT_SECS)
         def _() -> None:
             section = self._fetch()[block]
 
-            if match == "exact":
-                missing = set(values) - set(section)
-                extra = set(section) - set(values)
-                if missing or extra:
-                    raise AssertionError(
-                        f"{block} key set mismatch (match='exact'): "
-                        f"missing={sorted(missing)}, extra={sorted(extra)}"
-                    )
-            else:  # "subset"
-                missing = set(values) - set(section)
-                if missing:
-                    raise AssertionError(
-                        f"{block}: keys missing from the test snapshot: "
-                        f"{sorted(missing)}. Present keys: {sorted(section)}"
-                    )
+            # Keys expected but absent (both modes) and, for "exact" only, keys
+            # present in the snapshot that were not expected.
+            missing = sorted(set(values) - set(section))
+            extra = sorted(set(section) - set(values)) if match == "exact" else []
+            # Value mismatches, checked for every expected key that is present.
+            # This applies to BOTH modes: "exact" must verify values too, not
+            # just that the key sets are equal.
+            mismatched = sorted(
+                key for key in values if key in section and section[key] != values[key]
+            )
 
-            # All `values` keys are present in `section` by this point.
-            mismatches = {
-                key: section[key] for key, val in values.items() if section[key] != val
-            }
-            if mismatches:
-                detail = ", ".join(
-                    f"{block}[{key!r}] == {actual!r}, expected {values[key]!r}"
-                    for key, actual in sorted(mismatches.items())
-                )
-                raise AssertionError(detail)
+            if not (missing or extra or mismatched):
+                return
+
+            problems: list[str] = []
+            if missing:
+                problems.append(f"missing keys {missing}")
+            if extra:
+                problems.append(f"unexpected keys {extra}")
+            problems += [
+                f"{block}[{key!r}] == {section[key]!r}, expected {values[key]!r}"
+                for key in mismatched
+            ]
+            raise AssertionError(f"{block} (match={match!r}): " + "; ".join(problems))
 
         _()
 
