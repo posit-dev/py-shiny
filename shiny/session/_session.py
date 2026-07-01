@@ -1331,33 +1331,49 @@ class AppSession(Session):
         if fmt != "json":
             return PlainTextResponse(f"Invalid format requested: {fmt}", 400)
 
+        # Block selection. Each of `input`/`output`/`export` is included only if
+        # its query param is present: "1" selects the whole block, a comma list
+        # (e.g. "a,b") selects just those keys.
+        #
+        # DEVIATION FROM R: when NONE of the three params are supplied, py-shiny
+        # returns all three blocks as a convenience. R instead responds 400
+        # ("None of export, input, or output requested.").
+        want = {block: request.query_params.get(block) for block in _SNAPSHOT_BLOCKS}
+        select_all = all(spec is None for spec in want.values())
+
+        payload: dict[str, Any] = {}
         with session_context(self):
             with isolate():
-                inputs = {
-                    str(key): _snapshot_safe_value(val)
-                    for key, val in self.input._serialize_test_mode().items()
-                }
+                if select_all or want["input"] is not None:
+                    inputs = {
+                        str(key): _snapshot_safe_value(val)
+                        for key, val in self.input._serialize_test_mode().items()
+                    }
+                    payload["input"] = _filter_snapshot_block(inputs, want["input"])
 
-                omq = self._outbound_message_queues
-                outputs: dict[str, Any] = {
-                    str(key): _snapshot_safe_value(val)
-                    for key, val in omq.test_values.items()
-                }
-                for key, err in omq.test_errors.items():
-                    if isinstance(err, dict):
-                        message = cast("dict[str, Any]", err).get("message")
-                    else:
-                        message = str(err)
-                    outputs[str(key)] = {"__shiny_output_error__": message}
+                if select_all or want["output"] is not None:
+                    omq = self._outbound_message_queues
+                    outputs: dict[str, Any] = {
+                        str(key): _snapshot_safe_value(val)
+                        for key, val in omq.test_values.items()
+                    }
+                    for key, err in omq.test_errors.items():
+                        if isinstance(err, dict):
+                            message = cast("dict[str, Any]", err).get("message")
+                        else:
+                            message = str(err)
+                        outputs[str(key)] = {"__shiny_output_error__": message}
+                    payload["output"] = _filter_snapshot_block(outputs, want["output"])
 
-                exports: dict[str, Any] = {}
-                for name, fn in self._test_value_exports.items():
-                    try:
-                        exports[name] = _snapshot_safe_value(fn())
-                    except Exception as e:
-                        exports[name] = {"__shiny_serialization_error__": str(e)}
+                if select_all or want["export"] is not None:
+                    exports: dict[str, Any] = {}
+                    for name, fn in self._test_value_exports.items():
+                        try:
+                            exports[name] = _snapshot_safe_value(fn())
+                        except Exception as e:
+                            exports[name] = {"__shiny_serialization_error__": str(e)}
+                    payload["export"] = _filter_snapshot_block(exports, want["export"])
 
-        payload = {"input": inputs, "output": outputs, "export": exports}
         body = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
         return Response(content=body, media_type="application/json")
 
@@ -1828,6 +1844,10 @@ class SessionProxy(Session):
 # ======================================================================================
 
 
+_SNAPSHOT_BLOCKS = ("input", "output", "export")
+"""The block names selectable via the test-snapshot endpoint's query params."""
+
+
 def _snapshot_safe_value(value: Any) -> Any:
     """
     Coerce a value into something JSON-serializable for a test snapshot.
@@ -1841,6 +1861,19 @@ def _snapshot_safe_value(value: Any) -> Any:
         return orjson.loads(orjson.dumps(value, default=str))
     except Exception as e:
         return {"__shiny_serialization_error__": str(e)}
+
+
+def _filter_snapshot_block(block: dict[str, Any], spec: str | None) -> dict[str, Any]:
+    """
+    Select keys from a test-snapshot block per a query-param value.
+
+    `spec` of `None` (the select-all default) or `"1"` returns the whole block; a
+    comma-separated list returns only those keys that exist in the block (unknown
+    names are silently dropped, matching R).
+    """
+    if spec is None or spec == "1":
+        return block
+    return {name: block[name] for name in spec.split(",") if name in block}
 
 
 def _is_internal_snapshot_input(key: str) -> bool:

@@ -346,3 +346,43 @@ async def test_snapshot_endpoint_format_param(
         _snapshot_request(b"format=rds"), "dataobj", "shinytest"
     )
     assert bad.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_block_filtering(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import orjson
+
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    session.input["x"] = reactive.Value(1)
+    session._outbound_message_queues.set_value("out1", "a")
+    session._outbound_message_queues.set_value("out2", "b")
+    session.export_test_values(exp=lambda: 7)
+
+    async def snap(qs: bytes) -> dict[str, object]:
+        resp = cast(
+            Response,
+            await session._handle_request_impl(
+                _snapshot_request(qs), "dataobj", "shinytest"
+            ),
+        )
+        return orjson.loads(resp.body)
+
+    # No params -> all three blocks (py-shiny convenience default; R returns 400).
+    allb = await snap(b"")
+    assert set(allb.keys()) == {"input", "output", "export"}
+
+    # Selective: only the requested block(s) appear; "1" = the whole block.
+    only_out = await snap(b"output=1")
+    assert set(only_out.keys()) == {"output"}
+    assert only_out["output"] == {"out1": "a", "out2": "b"}
+
+    two = await snap(b"input=1&export=1")
+    assert set(two.keys()) == {"input", "export"}
+
+    # A comma list selects specific keys; unknown names are dropped.
+    csv = await snap(b"output=out1,nope")
+    assert set(csv.keys()) == {"output"}
+    assert csv["output"] == {"out1": "a"}
