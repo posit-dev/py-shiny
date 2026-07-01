@@ -357,6 +357,7 @@ def offcanvas(
     )
 
 
+@no_example()
 def show_offcanvas(
     offcanvas: Offcanvas,
     *,
@@ -431,6 +432,7 @@ def show_offcanvas(
     return local_id
 
 
+@no_example()
 def hide_offcanvas(
     id: Union[str, Offcanvas],
     *,
@@ -472,6 +474,7 @@ def hide_offcanvas(
     the_session.on_flush(callback, once=True)
 
 
+@no_example()
 def toggle_offcanvas(
     id: str,
     show: Optional[bool] = None,
