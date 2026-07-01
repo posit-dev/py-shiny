@@ -221,6 +221,11 @@ class Offcanvas:
                 trigger.attrs["data-bs-toggle"] = "offcanvas"
                 trigger.attrs["data-bs-target"] = f"#{the_id}"
                 trigger.attrs["aria-controls"] = the_id
+            else:
+                raise ValueError(
+                    "`trigger` must be a `Tag`, `TagList`, or `str`, "
+                    f"not {type(trigger).__name__!r}."
+                )
 
             return TagList(trigger, offcanvas_el).tagify()
 
@@ -375,6 +380,13 @@ def show_offcanvas(
     -------
     :
         The local (pre-namespace) ID of the displayed panel.
+
+    Note
+    ----
+    If a panel with the same ``id`` is already present on the page,
+    ``show_offcanvas()`` simply reveals it — the content is not re-rendered.
+    To update an id'd panel's content, update the reactive outputs it contains
+    rather than calling ``show_offcanvas()`` again.
 
     See Also
     --------
