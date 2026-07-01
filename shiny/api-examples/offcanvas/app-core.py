@@ -7,6 +7,7 @@ app_ui = ui.page_fluid(
         id="panel",
     ),
     ui.input_action_button("toggle_btn", "Toggle panel"),
+    ui.input_action_button("hide_btn", "Hide panel"),
     ui.br(),
     ui.br(),
     ui.output_text_verbatim("state"),
@@ -18,6 +19,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(input.toggle_btn)
     def _():
         ui.toggle_offcanvas("panel")
+
+    @reactive.effect
+    @reactive.event(input.hide_btn)
+    def _():
+        ui.hide_offcanvas("panel")
 
     @render.text
     def state():
