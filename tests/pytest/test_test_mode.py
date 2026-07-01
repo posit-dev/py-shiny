@@ -387,6 +387,33 @@ async def test_snapshot_endpoint_block_filtering(
     assert set(csv.keys()) == {"output"}
     assert csv["output"] == {"out1": "a"}
 
+    # An empty value selects no keys (matches R: "" splits to nothing).
+    empty = await snap(b"output=")
+    assert empty == {"output": {}}
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_skips_unrequested_blocks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Export callables must not be evaluated when the `export` block is not
+    # requested (building only requested blocks avoids unnecessary work/side
+    # effects).
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    calls: list[int] = []
+    session.export_test_values(exp=lambda: calls.append(1) or 1)
+
+    await session._handle_request_impl(
+        _snapshot_request(b"input=1"), "dataobj", "shinytest"
+    )
+    assert calls == []  # export not requested -> callable not invoked
+
+    await session._handle_request_impl(
+        _snapshot_request(b"export=1"), "dataobj", "shinytest"
+    )
+    assert calls == [1]  # export requested -> callable invoked once
+
 
 @pytest.mark.asyncio
 async def test_snapshot_endpoint_sortc_param(
