@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import pytest
 from htmltools import Tag, TagList, tags
 
@@ -95,9 +97,6 @@ def test_offcanvas_no_title_no_aria_label_warns():
 
 def test_offcanvas_with_aria_label_no_warning():
     oc = ui.offcanvas(id="x", **{"aria-label": "My panel"})
-    # Should not warn
-    import warnings
-
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         oc.tagify()
