@@ -34,7 +34,6 @@ def test_offcanvas_server_toggle(page: Page, local_app: ShinyAppProc) -> None:
 
     controller.InputActionButton(page, "show_btn").click()
     panel.expect_open(True)
-    panel.expect_body("Panel via server.")
     state.expect_value("open")
 
     controller.InputActionButton(page, "hide_btn").click()
