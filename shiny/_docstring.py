@@ -152,15 +152,7 @@ def add_example(
                 mode="express" if "shiny/express/" in func_dir else None,
             )
         except ExampleNotFoundException as e:
-            file = "shiny/" + func_dir.split("shiny/")[1]
-            if "__code__" in dir(func):
-                print(
-                    f"::warning file={file},line={func.__code__.co_firstlineno}::{fn_name} - {e}"
-                )
-            else:
-                print(f"::warning file={file}::{fn_name} - {e}")
-
-            return func
+            raise RuntimeError(f"{fn_name} is missing an API example: {e}") from e
 
         other_files: list[str] = []
         for abs_f in Path(example_dir).glob("**/*"):

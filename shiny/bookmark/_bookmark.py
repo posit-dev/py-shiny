@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._utils import AsyncCallbacks, CancelCallback, wrap_async
 from ..otel._decorators import suppress as otel_suppress
 from ._button import BOOKMARK_ID
@@ -42,7 +42,7 @@ class Bookmark(ABC):
     _on_restore_callbacks: AsyncCallbacks
     _on_restored_callbacks: AsyncCallbacks
 
-    @add_example("input_bookmark_button")
+    @add_example(ex_dir="../api-examples/input_bookmark_button")
     async def __call__(self) -> None:
         await self.do_bookmark()
 
@@ -96,7 +96,8 @@ class Bookmark(ABC):
 
     #     await session.insert_ui(modal_with_url(url))
 
-    @add_example("bookmark_callbacks")
+    @add_example(ex_dir="../api-examples/bookmark_callbacks")
+    @no_example("express")
     def on_bookmark(
         self,
         callback: (
@@ -118,7 +119,8 @@ class Bookmark(ABC):
         """
         return self._on_bookmark_callbacks.register(wrap_async(callback))
 
-    @add_example("bookmark_callbacks")
+    @add_example(ex_dir="../api-examples/bookmark_callbacks")
+    @no_example("express")
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],

@@ -213,7 +213,7 @@ class Session(ABC):
         which expects a session can run without raising errors.
         """
 
-    @add_example("session_close")
+    @add_example(ex_dir="../api-examples/session_close")
     @abstractmethod
     async def close(self, code: int = 1001) -> None:
         """
@@ -223,7 +223,7 @@ class Session(ABC):
     @abstractmethod
     def _is_hidden(self, name: str) -> bool: ...
 
-    @add_example("session_on_ended")
+    @add_example(ex_dir="../api-examples/session_on_ended")
     @abstractmethod
     def on_ended(
         self,
@@ -438,7 +438,7 @@ class Session(ABC):
     @abstractmethod
     def _send_progress(self, type: str, message: object) -> None: ...
 
-    @add_example("session_send_custom_message")
+    @add_example(ex_dir="../api-examples/session_send_custom_message")
     @abstractmethod
     async def send_custom_message(self, type: str, message: dict[str, object]) -> None:
         """
@@ -471,7 +471,7 @@ class Session(ABC):
         that, if there is a lot of contention for the main thread).
         """
 
-    @add_example("session_on_flush")
+    @add_example(ex_dir="../api-examples/session_on_flush")
     @abstractmethod
     def on_flush(
         self,
@@ -494,7 +494,7 @@ class Session(ABC):
             A function that can be used to cancel the registration.
         """
 
-    @add_example("session_on_flushed")
+    @add_example(ex_dir="../api-examples/session_on_flushed")
     @abstractmethod
     def on_flushed(
         self,
@@ -548,7 +548,7 @@ class Session(ABC):
             The decorated function.
         """
 
-    @add_example("session_dynamic_route")
+    @add_example(ex_dir="../api-examples/session_dynamic_route")
     @abstractmethod
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         """
