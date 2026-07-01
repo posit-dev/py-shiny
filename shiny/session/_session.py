@@ -1324,6 +1324,13 @@ class AppSession(Session):
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
     def _handle_test_snapshot(self, request: Request) -> ASGIApp:
+        # `format`: py-shiny only ever emits JSON. R additionally supports "rds",
+        # but there is no RDS equivalent in Python, so any non-"json" value
+        # (including "rds") is rejected.
+        fmt = request.query_params.get("format", "json")
+        if fmt != "json":
+            return PlainTextResponse(f"Invalid format requested: {fmt}", 400)
+
         with session_context(self):
             with isolate():
                 inputs = {

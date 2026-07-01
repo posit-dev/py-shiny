@@ -51,13 +51,13 @@ def _make_app_session() -> AppSession:
     return App(ui.TagList(), None)._create_session(conn)
 
 
-def _snapshot_request() -> Request:
+def _snapshot_request(query_string: bytes = b"") -> Request:
     return Request(
         {
             "type": "http",
             "method": "GET",
             "headers": [],
-            "query_string": b"",
+            "query_string": query_string,
             "path": "/",
         }
     )
@@ -326,3 +326,23 @@ async def test_snapshot_endpoint_handles_resolved_id_output_keys(
     )
     body = orjson.loads(resp.body)
     assert body["output"]["greeting"] == "hi"
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_format_param(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    # `format=json` (and the default) are accepted.
+    ok = await session._handle_request_impl(
+        _snapshot_request(b"format=json"), "dataobj", "shinytest"
+    )
+    assert ok.status_code == 200
+
+    # Any other format (including R's `rds`) is rejected.
+    bad = await session._handle_request_impl(
+        _snapshot_request(b"format=rds"), "dataobj", "shinytest"
+    )
+    assert bad.status_code == 400
