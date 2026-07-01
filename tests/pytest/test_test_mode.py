@@ -336,14 +336,20 @@ async def test_snapshot_endpoint_format_param(
     session = _make_app_session()
 
     # `format=json` (and the default) are accepted.
-    ok = await session._handle_request_impl(
-        _snapshot_request(b"format=json"), "dataobj", "shinytest"
+    ok = cast(
+        Response,
+        await session._handle_request_impl(
+            _snapshot_request(b"format=json"), "dataobj", "shinytest"
+        ),
     )
     assert ok.status_code == 200
 
     # Any other format (including R's `rds`) is rejected.
-    bad = await session._handle_request_impl(
-        _snapshot_request(b"format=rds"), "dataobj", "shinytest"
+    bad = cast(
+        Response,
+        await session._handle_request_impl(
+            _snapshot_request(b"format=rds"), "dataobj", "shinytest"
+        ),
     )
     assert bad.status_code == 400
 
@@ -424,13 +430,19 @@ async def test_snapshot_endpoint_sortc_param(
 
     # `sortC=1` and an absent `sortC` are accepted (keys are always C-sorted).
     for qs in (b"input=1&sortC=1", b"input=1"):
-        resp = await session._handle_request_impl(
-            _snapshot_request(qs), "dataobj", "shinytest"
+        resp = cast(
+            Response,
+            await session._handle_request_impl(
+                _snapshot_request(qs), "dataobj", "shinytest"
+            ),
         )
         assert resp.status_code == 200
 
     # Any other `sortC` value is rejected (mirrors R).
-    bad = await session._handle_request_impl(
-        _snapshot_request(b"input=1&sortC=2"), "dataobj", "shinytest"
+    bad = cast(
+        Response,
+        await session._handle_request_impl(
+            _snapshot_request(b"input=1&sortC=2"), "dataobj", "shinytest"
+        ),
     )
     assert bad.status_code == 400
