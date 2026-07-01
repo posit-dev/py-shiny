@@ -1331,6 +1331,16 @@ class AppSession(Session):
         if fmt != "json":
             return PlainTextResponse(f"Invalid format requested: {fmt}", 400)
 
+        # `sortC`: R uses this to choose radix (C-locale) vs locale-aware key
+        # sorting. orjson always sorts keys by code point (equivalent to R's
+        # radix) and has no locale-aware collation, so this is a no-op here -- but
+        # it is validated the same way R does ("1" or not supplied).
+        sort_c = request.query_params.get("sortC")
+        if sort_c is not None and sort_c != "1":
+            return PlainTextResponse(
+                "The `sortC` parameter can only be `1` or not supplied.", 400
+            )
+
         # Block selection. Each of `input`/`output`/`export` is included only if
         # its query param is present: "1" selects the whole block, a comma list
         # (e.g. "a,b") selects just those keys.

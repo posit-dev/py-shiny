@@ -386,3 +386,24 @@ async def test_snapshot_endpoint_block_filtering(
     csv = await snap(b"output=out1,nope")
     assert set(csv.keys()) == {"output"}
     assert csv["output"] == {"out1": "a"}
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_sortc_param(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    # `sortC=1` and an absent `sortC` are accepted (keys are always C-sorted).
+    for qs in (b"input=1&sortC=1", b"input=1"):
+        resp = await session._handle_request_impl(
+            _snapshot_request(qs), "dataobj", "shinytest"
+        )
+        assert resp.status_code == 200
+
+    # Any other `sortC` value is rejected (mirrors R).
+    bad = await session._handle_request_impl(
+        _snapshot_request(b"input=1&sortC=2"), "dataobj", "shinytest"
+    )
+    assert bad.status_code == 400
