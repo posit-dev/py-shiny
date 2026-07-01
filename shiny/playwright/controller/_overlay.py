@@ -335,17 +335,6 @@ class Offcanvas(UiBase):
         )
         self.loc_body = self.loc.locator("div.offcanvas-body")
 
-    def open(self, *, timeout: Timeout = None) -> None:
-        """
-        Opens the offcanvas panel.
-
-        Parameters
-        ----------
-        timeout
-            The maximum time to wait for the offcanvas to open. Defaults to `None`.
-        """
-        self.set(open=True, timeout=timeout)
-
     def close(self, *, timeout: Timeout = None) -> None:
         """
         Closes the offcanvas panel.
@@ -361,29 +350,24 @@ class Offcanvas(UiBase):
         """
         Sets the offcanvas panel to open or closed.
 
+        Opening an offcanvas panel requires an external trigger element in the app
+        (e.g. an action button wired to ``toggle_offcanvas()``). Only closing
+        (``open=False``) is supported programmatically by this controller.
+
         Parameters
         ----------
         open
-            `True` to open the offcanvas and `False` to close it.
+            ``False`` to close the offcanvas. ``True`` is accepted but has no effect
+            since the panel can only be opened via an app-level trigger.
         timeout
             The maximum time to wait for the offcanvas to change state. Defaults to `None`.
         """
         is_open = "show" in (self.loc.get_attribute("class") or "")
-        if open ^ is_open:
-            self._toggle(timeout=timeout)
+        if not open and is_open:
+            self._close(timeout=timeout)
 
-    def _toggle(self, *, timeout: Timeout = None) -> None:
-        """
-        Toggles the offcanvas panel open or closed.
-
-        When the panel is open, closes it via the close button.
-        Opening must be triggered externally (e.g. via a toggle button in the app).
-
-        Parameters
-        ----------
-        timeout
-            The maximum time to wait for the toggle to complete. Defaults to `None`.
-        """
+    def _close(self, *, timeout: Timeout = None) -> None:
+        """Closes the panel by clicking the close button."""
         self.loc_close.wait_for(state="visible", timeout=timeout)
         self.loc_close.scroll_into_view_if_needed(timeout=timeout)
         self.loc_close.click(timeout=timeout)
