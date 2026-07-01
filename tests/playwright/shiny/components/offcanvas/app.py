@@ -9,9 +9,9 @@ app_ui = ui.page_fluid(
     ),
     ui.br(),
     ui.input_action_button("show_btn", "Show"),
-    ui.input_action_button("hide_btn", "Hide"),
     ui.offcanvas(
         ui.p("Panel via server."),
+        ui.input_action_button("hide_btn", "Hide"),
         title="Server Panel",
         id="server_panel",
     ),
