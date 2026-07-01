@@ -26,23 +26,18 @@ if TYPE_CHECKING:
 
     from ..session import Session
 
-_PLACEMENT_MAP: dict[str, str] = {
+# Maps user-supplied placement (including start/end aliases) to Bootstrap class suffix.
+# The BS class is stored on Offcanvas and used directly in tagify().
+_PLACEMENT_BS: dict[str, str] = {
     "right": "end",
+    "end": "end",
     "left": "start",
+    "start": "start",
     "top": "top",
     "bottom": "bottom",
-    "start": "start",
-    "end": "end",
 }
 
-_PLACEMENT_NORMALIZE: dict[str, str] = {
-    "right": "right",
-    "left": "left",
-    "top": "top",
-    "bottom": "bottom",
-    "start": "left",
-    "end": "right",
-}
+_HORIZONTAL_PLACEMENTS: frozenset[str] = frozenset({"start", "end"})
 
 
 @no_example()
@@ -131,8 +126,7 @@ class Offcanvas:
 
         the_id = self.id if self.id is not None else rand_hex(8)
 
-        bs_placement = _PLACEMENT_MAP[self.placement]
-        class_ = f"offcanvas offcanvas-{bs_placement}"
+        class_ = f"offcanvas offcanvas-{self.placement}"
 
         backdrop_attr: Optional[str] = None
         if self.backdrop is False:
@@ -217,6 +211,11 @@ class Offcanvas:
                             "data-bs-target": f"#{the_id}",
                             "aria-controls": the_id,
                         },
+                    )
+                else:
+                    raise ValueError(
+                        "The last element of a `TagList` trigger must be a `Tag` or "
+                        f"`str`, not {type(last).__name__!r}."
                     )
             elif isinstance(trigger, Tag):
                 trigger.attrs["data-bs-toggle"] = "offcanvas"
@@ -303,13 +302,13 @@ def offcanvas(
     """
     attrs, children = consolidate_attrs(*args, **kwargs)
 
-    if placement not in _PLACEMENT_NORMALIZE:
+    if placement not in _PLACEMENT_BS:
         raise ValueError(
             f"`placement` must be one of 'right', 'left', 'top', or 'bottom', "
             f"not '{placement}'."
         )
 
-    normalized_placement = _PLACEMENT_NORMALIZE[placement]
+    bs_placement = _PLACEMENT_BS[placement]
 
     resolved_id = resolve_id_or_none(id)
 
@@ -317,7 +316,7 @@ def offcanvas(
     height_css: Optional[str] = None
 
     if width is not None:
-        if normalized_placement not in ("left", "right"):
+        if bs_placement not in _HORIZONTAL_PLACEMENTS:
             warnings.warn(
                 "`width` is only valid for `placement='left'` or `placement='right'`. "
                 "It will be ignored.",
@@ -327,7 +326,7 @@ def offcanvas(
             width_css = as_css_unit(width)
 
     if height is not None:
-        if normalized_placement not in ("top", "bottom"):
+        if bs_placement in _HORIZONTAL_PLACEMENTS:
             warnings.warn(
                 "`height` is only valid for `placement='top'` or `placement='bottom'`. "
                 "It will be ignored.",
@@ -343,7 +342,7 @@ def offcanvas(
         footer=footer,
         trigger=trigger,
         id=resolved_id,
-        placement=normalized_placement,
+        placement=bs_placement,
         width=width_css,
         height=height_css,
         close_button=close_button,
