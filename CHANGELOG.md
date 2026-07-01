@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added the `AppTestValues` Playwright controller for reading a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests, plus an `App(test_mode=)` constructor argument (defaulting to the `SHINY_TESTMODE` env var). The pytest app-launch fixtures (`local_app`, `create_app_fixture`) now run apps in test mode by default. (#2269)
 
+* The test-mode snapshot endpoint now honors query params (matching Shiny for R): `format=json` (the only supported format; other values return `400`), `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys), and `sortC` (`1` or omitted). Unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
+
 ## [1.6.3] - 2026-06-01
 
 ### New features
