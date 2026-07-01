@@ -223,9 +223,9 @@ class Offcanvas:
                 trigger.attrs["data-bs-target"] = f"#{the_id}"
                 trigger.attrs["aria-controls"] = the_id
 
-            return TagList(trigger, offcanvas_el)
+            return TagList(trigger, offcanvas_el).tagify()
 
-        return offcanvas_el
+        return offcanvas_el.tagify()
 
 
 @add_example()

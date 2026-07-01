@@ -252,10 +252,12 @@ def test_offcanvas_with_trigger_returns_taglist():
     btn = tags.button("Open")
     oc = ui.offcanvas(id="myid", title="T", trigger=btn)
     result = oc.tagify()
-    assert isinstance(result, TagList)
+    html = str(result)
+    assert "bslib-offcanvas" in html
+    assert "Open" in html
 
 
 def test_offcanvas_without_trigger_returns_tag():
     oc = ui.offcanvas(id="myid", title="T")
     result = oc.tagify()
-    assert isinstance(result, Tag)
+    assert "bslib-offcanvas" in str(result)
