@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from playwright.sync_api import Page
 
@@ -119,10 +119,114 @@ class AppTestValues:
         """
         self._expect_value("export", key, value, timeout)
 
-    # TODO(phase-b): whole-block expectations.
-    #   Compare a provided dict against the corresponding snapshot block, treating
-    #   the given dict as a subset (or full) set of keys to match. Decide/encode the
-    #   comparison mode (subset vs full) when implementing.
-    # def expect_inputs(self, values: dict[str, Any], *, timeout: float | None = None) -> None: ...
-    # def expect_outputs(self, values: dict[str, Any], *, timeout: float | None = None) -> None: ...
-    # def expect_exports(self, values: dict[str, Any], *, timeout: float | None = None) -> None: ...
+    def _expect_values(
+        self,
+        block: str,
+        values: dict[str, Any],
+        match: Literal["subset", "exact"],
+        timeout: float | None,
+    ) -> None:
+        @retry_with_timeout(timeout if timeout is not None else _DEFAULT_TIMEOUT_SECS)
+        def _() -> None:
+            section = self._fetch()[block]
+
+            if match == "exact":
+                missing = set(values) - set(section)
+                extra = set(section) - set(values)
+                if missing or extra:
+                    raise AssertionError(
+                        f"{block} key set mismatch (match='exact'): "
+                        f"missing={sorted(missing)}, extra={sorted(extra)}"
+                    )
+            else:  # "subset"
+                missing = set(values) - set(section)
+                if missing:
+                    raise AssertionError(
+                        f"{block}: keys missing from the test snapshot: "
+                        f"{sorted(missing)}. Present keys: {sorted(section)}"
+                    )
+
+            # All `values` keys are present in `section` by this point.
+            mismatches = {
+                key: section[key] for key, val in values.items() if section[key] != val
+            }
+            if mismatches:
+                detail = ", ".join(
+                    f"{block}[{key!r}] == {actual!r}, expected {values[key]!r}"
+                    for key, actual in sorted(mismatches.items())
+                )
+                raise AssertionError(detail)
+
+        _()
+
+    def expect_inputs(
+        self,
+        values: dict[str, Any],
+        *,
+        match: Literal["subset", "exact"] = "subset",
+        timeout: float | None = None,
+    ) -> None:
+        """
+        Expect the `input` block to contain `values` (JSON-decoded), retrying until
+        it matches or `timeout` seconds elapse.
+
+        Parameters
+        ----------
+        values
+            A mapping of (namespaced) input ids to their expected values.
+        match
+            `"subset"` (the default) requires every key in `values` to be present
+            and equal, ignoring any additional keys in the snapshot. `"exact"`
+            additionally requires the snapshot's key set to equal `values`' keys.
+        timeout
+            Seconds to retry before failing.
+        """
+        self._expect_values("input", values, match, timeout)
+
+    def expect_outputs(
+        self,
+        values: dict[str, Any],
+        *,
+        match: Literal["subset", "exact"] = "subset",
+        timeout: float | None = None,
+    ) -> None:
+        """
+        Expect the `output` block to contain `values` (JSON-decoded), retrying until
+        it matches or `timeout` seconds elapse.
+
+        Parameters
+        ----------
+        values
+            A mapping of (namespaced) output ids to their expected values.
+        match
+            `"subset"` (the default) requires every key in `values` to be present
+            and equal, ignoring any additional keys in the snapshot. `"exact"`
+            additionally requires the snapshot's key set to equal `values`' keys.
+        timeout
+            Seconds to retry before failing.
+        """
+        self._expect_values("output", values, match, timeout)
+
+    def expect_exports(
+        self,
+        values: dict[str, Any],
+        *,
+        match: Literal["subset", "exact"] = "subset",
+        timeout: float | None = None,
+    ) -> None:
+        """
+        Expect the `export` block to contain `values` (JSON-decoded), retrying until
+        it matches or `timeout` seconds elapse.
+
+        Parameters
+        ----------
+        values
+            A mapping of (namespaced) exported names to their expected values.
+        match
+            `"subset"` (the default) requires every key in `values` to be present
+            and equal, ignoring any additional keys in the snapshot. `"exact"`
+            additionally requires the snapshot's key set to equal `values`' keys.
+        timeout
+            Seconds to retry before failing.
+        """
+        self._expect_values("export", values, match, timeout)
