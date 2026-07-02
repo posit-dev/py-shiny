@@ -612,7 +612,7 @@ class Session(ABC):
         """
         Register named values to include in the test-mode snapshot.
 
-        Internal implementation of the public `shiny.session.export_test_values()`
+        Internal implementation of the public `shiny.testmode.export_test_values()`
         function; call that instead of this method directly.
 
         Each value must be a zero-argument callable (a plain function/`lambda` or
@@ -630,7 +630,7 @@ class Session(ABC):
 
         See Also
         --------
-        * `shiny.session.export_test_values`
+        * `shiny.testmode.export_test_values`
         """
 
     @abstractmethod

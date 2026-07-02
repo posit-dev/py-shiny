@@ -276,7 +276,7 @@ quartodoc:
           contents:
             - session.get_current_session
             - session.require_active_session
-            - session.export_test_values
+            - testmode.export_test_values
             - session.session_context
             - reactive.get_current_context
             - session.ClientData

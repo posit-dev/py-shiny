@@ -11,7 +11,7 @@ from starlette.responses import Response
 from shiny import App, reactive, ui
 from shiny._connection import MockConnection
 from shiny._utils import is_test_mode
-from shiny.session import export_test_values
+from shiny.testmode import export_test_values
 from shiny.session._session import AppSession, OutBoundMessageQueues
 from shiny.session._utils import (
     session_context,
@@ -561,3 +561,12 @@ async def test_snapshot_endpoint_sortc_param(
         ),
     )
     assert bad.status_code == 400
+
+
+def test_export_test_values_relocated() -> None:
+    # `export_test_values` lives in `shiny.testmode`; the pre-release
+    # `shiny.session` location is gone (PR #2270 was never released).
+    import shiny.session
+
+    assert not hasattr(shiny.session, "export_test_values")
+    assert "export_test_values" not in shiny.session.__all__

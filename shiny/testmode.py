@@ -1,10 +1,13 @@
-"""Test-mode value exporting (see `SHINY_TESTMODE`)."""
+"""Test-mode tools (see `SHINY_TESTMODE`)."""
 
 from __future__ import annotations
 
 from typing import Any, Callable
 
-from ._utils import require_active_session
+# Import from `shiny.session._utils` directly (not the `shiny.session` package
+# __init__): `shiny.session._session` imports from this module, so importing the
+# package here would be circular.
+from .session._utils import require_active_session
 
 __all__ = ("export_test_values",)
 
@@ -46,7 +49,7 @@ def export_test_values(**kwargs: Callable[[], Any]) -> None:
     --------
     ```python
     from shiny import App, Inputs, Outputs, Session, reactive, ui
-    from shiny.session import export_test_values
+    from shiny.testmode import export_test_values
 
     app_ui = ui.page_fluid(ui.input_slider("n", "n", 0, 100, 20))
 
