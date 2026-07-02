@@ -12,6 +12,12 @@ jobs:
     concurrency: playwright-deploys-${{ matrix.config.name }}
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.config.name }}
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         # Matches deploy server python version
