@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from starlette.requests import Request
@@ -958,7 +958,7 @@ def test_file_restore_handler_registers_snapshot_preprocess(
         "type": ["text/plain"],
         "datapath": ["a.txt"],
     }
-    restored = handler(value, ResolvedId("file1"), session)
+    restored = cast("list[Any]", handler(value, ResolvedId("file1"), session))
 
     assert isinstance(restored, list) and len(restored) == 1
     assert ResolvedId("file1") in session.input._snapshot_preprocessors
