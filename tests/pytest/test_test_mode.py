@@ -90,6 +90,43 @@ def test_outbound_queue_no_record_when_off() -> None:
     assert omq.test_errors == {}
 
 
+def test_outbound_queue_set_silent_retains_last_value() -> None:
+    omq = OutBoundMessageQueues(record_test_values=True)
+    omq.set_value("out1", 42)
+
+    omq.set_silent("out1")
+
+    # Transient queues: silenced like any other value (client should clear it).
+    assert omq.values["out1"] is None
+    assert "out1" not in omq.errors
+    # Persistent test-mode record: untouched, still reports the last value.
+    assert omq.test_values == {"out1": 42}
+    assert omq.test_errors == {}
+
+
+def test_outbound_queue_set_silent_retains_last_error() -> None:
+    omq = OutBoundMessageQueues(record_test_values=True)
+    omq.set_error("out1", {"message": "boom"})
+
+    omq.set_silent("out1")
+
+    assert omq.values["out1"] is None
+    assert "out1" not in omq.errors
+    # Persistent test-mode record: untouched, still reports the last error.
+    assert omq.test_errors == {"out1": {"message": "boom"}}
+    assert "out1" not in omq.test_values
+
+
+def test_outbound_queue_set_silent_on_first_run_leaves_absent() -> None:
+    omq = OutBoundMessageQueues(record_test_values=True)
+
+    omq.set_silent("out1")
+
+    assert omq.values["out1"] is None
+    assert "out1" not in omq.test_values
+    assert "out1" not in omq.test_errors
+
+
 def test_app_session_wires_record_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SHINY_TESTMODE", "1")
     session = _make_app_session()
@@ -260,6 +297,65 @@ async def test_snapshot_endpoint_returns_state(
 
     # OPT_SORT_KEYS -> top-level keys are emitted in sorted order
     assert list(body.keys()) == ["export", "input", "output"]
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_silence_after_value_retains_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    session._outbound_message_queues.set_value("out1", "hello")
+    session._outbound_message_queues.set_silent("out1")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["out1"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_silence_after_error_retains_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    session._outbound_message_queues.set_error("out1", {"message": "boom"})
+    session._outbound_message_queues.set_silent("out1")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["out1"] == {"__shiny_output_error__": "boom"}
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_silence_on_first_run_omits_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    session._outbound_message_queues.set_silent("out1")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert "out1" not in body["output"]
 
 
 @pytest.mark.asyncio

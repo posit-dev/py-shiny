@@ -183,6 +183,19 @@ class OutBoundMessageQueues:
             self.test_values[id] = value
             self.test_errors.pop(id, None)
 
+    def set_silent(self, id: str) -> None:
+        """
+        Record that computing `id`'s value was silently suppressed (e.g. via
+        `req()`), without touching the persistent test-mode record.
+
+        Unlike `set_value(id, None)`, this leaves `test_values`/`test_errors`
+        untouched, so the test-mode snapshot retains the output's last
+        computed value or error (matching Shiny for R) instead of reporting
+        `None`.
+        """
+        self.values[id] = None
+        self.errors.pop(id, None)
+
     def set_error(self, id: str, error: Any) -> None:
         self.errors[id] = error
         # remove from self.values
@@ -2493,7 +2506,7 @@ class Outputs:
                 except SilentCancelOutputException:
                     pass
                 except SilentException:
-                    session._outbound_message_queues.set_value(output_name, None)
+                    session._outbound_message_queues.set_silent(output_name)
                 except Exception as e:
                     # Print traceback to the console
                     traceback.print_exc()
