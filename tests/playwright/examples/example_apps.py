@@ -179,9 +179,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
 
     page.on("console", on_console_msg)
 
-    # Makes sure the app is closed when exiting the code block
     with sa:
-        page.goto(sa.url)
+        page.goto(sa.url, wait_until="domcontentloaded")
 
         app_name = os.path.basename(os.path.dirname(ex_app_path))
         short_app_path = f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
