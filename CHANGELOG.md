@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added experimental test mode, enabled with the `SHINY_TESTMODE=1` environment variable. When enabled, each session serves a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.session.export_test_values()`. (#2269)
+* Added test mode, enabled with the `SHINY_TESTMODE=1` environment variable. When enabled, each session serves a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.session.export_test_values()`. (#2269)
 
 * Added the `AppTestValues` Playwright controller for reading a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests, plus an `App(test_mode=)` constructor argument (defaulting to the `SHINY_TESTMODE` env var). The pytest app-launch fixtures (`local_app`, `create_app_fixture`) now run apps in test mode by default. (#2269)
 
