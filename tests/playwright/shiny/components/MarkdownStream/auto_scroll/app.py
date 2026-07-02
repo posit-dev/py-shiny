@@ -3,11 +3,13 @@ import asyncio
 from shiny import reactive
 from shiny.express import input, ui
 
-stream = ui.MarkdownStream("auto_scroll_stream")
+pinned_stream = ui.MarkdownStream("auto_scroll_stream")
+unpinned_stream = ui.MarkdownStream("no_auto_scroll_stream")
 
 # Chunks are gated behind button clicks so the test controls stream pacing.
 # This keeps scroll assertions deterministic regardless of machine load.
-chunk_queue: asyncio.Queue[str] = asyncio.Queue()
+pinned_queue: asyncio.Queue[str] = asyncio.Queue()
+unpinned_queue: asyncio.Queue[str] = asyncio.Queue()
 
 # Each chunk is taller than the 300px card so a missed auto-scroll is
 # unambiguous: the container ends up far from the bottom, not a few px off.
@@ -18,24 +20,34 @@ def make_chunk(i: int) -> str:
     return f"\n\nCHUNK-{i}-START\n\n{FILLER}\n\nCHUNK-{i}-END\n\n"
 
 
-async def gated_chunks():
-    while True:
-        yield await chunk_queue.get()
+def gated_chunks(queue: asyncio.Queue[str]):
+    async def gen():
+        while True:
+            yield await queue.get()
+
+    return gen()
 
 
 @reactive.effect
 @reactive.event(input.next_chunk)
 async def _():
-    await chunk_queue.put(make_chunk(input.next_chunk()))
+    chunk = make_chunk(input.next_chunk())
+    await pinned_queue.put(chunk)
+    await unpinned_queue.put(chunk)
 
 
 @reactive.effect
 async def _():
-    await stream.stream(gated_chunks())
+    await pinned_stream.stream(gated_chunks(pinned_queue))
+    await unpinned_stream.stream(gated_chunks(unpinned_queue))
 
 
 ui.input_action_button("next_chunk", "Next chunk")
 
 with ui.card(height="300px", class_="mt-3"):
-    ui.card_header("Auto-scroll stream")
-    stream.ui()
+    ui.card_header("Auto-scroll stream (pinned to bottom)")
+    pinned_stream.ui()
+
+with ui.card(height="300px", class_="mt-3"):
+    ui.card_header("No auto-scroll stream (stays at top)")
+    unpinned_stream.ui(auto_scroll=False)
