@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The test-mode snapshot endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys). Unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
 
+* Test-mode snapshot values can now be preprocessed before they are written to the snapshot, e.g. to scrub timestamps or temp paths: `input.set_snapshot_preprocess(id, fn)` for inputs and `my_output.snapshot_preprocess(fn)` for outputs (or the `shiny.testmode.snapshot_preprocess_input()` / `snapshot_preprocess_output()` free functions). Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
+
 
 ## [1.6.3] - 2026-06-01
 

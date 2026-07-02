@@ -57,7 +57,6 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
-from ..testmode import _snapshot_preprocess_file_input
 from ..otel._attributes import (
     extract_http_attributes,
     extract_source_ref,
@@ -74,6 +73,7 @@ from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
+from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
     Jsonifiable,
     SafeException,

@@ -11,11 +11,11 @@ from starlette.responses import Response
 from shiny import App, reactive, ui
 from shiny._connection import MockConnection
 from shiny._utils import is_test_mode
-from shiny.testmode import export_test_values
 from shiny.session._session import AppSession, OutBoundMessageQueues
 from shiny.session._utils import (
     session_context,
 )
+from shiny.testmode import export_test_values
 
 
 def test_is_test_mode_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -277,6 +277,9 @@ quartodoc:
             - session.get_current_session
             - session.require_active_session
             - testmode.export_test_values
+            - testmode.snapshot_preprocess_input
+            - testmode.snapshot_preprocess_output
+            - session.Inputs.set_snapshot_preprocess
             - session.session_context
             - reactive.get_current_context
             - session.ClientData

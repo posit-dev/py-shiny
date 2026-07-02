@@ -18,6 +18,12 @@ def test_app_test_values(page: Page, local_app: ShinyAppProc) -> None:
     app_values.expect_output("double_txt", "doubled = 40")
     app_values.expect_export("doubled", 40)
 
+    # Snapshot preprocessing: the live input keeps its real value while the
+    # snapshot shows the scrubbed one; same for the timestamp output.
+    controller.InputText(page, "secret").expect_value("hunter2")
+    app_values.expect_input("secret", "<redacted>")
+    app_values.expect_output("stamp", "time = <scrubbed>")
+
     # Raw snapshot shape.
     data = app_values.get()
     assert set(data.keys()) == {"input", "output", "export"}
