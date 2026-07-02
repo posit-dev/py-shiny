@@ -223,7 +223,8 @@ def test_is_internal_snapshot_input() -> None:
     assert _is_internal_snapshot_input("x") is False
 
 
-def test_serialize_test_mode_collects_and_skips() -> None:
+@pytest.mark.asyncio
+async def test_serialize_test_mode_collects_and_skips() -> None:
     from shiny.session._session import Inputs
 
     inputs = Inputs(dict())
@@ -231,7 +232,7 @@ def test_serialize_test_mode_collects_and_skips() -> None:
     inputs["name"] = reactive.Value("hi")
     inputs[".clientdata_output_x_hidden"] = reactive.Value(True)
 
-    result = inputs._serialize_test_mode()
+    result = await inputs._serialize_test_mode()
     assert result == {"x": 5, "name": "hi"}
 
 
@@ -570,3 +571,105 @@ def test_export_test_values_relocated() -> None:
 
     assert not hasattr(shiny.session, "export_test_values")
     assert "export_test_values" not in shiny.session.__all__
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_preprocess_applied(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    session.input["t"] = reactive.Value("2026-07-02 12:34:56")
+    session.input["x"] = reactive.Value(10)
+
+    # Sync preprocessor
+    session.input.set_snapshot_preprocess("t", lambda value: "<time>")
+
+    # Async preprocessor
+    async def double(value: int) -> int:
+        return value * 2
+
+    session.input.set_snapshot_preprocess("x", double)
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["input"]["t"] == "<time>"
+    assert body["input"]["x"] == 20
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_preprocess_namespaced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    from shiny._namespaces import ResolvedId
+
+    session.input[ResolvedId("mod1-y")] = reactive.Value(1)
+
+    # Registering through a module proxy namespaces the id and shares storage
+    # with the root session's Inputs.
+    proxy = session.make_scope("mod1")
+    proxy.input.set_snapshot_preprocess("y", lambda value: value + 100)
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["input"]["mod1-y"] == 101
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_preprocess_error_marker(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    session.input["bad"] = reactive.Value(1)
+    session.input["ok"] = reactive.Value(2)
+
+    def boom(value: int) -> int:
+        raise RuntimeError("boom")
+
+    session.input.set_snapshot_preprocess("bad", boom)
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    # A raising preprocessor becomes a visible, non-fatal marker; other keys
+    # are unaffected.
+    assert body["input"]["bad"] == {"__shiny_snapshot_preprocess_error__": "boom"}
+    assert body["input"]["ok"] == 2
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_preprocess_reregister_overwrites(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    session.input["x"] = reactive.Value(1)
+
+    session.input.set_snapshot_preprocess("x", lambda value: "first")
+    session.input.set_snapshot_preprocess("x", lambda value: "second")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["input"]["x"] == "second"

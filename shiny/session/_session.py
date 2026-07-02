@@ -1335,11 +1335,11 @@ class AppSession(Session):
         elif action == "dataobj" and subpath == "shinytest" and request.method == "GET":
             if not self.app._test_mode:
                 return HTMLResponse("<h1>Not Found</h1>", 404)
-            return self._handle_test_snapshot(request)
+            return await self._handle_test_snapshot(request)
 
         return HTMLResponse("<h1>Not Found</h1>", 404)
 
-    def _handle_test_snapshot(self, request: Request) -> ASGIApp:
+    async def _handle_test_snapshot(self, request: Request) -> ASGIApp:
         # `format`: py-shiny only ever emits JSON. R additionally supports "rds",
         # but there is no RDS equivalent in Python, so any non-"json" value
         # (including "rds") is rejected.
@@ -1373,7 +1373,9 @@ class AppSession(Session):
                 if select_all or want["input"] is not None:
                     inputs = {
                         str(key): _snapshot_safe_value(val)
-                        for key, val in self.input._serialize_test_mode().items()
+                        for key, val in (
+                            await self.input._serialize_test_mode()
+                        ).items()
                     }
                     payload["input"] = _filter_snapshot_block(inputs, want["input"])
 
@@ -1671,6 +1673,10 @@ class SessionProxy(Session):
         self.id = root_session.id
         self.ns = ns
         self.input = Inputs(values=root_session.input._map, ns=ns)
+        # Share snapshot-preprocessor storage with the root session so that
+        # registrations made inside modules are visible to the (root) snapshot
+        # handler, like the shared `_map`.
+        self.input._snapshot_preprocessors = root_session.input._snapshot_preprocessors
         self.output = Outputs(
             self,
             ns=ns,
@@ -1941,12 +1947,21 @@ class Inputs:
     Set this value via `Inputs.set_serializer(id, fn)`.
     """
 
+    _snapshot_preprocessors: dict[str, Callable[[Any], Awaitable[Any]]]
+    """
+    Preprocessors applied to input values in test-mode snapshots.
+
+    Keyed by resolved input id; values are async-wrapped callables. Set via
+    `Inputs.set_snapshot_preprocess(id, fn)`.
+    """
+
     def __init__(
         self, values: dict[str, Value[Any]], ns: Callable[[str], ResolvedId] = Root
     ) -> None:
         self._map = values
         self._ns = ns
         self._serializers = {}
+        self._snapshot_preprocessors = {}
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, reactive.Value):
@@ -1989,14 +2004,14 @@ class Inputs:
 
     # Allow access of values as attributes.
     def __setattr__(self, attr: str, value: Value[Any]) -> None:
-        if attr in ("_map", "_ns", "_serializers"):
+        if attr in ("_map", "_ns", "_serializers", "_snapshot_preprocessors"):
             super().__setattr__(attr, value)
             return
 
         self.__setitem__(attr, value)
 
     def __getattr__(self, attr: str) -> Value[Any]:
-        if attr in ("_map", "_ns", "_serializers"):
+        if attr in ("_map", "_ns", "_serializers", "_snapshot_preprocessors"):
             return object.__getattribute__(self, attr)
         return self.__getitem__(attr)
 
@@ -2044,6 +2059,34 @@ class Inputs:
         """
         self._serializers[id] = wrap_async(fn)
 
+    def set_snapshot_preprocess(
+        self,
+        id: str,
+        fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]],
+    ) -> None:
+        """
+        Set a function for preprocessing an input value in test-mode snapshots.
+
+        When a test snapshot is requested (see `shiny.testmode`), the registered
+        function receives the input's current value and its return value is
+        written to the snapshot instead. Use this to scrub non-deterministic
+        values (timestamps, temp paths, random ids) so snapshots diff cleanly.
+
+        The function may be synchronous or asynchronous. It only affects test
+        snapshots -- never the live input value. Registering again for the same
+        `id` overwrites the previous function. Registration is harmless when
+        test mode is off, so calls can be left in production code.
+
+        Parameters
+        ----------
+        id
+            The ID of the input value.
+        fn
+            A function that takes the input value and returns the value to
+            write to the test snapshot.
+        """
+        self._snapshot_preprocessors[self._ns(id)] = wrap_async(fn)
+
     async def _serialize(
         self,
         /,
@@ -2080,14 +2123,16 @@ class Inputs:
 
         return serialized_values
 
-    def _serialize_test_mode(self) -> dict[str, Any]:
+    async def _serialize_test_mode(self) -> dict[str, Any]:
         """
         Collect current input values for a test-mode snapshot.
 
         Unlike `_serialize` (used for bookmarking), this applies no bookmark
         serializers and never touches the filesystem; raw values are returned for
         best-effort JSON serialization by the snapshot handler. Client-internal
-        and bookmark inputs are skipped.
+        and bookmark inputs are skipped. Snapshot preprocessors (see
+        `set_snapshot_preprocess`) are applied; a raising preprocessor becomes a
+        visible, non-fatal `__shiny_snapshot_preprocess_error__` marker.
         """
         out: dict[str, Any] = {}
         with reactive.isolate():
@@ -2098,6 +2143,12 @@ class Inputs:
                     val = value()
                 except SilentException:
                     continue
+                preprocess = self._snapshot_preprocessors.get(key)
+                if preprocess is not None:
+                    try:
+                        val = await preprocess(val)
+                    except Exception as e:
+                        val = {"__shiny_snapshot_preprocess_error__": str(e)}
                 out[str(key)] = val
         return out
 
