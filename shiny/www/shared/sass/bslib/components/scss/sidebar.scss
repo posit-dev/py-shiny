@@ -365,6 +365,9 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
       opacity: 0.1;
       border-radius: 1px;
       transition: all 0.15s ease;
+      // Allow direct grabbing from inside the sidebar without trip-area activation
+      pointer-events: auto;
+      cursor: ew-resize;
     }
 
     &:hover, &:focus, &:active, &.handle-active {
@@ -375,9 +378,11 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--_padding-icon)), var(--_sid
 
     &:hover .resize-indicator,
     &:focus .resize-indicator,
-    &.handle-active .resize-indicator {
+    &.handle-active .resize-indicator,
+    .resize-indicator:hover {
       width: 3px;
       height: 40px;
+      opacity: 1;
     }
 
     &:active .resize-indicator {
