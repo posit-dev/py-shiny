@@ -2,6 +2,7 @@
 Tools for working within a (user) session context.
 """
 
+from ._export import export_test_values
 from ._session import ClientData, Inputs, Outputs, Session
 from ._utils import (  # noqa: F401
     get_current_session,
@@ -16,4 +17,5 @@ __all__ = (
     "ClientData",
     "get_current_session",
     "require_active_session",
+    "export_test_values",
 )

@@ -595,9 +595,12 @@ class Session(ABC):
         """
 
     @abstractmethod
-    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+    def _export_test_values(self, **kwargs: Callable[[], Any]) -> None:
         """
         Register named values to include in the test-mode snapshot.
+
+        Internal implementation of the public `shiny.session.export_test_values()`
+        function; call that instead of this method directly.
 
         Each value must be a zero-argument callable (a plain function/`lambda` or
         a `reactive.calc`); it is evaluated lazily, in a reactive isolate, when a
@@ -614,7 +617,7 @@ class Session(ABC):
 
         See Also
         --------
-        * `shiny.export_test_values`
+        * `shiny.session.export_test_values`
         """
 
     @abstractmethod
@@ -1565,7 +1568,7 @@ class AppSession(Session):
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
 
-    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+    def _export_test_values(self, **kwargs: Callable[[], Any]) -> None:
         if not self.app._test_mode:
             return
         self._test_value_exports.update(kwargs)
@@ -1817,12 +1820,12 @@ class SessionProxy(Session):
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         return self._root_session.dynamic_route(self.ns(name), handler)
 
-    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+    def _export_test_values(self, **kwargs: Callable[[], Any]) -> None:
         # NOTE: Deviation from R Shiny's `exportTestValues()`, which does NOT
         # namespace export names. py-shiny namespaces them with this module's
         # `ns` prefix so values exported from different modules don't collide.
         namespaced = {str(self.ns(name)): value for name, value in kwargs.items()}
-        self._root_session.export_test_values(**namespaced)
+        self._root_session._export_test_values(**namespaced)
 
     def get_test_snapshot_url(self) -> str:
         return self._root_session.get_test_snapshot_url()

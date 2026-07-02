@@ -139,7 +139,7 @@ class ExpressStubSession(Session):
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         return ""
 
-    def export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+    def _export_test_values(self, **kwargs: Callable[[], Any]) -> None:
         return
 
     def get_test_snapshot_url(self) -> str:

@@ -1,13 +1,5 @@
-from shiny import (
-    App,
-    Inputs,
-    Outputs,
-    Session,
-    export_test_values,
-    reactive,
-    render,
-    ui,
-)
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny.session import export_test_values
 
 app_ui = ui.page_fluid(
     ui.input_text("name", "Name", value="abc"),

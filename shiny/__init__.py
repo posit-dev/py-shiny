@@ -18,7 +18,6 @@ from . import ui
 
 # Private submodules that have some user-facing functionality
 from ._app import App
-from ._export import export_test_values
 from ._validation import req
 from ._deprecated import *
 
@@ -59,8 +58,6 @@ __all__ = (
     "Session",
     "Inputs",
     "Outputs",
-    # _export.py
-    "export_test_values",
     # _validation.py
     "req",
     # _deprecated.py

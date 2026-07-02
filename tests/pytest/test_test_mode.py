@@ -11,6 +11,7 @@ from starlette.responses import Response
 from shiny import App, reactive, ui
 from shiny._connection import MockConnection
 from shiny._utils import is_test_mode
+from shiny.session import export_test_values
 from shiny.session._session import AppSession, OutBoundMessageQueues
 from shiny.session._utils import (
     session_context,
@@ -103,18 +104,21 @@ def test_export_test_values_registers(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SHINY_TESTMODE", "1")
     session = _make_app_session()
 
-    session.export_test_values(foo=lambda: 1, bar=lambda: 2)
+    with session_context(session):
+        export_test_values(foo=lambda: 1, bar=lambda: 2)
     assert set(session._test_value_exports) == {"foo", "bar"}
 
     # last-registration-wins on duplicate name
-    session.export_test_values(foo=lambda: 99)
+    with session_context(session):
+        export_test_values(foo=lambda: 99)
     assert session._test_value_exports["foo"]() == 99
 
 
 def test_export_test_values_noop_when_off(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SHINY_TESTMODE", raising=False)
     session = _make_app_session()
-    session.export_test_values(foo=lambda: 1)
+    with session_context(session):
+        export_test_values(foo=lambda: 1)
     assert session._test_value_exports == {}
 
 
@@ -122,30 +126,17 @@ def test_export_test_values_namespaced(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SHINY_TESTMODE", "1")
     root = _make_app_session()
     proxy = root.make_scope("mod1")
-    proxy.export_test_values(foo=lambda: 1)
+    with session_context(proxy):
+        export_test_values(foo=lambda: 1)
     # DEVIATION from R: export names are namespaced with the module prefix.
     assert "mod1-foo" in root._test_value_exports
     assert "foo" not in root._test_value_exports
 
 
-def test_module_level_export_uses_current_session(
+def test_export_test_values_targets_other_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SHINY_TESTMODE", "1")
-    from shiny import export_test_values
-
-    session = _make_app_session()
-    with session_context(session):
-        export_test_values(foo=lambda: 1)
-    assert "foo" in session._test_value_exports
-
-
-def test_module_level_export_targets_other_session(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("SHINY_TESTMODE", "1")
-    from shiny import export_test_values
-
     other = _make_app_session()
     # No active session here; target `other` explicitly via its context.
     with session_context(other):
@@ -153,14 +144,38 @@ def test_module_level_export_targets_other_session(
     assert "bar" in other._test_value_exports
 
 
-def test_module_level_export_requires_session(
+def test_export_test_values_requires_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SHINY_TESTMODE", "1")
-    from shiny import export_test_values
-
     with pytest.raises(RuntimeError):
         export_test_values(foo=lambda: 1)
+
+
+def test_session_export_test_values_method(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Directly exercise the private `Session._export_test_values` method that the
+    # public `export_test_values()` delegates to (no active-session context
+    # needed since the method operates on the session object itself).
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    root = _make_app_session()
+
+    # AppSession stores names as-is.
+    root._export_test_values(foo=lambda: 1)
+    assert "foo" in root._test_value_exports
+
+    # SessionProxy namespaces names with the module prefix, into the root session.
+    proxy = root.make_scope("mod1")
+    proxy._export_test_values(bar=lambda: 2)
+    assert "mod1-bar" in root._test_value_exports
+    assert "bar" not in root._test_value_exports
+
+    # No-op when test mode is off.
+    monkeypatch.delenv("SHINY_TESTMODE", raising=False)
+    off = _make_app_session()
+    off._export_test_values(baz=lambda: 3)
+    assert off._test_value_exports == {}
 
 
 def test_is_internal_snapshot_input() -> None:
@@ -227,7 +242,8 @@ async def test_snapshot_endpoint_returns_state(
     session.input["x"] = reactive.Value(10)
     session._outbound_message_queues.set_value("out1", "hello")
     session._outbound_message_queues.set_error("out2", {"message": "boom"})
-    session.export_test_values(myexp=lambda: 123)
+    with session_context(session):
+        export_test_values(myexp=lambda: 123)
 
     resp = cast(
         Response,
@@ -273,7 +289,8 @@ async def test_snapshot_endpoint_export_error_marker(
     def raises() -> object:
         raise RuntimeError("export boom")
 
-    session.export_test_values(bad_value=lambda: Bad(), raises=raises)
+    with session_context(session):
+        export_test_values(bad_value=lambda: Bad(), raises=raises)
 
     resp = cast(
         Response,
@@ -365,7 +382,8 @@ async def test_snapshot_endpoint_block_filtering(
     session.input["x"] = reactive.Value(1)
     session._outbound_message_queues.set_value("out1", "a")
     session._outbound_message_queues.set_value("out2", "b")
-    session.export_test_values(exp=lambda: 7)
+    with session_context(session):
+        export_test_values(exp=lambda: 7)
 
     async def snap(qs: bytes) -> dict[str, object]:
         resp = cast(
@@ -408,7 +426,8 @@ async def test_snapshot_endpoint_skips_unrequested_blocks(
     monkeypatch.setenv("SHINY_TESTMODE", "1")
     session = _make_app_session()
     calls: list[int] = []
-    session.export_test_values(exp=lambda: calls.append(1) or 1)
+    with session_context(session):
+        export_test_values(exp=lambda: calls.append(1) or 1)
 
     await session._handle_request_impl(
         _snapshot_request(b"input=1"), "dataobj", "shinytest"
