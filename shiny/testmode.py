@@ -99,6 +99,22 @@ def snapshot_preprocess_input(
     RuntimeError
         If there is no active session.
 
+    Examples
+    --------
+    ```python
+    from shiny import App, Inputs, Outputs, Session, ui
+    from shiny.testmode import snapshot_preprocess_input
+
+    app_ui = ui.page_fluid(ui.input_text("secret", "Secret", value="hunter2"))
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        # Scrub the value shown in test-mode snapshots; the live input value
+        # is untouched. No effect unless `SHINY_TESTMODE=1` is set.
+        snapshot_preprocess_input("secret", lambda value: "<redacted>")
+
+    app = App(app_ui, server)
+    ```
+
     See Also
     --------
     * `shiny.testmode.snapshot_preprocess_output`
@@ -134,6 +150,28 @@ def snapshot_preprocess_output(
     ValueError
         If no output with `id` is registered on the session. Call this function
         after defining the output.
+
+    Examples
+    --------
+    ```python
+    from datetime import datetime
+
+    from shiny import App, Inputs, Outputs, Session, render, ui
+    from shiny.testmode import snapshot_preprocess_output
+
+    app_ui = ui.page_fluid(ui.output_text_verbatim("stamp"))
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def stamp():
+            return f"time = {datetime.now().isoformat()}"
+
+        # Scrub the value shown in test-mode snapshots; the rendered output
+        # is untouched. No effect unless `SHINY_TESTMODE=1` is set.
+        snapshot_preprocess_output("stamp", lambda value: "time = <scrubbed>")
+
+    app = App(app_ui, server)
+    ```
 
     See Also
     --------

@@ -865,10 +865,13 @@ async def test_upload_end_auto_registers_file_scrub(
                 }
             ]
 
+    def fake_get_upload_operation(job_id: str) -> FakeOp:
+        return FakeOp()
+
     monkeypatch.setattr(
         session._file_upload_manager,
         "get_upload_operation",
-        lambda job_id: FakeOp(),
+        fake_get_upload_operation,
     )
     handler, _ = session._message_handlers["uploadEnd"]
     await handler("job1", "file1")
@@ -936,8 +939,11 @@ def test_file_restore_handler_registers_snapshot_preprocess(
 
     (tmp_path / "a.txt").write_text("hello")
 
+    def fake_can_serialize_input_file(session: object) -> bool:
+        return True
+
     monkeypatch.setattr(
-        shiny.input_handler, "can_serialize_input_file", lambda session: True
+        shiny.input_handler, "can_serialize_input_file", fake_can_serialize_input_file
     )
     monkeypatch.setattr(
         shiny.bookmark._restore_state,
