@@ -57,6 +57,7 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
+from ..testmode import _snapshot_preprocess_file_input
 from ..otel._attributes import (
     extract_http_attributes,
     extract_source_ref,
@@ -1152,6 +1153,12 @@ class AppSession(Session):
 
             # This also occurs during input handler: shiny.file
             self.input.set_serializer(input_id, serializer_file_input)
+
+            # Like R's @uploadEnd: scrub the nondeterministic tempdir out of the
+            # value shown in test-mode snapshots.
+            self.input.set_snapshot_preprocess(
+                ResolvedId(input_id), _snapshot_preprocess_file_input
+            )
 
             # Explicitly return None to signal that the message was handled.
             return None

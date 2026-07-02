@@ -818,3 +818,68 @@ def test_snapshot_preprocess_free_functions_require_session() -> None:
         snapshot_preprocess_input("x", lambda value: value)
     with pytest.raises(RuntimeError):
         snapshot_preprocess_output("x", lambda value: value)
+
+
+def test_snapshot_preprocess_file_input_helper() -> None:
+    from shiny.testmode import _snapshot_preprocess_file_input
+
+    value = [
+        {
+            "name": "a.txt",
+            "size": 1,
+            "type": "text/plain",
+            "datapath": "/tmp/xyz123/a.txt",
+        },
+        {"name": "b.txt", "size": 2, "type": "text/plain", "datapath": "b.txt"},
+    ]
+    scrubbed = _snapshot_preprocess_file_input(value)
+    assert [f["datapath"] for f in scrubbed] == ["a.txt", "b.txt"]
+    # Original value is not mutated.
+    assert value[0]["datapath"] == "/tmp/xyz123/a.txt"
+
+    # Non-list / malformed values pass through unchanged.
+    assert _snapshot_preprocess_file_input(None) is None
+    assert _snapshot_preprocess_file_input("x") == "x"
+    assert _snapshot_preprocess_file_input([{"name": "no-path"}]) == [
+        {"name": "no-path"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_upload_end_auto_registers_file_scrub(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    class FakeOp:
+        def finish(self) -> list[dict[str, object]]:
+            return [
+                {
+                    "name": "a.txt",
+                    "size": 1,
+                    "type": "text/plain",
+                    "datapath": "/tmp/xyz123/a.txt",
+                }
+            ]
+
+    monkeypatch.setattr(
+        session._file_upload_manager,
+        "get_upload_operation",
+        lambda job_id: FakeOp(),
+    )
+    handler, _ = session._message_handlers["uploadEnd"]
+    await handler("job1", "file1")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    # The live input value keeps the real tempdir path; only the snapshot is
+    # scrubbed to the basename (matching R's snapshotPreprocessorFileInput).
+    assert body["input"]["file1"] == [
+        {"name": "a.txt", "size": 1, "type": "text/plain", "datapath": "a.txt"}
+    ]

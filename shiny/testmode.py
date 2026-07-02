@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 # Import from `shiny.session._utils` directly (not the `shiny.session` package
@@ -147,3 +148,23 @@ def snapshot_preprocess_output(
             "Call `snapshot_preprocess_output()` after defining the output."
         )
     output_info.renderer.snapshot_preprocess(fn)
+
+
+def _snapshot_preprocess_file_input(value: Any) -> Any:
+    """
+    Scrub a file-input value for test-mode snapshots.
+
+    Replaces each uploaded file's `datapath` with its basename, since the
+    tempdir portion differs on every run (mirrors R's
+    `snapshotPreprocessorFileInput`). Auto-registered for file inputs on upload
+    and on bookmark restore. Non-list or malformed values pass through
+    unchanged.
+    """
+    if not isinstance(value, list):
+        return value
+    out: list[Any] = []
+    for file_info in value:
+        if isinstance(file_info, dict) and isinstance(file_info.get("datapath"), str):
+            file_info = {**file_info, "datapath": Path(file_info["datapath"]).name}
+        out.append(file_info)
+    return out
