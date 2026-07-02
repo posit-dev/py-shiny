@@ -1389,7 +1389,10 @@ class AppSession(Session):
                 if select_all or want["output"] is not None:
                     omq = self._outbound_message_queues
                     outputs: dict[str, Any] = {}
-                    for key, val in omq.test_values.items():
+                    # Materialize the items: an async preprocessor may yield to
+                    # the event loop mid-iteration, during which a rendering
+                    # output can mutate `test_values`.
+                    for key, val in list(omq.test_values.items()):
                         # Apply the renderer's snapshot preprocessor, if any.
                         # (`_outputs` and `test_values` are both keyed by the
                         # namespaced output name.)
@@ -2075,7 +2078,7 @@ class Inputs:
             The ID of the input value.
         fn
             A function that takes the input value and returns a modified value. The
-            returned value will be used for test snapshots and bookmarking.
+            returned value will be used for bookmarking.
         """
         self._serializers[id] = wrap_async(fn)
 
@@ -2156,7 +2159,10 @@ class Inputs:
         """
         out: dict[str, Any] = {}
         with reactive.isolate():
-            for key, value in self._map.items():
+            # Materialize the items: an async preprocessor may yield to the
+            # event loop mid-iteration, during which the client can add new
+            # inputs to `_map`.
+            for key, value in list(self._map.items()):
                 if _is_internal_snapshot_input(str(key)):
                     continue
                 try:

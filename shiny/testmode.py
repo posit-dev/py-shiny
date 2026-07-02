@@ -83,7 +83,7 @@ def snapshot_preprocess_input(
 
     Uses the current reactive session; equivalent to
     `session.input.set_snapshot_preprocess(id, fn)`. See
-    :meth:`~shiny.session.Inputs.set_snapshot_preprocess` for details. Inside a
+    `shiny.session.Inputs.set_snapshot_preprocess` for details. Inside a
     module, `id` is resolved in the module's namespace.
 
     Parameters
@@ -116,7 +116,7 @@ def snapshot_preprocess_output(
 
     Uses the current reactive session; equivalent to calling
     `.snapshot_preprocess(fn)` on the renderer object registered for `id`. See
-    :meth:`~shiny.render.renderer.Renderer.snapshot_preprocess` for details.
+    `shiny.render.renderer.Renderer.snapshot_preprocess` for details.
     Inside a module, `id` is resolved in the module's namespace.
 
     Parameters

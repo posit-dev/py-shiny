@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
 
 import pytest
@@ -883,3 +885,74 @@ async def test_upload_end_auto_registers_file_scrub(
     assert body["input"]["file1"] == [
         {"name": "a.txt", "size": 1, "type": "text/plain", "datapath": "a.txt"}
     ]
+
+
+@pytest.mark.asyncio
+async def test_snapshot_preprocess_output_namespaced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    proxy = session.make_scope("mod1")
+
+    from shiny import render
+    from shiny.testmode import snapshot_preprocess_output
+
+    @render.text
+    def out1() -> str:
+        return "unused"
+
+    # Register through the module proxy: the output lands under the
+    # namespaced name, and the free function resolves the plain id against
+    # the proxy's namespace.
+    proxy.output(out1)
+    session._outbound_message_queues.set_value("mod1-out1", "hello")
+
+    with session_context(proxy):
+        snapshot_preprocess_output("out1", lambda value: value.upper())
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["mod1-out1"] == "HELLO"
+
+
+def test_file_restore_handler_registers_snapshot_preprocess(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    # The `shiny.file` input handler (bookmark restore) must register the same
+    # datapath scrubber as `uploadEnd`.
+    import shiny.bookmark._restore_state
+    import shiny.input_handler
+    from shiny._namespaces import ResolvedId
+
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    (tmp_path / "a.txt").write_text("hello")
+
+    monkeypatch.setattr(
+        shiny.input_handler, "can_serialize_input_file", lambda session: True
+    )
+    monkeypatch.setattr(
+        shiny.bookmark._restore_state,
+        "get_current_restore_context",
+        lambda: SimpleNamespace(dir=str(tmp_path)),
+    )
+
+    handler = shiny.input_handler.input_handlers["shiny.file"]
+    value = {
+        "name": ["a.txt"],
+        "size": [5],
+        "type": ["text/plain"],
+        "datapath": ["a.txt"],
+    }
+    restored = handler(value, ResolvedId("file1"), session)
+
+    assert isinstance(restored, list) and len(restored) == 1
+    assert ResolvedId("file1") in session.input._snapshot_preprocessors
