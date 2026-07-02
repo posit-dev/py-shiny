@@ -264,6 +264,14 @@ quartodoc:
         # uses class.rst template
         - module.ui
         - module.server
+    - title: Test mode
+      desc: Capturing a session's `input`/`output`/`export` state for snapshot testing (`SHINY_TESTMODE`).
+      contents:
+        - testmode.export_test_values
+        - testmode.snapshot_preprocess_input
+        - testmode.snapshot_preprocess_output
+        - session.Inputs.set_snapshot_preprocess
+        - session.Session.get_test_snapshot_url
     - title: Developer facing tools
       desc: ""
       contents:
@@ -276,10 +284,6 @@ quartodoc:
           contents:
             - session.get_current_session
             - session.require_active_session
-            - testmode.export_test_values
-            - testmode.snapshot_preprocess_input
-            - testmode.snapshot_preprocess_output
-            - session.Inputs.set_snapshot_preprocess
             - session.session_context
             - reactive.get_current_context
             - session.ClientData
@@ -289,7 +293,6 @@ quartodoc:
             - session.Session.on_flushed
             - session.Session.on_ended
             - session.Session.dynamic_route
-            - session.Session.get_test_snapshot_url
             - session.Session.close
             - input_handler.input_handlers
         - kind: page
