@@ -300,6 +300,65 @@ async def test_snapshot_endpoint_returns_state(
 
 
 @pytest.mark.asyncio
+async def test_snapshot_endpoint_silence_after_value_retains_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    session._outbound_message_queues.set_value("out1", "hello")
+    session._outbound_message_queues.set_silent("out1")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["out1"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_silence_after_error_retains_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    session._outbound_message_queues.set_error("out1", {"message": "boom"})
+    session._outbound_message_queues.set_silent("out1")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["out1"] == {"__shiny_output_error__": "boom"}
+
+
+@pytest.mark.asyncio
+async def test_snapshot_endpoint_silence_on_first_run_omits_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    session._outbound_message_queues.set_silent("out1")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert "out1" not in body["output"]
+
+
+@pytest.mark.asyncio
 async def test_snapshot_endpoint_404_when_off(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
