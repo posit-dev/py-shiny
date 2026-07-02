@@ -30,6 +30,15 @@ def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
             )
         )
 
+    # NOTE: `www/shared/shiny-testmode.js` is vendored from upstream Shiny but is
+    # intentionally NOT registered here. It installs a `postMessage` -> `eval`
+    # bridge so a parent frame can inject JavaScript into the app (used by the
+    # legacy R `shinytest` package). py-shiny's test mode is driven via Playwright,
+    # which executes JS directly over the Chrome DevTools Protocol
+    # (`page.evaluate`), so the bridge is unnecessary. Because it is an
+    # arbitrary-`eval` sink, if a non-CDP consumer ever needs it, add it here
+    # strictly gated behind test mode (e.g. `get_current_session().app._test_mode`).
+
     return deps
 
 
