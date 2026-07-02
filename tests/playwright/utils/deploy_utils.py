@@ -287,7 +287,9 @@ def local_deploys_app_url_fixture(
                         "dogfood server does not have public links now, the team will migrate to spinning their own connect server in the future."
                     )
                 if not (server_url and api_key):
-                    pytest.skip("Connect server url or api key not found. Cannot deploy.")
+                    pytest.skip(
+                        "Connect server url or api key not found. Cannot deploy."
+                    )
             if (
                 deploy_location == "shinyapps"
                 and shinyappsio_name
