@@ -78,7 +78,10 @@ def create_app_fixture(
         Extra environment variables for the launched app subprocess, merged over the
         parent environment. When ``None`` (the default), ``{"SHINY_TESTMODE": "1"}``
         is used so the app runs in Shiny test mode (enabling the `AppTestValues`
-        controller). Pass an explicit dict (e.g. ``{}``) to override.
+        controller). Pass an explicit dict to override, e.g. ``{"SHINY_TESTMODE":
+        "0"}`` to reliably disable test mode. Note that ``{}`` only stops this
+        fixture from *setting* ``SHINY_TESTMODE``; because the value is merged over
+        the parent environment, an inherited ``SHINY_TESTMODE=1`` would still apply.
 
     Returns
     -------
@@ -131,7 +134,9 @@ def create_app_fixture(
     """
 
     # Launched apps run in Shiny test mode by default so the `AppTestValues`
-    # controller works out of the box. Pass `env={}` (or a custom dict) to opt out.
+    # controller works out of the box. Pass `env={"SHINY_TESTMODE": "0"}` to
+    # reliably disable it (a bare `env={}` merges over the parent environment, so
+    # an inherited `SHINY_TESTMODE=1` would still apply).
     effective_env = {"SHINY_TESTMODE": "1"} if env is None else env
 
     def get_app_path(request: pytest.FixtureRequest, app: PurePath | str):
