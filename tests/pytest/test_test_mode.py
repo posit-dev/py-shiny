@@ -673,3 +673,93 @@ async def test_input_snapshot_preprocess_reregister_overwrites(
 
     body = orjson.loads(resp.body)
     assert body["input"]["x"] == "second"
+
+
+@pytest.mark.asyncio
+async def test_output_snapshot_preprocess_applied(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    from shiny import render
+
+    @render.text
+    def out1() -> str:
+        return "unused"
+
+    session.output(out1)
+
+    # Sync preprocessor; simulate the output having rendered.
+    out1.snapshot_preprocess(lambda value: "<scrubbed>")
+    session._outbound_message_queues.set_value("out1", "the time is 12:34")
+
+    @render.text
+    def out2() -> str:
+        return "unused"
+
+    session.output(out2)
+
+    # Async preprocessor
+    async def shout(value: str) -> str:
+        return value.upper()
+
+    out2.snapshot_preprocess(shout)
+    session._outbound_message_queues.set_value("out2", "hello")
+
+    # An output with no preprocessor passes through unchanged, as does a
+    # recorded value with no registered renderer at all.
+    session._outbound_message_queues.set_value("out3", "raw")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["out1"] == "<scrubbed>"
+    assert body["output"]["out2"] == "HELLO"
+    assert body["output"]["out3"] == "raw"
+
+
+@pytest.mark.asyncio
+async def test_output_snapshot_preprocess_error_marker_and_bypass(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    from shiny import render
+
+    @render.text
+    def bad() -> str:
+        return "unused"
+
+    session.output(bad)
+
+    def boom(value: str) -> str:
+        raise RuntimeError("boom")
+
+    bad.snapshot_preprocess(boom)
+    session._outbound_message_queues.set_value("bad", "value")
+
+    # Errored outputs keep their error marker; the preprocessor must NOT run
+    # on them.
+    @render.text
+    def errored() -> str:
+        return "unused"
+
+    session.output(errored)
+    errored.snapshot_preprocess(lambda value: "SHOULD NOT APPEAR")
+    session._outbound_message_queues.set_error("errored", {"message": "kaput"})
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["bad"] == {"__shiny_snapshot_preprocess_error__": "boom"}
+    assert body["output"]["errored"] == {"__shiny_output_error__": "kaput"}

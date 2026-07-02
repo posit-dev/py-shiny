@@ -1381,10 +1381,23 @@ class AppSession(Session):
 
                 if select_all or want["output"] is not None:
                     omq = self._outbound_message_queues
-                    outputs: dict[str, Any] = {
-                        str(key): _snapshot_safe_value(val)
-                        for key, val in omq.test_values.items()
-                    }
+                    outputs: dict[str, Any] = {}
+                    for key, val in omq.test_values.items():
+                        # Apply the renderer's snapshot preprocessor, if any.
+                        # (`_outputs` and `test_values` are both keyed by the
+                        # namespaced output name.)
+                        info = self.output._outputs.get(key)
+                        preprocess = (
+                            info.renderer._snapshot_preprocess_fn
+                            if info is not None
+                            else None
+                        )
+                        if preprocess is not None:
+                            try:
+                                val = await preprocess(val)
+                            except Exception as e:
+                                val = {"__shiny_snapshot_preprocess_error__": str(e)}
+                        outputs[str(key)] = _snapshot_safe_value(val)
                     for key, err in omq.test_errors.items():
                         if isinstance(err, dict):
                             message = cast("dict[str, Any]", err).get("message")

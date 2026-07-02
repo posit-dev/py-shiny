@@ -202,6 +202,31 @@ class Renderer(Generic[IT]):
         """
         self.output_id = output_id
 
+    def snapshot_preprocess(
+        self,
+        fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]],
+    ) -> None:
+        """
+        Set a function for preprocessing this output's value in test-mode snapshots.
+
+        When a test snapshot is requested (see `shiny.testmode`), the registered
+        function receives the output's last rendered value and its return value
+        is written to the snapshot instead. Use this to scrub non-deterministic
+        values (timestamps, temp paths, random ids) so snapshots diff cleanly.
+
+        The function may be synchronous or asynchronous. It only affects test
+        snapshots -- never the value sent to the client. Calling again
+        overwrites the previous function. Registration is harmless when test
+        mode is off, so calls can be left in production code.
+
+        Parameters
+        ----------
+        fn
+            A function that takes the output value and returns the value to
+            write to the test snapshot.
+        """
+        self._snapshot_preprocess_fn = wrap_async(fn)
+
     def auto_output_ui(
         self,
         # *
@@ -225,6 +250,7 @@ class Renderer(Generic[IT]):
         super().__init__()
 
         self._auto_registered: bool = False
+        self._snapshot_preprocess_fn: Callable[[Any], Awaitable[Any]] | None = None
 
         # Must be done last
         if callable(_fn):
