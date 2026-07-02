@@ -2,12 +2,14 @@
 # such as examples/example_apps.py
 from __future__ import annotations
 
+import logging
 import os
+import typing
 from inspect import signature
 from pathlib import PurePath
 
 import pytest
-from playwright.sync_api import BrowserContext, BrowserType, Page
+from playwright.sync_api import BrowserContext, BrowserType, Page, Response
 
 from shiny.pytest import ScopeName as ScopeName
 from shiny.pytest import create_app_fixture
@@ -35,7 +37,26 @@ def session_page(browser: BrowserContext) -> Page:
     Returns:
         Page: The newly created page.
     """
-    return browser.new_page()
+    page = browser.new_page()
+    original_goto = page.goto
+
+    def goto_and_verify_commit(url: str, **kwargs: typing.Any) -> Response | None:
+        # WebKit occasionally swallows a navigation issued right after the
+        # `about:blank` reset performed by the function-scoped `page` fixture:
+        # `goto()` returns normally but the page never leaves `about:blank`,
+        # so every subsequent locator wait times out. When that happens,
+        # retry the navigation once.
+        response = original_goto(url, **kwargs)
+        if url != "about:blank" and page.url == "about:blank":
+            logging.warning(
+                "Navigation to %s did not commit (page still on about:blank); retrying one time",
+                url,
+            )
+            response = original_goto(url, **kwargs)
+        return response
+
+    page.goto = goto_and_verify_commit  # pyright: ignore[reportAttributeAccessIssue]
+    return page
 
 
 @pytest.fixture(scope="function")
