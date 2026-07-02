@@ -9,11 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added test mode, enabled with the `SHINY_TESTMODE=1` environment variable. When enabled, each session serves a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.session.export_test_values()`. (#2269)
+* Added test mode, enabled via the `SHINY_TESTMODE=1` environment variable or the `App(test_mode=)` argument (which defaults to that env var). The pytest app-launch fixtures (`local_app`, `create_app_fixture`) now run apps in test mode. (#2269)
 
-* Added the `AppTestValues` Playwright controller for reading a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests, plus an `App(test_mode=)` constructor argument (defaulting to the `SHINY_TESTMODE` env var). The pytest app-launch fixtures (`local_app`, `create_app_fixture`) now run apps in test mode by default. (#2269)
+* When test mode is enabled, each session can serve a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.session.export_test_values()`. (#2269)
 
-* The test-mode snapshot endpoint now honors query params (matching Shiny for R): `format=json` (the only supported format; other values return `400`), `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys), and `sortC` (`1` or omitted). Unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
+* Added the `shiny.playwright.controller.AppTestValues` Playwright controller for reading a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests. (#2269)
+
+* The test-mode snapshot endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys). Unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
+
 
 ## [1.6.3] - 2026-06-01
 
