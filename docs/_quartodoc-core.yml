@@ -265,7 +265,7 @@ quartodoc:
         - module.ui
         - module.server
     - title: Test mode
-      desc: Capturing a session's `input`/`output`/`export` state for snapshot testing (`SHINY_TESTMODE`).
+      desc: Capturing a session's `input`/`output`/`export` state for snapshot testing.
       contents:
         - testmode.export_test_values
         - testmode.snapshot_preprocess_input
