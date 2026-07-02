@@ -144,7 +144,7 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run End-to-End tests
-        timeout-minutes: 15 # shard runs ~2-4m; fail fast on hangs (was 60m)
+        timeout-minutes: 15 # shard runs ~2-4m; fail fast on hangs
         run: |
           make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
@@ -213,7 +213,7 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run example app tests
-        timeout-minutes: 15 # shard runs ~2-4m; fail fast on hangs (was 60m)
+        timeout-minutes: 15 # shard runs ~2-4m; fail fast on hangs
         run: |
           make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
@@ -263,7 +263,7 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run playwright tests for AI generated apps
-        timeout-minutes: 15 # shard runs ~2-4m; fail fast on hangs (was 60m)
+        timeout-minutes: 15 # shard runs ~2-4m; fail fast on hangs
         run: |
           make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
