@@ -1,3 +1,12 @@
+# The Playwright image is mirrored to GHCR (ghcr.io/<owner>/<repo>/playwright)
+# as a lazy pull-through cache. GHCR is co-located with the runners, so a hit
+# is a fast pull with no Azure/MCR round-trip; a miss falls back to MCR and
+# pushes the image to GHCR for the next run. No separate mirror workflow.
+# The container runs `playwright run-server`; pytest-playwright on the host
+# connects via $PW_TEST_CONNECT_WS_ENDPOINT, so test code is unchanged.
+#
+# Requires the calling job to grant `permissions: packages: write` so the
+# GITHUB_TOKEN can push to GHCR.
 name: "Setup remote Playwright"
 description: "Start a Playwright server in Docker and configure pytest-playwright to connect to it"
 inputs:
@@ -38,68 +47,40 @@ runs:
 
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-    - name: Compute Playwright image cache key
-      id: image-cache-key
+    - name: Log in to GHCR
+      shell: bash
+      run: |
+        echo "${{ github.token }}" | docker login ghcr.io \
+          -u "${{ github.actor }}" --password-stdin
+
+    - name: Ensure Playwright image (GHCR pull-through cache)
       shell: bash
       run: |
         VERSION="${{ steps.resolve-version.outputs.version }}"
-        IMAGE="mcr.microsoft.com/playwright:v${VERSION}-noble"
-        # Slugify the image reference for safe filesystem use.
-        SLUG=$(echo "$IMAGE" | tr '/:' '__')
-        CACHE_DIR="${RUNNER_TEMP:-/tmp}/playwright-image-cache"
-        CACHE_FILE="${CACHE_DIR}/${SLUG}.tar"
-        mkdir -p "$CACHE_DIR"
-        echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-        echo "cache-dir=$CACHE_DIR" >> "$GITHUB_OUTPUT"
-        echo "cache-file=$CACHE_FILE" >> "$GITHUB_OUTPUT"
-        echo "cache-key=playwright-docker-image-${{ runner.os }}-${{ runner.arch }}-v${VERSION}-noble" >> "$GITHUB_OUTPUT"
+        MCR_REF="mcr.microsoft.com/playwright:v${VERSION}-noble"
 
-    - name: Restore cached Playwright image
-      id: restore-image-cache
-      uses: actions/cache/restore@v5
-      with:
-        path: ${{ steps.image-cache-key.outputs.cache-dir }}
-        key: ${{ steps.image-cache-key.outputs.cache-key }}
+        # GHCR package names must be lowercase.
+        OWNER_REPO="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+        GHCR_REF="ghcr.io/${OWNER_REPO}/playwright:v${VERSION}-noble"
 
-    - name: Load cached Playwright image
-      id: load-image-cache
-      if: steps.restore-image-cache.outputs.cache-hit == 'true'
-      shell: bash
-      run: |
-        CACHE_FILE="${{ steps.image-cache-key.outputs.cache-file }}"
-        LOADED=false
-        if [ -f "$CACHE_FILE" ]; then
-          echo "Loading cached image from $CACHE_FILE"
-          if docker load -i "$CACHE_FILE"; then
-            LOADED=true
-          else
-            echo "Cached image tar at $CACHE_FILE is invalid or corrupted; deleting it and pulling instead." >&2
-            rm -f "$CACHE_FILE"
-          fi
-        else
-          echo "Cache hit reported but $CACHE_FILE is missing; will pull instead." >&2
-        fi
-        echo "loaded=$LOADED" >> "$GITHUB_OUTPUT"
-
-    - name: Pull Playwright image
-      id: pull-image
-      shell: bash
-      run: |
-        IMAGE="${{ steps.image-cache-key.outputs.image }}"
-        # If the cached image was loaded successfully, skip the pull entirely.
-        if docker image inspect "$IMAGE" >/dev/null 2>&1; then
-          echo "Image $IMAGE already present locally; skipping pull."
-          echo "pulled=false" >> "$GITHUB_OUTPUT"
+        # Fast path: image already mirrored to GHCR (co-located with the
+        # runner, no MCR round-trip). Tag it to the MCR name so the rest of
+        # this action is agnostic about where the image came from.
+        if docker pull "$GHCR_REF"; then
+          echo "Pulled $GHCR_REF from GHCR."
+          docker tag "$GHCR_REF" "$MCR_REF"
           exit 0
         fi
+
+        echo "GHCR miss for $GHCR_REF; falling back to MCR."
 
         # MCR (Azure Front Door) intermittently returns "The request is blocked"
         # for GitHub Actions runners. Retry a few times before giving up.
         attempt=1
         max_attempts=5
-        until docker pull "$IMAGE"; do
+        until docker pull "$MCR_REF"; do
           if [ "$attempt" -ge "$max_attempts" ]; then
-            echo "Failed to pull $IMAGE after $attempt attempts" >&2
+            echo "Failed to pull $MCR_REF after $attempt attempts" >&2
             exit 1
           fi
           sleep_seconds=$((attempt * 10))
@@ -107,23 +88,16 @@ runs:
           sleep "$sleep_seconds"
           attempt=$((attempt + 1))
         done
-        echo "pulled=true" >> "$GITHUB_OUTPUT"
 
-    - name: Save Playwright image to cache
-      if: steps.pull-image.outputs.pulled == 'true'
-      shell: bash
-      run: |
-        IMAGE="${{ steps.image-cache-key.outputs.image }}"
-        CACHE_FILE="${{ steps.image-cache-key.outputs.cache-file }}"
-        echo "Saving $IMAGE to $CACHE_FILE"
-        docker save "$IMAGE" -o "$CACHE_FILE"
-
-    - name: Persist Playwright image cache
-      if: steps.pull-image.outputs.pulled == 'true'
-      uses: actions/cache/save@v5
-      with:
-        path: ${{ steps.image-cache-key.outputs.cache-dir }}
-        key: ${{ steps.image-cache-key.outputs.cache-key }}
+        # Populate GHCR for the next run. Idempotent: concurrent first-runs on
+        # a fresh version push the same digest. A failed push must not fail the
+        # job — we already have the image locally.
+        docker tag "$MCR_REF" "$GHCR_REF"
+        if docker push "$GHCR_REF"; then
+          echo "Mirrored $MCR_REF -> $GHCR_REF."
+        else
+          echo "Failed to push $GHCR_REF; continuing with local image." >&2
+        fi
 
     - name: Start Playwright server
       shell: bash
