@@ -58,7 +58,15 @@ class AppTestValues:
                 f"{response.status}. Enable test mode via `App(test_mode=True)` or "
                 f"the `SHINY_TESTMODE=1` environment variable."
             )
-        return response.json()
+        try:
+            return response.json()
+        except Exception as e:
+            # A 200 with a non-JSON body (e.g. an HTML error page from a proxy)
+            # would otherwise surface as an opaque decode error.
+            raise RuntimeError(
+                f"Test-mode snapshot request to {url} returned a non-JSON body "
+                f"(HTTP {response.status})."
+            ) from e
 
     def get(self) -> dict[str, Any]:
         """
