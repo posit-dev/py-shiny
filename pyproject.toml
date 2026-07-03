@@ -1,11 +1,25 @@
 [build-system]
-requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
+requires = ["setuptools>=77", "wheel", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
+# Declare package data explicitly (instead of the default include-package-data
+# manifest scan) so build_py does not warn that asset/template directories are
+# "absent from the `packages` configuration". The second glob is needed because
+# `**` does not match hidden files (the package templates ship .gitignore files).
+include-package-data = false
+
+[tool.setuptools.package-data]
+shiny = ["**", "**/.gitignore"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["shiny*"]
+# Keep `false` so only directories with an `__init__.py` are packaged as code.
+# `true` would register every asset/template directory (shiny/www/..., etc.) as
+# a PEP 420 namespace package and sweep in any stray directory or .py file that
+# lands under shiny/, over-exposing the package surface. Those directories are
+# instead shipped as data files via the package-data globs above.
 namespaces = false
 
 [tool.setuptools.exclude-package-data]
@@ -22,11 +36,11 @@ authors = [{ name = "Winston Chang", email = "winston@posit.co" }]
 description = "A web development framework for Python."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
