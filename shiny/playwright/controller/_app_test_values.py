@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
 
 from ..expect._expect_to_change import retry_with_timeout
@@ -46,28 +47,26 @@ class AppTestValues:
         self.page = page
 
     def _fetch(self) -> dict[str, Any]:
-        # Discover the snapshot URL from the Shiny client. Optional chaining keeps
-        # `evaluate` from throwing when the client API isn't present yet (app not
-        # loaded/bound); the try/except covers any other page-level error. Either
-        # way we raise a clear message instead of an opaque Playwright/URL error.
+        # Discover the snapshot URL from the Shiny client. The app may not be bound
+        # yet right after navigation, so poll (via `wait_for_function`) until the
+        # client exposes `getTestSnapshotBaseUrl` and returns a URL, up to
+        # `_DEFAULT_TIMEOUT_SECS`. Optional chaining makes the expression falsy
+        # (keep waiting) rather than throwing while the API is absent. If it never
+        # appears, raise a clear message instead of an opaque Playwright/URL error.
         try:
-            url = self.page.evaluate(
+            handle = self.page.wait_for_function(
                 "() => window.Shiny?.shinyapp?.getTestSnapshotBaseUrl?."
-                "({ fullUrl: true }) ?? null"
+                "({ fullUrl: true }) ?? false",
+                timeout=_DEFAULT_TIMEOUT_SECS * 1000,
             )
-        except Exception as e:
+        except PlaywrightError as e:
             raise RuntimeError(
-                "Could not read the test-mode snapshot URL from the page. Make sure "
-                "the Shiny app is loaded and bound before using `AppTestValues` "
-                "(e.g. `page.goto(app.url)` and wait for an element to appear)."
+                "Timed out waiting for the Shiny app to load in the page before "
+                "reading the test-mode snapshot (the client API "
+                "`window.Shiny.shinyapp.getTestSnapshotBaseUrl` never became "
+                "available). Ensure the app is served, reachable, and loaded."
             ) from e
-        if not url:
-            raise RuntimeError(
-                "The Shiny client API `window.Shiny.shinyapp.getTestSnapshotBaseUrl` "
-                "was not available. Ensure the app is fully loaded and bound in the "
-                "page before reading the test-mode snapshot."
-            )
-        url = str(url)
+        url = str(handle.json_value())
         response = self.page.request.get(url)
         if not response.ok:
             raise RuntimeError(

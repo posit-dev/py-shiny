@@ -6,6 +6,7 @@ from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
+from playwright.sync_api import Error as PlaywrightError
 
 from shiny.playwright.controller import AppTestValues
 
@@ -25,7 +26,10 @@ def test_expect_values_rejects_invalid_match() -> None:
 
 def _fake_page(*, ok: bool = True, json_error: bool = False) -> MagicMock:
     page = MagicMock()
-    page.evaluate.return_value = "http://x/session/1/dataobj/shinytest?nonce=1"
+    # `wait_for_function` returns a JSHandle whose `.json_value()` is the URL.
+    page.wait_for_function.return_value.json_value.return_value = (
+        "http://x/session/1/dataobj/shinytest?nonce=1"
+    )
     response = MagicMock()
     response.ok = ok
     response.status = 200 if ok else 404
@@ -51,22 +55,12 @@ def test_get_raises_on_non_json_body() -> None:
         av.get()
 
 
-def test_get_raises_when_snapshot_url_unavailable() -> None:
-    # If the Shiny client API isn't present yet (app not loaded/bound), the
-    # optional-chaining evaluate returns None -> clear error, no HTTP request.
+def test_get_raises_when_app_never_loads() -> None:
+    # If the client API never appears, `wait_for_function` times out; we surface a
+    # clear error (not a raw Playwright timeout) and make no HTTP request.
     page = MagicMock()
-    page.evaluate.return_value = None
+    page.wait_for_function.side_effect = PlaywrightError("Timeout 30000ms exceeded")
     av = AppTestValues(page)
-    with pytest.raises(RuntimeError, match="loaded and bound"):
-        av.get()
-    page.request.get.assert_not_called()
-
-
-def test_get_raises_when_evaluate_errors() -> None:
-    # A page-level evaluate error surfaces as a clear message, not a raw JS error.
-    page = MagicMock()
-    page.evaluate.side_effect = RuntimeError("Execution context was destroyed")
-    av = AppTestValues(page)
-    with pytest.raises(RuntimeError, match="loaded and bound"):
+    with pytest.raises(RuntimeError, match="Timed out waiting for the Shiny app"):
         av.get()
     page.request.get.assert_not_called()
