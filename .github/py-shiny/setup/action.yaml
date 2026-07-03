@@ -18,7 +18,7 @@ runs:
       # cache lives on the same drive as the workspace (RUNNER_TEMP), which
       # lets uv hardlink packages instead of falling back to slow file copies.
       - name: Install `uv`
-        uses: astral-sh/setup-uv@v8
+        uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
