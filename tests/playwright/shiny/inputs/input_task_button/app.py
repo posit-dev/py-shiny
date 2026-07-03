@@ -24,7 +24,11 @@ nonblock_render_counts = reactive.value[tuple[int, ...]](())
 ui.h5("Current time")
 
 
-@render.text()
+# Rendered as code: the busy-indicator spinner CSS applies
+# `min-height: 32px` to any recalculating output, which makes a plain text
+# output (24px tall) bounce the layout on every tick. A `pre` block is
+# already taller than 32px, so the rapid updates cause no layout shift.
+@render.code
 def current_time() -> str:
     reactive.invalidate_later(0.1)
     render_times.append(time.time())
@@ -92,18 +96,18 @@ with ui.layout_sidebar():
 
     ui.h5("Sum of x and y")
 
-    @render.text
+    @render.code
     def show_result():
         return str(slow_compute.result())
 
     ui.h5("Time renders during each blocking window")
 
-    @render.text
+    @render.code
     def renders_during_block():
         return ",".join(str(count) for count in block_render_counts())
 
     ui.h5("Time renders during each non-blocking window")
 
-    @render.text
+    @render.code
     def renders_during_nonblock():
         return ",".join(str(count) for count in nonblock_render_counts())

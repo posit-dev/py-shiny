@@ -10,7 +10,7 @@ from shiny.run import ShinyAppProc
 
 def click_extended_task_button(
     button: controller.InputTaskButton,
-    current_time: controller.OutputText,
+    current_time: controller.OutputCode,
 ) -> str:
     button.expect_state("ready")
     button.click()
@@ -18,15 +18,15 @@ def click_extended_task_button(
     # this assertion must run promptly; a finite timeout keeps a missed busy
     # window a fast, diagnosable failure instead of an infinite hang.
     button.expect_state("busy")
-    return current_time.get_value()
+    return current_time.loc.inner_text()
 
 
 def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
     y = controller.InputNumeric(page, "y")
     y.set("4")
-    result = controller.OutputText(page, "show_result")
-    current_time = controller.OutputText(page, "current_time")
+    result = controller.OutputCode(page, "show_result")
+    current_time = controller.OutputCode(page, "current_time")
     # Make sure the time has content
     current_time.expect.not_to_be_empty()
 
@@ -54,7 +54,7 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     # (clicked) non-blocking window must contain renders. This proves a zero
     # count means "blocked", not "counter broken". The first (startup) window
     # overlaps the startup blocking window, so its count is not constrained.
-    renders_during_nonblock = controller.OutputText(page, "renders_during_nonblock")
+    renders_during_nonblock = controller.OutputCode(page, "renders_during_nonblock")
     renders_during_nonblock.expect_value(re.compile(r"^\d+,[1-9]\d*$"))
 
     # set up Blocking test
@@ -64,7 +64,7 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     # Blocking verification. The server records how many current_time renders
     # occur inside each blocking window; this avoids sampling the display on a
     # timer from the client, which races against in-flight output updates.
-    renders_during_block = controller.OutputText(page, "renders_during_block")
+    renders_during_block = controller.OutputCode(page, "renders_during_block")
     # The `ignore_none=False` handler already ran one blocking window at
     # startup; it must not have allowed any renders either.
     renders_during_block.expect_value("0")
@@ -82,4 +82,4 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     renders_during_block.expect_value("0,0", timeout=10 * 1000)
     # The time ticker must still be alive afterwards, proving the zero count
     # came from blocking rather than from a dead ticker.
-    current_time.expect.not_to_have_text(current_time.get_value(), timeout=1000)
+    current_time.expect.not_to_have_text(current_time.loc.inner_text(), timeout=1000)
