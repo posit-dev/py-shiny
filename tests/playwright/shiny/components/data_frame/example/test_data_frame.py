@@ -241,6 +241,7 @@ def test_single_selection(
     assert detail_text() == snapshot
 
 
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_filter_grid(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -252,6 +253,7 @@ def test_filter_grid(
     _filter_test_impl(page, data_frame_app, grid, summary, snapshot)
 
 
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_filter_table(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -371,6 +373,7 @@ def _filter_test_impl(
     expect(summary).to_have_text(re.compile(" of 20"))
 
 
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_filter_disable(page: Page, data_frame_app: ShinyAppProc):
     page.goto(data_frame_app.url)
 

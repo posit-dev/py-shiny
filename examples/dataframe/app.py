@@ -4,6 +4,20 @@ import shinyswatch
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
+# A static subset of `sns.get_dataset_names()`. Calling that function makes a
+# network request to GitHub on every page load, which is unreliable in CI.
+dataset_names = [
+    "anagrams",
+    "anscombe",
+    "attention",
+    "diamonds",
+    "iris",
+    "mpg",
+    "penguins",
+    "tips",
+    "titanic",
+]
+
 
 def app_ui(req):
     dark = True if "dark" in req.query_params else None
@@ -13,7 +27,7 @@ def app_ui(req):
             ui.tags.meta(name="viewport", content="width=device-width, initial-scale=1")
         ),
         light_dark_switcher(dark),
-        ui.input_select("dataset", "Dataset", sns.get_dataset_names()),
+        ui.input_select("dataset", "Dataset", dataset_names),
         ui.input_select(
             "selection_mode",
             "Selection mode",
