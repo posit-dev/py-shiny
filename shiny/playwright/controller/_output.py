@@ -1147,8 +1147,6 @@ class OutputDataFrame(UiWithContainer):
 
         def click_sort_arrow(loc: Locator) -> None:
             arrow_el = loc.element_handle(timeout=timeout)
-            if arrow_el is None:
-                return
             old_class = arrow_el.get_attribute("class")
             click_loc(loc)
             self.page.wait_for_function(
