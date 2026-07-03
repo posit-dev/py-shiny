@@ -1,9 +1,6 @@
 # pyright:basic
 import time
 
-import numpy as np
-import seaborn as sns
-
 from shiny import App, module, reactive, render, ui
 
 
@@ -27,7 +24,12 @@ def card_server(input, output, session, rerender):
     def plot():
         rerender()
         time.sleep(0.5)
-        sns.lineplot(x=np.arange(100), y=np.random.randn(100))
+        # Lazy load matplotlib and draw a simple plot without seaborn/numpy to optimize startup
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        ax.plot([0, 100], [0, 100])
+        return fig
 
 
 # -- Main app --
