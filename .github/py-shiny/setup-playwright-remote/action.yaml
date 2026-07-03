@@ -2,6 +2,15 @@
 # as a lazy pull-through cache. GHCR is co-located with the runners, so a hit
 # is a fast pull with no Azure/MCR round-trip; a miss falls back to MCR and
 # pushes the image to GHCR for the next run. No separate mirror workflow.
+#
+# The MCR image ships browsers but strips the playwright npm package and the
+# npm cache from its final layer, so `npx -y playwright run-server` downloads
+# the package from registry.npmjs.org on every container start — silently, and
+# intermittently slower than any startup deadline. To keep the npm registry
+# out of the hot path, we bake `npm install playwright` into a derived
+# `-server` image (built once per version, cached in GHCR) and start the
+# server with `npx --no` so it can never fall back to a network install.
+#
 # The container runs `playwright run-server`; pytest-playwright on the host
 # connects via $PW_TEST_CONNECT_WS_ENDPOINT, so test code is unchanged.
 #
@@ -53,7 +62,8 @@ runs:
         echo "${{ github.token }}" | docker login ghcr.io \
           -u "${{ github.actor }}" --password-stdin
 
-    - name: Ensure Playwright image (GHCR pull-through cache)
+    - name: Ensure Playwright server image (GHCR pull-through cache)
+      id: server-image
       shell: bash
       run: |
         VERSION="${{ steps.resolve-version.outputs.version }}"
@@ -62,41 +72,69 @@ runs:
         # GHCR package names must be lowercase.
         OWNER_REPO="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
         GHCR_REF="ghcr.io/${OWNER_REPO}/playwright:v${VERSION}-noble"
+        # MCR image plus the playwright npm package baked in, so `run-server`
+        # starts without touching the npm registry.
+        SERVER_REF="ghcr.io/${OWNER_REPO}/playwright:v${VERSION}-noble-server"
 
-        # Fast path: image already mirrored to GHCR (co-located with the
-        # runner, no MCR round-trip). Tag it to the MCR name so the rest of
-        # this action is agnostic about where the image came from.
-        if docker pull "$GHCR_REF"; then
-          echo "Pulled $GHCR_REF from GHCR."
-          docker tag "$GHCR_REF" "$MCR_REF"
+        echo "image-ref=$SERVER_REF" >> "$GITHUB_OUTPUT"
+
+        # Fast path: derived server image already in GHCR (co-located with
+        # the runner, no MCR or npm round-trip).
+        if docker pull "$SERVER_REF"; then
+          echo "Pulled $SERVER_REF from GHCR."
           exit 0
         fi
 
-        echo "GHCR miss for $GHCR_REF; falling back to MCR."
+        echo "GHCR miss for $SERVER_REF; building it from the base image."
 
-        # MCR (Azure Front Door) intermittently returns "The request is blocked"
-        # for GitHub Actions runners. Retry a few times before giving up.
-        attempt=1
-        max_attempts=5
-        until docker pull "$MCR_REF"; do
-          if [ "$attempt" -ge "$max_attempts" ]; then
-            echo "Failed to pull $MCR_REF after $attempt attempts" >&2
-            exit 1
-          fi
-          sleep_seconds=$((attempt * 10))
-          echo "docker pull failed (attempt $attempt/$max_attempts); retrying in ${sleep_seconds}s..." >&2
-          sleep "$sleep_seconds"
-          attempt=$((attempt + 1))
-        done
-
-        # Populate GHCR for the next run. Idempotent: concurrent first-runs on
-        # a fresh version push the same digest. A failed push must not fail the
-        # job — we already have the image locally.
-        docker tag "$MCR_REF" "$GHCR_REF"
-        if docker push "$GHCR_REF"; then
-          echo "Mirrored $MCR_REF -> $GHCR_REF."
+        # Base image: prefer the GHCR mirror, fall back to MCR.
+        if docker pull "$GHCR_REF"; then
+          echo "Pulled $GHCR_REF from GHCR."
+          docker tag "$GHCR_REF" "$MCR_REF"
         else
-          echo "Failed to push $GHCR_REF; continuing with local image." >&2
+          echo "GHCR miss for $GHCR_REF; falling back to MCR."
+
+          # MCR (Azure Front Door) intermittently returns "The request is blocked"
+          # for GitHub Actions runners. Retry a few times before giving up.
+          attempt=1
+          max_attempts=5
+          until docker pull "$MCR_REF"; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Failed to pull $MCR_REF after $attempt attempts" >&2
+              exit 1
+            fi
+            sleep_seconds=$((attempt * 10))
+            echo "docker pull failed (attempt $attempt/$max_attempts); retrying in ${sleep_seconds}s..." >&2
+            sleep "$sleep_seconds"
+            attempt=$((attempt + 1))
+          done
+
+          # Populate the GHCR mirror for the next run. Idempotent: concurrent
+          # first-runs on a fresh version push the same digest. A failed push
+          # must not fail the job — we already have the image locally.
+          docker tag "$MCR_REF" "$GHCR_REF"
+          if docker push "$GHCR_REF"; then
+            echo "Mirrored $MCR_REF -> $GHCR_REF."
+          else
+            echo "Failed to push $GHCR_REF; continuing with local image." >&2
+          fi
+        fi
+
+        # Bake the playwright npm package into the server image. The npm
+        # registry is only reachable here, once per version — never at
+        # container start.
+        docker build -t "$SERVER_REF" - <<DOCKERFILE
+        FROM $MCR_REF
+        USER pwuser
+        WORKDIR /home/pwuser
+        RUN npm install playwright@${VERSION}
+        DOCKERFILE
+
+        # Populate GHCR for the next run; a failed push must not fail the job.
+        if docker push "$SERVER_REF"; then
+          echo "Pushed $SERVER_REF."
+        else
+          echo "Failed to push $SERVER_REF; continuing with local image." >&2
         fi
 
     - name: Start Playwright server
@@ -104,16 +142,18 @@ runs:
       run: |
         docker rm -f "${{ inputs.container-name }}" >/dev/null 2>&1 || true
 
+        # No --rm: if the server crashes, the container must survive so the
+        # logs-on-failure step below can read it. `docker rm -f` above cleans
+        # up any leftover container from a previous attempt.
         docker run -d \
           --name "${{ inputs.container-name }}" \
           --ipc=host \
           -p "127.0.0.1:${{ inputs.port }}:${{ inputs.port }}" \
-          --rm \
           --init \
           --workdir /home/pwuser \
           --user pwuser \
-          "mcr.microsoft.com/playwright:v${{ steps.resolve-version.outputs.version }}-noble" \
-          /bin/sh -c "npx -y playwright@${{ steps.resolve-version.outputs.version }} run-server --port ${{ inputs.port }} --host 0.0.0.0"
+          "${{ steps.server-image.outputs.image-ref }}" \
+          /bin/sh -c "npx --no -- playwright run-server --port ${{ inputs.port }} --host 0.0.0.0"
 
     - name: Wait for Playwright server
       shell: bash
