@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import time
-
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -53,15 +51,25 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     y.set("15")
     result.expect_value("5")
 
-    # Blocking verification
+    # Blocking verification. The server records how many current_time renders
+    # occur inside each blocking window; this avoids sampling the display on a
+    # timer from the client, which races against in-flight output updates.
+    renders_during_block = controller.OutputText(page, "renders_during_block")
+    # The `ignore_none=False` handler already ran one blocking window at
+    # startup; it must not have allowed any renders either.
+    renders_during_block.expect_value("0")
+
     button_block = controller.InputTaskButton(page, "btn_block")
     button_block.expect_label_busy("\n  \n Blocking...")
     button_block.expect_label_ready("Block compute")
     button_block.expect_auto_reset(True)
-    time_block = click_extended_task_button(
+    click_extended_task_button(
         button_block,
         current_time,
     )
-    # Make sure time value has not changed after 500ms has ellapsed
-    time.sleep(0.5)
-    current_time.expect_value(time_block)
+    # Once the blocking computation finishes, the server reports zero
+    # current_time renders inside the second blocking window.
+    renders_during_block.expect_value("0,0", timeout=10 * 1000)
+    # The time ticker must still be alive afterwards, proving the zero count
+    # came from blocking rather than from a dead ticker.
+    current_time.expect.not_to_have_text(current_time.get_value(), timeout=1000)
