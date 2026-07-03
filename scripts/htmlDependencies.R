@@ -84,6 +84,16 @@ dir_create(WWW_SHARED)
 cli::cli_h2("Copy web dependencies from {.pkg shiny} and {.pkg bslib}")
 
 copy_from_pkg("shiny", "www/shared", WWW_SHARED, WWW_SHARED)
+
+# `shiny-testmode.js` is upstream Shiny's postMessage->eval bridge for driving an
+# app from a parent frame (legacy R {shinytest}). py-shiny drives tests via
+# Playwright over the Chrome DevTools Protocol (CDP) (`page.evaluate`) and does
+# not ship this arbitrary-eval script, so remove it (and its source map) if
+# upstream included it. Guarded on existence so this stays safe if upstream ever
+# stops shipping it.
+testmode_files <- path(WWW_SHARED, c("shiny-testmode.js", "shiny-testmode.js.map"))
+file_delete(testmode_files[file_exists(testmode_files)])
+
 www_bslib_components <- path(WWW_SHARED, "bslib", "components")
 copy_from_pkg("bslib", "components/dist", www_bslib_components)
 copy_from_pkg("htmltools", "fill", path(WWW_SHARED, "htmltools", "fill"))

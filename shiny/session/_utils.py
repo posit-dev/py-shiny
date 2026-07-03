@@ -99,7 +99,7 @@ def require_active_session(session: Optional[Session]) -> Session:
 
     Raises
     ------
-    ValueError
+    RuntimeError
         If session is not active.
 
     See Also

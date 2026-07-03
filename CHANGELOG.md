@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* Added test mode, enabled via the `SHINY_TESTMODE=1` environment variable or the `App(test_mode=)` argument (which defaults to that env var). The pytest app-launch fixtures (`local_app`, `create_app_fixture`) now run apps in test mode. (#2269)
+
+* When test mode is enabled, each session can serve a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.testmode.export_test_values()`. (#2269)
+
+* Added the `shiny.playwright.controller.AppTestValues` Playwright controller for reading a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests. (#2269)
+
+* The test-mode snapshot endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys). Unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
+
+* Test-mode snapshot values can now be preprocessed before they are written to the snapshot, e.g. to scrub timestamps or temp paths: `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) for inputs and `my_output.snapshot_preprocess(fn)` for outputs. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
+
+* Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
+
+### Bug fixes
+
+* Fixed rare tabset ID collisions in pages with many navsets. Randomly generated `data-tabsetid` values were drawn from a pool of ~1 million, so a page with dozens of tabsets could occasionally produce two navsets with the same ID (a birthday collision), resulting in duplicate DOM ids and broken tab switching. IDs are now drawn from a pool of 9 trillion. (#2296)
+
+### Other changes
+
+* `shiny.run.run_shiny_app()` (and therefore `shiny.pytest.create_app_fixture()`) now picks random app ports from a disjoint per-worker port range when running under pytest-xdist, instead of the full 1024-49151 range shared by all workers. This prevents parallel test workers from racing to bind the same port and from reusing each other's recycled ports. When not running under pytest-xdist, the behavior is unchanged: ports are picked from `random_port()`'s full default range (1024-49151). (#2297)
+
 ## [1.6.3] - 2026-06-01
 
 ### New features

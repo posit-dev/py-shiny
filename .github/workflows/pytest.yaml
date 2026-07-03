@@ -106,6 +106,12 @@ jobs:
   playwright-shiny:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
@@ -144,7 +150,8 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run End-to-End tests
-        timeout-minutes: 60
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
         run: |
           make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
@@ -157,6 +164,12 @@ jobs:
   playwright-examples:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
@@ -213,7 +226,8 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run example app tests
-        timeout-minutes: 60
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
         run: |
           make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
@@ -226,6 +240,12 @@ jobs:
   playwright-ai:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
@@ -263,7 +283,8 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run playwright tests for AI generated apps
-        timeout-minutes: 60
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
         run: |
           make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
@@ -276,6 +297,12 @@ jobs:
   playwright-deploys-precheck:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         # Matches deploy server python version

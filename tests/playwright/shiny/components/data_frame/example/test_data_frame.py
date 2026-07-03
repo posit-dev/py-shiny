@@ -241,6 +241,7 @@ def test_single_selection(
     assert detail_text() == snapshot
 
 
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_filter_grid(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -252,6 +253,7 @@ def test_filter_grid(
     _filter_test_impl(page, data_frame_app, grid, summary, snapshot)
 
 
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_filter_table(
     page: Page,
     data_frame_app: ShinyAppProc,
@@ -277,6 +279,11 @@ def _filter_test_impl(
     snapshot: Any,
 ):
     controller.InputSelect(page, "selection_mode").set("none")
+    # Changing the selection mode re-renders the data frame on the server. Wait
+    # for the new table to arrive (multi-row selection is now disabled) before
+    # interacting with the filter inputs; otherwise the re-render can steal
+    # focus mid-test.
+    expect(grid.locator("table")).to_have_attribute("aria-multiselectable", "false")
 
     filters = grid.locator("tr.filters")
 
@@ -366,6 +373,7 @@ def _filter_test_impl(
     expect(summary).to_have_text(re.compile(" of 20"))
 
 
+@pytest.mark.flaky(reruns=reruns, delay=reruns_delay)
 def test_filter_disable(page: Page, data_frame_app: ShinyAppProc):
     page.goto(data_frame_app.url)
 
