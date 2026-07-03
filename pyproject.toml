@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
+requires = ["setuptools>=77", "wheel", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["shiny*"]
-namespaces = false
+namespaces = true
 
 [tool.setuptools.exclude-package-data]
 "*" = ["api-examples/**"]
@@ -22,11 +22,11 @@ authors = [{ name = "Winston Chang", email = "winston@posit.co" }]
 description = "A web development framework for Python."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
