@@ -5,6 +5,7 @@ import pytest
 from shiny.run._run import (
     PORT_RANGE_DEFAULT,
     WORKER_PORT_RANGE_BASE,
+    WORKER_PORT_RANGE_COUNT,
     WORKER_PORT_RANGE_SIZE,
     port_search_range,
 )
@@ -37,13 +38,17 @@ def test_port_search_range_wraps_after_worker_cap(monkeypatch: pytest.MonkeyPatc
     assert wrapped == port_search_range()
 
 
-def test_port_search_range_stays_below_linux_ephemeral_ports(
+def test_worker_port_ranges_stay_within_valid_bounds(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    # The Linux ephemeral port range starts at 32768. Ports handed to Shiny apps
-    # must stay below it so the OS never assigns one of our ports to an outgoing
-    # connection.
-    for worker_num in range(0, 64):
+    # Because worker numbers wrap at WORKER_PORT_RANGE_COUNT, checking
+    # 0..WORKER_PORT_RANGE_COUNT-1 covers every range that can ever be produced.
+    #
+    # Every worker range must stay within random_port()'s default bounds
+    # (PORT_RANGE_DEFAULT) and below 32768, where the Linux ephemeral port range
+    # starts, so the OS never assigns one of our ports to an outgoing connection.
+    for worker_num in range(WORKER_PORT_RANGE_COUNT):
         monkeypatch.setenv("PYTEST_XDIST_WORKER", f"gw{worker_num}")
         min_port, max_port = port_search_range()
-        assert 1024 < min_port < max_port < 32768
+        assert PORT_RANGE_DEFAULT[0] < min_port < max_port < 32768
+        assert max_port < PORT_RANGE_DEFAULT[1]
