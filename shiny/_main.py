@@ -12,8 +12,9 @@ import sys
 import types
 import warnings
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -65,6 +66,7 @@ RELOAD_EXCLUDES_DEFAULT = (
 
 
 class ShinyServer(Server):
+    # In reload mode, on_started travels with the server target, so keep it picklable.
     def __init__(
         self, config: Config, on_started: Callable[[], None] | None = None
     ) -> None:
@@ -73,8 +75,7 @@ class ShinyServer(Server):
 
     async def startup(self, sockets: list[Any] | None = None) -> None:
         await super().startup(sockets=sockets)
-        server = cast(Any, self)
-        if server.started and self._on_started is not None:
+        if getattr(self, "started") and self._on_started is not None:
             self._on_started()
 
 
@@ -85,14 +86,16 @@ def _run_uvicorn(
     on_started: Callable[[], None] | None = None,
     **kwargs: Any,
 ) -> None:
+    # Mirrors uvicorn.run(); re-check this helper when upgrading Uvicorn.
     if app_dir is not None:
         sys.path.insert(0, app_dir)
 
     config = Config(app, **kwargs)
-    config_attrs = cast(Any, config)
     server = ShinyServer(config=config, on_started=on_started)
 
-    if (config_attrs.reload or config_attrs.workers > 1) and not isinstance(app, str):
+    if (getattr(config, "reload") or getattr(config, "workers") > 1) and not isinstance(
+        app, str
+    ):
         logging.getLogger("uvicorn.error").warning(
             "You must pass the application as an import string to enable "
             "'reload' or 'workers'."
@@ -103,7 +106,7 @@ def _run_uvicorn(
         if config.should_reload:
             sock = config.bind_socket()
             ChangeReload(config, target=server.run, sockets=[sock]).run()
-        elif config_attrs.workers > 1:
+        elif getattr(config, "workers") > 1:
             sock = config.bind_socket()
             Multiprocess(config, target=server.run, sockets=[sock]).run()
         else:
@@ -111,14 +114,14 @@ def _run_uvicorn(
     except KeyboardInterrupt:
         pass
     finally:
-        uds = cast(str | None, config_attrs.uds)
+        uds = getattr(config, "uds")
         if uds and os.path.exists(uds):
             os.remove(uds)
 
     if (
-        not cast(Any, server).started
+        not getattr(server, "started")
         and not config.should_reload
-        and config_attrs.workers == 1
+        and getattr(config, "workers") == 1
     ):
         sys.exit(_UVICORN_STARTUP_FAILURE)
 
@@ -369,8 +372,6 @@ def run_app(
     if port == 0:
         port = _utils.random_port(host=host)
 
-    os.environ["SHINY_BROWSER_HOST"] = host
-    os.environ["SHINY_BROWSER_PORT"] = str(port)
     if dev_mode:
         os.environ["SHINY_DEV_MODE"] = "1"
 
@@ -463,7 +464,7 @@ def run_app(
         }
 
     if launch_browser and not reload:
-        on_started = lambda: _launchbrowser.launch_browser(host, port)
+        on_started = partial(_launchbrowser.launch_browser, host, port)
 
     maybe_setup_rsw_proxying(log_config)
 
