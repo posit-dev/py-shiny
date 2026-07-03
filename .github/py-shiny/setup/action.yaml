@@ -13,10 +13,19 @@ runs:
         with:
           python-version: ${{ inputs.python-version }}
 
+      # On Windows runners the workspace and RUNNER_TEMP are on `D:` but the
+      # setup-python interpreter (and its site-packages) is on `C:`. uv can
+      # only hardlink when its cache is on the same drive as the install
+      # target, so place the cache on `C:` to avoid slow file-copy fallback.
+      # setup-uv respects a pre-existing UV_CACHE_DIR for its cache save/restore.
+      - name: Put `uv` cache on the same drive as Python (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo 'UV_CACHE_DIR=C:\uv-cache' >> $GITHUB_ENV
+
       # Installs the `uv` binary directly (no pip bootstrap) and caches uv's
-      # package cache between runs, keyed on pyproject.toml. On Windows the
-      # cache lives on the same drive as the workspace (RUNNER_TEMP), which
-      # lets uv hardlink packages instead of falling back to slow file copies.
+      # package cache between runs, keyed on pyproject.toml + python version.
       - name: Install `uv`
         # Pinned to an exact release; astral-sh/setup-uv has no floating `v8` tag
         uses: astral-sh/setup-uv@v8.2.0
