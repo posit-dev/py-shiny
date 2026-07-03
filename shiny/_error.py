@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from typing import cast
 
 import starlette.exceptions as exceptions
 import starlette.responses as responses
 from starlette.types import ASGIApp, Receive, Scope, Send
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorMiddleware:
@@ -22,7 +25,7 @@ class ErrorMiddleware:
             return await self.app(scope, receive, send)
         except exceptions.HTTPException as e:
             resp = responses.PlainTextResponse(
-                e.detail,
+                "An error occurred",
                 e.status_code,
                 headers=cast(
                     "dict[str, str]",
@@ -32,9 +35,7 @@ class ErrorMiddleware:
             )
             await resp(scope, receive, send)
         except Exception as e:
-            # Seems super weird this is just going to stdout, should we use logger or
-            # at least stderr?
-            print("Unhandled error: " + str(e))
+            logger.exception("Unhandled error: %s", e)
             resp = responses.PlainTextResponse(
                 "An internal server error occurred", 500, media_type="text/plain"
             )
