@@ -277,8 +277,12 @@ dist: clean ## builds source and wheel package
 install: dist
 	pip uninstall -y shiny
 	python -m pip install dist/shiny*.whl
-ci-install-wheel: dist FORCE
-	# `uv` version of `make install`
+ci-install-wheel: FORCE
+	# `uv` version of `make install`; `uv build` is much faster than
+	# `pip install build` + `python -m build` as it caches build dependencies
+	rm -fr dist/
+	uv build
+	ls -l dist
 	uv pip uninstall shiny
 	uv pip install dist/shiny*.whl
 
