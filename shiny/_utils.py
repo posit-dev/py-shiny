@@ -89,8 +89,18 @@ def guess_mime_type(
     return mimetypes.guess_type(url, strict)[0] or default
 
 
+RANDOM_PORT_MIN_DEFAULT = 1024
+"""Default lower bound for `random_port()`: the start of the TCP User Ports range."""
+
+RANDOM_PORT_MAX_DEFAULT = 49151
+"""Default upper bound for `random_port()`: the end of the TCP User Ports range."""
+
+
 def random_port(
-    min: int = 1024, max: int = 49151, host: str = "127.0.0.1", n: int = 20
+    min: int = RANDOM_PORT_MIN_DEFAULT,
+    max: int = RANDOM_PORT_MAX_DEFAULT,
+    host: str = "127.0.0.1",
+    n: int = 20,
 ) -> int:
     """Find an open TCP port
 

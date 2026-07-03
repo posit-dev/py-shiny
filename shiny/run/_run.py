@@ -12,7 +12,7 @@ from types import TracebackType
 from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
 from .._docstring import no_example
-from .._utils import random_port
+from .._utils import RANDOM_PORT_MAX_DEFAULT, RANDOM_PORT_MIN_DEFAULT, random_port
 
 __all__ = (
     "ShinyAppProc",
@@ -22,8 +22,8 @@ __all__ = (
 )
 
 
-PORT_RANGE_DEFAULT: tuple[int, int] = (1024, 49151)
-"""Port search range when not running under pytest-xdist (mirrors `random_port()`)."""
+PORT_RANGE_DEFAULT: tuple[int, int] = (RANDOM_PORT_MIN_DEFAULT, RANDOM_PORT_MAX_DEFAULT)
+"""Port search range when not running under pytest-xdist: `random_port()`'s defaults."""
 
 WORKER_PORT_RANGE_BASE: int = 21000
 """First port of the range reserved for pytest-xdist worker 0 (``gw0``)."""
