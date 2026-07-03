@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict
 
 from .bookmark import serializer_unserializable
 from .bookmark._serializers import can_serialize_input_file, serializer_file_input
+from .testmode import _snapshot_preprocess_file_input
 
 if TYPE_CHECKING:
     from .session import Session
@@ -252,5 +253,6 @@ def _(value: Any, name: ResolvedId, session: Session) -> Any:
     # uploaded the usual way (instead of being restored), this occurs in
     # session$`@uploadEnd`.
     session.input.set_serializer(name, serializer_file_input)
+    session.input.set_snapshot_preprocess(name, _snapshot_preprocess_file_input)
 
     return value_list

@@ -46,6 +46,17 @@ def rand_hex(bytes: int) -> str:
     return format_str.format(secrets.randbits(bytes * 8))
 
 
+def is_test_mode() -> bool:
+    """
+    Whether Shiny test mode is enabled.
+
+    Test mode is enabled by setting the ``SHINY_TESTMODE`` environment variable
+    to ``"1"``. When enabled, each session records the last value of every output
+    and serves a JSON snapshot endpoint at ``/session/{id}/dataobj/shinytest``.
+    """
+    return os.getenv("SHINY_TESTMODE") == "1"
+
+
 def drop_none(x: dict[str, Any]) -> dict[str, object]:
     return {k: v for k, v in x.items() if v is not None}
 

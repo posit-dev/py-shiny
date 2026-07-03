@@ -4,6 +4,7 @@ from ._accordion import (
     Accordion,
     AccordionPanel,
 )
+from ._app_test_values import AppTestValues
 from ._card import Card, ValueBox
 from ._file import (
     DownloadButton,
@@ -75,6 +76,7 @@ from ._toolbar import (
 )
 
 __all__ = [
+    "AppTestValues",
     "InputActionButton",
     "InputActionLink",
     "InputBookmarkButton",

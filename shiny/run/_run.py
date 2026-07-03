@@ -238,6 +238,18 @@ class ShinyAppProc:
             )
 
 
+def _subprocess_env(env: dict[str, str] | None) -> dict[str, str] | None:
+    """
+    Build the environment for a launched app subprocess.
+
+    Returns ``None`` (inherit the parent environment unchanged) when ``env`` is
+    ``None``; otherwise returns the parent environment merged with ``env``.
+    """
+    if env is None:
+        return None
+    return {**os.environ, **env}
+
+
 @no_example()
 def run_shiny_app(
     app_file: Union[str, PurePath],
@@ -248,6 +260,7 @@ def run_shiny_app(
     wait_for_start: bool = True,
     timeout_secs: float = 30,
     bufsize: int = 64 * 1024,
+    env: dict[str, str] | None = None,
 ) -> ShinyAppProc:
     """
     Run a Shiny app in a subprocess.
@@ -270,6 +283,10 @@ def run_shiny_app(
         The maximum number of seconds to wait for the app to become ready.
     bufsize
         The buffer size to use for stdout and stderr.
+    env
+        Extra environment variables for the app subprocess, merged over the parent
+        environment (supplied values win). When ``None`` (the default), the parent
+        environment is inherited unchanged.
 
     Returns
     -------
@@ -298,6 +315,7 @@ def run_shiny_app(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         cwd=cwd,
+        env=_subprocess_env(env),
         encoding="utf-8",
     )
 
@@ -328,6 +346,7 @@ def run_shiny_app(
                 wait_for_start=wait_for_start,
                 timeout_secs=timeout_secs,
                 bufsize=bufsize,
+                env=env,
             )
 
     return sa
@@ -344,6 +363,7 @@ def shiny_app_gen(
     # wait_for_start: bool = False,
     timeout_secs: float = 30,
     bufsize: int = 64 * 1024,
+    env: dict[str, str] | None = None,
 ) -> Generator[ShinyAppProc, Any, None]:
     """
     Run a Shiny app in a subprocess.
@@ -370,6 +390,10 @@ def shiny_app_gen(
         The maximum number of seconds to wait for the app to become ready.
     bufsize
         The buffer size to use for stdout and stderr.
+    env
+        Extra environment variables for the app subprocess, merged over the parent
+        environment (supplied values win). When ``None`` (the default), the parent
+        environment is inherited unchanged.
 
     Yields
     ------
@@ -387,6 +411,7 @@ def shiny_app_gen(
         cwd=cwd,
         bufsize=bufsize,
         timeout_secs=timeout_secs,
+        env=env,
     )
     had_connection_error: bool = False
     try:
