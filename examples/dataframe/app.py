@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import seaborn as sns
 import shinyswatch
@@ -17,6 +19,19 @@ dataset_names = [
     "tips",
     "titanic",
 ]
+
+
+def load_dataset_local(name: str) -> pd.DataFrame:
+    here = os.path.dirname(__file__)
+    csv_path = os.path.join(here, "data", f"{name}.csv")
+    gz_path = os.path.join(here, "data", f"{name}.csv.gz")
+
+    if os.path.exists(gz_path):
+        return pd.read_csv(gz_path, compression="gzip")
+    elif os.path.exists(csv_path):
+        return pd.read_csv(csv_path)
+
+    return sns.load_dataset(name)
 
 
 def app_ui(req):
@@ -78,7 +93,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.effect
     def update_df():
-        return df.set(sns.load_dataset(req(input.dataset())))
+        return df.set(load_dataset_local(req(input.dataset())))
 
     @render.data_frame
     def grid():

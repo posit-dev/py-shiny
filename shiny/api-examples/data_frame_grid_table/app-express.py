@@ -1,5 +1,4 @@
 import pandas as pd
-import seaborn as sns
 
 from shiny import reactive
 from shiny.express import input, render, ui
@@ -7,7 +6,56 @@ from shiny.express import input, render, ui
 height = 350
 width = "fit-content"
 df: reactive.value[pd.DataFrame] = reactive.value(
-    sns.load_dataset("anagrams").iloc[:, 1:]
+    pd.DataFrame(
+        {
+            "attnr": [
+                "divided",
+                "divided",
+                "divided",
+                "divided",
+                "divided",
+                "divided",
+                "divided",
+                "divided",
+                "divided",
+                "divided",
+                "focused",
+                "focused",
+                "focused",
+                "focused",
+                "focused",
+                "focused",
+                "focused",
+                "focused",
+                "focused",
+                "focused",
+            ],
+            "num1": [2, 3, 3, 5, 4, 5, 5, 5, 2, 6, 6, 8, 6, 8, 8, 6, 7, 7, 5, 6],
+            "num2": [
+                4.0,
+                4.0,
+                5.0,
+                7.0,
+                5.0,
+                5.0,
+                4.5,
+                7.0,
+                3.0,
+                5.0,
+                5.0,
+                9.0,
+                5.0,
+                8.0,
+                8.0,
+                8.0,
+                7.0,
+                8.0,
+                6.0,
+                6.0,
+            ],
+            "num3": [7, 5, 6, 5, 8, 6, 6, 8, 7, 6, 6, 8, 9, 7, 7, 7, 6, 6, 6, 5],
+        }
+    )
 )
 
 
