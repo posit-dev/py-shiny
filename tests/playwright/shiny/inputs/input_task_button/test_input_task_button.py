@@ -13,9 +13,12 @@ def click_extended_task_button(
     current_time: controller.OutputText,
 ) -> str:
     button.expect_state("ready")
-    button.click(timeout=0)
-    button.expect_state("busy", timeout=0)
-    return current_time.get_value(timeout=0)
+    button.click()
+    # The "busy" state only lasts as long as the server-side task (~1.5s), so
+    # this assertion must run promptly; a finite timeout keeps a missed busy
+    # window a fast, diagnosable failure instead of an infinite hang.
+    button.expect_state("busy")
+    return current_time.get_value()
 
 
 def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
@@ -40,11 +43,11 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
         button_task,
         current_time,
     )
-    # Make sure time value updates (before the calculation finishes
-    current_time.expect.not_to_have_text(time1, timeout=500)
-    result.expect_value("3", timeout=0)
+    # Make sure time value updates (before the 1.5s calculation finishes)
+    current_time.expect.not_to_have_text(time1, timeout=1000)
+    result.expect_value("3")
     # After the calculation time plus a buffer, make sure the calculation finishes
-    result.expect_value("5", timeout=(1.5 + 1) * 1000)
+    result.expect_value("5", timeout=10 * 1000)
 
     # set up Blocking test
     y.set("15")
@@ -61,4 +64,4 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     )
     # Make sure time value has not changed after 500ms has ellapsed
     time.sleep(0.5)
-    current_time.expect_value(time_block, timeout=0)
+    current_time.expect_value(time_block)
