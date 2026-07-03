@@ -18,6 +18,7 @@ quartodoc:
         - playwright.controller.Accordion
         - playwright.controller.AccordionPanel
         - playwright.controller.Card
+        - playwright.controller.Offcanvas
         - playwright.controller.Popover
         - playwright.controller.Sidebar
         - playwright.controller.Toast

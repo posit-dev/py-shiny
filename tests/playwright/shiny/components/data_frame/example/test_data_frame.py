@@ -277,6 +277,11 @@ def _filter_test_impl(
     snapshot: Any,
 ):
     controller.InputSelect(page, "selection_mode").set("none")
+    # Changing the selection mode re-renders the data frame on the server. Wait
+    # for the new table to arrive (multi-row selection is now disabled) before
+    # interacting with the filter inputs; otherwise the re-render can steal
+    # focus mid-test.
+    expect(grid.locator("table")).to_have_attribute("aria-multiselectable", "false")
 
     filters = grid.locator("tr.filters")
 

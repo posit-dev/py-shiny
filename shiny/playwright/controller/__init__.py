@@ -65,6 +65,7 @@ from ._output import (
     OutputUi,
 )
 from ._overlay import (
+    Offcanvas,
     Popover,
     Tooltip,
 )
@@ -112,6 +113,7 @@ __all__ = [
     "Accordion",
     "AccordionPanel",
     "Sidebar",
+    "Offcanvas",
     "Popover",
     "Toast",
     "Tooltip",

@@ -33,6 +33,7 @@ quartodoc:
         - ui.card
         - ui.card_header
         - ui.card_footer
+        - ui.offcanvas
         - ui.popover
         - ui.tooltip
         - ui.accordion
@@ -190,6 +191,9 @@ quartodoc:
         - ui.update_sidebar
         - ui.update_tooltip
         - ui.update_popover
+        - ui.hide_offcanvas
+        - ui.show_offcanvas
+        - ui.toggle_offcanvas
         - ui.update_accordion
         - ui.update_accordion_panel
         - ui.insert_accordion_panel

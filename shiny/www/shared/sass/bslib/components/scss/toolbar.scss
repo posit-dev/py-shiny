@@ -126,12 +126,14 @@
   /* ---- Adjustments to other elements ---- */
 
   // Ensures uniformity of font sizing in elements and sub-elements (e.g., input select)
+  // Excludes bslib-offcanvas since it's a fixed-position overlay, not laid out
+  // as part of the toolbar, and shouldn't inherit the toolbar's compact styling.
   &,
-  & * {
+  & :not(bslib-offcanvas, bslib-offcanvas *) {
     font-size: 0.9rem;
   }
 
-  &>* {
+  &>:not(bslib-offcanvas, .offcanvas-backdrop) {
     margin-bottom: 0 !important;
     width: auto;
     align-self: center;
