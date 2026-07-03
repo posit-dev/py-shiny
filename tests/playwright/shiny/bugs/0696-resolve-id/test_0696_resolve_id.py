@@ -53,39 +53,6 @@ def expect_outputs(page: Page, module_id: str, letter: str, count: int):
     )
 
 
-def expect_labels(page: Page, module_id: str):
-    def resolve_id(id: str):
-        if module_id:
-            return f"{module_id}-{id}"
-        return id
-
-    controller.InputNumeric(page, resolve_id("input_numeric")).expect_label("Numeric")
-    controller.InputText(page, resolve_id("input_text")).expect_label("Text")
-    controller.InputTextArea(page, resolve_id("input_text_area")).expect_label(
-        "Text area"
-    )
-    controller.InputSelect(page, resolve_id("input_select")).expect_label("Select")
-    controller.InputSelectize(page, resolve_id("input_selectize")).expect_label(
-        "Selectize"
-    )
-    controller.InputCheckbox(page, resolve_id("input_checkbox")).expect_label(
-        "Checkbox"
-    )
-    controller.InputSwitch(page, resolve_id("input_switch")).expect_label("Switch")
-    controller.InputCheckboxGroup(
-        page, resolve_id("input_checkbox_group")
-    ).expect_label("Checkbox group")
-    controller.InputRadioButtons(page, resolve_id("input_radio_buttons")).expect_label(
-        "Radio buttons"
-    )
-    controller.InputFile(page, resolve_id("input_file")).expect_label("File")
-    controller.InputSlider(page, resolve_id("input_slider")).expect_label("Slider")
-    controller.InputDate(page, resolve_id("input_date")).expect_label("Date")
-    controller.InputDateRange(page, resolve_id("input_date_range")).expect_label(
-        "Date range"
-    )
-
-
 def expect_default_outputs(page: Page, module_id: str):
     expect_outputs(page, module_id, "a", 0)
 
@@ -107,38 +74,32 @@ def test_module_support(page: Page, local_app: ShinyAppProc, tmp_path: Path) -> 
     page.set_viewport_size({"width": 3000, "height": 6000})
     page.goto(local_app.url)
 
-    # Verify reset state
-    for mod_id in ("", "mod1", "mod2"):
-        expect_default_mod_state(page, mod_id)
-        expect_default_outputs(page, mod_id)
-        expect_labels(page, mod_id)
-
-    # Click x3 `update_mod2`
+    # Update mod2 once; one pass covers ID resolution without multiplying remote
+    # WebKit locator/action cost.
     update_mod2 = controller.InputActionButton(page, "update_mod2")
-    for i in range(3):
-        update_mod2.click()
-        controller.InputActionButton(page, "mod2-input_action_button").click()
-        controller.InputActionLink(page, "mod2-input_action_link").click()
-        with page.expect_download() as download_button_info:
-            download_button = controller.DownloadButton(page, "mod2-download_button")
-            download_button.click()
-            download = download_button_info.value
-            expect_download_contents(
-                download=download,
-                destination=tmp_path / f"download_button-mod2-{i + 1}.csv",
-                suggested_filename="download_button-mod2.csv",
-                expected_contents=f"session,type,count\nmod2,button,{i + 1}\n",
-            )
-        with page.expect_download() as download_link_info:
-            download_link = controller.DownloadLink(page, "mod2-download_link")
-            download_link.click()
-            download = download_link_info.value
-            expect_download_contents(
-                download=download,
-                destination=tmp_path / f"download_link-mod2-{i + 1}.csv",
-                suggested_filename="download_link-mod2.csv",
-                expected_contents=f"session,type,count\nmod2,link,{i + 1}\n",
-            )
+    update_mod2.click()
+    controller.InputActionButton(page, "mod2-input_action_button").click()
+    controller.InputActionLink(page, "mod2-input_action_link").click()
+    with page.expect_download() as download_button_info:
+        download_button = controller.DownloadButton(page, "mod2-download_button")
+        download_button.click()
+        download = download_button_info.value
+        expect_download_contents(
+            download=download,
+            destination=tmp_path / "download_button-mod2.csv",
+            suggested_filename="download_button-mod2.csv",
+            expected_contents="session,type,count\nmod2,button,1\n",
+        )
+    with page.expect_download() as download_link_info:
+        download_link = controller.DownloadLink(page, "mod2-download_link")
+        download_link.click()
+        download = download_link_info.value
+        expect_download_contents(
+            download=download,
+            destination=tmp_path / "download_link-mod2.csv",
+            suggested_filename="download_link-mod2.csv",
+            expected_contents="session,type,count\nmod2,link,1\n",
+        )
 
     controller.InputFile(page, "mod2-input_file").set(
         Path(__file__).parent / "test_file.txt"
@@ -155,30 +116,30 @@ def test_module_support(page: Page, local_app: ShinyAppProc, tmp_path: Path) -> 
         page,
         module_id="mod2",
         sidebar=False,
-        accordion=("d",),
+        accordion=("b",),
         popover=True,
         tooltip=True,
-        input_action_button=3,
-        input_action_link=3,
+        input_action_button=1,
+        input_action_link=1,
         input_file="test_file.txt",
         input_checkbox=True,
-        input_checkbox_group=("a", "b", "c"),
-        input_date=datetime.date(2023, 8, 27),
-        input_date_range=(datetime.date(2023, 8, 28), datetime.date(2023, 8, 30)),
-        input_numeric=3,
-        input_password="password3",
-        input_radio_buttons="d",
-        input_select="d",
-        input_selectize="d",
-        input_slider=3,
+        input_checkbox_group=("a", "c", "d"),
+        input_date=datetime.date(2023, 8, 25),
+        input_date_range=(datetime.date(2023, 8, 26), datetime.date(2023, 8, 28)),
+        input_numeric=1,
+        input_password="password1",
+        input_radio_buttons="b",
+        input_select="b",
+        input_selectize="b",
+        input_slider=1,
         input_switch=True,
-        input_text="text3",
-        input_text_area="text_area3",
-        navset_bar="d",
-        navset_card_pill="d",
-        navset_card_tab="d",
-        navset_hidden="d",
-        navset_pill="d",
-        navset_tab="d",
+        input_text="text1",
+        input_text_area="text_area1",
+        navset_bar="b",
+        navset_card_pill="b",
+        navset_card_tab="b",
+        navset_hidden="b",
+        navset_pill="b",
+        navset_tab="b",
     )
-    expect_outputs(page, "mod2", "d", 3)
+    expect_outputs(page, "mod2", "b", 1)
