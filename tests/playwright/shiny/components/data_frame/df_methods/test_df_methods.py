@@ -28,7 +28,15 @@ def test_dataframe_methods(page: Page, local_app: ShinyAppProc, tab_name: str) -
     update_filter = controller.InputActionButton(page, f"{tab_name}-update_filter")
 
     def reset_data_frame():
+        # Clicking reset invalidates the data frame output, which re-mounts the
+        # client-side table with fresh (unsorted / unfiltered) state. Wait for the
+        # current table element to be replaced before interacting with the data
+        # frame again; otherwise a subsequent action (e.g. a sort click) can race
+        # the re-mount and be silently discarded. The output values below are not
+        # sufficient synchronization as they may already have their expected values.
+        old_table = data_frame.loc_table.element_handle()
         reset_df.click()
+        page.wait_for_function("el => !el.isConnected", arg=old_table)
         data_view_rows.expect_value("(0, 1, 2, 3, 4, 5)")
         data_view_selected_true.expect_value("[]")
         data_view_selected_false.expect_value("[0, 1, 50, 51, 100, 101]")
