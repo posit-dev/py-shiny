@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import cast
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from starlette.requests import Request
@@ -11,11 +13,11 @@ from starlette.responses import Response
 from shiny import App, reactive, ui
 from shiny._connection import MockConnection
 from shiny._utils import is_test_mode
-from shiny.session import export_test_values
 from shiny.session._session import AppSession, OutBoundMessageQueues
 from shiny.session._utils import (
     session_context,
 )
+from shiny.testmode import export_test_values
 
 
 def test_is_test_mode_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -223,7 +225,8 @@ def test_is_internal_snapshot_input() -> None:
     assert _is_internal_snapshot_input("x") is False
 
 
-def test_serialize_test_mode_collects_and_skips() -> None:
+@pytest.mark.asyncio
+async def test_serialize_test_mode_collects_and_skips() -> None:
     from shiny.session._session import Inputs
 
     inputs = Inputs(dict())
@@ -231,7 +234,7 @@ def test_serialize_test_mode_collects_and_skips() -> None:
     inputs["name"] = reactive.Value("hi")
     inputs[".clientdata_output_x_hidden"] = reactive.Value(True)
 
-    result = inputs._serialize_test_mode()
+    result = await inputs._serialize_test_mode()
     assert result == {"x": 5, "name": "hi"}
 
 
@@ -561,3 +564,383 @@ async def test_snapshot_endpoint_sortc_param(
         ),
     )
     assert bad.status_code == 400
+
+
+def test_export_test_values_relocated() -> None:
+    # `export_test_values` lives in `shiny.testmode`; the pre-release
+    # `shiny.session` location is gone (PR #2270 was never released).
+    import shiny.session
+
+    assert not hasattr(shiny.session, "export_test_values")
+    assert "export_test_values" not in shiny.session.__all__
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_preprocess_applied(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    session.input["t"] = reactive.Value("2026-07-02 12:34:56")
+    session.input["x"] = reactive.Value(10)
+
+    # Sync preprocessor
+    session.input.set_snapshot_preprocess("t", lambda value: "<time>")
+
+    # Async preprocessor
+    async def double(value: int) -> int:
+        return value * 2
+
+    session.input.set_snapshot_preprocess("x", double)
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["input"]["t"] == "<time>"
+    assert body["input"]["x"] == 20
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_preprocess_namespaced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    from shiny._namespaces import ResolvedId
+
+    session.input[ResolvedId("mod1-y")] = reactive.Value(1)
+
+    # Registering through a module proxy namespaces the id and shares storage
+    # with the root session's Inputs.
+    proxy = session.make_scope("mod1")
+    proxy.input.set_snapshot_preprocess("y", lambda value: value + 100)
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["input"]["mod1-y"] == 101
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_preprocess_error_marker(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    session.input["bad"] = reactive.Value(1)
+    session.input["ok"] = reactive.Value(2)
+
+    def boom(value: int) -> int:
+        raise RuntimeError("boom")
+
+    session.input.set_snapshot_preprocess("bad", boom)
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    # A raising preprocessor becomes a visible, non-fatal marker; other keys
+    # are unaffected.
+    assert body["input"]["bad"] == {"__shiny_snapshot_preprocess_error__": "boom"}
+    assert body["input"]["ok"] == 2
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_preprocess_reregister_overwrites(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    session.input["x"] = reactive.Value(1)
+
+    session.input.set_snapshot_preprocess("x", lambda value: "first")
+    session.input.set_snapshot_preprocess("x", lambda value: "second")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["input"]["x"] == "second"
+
+
+@pytest.mark.asyncio
+async def test_output_snapshot_preprocess_applied(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    from shiny import render
+
+    @render.text
+    def out1() -> str:
+        return "unused"
+
+    session.output(out1)
+
+    # Sync preprocessor; simulate the output having rendered.
+    out1.snapshot_preprocess(lambda value: "<scrubbed>")
+    session._outbound_message_queues.set_value("out1", "the time is 12:34")
+
+    @render.text
+    def out2() -> str:
+        return "unused"
+
+    session.output(out2)
+
+    # Async preprocessor
+    async def shout(value: str) -> str:
+        return value.upper()
+
+    out2.snapshot_preprocess(shout)
+    session._outbound_message_queues.set_value("out2", "hello")
+
+    # An output with no preprocessor passes through unchanged, as does a
+    # recorded value with no registered renderer at all.
+    session._outbound_message_queues.set_value("out3", "raw")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["out1"] == "<scrubbed>"
+    assert body["output"]["out2"] == "HELLO"
+    assert body["output"]["out3"] == "raw"
+
+
+@pytest.mark.asyncio
+async def test_output_snapshot_preprocess_error_marker_and_bypass(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    from shiny import render
+
+    @render.text
+    def bad() -> str:
+        return "unused"
+
+    session.output(bad)
+
+    def boom(value: str) -> str:
+        raise RuntimeError("boom")
+
+    bad.snapshot_preprocess(boom)
+    session._outbound_message_queues.set_value("bad", "value")
+
+    # Errored outputs keep their error marker; the preprocessor must NOT run
+    # on them.
+    @render.text
+    def errored() -> str:
+        return "unused"
+
+    session.output(errored)
+    errored.snapshot_preprocess(lambda value: "SHOULD NOT APPEAR")
+    session._outbound_message_queues.set_error("errored", {"message": "kaput"})
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["bad"] == {"__shiny_snapshot_preprocess_error__": "boom"}
+    assert body["output"]["errored"] == {"__shiny_output_error__": "kaput"}
+
+
+@pytest.mark.asyncio
+async def test_snapshot_preprocess_input_free_function(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    session.input["x"] = reactive.Value(1)
+
+    from shiny.testmode import snapshot_preprocess_input
+
+    with session_context(session):
+        snapshot_preprocess_input("x", lambda value: value + 1)
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["input"]["x"] == 2
+
+
+def test_snapshot_preprocess_input_free_function_requires_session() -> None:
+    from shiny.testmode import snapshot_preprocess_input
+
+    with pytest.raises(RuntimeError):
+        snapshot_preprocess_input("x", lambda value: value)
+
+
+def test_no_snapshot_preprocess_output_free_function() -> None:
+    # Deliberate API decision: output preprocessors attach to the renderer
+    # object (`my_output.snapshot_preprocess(fn)`); there is no id-keyed free
+    # function. See the NOTE in shiny/testmode.py.
+    import shiny.testmode
+
+    assert not hasattr(shiny.testmode, "snapshot_preprocess_output")
+
+
+def test_snapshot_preprocess_file_input_helper() -> None:
+    from shiny.testmode import _snapshot_preprocess_file_input
+
+    value = [
+        {
+            "name": "a.txt",
+            "size": 1,
+            "type": "text/plain",
+            "datapath": "/tmp/xyz123/a.txt",
+        },
+        {"name": "b.txt", "size": 2, "type": "text/plain", "datapath": "b.txt"},
+    ]
+    scrubbed = _snapshot_preprocess_file_input(value)
+    assert [f["datapath"] for f in scrubbed] == ["a.txt", "b.txt"]
+    # Original value is not mutated.
+    assert value[0]["datapath"] == "/tmp/xyz123/a.txt"
+
+    # Non-list / malformed values pass through unchanged.
+    assert _snapshot_preprocess_file_input(None) is None
+    assert _snapshot_preprocess_file_input("x") == "x"
+    assert _snapshot_preprocess_file_input([{"name": "no-path"}]) == [
+        {"name": "no-path"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_upload_end_auto_registers_file_scrub(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    class FakeOp:
+        def finish(self) -> list[dict[str, object]]:
+            return [
+                {
+                    "name": "a.txt",
+                    "size": 1,
+                    "type": "text/plain",
+                    "datapath": "/tmp/xyz123/a.txt",
+                }
+            ]
+
+    def fake_get_upload_operation(job_id: str) -> FakeOp:
+        return FakeOp()
+
+    monkeypatch.setattr(
+        session._file_upload_manager,
+        "get_upload_operation",
+        fake_get_upload_operation,
+    )
+    handler, _ = session._message_handlers["uploadEnd"]
+    await handler("job1", "file1")
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    # The live input value keeps the real tempdir path; only the snapshot is
+    # scrubbed to the basename (matching R's snapshotPreprocessorFileInput).
+    assert body["input"]["file1"] == [
+        {"name": "a.txt", "size": 1, "type": "text/plain", "datapath": "a.txt"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_snapshot_preprocess_output_namespaced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+    proxy = session.make_scope("mod1")
+
+    from shiny import render
+
+    @render.text
+    def out1() -> str:
+        return "unused"
+
+    # Register through the module proxy: the output lands under the
+    # namespaced name, and the renderer-attached preprocessor is found via
+    # the shared `_outputs` registry.
+    proxy.output(out1)
+    session._outbound_message_queues.set_value("mod1-out1", "hello")
+
+    out1.snapshot_preprocess(lambda value: value.upper())
+
+    resp = cast(
+        Response,
+        await session._handle_request_impl(_snapshot_request(), "dataobj", "shinytest"),
+    )
+    import orjson
+
+    body = orjson.loads(resp.body)
+    assert body["output"]["mod1-out1"] == "HELLO"
+
+
+def test_file_restore_handler_registers_snapshot_preprocess(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    # The `shiny.file` input handler (bookmark restore) must register the same
+    # datapath scrubber as `uploadEnd`.
+    import shiny.bookmark._restore_state
+    import shiny.input_handler
+    from shiny._namespaces import ResolvedId
+
+    monkeypatch.setenv("SHINY_TESTMODE", "1")
+    session = _make_app_session()
+
+    (tmp_path / "a.txt").write_text("hello")
+
+    def fake_can_serialize_input_file(session: object) -> bool:
+        return True
+
+    monkeypatch.setattr(
+        shiny.input_handler, "can_serialize_input_file", fake_can_serialize_input_file
+    )
+    monkeypatch.setattr(
+        shiny.bookmark._restore_state,
+        "get_current_restore_context",
+        lambda: SimpleNamespace(dir=str(tmp_path)),
+    )
+
+    handler = shiny.input_handler.input_handlers["shiny.file"]
+    value = {
+        "name": ["a.txt"],
+        "size": [5],
+        "type": ["text/plain"],
+        "datapath": ["a.txt"],
+    }
+    restored = cast("list[Any]", handler(value, ResolvedId("file1"), session))
+
+    assert isinstance(restored, list) and len(restored) == 1
+    assert ResolvedId("file1") in session.input._snapshot_preprocessors
