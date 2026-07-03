@@ -529,10 +529,12 @@ class Theme:
             **args,
         }
 
-        self._css = sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        css = sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
             string=self.to_sass(),
             **args,
         )
+        assert isinstance(css, str)
+        self._css = css
 
         return self._css
 
