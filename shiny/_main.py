@@ -14,7 +14,7 @@ import warnings
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import click
 import uvicorn
@@ -75,7 +75,7 @@ class ShinyServer(Server):
 
     async def startup(self, sockets: list[Any] | None = None) -> None:
         await super().startup(sockets=sockets)
-        if getattr(self, "started") and self._on_started is not None:
+        if cast(Any, self).started and self._on_started is not None:
             self._on_started()
 
 
@@ -91,11 +91,10 @@ def _run_uvicorn(
         sys.path.insert(0, app_dir)
 
     config = Config(app, **kwargs)
+    config_attrs = cast(Any, config)
     server = ShinyServer(config=config, on_started=on_started)
 
-    if (getattr(config, "reload") or getattr(config, "workers") > 1) and not isinstance(
-        app, str
-    ):
+    if (config_attrs.reload or config_attrs.workers > 1) and not isinstance(app, str):
         logging.getLogger("uvicorn.error").warning(
             "You must pass the application as an import string to enable "
             "'reload' or 'workers'."
@@ -106,7 +105,7 @@ def _run_uvicorn(
         if config.should_reload:
             sock = config.bind_socket()
             ChangeReload(config, target=server.run, sockets=[sock]).run()
-        elif getattr(config, "workers") > 1:
+        elif config_attrs.workers > 1:
             sock = config.bind_socket()
             Multiprocess(config, target=server.run, sockets=[sock]).run()
         else:
@@ -114,14 +113,14 @@ def _run_uvicorn(
     except KeyboardInterrupt:
         pass
     finally:
-        uds = getattr(config, "uds")
+        uds = cast(str | None, config_attrs.uds)
         if uds and os.path.exists(uds):
             os.remove(uds)
 
     if (
-        not getattr(server, "started")
+        not cast(Any, server).started
         and not config.should_reload
-        and getattr(config, "workers") == 1
+        and config_attrs.workers == 1
     ):
         sys.exit(_UVICORN_STARTUP_FAILURE)
 
