@@ -6,7 +6,13 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["shiny*"]
-namespaces = true
+# Keep `false` so only directories with an `__init__.py` are packaged as code.
+# `true` would register every asset/template directory (shiny/www/..., etc.) as
+# a PEP 420 namespace package and sweep in any stray directory or .py file that
+# lands under shiny/, over-exposing the package surface. The cost of `false` is
+# cosmetic: build_py warns that those data directories are "absent from the
+# `packages` configuration" while still bundling them via include-package-data.
+namespaces = false
 
 [tool.setuptools.exclude-package-data]
 "*" = ["api-examples/**"]
