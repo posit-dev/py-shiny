@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -46,6 +48,14 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     result.expect_value("3")
     # After the calculation time plus a buffer, make sure the calculation finishes
     result.expect_value("5", timeout=10 * 1000)
+
+    # Negative control for the render counter used by the blocking check
+    # below: the session keeps flushing during an extended task, so the second
+    # (clicked) non-blocking window must contain renders. This proves a zero
+    # count means "blocked", not "counter broken". The first (startup) window
+    # overlaps the startup blocking window, so its count is not constrained.
+    renders_during_nonblock = controller.OutputText(page, "renders_during_nonblock")
+    renders_during_nonblock.expect_value(re.compile(r"^\d+,[1-9]\d*$"))
 
     # set up Blocking test
     y.set("15")
