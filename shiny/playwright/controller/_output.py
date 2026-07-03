@@ -696,16 +696,8 @@ class OutputDataFrame(UiWithContainer):
         return (
             # Find the direct row
             self.loc_body.locator(f"> tr[data-index='{row}']")
-            # Find all direct td's and th's (these are independent sets)
-            .locator("> td, > th")
-            # Remove all results that contain the `row-number` class
-            .locator(
-                # self
-                "xpath=.",
-                has=self.page.locator(
-                    "xpath=self::*[not(contains(@class, 'row-number'))]"
-                ),
-            )
+            # Find all direct non-row-number td's and th's
+            .locator("> td:not(.row-number), > th:not(.row-number)")
             # Return the first result
             .nth(col)
         )
@@ -1152,14 +1144,21 @@ class OutputDataFrame(UiWithContainer):
                 timeout=timeout,
                 modifiers=clickModifier,
             )
-            # Wait for arrows to react a little bit
-            # This could possible be changed to a `wait_for_change`, but 150ms should be fine
-            self.page.wait_for_timeout(150)
+
+        def click_sort_arrow(loc: Locator) -> None:
+            arrow_el = loc.element_handle(timeout=timeout)
+            old_class = arrow_el.get_attribute("class")
+            click_loc(loc)
+            self.page.wait_for_function(
+                "([el, oldClass]) => !el.isConnected || el.getAttribute('class') !== oldClass",
+                arg=[arrow_el, old_class],
+                timeout=timeout,
+            )
 
         # Reset arrow sorting by clicking on the arrows until none are found
         sortingArrows = self.loc_column_label.locator("svg.sort-arrow")
         while sortingArrows.count() > 0:
-            click_loc(sortingArrows.first)
+            click_sort_arrow(sortingArrows.first)
 
         # Quit early if no sorting is needed
         if sort is None:
@@ -1235,11 +1234,16 @@ class OutputDataFrame(UiWithContainer):
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
+
+        def fill_if_needed(input_el: Locator, value: str) -> None:
+            if input_el.input_value(timeout=timeout) != value:
+                input_el.fill(value, timeout=timeout)
+
         # reset all filters
         all_input_locs = self.loc_column_filter.locator("> input, > div > input")
         for i in range(all_input_locs.count()):
             input_el = all_input_locs.nth(i)
-            input_el.fill("", timeout=timeout)
+            fill_if_needed(input_el, "")
 
         if filter is None:
             return
@@ -1262,19 +1266,13 @@ class OutputDataFrame(UiWithContainer):
             filterColumn = self.loc_column_filter.nth(filterInfo["col"])
 
             if isinstance(filterInfo["value"], str):
-                filterColumn.locator("> input").fill(filterInfo["value"])
+                fill_if_needed(filterColumn.locator("> input"), filterInfo["value"])
             elif isinstance(filterInfo["value"], (tuple, list)):
                 header_inputs = filterColumn.locator("> div > input")
                 if filterInfo["value"][0] is not None:
-                    header_inputs.nth(0).fill(
-                        str(filterInfo["value"][0]),
-                        timeout=timeout,
-                    )
+                    fill_if_needed(header_inputs.nth(0), str(filterInfo["value"][0]))
                 if filterInfo["value"][1] is not None:
-                    header_inputs.nth(1).fill(
-                        str(filterInfo["value"][1]),
-                        timeout=timeout,
-                    )
+                    fill_if_needed(header_inputs.nth(1), str(filterInfo["value"][1]))
             else:
                 raise ValueError(
                     "Invalid filter value. Must be a string or a tuple/list of two numbers."

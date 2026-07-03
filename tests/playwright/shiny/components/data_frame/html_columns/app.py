@@ -1,4 +1,3 @@
-import pkgutil
 import random
 import string
 from typing import Any, cast
@@ -10,17 +9,28 @@ from htmltools import HTMLDependency
 from shiny import App, Inputs, Outputs, Session, render, ui
 from shiny.render import CellPatch
 
-pd_penguins = palmerpenguins.load_penguins_raw()
-pl_penguins = pl.read_csv(
-    cast(
-        bytes,
-        pkgutil.get_data(
-            "palmerpenguins",
-            "data/penguins-raw.csv",
-        ),
-    ),
-    null_values="NA",
-)
+HTML_COLUMNS_SAMPLE_ROWS = [
+    0,
+    1,
+    2,
+    3,
+    8,
+    9,
+    33,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    47,
+    150,
+    151,
+]
+
+pd_penguins = palmerpenguins.load_penguins_raw().iloc[HTML_COLUMNS_SAMPLE_ROWS].copy()
+pl_penguins = pl.from_pandas(pd_penguins)
 
 
 def random_generator():
@@ -47,11 +57,7 @@ def make_heading(y: Any) -> Any:
 def make_island_content(z: Any) -> ui.TagList:
     return ui.TagList(
         ui.input_checkbox(f"checkbox_{z}_{random_generator()}", f"{z}"),
-        ui.tags.img(
-            src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/276517/posit-logo-fullcolor-TM.png",
-            height="20%",
-            width="20%",
-        ),
+        ui.tags.span(str(z)),
     )
 
 
@@ -59,9 +65,15 @@ studyName = pd_penguins["studyName"].copy().astype("object")
 # Set the first value of the column to an html object so the column is treated as object by narwhals (not str)
 studyName[0] = htmlDep
 pd_penguins["studyName"] = studyName
-pd_penguins["Species"] = pd_penguins["Species"].apply(make_underlined_html)
-pd_penguins["Region"] = pd_penguins["Region"].apply(make_heading)
-pd_penguins["Island"] = pd_penguins["Island"].apply(make_island_content)
+pd_penguins["Species"] = cast(
+    Any,
+    [make_underlined_html(x) for x in pd_penguins["Species"]],
+)
+pd_penguins["Region"] = [make_heading(x) for x in pd_penguins["Region"]]
+pd_penguins["Island"] = cast(
+    Any,
+    [make_island_content(x) for x in pd_penguins["Island"]],
+)
 # Convert column 5 (Stage) to object dtype before assigning HTML objects (required for pandas 3.0+)
 pd_penguins["Stage"] = pd_penguins["Stage"].astype("object")
 
@@ -101,11 +113,7 @@ pl_penguins = (
             [
                 ui.div(
                     ui.input_checkbox(f"checkbox_{x}_{random_generator()}", f"{x}"),
-                    ui.tags.img(
-                        src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/276517/posit-logo-fullcolor-TM.png",
-                        height="20%",
-                        width="20%",
-                    ),
+                    ui.tags.span(str(x)),
                 )
                 for x in pl_penguins["Island"]
             ],
