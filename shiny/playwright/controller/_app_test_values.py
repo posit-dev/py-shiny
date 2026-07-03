@@ -46,11 +46,28 @@ class AppTestValues:
         self.page = page
 
     def _fetch(self) -> dict[str, Any]:
-        url = str(
-            self.page.evaluate(
-                "() => window.Shiny.shinyapp.getTestSnapshotBaseUrl({fullUrl: true})"
+        # Discover the snapshot URL from the Shiny client. Optional chaining keeps
+        # `evaluate` from throwing when the client API isn't present yet (app not
+        # loaded/bound); the try/except covers any other page-level error. Either
+        # way we raise a clear message instead of an opaque Playwright/URL error.
+        try:
+            url = self.page.evaluate(
+                "() => window.Shiny?.shinyapp?.getTestSnapshotBaseUrl?."
+                "({ fullUrl: true }) ?? null"
             )
-        )
+        except Exception as e:
+            raise RuntimeError(
+                "Could not read the test-mode snapshot URL from the page. Make sure "
+                "the Shiny app is loaded and bound before using `AppTestValues` "
+                "(e.g. `page.goto(app.url)` and wait for an element to appear)."
+            ) from e
+        if not url:
+            raise RuntimeError(
+                "The Shiny client API `window.Shiny.shinyapp.getTestSnapshotBaseUrl` "
+                "was not available. Ensure the app is fully loaded and bound in the "
+                "page before reading the test-mode snapshot."
+            )
+        url = str(url)
         response = self.page.request.get(url)
         if not response.ok:
             raise RuntimeError(

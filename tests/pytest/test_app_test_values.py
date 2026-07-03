@@ -49,3 +49,24 @@ def test_get_raises_on_non_json_body() -> None:
     av = AppTestValues(_fake_page(ok=True, json_error=True))
     with pytest.raises(RuntimeError, match="non-JSON body"):
         av.get()
+
+
+def test_get_raises_when_snapshot_url_unavailable() -> None:
+    # If the Shiny client API isn't present yet (app not loaded/bound), the
+    # optional-chaining evaluate returns None -> clear error, no HTTP request.
+    page = MagicMock()
+    page.evaluate.return_value = None
+    av = AppTestValues(page)
+    with pytest.raises(RuntimeError, match="loaded and bound"):
+        av.get()
+    page.request.get.assert_not_called()
+
+
+def test_get_raises_when_evaluate_errors() -> None:
+    # A page-level evaluate error surfaces as a clear message, not a raw JS error.
+    page = MagicMock()
+    page.evaluate.side_effect = RuntimeError("Execution context was destroyed")
+    av = AppTestValues(page)
+    with pytest.raises(RuntimeError, match="loaded and bound"):
+        av.get()
+    page.request.get.assert_not_called()
