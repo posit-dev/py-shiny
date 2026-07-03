@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 
 import pytest
 from example_apps import get_apps, reruns, reruns_delay, validate_example
@@ -10,6 +11,7 @@ from shiny._main_create import (
     GithubRepoLocation,
     parse_github_arg,
     shiny_internal_templates,
+    template_by_name,
 )
 
 
@@ -19,6 +21,7 @@ def subprocess_create(
     *,
     mode: str = "core",
     package_name: str = "",
+    check_duplicate: bool = False,
 ):
     cmd = [
         "shiny",
@@ -33,7 +36,7 @@ def subprocess_create(
         package_name,
     ]
 
-    subprocess.run(cmd)
+    subprocess.run(cmd, check=True)
     assert os.path.isdir(dest_dir)
 
     # Package templates don't have a top-level app.py file
@@ -42,9 +45,24 @@ def subprocess_create(
     else:
         assert os.path.isfile(f"{dest_dir}/pyproject.toml")
 
-    print("\nCheck for duplicate files")
-    with pytest.raises(subprocess.CalledProcessError):
-        subprocess.run(cmd, check=True)
+    if check_duplicate:
+        print("\nCheck for duplicate files")
+        with pytest.raises(subprocess.CalledProcessError):
+            subprocess.run(cmd, check=True)
+
+
+def assert_created_app_matches_template(
+    app_template: str, dest_dir: str, *, mode: str
+) -> None:
+    template = template_by_name(shiny_internal_templates.apps, app_template)
+    assert template is not None
+
+    source_name = f"app-{mode}.py" if template.express_available else "app.py"
+    assert (Path(dest_dir) / "app.py").read_text() == (
+        template.path / source_name
+    ).read_text()
+    assert not (Path(dest_dir) / "app-core.py").exists()
+    assert not (Path(dest_dir) / "app-express.py").exists()
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
@@ -61,18 +79,23 @@ assert len(pkg_templates) > 0
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 @pytest.mark.parametrize("app_template", app_templates)
-def test_create_core(app_template: str, page: Page):
+def test_create_core(app_template: str):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
         subprocess_create(app_template, dest_dir=tmpdir)
-        validate_example(page, f"{tmpdir}/app.py")
+        assert_created_app_matches_template(app_template, tmpdir, mode="core")
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 @pytest.mark.parametrize("app_template", ["basic-app"])
-def test_create_express(app_template: str, page: Page):
+def test_create_express(app_template: str):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
         subprocess_create(app_template, dest_dir=tmpdir, mode="express")
-        validate_example(page, f"{tmpdir}/app.py")
+        assert_created_app_matches_template(app_template, tmpdir, mode="express")
+
+
+def test_create_duplicate_files_error():
+    with tempfile.TemporaryDirectory("example_apps") as tmpdir:
+        subprocess_create("basic-app", dest_dir=tmpdir, check_duplicate=True)
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
