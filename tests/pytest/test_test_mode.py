@@ -768,26 +768,17 @@ async def test_output_snapshot_preprocess_error_marker_and_bypass(
 
 
 @pytest.mark.asyncio
-async def test_snapshot_preprocess_free_functions(
+async def test_snapshot_preprocess_input_free_function(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SHINY_TESTMODE", "1")
     session = _make_app_session()
     session.input["x"] = reactive.Value(1)
 
-    from shiny import render
-    from shiny.testmode import snapshot_preprocess_input, snapshot_preprocess_output
-
-    @render.text
-    def out1() -> str:
-        return "unused"
-
-    session.output(out1)
-    session._outbound_message_queues.set_value("out1", "hello")
+    from shiny.testmode import snapshot_preprocess_input
 
     with session_context(session):
         snapshot_preprocess_input("x", lambda value: value + 1)
-        snapshot_preprocess_output("out1", lambda value: value.upper())
 
     resp = cast(
         Response,
@@ -797,29 +788,22 @@ async def test_snapshot_preprocess_free_functions(
 
     body = orjson.loads(resp.body)
     assert body["input"]["x"] == 2
-    assert body["output"]["out1"] == "HELLO"
 
 
-def test_snapshot_preprocess_output_unregistered_raises(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("SHINY_TESTMODE", "1")
-    session = _make_app_session()
-
-    from shiny.testmode import snapshot_preprocess_output
-
-    with session_context(session):
-        with pytest.raises(ValueError, match="No output named 'nope'"):
-            snapshot_preprocess_output("nope", lambda value: value)
-
-
-def test_snapshot_preprocess_free_functions_require_session() -> None:
-    from shiny.testmode import snapshot_preprocess_input, snapshot_preprocess_output
+def test_snapshot_preprocess_input_free_function_requires_session() -> None:
+    from shiny.testmode import snapshot_preprocess_input
 
     with pytest.raises(RuntimeError):
         snapshot_preprocess_input("x", lambda value: value)
-    with pytest.raises(RuntimeError):
-        snapshot_preprocess_output("x", lambda value: value)
+
+
+def test_no_snapshot_preprocess_output_free_function() -> None:
+    # Deliberate API decision: output preprocessors attach to the renderer
+    # object (`my_output.snapshot_preprocess(fn)`); there is no id-keyed free
+    # function. See the NOTE in shiny/testmode.py.
+    import shiny.testmode
+
+    assert not hasattr(shiny.testmode, "snapshot_preprocess_output")
 
 
 def test_snapshot_preprocess_file_input_helper() -> None:
@@ -899,20 +883,18 @@ async def test_snapshot_preprocess_output_namespaced(
     proxy = session.make_scope("mod1")
 
     from shiny import render
-    from shiny.testmode import snapshot_preprocess_output
 
     @render.text
     def out1() -> str:
         return "unused"
 
     # Register through the module proxy: the output lands under the
-    # namespaced name, and the free function resolves the plain id against
-    # the proxy's namespace.
+    # namespaced name, and the renderer-attached preprocessor is found via
+    # the shared `_outputs` registry.
     proxy.output(out1)
     session._outbound_message_queues.set_value("mod1-out1", "hello")
 
-    with session_context(proxy):
-        snapshot_preprocess_output("out1", lambda value: value.upper())
+    out1.snapshot_preprocess(lambda value: value.upper())
 
     resp = cast(
         Response,

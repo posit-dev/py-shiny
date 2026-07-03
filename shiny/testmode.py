@@ -13,7 +13,6 @@ from .session._utils import require_active_session
 __all__ = (
     "export_test_values",
     "snapshot_preprocess_input",
-    "snapshot_preprocess_output",
 )
 
 
@@ -117,75 +116,19 @@ def snapshot_preprocess_input(
 
     See Also
     --------
-    * `shiny.testmode.snapshot_preprocess_output`
+    * `shiny.render.renderer.Renderer.snapshot_preprocess`
     """
     session = require_active_session(None)
     session.input.set_snapshot_preprocess(id, fn)
 
 
-def snapshot_preprocess_output(
-    id: str,
-    fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]],
-) -> None:
-    """
-    Set a function for preprocessing an output value in test-mode snapshots.
-
-    Uses the current reactive session; equivalent to calling
-    `.snapshot_preprocess(fn)` on the renderer object registered for `id`. See
-    `shiny.render.renderer.Renderer.snapshot_preprocess` for details.
-    Inside a module, `id` is resolved in the module's namespace.
-
-    Parameters
-    ----------
-    id
-        The ID of the output.
-    fn
-        A function (synchronous or asynchronous) that takes the output value
-        and returns the value to write to the test snapshot.
-
-    Raises
-    ------
-    RuntimeError
-        If there is no active session.
-    ValueError
-        If no output with `id` is registered on the session. Call this function
-        after defining the output.
-
-    Examples
-    --------
-    ```python
-    from datetime import datetime
-
-    from shiny import App, Inputs, Outputs, Session, render, ui
-    from shiny.testmode import snapshot_preprocess_output
-
-    app_ui = ui.page_fluid(ui.output_text_verbatim("stamp"))
-
-    def server(input: Inputs, output: Outputs, session: Session):
-        @render.text
-        def stamp():
-            return f"time = {datetime.now().isoformat()}"
-
-        # Scrub the value shown in test-mode snapshots; the rendered output
-        # is untouched. No effect unless `SHINY_TESTMODE=1` is set.
-        snapshot_preprocess_output("stamp", lambda value: "time = <scrubbed>")
-
-    app = App(app_ui, server)
-    ```
-
-    See Also
-    --------
-    * `shiny.testmode.snapshot_preprocess_input`
-    """
-    session = require_active_session(None)
-    resolved_id = session.output._ns(id)
-    output_info = session.output._outputs.get(resolved_id)
-    if output_info is None:
-        raise ValueError(
-            f"No output named {id!r} is registered on this session. "
-            "Call `snapshot_preprocess_output()` after defining the output."
-        )
-    output_info.renderer.snapshot_preprocess(fn)
+# NOTE: There is deliberately no `snapshot_preprocess_output(id, fn)` free function
+# (the analog of R's `snapshotPreprocessOutput`). Output preprocessors belong to the
+# renderer object itself: call `my_output.snapshot_preprocess(fn)` on the
+# `@render.*` object. An id-keyed free function would have to look up the
+# registered renderer on the current session, which only works after the output is
+# registered (order-dependent) and duplicates the method with worse ergonomics.
+# Inputs have no author-side object to attach to, hence the free function above.
 
 
 def _snapshot_preprocess_file_input(value: Any) -> Any:

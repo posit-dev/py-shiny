@@ -269,7 +269,6 @@ quartodoc:
       contents:
         - testmode.export_test_values
         - testmode.snapshot_preprocess_input
-        - testmode.snapshot_preprocess_output
         - session.Inputs.set_snapshot_preprocess
         - session.Session.get_test_snapshot_url
     - title: Developer facing tools
