@@ -150,7 +150,8 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run End-to-End tests
-        timeout-minutes: 60
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
         run: |
           make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
@@ -225,7 +226,8 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run example app tests
-        timeout-minutes: 60
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
         run: |
           make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
@@ -281,7 +283,8 @@ jobs:
           browser: ${{ matrix.browser }}
 
       - name: Run playwright tests for AI generated apps
-        timeout-minutes: 60
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
         run: |
           make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
       - uses: actions/upload-artifact@v6
