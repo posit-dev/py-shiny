@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import datetime
 import logging
+import os
+import re
 import subprocess
 import sys
 import threading
@@ -10,7 +12,7 @@ from types import TracebackType
 from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
 from .._docstring import no_example
-from .._utils import random_port
+from .._utils import RANDOM_PORT_MAX_DEFAULT, RANDOM_PORT_MIN_DEFAULT, random_port
 
 __all__ = (
     "ShinyAppProc",
@@ -18,6 +20,41 @@ __all__ = (
     # For internal use only
     # "shiny_app_gen",
 )
+
+
+PORT_RANGE_DEFAULT: tuple[int, int] = (RANDOM_PORT_MIN_DEFAULT, RANDOM_PORT_MAX_DEFAULT)
+"""Port search range when not running under pytest-xdist: `random_port()`'s defaults."""
+
+WORKER_PORT_RANGE_BASE: int = 21000
+"""First port of the range reserved for pytest-xdist worker 0 (``gw0``)."""
+
+WORKER_PORT_RANGE_SIZE: int = 300
+"""Number of ports reserved for each pytest-xdist worker."""
+
+WORKER_PORT_RANGE_COUNT: int = 32
+"""Worker numbers wrap after this many workers so all ranges stay below the Linux
+ephemeral port range (32768+), which the OS hands out to outgoing connections."""
+
+
+def port_search_range() -> tuple[int, int]:
+    """
+    Determine the `(min, max)` port search range for a random app port.
+
+    When running under pytest-xdist, each worker gets its own disjoint range of
+    ports derived from the ``PYTEST_XDIST_WORKER`` environment variable (e.g.
+    ``gw0``, ``gw1``, ...). This prevents two workers from racing to bind the same
+    randomly chosen port, and keeps one worker's browser from ever talking to an
+    app started by another worker after a port is recycled.
+
+    Outside of pytest-xdist, the full `random_port()` default range is used.
+    """
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "")
+    match = re.fullmatch(r"[a-zA-Z]*(\d+)", worker_id)
+    if match is None:
+        return PORT_RANGE_DEFAULT
+    worker_num = int(match.group(1)) % WORKER_PORT_RANGE_COUNT
+    min_port = WORKER_PORT_RANGE_BASE + worker_num * WORKER_PORT_RANGE_SIZE
+    return (min_port, min_port + WORKER_PORT_RANGE_SIZE - 1)
 
 
 class OutputStream:
@@ -240,7 +277,11 @@ def run_shiny_app(
         A :class:`shiny.run.ShinyAppProc` object representing the running
         Shiny app process.
     """
-    shiny_port = port if port != 0 else random_port()
+    if port != 0:
+        shiny_port = port
+    else:
+        port_min, port_max = port_search_range()
+        shiny_port = random_port(min=port_min, max=port_max)
 
     child = subprocess.Popen(
         [

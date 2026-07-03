@@ -9,7 +9,9 @@ from inspect import signature
 from pathlib import PurePath
 
 import pytest
-from playwright.sync_api import BrowserContext, BrowserType, Page, Response
+from playwright.sync_api import BrowserContext, BrowserType
+from playwright.sync_api import Error as PlaywrightError
+from playwright.sync_api import Page, Response
 
 from shiny.pytest import ScopeName as ScopeName
 from shiny.pytest import create_app_fixture
@@ -44,6 +46,21 @@ def _new_session_page(browser: BrowserContext) -> Page:
     original_goto = page.goto
 
     def goto_and_verify_commit(url: str, **kwargs: typing.Any) -> Response | None:
+        # Firefox occasionally restarts the initial navigation internally, which
+        # surfaces as `Page.goto: Navigation to "<url>" is interrupted by another
+        # navigation to "<url>"`. The interrupting navigation targets the same
+        # URL, so retrying once is safe.
+        try:
+            response = original_goto(url, **kwargs)
+        except PlaywrightError as err:
+            if f'is interrupted by another navigation to "{url}"' not in str(err):
+                raise
+            logging.warning(
+                "Navigation to %s was interrupted by another navigation to the "
+                "same URL; retrying one time",
+                url,
+            )
+            response = original_goto(url, **kwargs)
         # WebKit occasionally swallows a navigation issued right after the
         # `about:blank` reset performed by the function-scoped `page` fixture:
         # `goto()` returns normally but the page never leaves `about:blank`,
@@ -52,7 +69,6 @@ def _new_session_page(browser: BrowserContext) -> Page:
         # is wedged and no future navigation will commit either, so mark it
         # for replacement and fail fast; a flaky rerun then gets a fresh page
         # instead of timing out on the same broken one.
-        response = original_goto(url, **kwargs)
         if url != "about:blank" and page.url == "about:blank":
             logging.warning(
                 "Navigation to %s did not commit (page still on about:blank); retrying one time",
