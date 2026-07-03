@@ -45,7 +45,9 @@ def test_validate_chat_update_user_input(page: Page, local_app: ShinyAppProc) ->
     expect(chat.loc_input).not_to_be_focused()
 
     # Input remains cleared if previously clear (have to clear the input first)
-    chat.loc_input.fill("")
+    chat.loc_input.focus()
+    chat.loc_input.press("ControlOrMeta+A")
+    chat.loc_input.press("Backspace")
 
     chat.expect_user_input("")
 
