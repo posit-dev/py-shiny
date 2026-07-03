@@ -58,11 +58,26 @@ def assert_created_app_matches_template(
     assert template is not None
 
     source_name = f"app-{mode}.py" if template.express_available else "app.py"
-    assert (Path(dest_dir) / "app.py").read_text() == (
-        template.path / source_name
-    ).read_text()
-    assert not (Path(dest_dir) / "app-core.py").exists()
-    assert not (Path(dest_dir) / "app-express.py").exists()
+    expected_files: dict[Path, Path] = {Path("app.py"): template.path / source_name}
+
+    for source_file in template.path.rglob("*"):
+        if (
+            not source_file.is_file()
+            or "__pycache__" in source_file.parts
+            or source_file.name in {"_template.json", "app-core.py", "app-express.py"}
+        ):
+            continue
+        expected_files[source_file.relative_to(template.path)] = source_file
+
+    actual_files = {
+        file.relative_to(dest_dir)
+        for file in Path(dest_dir).rglob("*")
+        if file.is_file() and "__pycache__" not in file.parts
+    }
+    assert actual_files == set(expected_files)
+
+    for dest_file, source_file in expected_files.items():
+        assert (Path(dest_dir) / dest_file).read_bytes() == source_file.read_bytes()
 
 
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
@@ -77,7 +92,6 @@ assert len(app_templates) > 0
 assert len(pkg_templates) > 0
 
 
-@pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 @pytest.mark.parametrize("app_template", app_templates)
 def test_create_core(app_template: str):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
@@ -85,7 +99,6 @@ def test_create_core(app_template: str):
         assert_created_app_matches_template(app_template, tmpdir, mode="core")
 
 
-@pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 @pytest.mark.parametrize("app_template", ["basic-app"])
 def test_create_express(app_template: str):
     with tempfile.TemporaryDirectory("example_apps") as tmpdir:
