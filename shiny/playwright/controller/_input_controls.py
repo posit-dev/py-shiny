@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 import typing
 from typing import Literal
 
@@ -363,34 +362,28 @@ class _InputSliderBase(
         else:
             raise ValueError(f"Invalid direction: {direction}")
 
+        page = self.loc_container.page
+        mouse = page.mouse
+
+        # WebKit coalesces mousemove events delivered within the same frame, which
+        # would skip pixels (and therefore values) during the scan. Waiting for an
+        # animation frame after each move guarantees each move is processed
+        # individually. Chromium and Firefox dispatch input events synchronously.
+        browser = page.context.browser
+        needs_frame_sync = browser is None or browser.browser_type.name == "webkit"
+
+        def sync_move(x: float, y: float) -> None:
+            mouse.move(x, y)
+            if needs_frame_sync:
+                page.evaluate("() => new Promise(requestAnimationFrame)")
+
         # Move mouse to handle center and press down on mouse
-        mouse = self.loc_container.page.mouse
         mouse.move(handle_center.get("x"), handle_center.get("y"))
         mouse.down()
 
-        # Slow it down a bit. Like "type" for text, but to allow the slider label to catch up
-        # This should be done for every `mouse.move()` call
-        sleep_time = 0.05
-
-        def slow_move(x: float, y: float, delay: float = sleep_time) -> None:
-            """
-            Slowly move the mouse to the given coordinates.
-
-            Parameters
-            ----------
-            x
-                The x-coordinate.
-            y
-                The y-coordinate.
-            delay
-                The delay between each move. Defaults to `sleep_time`.
-            """
-            mouse.move(x, y)
-            time.sleep(delay)
-
         # Move all the way to the left
         handle_center_y = handle_center.get("y")
-        slow_move(start_x, handle_center_y, delay=10 * sleep_time)
+        sync_move(start_x, handle_center_y)
 
         # For each pixel in the grid width, check the text label
         pxls: int = 0
@@ -410,7 +403,7 @@ class _InputSliderBase(
                 break
 
             # Not found; move handle to the right
-            slow_move(start_x + pxls, handle_center_y)
+            sync_move(start_x + pxls, handle_center_y)
 
             pxls += pixel_increment
 

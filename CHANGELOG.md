@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* The Playwright controllers `InputSlider.set()` and `InputSliderRange.set()` are now ~5-10x faster. The drag simulation previously slept 50ms after every one-pixel mouse move; the sleeps are removed, and on WebKit (where rapid mouse moves within a frame are coalesced, which would skip slider values) each move is instead synchronized with a `requestAnimationFrame` round-trip. (#2311)
+
 * Fixed rare tabset ID collisions in pages with many navsets. Randomly generated `data-tabsetid` values were drawn from a pool of ~1 million, so a page with dozens of tabsets could occasionally produce two navsets with the same ID (a birthday collision), resulting in duplicate DOM ids and broken tab switching. IDs are now drawn from a pool of 9 trillion. (#2296)
 
 ### Other changes
