@@ -13,19 +13,15 @@ runs:
         with:
           python-version: ${{ inputs.python-version }}
 
-      # On Windows runners the workspace and RUNNER_TEMP are on `D:` but the
-      # setup-python interpreter (and its site-packages) is on `C:`. uv can
-      # only hardlink when its cache is on the same drive as the install
-      # target, so place the cache on `C:` to avoid slow file-copy fallback.
-      # setup-uv respects a pre-existing UV_CACHE_DIR for its cache save/restore.
-      - name: Put `uv` cache on the same drive as Python (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          echo 'UV_CACHE_DIR=C:\uv-cache' >> $GITHUB_ENV
-
       # Installs the `uv` binary directly (no pip bootstrap) and caches uv's
       # package cache between runs, keyed on pyproject.toml + python version.
+      #
+      # `activate-environment` creates and activates a venv in the workspace
+      # instead of installing into setup-python's site-packages. This matters
+      # on Windows runners: the workspace, RUNNER_TEMP (uv's cache), and the
+      # venv are all on the fast `D:` drive, so installs hardlink from the
+      # cache instead of copying files onto the slow `C:` drive where
+      # setup-python's interpreter lives.
       - name: Install `uv`
         # Pinned to an exact release; astral-sh/setup-uv has no floating `v8` tag
         uses: astral-sh/setup-uv@v8.2.0
@@ -33,12 +29,8 @@ runs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
           cache-suffix: py${{ inputs.python-version }}
-
-      # https://github.com/astral-sh/uv/blob/main/docs/guides/integration/github.md#using-uv-pip
-      - name: Allow uv to use the system Python by default
-        shell: bash
-        run: |
-          echo "UV_SYSTEM_PYTHON=1" >> $GITHUB_ENV
+          activate-environment: true
+          python-version: ${{ inputs.python-version }}
 
       - name: Install dependencies
         shell: bash
