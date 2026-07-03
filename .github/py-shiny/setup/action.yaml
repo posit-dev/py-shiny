@@ -18,6 +18,7 @@ runs:
       # cache lives on the same drive as the workspace (RUNNER_TEMP), which
       # lets uv hardlink packages instead of falling back to slow file copies.
       - name: Install `uv`
+        # Pinned to an exact release; astral-sh/setup-uv has no floating `v8` tag
         uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
