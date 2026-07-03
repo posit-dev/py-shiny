@@ -140,9 +140,6 @@ jobs:
         id: browsers
         with:
           browser: ${{ matrix.browser }}
-          # If anything other than `true`, it will heavily reduce webkit performance
-          # Related: https://github.com/microsoft/playwright/issues/18119
-          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
       - name: Setup remote Playwright
         uses: ./.github/py-shiny/setup-playwright-remote
@@ -153,13 +150,7 @@ jobs:
         # Healthy shards finish in ~4 minutes; kill stragglers quickly
         timeout-minutes: 10
         run: |
-          make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v6
-        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
-        with:
-          name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
-          path: test-results/
-          retention-days: 5
+          make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }}" ${{ steps.browsers.outputs.browsers }}
 
   playwright-examples:
     if: github.event_name != 'release'
@@ -197,9 +188,6 @@ jobs:
         id: browsers
         with:
           browser: ${{ matrix.browser }}
-          # If anything other than `true`, it will heavily reduce webkit performance
-          # Related: https://github.com/microsoft/playwright/issues/18119
-          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
       - name: Install node.js
         uses: actions/setup-node@v6
@@ -229,13 +217,7 @@ jobs:
         # Healthy shards finish in ~4 minutes; kill stragglers quickly
         timeout-minutes: 10
         run: |
-          make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v6
-        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
-        with:
-          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
-          path: test-results/
-          retention-days: 5
+          make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }}" ${{ steps.browsers.outputs.browsers }}
 
   playwright-ai:
     if: github.event_name != 'release'
@@ -273,9 +255,6 @@ jobs:
         id: browsers
         with:
           browser: ${{ matrix.browser }}
-          # If anything other than `true`, it will heavily reduce webkit performance
-          # Related: https://github.com/microsoft/playwright/issues/18119
-          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
       - name: Setup remote Playwright
         uses: ./.github/py-shiny/setup-playwright-remote
@@ -286,13 +265,7 @@ jobs:
         # Healthy shards finish in ~4 minutes; kill stragglers quickly
         timeout-minutes: 10
         run: |
-          make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }} ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v6
-        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
-        with:
-          name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-shard${{ matrix.shard }}-results"
-          path: test-results/
-          retention-days: 5
+          make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }}" ${{ steps.browsers.outputs.browsers }}
 
   playwright-deploys-precheck:
     if: github.event_name != 'release'
@@ -332,13 +305,6 @@ jobs:
           DEPLOY_APPS: "false"
         run: |
           make playwright-deploys
-
-      - uses: actions/upload-artifact@v6
-        if: failure()
-        with:
-          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-results"
-          path: test-results/
-          retention-days: 5
 
   test-narwhals-integration:
     runs-on: ubuntu-latest
