@@ -1,9 +1,101 @@
+import asyncio
+import logging
 import warnings
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import pytest
+from uvicorn.config import Config
+from uvicorn.server import Server
 
-from shiny._main import _set_workbench_kwargs
+from shiny import _main
+from shiny._main import ShinyServer, _set_workbench_kwargs
+
+
+def test_shiny_server_calls_on_started(monkeypatch: pytest.MonkeyPatch):
+    calls: list[str] = []
+
+    async def startup(self: Server, sockets: list[Any] | None = None) -> None:
+        cast(Any, self).started = True
+
+    monkeypatch.setattr(Server, "startup", startup)
+
+    server = ShinyServer(
+        config=Config("app:app"), on_started=lambda: calls.append("started")
+    )
+    asyncio.run(server.startup())
+
+    assert calls == ["started"]
+
+
+def test_launch_browser_callback_ignores_log_level(monkeypatch: pytest.MonkeyPatch):
+    captured_kwargs: dict[str, Any] = {}
+    browser_calls: list[tuple[str, int]] = []
+
+    def run_uvicorn(app: Any, **kwargs: Any) -> None:
+        captured_kwargs.update(kwargs)
+
+    monkeypatch.setattr(_main, "_run_uvicorn", run_uvicorn)
+
+    def launch_browser(host: str, port: int) -> None:
+        browser_calls.append((host, port))
+
+    monkeypatch.setattr(_main._launchbrowser, "launch_browser", launch_browser)
+
+    _main.run_app(
+        cast(Any, object()),
+        host="127.0.0.1",
+        port=8765,
+        log_level="warning",
+        launch_browser=True,
+    )
+
+    logging.disable(logging.INFO)
+    try:
+        captured_kwargs["on_started"]()
+    finally:
+        logging.disable(logging.NOTSET)
+
+    assert captured_kwargs["log_level"] == "warning"
+    assert browser_calls == [("127.0.0.1", 8765)]
+
+
+def test_reload_uses_startup_callback_not_log_handler(monkeypatch: pytest.MonkeyPatch):
+    captured_kwargs: dict[str, Any] = {}
+    reload_calls: list[str] = []
+    start_server_calls: list[tuple[int, int, bool]] = []
+
+    def run_uvicorn(app: Any, **kwargs: Any) -> None:
+        captured_kwargs.update(kwargs)
+
+    monkeypatch.setattr(_main, "_run_uvicorn", run_uvicorn)
+    monkeypatch.setattr(
+        _main._autoreload, "reload_end", lambda: reload_calls.append("reload_end")
+    )
+
+    def start_server(autoreload_port: int, app_port: int, launch_browser: bool) -> None:
+        start_server_calls.append((autoreload_port, app_port, launch_browser))
+
+    monkeypatch.setattr(_main._autoreload, "start_server", start_server)
+
+    _main.run_app(
+        cast(Any, object()),
+        port=8765,
+        autoreload_port=8766,
+        reload=True,
+        launch_browser=True,
+        reload_dirs=[],
+        log_level="warning",
+    )
+
+    captured_kwargs["on_started"]()
+
+    log_config = captured_kwargs["log_config"]
+    assert "shiny_hot_reload" not in log_config["handlers"]
+    assert "shiny_hot_reload" not in log_config["loggers"]["uvicorn.error"].get(
+        "handlers", []
+    )
+    assert start_server_calls == [(8766, 8765, True)]
+    assert reload_calls == ["reload_end"]
 
 
 def test_workbench_kwargs_if_url_set(monkeypatch: pytest.MonkeyPatch):

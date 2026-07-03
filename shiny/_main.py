@@ -4,22 +4,27 @@ import copy
 import importlib
 import importlib.util
 import inspect
+import logging
 import os
 import platform
 import re
 import sys
 import types
 import warnings
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import click
 import uvicorn
 import uvicorn.config
+from uvicorn.config import Config
+from uvicorn.server import Server
+from uvicorn.supervisors import ChangeReload, Multiprocess
 
 import shiny
 
-from . import __version__, _autoreload, _hostenv, _static, _utils
+from . import __version__, _autoreload, _hostenv, _launchbrowser, _static, _utils
 from ._docstring import no_example
 from ._hostenv import is_workbench
 from ._typing_extensions import NotRequired, TypedDict
@@ -35,6 +40,7 @@ def main() -> None:
 
 
 stop_shortcut = "Ctrl+C"
+_UVICORN_STARTUP_FAILURE = 3
 
 RELOAD_INCLUDES_DEFAULT = (
     "*.py",
@@ -56,6 +62,65 @@ RELOAD_EXCLUDES_DEFAULT = (
     ".venv",
     shiny_bookmarks_folder_name,
 )
+
+
+class ShinyServer(Server):
+    def __init__(
+        self, config: Config, on_started: Callable[[], None] | None = None
+    ) -> None:
+        super().__init__(config=config)
+        self._on_started = on_started
+
+    async def startup(self, sockets: list[Any] | None = None) -> None:
+        await super().startup(sockets=sockets)
+        server = cast(Any, self)
+        if server.started and self._on_started is not None:
+            self._on_started()
+
+
+def _run_uvicorn(
+    app: Any,
+    *,
+    app_dir: str | None = None,
+    on_started: Callable[[], None] | None = None,
+    **kwargs: Any,
+) -> None:
+    if app_dir is not None:
+        sys.path.insert(0, app_dir)
+
+    config = Config(app, **kwargs)
+    config_attrs = cast(Any, config)
+    server = ShinyServer(config=config, on_started=on_started)
+
+    if (config_attrs.reload or config_attrs.workers > 1) and not isinstance(app, str):
+        logging.getLogger("uvicorn.error").warning(
+            "You must pass the application as an import string to enable "
+            "'reload' or 'workers'."
+        )
+        sys.exit(1)
+
+    try:
+        if config.should_reload:
+            sock = config.bind_socket()
+            ChangeReload(config, target=server.run, sockets=[sock]).run()
+        elif config_attrs.workers > 1:
+            sock = config.bind_socket()
+            Multiprocess(config, target=server.run, sockets=[sock]).run()
+        else:
+            server.run()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        uds = cast(str | None, config_attrs.uds)
+        if uds and os.path.exists(uds):
+            os.remove(uds)
+
+    if (
+        not cast(Any, server).started
+        and not config.should_reload
+        and config_attrs.workers == 1
+    ):
+        sys.exit(_UVICORN_STARTUP_FAILURE)
 
 
 @main.command(help=f"""Run a Shiny app (press {stop_shortcut} to stop).
@@ -336,6 +401,8 @@ def run_app(
         if app_dir is not None:
             reload_dirs = [app_dir]
 
+    on_started: Callable[[], None] | None = None
+
     if reload:
         # Always watch the app_dir
         if app_dir and app_dir not in reload_dirs:
@@ -355,7 +422,8 @@ def run_app(
             )
             reload = False
         else:
-            setup_hot_reload(log_config, autoreload_port, port, launch_browser)
+            setup_hot_reload(autoreload_port, port, launch_browser)
+            on_started = _autoreload.reload_end
 
     reload_args: ReloadArgs = {}
     if reload:
@@ -395,13 +463,13 @@ def run_app(
         }
 
     if launch_browser and not reload:
-        setup_launch_browser(log_config)
+        on_started = lambda: _launchbrowser.launch_browser(host, port)
 
     maybe_setup_rsw_proxying(log_config)
 
     _set_workbench_kwargs(kwargs)
 
-    uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
+    _run_uvicorn(
         app,
         host=host,
         port=port,
@@ -409,6 +477,7 @@ def run_app(
         log_level=log_level,
         log_config=log_config,
         app_dir=app_dir,
+        on_started=on_started,
         factory=factory,
         lifespan="on",
         # Don't allow shiny to use uvloop!
@@ -420,32 +489,11 @@ def run_app(
 
 
 def setup_hot_reload(
-    log_config: dict[str, Any],
     autoreload_port: int,
     app_port: int,
     launch_browser: bool,
 ) -> None:
-    # The only way I've found to get notified when uvicorn decides to reload, is by
-    # inserting a custom log handler.
-    log_config["handlers"]["shiny_hot_reload"] = {
-        "class": "shiny._autoreload.HotReloadHandler",
-        "level": "INFO",
-    }
-    if "handlers" not in log_config["loggers"]["uvicorn.error"]:
-        log_config["loggers"]["uvicorn.error"]["handlers"] = []
-    log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_hot_reload")
-
     _autoreload.start_server(autoreload_port, app_port, launch_browser)
-
-
-def setup_launch_browser(log_config: dict[str, Any]):
-    log_config["handlers"]["shiny_launch_browser"] = {
-        "class": "shiny._launchbrowser.LaunchBrowserHandler",
-        "level": "INFO",
-    }
-    if "handlers" not in log_config["loggers"]["uvicorn.error"]:
-        log_config["loggers"]["uvicorn.error"]["handlers"] = []
-    log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_launch_browser")
 
 
 def maybe_setup_rsw_proxying(log_config: dict[str, Any]) -> None:
