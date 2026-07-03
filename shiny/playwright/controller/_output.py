@@ -1145,10 +1145,22 @@ class OutputDataFrame(UiWithContainer):
                 modifiers=clickModifier,
             )
 
+        def click_sort_arrow(loc: Locator) -> None:
+            arrow_el = loc.element_handle(timeout=timeout)
+            if arrow_el is None:
+                return
+            old_class = arrow_el.get_attribute("class")
+            click_loc(loc)
+            self.page.wait_for_function(
+                "([el, oldClass]) => !el.isConnected || el.getAttribute('class') !== oldClass",
+                arg=[arrow_el, old_class],
+                timeout=timeout,
+            )
+
         # Reset arrow sorting by clicking on the arrows until none are found
         sortingArrows = self.loc_column_label.locator("svg.sort-arrow")
         while sortingArrows.count() > 0:
-            click_loc(sortingArrows.first)
+            click_sort_arrow(sortingArrows.first)
 
         # Quit early if no sorting is needed
         if sort is None:
