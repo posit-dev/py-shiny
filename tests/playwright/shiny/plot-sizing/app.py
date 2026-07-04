@@ -6,6 +6,7 @@ from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from PIL import Image
 from plotnine import aes, element_rect, geom_point, theme, theme_minimal
@@ -14,7 +15,13 @@ from plotnine.ggplot import ggplot
 
 from shiny import App, Inputs, Outputs, Session, module, render, req, ui
 
-tips = sns.load_dataset("tips")
+# Mock tips dataset to avoid network loading from seaborn
+tips = pd.DataFrame(
+    {
+        "total_bill": [16.99, 10.34, 21.01, 23.68, 24.59],
+        "tip": [1.01, 1.66, 3.50, 3.31, 3.61],
+    }
+)
 dpi = 150
 
 

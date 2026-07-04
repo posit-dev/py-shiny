@@ -127,17 +127,20 @@ class TestConcurrentReactiveExecutions:
 
         # Track execution order
         execution_order: list[str] = []
+        event = asyncio.Event()
 
         async def slow_calc_1():
             execution_order.append("calc1_start")
-            await asyncio.sleep(0.01)
+            await event.wait()
             execution_order.append("calc1_end")
             return "calc1"
 
         async def slow_calc_2():
             execution_order.append("calc2_start")
-            await asyncio.sleep(0.005)
+            # yield to allow calc1 to start and wait
+            await asyncio.sleep(0.001)
             execution_order.append("calc2_end")
+            event.set()
             return "calc2"
 
         with patch_otel_tracing_state(tracing_enabled=True):
