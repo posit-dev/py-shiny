@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `ui.output_data_frame` will now consistently order the filtered columns in ascending column order. (#2093)
 * When resetting a `ui.output_data_frame` filter, numeric range filters will now reset both values. (#2093)
 
-* The Playwright controllers `InputSlider.set()` and `InputSliderRange.set()` are now ~5-10x faster. The drag simulation previously slept 50ms after every one-pixel mouse move; the sleeps are removed, and on WebKit (where rapid mouse moves within a frame are coalesced, which would skip slider values) each move is instead synchronized with a `requestAnimationFrame` round-trip. (#2311)
+* The Playwright controllers `InputSlider.set()` and `InputSliderRange.set()` now compute the target value's position from the slider's step configuration and drag the handle directly to it, verifying the landing position against the widget's state (finishing with arrow-key presses when the slider has more steps than the track has pixels). Previously the handle was swept one pixel at a time while polling the label, which was slow and could intermittently miss the target when the browser coalesced or dropped mouse-move events (a recurring webkit CI flake). `InputSliderRange.set()` orders the two handle moves so neither is clamped by its sibling, instead of parking both handles at their extremes first. Setting a value the slider cannot produce now raises an error listing the slider's actual values. (#2311, #2326)
 
 * Fixed rare tabset ID collisions in pages with many navsets. Randomly generated `data-tabsetid` values were drawn from a pool of ~1 million, so a page with dozens of tabsets could occasionally produce two navsets with the same ID (a birthday collision), resulting in duplicate DOM ids and broken tab switching. IDs are now drawn from a pool of 9 trillion. (#2296)
 
@@ -143,7 +143,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed an issue where `session.bookmark()` would error when non-existent `input` values are read. (#2117)
 
 * Revised `accordion()`'s `open` logic to close all panels when an empty list is passed. (#2109)
->>>>>>> origin/main
 
 ## [1.5.0] - 2025-09-11
 
