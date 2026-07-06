@@ -18,13 +18,13 @@ from ._base import (
     InputActionBase,
     UiBase,
     UiWithLabel,
-    WidthLocStlyeM,
+    WidthLocStyleM,
     _expect_multiple,
 )
 
 
 class InputActionButton(
-    WidthLocStlyeM,
+    WidthLocStyleM,
     InputActionBase,
 ):
     """Controller for :func:`shiny.ui.input_action_button`."""
@@ -192,7 +192,7 @@ class InputDarkMode(UiBase):
 
 
 class InputTaskButton(
-    WidthLocStlyeM,
+    WidthLocStyleM,
     InputActionBase,
 ):
     """Controller for :func:`shiny.ui.input_task_button`."""

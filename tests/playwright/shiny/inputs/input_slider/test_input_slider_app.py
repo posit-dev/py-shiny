@@ -2,6 +2,7 @@ import datetime
 import re
 import time
 
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -47,6 +48,10 @@ def test_slider_regular(page: Page, local_app: ShinyAppProc) -> None:
     s0.expect_value(new_val)
     controller.OutputTextVerbatim(page, "txt0").expect_value(new_val)
 
+    # A value the slider cannot produce raises with the slider's actual values
+    with pytest.raises(ValueError, match="Could not find value '20.5'"):
+        s0.set("20.5")
+
 
 def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
@@ -68,7 +73,7 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     controller.OutputTextVerbatim(page, "txt1").expect_value("(200, 500)")
 
     new_val = ("605", "840")
-    s1.set(new_val, max_err_values=1000)
+    s1.set(new_val)
     try:
         s1.expect_value((MISSING, MISSING))  # type: ignore
     except ValueError as e:
@@ -78,6 +83,24 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     s1.expect_value(new_val)
     controller.OutputTextVerbatim(page, "txt1").expect_value(
         f"({new_val[0]}, {new_val[1]})"
+    )
+
+    # A range completely below the current one exercises the `from`-first move
+    # ordering (the completely-higher range above exercised `to`-first)
+    lower_val = ("50", "150")
+    s1.set(lower_val)
+    s1.expect_value(lower_val)
+    controller.OutputTextVerbatim(page, "txt1").expect_value(
+        f"({lower_val[0]}, {lower_val[1]})"
+    )
+
+    # A range strictly inside the current one (`from` moves up, `to` moves down)
+    # exercises the `to`-first ordering with a downward `to` move
+    inner_val = ("75", "100")
+    s1.set(inner_val)
+    s1.expect_value(inner_val)
+    controller.OutputTextVerbatim(page, "txt1").expect_value(
+        f"({inner_val[0]}, {inner_val[1]})"
     )
 
 
@@ -213,7 +236,7 @@ def test_slider_drag_range_disabled(page: Page, local_app: ShinyAppProc) -> None
     s7.expect_max("1000")
     s7.expect_drag_range("false")
     new_val = ("25", "502")
-    s7.set(new_val, max_err_values=1000)
+    s7.set(new_val)
     controller.OutputTextVerbatim(page, "txt7").expect_value(
         f"({new_val[0]}, {new_val[1]})"
     )

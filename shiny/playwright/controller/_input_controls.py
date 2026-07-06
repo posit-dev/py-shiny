@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import time
 import typing
-from typing import Literal
 
-from playwright.sync_api import FloatRect, Locator, Page, Position
+from playwright.sync_api import FloatRect, Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
 from ...types import MISSING, MISSING_TYPE, ListOrTuple
@@ -332,93 +332,182 @@ class _InputSliderBase(
         self.loc_container.wait_for(state="visible", timeout=timeout)
         self.loc_container.scroll_into_view_if_needed(timeout=timeout)
 
+    # JS expression computing the slider's step positions and where the given
+    # handle sits among them, from ionRangeSlider's internal state (which updates
+    # synchronously on every interaction, unlike the throttled label repaints).
+    # `labels` mirrors what `drawLabels()` renders at each step position; `cur`
+    # is the handle's current position index; `lo`/`hi` are the position indices
+    # the handle can reach (a range slider handle is bounded by its sibling).
+    _SLIDER_STEP_STATE_JS = """(el, resultKey) => {
+        const inst = window.jQuery(el).data("ionRangeSlider");
+        const opts = inst.options;
+        const hasValues = opts.values.length > 0;
+        const labelFor = (val) =>
+            hasValues
+                ? String(inst.decorate(opts.p_values[val]))
+                : String(inst.decorate(inst._prettify(val), val));
+        const labels = [];
+        const stepValues = [];
+        for (let k = 0; opts.step > 0 && k <= 100000; k++) {
+            let val = inst.toFixed(opts.min + k * opts.step);
+            if (val >= opts.max) {
+                val = opts.max;
+            }
+            labels.push(labelFor(val));
+            stepValues.push(val);
+            if (val === opts.max) {
+                break;
+            }
+        }
+        const idxOf = (val) => {
+            let best = 0;
+            for (let k = 0; k < stepValues.length; k++) {
+                if (Math.abs(stepValues[k] - val) < Math.abs(stepValues[best] - val)) {
+                    best = k;
+                }
+            }
+            return best;
+        };
+        const cur = idxOf(inst.result[resultKey]);
+        const lo = resultKey === "to" ? idxOf(inst.result.from) : 0;
+        const hi =
+            resultKey === "from" && opts.type === "double"
+                ? idxOf(inst.result.to)
+                : labels.length - 1;
+        return { labels: labels, cur: cur, lo: lo, hi: hi };
+    }"""
+
     def _set_helper(
         self,
         *,
         value: str,
         irs_label: Locator,
-        handle_center: Position,
-        grid_bb: FloatRect,
-        start_x: float,
-        direction: Literal["left", "right"],
+        handle: Locator,
         max_err_values: int = 15,
     ) -> None:
-        if direction == "left":
-            pixel_increment = -1
-            error_msg_direction = "right to left"
-            min_pxls = -1 * (grid_bb["width"] + 1)
+        """
+        Drag the slider `handle` directly to the position of the `value` label.
 
-            def should_continue(cur_pxls: float) -> bool:
-                return cur_pxls > min_pxls
+        The label text at every step position is computed from the widget's
+        internal state (the label element repaints on a throttled animation frame
+        loop and cannot be reliably sampled mid-drag), the target position is
+        located in that list, and the handle is dragged straight to that
+        position's pixel coordinate. Only the final mouse position matters, so
+        coalesced or dropped mouse-move events cannot skip the target; the result
+        is verified against the widget's internal state and the drag is retried
+        if it did not land.
 
-        elif direction == "right":
-            pixel_increment = 1
-            error_msg_direction = "left to right"
-            max_pxls = grid_bb["width"] + 1
+        Parameters
+        ----------
+        value
+            The value to set the slider to.
+        irs_label
+            Playwright `Locator` of the slider handle's value label.
+        handle
+            Playwright `Locator` of the slider handle to move.
+        max_err_values
+            The maximum number of error values to display if the value is not found.
+        """
+        # Which `result` entry tracks this handle ("from" for single sliders and
+        # `from` handles, "to" for `to` handles)
+        handle_class = handle.get_attribute("class") or ""
+        result_key = "to" if "to" in handle_class.split() else "from"
 
-            def should_continue(cur_pxls: float) -> bool:
-                return cur_pxls <= max_pxls
+        def read_step_state() -> typing.Tuple[typing.List[str], int, int, int]:
+            state = self.loc.evaluate(self._SLIDER_STEP_STATE_JS, result_key)
+            return (
+                [str(label) for label in state["labels"]],
+                int(state["cur"]),
+                int(state["lo"]),
+                int(state["hi"]),
+            )
 
-        else:
-            raise ValueError(f"Invalid direction: {direction}")
+        def read_settled_position() -> int:
+            # Input events are processed asynchronously by the browser, so a
+            # state read can overtake in-flight events; poll until the position
+            # holds steady across consecutive reads
+            _, pos, _, _ = read_step_state()
+            for _ in range(20):
+                time.sleep(0.05)
+                _, next_pos, _, _ = read_step_state()
+                if next_pos == pos:
+                    return pos
+                pos = next_pos
+            return pos
 
-        page = self.loc_container.page
-        mouse = page.mouse
+        labels, cur, lo, hi = read_step_state()
 
-        # WebKit coalesces mousemove events delivered within the same frame, which
-        # would skip pixels (and therefore values) during the scan. Waiting for an
-        # animation frame after each move guarantees each move is processed
-        # individually. Chromium and Firefox dispatch input events synchronously.
-        browser = page.context.browser
-        needs_frame_sync = browser is None or browser.browser_type.name == "webkit"
-
-        def sync_move(x: float, y: float) -> None:
-            mouse.move(x, y)
-            if needs_frame_sync:
-                page.evaluate("() => new Promise(requestAnimationFrame)")
-
-        # Move mouse to handle center and press down on mouse
-        mouse.move(handle_center.get("x"), handle_center.get("y"))
-        mouse.down()
-
-        # Move all the way to the left
-        handle_center_y = handle_center.get("y")
-        sync_move(start_x, handle_center_y)
-
-        # For each pixel in the grid width, check the text label
-        pxls: int = 0
-        found = False
-        values_found: typing.Dict[str, bool] = {}
-        cur_val = None
-        while should_continue(pxls):
-            # Get value
-            cur_val = irs_label.inner_text()
-            # Only store what could be used
-            if len(values_found) <= max_err_values + 1:
-                values_found[cur_val] = True
-
-            # Quit if found
-            if cur_val == value:
-                found = True
-                break
-
-            # Not found; move handle to the right
-            sync_move(start_x + pxls, handle_center_y)
-
-            pxls += pixel_increment
-
-        mouse.up()
-        if not found:
-            key_arr = list(values_found.keys())
+        if value not in labels:
+            display_labels = labels[:max_err_values]
             trail_txt = ""
-            if len(key_arr) > max_err_values:
-                key_arr = key_arr[:max_err_values]
+            if len(labels) > max_err_values:
                 trail_txt = f", ...\nTo display more values, increase `set(max_err_values={max_err_values})`"
-            values_found_txt = ", ".join([f'"{key}"' for key in key_arr])
+            values_found_txt = ", ".join([f'"{label}"' for label in display_labels])
             raise ValueError(
-                f"Could not find value '{value}' when moving slider from {error_msg_direction}\n"
+                f"Could not find value '{value}' among the slider's values\n"
                 + f"Values found:\n{values_found_txt}{trail_txt}"
             )
+        target = labels.index(value)
+        if not (lo <= target <= hi):
+            raise ValueError(
+                f"Value '{value}' is not reachable by this slider handle; "
+                + "the other handle currently limits it to values from "
+                + f"'{labels[lo]}' to '{labels[hi]}'"
+            )
+
+        n_steps = len(labels) - 1
+        if n_steps == 0:
+            playwright_expect(irs_label).to_have_text(value)
+            return
+
+        mouse = self.loc_container.page.mouse
+        grid_bb = self._grid_bb()
+        for _ in range(3):
+            if cur == target:
+                break
+            handle_bb = handle.bounding_box()
+            if handle_bb is None:
+                raise RuntimeError("Couldn't find bounding box for the slider handle")
+            handle_w = handle_bb["width"]
+            y = handle_bb["y"] + handle_bb["height"] / 2
+            # The handle's center travels from `grid left + half handle width`
+            # (first position) to `grid right - half handle width` (last position)
+            target_x = (
+                grid_bb["x"]
+                + handle_w / 2
+                + (grid_bb["width"] - handle_w) * (target / n_steps)
+            )
+            mouse.move(handle_bb["x"] + handle_w / 2, y)
+            mouse.down()
+            mouse.move(target_x, y)
+            mouse.up()
+            cur = read_settled_position()
+
+        if cur != target:
+            # Mouse coordinates are quantized to whole pixels, so when a slider
+            # has more steps than the track has pixels, the drag can land a step
+            # or two off a target that no integer pixel maps to. Finish with
+            # arrow keys, which move the handle by exactly one step per press.
+            line = self.loc_irs.locator("> .irs > .irs-line")
+            # Click the handle so ionRangeSlider targets it for keyboard input
+            # and aligns its internal pointer with the handle; a residual pointer
+            # offset from the drag would silently absorb key presses
+            handle.click()
+            cur = read_settled_position()
+            for _ in range(30):
+                if cur == target:
+                    break
+                line.press("ArrowRight" if target > cur else "ArrowLeft")
+                cur = read_settled_position()
+
+        if cur != target:
+            raise ValueError(
+                f"Could not drag the slider handle to value '{value}'; "
+                + f"it landed on '{labels[cur]}' instead"
+            )
+
+        # Wait for the throttled label repaint to reflect the final position
+        playwright_expect(irs_label).to_have_text(value)
 
     def _grid_bb(self, *, timeout: Timeout = None) -> FloatRect:
         grid = self.loc_irs.locator("> .irs > .irs-line")
@@ -426,23 +515,6 @@ class _InputSliderBase(
         if grid_bb is None:
             raise RuntimeError("Couldn't find bounding box for .irs-line")
         return grid_bb
-
-    def _handle_center(
-        self,
-        handle: Locator,
-        *,
-        name: str,
-        timeout: Timeout = None,
-    ) -> Position:
-        handle_bb = handle.bounding_box(timeout=timeout)
-        if handle_bb is None:
-            raise RuntimeError(f"Couldn't find bounding box for {name}")
-
-        handle_center: Position = {
-            "x": handle_bb.get("x") + (handle_bb.get("width") / 2),
-            "y": handle_bb.get("y") + (handle_bb.get("height") / 2),
-        }
-        return handle_center
 
 
 class _RadioButtonCheckboxGroupBase(
@@ -1516,16 +1588,10 @@ class InputSlider(_InputSliderBase):
         self._wait_for_container(timeout=timeout)
 
         handle = self.loc_irs.locator("> .irs-handle")
-        handle_center = self._handle_center(handle, name="handle", timeout=timeout)
-        grid_bb = self._grid_bb(timeout=timeout)
-
         self._set_helper(
             value=value,
             irs_label=self.loc_irs_label,
-            handle_center=handle_center,
-            grid_bb=grid_bb,
-            start_x=grid_bb["x"],
-            direction="right",
+            handle=handle,
             max_err_values=max_err_values,
         )
 
@@ -1596,28 +1662,6 @@ class InputSliderRange(_InputSliderBase):
                 to_val, timeout=timeout
             )
 
-    def _set_fraction(
-        self,
-        handle: Locator,
-        fraction: float,
-        *,
-        name: str,
-        timeout: Timeout = None,
-    ) -> None:
-        if fraction > 1 or fraction < 0:
-            raise ValueError("`fraction` must be between 0 and 1")
-
-        handle_center = self._handle_center(handle, name=name, timeout=timeout)
-        grid_bb = self._grid_bb(timeout=timeout)
-        mouse = self.loc_container.page.mouse
-        mouse.move(x=handle_center.get("x"), y=handle_center.get("y"))
-        mouse.down()
-        mouse.move(
-            grid_bb.get("x") + (fraction * grid_bb.get("width")),
-            handle_center.get("y"),
-        )
-        mouse.up()
-
     def set(
         self,
         value: (
@@ -1650,46 +1694,42 @@ class InputSliderRange(_InputSliderBase):
         self.loc_container.scroll_into_view_if_needed(timeout=timeout)
         handle_from = self.loc_irs.locator("> .irs-handle.from")
         handle_to = self.loc_irs.locator("> .irs-handle.to")
-        if not_is_missing(value_from):
-            # Move `from` handle to the far left
-            self._set_fraction(handle_from, 0, name="`from` handle", timeout=timeout)
-        if not_is_missing(value_to):
-            # Move `to` handle to the far right
-            self._set_fraction(handle_to, 1, name="`to` handle", timeout=timeout)
 
-        handle_center_from = self._handle_center(
-            handle_from, name="`from` handle", timeout=timeout
-        )
-        grid_bb = self._grid_bb(timeout=timeout)
+        def set_from() -> None:
+            if not_is_missing(value_from):
+                self._set_helper(
+                    value=value_from,
+                    irs_label=self.loc_irs_label_from,
+                    handle=handle_from,
+                    max_err_values=max_err_values,
+                )
 
-        # Handles are [possibly] now at their respective extreme value
-        # Now let's move them towards the other end until we find the corresponding str
+        def set_to() -> None:
+            if not_is_missing(value_to):
+                self._set_helper(
+                    value=value_to,
+                    irs_label=self.loc_irs_label_to,
+                    handle=handle_to,
+                    max_err_values=max_err_values,
+                )
 
-        if not_is_missing(value_from):
-            self._set_helper(
-                value=value_from,
-                irs_label=self.loc_irs_label_from,
-                handle_center=handle_center_from,
-                grid_bb=grid_bb,
-                # Start at the far left
-                start_x=grid_bb["x"],
-                # And move to the right
-                direction="right",
-                max_err_values=max_err_values,
-            )
+        # When moving both handles, order the moves so neither handle is clamped
+        # by its sibling: moving `from` first is safe when it moves down or stays
+        # put (`from_new <= from_old <= to_old`); otherwise the new range lies
+        # entirely above the current `from` (`to_new >= from_new > from_old`), so
+        # moving `to` first is safe.
+        from_first = True
+        if not_is_missing(value_from) and not_is_missing(value_to):
+            state = self.loc.evaluate(self._SLIDER_STEP_STATE_JS, "from")
+            labels = [str(label) for label in state["labels"]]
+            # An unknown `from` value keeps the default order so that
+            # `set_from()` raises the descriptive lookup error
+            if value_from in labels:
+                from_first = labels.index(value_from) <= int(state["cur"])
 
-        handle_center_to = self._handle_center(
-            handle_to, name="`to` handle", timeout=timeout
-        )
-        if not_is_missing(value_to):
-            self._set_helper(
-                value=value_to,
-                irs_label=self.loc_irs_label_to,
-                handle_center=handle_center_to,
-                grid_bb=grid_bb,
-                # Start at the far right
-                start_x=grid_bb["x"] + grid_bb["width"],
-                # And move to the left
-                direction="left",
-                max_err_values=max_err_values,
-            )
+        if from_first:
+            set_from()
+            set_to()
+        else:
+            set_to()
+            set_from()

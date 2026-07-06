@@ -370,9 +370,9 @@ def value_box(
         and `text-*` classes (e.g, `"bg-danger"` and `"text-light"`) to customize the
         background/foreground colors.
     id
-        Provide a unique identifier for the :func:`~shiny.ui.value_box()` to report its
-        state to Shiny. For example, using `id="my_value_box"`, you can observe the
-        value box's full screen state with `input.my_value_box()["full_screen"]`.
+        A unique identifier for the value box. If provided, the value box's full
+        screen state is reported to Shiny at `input.<id>_full_screen()` (e.g.,
+        `input.my_value_box_full_screen()` for `id="my_value_box"`).
     **kwargs
         Additional attributes to pass to :func:`~shiny.ui.card`.
 

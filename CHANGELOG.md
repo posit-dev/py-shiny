@@ -21,13 +21,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
+### Improvements
+
+* Playwright's `OutputDataFrame.set_filter()` controller now supports multi-column filters (#2093)
+* Add api-example for `ui.output_code` (#2093)
+* Update controllers for `DownloadLink` and `DownloadButton` (#2093)
+
 ### Bug fixes
 
 * Fixed `--launch-browser` so it no longer depends on INFO-level Uvicorn startup logs. Browser launch now works when logs are disabled or `--log-level=warning` is used. (#569)
 
-* The Playwright controllers `InputSlider.set()` and `InputSliderRange.set()` are now ~5-10x faster. The drag simulation previously slept 50ms after every one-pixel mouse move; the sleeps are removed, and on WebKit (where rapid mouse moves within a frame are coalesced, which would skip slider values) each move is instead synchronized with a `requestAnimationFrame` round-trip. (#2311)
+* `ui.output_data_frame` will now consistently order the filtered columns in ascending column order. (#2093)
+* When resetting a `ui.output_data_frame` filter, numeric range filters will now reset both values. (#2093)
+
+* The Playwright controllers `InputSlider.set()` and `InputSliderRange.set()` now compute the target value's position from the slider's step configuration and drag the handle directly to it, verifying the landing position against the widget's state (finishing with arrow-key presses when the slider has more steps than the track has pixels). Previously the handle was swept one pixel at a time while polling the label, which was slow and could intermittently miss the target when the browser coalesced or dropped mouse-move events (a recurring webkit CI flake). `InputSliderRange.set()` orders the two handle moves so neither is clamped by its sibling, instead of parking both handles at their extremes first. Setting a value the slider cannot produce now raises an error listing the slider's actual values. (#2311, #2326)
 
 * Fixed rare tabset ID collisions in pages with many navsets. Randomly generated `data-tabsetid` values were drawn from a pool of ~1 million, so a page with dozens of tabsets could occasionally produce two navsets with the same ID (a birthday collision), resulting in duplicate DOM ids and broken tab switching. IDs are now drawn from a pool of 9 trillion. (#2296)
+
+* Fixed the `value_box()` `id` parameter docstring, which previously documented the wrong reactive-value syntax (`input.<id>()["full_screen"]`) for observing the value box's full screen state. It now correctly documents `input.<id>_full_screen()`, matching `card()`. (#2324)
 
 ### Other changes
 

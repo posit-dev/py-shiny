@@ -93,6 +93,7 @@ test = [
     "timezonefinder ; platform_system != 'Windows'",
     "ipyleaflet",
     "shinywidgets",
+    "shinychat>=0.6.0",
     "seaborn",
     "plotnine",
     "plotly",
