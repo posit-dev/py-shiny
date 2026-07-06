@@ -1058,6 +1058,7 @@ def update_navs(
 
     See Also
     --------
+    * :func:`~shiny.ui.update_navset`
     * :func:`~shiny.ui.navset_tab`
     * :func:`~shiny.ui.navset_pill`
     * :func:`~shiny.ui.page_navbar`
