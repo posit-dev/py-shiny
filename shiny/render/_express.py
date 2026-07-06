@@ -14,7 +14,7 @@ from .renderer import AsyncValueFn, Renderer, ValueFn
 from .renderer._utils import rendered_deps_to_jsonifiable, set_kwargs_value
 
 
-@add_example(ex_dir="../api-examples/render_express")
+@add_example(example_name="render_express")
 class express(Renderer[None]):
     """
     Reactively render HTML content with output captured as in Shiny Express

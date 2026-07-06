@@ -68,7 +68,7 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     return div({"class": "row"}, *args, **kwargs)
 
 
-@add_example(ex_dir="../api-examples/row")
+@add_example(example_name="row")
 @no_example("express")
 def column(
     width: int, *args: TagChild | TagAttrs, offset: int = 0, **kwargs: TagAttrValue

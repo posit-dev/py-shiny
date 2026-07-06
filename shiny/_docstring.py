@@ -112,10 +112,12 @@ def add_example(
         as these files will never be included in the example.
     ex_dir:
         The directory containing the example, as a path relative to the decorated
-        object's source file. Mutually exclusive with ``example_name``. If neither is
-        specified, ``add_example()`` will find a directory named after the current
-        function in the first ``api-examples/`` directory it finds in the current
-        directory or its parent directories.
+        object's source file. Mutually exclusive with ``example_name``. Prefer
+        ``example_name``; use ``ex_dir`` only when the example lives outside the
+        nearest ``api-examples/`` tree. If neither is specified, ``add_example()``
+        will find a directory named after the current function in the first
+        ``api-examples/`` directory it finds in the current directory or its parent
+        directories.
     example_name:
         The name of the example directory to look up in the first ``api-examples/``
         directory found in the decorated object's directory or its parent directories.

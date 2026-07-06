@@ -310,7 +310,7 @@ def output_code(id: str, placeholder: bool = True) -> Tag:
     return tags.pre(id=resolve_id(id), class_=cls)
 
 
-@add_example(ex_dir="../api-examples/input_text")
+@add_example(example_name="input_text")
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
     Create a output container for some text.

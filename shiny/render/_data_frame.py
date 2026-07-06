@@ -432,7 +432,7 @@ class data_frame(
         """
         return self._subset_data_view(selected=True)
 
-    @add_example(ex_dir="../api-examples/data_frame_data_view")
+    @add_example(example_name="data_frame_data_view")
     def data_view(self, *, selected: bool = False) -> IntoDataFrameT:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
@@ -600,7 +600,7 @@ class data_frame(
             )
         return self._session
 
-    @add_example(ex_dir="../api-examples/data_frame_data_view")
+    @add_example(example_name="data_frame_data_view")
     def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> None:
         """
         Decorator to set the function that updates a single cell in the data frame.
@@ -622,7 +622,7 @@ class data_frame(
         # from .._typing_extensions import Self
         # return self
 
-    @add_example(ex_dir="../api-examples/data_frame_set_patches")
+    @add_example(example_name="data_frame_set_patches")
     def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> None:
         """
         Decorator to set the function that updates a batch of cells in the data frame.
@@ -1103,7 +1103,7 @@ class data_frame(
             {"cellSelection": cell_selection},
         )
 
-    @add_example(ex_dir="../api-examples/data_frame_update_sort")
+    @add_example(example_name="data_frame_update_sort")
     async def update_sort(
         self,
         sort: ListOrTuple[ColumnSort | int] | int | ColumnSort | None,
@@ -1155,7 +1155,7 @@ class data_frame(
             {"sort": vals},
         )
 
-    @add_example(ex_dir="../api-examples/data_frame_update_filter")
+    @add_example(example_name="data_frame_update_filter")
     async def update_filter(
         self,
         filter: ListOrTuple[ColumnFilter] | None,

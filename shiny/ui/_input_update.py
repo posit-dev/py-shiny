@@ -114,7 +114,7 @@ def update_action_button(
     session.send_input_message(id, drop_none(msg))
 
 
-@add_example(ex_dir="../api-examples/update_action_button")
+@add_example(example_name="update_action_button")
 @doc_format(note=_note)
 def update_action_link(
     id: str,

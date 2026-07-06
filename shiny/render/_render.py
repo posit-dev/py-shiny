@@ -50,7 +50,7 @@ __all__ = (
 # ======================================================================================
 
 
-@add_example(ex_dir="../api-examples/output_text")
+@add_example(example_name="output_text")
 class text(Renderer[str]):
     """
     Reactively render text.
@@ -177,7 +177,7 @@ class code(Renderer[str]):
 # a nontrivial amount of overhead. So for now, we're just using `object`.
 
 
-@add_example(ex_dir="../api-examples/output_plot")
+@add_example(example_name="output_plot")
 class plot(Renderer[object]):
     """
     Reactively render a plot object as an HTML image.
@@ -379,7 +379,7 @@ class plot(Renderer[object]):
 # ======================================================================================
 # RenderImage
 # ======================================================================================
-@add_example(ex_dir="../api-examples/output_image")
+@add_example(example_name="output_image")
 class image(Renderer[ImgData]):
     """
     Reactively render a image file as an HTML image.
@@ -443,7 +443,7 @@ class image(Renderer[ImgData]):
 # ======================================================================================
 
 
-@add_example(ex_dir="../api-examples/output_table")
+@add_example(example_name="output_table")
 class table(Renderer[IntoDataFrame]):
     """
     Reactively render a pandas ``DataFrame`` object (or similar) as a basic HTML
@@ -551,7 +551,7 @@ class table(Renderer[IntoDataFrame]):
 # ======================================================================================
 # RenderUI
 # ======================================================================================
-@add_example(ex_dir="../api-examples/output_ui")
+@add_example(example_name="output_ui")
 class ui(Renderer[TagChild]):
     """
     Reactively render HTML content.
@@ -595,7 +595,7 @@ class ui(Renderer[TagChild]):
 # ======================================================================================
 # RenderDownload
 # ======================================================================================
-@add_example(ex_dir="../api-examples/download")
+@add_example(example_name="download")
 class download(Renderer[str]):
     """
     Decorator to register a function to handle a download.

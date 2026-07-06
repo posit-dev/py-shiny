@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from ..session import Session
 
 
-@add_example(ex_dir="../api-examples/modal")
+@add_example(example_name="modal")
 def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue) -> Tag:
     """
     Creates a button that will dismiss a :func:`~shiny.ui.modal`.
@@ -158,7 +158,7 @@ def modal(
     )
 
 
-@add_example(ex_dir="../api-examples/modal")
+@add_example(example_name="modal")
 def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     """
     Show a modal dialog.
