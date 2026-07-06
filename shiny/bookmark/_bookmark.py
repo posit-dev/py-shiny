@@ -42,7 +42,7 @@ class Bookmark(ABC):
     _on_restore_callbacks: AsyncCallbacks
     _on_restored_callbacks: AsyncCallbacks
 
-    @add_example(ex_dir="../api-examples/input_bookmark_button")
+    @add_example(example_name="input_bookmark_button")
     async def __call__(self) -> None:
         await self.do_bookmark()
 
@@ -96,7 +96,7 @@ class Bookmark(ABC):
 
     #     await session.insert_ui(modal_with_url(url))
 
-    @add_example(ex_dir="../api-examples/bookmark_callbacks")
+    @add_example(example_name="bookmark_callbacks")
     def on_bookmark(
         self,
         callback: (
@@ -118,7 +118,7 @@ class Bookmark(ABC):
         """
         return self._on_bookmark_callbacks.register(wrap_async(callback))
 
-    @add_example(ex_dir="../api-examples/bookmark_callbacks")
+    @add_example(example_name="bookmark_callbacks")
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
