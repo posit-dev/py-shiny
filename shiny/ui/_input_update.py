@@ -1034,7 +1034,7 @@ update_text_area.__doc__ = update_text.__doc__
 
 
 # TODO: we should probably provide a nav_select() alias for this as well
-@add_example()
+@no_example()
 @doc_format(note=_note)
 def update_navs(
     id: str, selected: Optional[str] = None, session: Optional[Session] = None
@@ -1058,6 +1058,7 @@ def update_navs(
 
     See Also
     --------
+    * :func:`~shiny.ui.update_navset`
     * :func:`~shiny.ui.navset_tab`
     * :func:`~shiny.ui.navset_pill`
     * :func:`~shiny.ui.page_navbar`

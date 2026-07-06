@@ -4,7 +4,7 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagChild, css, tags
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from .._shinyenv import is_pyodide
 from ..module import resolve_id
 
@@ -66,6 +66,7 @@ def download_button(
 
 
 @add_example()
+@no_example("express")
 def download_link(
     id: str,
     label: TagChild,
