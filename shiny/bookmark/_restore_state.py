@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, TypeVar, overload
 from urllib.parse import parse_qs, parse_qsl
 
-from .._docstring import add_example, no_example
+from .._docstring import add_example
 from ..module import ResolvedId
 from ._bookmark_state import local_restore_dir
 from ._global import get_bookmark_restore_dir_fn
@@ -398,7 +398,6 @@ def restore_input(resolved_id: ResolvedId, default: Optional[Any] = None) -> Any
 @overload
 def restore_input(resolved_id: None, default: T) -> T: ...
 @add_example()
-@no_example("express")
 def restore_input(resolved_id: ResolvedId | None, default: Optional[Any] = None) -> Any:
     """
     Restore an input value

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from ...session import Session
 
 from ..._deprecated import warn_deprecated
-from ..._docstring import add_example, no_example
+from ..._docstring import add_example
 from ..._typing_extensions import Concatenate, ParamSpec
 from ..._utils import is_async_callable
 from ...types import MISSING
@@ -572,7 +572,6 @@ def output_transformer(
 
 
 @add_example()
-@no_example("express")
 def output_transformer(
     transform_fn: TransformFn[IT, P, OT] | None = None,
     *,
