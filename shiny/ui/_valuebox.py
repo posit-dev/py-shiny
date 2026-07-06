@@ -92,7 +92,6 @@ class ShowcaseLayout:
 
 
 @add_example()
-@no_example("express")
 def showcase_left_center(
     *,
     width: CssUnit = "30%",
@@ -127,7 +126,6 @@ def showcase_left_center(
 
 
 @add_example()
-@no_example("express")
 def showcase_top_right(
     *,
     width: CssUnit = "40%",
@@ -163,7 +161,6 @@ def showcase_top_right(
 
 
 @add_example()
-@no_example("express")
 def showcase_bottom(
     *,
     width: CssUnit = "100%",
