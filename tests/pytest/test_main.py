@@ -47,6 +47,8 @@ def test_launch_browser_callback_ignores_log_level(monkeypatch: pytest.MonkeyPat
         port=8765,
         log_level="warning",
         launch_browser=True,
+        # Keep run_app() from setting SHINY_DEV_MODE=1 in the pytest process.
+        dev_mode=False,
     )
 
     logging.disable(logging.INFO)
@@ -85,6 +87,8 @@ def test_reload_uses_startup_callback_not_log_handler(monkeypatch: pytest.Monkey
         launch_browser=True,
         reload_dirs=[],
         log_level="warning",
+        # Keep run_app() from setting SHINY_DEV_MODE=1 in the pytest process.
+        dev_mode=False,
     )
 
     captured_kwargs["on_started"]()
