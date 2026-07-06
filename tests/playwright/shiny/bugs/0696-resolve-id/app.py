@@ -88,15 +88,13 @@ def mod_x_ui(label: str) -> ui.TagChild:
         ui.sidebar("Sidebar content", id="sidebar", width="100px"),
         ui.h2(label),
         ui.tags.label("Output status:"),
-        ui.tags.style(
-            """
+        ui.tags.style("""
             pre[id*="status_"] {
                 padding: 0;
                 font-size: xx-small;
                 text-wrap: balance;
             }
-            """
-        ),
+            """),
         ui.layout_column_wrap(
             *[
                 ui.output_text_verbatim(f"status_x_{x_input_key}", placeholder=True)
@@ -322,19 +320,14 @@ app_ui = ui.page_fluid(
     ui.input_action_button("update_global", "Update Global"),
     ui.input_action_button("update_mod1", "Update Module 1"),
     ui.input_action_button("update_mod2", "Update Module 2"),
-    ui.tags.head(
-        ui.tags.style(
-            """
+    ui.tags.head(ui.tags.style("""
         .popover.popover {
             --bs-popover-max-width: 500px;
         }
-        """
-        )
-    ),
+        """)),
     ui.popover(
         ui.input_action_button("ignore", "Explanation of test"),
-        ui.markdown(
-            """
+        ui.markdown("""
             E2E test app added has a main session and two module sessions that have inputs and outputs. It makes sure that one module does not update the other module or the main session.
 
             If a component does not use `resolve_id()`, the global session will be updated and the module will be unchanged.
@@ -360,8 +353,7 @@ app_ui = ui.page_fluid(
                 * Add the output into the module ui definition
                 * If it needs to be on the screen to be updated (rare), add it near the top of the definition
                 * Update `expect_outputs()` to support the new output
-            """
-        ),
+            """),
         id="explanation",
     ),
     ui.layout_column_wrap(

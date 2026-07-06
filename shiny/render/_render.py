@@ -216,11 +216,11 @@ class plot(Renderer[object]):
            :class:`matplotlib.figure.Figure` instance.
         5. A :class:`PIL.Image.Image` instance.
 
-    It's also possible to use the ``matplotlib.pyplot`` interface; in that case, your
-    function should just call pyplot functions and not return anything. (Note that if
-    the decorated function is async, then it's not safe to use pyplot. Shiny will detect
-    this case and throw an error asking you to use matplotlib's object-oriented
-    interface instead.)
+        It's also possible to use the ``matplotlib.pyplot`` interface; in that case,
+        your function should just call pyplot functions and not return anything. (Note
+        that if the decorated function is async, then it's not safe to use pyplot. Shiny
+        will detect this case and throw an error asking you to use matplotlib's
+        object-oriented interface instead.)
 
     Tip
     ----
@@ -670,6 +670,10 @@ class download(Renderer[str]):
         self,
         fn: DownloadHandler,
     ) -> Self:
+        from .._utils import validate_no_params
+
+        validate_no_params(fn, "render.download", stacklevel=4)
+
         # For downloads, the value function (which is passed to `__call__()`) is
         # different than for other renderers. For normal renderers, the user supplies
         # the value function. This function returns a value which is transformed,

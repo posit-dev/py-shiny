@@ -180,7 +180,7 @@ class NotifyException(Exception):
     close: bool
 
     def __init__(self, message: str, sanitize: bool = True, close: bool = False):
-        super().__init__(message)
+        super().__init__(message, sanitize, close)
         self.sanitize = sanitize
         self.close = close
 

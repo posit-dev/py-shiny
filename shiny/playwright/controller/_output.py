@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import platform
 from typing import Any, Literal, Protocol, Sequence, cast
 
 from playwright.sync_api import Locator, Page
@@ -698,16 +697,8 @@ class OutputDataFrame(UiWithContainer):
         return (
             # Find the direct row
             self.loc_body.locator(f"> tr[data-index='{row}']")
-            # Find all direct td's and th's (these are independent sets)
-            .locator("> td, > th")
-            # Remove all results that contain the `row-number` class
-            .locator(
-                # self
-                "xpath=.",
-                has=self.page.locator(
-                    "xpath=self::*[not(contains(@class, 'row-number'))]"
-                ),
-            )
+            # Find all direct non-row-number td's and th's
+            .locator("> td:not(.row-number), > th:not(.row-number)")
             # Return the first result
             .nth(col)
         )
@@ -916,6 +907,14 @@ class OutputDataFrame(UiWithContainer):
                 break
         cell.scroll_into_view_if_needed(timeout=timeout)
 
+    def _multi_select_modifier(self) -> Literal["Control", "Meta"]:
+        platform = self.page.evaluate(
+            "() => window.navigator.userAgentData?.platform ?? window.navigator.platform"
+        )
+        if isinstance(platform, str) and platform.lower().startswith("mac"):
+            return "Meta"
+        return "Control"
+
     def _expect_column_label(
         self,
         value: ListPatternOrStr,
@@ -1017,18 +1016,13 @@ class OutputDataFrame(UiWithContainer):
                 self.cell_locator(row=value[-1], col=0).click(timeout=timeout)
                 self.page.keyboard.up("Shift")
             else:
-                # if operating system is MacOs use Meta (Cmd) else use Ctrl key
-                if platform.system() == "Darwin":
-                    self.page.keyboard.down("Meta")
-                else:
-                    self.page.keyboard.down("Control")
+                modifier = self._multi_select_modifier()
                 for row in value:
                     self._cell_scroll_if_needed(row=row, col=0, timeout=timeout)
-                    self.cell_locator(row=row, col=0).click(timeout=timeout)
-                if platform.system() == "Darwin":
-                    self.page.keyboard.up("Meta")
-                else:
-                    self.page.keyboard.up("Control")
+                    self.cell_locator(row=row, col=0).click(
+                        timeout=timeout,
+                        modifiers=[modifier],
+                    )
         else:
             self.cell_locator(row=value[0], col=0).click(timeout=timeout)
 
@@ -1151,14 +1145,21 @@ class OutputDataFrame(UiWithContainer):
                 timeout=timeout,
                 modifiers=clickModifier,
             )
-            # Wait for arrows to react a little bit
-            # This could possible be changed to a `wait_for_change`, but 150ms should be fine
-            self.page.wait_for_timeout(150)
+
+        def click_sort_arrow(loc: Locator) -> None:
+            arrow_el = loc.element_handle(timeout=timeout)
+            old_class = arrow_el.get_attribute("class")
+            click_loc(loc)
+            self.page.wait_for_function(
+                "([el, oldClass]) => !el.isConnected || el.getAttribute('class') !== oldClass",
+                arg=[arrow_el, old_class],
+                timeout=timeout,
+            )
 
         # Reset arrow sorting by clicking on the arrows until none are found
         sortingArrows = self.loc_column_label.locator("svg.sort-arrow")
         while sortingArrows.count() > 0:
-            click_loc(sortingArrows.first)
+            click_sort_arrow(sortingArrows.first)
 
         # Quit early if no sorting is needed
         if sort is None:
@@ -1233,11 +1234,16 @@ class OutputDataFrame(UiWithContainer):
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
+
+        def fill_if_needed(input_el: Locator, value: str) -> None:
+            if input_el.input_value(timeout=timeout) != value:
+                input_el.fill(value, timeout=timeout)
+
         # reset all filters
         all_input_locs = self.loc_column_filter.locator("> input, > div > input")
         for i in range(all_input_locs.count()):
             input_el = all_input_locs.nth(i)
-            input_el.fill("", timeout=timeout)
+            fill_if_needed(input_el, "")
 
         if filter is None:
             return
@@ -1263,7 +1269,7 @@ class OutputDataFrame(UiWithContainer):
             filterColumn = self.loc_column_filter.nth(col_idx)
 
             if isinstance(value, (str, int, float)):
-                filterColumn.locator("> input").fill(str(value), timeout=timeout)
+                fill_if_needed(filterColumn.locator("> input"), str(value))
                 continue
 
             if isinstance(value, (list, tuple)):
@@ -1277,15 +1283,12 @@ class OutputDataFrame(UiWithContainer):
                 header_inputs = filterColumn.locator("> div > input")
                 lower = range_values[0]
                 upper = range_values[1]
-                if lower is not None:
-                    header_inputs.nth(0).fill(str(lower), timeout=timeout)
-                else:
-                    header_inputs.nth(0).fill("", timeout=timeout)
-
-                if upper is not None:
-                    header_inputs.nth(1).fill(str(upper), timeout=timeout)
-                else:
-                    header_inputs.nth(1).fill("", timeout=timeout)
+                fill_if_needed(
+                    header_inputs.nth(0), "" if lower is None else str(lower)
+                )
+                fill_if_needed(
+                    header_inputs.nth(1), "" if upper is None else str(upper)
+                )
                 continue
 
             raise ValueError("Invalid filter value.")

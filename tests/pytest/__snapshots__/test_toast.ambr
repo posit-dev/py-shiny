@@ -1,0 +1,80 @@
+# serializer version: 1
+# name: test_toast_header_icon_renders_in_header
+  '''
+  <div class="toast" id="header-icon-toast" role="status" aria-live="polite" aria-atomic="true" data-bs-autohide="true">
+    <div class="toast-header">
+      <span class="toast-header-icon"><span class="header-test-icon">★</span></span><strong class="me-auto ms-2">Notification</strong><small class="text-muted text-end">now</small><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">Body content</div>
+  </div>
+  '''
+# ---
+# name: test_toast_header_icon_with_status_and_title
+  '''
+  <div class="toast" id="full-header-toast" role="status" aria-live="polite" aria-atomic="true" data-bs-autohide="true">
+    <div class="toast-header">
+      <span class="toast-header-icon"><span class="success-icon">✓</span></span><strong class="me-auto ms-2">Success</strong><small class="text-muted text-end">just now</small><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">Operation completed</div>
+  </div>
+  '''
+# ---
+# name: test_toast_icon_renders_in_body_with_header
+  '''
+  <div class="toast" id="icon-header-toast" role="status" aria-live="polite" aria-atomic="true" data-bs-autohide="true">
+    <div class="toast-header">
+      <strong class="me-auto">New Mail</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body d-flex gap-2">
+      <span class="toast-body-icon"><span class="header-icon">★</span></span>
+      <div class="toast-body-content flex-grow-1">Message content</div>
+    </div>
+  </div>
+  '''
+# ---
+# name: test_toast_icon_renders_in_body_without_header
+  '''
+  <div class="toast" id="icon-toast" role="status" aria-live="polite" aria-atomic="true" data-bs-autohide="true">
+    <div class="toast-body d-flex gap-2">
+      <span class="toast-body-icon"><span class="my-icon">★</span></span>
+      <div class="toast-body-content flex-grow-1">You have new messages</div>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+  '''
+# ---
+# name: test_toast_icon_works_with_closable_button_in_body
+  '''
+  <div class="toast" id="icon-closable-toast" role="status" aria-live="polite" aria-atomic="true" data-bs-autohide="true">
+    <div class="toast-body d-flex gap-2">
+      <span class="toast-body-icon"><span class="alert-icon">★</span></span>
+      <div class="toast-body-content flex-grow-1">Warning message</div>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+  '''
+# ---
+# name: test_toast_with_both_header_icon_and_body_icon
+  '''
+  <div class="toast" id="dual-icon-toast" role="status" aria-live="polite" aria-atomic="true" data-bs-autohide="true">
+    <div class="toast-header">
+      <span class="toast-header-icon"><span class="h-icon">H</span></span><strong class="me-auto ms-2">Title</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body d-flex gap-2">
+      <span class="toast-body-icon"><span class="b-icon">B</span></span>
+      <div class="toast-body-content flex-grow-1">Message content</div>
+    </div>
+  </div>
+  '''
+# ---
+# name: test_toast_with_custom_tag_header
+  '''
+  <div class="toast" id="custom-header-toast" role="status" aria-live="polite" aria-atomic="true" data-bs-autohide="true">
+    <div class="toast-header">
+      <div class="custom-header">My Header</div>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">Body</div>
+  </div>
+  '''
+# ---

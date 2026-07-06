@@ -9,12 +9,19 @@ def app_ui(request: Request):
     )
 
 
-def server(input: Inputs, ouput: Outputs, session: Session):
+def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.effect
     @reactive.event(input.letter, ignore_init=True)
     async def _():
         await session.bookmark()
+
+    # Just to make sure that missing inputs don't break bookmarking
+    # behavior (https://github.com/posit-dev/py-shiny/pull/2117)
+    @reactive.effect
+    @reactive.event(input.non_existent_input)
+    def _():
+        pass
 
 
 app = App(app_ui, server, bookmark_store="url")

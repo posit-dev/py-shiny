@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from typing import TYPE_CHECKING, Optional, Protocol
 
 from htmltools import (
     HTML,
@@ -14,6 +14,9 @@ from htmltools import (
     div,
     tags,
 )
+
+if TYPE_CHECKING:
+    from htmltools import Tagified
 
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
@@ -429,7 +432,7 @@ class CardItem:
         """
         return self._item
 
-    def tagify(self) -> TagList:
+    def tagify(self) -> Tagified:
         """
         Tagify the `item`
 

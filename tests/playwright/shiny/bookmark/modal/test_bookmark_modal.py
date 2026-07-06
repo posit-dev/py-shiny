@@ -19,3 +19,4 @@ def test_bookmark_modules(page: Page, local_app: ShinyAppProc):
     )
 
     assert "?" not in page.url
+    assert "An error has occurred" not in page.inner_text("body")

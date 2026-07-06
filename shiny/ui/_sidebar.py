@@ -32,6 +32,8 @@ from .css import CssUnit, as_css_padding, as_css_unit
 from .fill import as_fill_item, as_fillable_container
 
 if TYPE_CHECKING:
+    from htmltools import Tagified
+
     from ..session import Session
 
 __all__ = (
@@ -210,6 +212,10 @@ class Sidebar:
         Whether or not the sidebar should be considered a fillable container.
         When `True`, the sidebar and its content can use `fill` to consume
         available vertical space.
+    resizable
+        Whether or not the sidebar can be resized by dragging. When `True` (the
+        default), a resize handle is shown at the edge of the sidebar that allows
+        the user to drag to resize the sidebar width.
 
     Parameters
     ----------
@@ -269,6 +275,10 @@ class Sidebar:
           and right, and the third will be bottom.
         * If four, then the values will be interpreted as top, right, bottom, and left
           respectively.
+    resizable
+        Whether or not the sidebar can be resized by dragging. When `True` (the
+        default), a resize handle is shown at the edge of the sidebar that allows
+        the user to drag to resize the sidebar width.
     """
 
     def __init__(
@@ -288,6 +298,7 @@ class Sidebar:
         gap: Optional[CssUnit] = None,
         padding: Optional[CssUnit | list[CssUnit]] = None,
         fillable: bool = False,
+        resizable: bool = True,
     ):
         if isinstance(title, (str, int, float)):
             title = tags.header(str(title), class_="sidebar-title")
@@ -298,6 +309,7 @@ class Sidebar:
         self.gap = as_css_unit(gap)
         self.padding = as_css_padding(padding)
         self.fillable = fillable
+        self.resizable = resizable
         # User-provided initial open state
         self._open: SidebarOpen | None = self._as_open(open)
         # Shiny or consumer-provided default open state, change with `_set_default_open()`
@@ -434,6 +446,7 @@ class Sidebar:
                 "id": id,
                 "class": "sidebar",
                 "hidden": "true" if is_hidden_initially else None,
+                "data-resizable": "" if self.resizable else None,
             },
             # If the user provided an id, we make the sidebar an input to report state
             {"class": "bslib-sidebar-input"} if self.id is not None else None,
@@ -447,7 +460,7 @@ class Sidebar:
 
         return sidebar_tag
 
-    def tagify(self) -> TagList:
+    def tagify(self) -> Tagified:
         id = self._get_sidebar_id()
         taglist = TagList(self._sidebar_tag(id), self._collapse_tag(id))
         return taglist.tagify()
@@ -468,6 +481,7 @@ def sidebar(
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
     fillable: bool = False,
+    resizable: bool = True,
     **kwargs: TagAttrValue,
 ) -> Sidebar:
     # See [this article](https://rstudio.github.io/bslib/articles/sidebars.html)
@@ -547,6 +561,10 @@ def sidebar(
         Whether or not the sidebar should be considered a fillable container.
         When `True`, the sidebar and its content can use `fill` to consume
         available vertical space.
+    resizable
+        Whether or not the sidebar can be resized by dragging. When `True` (the
+        default), a resize handle is shown at the edge of the sidebar that allows
+        the user to drag to resize the sidebar width.
     **kwargs
         Named attributes are supplied to the sidebar content container.
 
@@ -594,6 +612,7 @@ def sidebar(
         gap=gap,
         padding=padding,
         fillable=fillable,
+        resizable=resizable,
     )
 
 

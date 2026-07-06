@@ -19,7 +19,6 @@ from ._output import (  # noqa: F401
 from ._run import app_opts, wrap_express_app
 from .expressify_decorator import expressify
 
-
 __all__ = (
     "render",
     "input",

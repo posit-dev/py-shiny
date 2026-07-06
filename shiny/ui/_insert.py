@@ -115,10 +115,17 @@ def remove_ui(
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
 
+    Note
+    ----
+    Removing UI does not destroy the reactive objects (effects, calcs, values)
+    that were created in the corresponding module server. Call
+    :meth:`~shiny.Session.destroy` on the module's session to clean those up.
+
     See Also
     --------
     * :func:`~shiny.ui.insert_ui`
     * :class:`~shiny.render.ui`
+    * :meth:`~shiny.Session.destroy`
     """
 
     session = require_active_session(session)

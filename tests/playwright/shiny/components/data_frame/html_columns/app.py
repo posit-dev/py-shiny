@@ -1,22 +1,36 @@
-import pkgutil
 import random
 import string
+from typing import Any, cast
 
-import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import palmerpenguins
 import polars as pl
 from htmltools import HTMLDependency
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 from shiny.render import CellPatch
 
-pd_penguins = palmerpenguins.load_penguins_raw()
-pl_penguins = pl.read_csv(
-    pkgutil.get_data(  # pyright: ignore[reportArgumentType]
-        "palmerpenguins",
-        "data/penguins-raw.csv",
-    ),
-    null_values="NA",
-)
+HTML_COLUMNS_SAMPLE_ROWS = [
+    0,
+    1,
+    2,
+    3,
+    8,
+    9,
+    33,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    47,
+    150,
+    151,
+]
+
+pd_penguins = palmerpenguins.load_penguins_raw().iloc[HTML_COLUMNS_SAMPLE_ROWS].copy()
+pl_penguins = pl.from_pandas(pd_penguins)
 
 
 def random_generator():
@@ -25,49 +39,51 @@ def random_generator():
     )
 
 
-htmlDep = (
-    HTMLDependency(  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
-        f"studyname-0-{random_generator()}",
-        version="1",
-        head='<script>window.shinytestvalue = "testing"</script>',
-    )
+htmlDep = HTMLDependency(
+    f"studyname-0-{random_generator()}",
+    version="1",
+    head='<script>window.shinytestvalue = "testing"</script>',
 )
 
-studyName = (  # pyright: ignore[reportUnknownVariableType]
-    pd_penguins["studyName"]
-    .copy()
-    .astype("object")  # pyright: ignore[reportUnknownMemberType]
-)
+
+def make_underlined_html(x: Any) -> ui.HTML:
+    return ui.HTML(f"<u>{x}</u>")
+
+
+def make_heading(y: Any) -> Any:
+    return ui.tags.h1(f"{y}")
+
+
+def make_island_content(z: Any) -> ui.TagList:
+    return ui.TagList(
+        ui.input_checkbox(f"checkbox_{z}_{random_generator()}", f"{z}"),
+        ui.tags.span(str(z)),
+    )
+
+
+studyName = pd_penguins["studyName"].copy().astype("object")
 # Set the first value of the column to an html object so the column is treated as object by narwhals (not str)
 studyName[0] = htmlDep
 pd_penguins["studyName"] = studyName
-pd_penguins["Species"] = pd_penguins["Species"].apply(lambda x: ui.HTML(f"<u>{x}</u>"))  # type: ignore
-pd_penguins["Region"] = pd_penguins["Region"].apply(  # type: ignore
-    lambda y: ui.tags.h1(  # pyright: ignore[reportUnknownLambdaType, reportArgumentType]
-        f"{y}"
-    )
-)  # pyright: ignore[reportUnknownMemberType]
-pd_penguins["Island"] = pd_penguins[
-    "Island"
-].apply(  # pyright: ignore[reportUnknownMemberType]
-    lambda z: ui.TagList(  # pyright: ignore[reportUnknownLambdaType]
-        ui.input_checkbox(f"checkbox_{z}_{random_generator()}", f"{z}"),
-        ui.tags.img(
-            src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/276517/posit-logo-fullcolor-TM.png",
-            height="20%",
-            width="20%",
-        ),
-    )
+pd_penguins["Species"] = cast(
+    Any,
+    [make_underlined_html(x) for x in pd_penguins["Species"]],
 )
-# Set the first value of the column to an html object.
-# Narwhals does not inspect the types beyond the first row.
-# Theforefore, we should not either and need to set the type to object.
-pd_penguins.iloc[0, 5] = ui.div(  # pyright: ignore[reportArgumentType]
-    pd_penguins.iloc[0, 5]  # pyright: ignore[reportArgumentType]
+pd_penguins["Region"] = [make_heading(x) for x in pd_penguins["Region"]]
+pd_penguins["Island"] = cast(
+    Any,
+    [make_island_content(x) for x in pd_penguins["Island"]],
 )
-pd_penguins.iloc[1, 5] = ui.p(  # pyright: ignore[reportArgumentType]
-    ui.input_action_button("pandas_test_cell_button", "Test button"),
-    ui.output_text_verbatim("pandas_test_cell_text", placeholder=True),
+# Convert column 5 (Stage) to object dtype before assigning HTML objects (required for pandas 3.0+)
+pd_penguins["Stage"] = pd_penguins["Stage"].astype("object")
+
+pd_penguins.iloc[0, 5] = cast(Any, ui.div(str(pd_penguins.iloc[0, 5])))
+pd_penguins.iloc[1, 5] = cast(
+    Any,
+    ui.p(
+        ui.input_action_button("pandas_test_cell_button", "Test button"),
+        ui.output_text_verbatim("pandas_test_cell_text", placeholder=True),
+    ),
 )
 
 
@@ -97,11 +113,7 @@ pl_penguins = (
             [
                 ui.div(
                     ui.input_checkbox(f"checkbox_{x}_{random_generator()}", f"{x}"),
-                    ui.tags.img(
-                        src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/276517/posit-logo-fullcolor-TM.png",
-                        height="20%",
-                        width="20%",
-                    ),
+                    ui.tags.span(str(x)),
                 )
                 for x in pl_penguins["Island"]
             ],
@@ -112,7 +124,7 @@ pl_penguins = (
         pl.Series(
             [
                 (
-                    ui.p(  # pyright: ignore[reportArgumentType]
+                    ui.p(
                         ui.input_action_button(
                             "polars_test_cell_button", "Test button"
                         ),
@@ -164,7 +176,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @render.data_frame
     def pandas_df():
         return render.DataGrid(
-            data=pd_penguins,  # pyright: ignore[reportUnknownArgumentType]
+            data=pd_penguins,
             filters=True,
             editable=True,
         )
@@ -172,7 +184,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @render.data_frame
     def polars_df():
         return render.DataGrid(
-            data=pl_penguins,  # pyright: ignore[reportUnknownArgumentType]
+            data=pl_penguins,
             filters=True,
             editable=True,
         )

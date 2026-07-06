@@ -15,7 +15,7 @@ shiny-data-frame {
   --shiny-datagrid-padding-x: 0.5em;
   --shiny-datagrid-padding-y: 0.3em;
   --shiny-datagrid-padding: var(--shiny-datagrid-padding-y) var(--shiny-datagrid-padding-x);
-  --shiny-datagrid-grid-header-bgcolor: var(--bs-light, #eee);
+  --shiny-datagrid-grid-header-bgcolor: var(--bs-tertiary-bg, #eee);
   --shiny-datagrid-grid-header-gridlines-color: var(--bs-border-color, #ccc);
   --shiny-datagrid-grid-header-gridlines-style: solid;
   --shiny-datagrid-grid-gridlines-color: var(--bs-border-color, #ccc);
@@ -24,8 +24,8 @@ shiny-data-frame {
   --shiny-datagrid-table-top-border: 1px solid;
   --shiny-datagrid-table-bottom-border: 1px solid;
   --shiny-datagrid-grid-body-hover-bgcolor: var(--shiny-datagrid-grid-header-bgcolor);
-  --shiny-datagrid-grid-body-selected-bgcolor: #b4d5fe;
-  --shiny-datagrid-grid-body-selected-color: var(--bs-dark);
+  --shiny-datagrid-grid-body-selected-bgcolor: var(--bs-primary-bg-subtle, #b4d5fe);
+  --shiny-datagrid-grid-body-selected-color: var(--bs-emphasis-color, var(--bs-dark));
   --shiny-datagrid-grid-header-selected-bgcolor: color-mix(
     in srgb,
     var(--shiny-datagrid-grid-header-bgcolor) 30%,
@@ -38,7 +38,7 @@ shiny-data-frame {
   --shiny-datagrid-table-cell-edit-failure-border-color: color-mix(in srgb, var(--bs-danger) 40%, transparent);
   --shiny-datagrid-table-cell-edit-failure-border-style: var(--shiny-datagrid-grid-gridlines-style);
   --shiny-datagrid-table-cell-edit-failure-bgcolor: color-mix(in srgb, var(--bs-danger) 10%, transparent);
-  --shiny-datagrid-table-cell-edit-saving-color: var(--bs-gray-500);
+  --shiny-datagrid-table-cell-edit-saving-color: var(--bs-secondary-color, var(--bs-gray-500));
 }
 
 /*

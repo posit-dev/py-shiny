@@ -112,6 +112,10 @@ format-isort: FORCE
 	@echo "-------- Sorting imports with isort --------"
 	isort .
 
+test-update-snapshots: FORCE ## Update test snapshots
+	@echo "-------- Updating test snapshots ----------"
+	pytest --snapshot-update
+
 docs: FORCE ## docs: build docs with quartodoc
 	@echo "-------- Building docs with quartodoc ------"
 	@cd docs && make quartodoc
@@ -175,6 +179,33 @@ clean-js: FORCE
 SUB_FILE:=
 PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
 PYTEST_DEPLOYS_BROWSERS:= --browser chromium
+# Per-test timeout (seconds) so a single hung test fails fast with a full
+# thread-stack dump instead of silently consuming the whole CI job.
+PLAYWRIGHT_TEST_TIMEOUT:= 120
+# pytest-timeout defaults to the `signal` (SIGALRM) method on POSIX, but the
+# exception it raises can be swallowed inside Playwright's sync-API event
+# loop, leaving the worker hung until the CI job timeout kills it with no
+# diagnostics. The `thread` method kills the worker process instead, which
+# pytest-xdist reports as a failure while the rest of the run (and its
+# traces/artifacts) completes normally.
+PLAYWRIGHT_TEST_TIMEOUT_METHOD:= thread
+# The thread method's own stack dump goes to the xdist worker's stdout, which
+# is execnet's IPC pipe (lost). pytest's builtin faulthandler writes to the
+# original stderr fd, which xdist workers inherit, so dump every thread's
+# stack shortly *before* the kill to record where the test was hung.
+PLAYWRIGHT_FAULTHANDLER_TIMEOUT:= 110
+# In CI, use one line per test (`-v`) instead of the default dot-progress
+# output. GitHub Actions' log viewer only displays a line once it sees a
+# trailing newline, and pytest's dot mode only emits one every ~80 chars
+# (terminal-width wrapping) -- with a small shard, that can be the entire
+# run, hiding all progress until the very end. `-v` emits a newline per test,
+# so CI shows real-time progress and where a hang starts. Left off locally
+# since the default dot output is nicer for interactive use.
+ifeq ($(CI),true)
+PLAYWRIGHT_VERBOSE:= -v
+else
+PLAYWRIGHT_VERBOSE:=
+endif
 
 
 # Full test path to playwright tests
@@ -186,15 +217,21 @@ EXAMPLES_TEST_FILE:=tests/playwright/examples/$(SUB_FILE)
 AI_TEST_FILE:=tests/playwright/ai_generated_apps/$(SUB_FILE)
 
 install-playwright: FORCE
-	playwright install --with-deps
+	@if [ -n "$$PW_TEST_CONNECT_WS_ENDPOINT" ]; then \
+		echo "Using remote Playwright server at $$PW_TEST_CONNECT_WS_ENDPOINT"; \
+	else \
+		playwright install --with-deps $(PLAYWRIGHT_BROWSERS); \
+	fi
 
 install-rsconnect: FORCE
 	pip install git+https://github.com/rstudio/rsconnect-python.git#egg=rsconnect-python
 
 
 # All end-to-end tests with playwright
+# `--timeout` bounds each test so a hang fails fast with a thread-stack dump
+# instead of consuming the whole job.
 playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
-	pytest $(TEST_FILE) $(PYTEST_BROWSERS)
+	pytest $(PLAYWRIGHT_VERBOSE) --timeout=$(PLAYWRIGHT_TEST_TIMEOUT) --timeout-method=$(PLAYWRIGHT_TEST_TIMEOUT_METHOD) -o faulthandler_timeout=$(PLAYWRIGHT_FAULTHANDLER_TIMEOUT) $(TEST_FILE) $(PYTEST_BROWSERS)
 
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (TEST_FILE="" from root of repo)
 	pytest -c tests/playwright/playwright-pytest.ini $(TEST_FILE)
@@ -240,8 +277,12 @@ dist: clean ## builds source and wheel package
 install: dist
 	pip uninstall -y shiny
 	python -m pip install dist/shiny*.whl
-ci-install-wheel: dist FORCE
-	# `uv` version of `make install`
+ci-install-wheel: FORCE
+	# `uv` version of `make install`; `uv build` is much faster than
+	# `pip install build` + `python -m build` as it caches build dependencies
+	rm -fr dist/
+	uv build
+	ls -l dist
 	uv pip uninstall shiny
 	uv pip install dist/shiny*.whl
 
@@ -285,8 +326,9 @@ upgrade-html-deps: FORCE ## Upgrade Shiny's HTMLDependencies
 narwhals-install-shiny: FORCE
 	@echo "-------- Install py-shiny ----------"
 	$(MAKE) ci-install-deps
+	$(MAKE) install-playwright PLAYWRIGHT_BROWSERS=chromium
 narwhals-test-integration: FORCE
-	@echo "-------- Running py-shiny format, lint, typing, and unit tests ----------"
-	$(MAKE) check
+	@echo "-------- Running py-shiny typing and unit tests ----------"
+	$(MAKE) check-types check-tests
 	@echo "-------- Running py-shiny playwright tests ----------"
 	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/components/data_frame/data_type/" PYTEST_BROWSERS="--browser chromium"

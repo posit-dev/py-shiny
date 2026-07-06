@@ -1,3 +1,9 @@
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Context files
+.context/
+
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
 *.py[cod]
@@ -130,4 +136,10 @@ test-results.xml
 results-inspect-ai/
 test-results-inspect-ai/
 tests/inspect-ai/scripts/test_metadata.json
-.claude/
+
+# Claude
+/.claude/*.local.*
+/.claude/scheduled_tasks.lock
+/.claude/plans/
+docs/plans/
+docs/superpowers/

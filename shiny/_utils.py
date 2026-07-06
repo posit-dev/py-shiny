@@ -46,6 +46,17 @@ def rand_hex(bytes: int) -> str:
     return format_str.format(secrets.randbits(bytes * 8))
 
 
+def is_test_mode() -> bool:
+    """
+    Whether Shiny test mode is enabled.
+
+    Test mode is enabled by setting the ``SHINY_TESTMODE`` environment variable
+    to ``"1"``. When enabled, each session records the last value of every output
+    and serves a JSON snapshot endpoint at ``/session/{id}/dataobj/shinytest``.
+    """
+    return os.getenv("SHINY_TESTMODE") == "1"
+
+
 def drop_none(x: dict[str, Any]) -> dict[str, object]:
     return {k: v for k, v in x.items() if v is not None}
 
@@ -89,8 +100,18 @@ def guess_mime_type(
     return mimetypes.guess_type(url, strict)[0] or default
 
 
+RANDOM_PORT_MIN_DEFAULT = 1024
+"""Default lower bound for `random_port()`: the start of the TCP User Ports range."""
+
+RANDOM_PORT_MAX_DEFAULT = 49151
+"""Default upper bound for `random_port()`: the end of the TCP User Ports range."""
+
+
 def random_port(
-    min: int = 1024, max: int = 49151, host: str = "127.0.0.1", n: int = 20
+    min: int = RANDOM_PORT_MIN_DEFAULT,
+    max: int = RANDOM_PORT_MAX_DEFAULT,
+    host: str = "127.0.0.1",
+    n: int = 20,
 ) -> int:
     """Find an open TCP port
 
@@ -552,9 +573,19 @@ CancelCallback = Callable[[], None]
 
 
 class AsyncCallbacks:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        on_error: Callable[[Exception], None] | None = None,
+    ) -> None:
         self._callbacks: dict[int, tuple[Callable[..., Awaitable[None]], bool]] = {}
         self._id: int = 0
+        self._on_error = on_error
+        """
+        If set, called with the exception when a callback raises during
+        `invoke()`, and iteration continues to the next callback.
+        If `None` (the default), exceptions propagate immediately.
+        """
 
     def register(
         self, fn: Callable[..., Awaitable[None]], once: bool = False
@@ -569,7 +600,21 @@ class AsyncCallbacks:
 
         return cancel_callback
 
-    async def invoke(self, *args: Any, **kwargs: Any) -> None:
+    async def invoke(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Invoke all registered callbacks with the given arguments.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to each callback.
+        **kwargs
+            Keyword arguments passed to each callback.
+        """
         # The list() wrapper is necessary to force collection of all the items before
         # iteration begins. This is necessary because self._callbacks may be mutated
         # by callbacks.
@@ -577,6 +622,11 @@ class AsyncCallbacks:
             fn, once = value
             try:
                 await fn(*args, **kwargs)
+            except Exception as e:
+                if self._on_error is not None:
+                    self._on_error(e)
+                else:
+                    raise
             finally:
                 if once:
                     if id in self._callbacks:
@@ -640,3 +690,79 @@ def import_module_from_path(module_name: str, path: Path):
             sys.modules[module_name] = prev_module
         raise
     return module
+
+
+def validate_no_params(
+    fn: Callable[..., Any],
+    decorator_name: str,
+    *,
+    stacklevel: int = 3,
+) -> None:
+    """
+    Validate that a decorated function has no required parameters.
+
+    Parameters
+    ----------
+    fn
+        The function to validate.
+    decorator_name
+        The name of the decorator (e.g., ``"reactive.calc"``) for error messages.
+    stacklevel
+        The ``stacklevel`` passed to :func:`warnings.warn` when issuing warnings
+        about parameters with default values. The default (3) is correct when
+        ``validate_no_params`` is called one frame below the user's code (e.g.,
+        from ``Renderer.__call__``). Callers with deeper call stacks (e.g.,
+        ``Calc_.__init__`` via ``reactive.calc()``) should pass a higher value.
+
+    Raises
+    ------
+    TypeError
+        If the function has required parameters (excluding ``self`` and ``cls``).
+    """
+    # Skip if this function has already been validated (e.g., by an outer decorator
+    # like @reactive.poll before the inner @reactive.calc).
+    if getattr(fn, "_shiny_params_validated", False):
+        return
+
+    sig = inspect.signature(fn)
+    skip_names = {"self", "cls"}
+    skip_kinds = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+
+    required_params: list[str] = []
+    defaulted_params: list[str] = []
+    for p in sig.parameters.values():
+        if p.name in skip_names or p.kind in skip_kinds:
+            continue
+        if p.default is inspect.Parameter.empty:
+            required_params.append(p.name)
+        else:
+            defaulted_params.append(p.name)
+
+    if required_params:
+        raise TypeError(
+            f"@{decorator_name} expected a function with no required parameters, "
+            f"but {fn.__name__}() has required parameter(s): "
+            f"{', '.join(required_params)}. "
+            f"Reactive functions and render functions should take no arguments."
+        )
+
+    # Warn about parameters with defaults — they will never be used by Shiny
+    if defaulted_params:
+        warnings.warn(
+            f"@{decorator_name} decorated function {fn.__name__}() has parameter(s) "
+            f"with default values: {', '.join(defaulted_params)}. "
+            f"These parameters will never be supplied by Shiny and will always use "
+            f"their defaults. Consider removing them or wrapping the function call "
+            f"in a lambda, e.g., @{decorator_name}\\ndef fn(): return "
+            f"{fn.__name__}({', '.join(f'{n}={n}' for n in defaulted_params)})",
+            stacklevel=stacklevel,
+        )
+
+    # Mark the function as validated so downstream decorators don't re-validate
+    # (e.g., @reactive.poll wraps with @functools.wraps which propagates the
+    # original signature to the inner @reactive.calc).
+    try:
+        fn._shiny_params_validated = True  # type: ignore[attr-defined]
+    except AttributeError:
+        # Some callables (e.g., built-ins) don't allow setting attributes
+        pass

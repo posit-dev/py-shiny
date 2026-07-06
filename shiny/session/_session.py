@@ -31,9 +31,15 @@ from typing import (
     overload,
 )
 
+import orjson
 from htmltools import TagChild, TagList
 from starlette.requests import HTTPConnection, Request
-from starlette.responses import HTMLResponse, PlainTextResponse, StreamingResponse
+from starlette.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    Response,
+    StreamingResponse,
+)
 from starlette.types import ASGIApp
 
 from .. import _utils, reactive, render
@@ -51,12 +57,23 @@ from ..bookmark._serializers import serializer_file_input
 from ..http_staticfiles import FileResponse
 from ..input_handler import input_handlers
 from ..module import ResolvedId
+from ..otel._attributes import (
+    extract_http_attributes,
+    extract_source_ref,
+    get_session_id_attrs,
+)
+from ..otel._collect import OtelCollectLevel, _get_env_level
+from ..otel._decorators import suppress as otel_suppress
+from ..otel._function_attrs import resolve_func_otel_level
+from ..otel._labels import create_otel_label, create_otel_span_name
+from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
+from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
     Jsonifiable,
     SafeException,
@@ -140,10 +157,18 @@ class DownloadInfo:
 
 
 class OutBoundMessageQueues:
-    def __init__(self):
+    def __init__(self, record_test_values: bool = False):
         self.values: dict[str, Any] = {}
         self.errors: dict[str, Any] = {}
         self.input_messages: list[dict[str, Any]] = []
+
+        # Test-mode (`SHINY_TESTMODE`) persistent record of the last value/error
+        # sent for each output. Unlike `values`/`errors`, these are NOT cleared
+        # by `reset()`, so a test snapshot can report the last computed value of
+        # every output even though the transient queues are flushed each cycle.
+        self._record_test_values = record_test_values
+        self.test_values: dict[str, Any] = {}
+        self.test_errors: dict[str, Any] = {}
 
     def reset(self) -> None:
         self.values.clear()
@@ -155,12 +180,31 @@ class OutBoundMessageQueues:
         # remove from self.errors
         if id in self.errors:
             del self.errors[id]
+        if self._record_test_values:
+            self.test_values[id] = value
+            self.test_errors.pop(id, None)
+
+    def set_silent(self, id: str) -> None:
+        """
+        Record that computing `id`'s value was silently suppressed (e.g. via
+        `req()`), without touching the persistent test-mode record.
+
+        Unlike `set_value(id, None)`, this leaves `test_values`/`test_errors`
+        untouched, so the test-mode snapshot retains the output's last
+        computed value or error (matching Shiny for R) instead of reporting
+        `None`.
+        """
+        self.values[id] = None
+        self.errors.pop(id, None)
 
     def set_error(self, id: str, error: Any) -> None:
         self.errors[id] = error
         # remove from self.values
         if id in self.values:
             del self.values[id]
+        if self._record_test_values:
+            self.test_errors[id] = error
+            self.test_values.pop(id, None)
 
     def add_input_message(self, id: str, message: dict[str, Any]) -> None:
         self.input_messages.append({"id": id, "message": message})
@@ -231,6 +275,134 @@ class Session(ABC):
         -------
         :
             A function that can be used to cancel the registration.
+        """
+
+    @abstractmethod
+    def on_destroy(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        """
+        Register a callback to run when this session or module scope is destroyed.
+
+        For ``SessionProxy`` (module sessions), destroy callbacks fire when
+        ``session.destroy()`` is explicitly called. For ``AppSession`` (root
+        sessions), destroy callbacks fire automatically at session end, after
+        all ``on_ended`` callbacks have run.
+
+        Parameters
+        ----------
+        fn
+            The function to call on destroy. Can be sync or async.
+        """
+
+    @abstractmethod
+    async def destroy(self, id: Id | None = None) -> None:
+        """
+        Destroy this session or module scope, including all descendant scopes.
+
+        Fires all registered destroy callbacks, then removes all namespaced
+        state from the session. This does not alter the UI; use
+        :func:`~shiny.ui.remove_ui` to remove UI elements.
+
+        Pass an ``id`` to tear down a **child** module scope instead of this
+        one. The parent that inserted a module's UI under an ``id`` can tear it
+        down by that same ``id`` with ``session.destroy(id)``, without the
+        module having to hand anything back:
+
+        ```python
+        @reactive.effect
+        @reactive.event(input.add)
+        def _():
+            ui.insert_ui(my_module_ui("editor"), selector="#container")
+            my_module_server("editor")
+
+        @reactive.effect
+        @reactive.event(input.remove)
+        async def _():
+            ui.remove_ui(selector="#editor")
+            await session.destroy("editor")
+        ```
+
+        The following categories of state are cleaned up:
+
+        - **Reactive objects** — Effects are stopped, calcs and values are
+          invalidated. After destruction, ``get()``/``set()`` on a destroyed
+          value raises ``DestroyedReactiveError``; ``is_set()`` returns
+          ``False``.
+        - **Inputs** — Namespaced input keys and their values are removed.
+          A new module with the same namespace gets fresh input values.
+        - **Outputs** — Namespaced output entries are removed and their
+          render effects are destroyed.
+        - **Message handlers, dynamic routes, downloads** — Namespaced
+          entries are removed from the root session.
+
+        For ``SessionProxy``, this must be called explicitly (typically after
+        removing dynamic module UI). For ``AppSession``, this is called
+        automatically at session end, after all ``on_ended`` callbacks.
+
+        Idempotent: calling destroy() more than once has no effect.
+
+        Composability
+        -------------
+        Every reactive object — values, calcs, and effects — is **scoped** to
+        the session (or module session) in which it was created. When you call
+        ``destroy()``, only the objects in that scope are torn down; the parent
+        session and sibling modules are unaffected.
+
+        This scoping is what makes modules safe to add and remove dynamically.
+        Without it, destroying one module could leak callbacks or invalidate
+        reactive objects that belong to another part of the app.
+
+        The key rule: **data that must outlive a module should live outside
+        it.** If a reactive value is created inside a module, it is destroyed
+        with the module. If it is created in the caller's scope and passed in,
+        the module can write to it, and the caller can continue reading it
+        after the module is destroyed.
+
+        Returning a reactive value from a module works when the module lives
+        for the entire session. However, if you plan to call
+        ``session.destroy()``, the returned value will be destroyed and can
+        no longer be read:
+
+        ```python
+        @module.server
+        def my_module_server(input, output, session):
+            result = reactive.value(0)
+            # ... update result ...
+            return result
+
+        returned_value = my_module_server("editor")
+        await session.destroy()
+        returned_value()  # Raises DestroyedReactiveError!
+        ```
+
+        Instead, pass a reactive value **into** the module. The value lives
+        in the caller's scope and survives destruction:
+
+        ```python
+        @module.server
+        def my_module_server(input, output, session, result):
+            # Module writes to the caller-owned value
+            @reactive.effect
+            @reactive.event(input.save)
+            def _():
+                result.set(input.data())
+
+        # Caller creates and owns the value
+        saved_data = reactive.value(None)
+        my_module_server("editor", result=saved_data)
+        # saved_data is still valid after the module is destroyed
+        ```
+
+        Parameters
+        ----------
+        id
+            Optional module ``id`` whose child scope should be destroyed. When
+            ``None`` (the default), the current scope is destroyed.
+
+        See Also
+        --------
+        * :func:`~shiny.ui.remove_ui`
         """
 
     @abstractmethod
@@ -437,6 +609,49 @@ class Session(ABC):
         """
 
     @abstractmethod
+    def _export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        """
+        Register named values to include in the test-mode snapshot.
+
+        Internal implementation of the public `shiny.testmode.export_test_values()`
+        function; call that instead of this method directly.
+
+        Each value must be a zero-argument callable (a plain function/`lambda` or
+        a `reactive.calc`); it is evaluated lazily, in a reactive isolate, when a
+        test snapshot is requested. Registered values appear under the ``export``
+        block of the snapshot returned by the ``dataobj/shinytest`` endpoint.
+
+        Has no effect unless test mode is enabled (``SHINY_TESTMODE=1``), so calls
+        can be left in production code. Re-registering a name overwrites it.
+
+        Parameters
+        ----------
+        **kwargs
+            Named zero-argument callables whose return values are exported.
+
+        See Also
+        --------
+        * `shiny.testmode.export_test_values`
+        """
+
+    @abstractmethod
+    def get_test_snapshot_url(self) -> str:
+        """
+        Return the URL of this session's test-mode snapshot endpoint.
+
+        The URL (with a fresh cache-busting `nonce`) points at the
+        `dataobj/shinytest` endpoint, which returns a JSON snapshot of this
+        session's `input`, `output`, and `export` values. The endpoint only
+        responds when test mode is enabled (`SHINY_TESTMODE=1`); otherwise it
+        returns a 404.
+
+        Returns
+        -------
+        :
+            The URL path for the snapshot endpoint.
+        """
+
+    @abstractmethod
     def set_message_handler(
         self,
         name: str,
@@ -491,6 +706,69 @@ class Session(ABC):
 
     @abstractmethod
     def _decrement_busy_count(self) -> None: ...
+
+
+def _print_exception(e: Exception) -> None:
+    traceback.print_exception(type(e), e, e.__traceback__)
+
+
+def _new_destroy_callbacks() -> _utils.AsyncCallbacks:
+    return _utils.AsyncCallbacks(on_error=_print_exception)
+
+
+async def _invoke_destroy_callbacks(
+    callbacks_by_ns: dict[str, _utils.AsyncCallbacks],
+    ns: str,
+) -> None:
+    """
+    Invoke destroy callbacks for a namespace and all its descendants.
+
+    Collects all namespaces matching ``ns`` (exact match) and any child
+    namespaces (``ns + "-"`` prefix), sorts them deepest-first, then pops
+    and invokes each set of callbacks.
+
+    Parameters
+    ----------
+    callbacks_by_ns
+        The dict mapping namespace strings to their ``AsyncCallbacks``.
+    ns
+        The namespace to destroy. Use ``""`` for the root session (destroys
+        all namespaces).
+    """
+    if ns == "":
+        # Root: destroy everything
+        matching_keys = list(callbacks_by_ns.keys())
+    else:
+        ns_prefix = ns + "-"
+        matching_keys = [
+            k for k in callbacks_by_ns if k == ns or k.startswith(ns_prefix)
+        ]
+
+    # Sort deepest namespaces first (most dashes → most nested) so that
+    # children are destroyed before parents, mirroring the reverse of
+    # construction order.
+    matching_keys.sort(key=lambda k: k.count("-"), reverse=True)
+
+    for ns_key in matching_keys:
+        callbacks = callbacks_by_ns.pop(ns_key, None)
+        if callbacks is not None:
+            await callbacks.invoke()
+
+
+def _validate_destroy_id(id: Id) -> None:
+    """
+    Validate the ``id`` passed to ``session.destroy(id)``.
+
+    Must be a single, non-empty string. (When ``id`` is a plain ``str``, the
+    permitted character set is additionally enforced by ``make_scope()`` via
+    ``validate_id()``.)
+    """
+    if not isinstance(id, str) or id == "":
+        raise ValueError(
+            "`id` must be a single, non-empty string. Pass a module `id` to "
+            'tear down that scope (e.g. `session.destroy("my_module")`), or '
+            "call `destroy()` with no `id` to destroy the current scope."
+        )
 
 
 # ======================================================================================
@@ -559,13 +837,24 @@ class AppSession(Session):
             except Exception as e:
                 print("Error parsing credentials header: " + str(e), file=sys.stderr)
 
-        self._outbound_message_queues = OutBoundMessageQueues()
+        self._outbound_message_queues = OutBoundMessageQueues(
+            record_test_values=app._test_mode
+        )
 
         self._file_upload_manager: FileUploadManager = FileUploadManager()
         self._on_ended_callbacks = _utils.AsyncCallbacks()
         self._has_run_session_ended_tasks: bool = False
         self._downloads: dict[str, DownloadInfo] = {}
         self._dynamic_routes: dict[str, DynamicRouteHandler] = {}
+
+        # Test-mode (`SHINY_TESTMODE`) registry of values to include in the
+        # `export` block of the snapshot. Keys are (namespaced) export names;
+        # values are zero-arg callables evaluated lazily at snapshot time.
+        self._test_value_exports: dict[str, Callable[[], Any]] = {}
+
+        # Destroy callbacks for module scopes, keyed by namespace string.
+        # Stored on root session because SessionProxy is a throwaway lens.
+        self._destroy_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
 
         self._register_session_ended_callbacks()
 
@@ -584,10 +873,21 @@ class AppSession(Session):
             return
         self._has_run_session_ended_tasks = True
 
-        try:
-            await self._on_ended_callbacks.invoke()
-        finally:
-            self.app._remove_session(self)
+        # Wrap session cleanup in session_end span (or no-op if not collecting)
+        with session_context(self):
+            async with shiny_otel_span(
+                "session_end",
+                required_level=OtelCollectLevel.SESSION,
+                collection_level=_get_env_level(),
+                infer_session_id=True,
+            ):
+                try:
+                    await self._on_ended_callbacks.invoke()
+                    # Destroy callbacks run after on_ended callbacks so that
+                    # on_ended handlers can still read reactive state.
+                    await self.destroy()
+                finally:
+                    self.app._remove_session(self)
 
     def is_stub_session(self) -> Literal[False]:
         return False
@@ -597,6 +897,10 @@ class AppSession(Session):
         await self._run_session_ended_tasks()
 
     async def _run(self) -> None:
+        await self._run_impl()
+
+    async def _run_impl(self) -> None:
+        """Implementation of session execution loop."""
         conn_state: ConnectionState = ConnectionState.Start
 
         def verify_state(expected_state: ConnectionState) -> None:
@@ -669,19 +973,30 @@ class AppSession(Session):
                             message_obj = typing.cast(ClientMessageInit, message_obj)
                             self._manage_inputs(message_obj["data"])
 
+                            # Wrap server function initialization in session_start span
                             with session_context(self):
-                                self.app.server(self.input, self.output, self)
+                                async with shiny_otel_span(
+                                    "session_start",
+                                    attributes=lambda: extract_http_attributes(
+                                        self.http_conn
+                                    ),
+                                    required_level=OtelCollectLevel.SESSION,
+                                    collection_level=_get_env_level(),
+                                    infer_session_id=True,
+                                ):
+                                    self.app.server(self.input, self.output, self)
 
-                            # TODO: Remove this call to reactive_flush() once https://github.com/posit-dev/py-shiny/issues/1889 is fixed
-                            # Workaround: Any `on_flushed()` calls from bookmark's `on_restored()` will be flushed here
-                            if self.bookmark.store != "disable":
-                                await reactive_flush()
+                                    # Flush here to attempt a reactive_update within `session_start` otel span.
+                                    # Might also fix https://github.com/posit-dev/py-shiny/issues/1889
+                                    await reactive_flush()
 
                         elif message_obj["method"] == "update":
                             verify_state(ConnectionState.Running)
 
                             message_obj = typing.cast(ClientMessageUpdate, message_obj)
-                            self._manage_inputs(message_obj["data"])
+                            # Set the session context for otel logging purposes
+                            with session_context(self):
+                                self._manage_inputs(message_obj["data"])
 
                         elif "tag" in message_obj and "args" in message_obj:
                             verify_state(ConnectionState.Running)
@@ -700,9 +1015,11 @@ class AppSession(Session):
                         # https://github.com/posit-dev/py-shiny/issues/1381
                         await asyncio.sleep(0)
 
-                        self._request_flush()
-
-                        await reactive_flush()
+                        # Keep session context active for reactive flush so
+                        # reactive_update spans can consistently include session.id.
+                        with session_context(self):
+                            self._request_flush()
+                            await reactive_flush()
 
             except ConnectionClosed:
                 ...
@@ -734,7 +1051,13 @@ class AppSession(Session):
             # The keys[0] value is already a fully namespaced id; make that explicit by
             # wrapping it in ResolvedId, otherwise self.input will throw an id
             # validation error.
-            self.input[ResolvedId(keys[0])]._set(val)
+            # The client sends a value over the wire in two cases: either it's a
+            # genuinely new value, or it was sent with {priority: "event"} which
+            # bypasses client-side deduplication (InputNoResendDecorator). Either
+            # way, the server should accept this value as new and cause dependents
+            # to recalculate. This achieves dedupe=FALSE behavior from R Shiny:
+            # https://github.com/rstudio/shiny/blob/75a63716e578976965daeadde81af7166a50faac/R/shiny.R#L728
+            self.input[ResolvedId(keys[0])]._set(val, force=True)
 
         self.output._manage_hidden()
 
@@ -831,6 +1154,12 @@ class AppSession(Session):
             # This also occurs during input handler: shiny.file
             self.input.set_serializer(input_id, serializer_file_input)
 
+            # Like R's @uploadEnd: scrub the nondeterministic tempdir out of the
+            # value shown in test-mode snapshots.
+            self.input.set_snapshot_preprocess(
+                ResolvedId(input_id), _snapshot_preprocess_file_input
+            )
+
             # Explicitly return None to signal that the message was handled.
             return None
 
@@ -906,13 +1235,43 @@ class AppSession(Session):
                             "Cache-Control": "no-store",
                         }
 
+                        # Parse namespace and base id from download_id
+                        # IDs only contain \w characters, so "-" is exclusively
+                        # the namespace separator (from ResolvedId)
+                        if "-" in download_id:
+                            dl_namespace, _, dl_base_id = download_id.rpartition("-")
+                        else:
+                            dl_namespace, dl_base_id = None, download_id
+
+                        download_label = create_otel_label(
+                            "download",
+                            dl_base_id,
+                            namespace=dl_namespace or None,
+                        )
+
+                        otel_attrs = {
+                            **get_session_id_attrs(self),
+                            "download.id": download_id,
+                            "download.filename": filename,
+                        }
+
                         if isinstance(contents, str):
                             # contents is the path to a file
-                            return FileResponse(
-                                Path(contents),
-                                headers=headers,
-                                media_type=content_type,
-                            )
+                            # Span captures download initiation; the actual file
+                            # transfer is handled by Starlette's ASGI layer after
+                            # we return the FileResponse object.
+                            async with shiny_otel_span(
+                                download_label,
+                                attributes=otel_attrs,
+                                infer_session_id=False,
+                                required_level=OtelCollectLevel.REACTIVITY,
+                            ):
+                                file_response = FileResponse(
+                                    Path(contents),
+                                    headers=headers,
+                                    media_type=content_type,
+                                )
+                            return file_response
 
                         wrapped_contents: AsyncIterable[bytes]
 
@@ -946,6 +1305,14 @@ class AppSession(Session):
 
                             wrapped_contents = wrap_content_sync()
 
+                        wrapped_contents = shiny_otel_span_stream(
+                            download_label,
+                            wrapped_contents,
+                            attributes=otel_attrs,
+                            infer_session_id=False,
+                            required_level=OtelCollectLevel.REACTIVITY,
+                        )
+
                         # In streaming downloads, we send a 200 response, but if an
                         # error occurs in the middle of it, the client needs to know.
                         # With chunked encoding, the client will know if an error occurs
@@ -972,7 +1339,94 @@ class AppSession(Session):
                     else:
                         return handler(request)
 
+        elif action == "dataobj" and subpath == "shinytest" and request.method == "GET":
+            if not self.app._test_mode:
+                return HTMLResponse("<h1>Not Found</h1>", 404)
+            return await self._handle_test_snapshot(request)
+
         return HTMLResponse("<h1>Not Found</h1>", 404)
+
+    async def _handle_test_snapshot(self, request: Request) -> ASGIApp:
+        # `format`: py-shiny only ever emits JSON. R additionally supports "rds",
+        # but there is no RDS equivalent in Python, so any non-"json" value
+        # (including "rds") is rejected.
+        fmt = request.query_params.get("format", "json")
+        if fmt != "json":
+            return PlainTextResponse(f"Invalid format requested: {fmt}", 400)
+
+        # `sortC`: R uses this to choose radix (C-locale) vs locale-aware key
+        # sorting. orjson always sorts keys by code point (equivalent to R's
+        # radix) and has no locale-aware collation, so this is a no-op here -- but
+        # it is validated the same way R does ("1" or not supplied).
+        sort_c = request.query_params.get("sortC")
+        if sort_c is not None and sort_c != "1":
+            return PlainTextResponse(
+                "The `sortC` parameter can only be `1` or not supplied.", 400
+            )
+
+        # Block selection. Each of `input`/`output`/`export` is included only if
+        # its query param is present: "1" selects the whole block, a comma list
+        # (e.g. "a,b") selects just those keys.
+        #
+        # DEVIATION FROM R: when NONE of the three params are supplied, py-shiny
+        # returns all three blocks as a convenience. R instead responds 400
+        # ("None of export, input, or output requested.").
+        want = {block: request.query_params.get(block) for block in _SNAPSHOT_BLOCKS}
+        select_all = all(spec is None for spec in want.values())
+
+        payload: dict[str, Any] = {}
+        with session_context(self):
+            with isolate():
+                if select_all or want["input"] is not None:
+                    inputs = {
+                        str(key): _snapshot_safe_value(val)
+                        for key, val in (
+                            await self.input._serialize_test_mode()
+                        ).items()
+                    }
+                    payload["input"] = _filter_snapshot_block(inputs, want["input"])
+
+                if select_all or want["output"] is not None:
+                    omq = self._outbound_message_queues
+                    outputs: dict[str, Any] = {}
+                    # Materialize the items: an async preprocessor may yield to
+                    # the event loop mid-iteration, during which a rendering
+                    # output can mutate `test_values`.
+                    for key, val in list(omq.test_values.items()):
+                        # Apply the renderer's snapshot preprocessor, if any.
+                        # (`_outputs` and `test_values` are both keyed by the
+                        # namespaced output name.)
+                        info = self.output._outputs.get(key)
+                        preprocess = (
+                            info.renderer._snapshot_preprocess_fn
+                            if info is not None
+                            else None
+                        )
+                        if preprocess is not None:
+                            try:
+                                val = await preprocess(val)
+                            except Exception as e:
+                                val = {"__shiny_snapshot_preprocess_error__": str(e)}
+                        outputs[str(key)] = _snapshot_safe_value(val)
+                    for key, err in omq.test_errors.items():
+                        if isinstance(err, dict):
+                            message = cast("dict[str, Any]", err).get("message")
+                        else:
+                            message = str(err)
+                        outputs[str(key)] = {"__shiny_output_error__": message}
+                    payload["output"] = _filter_snapshot_block(outputs, want["output"])
+
+                if select_all or want["export"] is not None:
+                    exports: dict[str, Any] = {}
+                    for name, fn in self._test_value_exports.items():
+                        try:
+                            exports[name] = _snapshot_safe_value(fn())
+                        except Exception as e:
+                            exports[name] = {"__shiny_serialization_error__": str(e)}
+                    payload["export"] = _filter_snapshot_block(exports, want["export"])
+
+        body = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
+        return Response(content=body, media_type="application/json")
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
         self._outbound_message_queues.add_input_message(id, message)
@@ -1094,6 +1548,21 @@ class AppSession(Session):
     ) -> Callable[[], None]:
         return self._on_ended_callbacks.register(wrap_async(fn))
 
+    def on_destroy(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        ns_key = ""
+        if ns_key not in self._destroy_callbacks_by_ns:
+            self._destroy_callbacks_by_ns[ns_key] = _new_destroy_callbacks()
+        self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn))
+
+    async def destroy(self, id: Id | None = None) -> None:
+        if id is None:
+            await _invoke_destroy_callbacks(self._destroy_callbacks_by_ns, "")
+        else:
+            _validate_destroy_id(id)
+            await self.make_scope(id).destroy()
+
     # ==========================================================================
     # Misc
     # ==========================================================================
@@ -1136,6 +1605,18 @@ class AppSession(Session):
         self._dynamic_routes.update({name: handler})
         nonce = _utils.rand_hex(8)
         return f"session/{urllib.parse.quote(self.id)}/dynamic_route/{urllib.parse.quote(name)}?nonce={urllib.parse.quote(nonce)}"
+
+    def _export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        if not self.app._test_mode:
+            return
+        self._test_value_exports.update(kwargs)
+
+    def get_test_snapshot_url(self) -> str:
+        nonce = _utils.rand_hex(8)
+        return (
+            f"session/{urllib.parse.quote(self.id)}"
+            f"/dataobj/shinytest?nonce={urllib.parse.quote(nonce)}"
+        )
 
     def set_message_handler(
         self,
@@ -1215,6 +1696,10 @@ class SessionProxy(Session):
         self.id = root_session.id
         self.ns = ns
         self.input = Inputs(values=root_session.input._map, ns=ns)
+        # Share snapshot-preprocessor storage with the root session so that
+        # registrations made inside modules are visible to the (root) snapshot
+        # handler, like the shared `_map`.
+        self.input._snapshot_preprocessors = root_session.input._snapshot_preprocessors
         self.output = Outputs(
             self,
             ns=ns,
@@ -1225,6 +1710,66 @@ class SessionProxy(Session):
         self._downloads = root_session._downloads
 
         self.bookmark = BookmarkProxy(self)
+
+    def on_destroy(
+        self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
+    ) -> None:
+        """
+        Register a callback to run when this module scope is destroyed.
+
+        Destroy callbacks fire when ``destroy()`` is explicitly called, or
+        automatically at session end (after ``on_ended`` callbacks).
+
+        Parameters
+        ----------
+        fn
+            The function to call when destroy occurs.
+        """
+        destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
+            self._root_session, "_destroy_callbacks_by_ns", None
+        )
+        if destroy_cbs is not None:
+            ns_key = str(self.ns)
+            if ns_key not in destroy_cbs:
+                destroy_cbs[ns_key] = _new_destroy_callbacks()
+            destroy_cbs[ns_key].register(wrap_async(fn))
+
+    async def destroy(self, id: Id | None = None) -> None:
+        # When `id` is given, destroy that child scope rather than this scope.
+        if id is not None:
+            _validate_destroy_id(id)
+            await self.make_scope(id).destroy()
+            return
+
+        destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
+            self._root_session, "_destroy_callbacks_by_ns", None
+        )
+        if destroy_cbs is not None:
+            await _invoke_destroy_callbacks(destroy_cbs, str(self.ns))
+
+        # Destroy inputs and outputs after callbacks, so that callback
+        # functions can still read input/output values during destruction.
+        # Remove namespaced input keys and their values.
+        self.input._destroy()
+        # Remove namespaced output entries and destroy their effects.
+        self.output._destroy()
+
+        # Clean up namespaced registrations that the module made on the root
+        # session. These dicts use namespaced keys (via self.ns(name)), so
+        # entries from a destroyed module would otherwise persist for the
+        # session lifetime — leaking handler closures and preventing GC of
+        # objects they capture.
+        ns_str = str(self.ns)
+        ns_prefix = ns_str + "-"
+        for attr in ("_message_handlers", "_dynamic_routes", "_downloads"):
+            registry: dict[str, object] | None = getattr(self._root_session, attr, None)
+            if registry is None:
+                continue
+            keys_to_remove = [
+                k for k in registry if k == ns_str or k.startswith(ns_prefix)
+            ]
+            for k in keys_to_remove:
+                del registry[k]
 
     def _is_hidden(self, name: str) -> bool:
         return self._root_session._is_hidden(name)
@@ -1317,6 +1862,16 @@ class SessionProxy(Session):
     def dynamic_route(self, name: str, handler: DynamicRouteHandler) -> str:
         return self._root_session.dynamic_route(self.ns(name), handler)
 
+    def _export_test_values(self, **kwargs: Callable[[], Any]) -> None:
+        # NOTE: Deviation from R Shiny's `exportTestValues()`, which does NOT
+        # namespace export names. py-shiny namespaces them with this module's
+        # `ns` prefix so values exported from different modules don't collide.
+        namespaced = {str(self.ns(name)): value for name, value in kwargs.items()}
+        self._root_session._export_test_values(**namespaced)
+
+    def get_test_snapshot_url(self) -> str:
+        return self._root_session.get_test_snapshot_url()
+
     async def _unhandled_error(self, e: Exception) -> None:
         await self._root_session._unhandled_error(e)
 
@@ -1344,6 +1899,52 @@ class SessionProxy(Session):
 # ======================================================================================
 
 
+_SNAPSHOT_BLOCKS = ("input", "output", "export")
+"""The block names selectable via the test-snapshot endpoint's query params."""
+
+
+def _snapshot_safe_value(value: Any) -> Any:
+    """
+    Coerce a value into something JSON-serializable for a test snapshot.
+
+    Best-effort: values that orjson cannot encode are stringified via
+    `default=str`. If serialization still fails (e.g. `str()` raises), a visible,
+    non-fatal marker is returned so a single bad value never fails the whole
+    snapshot.
+    """
+    try:
+        return orjson.loads(orjson.dumps(value, default=str))
+    except Exception as e:
+        return {"__shiny_serialization_error__": str(e)}
+
+
+def _filter_snapshot_block(block: dict[str, Any], spec: str | None) -> dict[str, Any]:
+    """
+    Select keys from a test-snapshot block per a query-param value.
+
+    `spec` of `None` (the select-all default) or `"1"` returns the whole block; a
+    comma-separated list returns only those keys that exist in the block (unknown
+    names are silently dropped, matching R).
+    """
+    if spec is None or spec == "1":
+        return block
+    return {name: block[name] for name in spec.split(",") if name in block}
+
+
+def _is_internal_snapshot_input(key: str) -> bool:
+    """
+    Whether an input key is client-internal and excluded from snapshots.
+
+    Used by both bookmark serialization and test-mode snapshots to skip
+    client-data inputs (`.clientdata_*`) and the bookmark machinery inputs.
+    """
+    if key.startswith(".clientdata_"):
+        return True
+    if key == BOOKMARK_ID or key.endswith(f"{ResolvedId._sep}{BOOKMARK_ID}"):
+        return True
+    return False
+
+
 # TODO: provide a real input typing example when we have an answer for that
 # https://github.com/posit-dev/py-shiny/issues/70
 class Inputs:
@@ -1369,26 +1970,55 @@ class Inputs:
     Set this value via `Inputs.set_serializer(id, fn)`.
     """
 
+    _snapshot_preprocessors: dict[str, Callable[[Any], Awaitable[Any]]]
+    """
+    Preprocessors applied to input values in test-mode snapshots.
+
+    Keyed by resolved input id; values are async-wrapped callables. Set via
+    `Inputs.set_snapshot_preprocess(id, fn)`.
+    """
+
     def __init__(
-        self, values: dict[str, Value[Any]], ns: Callable[[str], str] = Root
+        self, values: dict[str, Value[Any]], ns: Callable[[str], ResolvedId] = Root
     ) -> None:
         self._map = values
         self._ns = ns
         self._serializers = {}
+        self._snapshot_preprocessors = {}
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, reactive.Value):
             raise TypeError("`value` must be a reactive.Value object.")
 
+        # Set the name on the Value for OpenTelemetry logging (before namespacing)
+        # The module ns will be included separately
+        # Keys starting with "." (like .clientdata_*) use the full key as the name
+        if key.startswith("."):
+            value._name = key
+        else:
+            value._name = f"input.{key}"
         self._map[self._ns(key)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
+        original_key = key
         key = self._ns(key)
         # Auto-populate key if accessed but not yet set. Needed to take reactive
         # dependencies on input values that haven't been received from client
         # yet.
         if key not in self._map:
-            self._map[key] = Value[Any](read_only=True)
+            # Set the name for OpenTelemetry logging (before namespacing)
+            # The module ns will be included separately
+            # Exclude things like `.clientData`
+            value_name = (
+                original_key
+                if original_key.startswith(".")
+                else f"input.{original_key}"
+            )
+
+            new_value = Value[Any](read_only=True, name=value_name)
+
+            # Do not call __setitem__ directly here. The _name would be undone
+            self._map[key] = new_value
 
         return self._map[key]
 
@@ -1397,14 +2027,14 @@ class Inputs:
 
     # Allow access of values as attributes.
     def __setattr__(self, attr: str, value: Value[Any]) -> None:
-        if attr in ("_map", "_ns", "_serializers"):
+        if attr in ("_map", "_ns", "_serializers", "_snapshot_preprocessors"):
             super().__setattr__(attr, value)
             return
 
         self.__setitem__(attr, value)
 
     def __getattr__(self, attr: str) -> Value[Any]:
-        if attr in ("_map", "_ns", "_serializers"):
+        if attr in ("_map", "_ns", "_serializers", "_snapshot_preprocessors"):
             return object.__getattribute__(self, attr)
         return self.__getitem__(attr)
 
@@ -1448,9 +2078,37 @@ class Inputs:
             The ID of the input value.
         fn
             A function that takes the input value and returns a modified value. The
-            returned value will be used for test snapshots and bookmarking.
+            returned value will be used for bookmarking.
         """
         self._serializers[id] = wrap_async(fn)
+
+    def set_snapshot_preprocess(
+        self,
+        id: str,
+        fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]],
+    ) -> None:
+        """
+        Set a function for preprocessing an input value in test-mode snapshots.
+
+        When a test snapshot is requested (see `shiny.testmode`), the registered
+        function receives the input's current value and its return value is
+        written to the snapshot instead. Use this to scrub non-deterministic
+        values (timestamps, temp paths, random ids) so snapshots diff cleanly.
+
+        The function may be synchronous or asynchronous. It only affects test
+        snapshots -- never the live input value. Registering again for the same
+        `id` overwrites the previous function. Registration is harmless when
+        test mode is off, so calls can be left in production code.
+
+        Parameters
+        ----------
+        id
+            The ID of the input value.
+        fn
+            A function that takes the input value and returns the value to
+            write to the test snapshot.
+        """
+        self._snapshot_preprocessors[self._ns(id)] = wrap_async(fn)
 
     async def _serialize(
         self,
@@ -1467,17 +2125,15 @@ class Inputs:
         with reactive.isolate():
 
             for key, value in self._map.items():
-                # TODO: Barret - Q: Should this be ignoring any Input key that starts with a "."?
-                if key.startswith(".clientdata_"):
-                    continue
-                # Ignore all bookmark inputs
-                if key == BOOKMARK_ID or key.endswith(
-                    f"{ResolvedId._sep}{BOOKMARK_ID}"
-                ):
+                if _is_internal_snapshot_input(str(key)):
                     continue
                 if key in exclude_set:
                     continue
-                val = value()
+
+                try:
+                    val = value()
+                except SilentException:
+                    continue
 
                 # Possibly apply custom serialization given the input id
                 serializer = self._serializers.get(key, serializer_default)
@@ -1489,6 +2145,55 @@ class Inputs:
                 serialized_values[str(key)] = serialized_value
 
         return serialized_values
+
+    async def _serialize_test_mode(self) -> dict[str, Any]:
+        """
+        Collect current input values for a test-mode snapshot.
+
+        Unlike `_serialize` (used for bookmarking), this applies no bookmark
+        serializers and never touches the filesystem; raw values are returned for
+        best-effort JSON serialization by the snapshot handler. Client-internal
+        and bookmark inputs are skipped. Snapshot preprocessors (see
+        `set_snapshot_preprocess`) are applied; a raising preprocessor becomes a
+        visible, non-fatal `__shiny_snapshot_preprocess_error__` marker.
+        """
+        out: dict[str, Any] = {}
+        with reactive.isolate():
+            # Materialize the items: an async preprocessor may yield to the
+            # event loop mid-iteration, during which the client can add new
+            # inputs to `_map`.
+            for key, value in list(self._map.items()):
+                if _is_internal_snapshot_input(str(key)):
+                    continue
+                try:
+                    val = value()
+                except SilentException:
+                    continue
+                preprocess = self._snapshot_preprocessors.get(key)
+                if preprocess is not None:
+                    try:
+                        val = await preprocess(val)
+                    except Exception as e:
+                        val = {"__shiny_snapshot_preprocess_error__": str(e)}
+                out[str(key)] = val
+        return out
+
+    def _destroy(self) -> None:
+        # This will cause all modules with the same module namespace prefix to have their inputs removed.
+        # So if one parent module is being torn down, all descendant modules will be torn down.
+        # Just like with Outputs
+
+        prefix = str(self._ns) + "-"
+        clientdata_prefix = f".clientdata_output_{self._ns}-"
+        keys_to_remove = [
+            k
+            for k in self._map
+            if k.startswith(prefix) or k.startswith(clientdata_prefix)
+        ]
+        for key in keys_to_remove:
+            value_obj = self._map[key]
+            value_obj.destroy()
+            del self._map[key]
 
 
 @add_example()
@@ -1687,7 +2392,12 @@ class ClientData:
                 f"ClientData value '{key}' not found. Please report this issue."
             )
 
-        return self._session.root_scope().input[id]()
+        val = self._session.root_scope().input[id]
+        if val._name is None:
+            # No leading `.`
+            val._name = str(id).removeprefix(".")
+
+        return val()
 
     def _read_output(self, id: Id | None, key: str) -> str | None:
         self._check_current_context(f"output_{key}")
@@ -1703,12 +2413,17 @@ class ClientData:
             )
 
         # Module support
+        non_namespace_id = id
         if not isinstance(id, ResolvedId):
             id = self._session.ns(id)
 
         input_id = ResolvedId(f".clientdata_output_{id}_{key}")
         if input_id in self._session.root_scope().input:
-            return self._session.root_scope().input[input_id]()
+            val = self._session.root_scope().input[input_id]
+            if val._name is None:
+                # No leading `.`
+                val._name = f"clientdata_output_{non_namespace_id}_{key}"
+            return val()
         else:
             return None
 
@@ -1810,6 +2525,16 @@ class Outputs:
             # renderer is a Renderer object. Give it a bit of metadata.
             renderer._set_output_metadata(output_id=output_id)
 
+            # Gather otel info for inner method
+            renderer_func = getattr(renderer.fn, "_orig_fn", renderer.fn)
+            output_otel_label = create_otel_span_name(
+                func=renderer_func,
+                label_type="output",
+                session=self._session,
+            )
+            output_otel_attrs = extract_source_ref(renderer_func)
+            output_otel_level = resolve_func_otel_level(renderer_func)
+
             renderer._on_register()
 
             self.remove(output_name)
@@ -1818,6 +2543,7 @@ class Outputs:
                 suspended=suspend_when_hidden and self._session._is_hidden(output_name),
                 priority=priority,
             )
+            @otel_suppress
             async def output_obs():
                 if self._session.is_stub_session():
                     raise RuntimeError(
@@ -1825,15 +2551,26 @@ class Outputs:
                     )
 
                 session = require_real_session()
+                output_attrs = {
+                    **get_session_id_attrs(session),
+                    **output_otel_attrs,
+                }
 
                 await session._send_message(
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
 
                 try:
-                    with session.clientdata._output_name_ctx(output_name):
-                        # Call the app's renderer function
-                        value = await renderer.render()
+                    async with shiny_otel_span(
+                        output_otel_label,
+                        attributes=output_attrs,
+                        infer_session_id=False,
+                        required_level=OtelCollectLevel.REACTIVITY,
+                        collection_level=output_otel_level,
+                    ):
+                        with session.clientdata._output_name_ctx(output_name):
+                            # Call the app's renderer function
+                            value = await renderer.render()
 
                     session._outbound_message_queues.set_value(output_name, value)
 
@@ -1846,7 +2583,7 @@ class Outputs:
                 except SilentCancelOutputException:
                     pass
                 except SilentException:
-                    session._outbound_message_queues.set_value(output_name, None)
+                    session._outbound_message_queues.set_silent(output_name)
                 except Exception as e:
                     # Print traceback to the console
                     traceback.print_exc()
@@ -1899,6 +2636,17 @@ class Outputs:
         if output_name in self._outputs:
             self._outputs[output_name].effect.destroy()
             del self._outputs[output_name]
+
+    def _destroy(self) -> None:
+        # This will cause all modules with the same module namespace prefix to have their outputs removed.
+        # So if one parent module is being torn down, all descendant modules will be torn down.
+        # Just like with Inputs
+
+        prefix = str(self._ns) + "-"
+        keys_to_remove = [k for k in self._outputs if k.startswith(prefix)]
+        for key in keys_to_remove:
+            self._outputs[key].effect.destroy()
+            del self._outputs[key]
 
     def _manage_hidden(self) -> None:
         "Suspends execution of hidden outputs and resumes execution of visible outputs."

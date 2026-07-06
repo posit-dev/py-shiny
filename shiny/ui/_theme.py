@@ -513,7 +513,7 @@ class Theme:
             return self._css
 
         check_theme_pkg_installed("libsass", "sass")
-        import sass
+        import sass  # pyright: ignore[reportMissingTypeStubs]
 
         args: SassCompileArgs = {} if compile_args is None else compile_args
 
@@ -529,7 +529,12 @@ class Theme:
             **args,
         }
 
-        self._css = sass.compile(string=self.to_sass(), **args)
+        css = sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            string=self.to_sass(),
+            **args,
+        )
+        assert isinstance(css, str)
+        self._css = css
 
         return self._css
 

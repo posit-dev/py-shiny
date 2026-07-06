@@ -144,7 +144,7 @@ def tooltip(
         {
             "id": resolve_id_or_none(id),
             "placement": placement,
-            "options": json.dumps(options) if options else None,
+            "bsOptions": json.dumps(options) if options else None,
         },
         attrs,
         # Use display:none instead of <template> since shiny.js

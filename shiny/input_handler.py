@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict
 
 from .bookmark import serializer_unserializable
 from .bookmark._serializers import can_serialize_input_file, serializer_file_input
+from .testmode import _snapshot_preprocess_file_input
 
 if TYPE_CHECKING:
     from .session import Session
@@ -149,10 +150,6 @@ def _(value: int, name: ResolvedId, session: Session) -> ActionButtonValue:
     return ActionButtonValue(value)
 
 
-# The inputs handlers below currently do nothing, but still need to be defined,
-# otherwise there will be an error when the input value is handled.
-
-
 @input_handlers.add("shiny.number")
 def _(value: str, name: ResolvedId, session: Session) -> str:
     return value
@@ -164,6 +161,12 @@ def _(value: str, name: ResolvedId, session: Session) -> str:
     session.input.set_serializer(name, serializer_unserializable)
 
     return value
+
+
+@input_handlers.add("bslib.toolbar.button")
+def _(value: int, name: ResolvedId, session: Session) -> ActionButtonValue:
+    # Toolbar buttons work like action buttons - they return a click count
+    return ActionButtonValue(value)
 
 
 @input_handlers.add("shiny.file")
@@ -250,5 +253,6 @@ def _(value: Any, name: ResolvedId, session: Session) -> Any:
     # uploaded the usual way (instead of being restored), this occurs in
     # session$`@uploadEnd`.
     session.input.set_serializer(name, serializer_file_input)
+    session.input.set_snapshot_preprocess(name, _snapshot_preprocess_file_input)
 
     return value_list

@@ -8,8 +8,7 @@ from shiny.ui._input_select import _update_options
 
 def test_panel_title():
     x = HTMLDocument(ui.panel_title("Hello Shiny UI")).render()["html"]
-    assert x == textwrap.dedent(
-        """\
+    assert x == textwrap.dedent("""\
         <!DOCTYPE html>
         <html>
           <head>
@@ -20,8 +19,7 @@ def test_panel_title():
           <body>
             <h2>Hello Shiny UI</h2>
           </body>
-        </html>"""
-    )
+        </html>""")
 
     title = TagList(
         tags.h1("A title"),
@@ -31,8 +29,7 @@ def test_panel_title():
     )
 
     x = HTMLDocument(ui.panel_title(title)).render()["html"]
-    assert x == textwrap.dedent(
-        """\
+    assert x == textwrap.dedent("""\
         <!DOCTYPE html>
         <html>
           <head>
@@ -49,15 +46,13 @@ def test_panel_title():
               A subtitle
             </h5>
           </body>
-        </html>"""
-    )
+        </html>""")
 
 
 def test_modal_footer():
     # Default behavior: Dismiss button
     x = str(ui.modal())
-    assert x == textwrap.dedent(
-        """\
+    assert x == textwrap.dedent("""\
         <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -73,13 +68,11 @@ def test_modal_footer():
         } else {
           $('#shiny-modal').modal().focus()
         }</script>
-        </div>"""
-    )
+        </div>""")
 
     # None: drop footer altogether
     x = str(ui.modal(footer=None))
-    assert x == textwrap.dedent(
-        """\
+    assert x == textwrap.dedent("""\
         <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -92,13 +85,11 @@ def test_modal_footer():
         } else {
           $('#shiny-modal').modal().focus()
         }</script>
-        </div>"""
-    )
+        </div>""")
 
     # If other falsy value: Render empty footer
     x = str(ui.modal(footer=""))
-    assert x == textwrap.dedent(
-        """\
+    assert x == textwrap.dedent("""\
         <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -112,13 +103,11 @@ def test_modal_footer():
         } else {
           $('#shiny-modal').modal().focus()
         }</script>
-        </div>"""
-    )
+        </div>""")
 
     # Anything else: include custom footer
     x = str(ui.modal(footer=ui.span("Custom Footer", class_="mt-3")))
-    assert x == textwrap.dedent(
-        """\
+    assert x == textwrap.dedent("""\
         <div id="shiny-modal" class="modal fade" tabindex="-1" data-backdrop="static" data-bs-backdrop="static" data-keyboard="false" data-bs-keyboard="false">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -134,8 +123,7 @@ def test_modal_footer():
         } else {
           $('#shiny-modal').modal().focus()
         }</script>
-        </div>"""
-    )
+        </div>""")
 
 
 def test__update_options():
@@ -189,3 +177,36 @@ def test__update_options():
     assert _update_options(d4, remove_button=True, multiple=True) == d4
     assert _update_options(d4, remove_button=True, multiple=False) == d4
     assert _update_options(d4, remove_button=False, multiple=False) == d4
+
+
+def test_tooltip_options():
+    """Test that tooltip renders options as bsOptions attribute."""
+    # Test with options parameter
+    options_dict: dict[str, object] = {"offset": [0, 100]}
+    t = ui.tooltip(
+        ui.input_action_button("btn", "Test"),
+        "A message",
+        id="test_tooltip",
+        placement="right",
+        options=options_dict,
+    )
+
+    t_str = str(t)
+
+    # Should contain bsOptions attribute with JSON-encoded options
+    assert "bsoptions" in t_str.lower(), "bsOptions attribute should be present"
+    # Check that the JSON content is present (HTML entities are encoded, so " becomes &quot;)
+    assert "&quot;offset&quot;" in t_str and (
+        "[0, 100]" in t_str or "[0,100]" in t_str
+    ), "Options should be JSON-encoded with offset value"
+
+    # Test without options parameter
+    t2 = ui.tooltip(
+        ui.input_action_button("btn2", "Test2"),
+        "Another message",
+        id="test_tooltip2",
+    )
+
+    t2_str = str(t2)
+    # Should still render properly
+    assert "bslib-tooltip" in t2_str, "Tooltip should render without options"

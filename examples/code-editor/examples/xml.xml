@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="config.xsl"?>
+<!-- Application Configuration File -->
+<configuration xmlns="http://example.com/config/1.0"
+  xmlns:app="http://example.com/app"
+  version="2.1">
+
+  <database>
+    <connection app:name="primary">
+      <host>db.example.com</host>
+      <port>5432</port>
+      <credentials username="admin" encrypted="true">
+        <![CDATA[
+          Connection string with special chars:
+          password=P@ssw0rd&key=value
+        ]]>
+      </credentials>
+    </connection>
+  </database>
+
+  <services>
+    <service id="auth-service" enabled="true">
+      <endpoint>https://api.example.com/auth</endpoint>
+      <timeout unit="seconds">30</timeout>
+      <!-- Load balancing enabled for high availability -->
+      <loadBalancing strategy="round-robin" />
+    </service>
+    <service id="cache-service" enabled="false">
+      <endpoint>redis://cache.example.com:6379</endpoint>
+    </service>
+  </services>
+
+</configuration>

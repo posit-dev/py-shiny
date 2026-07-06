@@ -1,0 +1,34 @@
+\documentclass[11pt]{article}
+\usepackage[utf-8]{inputenc}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+\title{LaTeX Syntax Highlighting Example}
+\author{John Doe}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This document demonstrates various LaTeX syntax elements for code highlighting.
+
+% This is a comment
+The quadratic formula is shown in display mode:
+\[
+x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+\]
+
+\subsection{Inline Mathematics}
+We can also use inline math like $E = mc^2$ within text.
+
+\begin{enumerate}
+  \item First item with special characters: \& \% \$
+  \item Second item with \textbf{bold} and \textit{italic}
+  \item Command with optional parameter: \includegraphics[width=0.5\textwidth]{image.png}
+\end{enumerate}
+
+\end{document}

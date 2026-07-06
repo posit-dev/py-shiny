@@ -45,13 +45,11 @@ app_ui = ui.page_fluid(
             ),
             ui.br(),
             ui.row(
-                ui.markdown(
-                    """
+                ui.markdown("""
                     This app lets you explore a dataset using SQL and duckdb.
                     The data is stored in an on-disk [duckdb](https://duckdb.org/) database,
                     which leads to extremely fast queries.
-                    """
-                ),
+                    """),
             ),
         ),
         ui.column(

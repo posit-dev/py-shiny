@@ -276,6 +276,26 @@ class Sidebar(
         """
         playwright_expect(self.loc_handle).to_have_count(int(exists), timeout=timeout)
 
+    def expect_resizable(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Asserts that the sidebar is resizable or not.
+
+        Parameters
+        ----------
+        value
+            `True` if the sidebar should be resizable, `False` otherwise.
+        timeout
+            The maximum time to wait for the expectation. Defaults to `None`.
+        """
+        if value:
+            playwright_expect(self.loc).to_have_attribute(
+                "data-resizable", "", timeout=timeout
+            )
+        else:
+            playwright_expect(self.loc).not_to_have_attribute(
+                "data-resizable", "", timeout=timeout
+            )
+
     def expect_open(self, value: bool, *, timeout: Timeout = None) -> None:
         """
         Expect the sidebar to be open or closed.

@@ -5,7 +5,21 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [UNRELEASED]
+
+### New features
+
+* Added test mode, enabled via the `SHINY_TESTMODE=1` environment variable or the `App(test_mode=)` argument (which defaults to that env var). The pytest app-launch fixtures (`local_app`, `create_app_fixture`) now run apps in test mode. (#2269)
+
+* When test mode is enabled, each session can serve a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.testmode.export_test_values()`. (#2269)
+
+* Added the `shiny.playwright.controller.AppTestValues` Playwright controller for reading a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests. (#2269)
+
+* The test-mode snapshot endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys). Unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
+
+* Test-mode snapshot values can now be preprocessed before they are written to the snapshot, e.g. to scrub timestamps or temp paths: `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) for inputs and `my_output.snapshot_preprocess(fn)` for outputs. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
+
+* Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
 ### Improvements
 
@@ -17,6 +31,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.output_data_frame` will now consistently order the filtered columns in ascending column order. (#2093)
 * When resetting a `ui.output_data_frame` filter, numeric range filters will now reset both values. (#2093)
+
+* The Playwright controllers `InputSlider.set()` and `InputSliderRange.set()` are now ~5-10x faster. The drag simulation previously slept 50ms after every one-pixel mouse move; the sleeps are removed, and on WebKit (where rapid mouse moves within a frame are coalesced, which would skip slider values) each move is instead synchronized with a `requestAnimationFrame` round-trip. (#2311)
+
+* Fixed rare tabset ID collisions in pages with many navsets. Randomly generated `data-tabsetid` values were drawn from a pool of ~1 million, so a page with dozens of tabsets could occasionally produce two navsets with the same ID (a birthday collision), resulting in duplicate DOM ids and broken tab switching. IDs are now drawn from a pool of 9 trillion. (#2296)
+
+### Other changes
+
+* Optimized the test suite by avoiding network-based dataset downloads and heavy library imports during Playwright test app startup, reducing setup time significantly. (#2314)
+
+* Packaging metadata now uses a PEP 639 SPDX license expression instead of the deprecated `license` table and license classifier, and stale `MANIFEST.in` rules were removed. Building the package (e.g. with `uv build`) no longer emits setuptools deprecation or manifest warnings. Wheel and sdist contents are unchanged. (#2304)
+
+* `shiny.run.run_shiny_app()` (and therefore `shiny.pytest.create_app_fixture()`) now picks random app ports from a disjoint per-worker port range when running under pytest-xdist, instead of the full 1024-49151 range shared by all workers. This prevents parallel test workers from racing to bind the same port and from reusing each other's recycled ports. When not running under pytest-xdist, the behavior is unchanged: ports are picked from `random_port()`'s full default range (1024-49151). (#2297)
+
+## [1.6.3] - 2026-06-01
+
+### New features
+
+* `session.destroy()` now accepts an optional module `id`. The parent that inserted a module's UI under an `id` can tear down that module's scope with `session.destroy(id)`, without the module having to hand back a cleanup handle. (#2264)
+
+* Added the `brite` theme preset, available wherever Shiny theme presets are accepted (e.g. `ui.Theme()` and `ui.page_*(theme=)`). (#2246)
+
+### Bug fixes
+
+* Fixed output resize/visibility detection for nested HTML outputs. The `IntersectionObserver` now observes the nearest non-`shiny-html-output` ancestor, so the native-observer pipeline introduced in 1.6.1 works correctly when outputs are nested inside other dynamic UI. (#2246)
+
+* Fixed `ui.input_submit_textarea()` failing inside module namespaces. The internal submit button's ID was built from the already-resolved (namespaced) textarea ID, causing a double-namespace when `input_task_button` resolved it again. (#2262)
+
+
+## [1.6.2] - 2026-05-21
+
+### Bug fixes
+
+* Adapted py-shiny to the `htmltools` 0.7.0 sibling-classes refactor. No runtime behavior change. (#2244)
+
+* Bumped `lodash`/`lodash-es` to `4.18.1` in the `js-react` template lockfile for CVE-2025-13465. (#2233)
+
+* Fixed `render.DataGrid()` column headers and hovered rows not adapting to dark mode when `ui.input_dark_mode()` is enabled. The data grid now uses Bootstrap 5.3 mode-aware color tokens (`--bs-tertiary-bg`, `--bs-primary-bg-subtle`, `--bs-emphasis-color`, `--bs-secondary-color`), with the legacy values preserved as fallbacks. (#1635)
+
+## [1.6.1] - 2026-05-01
+
+### New features
+
+* Added `session.destroy()` and `session.on_destroy()` for cleaning up reactive objects (effects, calcs, values) when dynamically inserted module UI is removed. Calling `session.destroy()` on a module's session fires all registered destroy callbacks, which stop effects, invalidate calcs and values, and remove namespaced inputs and outputs from the reactive graph. Reactive objects automatically register weak destroy callbacks so they can be garbage collected when no longer referenced, even before session end. (#2209)
+
+### Improvements
+
+* `@reactive.calc`, `@reactive.effect`, and render decorators (e.g. `@render.text`) now raise a `TypeError` if the decorated function has required parameters, since Shiny never supplies arguments to these functions. Functions with default parameter values emit a warning, as the defaults will always be used. (Thanks, @mvanhorn!) (#2200)
+
+* Output resize/visibility detection now uses native browser observers (`ResizeObserver`, `IntersectionObserver`) instead of relying on jQuery `shown`/`hidden` events and `window.resize`. This makes Shiny's client-side output-info pipeline (image/plot sizing, hidden-state tracking, theme reporting) work automatically in any layout — including CSS-only show/hide, third-party tab components, and non-Bootstrap frameworks — without requiring custom event hooks. This also introduces a `shiny:themechange` event for code that needs to trigger theme clientdata refreshes after changing surrounding visual theme context. (rstudio/shiny#3682)
+
+* `panel_conditional()` no longer briefly flashes its contents on app start
+  when the condition is initially `False`. (rstudio/shiny#3505)
+
+### Bug fixes
+
+* Fixed server-side input deduplication so that all values received from the client always trigger reactive invalidation. (#1600, #2219)
+
+* Fixed a caret drift issue in `ui.input_code_editor()` where the cursor would appear to the right of the actual text insertion point when certain themes or on some operating systems. (#2223)
+
+* Fixed OpenTelemetry name inference for `reactive.Value` to handle type-annotated assignments (e.g., `counter: reactive.Value[int] = reactive.Value(0)`), generic subscript calls (e.g., `reactive.Value[int](0)`), and multiline assignments where the `Value()` call is on a continuation line (e.g., assignments split across lines with parentheses or multiline type annotations). This fixes anonymous OTel labels for packages like `shinychat` that use multiline `reactive.Value` assignments. (#2205)
+
+
+## [1.6.0] - 2026-03-20
+
+### OpenTelemetry
+
+* Added the `SHINY_OTEL_COLLECT` environment variable to set the default collection level globally. Available levels: (#2143)
+  * `"none"` - Disables all Shiny-specific telemetry collection. Use this for sensitive operations where you don't want Shiny to emit any spans or logs.
+  * `"session"` - Captures session lifecycle spans that track when user sessions are starting and ending. This provides basic visibility into session activity without detailed reactive execution information.
+  * `"reactive_update"` - Captures everything from `"session"` plus reactive flush cycle spans that show when reactive invalidation and re-execution occurs. This helps identify performance bottlenecks in reactive updates without the overhead of per-reactive-component instrumentation.
+  * `"reactivity"` - Captures everything from `"reactive_update"` plus individual reactive execution spans (`reactive.calc`, `reactive.effect`, `extended_task`), info-level logs for reactive value updates (including source file, line number, and column position), and debug-level logs for extended task queue operations. This provides comprehensive visibility into reactive execution flow and timing.
+  * `"all"` \[Default\] - Currently equivalent to `"reactivity"` and represents the most comprehensive telemetry available. This is the default collection level when `SHINY_OTEL_COLLECT` is not set (or is explicitly set to `all`).
+
+* Added `otel.suppress` and `otel.collect` to control Shiny's internal OpenTelemetry instrumentation per-function or per-block. Use `@otel.suppress` / `@otel.collect` (no-parens decorators) to stamp a single function, or `with otel.suppress():` / `with otel.collect():` (context managers) to control telemetry during reactive object creation. `otel.suppress` disables Shiny's internal reactivity telemetry; `otel.collect` re-enables reactivity telemetry when the global default has been lowered. Both only affect Shiny's internal spans — user-defined OpenTelemetry spans are unaffected. (#2143)
+
+* Added OpenTelemetry example application (`examples/open-telemetry/`) demonstrating console exporter, collection control with `@otel.suppress` and `@otel.collect`, and side-by-side comparison of normal, suppressed, and force-enabled telemetry. The OpenTelemetry SDK is available via the optional `[otel]` dependency group: `pip install shiny[otel]`. Note: If you're already using an observability package with OpenTelemetry integration (e.g., `logfire`), it likely already includes `opentelemetry-sdk`, so you may not need to explicitly install the `[otel]` group. (#2143)
+
+### New features
+
+* Added toolbar component with `ui.toolbar()`, `ui.toolbar_input_button()`, `ui.toolbar_input_select()`, `ui.toolbar_divider()`, `ui.toolbar_spacer()`, `ui.update_toolbar_input_button()`, and `ui.update_toolbar_input_select()`. Toolbars are compact UI containers designed for small form elements suitable for card headers, footers, and other constrained spaces. They support flexible alignment (left/right), custom spacing and width, icon-only or labeled buttons with optional tooltips, select inputs with grouped choices, visual dividers for separating elements, and flexible spacers for split layouts. Server-side updates allow dynamic modification of button and select properties. (#2155)
+
+* Added a new `ui.input_code_editor()` element that allows for light-weight code editing with syntax highlighting, using the [prism-code-editor](https://prism-code-editor.netlify.app/) library. The editor supports 20+ languages, more than a dozen themes, and automatic light/dark mode switching. (#2128)
+
+### Improvements
+
+* Reduced installed package size by ~400KB by excluding `api-examples/` directories from wheel and source distributions. These examples are only needed when building documentation from the source repository. (#2126)
+
+* Improved reactive value name inference to support all import styles: `reactive.Value()`, `reactive.value()`, `Value()`, and `value()` now all correctly infer variable names for better OpenTelemetry log messages. (#2178)
+
+* Enhanced OpenTelemetry source reference attributes by adding `code.column.number` to track the column position of reactive value updates alongside existing file path, line number, and function name. (#2178)
+
+* Improved OpenTelemetry collection level handling: reactive values now capture the collection level at initialization time (matching behavior of `Calc` and `Effect`), ensuring consistent telemetry behavior throughout the value's lifetime. (#2178)
+
+### Other changes
+
+* Updated `palmerpenguins` dependency to version `>=0.1.5` to include type stubs, removing the need for type ignore comments in tests. (#2157)
+
+## [1.5.1] - 2025-12-08
+
+### New features
+
+* Added toast notification system with `ui.toast()`, `ui.toast_header()`, `ui.show_toast()`, and `ui.hide_toast()`. Toast notifications are temporary, non-intrusive messages that support multiple semantic types (success, warning, error, etc.), flexible positioning (9 positions: top/middle/bottom × left/center/right), auto-hide with configurable duration, optional headers with icons, and programmatic control. (#2111)
+
+* Added a new `input_submit_textarea()` input element, which is similar to `input_text_area()`, but includes a submit button to only submit the text changes to the server on click. This is especially useful when the input text change triggers a long-running operation and/or the user wants to type longer-form input and review it before submitting it. (#2099)
+
+### Bug fixes
+
+* Fixed `ui.tooltip()`'s `options` parameter to properly pass Bootstrap tooltip options to the underlying web component. (#2101)
+
+* Fixed an issue where `session.bookmark()` would error when non-existent `input` values are read. (#2117)
+
+* Revised `accordion()`'s `open` logic to close all panels when an empty list is passed. (#2109)
+>>>>>>> origin/main
 
 ## [1.5.0] - 2025-09-11
 

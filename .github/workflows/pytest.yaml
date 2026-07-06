@@ -17,20 +17,20 @@ jobs:
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
-          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
           - os: ${{ github.event.pull_request.draft && 'windows-latest' }}
           - os: ${{ github.event.pull_request.draft && 'macOS-latest' }}
 
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -70,11 +70,11 @@ jobs:
     if: github.event_name == 'release'
     needs: [check]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: "Set up Python 3.10"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.10"
       - name: Install dependencies
@@ -106,25 +106,28 @@ jobs:
   playwright-shiny:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
-        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1, 2, 3]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
-          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
           - browser: ${{ github.event.pull_request.draft && 'firefox' }}
           - browser: ${{ github.event.pull_request.draft && 'webkit' }}
-          # There are many unexplained tests that fail on webkit w/ python 3.8, 3.9
-          # Given the more recent versions of python work, we will exclude this combination
-          - browser: "webkit"
-            python-version: "3.9"
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -137,39 +140,43 @@ jobs:
         id: browsers
         with:
           browser: ${{ matrix.browser }}
-          # If anything other than `true`, it will heavily reduce webkit performance
-          # Related: https://github.com/microsoft/playwright/issues/18119
-          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
+
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+        with:
+          browser: ${{ matrix.browser }}
 
       - name: Run End-to-End tests
-        timeout-minutes: 60
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
         run: |
-          make playwright-shiny SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
-        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
-        with:
-          name: "playright-shiny-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
-          path: test-results/
-          retention-days: 5
+          make playwright-shiny SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }}" ${{ steps.browsers.outputs.browsers }}
 
   playwright-examples:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
-        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1, 2, 3]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
-          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
           - browser: ${{ github.event.pull_request.draft && 'firefox' }}
           - browser: ${{ github.event.pull_request.draft && 'webkit' }}
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -181,12 +188,9 @@ jobs:
         id: browsers
         with:
           browser: ${{ matrix.browser }}
-          # If anything other than `true`, it will heavily reduce webkit performance
-          # Related: https://github.com/microsoft/playwright/issues/18119
-          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
 
       - name: Install node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           cache: npm
           cache-dependency-path: examples/brownian/shinymediapipe/package-lock.json
@@ -195,46 +199,51 @@ jobs:
         run: |
           npm ci
       - name: Checkout py-shiny-templates repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: posit-dev/py-shiny-templates
           path: py-shiny-templates
 
       - name: Install py-shiny-templates dependencies
-        if: matrix.python-version != '3.9'
-        # Scikit-learn 1.7.0+ requires Python 3.10+
         run: |
           make ci-install-py-shiny-templates-deps
 
-      - name: Run example app tests
-        timeout-minutes: 60
-        run: |
-          make playwright-examples SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
-        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
         with:
-          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
-          path: test-results/
-          retention-days: 5
+          browser: ${{ matrix.browser }}
+
+      - name: Run example app tests
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
+        run: |
+          make playwright-examples SUB_FILE=". --numprocesses 3 --num-shards 4 --shard-id ${{ matrix.shard }}" ${{ steps.browsers.outputs.browsers }}
 
   playwright-ai:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
-        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9"]
+        python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
+        shard: [0, 1]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
           - python-version: ${{ github.event.pull_request.draft && '3.10' }}
-          - python-version: ${{ github.event.pull_request.draft && '3.9' }}
           - browser: ${{ github.event.pull_request.draft && 'firefox' }}
           - browser: ${{ github.event.pull_request.draft && 'webkit' }}
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -246,24 +255,27 @@ jobs:
         id: browsers
         with:
           browser: ${{ matrix.browser }}
-          # If anything other than `true`, it will heavily reduce webkit performance
-          # Related: https://github.com/microsoft/playwright/issues/18119
-          disable-playwright-diagnostics: ${{ matrix.browser == 'webkit' || matrix.browser == 'firefox' }}
+
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+        with:
+          browser: ${{ matrix.browser }}
 
       - name: Run playwright tests for AI generated apps
-        timeout-minutes: 60
+        # Healthy shards finish in ~4 minutes; kill stragglers quickly
+        timeout-minutes: 10
         run: |
-          make playwright-ai SUB_FILE=". --numprocesses 3 ${{ steps.browsers.outputs.playwright-diagnostic-args }}" ${{ steps.browsers.outputs.browsers }}
-      - uses: actions/upload-artifact@v4
-        if: failure() && steps.browsers.outputs.has-playwright-diagnostics
-        with:
-          name: "playright-ai-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.browser }}-results"
-          path: test-results/
-          retention-days: 5
+          make playwright-ai SUB_FILE=". --numprocesses 3 --num-shards 2 --shard-id ${{ matrix.shard }}" ${{ steps.browsers.outputs.browsers }}
 
   playwright-deploys-precheck:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    # `packages: write` lets GITHUB_TOKEN push the Playwright image to GHCR
+    # (the lazy pull-through cache in setup-playwright-remote). Job-level
+    # permissions replace the workflow-level grant, so restate `contents: read`.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         # Matches deploy server python version
@@ -271,7 +283,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup py-shiny
@@ -284,6 +296,9 @@ jobs:
         with:
           all-browsers: ${{ ! github.event.pull_request.draft }}
 
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
+
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally
         env:
@@ -291,25 +306,23 @@ jobs:
         run: |
           make playwright-deploys
 
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: "playright-examples-${{ runner.os }}-${{ matrix.python-version }}-results"
-          path: test-results/
-          retention-days: 5
-
   test-narwhals-integration:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Setup py-shiny
-        id: install
-        uses: ./.github/py-shiny/setup
-      - name: Run test commands
-        env:
-          UV_SYSTEM_PYTHON: 1
-        run: |
-          make narwhals-install-shiny
-          make narwhals-test-integration
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Narwhals integration setup
+        uses: ./.github/py-shiny/narwhals-setup
+        with:
+          shiny-dir: "."
+
+      - name: Narwhals integration test
+        uses: ./.github/py-shiny/narwhals-test
+        with:
+          shiny-dir: "."

@@ -51,7 +51,7 @@ class WrappedFunction(Protocol):
 
 def unwrap(fn: TFunc) -> TFunc:
     while isinstance(fn, WrappedFunction):
-        fn = fn.__wrapped__
+        fn = fn.__wrapped__  # pyright: ignore[reportAssignmentType]
     return fn
 
 

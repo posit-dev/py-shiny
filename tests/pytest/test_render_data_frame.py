@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 import pandas as pd
 import pytest
@@ -17,6 +17,12 @@ from shiny.session._session import RenderedDeps
 
 class _MockSession:
     ns: ResolvedId = Root
+
+    def on_ended(self, fn: Callable[[], None]) -> Callable[[], None]:
+        return lambda: None
+
+    def on_destroy(self, fn: Callable[[], None]) -> Callable[[], None]:
+        return lambda: None
 
     # Simplified version of `AppSession._process_ui()`
     def _process_ui(self, ui: TagChild) -> RenderedDeps:
@@ -96,8 +102,6 @@ def test_as_selection_modes():
 
 @pytest.mark.asyncio
 async def test_as_data_frame_none():
-
-    from typing import Any, Callable
 
     async def expect_data_is_not_none_error(fn: Callable[[], Any]):
         fn_async = wrap_async(fn)

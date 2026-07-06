@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections.abc
 import copy
 import re
-from typing import Any, Literal, Optional, Sequence, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar, cast
 
 from htmltools import (
     HTML,
@@ -17,6 +17,9 @@ from htmltools import (
     div,
     tags,
 )
+
+if TYPE_CHECKING:
+    from htmltools import Tagified
 
 from .._deprecated import warn_deprecated
 from .._docstring import add_example
@@ -404,7 +407,7 @@ class NavSet:
         self.header = header
         self.footer = footer
 
-    def tagify(self) -> TagList | Tag:
+    def tagify(self) -> Tagified:
         id = self.id
         ul_class = self.ul_class
         if id is not None:
@@ -1682,4 +1685,10 @@ def navset_title(
 
 
 def nav_random_int() -> str:
-    return private_random_int(1000, 1000000)
+    # A page can contain dozens of tabsets, and each render must produce unique
+    # IDs: a duplicate `data-tabsetid` yields duplicate `tab-<tabsetid>-<index>`
+    # DOM ids, which breaks Bootstrap tab targeting and any locator keyed on the
+    # tabset ID. The pool is sized so that birthday collisions are effectively
+    # impossible, while keeping IDs as fixed-width digit strings below 2**53 in
+    # case they are ever handled as numbers in JavaScript.
+    return private_random_int(10**12, 10**13 - 1)

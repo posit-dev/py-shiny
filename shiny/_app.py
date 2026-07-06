@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-import copy
 import os
 import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
-from typing import Any, Callable, Literal, Mapping, Optional, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Literal,
+    Mapping,
+    Optional,
+    TypeVar,
+    cast,
+)
 
 import starlette.applications
 import starlette.middleware
@@ -20,6 +28,9 @@ from htmltools import (
     Tag,
     TagList,
 )
+
+if TYPE_CHECKING:
+    from htmltools import Tagified
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -28,7 +39,7 @@ from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._shinyenv import is_pyodide
-from ._utils import guess_mime_type, is_async_callable, sort_keys_length
+from ._utils import guess_mime_type, is_async_callable, is_test_mode, sort_keys_length
 from .bookmark._global import as_bookmark_dir_fn
 from .bookmark._restore_state import RestoreContext, restore_context
 from .bookmark._types import (
@@ -50,6 +61,7 @@ SANITIZE_ERRORS: bool = False
 SANITIZE_ERROR_MSG: str = (
     "An error has occurred. Check your logs or contact the app author for clarification."
 )
+SANITIZE_OTEL_ERRORS: bool = True
 
 
 class App:
@@ -74,6 +86,11 @@ class App:
         that mount point.
     debug
         Whether to enable debug mode.
+    test_mode
+        Whether to enable Shiny test mode. When ``None`` (the default), this follows
+        the ``SHINY_TESTMODE`` environment variable. When test mode is enabled, the
+        session records output values and serves a JSON snapshot at
+        ``/session/{id}/dataobj/shinytest``.
 
     Examples
     --------
@@ -111,6 +128,18 @@ class App:
     The message to show when an error occurs and ``SANITIZE_ERRORS=True``.
     """
 
+    sanitize_otel_errors: bool = True
+    """
+    Whether to sanitize error messages in OpenTelemetry spans and logs. When ``True``
+    (the default), exception messages are replaced with a generic message before being
+    sent to telemetry backends, preventing sensitive information from being leaked to
+    external observability systems. Set to ``False`` only in trusted development
+    environments where telemetry data is kept secure.
+
+    Note: This is separate from ``sanitize_errors`` which controls UI error messages.
+    ``SafeException`` messages bypass sanitization regardless of this setting.
+    """
+
     ui: RenderedHTML | Callable[[Request], Tag | TagList]
     server: Callable[[Inputs, Outputs, Session], None]
 
@@ -120,7 +149,13 @@ class App:
 
     def __init__(
         self,
-        ui: Tag | TagList | Callable[[Request], Tag | TagList] | Path,
+        ui: (
+            Tag
+            | TagList
+            | Tagified
+            | Callable[[Request], Tag | TagList | Tagified]
+            | Path
+        ),
         server: (
             Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
         ),
@@ -129,6 +164,7 @@ class App:
         # Document type as Literal to have clearer type hints to App author
         bookmark_store: Literal["url", "server", "disable"] = "disable",
         debug: bool = False,
+        test_mode: bool | None = None,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
         # to the ASGI lifespan protocol)
@@ -150,11 +186,17 @@ class App:
         self._init_bookmarking(bookmark_store=bookmark_store, ui=ui)
 
         self._debug: bool = debug
+        self._test_mode: bool = is_test_mode() if test_mode is None else test_mode
+        """Whether Shiny test mode is enabled.
+
+        Defaults to the ``SHINY_TESTMODE`` env var when ``test_mode`` is ``None``.
+        """
 
         # Settings that the user can change after creating the App object.
         self.lib_prefix: str = LIB_PREFIX
         self.sanitize_errors: bool = SANITIZE_ERRORS
         self.sanitize_error_msg: str = SANITIZE_ERROR_MSG
+        self.sanitize_otel_errors: bool = SANITIZE_OTEL_ERRORS
 
         if static_assets is None:
             static_assets = {}
@@ -461,17 +503,19 @@ class App:
         self._registered_dependencies[dep_name] = dep
 
     def _render_page(self, ui: Tag | TagList, lib_prefix: str) -> RenderedHTML:
-        ui_res = copy.copy(ui)
         # Use presence of the Bootstrap dependency as a signal that the UI uses a
         # shiny.ui.page_*() function, in which case the Shiny CSS is already included.
-        has_bootstrap = any(
-            [dep.name == "bootstrap" for dep in ui_res.get_dependencies()]
-        )
+        has_bootstrap = any(dep.name == "bootstrap" for dep in ui.get_dependencies())
         # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
         # (see require_deps() for a comment about why we even include it)
-        ui_res.insert(
-            0,
-            [require_deps(), jquery_deps(), *shiny_deps(include_css=not has_bootstrap)],
+        # Compose a new TagList so this works for any UI input shape, including
+        # pre-tagified (and immutable) TagifiedTag/TagifiedTagList values that
+        # express mode produces (`run_express(...).tagify()` in `express/_run.py`).
+        ui_res = TagList(
+            require_deps(),
+            jquery_deps(),
+            *shiny_deps(include_css=not has_bootstrap),
+            ui,
         )
         rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
         self._ensure_web_dependencies(rendered["dependencies"])
@@ -517,7 +561,9 @@ class App:
         self._bookmark_restore_dir_fn = as_bookmark_dir_fn(bookmark_restore_dir_fn)
 
 
-def is_uifunc(x: Path | Tag | TagList | Callable[[Request], Tag | TagList]) -> bool:
+def is_uifunc(
+    x: Path | Tag | TagList | Tagified | Callable[[Request], Tag | TagList | Tagified],
+) -> bool:
     if (
         isinstance(x, Path)
         or isinstance(x, Tag)

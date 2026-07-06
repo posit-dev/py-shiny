@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar
 
 def find_api_examples_dir(start_dir: str) -> Optional[str]:
     current_dir = os.path.abspath(start_dir)
+    search_start = current_dir
     while True:
         api_examples_dir = os.path.join(current_dir, "api-examples")
         if os.path.isdir(api_examples_dir):
@@ -19,6 +20,15 @@ def find_api_examples_dir(start_dir: str) -> Optional[str]:
         if current_dir == os.path.dirname(current_dir):
             break  # Reached the global root directory
         current_dir = os.path.dirname(current_dir)
+
+    # Not found - provide helpful error for documentation builders
+    if os.getenv("SHINY_ADD_EXAMPLES") == "true":
+        raise FileNotFoundError(
+            "Could not find 'api-examples/' directory. "
+            "Documentation must be built from the source repository, "
+            "not from an installed package. "
+            f"Searched from: {search_start}"
+        )
     return None
 
 
@@ -228,6 +238,7 @@ class ExampleNotFoundException(FileNotFoundError):
         dir: str,
         type: Optional[Literal["core", "express"]] = None,
     ) -> None:
+        super().__init__(type, file_names, dir)
         self.type = type or os.environ.get("SHINY_MODE", "core")
         self.file_names = [file_names] if isinstance(file_names, str) else file_names
         self.dir = dir
@@ -250,8 +261,9 @@ class ExpressExampleNotFoundException(ExampleNotFoundException):
         self,
         file_names: list[str] | str,
         dir: str,
+        type: Literal["express"] = "express",
     ) -> None:
-        super().__init__(file_names, dir, "express")
+        super().__init__(file_names, dir, type)
 
 
 def app_choose_core_or_express(

@@ -213,6 +213,28 @@ class _ExpectAutocompleteAttrM:
         )
 
 
+class _ExpectRowsAttrM:
+    """A mixin class for the rows attribute."""
+
+    def expect_rows(
+        self: UiBaseP,
+        value: AttrValue,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the `rows` attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the `rows` attribute.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
+
+
 class InputText(
     _SetTextM,
     _ExpectTextInputValueM,
@@ -296,6 +318,7 @@ class InputTextArea(
     _ExpectPlaceholderAttrM,
     _ExpectAutocompleteAttrM,
     _ExpectSpellcheckAttrM,
+    _ExpectRowsAttrM,
     UiWithLabel,
 ):
     """Controller for :func:`shiny.ui.input_text_area`."""
@@ -367,19 +390,6 @@ class InputTextArea(
             The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
         """
         _expect_attribute_to_have_value(self.loc, "cols", value=value, timeout=timeout)
-
-    def expect_rows(self, value: AttrValue, *, timeout: Timeout = None) -> None:
-        """
-        Expect the `rows` attribute of the input text area to have a specific value.
-
-        Parameters
-        ----------
-        value
-            The expected value of the `rows` attribute.
-        timeout
-            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
-        """
-        _expect_attribute_to_have_value(self.loc, "rows", value=value, timeout=timeout)
 
     def expect_resize(
         self,
@@ -966,3 +976,344 @@ class InputDateRange(WidthContainerStyleM, UiWithLabel):
         # TODO-future; Composable expectations
         self.date_start.expect_autoclose(value, timeout=timeout)
         self.date_end.expect_autoclose(value, timeout=timeout)
+
+
+class InputSubmitTextarea(
+    _SetTextM,
+    WidthContainerStyleM,
+    _ExpectTextInputValueM,
+    _ExpectPlaceholderAttrM,
+    _ExpectRowsAttrM,
+    UiWithLabel,
+):
+    """Controller for :func:`shiny.ui.input_submit_textarea`."""
+
+    loc_button: Locator
+    """Playwright `Locator` for the submit button."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input submit textarea.
+
+        Parameters
+        ----------
+        page
+            The page where the input submit textarea is located.
+        id
+            The id of the input submit textarea.
+        """
+        super().__init__(
+            page,
+            id=id,
+            loc=f"textarea#{id}.form-control",
+        )
+        self.loc_button = self.loc_container.locator(".bslib-submit-textarea-btn")
+
+    def set(self, value: str, *, submit: bool = False, timeout: Timeout = None) -> None:
+        """
+        Sets the text value in the textarea.
+
+        Parameters
+        ----------
+        value
+            The text to set.
+        submit
+            Whether to click the submit button after setting the text. Defaults to `False`.
+        timeout
+            The maximum time to wait for the text to be set. Defaults to `None`.
+        """
+        set_text(self.loc, value, timeout=timeout)
+        if submit:
+            self.loc_button.click(timeout=timeout)
+
+    def submit(self, *, timeout: Timeout = None) -> None:
+        """
+        Clicks the submit button.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the click. Defaults to `None`.
+        """
+        self.loc_button.click(timeout=timeout)
+
+    def expect_data_needs_modifier(
+        self, value: bool, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expect the `data-needs-modifier` attribute to be present or absent.
+
+        Parameters
+        ----------
+        value
+            If `True`, expects the attribute to be present. If `False`, expects it to be absent.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc,
+            "data-needs-modifier",
+            value="" if value else None,
+            timeout=timeout,
+        )
+
+    def expect_button_label(
+        self, value: PatternOrStr, *, timeout: Timeout = None
+    ) -> None:
+        """
+        Expect the submit button to have a specific label.
+
+        Parameters
+        ----------
+        value
+            The expected label text.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        playwright_expect(self.loc_button).to_contain_text(value, timeout=timeout)
+
+
+class InputCodeEditor(
+    WidthContainerStyleM,
+    UiWithLabel,
+):
+    """Controller for :func:`shiny.ui.input_code_editor`."""
+
+    loc_editor: Locator
+    """Playwright `Locator` for the inner code editor container."""
+    loc_textarea: Locator
+    """Playwright `Locator` for the textarea element."""
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes the input code editor.
+
+        Parameters
+        ----------
+        page
+            The page where the input code editor is located.
+        id
+            The id of the input code editor.
+        """
+        # The bslib-code-editor element itself is the container (no wrapper div)
+        super().__init__(
+            page,
+            id=id,
+            loc="xpath=.",
+            loc_container=f"bslib-code-editor#{id}",
+        )
+        self.loc_editor = self.loc.locator(".code-editor")
+        self.loc_textarea = self.loc_editor.locator("textarea")
+
+    def _get_submit_modifier(self) -> str:
+        """Get the appropriate modifier key for submit (Meta on Mac, Control elsewhere)."""
+        return (
+            "Meta"
+            if self.page.evaluate("() => navigator.platform.includes('Mac')")
+            else "Control"
+        )
+
+    def set(self, value: str, *, submit: bool = False, timeout: Timeout = None) -> None:
+        """
+        Sets the code value in the editor.
+
+        Parameters
+        ----------
+        value
+            The code to set.
+        submit
+            Whether to trigger a submit (Ctrl/Cmd+Enter) after setting the text.
+            Defaults to `False`.
+        timeout
+            The maximum time to wait for the text to be set. Defaults to `None`.
+        """
+        set_text(self.loc_textarea, value, timeout=timeout)
+        if submit:
+            modifier = self._get_submit_modifier()
+            self.loc_textarea.press(f"{modifier}+Enter", timeout=timeout)
+
+    def submit(self, *, timeout: Timeout = None) -> None:
+        """
+        Triggers a submit by pressing Ctrl/Cmd+Enter.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the submit. Defaults to `None`.
+        """
+        modifier = self._get_submit_modifier()
+        self.loc_textarea.press(f"{modifier}+Enter", timeout=timeout)
+
+    def expect_value(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the value of the code editor to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected value of the code editor.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        playwright_expect(self.loc_textarea).to_have_value(value, timeout=timeout)
+
+    def expect_language(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the language attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected language (e.g., "python", "r", "javascript").
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "language", value=value, timeout=timeout
+        )
+
+    def expect_theme_light(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the light theme attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected light theme name.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "theme-light", value=value, timeout=timeout
+        )
+
+    def expect_theme_dark(
+        self,
+        value: PatternOrStr,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the dark theme attribute to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected dark theme name.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "theme-dark", value=value, timeout=timeout
+        )
+
+    def expect_read_only(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the read-only state to have a specific value.
+
+        Parameters
+        ----------
+        value
+            Whether the editor should be read-only.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "readonly", value="true" if value else "false", timeout=timeout
+        )
+
+    def expect_line_numbers(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the line numbers visibility to have a specific value.
+
+        Parameters
+        ----------
+        value
+            Whether line numbers should be shown.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc,
+            "line-numbers",
+            value="true" if value else "false",
+            timeout=timeout,
+        )
+
+    def expect_word_wrap(
+        self,
+        value: bool,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the word wrap state to have a specific value.
+
+        Parameters
+        ----------
+        value
+            Whether word wrap should be enabled.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "word-wrap", value="true" if value else "false", timeout=timeout
+        )
+
+    def expect_tab_size(
+        self,
+        value: int | str,
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expect the tab size to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected tab size.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_attribute_to_have_value(
+            self.loc, "tab-size", value=str(value), timeout=timeout
+        )
+
+    def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
+        """
+        Expect the height style to have a specific value.
+
+        Parameters
+        ----------
+        value
+            The expected height value.
+        timeout
+            The maximum time to wait for the expectation to be fulfilled. Defaults to `None`.
+        """
+        _expect_style_to_have_value(self.loc, "height", value, timeout=timeout)

@@ -1,9 +1,29 @@
 [build-system]
-requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
+requires = ["setuptools>=77", "wheel", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = { find = { include = ["shiny", "shiny.*"] } }
+# Declare package data explicitly (instead of the default include-package-data
+# manifest scan) so build_py does not warn that asset/template directories are
+# "absent from the `packages` configuration". The second glob is needed because
+# `**` does not match hidden files (the package templates ship .gitignore files).
+include-package-data = false
+
+[tool.setuptools.package-data]
+shiny = ["**", "**/.gitignore"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shiny*"]
+# Keep `false` so only directories with an `__init__.py` are packaged as code.
+# `true` would register every asset/template directory (shiny/www/..., etc.) as
+# a PEP 420 namespace package and sweep in any stray directory or .py file that
+# lands under shiny/, over-exposing the package surface. Those directories are
+# instead shipped as data files via the package-data globs above.
+namespaces = false
+
+[tool.setuptools.exclude-package-data]
+"*" = ["api-examples/**"]
 
 [tool.setuptools_scm]
 write_to = "shiny/_version.py"
@@ -15,25 +35,25 @@ dynamic = ["version"]
 authors = [{ name = "Winston Chang", email = "winston@posit.co" }]
 description = "A web development framework for Python."
 readme = "README.md"
-requires-python = ">=3.9"
-license = { text = "MIT" }
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "typing-extensions>=4.10.0",
     "uvicorn>=0.16.0;platform_system!='Emscripten'",
     "starlette",
     "websockets>=13.0",
-    "htmltools>=0.6.0",
+    "htmltools>=0.7.0",
     "click>=8.1.4;platform_system!='Emscripten'",
     "markdown-it-py>=1.1.0",
     "mdit-py-plugins>=0.3.0",
@@ -49,16 +69,19 @@ dependencies = [
     "narwhals>=1.10.0",
     "orjson>=3.10.7",
     "shinychat>=0.1.0",
+    "opentelemetry-api>=1.20.0",
 ]
 
 [project.optional-dependencies]
-theme = ["libsass>=0.23.0", "brand_yml>=0.1.0"]
+theme = ["libsass>=0.23.0", "brand_yml>=0.2.0"]
+otel = ["opentelemetry-sdk>=1.20.0"]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
     "pytest-playwright>=0.5.2",
     "playwright>=1.48.0",
     "pytest-xdist",
+    "pytest-shard",
     "pytest-timeout",
     "pytest-rerunfailures",
     "pytest-cov",
@@ -84,7 +107,7 @@ test = [
     "rsconnect-python",
     "scikit-learn",
     "folium",
-    "palmerpenguins",
+    "palmerpenguins>=0.1.5",                         # type stubs available
     "faicons",
     "ridgeplot",
     "great_tables",
@@ -92,16 +115,18 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
+    "opentelemetry-sdk>=1.20.0",
+    "logfire>=4.0.0",
 ]
 dev = [
-    "black>=24.0",
+    "black>=26.1.0",
     "flake8>=6.0.0",
     "flake8-bugbear>=23.2.13",
     "Flake8-pyproject>=1.2.3",
     "isort>=5.10.1",
     "libsass>=0.23.0",
-    "brand_yml>=0.1.0",
-    "pyright==1.1.398",
+    "brand_yml>=0.2.0",
+    "pyright>=1.1.407",
     "pre-commit>=2.15.0",
     "wheel",
     "matplotlib",
@@ -119,16 +144,16 @@ doc = [
     "jupyter",
     "jupyter_client < 8.0.0",
     "tabulate",
-    "shinylive",
+    "shinylive>=0.8.9",
     "pydantic>=2.7.4",
     "quartodoc>=0.8.1",
-    "griffe>=1.3.2",
+    "griffe>=1.3.2,<2.0.0",
 ]
 add-test = [
     "chatlas[anthropic,openai]",
     "openai>=1.104.1",
     "anthropic>=0.62.0",
-    "inspect-ai>=0.3.129",
+    "inspect-ai>=0.3.129;python_version>='3.10'",
     "pytest-timeout",
     "pytest>=6.2.4",
     "pytest-playwright>=0.5.2",
@@ -152,8 +177,11 @@ shiny-test = "shiny.pytest._pytest"
 testpaths = ["tests"]
 
 [tool.flake8]
-extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev"]
+extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev", ".context"]
 ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
+
+[tool.black]
+extend-exclude = ".context"
 
 [tool.isort]
 profile = "black"
@@ -161,6 +189,7 @@ skip = [
     "__init__.py",
     "typings/",
     "_dev/",
+    ".context/",
     ".venv",
     "venv",
     ".tox",

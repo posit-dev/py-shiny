@@ -20,6 +20,8 @@ from ..._utils import is_async_callable, wrap_async
 from ...types import Jsonifiable
 
 if TYPE_CHECKING:
+    from htmltools import Tagified
+
     from ...session import Session
 
 # TODO-barret-docs: Double check docs are rendererd
@@ -156,10 +158,13 @@ class Renderer(Generic[IT]):
         :
             Original renderer instance.
         """
+        from ..._utils import validate_no_params
         from ...session import get_current_session
 
         if not callable(_fn):
             raise TypeError("Value function must be callable")
+
+        validate_no_params(_fn, f"render.{type(self).__name__}", stacklevel=5)
 
         # Set value function with extra meta information
         self.fn = AsyncValueFn(_fn)
@@ -197,6 +202,31 @@ class Renderer(Generic[IT]):
         """
         self.output_id = output_id
 
+    def snapshot_preprocess(
+        self,
+        fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]],
+    ) -> None:
+        """
+        Set a function for preprocessing this output's value in test-mode snapshots.
+
+        When a test snapshot is requested (see `shiny.testmode`), the registered
+        function receives the output's last rendered value and its return value
+        is written to the snapshot instead. Use this to scrub non-deterministic
+        values (timestamps, temp paths, random ids) so snapshots diff cleanly.
+
+        The function may be synchronous or asynchronous. It only affects test
+        snapshots -- never the value sent to the client. Calling again
+        overwrites the previous function. Registration is harmless when test
+        mode is off, so calls can be left in production code.
+
+        Parameters
+        ----------
+        fn
+            A function that takes the output value and returns the value to
+            write to the test snapshot.
+        """
+        self._snapshot_preprocess_fn = wrap_async(fn)
+
     def auto_output_ui(
         self,
         # *
@@ -220,6 +250,7 @@ class Renderer(Generic[IT]):
         super().__init__()
 
         self._auto_registered: bool = False
+        self._snapshot_preprocess_fn: Callable[[Any], Awaitable[Any]] | None = None
 
         # Must be done last
         if callable(_fn):
@@ -247,7 +278,7 @@ class Renderer(Generic[IT]):
             " (of type `IT`) into a JSON-serializable object."
             " Ex: `dict`, `None`, `str`. (common)\n"
             "* `render(self)` method has full control of how an App author's value is"
-            " retrieved (`self._fn()`) and processed. (rare)"
+            " retrieved (`self.fn()`) and processed. (rare)"
         )
 
     async def render(self) -> Jsonifiable:
@@ -284,14 +315,18 @@ class Renderer(Generic[IT]):
             return None
         return TagList(rendered_ui)._repr_html_()
 
-    def tagify(self) -> DefaultUIFnResult:
+    def tagify(self) -> Tagified:
         rendered_ui = self._render_auto_output_ui()
         if rendered_ui is None:
             raise TypeError(
                 "No output UI exists for this type of render function: ",
                 self.__class__.__name__,
             )
-        return rendered_ui
+        # Wrap in TagList so str/MetadataNode/Tag/TagList all normalize
+        # through a single `.tagify()` call, satisfying the new
+        # Tagifiable contract (every `.tagify()` must return a fully
+        # tagified value).
+        return TagList(rendered_ui).tagify()
 
     def _render_auto_output_ui(self) -> DefaultUIFnResultOrNone:
         from ...session import session_context

@@ -1,0 +1,72 @@
+$prefix: bs- !default;
+
+// Top-level container
+.bslib-input-submit-textarea {
+  margin: 0 auto;
+}
+
+// Container for textarea and button
+.bslib-submit-textarea-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: var(--#{$prefix}border-width, 1px) solid var(--#{$prefix}gray-500, #ced4da); // bs_theme(preset="shiny") sets input border color to $gray-500
+  border-radius: var(--#{$prefix}border-radius-sm, 4px);
+  background-color: var(--#{$prefix}body-bg, white);
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus-within {
+    border-color: var(--#{$prefix}primary, #007bff);
+    box-shadow: 0 0 0 var(--#{$prefix}focus-ring-width, 0.25rem) var(--#{$prefix}focus-ring-color, rgba(13, 110, 253, 0.25));
+  }
+
+  > textarea {
+    border: none;
+    resize: none;
+    min-height: 1rem;
+    max-height: 10rem;
+    background-color: transparent;
+    padding: 0;
+    color: var(--#{$prefix}body-color, #212529);
+
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+  }
+
+  // Container for submit button + user-defined 'toolbar' items
+  > footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  // Class appended to submit button
+  .bslib-submit-textarea-btn {
+    margin-left: auto;
+  }
+}
+
+
+// Container for user-defined 'toolbar' items
+.bslib-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.bslib-submit-key {
+  border-radius: var(--#{$prefix}border-radius-sm, 4px);
+  padding: 0.25em 0.5em;
+  font-weight: 300;
+  font-size: 0.7em;
+  vertical-align: 0.15em;
+}
+
+:not(.disabled) .bslib-submit-key {
+  background-color: rgba(var(--#{$prefix}body-color-rgb, 0, 0, 0), 0.2);
+}

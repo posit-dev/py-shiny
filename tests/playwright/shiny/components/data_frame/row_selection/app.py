@@ -1,17 +1,11 @@
-import pkgutil
-
-import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import pandas as pd
 import polars as pl
 from narwhals.stable.v1.typing import IntoDataFrame
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
-pd_penguins = palmerpenguins.load_penguins_raw()
-pl_penguins = pl.read_csv(
-    pkgutil.get_data(  # pyright: ignore[reportArgumentType]
-        "palmerpenguins", "data/penguins-raw.csv"
-    )
-)
+pd_penguins = pd.DataFrame({"row": range(344)})
+pl_penguins = pl.DataFrame(pd_penguins)
 
 
 def make_ui(title: str):
