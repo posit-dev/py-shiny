@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol, Sequence, cast
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-from ...render._data_frame import ColumnFilter, ColumnSort
+from ...render._data_frame import ColumnFilter, ColumnSort, assert_column_filters
+from ...types import ListOrTuple
 from .._types import AttrValue, ListPatternOrStr, PatternOrStr, StyleValue, Timeout
 from ..expect import expect_not_to_have_class, expect_to_have_class
 from ..expect._internal import (
@@ -1212,11 +1213,9 @@ class OutputDataFrame(UiWithContainer):
                         break
                 click_loc(sort_col, shift=shift)
 
-    # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
     def set_filter(
         self,
-        # TODO-barret support array of filters
-        filter: ColumnFilter | list[ColumnFilter] | None,
+        filter: ColumnFilter | ListOrTuple[ColumnFilter] | None,
         *,
         timeout: Timeout = None,
     ):
@@ -1231,6 +1230,7 @@ class OutputDataFrame(UiWithContainer):
                 * `None`: Resets all filters.
                 * `ColumnFilterStr`: A dictionary specifying a string filter with 'col' and 'value' keys.
                 * `ColumnFilterNumber`: A dictionary specifying a numeric range filter with 'col' and 'value' keys.
+                * A sequence of `ColumnFilterStr` or `ColumnFilterNumber` dictionaries, for multiple filters.
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
@@ -1248,35 +1248,50 @@ class OutputDataFrame(UiWithContainer):
         if filter is None:
             return
 
+        filter_items: ListOrTuple[ColumnFilter]
         if isinstance(filter, dict):
-            filter = [filter]
-
-        if not isinstance(filter, list):
+            filter_items = [filter]
+        elif isinstance(filter, (list, tuple)):
+            filter_items = filter
+        else:
             raise ValueError(
-                "Invalid filter value. Must be a ColumnFilter, list[ColumnFilter], or None."
+                "Invalid filter value. Must be a ColumnFilter, "
+                "list[ColumnFilter], or None."
             )
 
-        for filterInfo in filter:
-            if "col" not in filterInfo:
-                raise ValueError("Column index (`col`) is required for filtering.")
+        playwright_expect(self.loc_column_label.first).to_be_visible(timeout=timeout)
+        assert_column_filters(filter_items, self.loc_column_label.count())
 
-            if "value" not in filterInfo:
-                raise ValueError("Filter value (`value`) is required for filtering.")
+        for filter_item in filter_items:
+            col_idx = filter_item["col"]
+            value = filter_item.get("value", None)
 
-            filterColumn = self.loc_column_filter.nth(filterInfo["col"])
+            filterColumn = self.loc_column_filter.nth(col_idx)
 
-            if isinstance(filterInfo["value"], str):
-                fill_if_needed(filterColumn.locator("> input"), filterInfo["value"])
-            elif isinstance(filterInfo["value"], (tuple, list)):
+            if isinstance(value, (str, int, float)):
+                fill_if_needed(filterColumn.locator("> input"), str(value))
+                continue
+
+            if isinstance(value, (list, tuple)):
+                range_values = cast(Sequence[Any], value)
+                if len(range_values) != 2:
+                    raise ValueError(
+                        "Numeric range filters must provide exactly two "
+                        "values (min, max)."
+                    )
+
                 header_inputs = filterColumn.locator("> div > input")
-                if filterInfo["value"][0] is not None:
-                    fill_if_needed(header_inputs.nth(0), str(filterInfo["value"][0]))
-                if filterInfo["value"][1] is not None:
-                    fill_if_needed(header_inputs.nth(1), str(filterInfo["value"][1]))
-            else:
-                raise ValueError(
-                    "Invalid filter value. Must be a string or a tuple/list of two numbers."
+                lower = range_values[0]
+                upper = range_values[1]
+                fill_if_needed(
+                    header_inputs.nth(0), "" if lower is None else str(lower)
                 )
+                fill_if_needed(
+                    header_inputs.nth(1), "" if upper is None else str(upper)
+                )
+                continue
+
+            raise ValueError("Invalid filter value.")
 
     def set_cell(
         self,

@@ -21,7 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
+### Improvements
+
+* Playwright's `OutputDataFrame.set_filter()` controller now supports multi-column filters (#2093)
+* Add api-example for `ui.output_code` (#2093)
+* Update controllers for `DownloadLink` and `DownloadButton` (#2093)
+
 ### Bug fixes
+
+* `ui.output_data_frame` will now consistently order the filtered columns in ascending column order. (#2093)
+* When resetting a `ui.output_data_frame` filter, numeric range filters will now reset both values. (#2093)
 
 * The Playwright controllers `InputSlider.set()` and `InputSliderRange.set()` now compute the target value's position from the slider's step configuration and drag the handle directly to it, verifying the landing position against the widget's state (finishing with arrow-key presses when the slider has more steps than the track has pixels). Previously the handle was swept one pixel at a time while polling the label, which was slow and could intermittently miss the target when the browser coalesced or dropped mouse-move events (a recurring webkit CI flake). `InputSliderRange.set()` orders the two handle moves so neither is clamped by its sibling, instead of parking both handles at their extremes first. Setting a value the slider cannot produce now raises an error listing the slider's actual values. (#2311, #2326)
 
