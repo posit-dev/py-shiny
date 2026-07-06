@@ -80,6 +80,15 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
         f"({new_val[0]}, {new_val[1]})"
     )
 
+    # A range completely below the current one exercises the `from`-first move
+    # ordering (the completely-higher range above exercised `to`-first)
+    lower_val = ("50", "150")
+    s1.set(lower_val, max_err_values=1000)
+    s1.expect_value(lower_val)
+    controller.OutputTextVerbatim(page, "txt1").expect_value(
+        f"({lower_val[0]}, {lower_val[1]})"
+    )
+
 
 def test_slider_custom_format(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
