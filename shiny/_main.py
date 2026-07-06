@@ -8,13 +8,14 @@ import logging
 import os
 import platform
 import re
+import socket
 import sys
 import types
 import warnings
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
 import click
 import uvicorn
@@ -65,7 +66,18 @@ RELOAD_EXCLUDES_DEFAULT = (
 )
 
 
+class ShinyConfig(Config):
+    # uvicorn's Config assigns these in __init__, but the generated stubs
+    # (`make pyright-typings`) omit instance attributes, so declare them here.
+    reload: bool
+    workers: int
+    uds: str | None
+
+
 class ShinyServer(Server):
+    # uvicorn's Server assigns this in __init__; see ShinyConfig note above.
+    started: bool
+
     # In reload mode, on_started travels with the server target, so keep it picklable.
     def __init__(
         self, config: Config, on_started: Callable[[], None] | None = None
@@ -73,9 +85,9 @@ class ShinyServer(Server):
         super().__init__(config=config)
         self._on_started = on_started
 
-    async def startup(self, sockets: list[Any] | None = None) -> None:
+    async def startup(self, sockets: list[socket.socket] | None = None) -> None:
         await super().startup(sockets=sockets)
-        if cast(Any, self).started and self._on_started is not None:
+        if self.started and self._on_started is not None:
             self._on_started()
 
 
@@ -90,11 +102,10 @@ def _run_uvicorn(
     if app_dir is not None:
         sys.path.insert(0, app_dir)
 
-    config = Config(app, **kwargs)
-    config_attrs = cast(Any, config)
+    config = ShinyConfig(app, **kwargs)
     server = ShinyServer(config=config, on_started=on_started)
 
-    if config_attrs.reload or config_attrs.workers > 1:
+    if config.reload or config.workers > 1:
         if not isinstance(app, str):
             logging.getLogger("uvicorn.error").warning(
                 "You must pass the application as an import string to enable "
@@ -111,7 +122,7 @@ def _run_uvicorn(
         if config.should_reload:
             sock = config.bind_socket()
             ChangeReload(config, target=server.run, sockets=[sock]).run()
-        elif config_attrs.workers > 1:
+        elif config.workers > 1:
             sock = config.bind_socket()
             Multiprocess(config, target=server.run, sockets=[sock]).run()
         else:
@@ -119,15 +130,11 @@ def _run_uvicorn(
     except KeyboardInterrupt:
         pass
     finally:
-        uds = cast(str | None, config_attrs.uds)
+        uds = config.uds
         if uds and os.path.exists(uds):
             os.remove(uds)
 
-    if (
-        not cast(Any, server).started
-        and not config.should_reload
-        and config_attrs.workers == 1
-    ):
+    if not server.started and not config.should_reload and config.workers == 1:
         sys.exit(_UVICORN_STARTUP_FAILURE)
 
 
