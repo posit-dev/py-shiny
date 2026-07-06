@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed rare tabset ID collisions in pages with many navsets. Randomly generated `data-tabsetid` values were drawn from a pool of ~1 million, so a page with dozens of tabsets could occasionally produce two navsets with the same ID (a birthday collision), resulting in duplicate DOM ids and broken tab switching. IDs are now drawn from a pool of 9 trillion. (#2296)
 
+* Fixed the `value_box()` `id` parameter docstring, which previously documented the wrong reactive-value syntax (`input.<id>()["full_screen"]`) for observing the value box's full screen state. It now correctly documents `input.<id>_full_screen()`, matching `card()`. (#2324)
+
 ### Other changes
 
 * Optimized the test suite by avoiding network-based dataset downloads and heavy library imports during Playwright test app startup, reducing setup time significantly. (#2314)
