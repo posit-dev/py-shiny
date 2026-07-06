@@ -479,9 +479,12 @@ class _InputSliderBase(
             )
             mouse.move(handle_bb["x"] + handle_w / 2, y)
             mouse.down()
+            # A few intermediate moves make the drag look like real pointer
+            # travel rather than a single teleporting jump; the exact count is
+            # unimportant since only the final position determines the landing
             mouse.move(target_x, y, steps=5)
             # Re-send the final position so it lands even if the browser dropped
-            # or coalesced the earlier moves
+            # or coalesced the moves above
             time.sleep(0.05)
             mouse.move(target_x, y)
             mouse.up()
