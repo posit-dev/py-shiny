@@ -36,7 +36,6 @@ from ._utils import get_window_title
 
 # TODO: make a python version of the layout guide?
 @add_example()
-@no_example("express")
 def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     """
     Responsive row-column based layout
@@ -69,7 +68,6 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
 
 
 @add_example(example_name="row")
-@no_example("express")
 def column(
     width: int, *args: TagChild | TagAttrs, offset: int = 0, **kwargs: TagAttrValue
 ) -> Tag:
