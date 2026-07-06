@@ -8,7 +8,9 @@ from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
-def test_download_link_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
+def test_download_link_kitchensink(
+    page: Page, local_app: ShinyAppProc, tmp_path: Path
+) -> None:
     page.goto(local_app.url)
 
     prefix_input = controller.InputText(page, "prefix")
@@ -23,10 +25,10 @@ def test_download_link_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     with page.expect_download() as plain_info:
         plain_link.click()
     plain_download = plain_info.value
-    plain_path_str = plain_download.path()
-    assert plain_path_str is not None
     assert plain_download.suggested_filename == "report-plain.txt"
-    plain_content = Path(plain_path_str).read_text()
+    plain_path = tmp_path / plain_download.suggested_filename
+    plain_download.save_as(plain_path)
+    plain_content = plain_path.read_text()
     assert "report plain download #1" in plain_content
     assert "Summary: plain link" in plain_content
 
@@ -36,10 +38,10 @@ def test_download_link_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     with page.expect_download() as styled_info:
         styled_link.click()
     styled_download = styled_info.value
-    styled_path_str = styled_download.path()
-    assert styled_path_str is not None
     assert styled_download.suggested_filename == "custom-styled.csv"
-    styled_content = Path(styled_path_str).read_text()
+    styled_path = tmp_path / styled_download.suggested_filename
+    styled_download.save_as(styled_path)
+    styled_content = styled_path.read_text()
     assert "metric,value" in styled_content
     assert "prefix,custom" in styled_content
     assert "download_count,1" in styled_content
@@ -50,9 +52,9 @@ def test_download_link_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     with page.expect_download() as plain_info_2:
         plain_link.click()
     plain_download_2 = plain_info_2.value
-    plain_path_str_2 = plain_download_2.path()
-    assert plain_path_str_2 is not None
     assert plain_download_2.suggested_filename == "custom-plain.txt"
-    plain_content_2 = Path(plain_path_str_2).read_text()
+    plain_path_2 = tmp_path / plain_download_2.suggested_filename
+    plain_download_2.save_as(plain_path_2)
+    plain_content_2 = plain_path_2.read_text()
     assert "custom plain download #2" in plain_content_2
     assert "Summary: plain link" in plain_content_2
