@@ -41,7 +41,9 @@ class SassCompileArgs(TypedDict):
 theme_temporary_directories: set[tempfile.TemporaryDirectory[str]] = set()
 
 
-@add_example()
+# The example directory is lowercase `theme`, which only resolves from `Theme` on
+# case-insensitive filesystems; name it explicitly so Linux docs builds find it.
+@add_example(example_name="theme")
 class Theme:
     """
     Create a custom Shiny theme.
