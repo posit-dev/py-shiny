@@ -85,9 +85,9 @@ def card(
     class_
         Additional CSS classes for the returned Tag.
     id
-        Provide a unique identifier for the :func:`~shiny.ui.card` or to report its
-        full screen state to Shiny. For example, using `id="my_card"`, you can observe
-        the card's full screen state with `input.my_card_full_screen()`.
+        A unique identifier for the card. If provided, the card's full screen
+        state is reported to Shiny at `input.<id>_full_screen()` (e.g.,
+        `input.my_card_full_screen()` for `id="my_card"`).
     **kwargs
         HTML attributes on the returned Tag.
 
