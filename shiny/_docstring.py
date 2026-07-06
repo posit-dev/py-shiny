@@ -81,8 +81,10 @@ example_writer = ExampleWriter()
 
 
 def add_example(
+    *,
     app_file: Optional[str] = None,
     ex_dir: Optional[str] = None,
+    example_name: Optional[str] = None,
 ) -> Callable[[F], F]:
     """
     Add an example to the docstring of a function, method, or class.
@@ -109,10 +111,23 @@ def add_example(
         ``app.py``. Support files _cannot_ be named ``app.py`` or start with ``app-``,
         as these files will never be included in the example.
     ex_dir:
-        The directory containing the example. If not specified, ``add_example()`` will
-        find a directory named after the current function in the first ``api-examples/``
-        directory it finds in the current directory or its parent directories.
+        The directory containing the example, as a path relative to the decorated
+        object's source file. Mutually exclusive with ``example_name``. Prefer
+        ``example_name``; use ``ex_dir`` only when the example lives outside the
+        nearest ``api-examples/`` tree. If neither is specified, ``add_example()``
+        will find a directory named after the current function in the first
+        ``api-examples/`` directory it finds in the current directory or its parent
+        directories.
+    example_name:
+        The name of the example directory to look up in the first ``api-examples/``
+        directory found in the decorated object's directory or its parent directories.
+        Use this instead of ``ex_dir`` when the example directory does not match the
+        decorated object's ``__name__``. Mutually exclusive with ``ex_dir``.
     """
+    if ex_dir is not None and example_name is not None:
+        raise ValueError(
+            "`ex_dir` and `example_name` are mutually exclusive; provide only one."
+        )
 
     def _(func: F) -> F:
         # To avoid a performance hit on `import shiny`, we only add examples to the
@@ -136,7 +151,12 @@ def add_example(
                 raise FileNotFoundError(
                     f"No example directory found for {fn_name} in {func_dir} or its parent directories."
                 )
-            example_dir = os.path.join(ex_dir_found, fn_name)
+            example_dir = os.path.join(ex_dir_found, example_name or fn_name)
+
+            if example_name is not None and not os.path.exists(example_dir):
+                raise FileNotFoundError(
+                    f"Example directory '{example_dir}' does not exist for {fn_name}."
+                )
         else:
             example_dir = os.path.abspath(os.path.join(func_dir, ex_dir))
 

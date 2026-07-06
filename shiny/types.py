@@ -54,7 +54,7 @@ ListOrTuple = Union[List[T], Tuple[T, ...]]
 #   {'name': 'mtcars.csv', 'size': 1303, 'type': 'text/csv', 'datapath: '/...../mtcars.csv'}
 # The incoming data doesn't include 'datapath'; that field is added by the
 # FileUploadOperation class.
-@add_example(ex_dir="./api-examples/input_file")
+@add_example(example_name="input_file")
 class FileInfo(TypedDict):
     """
     Class for information about a file upload.
@@ -74,7 +74,7 @@ class FileInfo(TypedDict):
     """The path to the file on the server."""
 
 
-@add_example(ex_dir="./api-examples/output_image")
+@add_example(example_name="output_image")
 class ImgData(TypedDict):
     """
     Return type for :class:`~shiny.render.image`.

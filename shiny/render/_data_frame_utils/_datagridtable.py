@@ -23,8 +23,8 @@ class AbstractTabularData(abc.ABC):
     def to_payload(self) -> FrameJson: ...
 
 
-@add_example(ex_dir="../../api-examples/data_frame_grid_table")
-@add_example(ex_dir="../../api-examples/data_frame_styles")
+@add_example(example_name="data_frame_grid_table")
+@add_example(example_name="data_frame_styles")
 class DataGrid(AbstractTabularData, Generic[IntoDataFrameT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a
@@ -183,8 +183,8 @@ class DataGrid(AbstractTabularData, Generic[IntoDataFrameT]):
         return res
 
 
-@add_example(ex_dir="../../api-examples/data_frame_grid_table")
-@add_example(ex_dir="../../api-examples/data_frame_styles")
+@add_example(example_name="data_frame_grid_table")
+@add_example(example_name="data_frame_styles")
 class DataTable(AbstractTabularData, Generic[IntoDataFrameT]):
     """
     Holds the data and options for a :class:`~shiny.render.data_frame` output, for a

@@ -11,15 +11,15 @@ __all__ = (
 
 MarkdownStream = add_example(
     app_file="app-core.py",
-    ex_dir="../shiny/api-examples/MarkdownStream",
+    example_name="MarkdownStream",
 )(MarkdownStream)
 
 ExpressMarkdownStream = add_example(
     app_file="app-express.py",
-    ex_dir="../shiny/api-examples/MarkdownStream",
+    example_name="MarkdownStream",
 )(ExpressMarkdownStream)
 
 output_markdown_stream = add_example(
     app_file="app-core.py",
-    ex_dir="../shiny/api-examples/MarkdownStream",
+    example_name="MarkdownStream",
 )(output_markdown_stream)
