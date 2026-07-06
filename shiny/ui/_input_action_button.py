@@ -9,7 +9,7 @@ from ..module import resolve_id
 
 
 @add_example()
-@add_example("app-disabled-core.py")
+@add_example(app_file="app-disabled-core.py")
 def input_action_button(
     id: str,
     label: TagChild,

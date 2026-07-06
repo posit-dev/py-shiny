@@ -81,8 +81,10 @@ example_writer = ExampleWriter()
 
 
 def add_example(
+    *,
     app_file: Optional[str] = None,
     ex_dir: Optional[str] = None,
+    example_name: Optional[str] = None,
 ) -> Callable[[F], F]:
     """
     Add an example to the docstring of a function, method, or class.
@@ -109,10 +111,29 @@ def add_example(
         ``app.py``. Support files _cannot_ be named ``app.py`` or start with ``app-``,
         as these files will never be included in the example.
     ex_dir:
-        The directory containing the example. If not specified, ``add_example()`` will
-        find a directory named after the current function in the first ``api-examples/``
-        directory it finds in the current directory or its parent directories.
+        The directory containing the example, as a path relative to the decorated
+        object's source file. Mutually exclusive with ``example_name``. If neither is
+        specified, ``add_example()`` will find a directory named after the current
+        function in the first ``api-examples/`` directory it finds in the current
+        directory or its parent directories.
+    example_name:
+        The name of the example directory to look up in the first ``api-examples/``
+        directory found in the decorated object's directory or its parent directories.
+        Use this instead of ``ex_dir`` when the example directory does not match the
+        decorated object's ``__name__``. Mutually exclusive with ``ex_dir``.
+
+    Raises
+    ------
+    FileNotFoundError
+        During docs builds (i.e. when the ``SHINY_ADD_EXAMPLES`` environment variable
+        is ``"true"``), if the example directory cannot be found. A missing example app
+        file raises :class:`ExampleNotFoundException` (a ``FileNotFoundError``
+        subclass). Use ``@no_example()`` to intentionally skip an example.
     """
+    if ex_dir is not None and example_name is not None:
+        raise ValueError(
+            "`ex_dir` and `example_name` are mutually exclusive; provide only one."
+        )
 
     def _(func: F) -> F:
         # To avoid a performance hit on `import shiny`, we only add examples to the
@@ -136,7 +157,12 @@ def add_example(
                 raise FileNotFoundError(
                     f"No example directory found for {fn_name} in {func_dir} or its parent directories."
                 )
-            example_dir = os.path.join(ex_dir_found, fn_name)
+            example_dir = os.path.join(ex_dir_found, example_name or fn_name)
+
+            if example_name is not None and not os.path.exists(example_dir):
+                raise FileNotFoundError(
+                    f"Example directory '{example_dir}' does not exist for {fn_name}."
+                )
         else:
             example_dir = os.path.abspath(os.path.join(func_dir, ex_dir))
 
@@ -152,15 +178,10 @@ def add_example(
                 mode="express" if "shiny/express/" in func_dir else None,
             )
         except ExampleNotFoundException as e:
-            file = "shiny/" + func_dir.split("shiny/")[1]
-            if "__code__" in dir(func):
-                print(
-                    f"::warning file={file},line={func.__code__.co_firstlineno}::{fn_name} - {e}"
-                )
-            else:
-                print(f"::warning file={file}::{fn_name} - {e}")
-
-            return func
+            # Enrich the exception with the decorated function's name so the docs
+            # build failure points at the API missing its example.
+            e.fn_name = fn_name
+            raise
 
         other_files: list[str] = []
         for abs_f in Path(example_dir).glob("**/*"):
@@ -232,6 +253,9 @@ def is_express_app(app_path: str) -> bool:
 
 
 class ExampleNotFoundException(FileNotFoundError):
+    # Name of the API missing its example; set by `@add_example()` when re-raising.
+    fn_name: Optional[str] = None
+
     def __init__(
         self,
         file_names: list[str] | str,
@@ -250,10 +274,13 @@ class ExampleNotFoundException(FileNotFoundError):
         else:
             type = "an"
 
-        return (
+        msg = (
             f"Could not find {type} example file named "
             + f"{' or '.join(self.file_names)} in {self.dir}."
         )
+        if self.fn_name is not None:
+            msg = f"`{self.fn_name}` is missing an API example: {msg}"
+        return msg
 
 
 class ExpressExampleNotFoundException(ExampleNotFoundException):
