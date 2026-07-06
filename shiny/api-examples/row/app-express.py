@@ -5,7 +5,7 @@ from shiny.express import input, render, ui
 
 with ui.row():
     with ui.column(4):
-        ui.input_slider("n", "N", min=0, max=100, value=20)
+        ui.input_slider("n", "N", min=1, max=100, value=20)
 
     with ui.column(8):
 
