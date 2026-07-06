@@ -94,12 +94,18 @@ def _run_uvicorn(
     config_attrs = cast(Any, config)
     server = ShinyServer(config=config, on_started=on_started)
 
-    if (config_attrs.reload or config_attrs.workers > 1) and not isinstance(app, str):
-        logging.getLogger("uvicorn.error").warning(
-            "You must pass the application as an import string to enable "
-            "'reload' or 'workers'."
-        )
-        sys.exit(1)
+    if config_attrs.reload or config_attrs.workers > 1:
+        if not isinstance(app, str):
+            logging.getLogger("uvicorn.error").warning(
+                "You must pass the application as an import string to enable "
+                "'reload' or 'workers'."
+            )
+            sys.exit(_UVICORN_STARTUP_FAILURE)
+    elif hasattr(config, "load_app"):
+        # Fail fast on app import errors before binding the socket, matching
+        # uvicorn.run(). Config.load_app() only exists in recent Uvicorn releases;
+        # older supported versions (>=0.16) load the app inside serve() instead.
+        config.load_app()
 
     try:
         if config.should_reload:
