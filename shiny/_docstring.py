@@ -112,6 +112,14 @@ def add_example(
         The directory containing the example. If not specified, ``add_example()`` will
         find a directory named after the current function in the first ``api-examples/``
         directory it finds in the current directory or its parent directories.
+
+    Raises
+    ------
+    FileNotFoundError
+        During docs builds (i.e. when the ``SHINY_ADD_EXAMPLES`` environment variable
+        is ``"true"``), if the example directory cannot be found. A missing example app
+        file raises :class:`ExampleNotFoundException` (a ``FileNotFoundError``
+        subclass). Use ``@no_example()`` to intentionally skip an example.
     """
 
     def _(func: F) -> F:
@@ -152,7 +160,10 @@ def add_example(
                 mode="express" if "shiny/express/" in func_dir else None,
             )
         except ExampleNotFoundException as e:
-            raise RuntimeError(f"{fn_name} is missing an API example: {e}") from e
+            # Enrich the exception with the decorated function's name so the docs
+            # build failure points at the API missing its example.
+            e.fn_name = fn_name
+            raise
 
         other_files: list[str] = []
         for abs_f in Path(example_dir).glob("**/*"):
@@ -224,6 +235,9 @@ def is_express_app(app_path: str) -> bool:
 
 
 class ExampleNotFoundException(FileNotFoundError):
+    # Name of the API missing its example; set by `@add_example()` when re-raising.
+    fn_name: Optional[str] = None
+
     def __init__(
         self,
         file_names: list[str] | str,
@@ -242,10 +256,13 @@ class ExampleNotFoundException(FileNotFoundError):
         else:
             type = "an"
 
-        return (
+        msg = (
             f"Could not find {type} example file named "
             + f"{' or '.join(self.file_names)} in {self.dir}."
         )
+        if self.fn_name is not None:
+            msg = f"`{self.fn_name}` is missing an API example: {msg}"
+        return msg
 
 
 class ExpressExampleNotFoundException(ExampleNotFoundException):
