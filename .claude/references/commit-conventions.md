@@ -8,8 +8,6 @@ This project uses **conventional commits** for commit messages and PR titles.
 <type>: <description>
 
 [optional body]
-
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ```
 
 An optional scope may be added when it clarifies the affected area, e.g.
@@ -33,8 +31,7 @@ An optional scope may be added when it clarifies the affected area, e.g.
 - Use sentence case: "Add feature" not "add feature"
 - No period at the end of the subject line
 - Body is optional but useful for explaining "why" not "what"
-- Always include `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` when
-  Claude writes the code
+- Do not add `Co-Authored-By: Claude ...` trailers
 
 ## PR Titles
 
