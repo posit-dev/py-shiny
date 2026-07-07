@@ -48,6 +48,19 @@ with exactly one `ui.output_*()` function (the one returned by its
 renderer. When adding an output component, add its renderer alongside it (and
 vice versa) — don't create shared or orphaned output UI functions.
 
+For example, `render.text` and `render.code` are both `Renderer[str]`, so
+`@render.text` would *technically* work inside a `ui.output_code()` container.
+The pairs are still kept strictly 1:1 — `render.text` ↔ `ui.output_text()`,
+`render.code` ↔ `ui.output_code()` — because:
+
+- **Express mode requires it**: Express renders the output UI automatically via
+  `auto_output_ui()`, so every renderer must have exactly one correct default
+  container. A code-styled output needs its own renderer (`render.code`), not a
+  "use `render.text` with a different container" recipe that only works in Core.
+- **1:1 is easier to explain**: documenting "each renderer has one output
+  function" beats documenting which of several containers *possibly* work with
+  which renderer (1:many).
+
 When creating a custom output renderer (base class:
 `shiny/render/renderer/_renderer.py`):
 
