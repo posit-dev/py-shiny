@@ -179,13 +179,6 @@ See `.claude/references/commit-conventions.md` for the full guide. In short:
 (`<type>: <Description>` — sentence case, present tense, ≤72 chars, no trailing
 period). Types: feat, fix, docs, refactor, test, chore, perf, style.
 
-## Porting from bslib
-
-New Bootstrap components are developed in R's bslib package first, then ported here
-(vendoring bslib's compiled assets rather than reimplementing them). For the complete
-workflow — studying the bslib source, Python implementation, asset vendoring, tests,
-and docs — use the `.claude/skills/port-from-bslib/SKILL.md` skill.
-
 ## Common Pitfalls
 
 - **Forgetting to run `make format`**: Always format before committing
