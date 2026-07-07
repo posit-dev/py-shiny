@@ -50,25 +50,33 @@ merged, so the PR title becomes the commit message on `main`):
   `--auto` merges instantly instead of waiting for CI. Watch CI to completion,
   then merge.
 
-## Handling flaky test failures
+## Handling flaky test failures in CI
 
-- If tests unrelated to the PR fail, restart the failed jobs:
+This section is about GitHub Actions jobs failing on a PR's CI run. (A test
+that fails locally on your machine is not "flaky" for this purpose — reproduce
+and fix it.)
+
+- If a CI job fails on tests unrelated to the PR's changes, restart that job:
   `gh run rerun <run-id> --failed`.
-- For each broken test that **passes within the restarted job**, submit a
-  GitHub Issue (`gh issue create`) containing a github.com URL link to the
-  broken job and the error output when possible. Search existing issues for
-  the test name first; if one exists, comment with the new occurrence instead
-  of filing a duplicate.
-- Individual tests are already retried in-job (pytest-rerunfailures); a
-  `1 rerun` note in the log means a flake was absorbed and needs no action.
-- A test that fails the **same way twice in a row** is not flaky — treat it as
-  real breakage and investigate.
-- Before chasing a failure, check whether `main` fails the same way
-  (`gh run list --workflow "Run tests" --branch main`). If it does, the
-  breakage is pre-existing — report it, don't fix it in the unrelated PR.
-- Never change tests or snapshots just to quiet an unrelated failure (e.g., do
-  not run `--snapshot-update` to silence syrupy's "unused snapshots" error —
-  a job can fail from that even when every test passed).
+- For each test that failed in the original CI job but **passes in the
+  restarted job**, submit a GitHub Issue (`gh issue create`) containing a
+  github.com URL link to the failed job and the error output when possible.
+  Search existing issues for the test name first; if one exists, comment with
+  the new occurrence instead of filing a duplicate.
+- Within a CI job, individual tests are already retried
+  (pytest-rerunfailures); a `1 rerun` note in the job log means a flake was
+  absorbed and the job passed — no action needed.
+- A CI job that fails the **same way twice in a row** (original run + restart)
+  is not flaky — treat it as real breakage and investigate, starting by
+  reproducing the failing test locally.
+- Before chasing a CI failure, check whether the same workflow also fails on
+  `main` (`gh run list --workflow "Run tests" --branch main`). If it does, the
+  breakage is pre-existing — report it (or file an issue), don't fix it in the
+  unrelated PR.
+- Never change tests or snapshots just to make an unrelated CI failure go
+  away (e.g., do not run `--snapshot-update` to silence syrupy's "unused
+  snapshots" error — that error can fail a CI job even when every test
+  passed).
 
 ## Related
 
