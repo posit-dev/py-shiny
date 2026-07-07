@@ -63,9 +63,14 @@ and fix it.)
   github.com URL link to the failed job and the error output when possible.
   Search existing issues for the test name first; if one exists, comment with
   the new occurrence instead of filing a duplicate.
+- Label flake issues with **`flaky test`** (groups them for the staleness
+  sweep), **`ai-generated-issue`** (marks the body as AI-written), and
+  **`needs-triage`** (flags it for human attention):
+  `gh issue create --label "flaky test,ai-generated-issue,needs-triage" ...`
 - **Staleness rule**: when a flake issue has had no new occurrences reported
   for **30 days** (check the last occurrence comment's date), close it with a
-  note that it can be reopened if the flake returns.
+  note that it can be reopened if the flake returns. Find candidates with
+  `gh issue list --label "flaky test"`.
 - Within a CI job, individual tests are already retried
   (pytest-rerunfailures); a `1 rerun` note in the job log means a flake was
   absorbed and the job passed — no action needed.
