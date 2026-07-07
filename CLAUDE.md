@@ -132,18 +132,6 @@ See `.claude/references/component-patterns.md` for the full checklists. In short
   `shiny/render/__init__.py`. Do not use the deprecated `@output_transformer()`.
   Output components and renderers map 1:1 — add them as a pair
 
-### Documentation Style
-
-See `.claude/references/documentation-style.md` for the full guide. In short:
-
-- **NumPy-style (numpydoc) docstrings** with dash-underlined sections; bare
-  parameter names (no types) with indented descriptions; `Returns` uses a `:` placeholder
-- Cross-reference API objects with Sphinx roles: `` :func:`~shiny.ui.update_slider` ``
-- Input components document their server value in a `Notes` Quarto callout
-- Attach runnable examples with `@add_example()` (apps in `shiny/api-examples/<name>/`
-  as `app-core.py` + `app-express.py`), not inline `Examples` sections
-- Register new public API in `docs/_quartodoc-*.yml` (alphabetical within sections)
-
 ### Type Checking Notes
 
 - Pyright is the primary type checker (not mypy)
