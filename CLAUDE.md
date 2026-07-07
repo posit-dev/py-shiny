@@ -10,24 +10,33 @@ py-shiny is a Python web framework for building reactive web applications. It ma
 
 ### Essential Commands
 ```bash
-# Install dev dependencies
+# Install dev dependencies (requires Python 3.10+)
 pip install -e ".[dev,test,doc]"
+pre-commit install       # Optional: auto-format/lint on commit
 
 # Format code (always run before committing)
 make format              # Auto-fix with black and isort
 make check-format        # Check only
+make check-lint          # Lint with flake8
 
 # Type checking
 make check-types         # Run pyright (requires typings)
 
 # Run tests
 make test                # Unit tests only (pytest)
+pytest tests/pytest/test_foo.py::test_name  # Single unit test
 make playwright          # All end-to-end tests (slow)
 make playwright-shiny SUB_FILE="inputs/test_foo.py"  # Single test
 
 # Comprehensive checks
 make check               # Format, lint, types, unit tests
 make check-fix           # Same but auto-fixes formatting
+```
+
+### Running Apps
+```bash
+shiny run app.py --reload --launch-browser  # Dev server with auto-reload
+SHINY_LOG_LEVEL=DEBUG shiny run app.py      # Verbose logging
 ```
 
 ### Asset Management
@@ -38,13 +47,6 @@ make upgrade-html-deps   # Requires R installed
 # Build JavaScript/TypeScript
 make js-build            # One-time build
 make js-watch            # Continuous rebuild
-```
-
-### Documentation
-```bash
-# Build API docs (slow, run at the end)
-make docs                # Build with quartodoc
-make docs-preview        # Build and serve locally
 ```
 
 ### Testing Shortcuts
@@ -217,10 +219,7 @@ Development workflow:
 - `.pre-commit-config.yaml` - Pre-commit hook configuration
 
 ### Documentation
-- `docs/_quartodoc-core.yml` - Core API reference config
-- `docs/_quartodoc-express.yml` - Express API reference config
-- `docs/_quartodoc-testing.yml` - Testing API reference config
-- Add new functions here to include in generated docs (alphabetical order within sections)
+- `.claude/references/documentation-style.md` - Docstring conventions, `@add_example()` workflow, quartodoc registration, docs build commands
 
 ## Important Patterns
 
@@ -245,44 +244,15 @@ When creating a custom renderer:
 
 ### Documentation Style
 
-- Use **Google-style docstrings**, not Sphinx/reStructuredText format
-- Parameter descriptions use `name` followed by description on next line, indented
-- Use markdown in docstrings: backticks for code, `**bold**` for emphasis
-- Section headers: `Parameters`, `Returns`, `Yields`, `Raises`, `Examples`, `Note`, `See Also`
-- Example format:
+See `.claude/references/documentation-style.md` for the full guide. In short:
 
-````python
-def foo(x: int, name: str) -> bool:
-    """
-    Brief one-line description.
-
-    Longer description paragraph if needed. Can use markdown formatting
-    like `code`, **bold**, and even code blocks.
-
-    Parameters
-    ----------
-    x
-        Description of x parameter.
-    name
-        Description of name parameter.
-
-    Returns
-    -------
-    :
-        Description of return value.
-
-    Examples
-    --------
-    ```python
-    result = foo(42, "test")
-    ```
-
-    See Also
-    --------
-    * `bar()` - Related function that does something similar
-    * `baz()` - Another related function
-    """
-````
+- **NumPy-style (numpydoc) docstrings** with dash-underlined sections; bare
+  parameter names (no types) with indented descriptions; `Returns` uses a `:` placeholder
+- Cross-reference API objects with Sphinx roles: `` :func:`~shiny.ui.update_slider` ``
+- Input components document their server value in a `Notes` Quarto callout
+- Attach runnable examples with `@add_example()` (apps in `shiny/api-examples/<name>/`
+  as `app-core.py` + `app-express.py`), not inline `Examples` sections
+- Register new public API in `docs/_quartodoc-*.yml` (alphabetical within sections)
 
 ### Type Checking Notes
 
