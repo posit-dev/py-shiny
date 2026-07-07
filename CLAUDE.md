@@ -151,7 +151,8 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 
 Commit messages and PR titles use **conventional commits**. Read
 `.claude/references/commit-conventions.md` for the format, types, and guidelines
-before committing or opening a PR.
+before committing or opening a PR — and for the merge policy and flaky-test
+handling before merging one.
 
 ## Common Pitfalls
 

@@ -42,6 +42,34 @@ merged, so the PR title becomes the commit message on `main`):
 - `fix: Pin griffe to <2.0.0 for quartodoc compatibility`
 - `refactor: Simplify reactive graph invalidation logic`
 
+## Merging PRs
+
+- When instructed to merge a PR, **squash merge** (`gh pr merge <number> --squash`)
+  only after the **full test suite (150+ GHA jobs) has succeeded** (`gh pr checks`).
+- **Never use `gh pr merge --auto`**: this repo has no required checks, so
+  `--auto` merges instantly instead of waiting for CI. Watch CI to completion,
+  then merge.
+
+## Handling flaky test failures
+
+- If tests unrelated to the PR fail, restart the failed jobs:
+  `gh run rerun <run-id> --failed`.
+- For each broken test that **passes within the restarted job**, submit a
+  GitHub Issue (`gh issue create`) containing a github.com URL link to the
+  broken job and the error output when possible. Search existing issues for
+  the test name first; if one exists, comment with the new occurrence instead
+  of filing a duplicate.
+- Individual tests are already retried in-job (pytest-rerunfailures); a
+  `1 rerun` note in the log means a flake was absorbed and needs no action.
+- A test that fails the **same way twice in a row** is not flaky — treat it as
+  real breakage and investigate.
+- Before chasing a failure, check whether `main` fails the same way
+  (`gh run list --workflow "Run tests" --branch main`). If it does, the
+  breakage is pre-existing — report it, don't fix it in the unrelated PR.
+- Never change tests or snapshots just to quiet an unrelated failure (e.g., do
+  not run `--snapshot-update` to silence syrupy's "unused snapshots" error —
+  a job can fail from that even when every test passed).
+
 ## Related
 
 - Update `CHANGELOG.md` for user-facing changes
