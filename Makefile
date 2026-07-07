@@ -230,8 +230,13 @@ install-rsconnect: FORCE
 # All end-to-end tests with playwright
 # `--timeout` bounds each test so a hang fails fast with a thread-stack dump
 # instead of consuming the whole job.
+# `--snapshot-warn-unused` because CI runs each browser and pytest-shard shard
+# as a separate partial job; syrupy (>=5.5.0, under xdist) would otherwise fail
+# the job for snapshots that belong to the tests running in the *other* jobs.
+# Stale snapshots can still be cleaned up with an all-browser, unsharded run
+# using `--snapshot-update`.
 playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
-	pytest $(PLAYWRIGHT_VERBOSE) --timeout=$(PLAYWRIGHT_TEST_TIMEOUT) --timeout-method=$(PLAYWRIGHT_TEST_TIMEOUT_METHOD) -o faulthandler_timeout=$(PLAYWRIGHT_FAULTHANDLER_TIMEOUT) $(TEST_FILE) $(PYTEST_BROWSERS)
+	pytest $(PLAYWRIGHT_VERBOSE) --snapshot-warn-unused --timeout=$(PLAYWRIGHT_TEST_TIMEOUT) --timeout-method=$(PLAYWRIGHT_TEST_TIMEOUT_METHOD) -o faulthandler_timeout=$(PLAYWRIGHT_FAULTHANDLER_TIMEOUT) $(TEST_FILE) $(PYTEST_BROWSERS)
 
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (TEST_FILE="" from root of repo)
 	pytest -c tests/playwright/playwright-pytest.ini $(TEST_FILE)

@@ -86,7 +86,7 @@ test = [
     "pytest-rerunfailures",
     "pytest-cov",
     "coverage",
-    "syrupy>=4.7.1",
+    "syrupy>=5.5.1",
     "psutil",
     "astropy",
     "suntime",
