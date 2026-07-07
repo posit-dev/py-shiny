@@ -10,18 +10,21 @@ py-shiny is a Python web framework for building reactive web applications. It ma
 
 ### Essential Commands
 ```bash
-# Install dev dependencies
+# Install dev dependencies (requires Python 3.10+)
 pip install -e ".[dev,test,doc]"
+pre-commit install       # Optional: auto-format/lint on commit
 
 # Format code (always run before committing)
 make format              # Auto-fix with black and isort
 make check-format        # Check only
+make check-lint          # Lint with flake8
 
 # Type checking
 make check-types         # Run pyright (requires typings)
 
 # Run tests
 make test                # Unit tests only (pytest)
+pytest tests/pytest/test_foo.py::test_name  # Single unit test
 make playwright          # All end-to-end tests (slow)
 make playwright-shiny SUB_FILE="inputs/test_foo.py"  # Single test
 
@@ -30,7 +33,15 @@ make check               # Format, lint, types, unit tests
 make check-fix           # Same but auto-fixes formatting
 ```
 
+### Running Apps
+```bash
+shiny run app.py --reload --launch-browser  # Dev server with auto-reload
+SHINY_LOG_LEVEL=DEBUG shiny run app.py      # Verbose logging
+```
+
 ### Asset Management
+
+See `.claude/references/assets.md` for details.
 ```bash
 # Vendor assets from upstream (bslib, shiny, sass, htmltools)
 make upgrade-html-deps   # Requires R installed
@@ -38,13 +49,6 @@ make upgrade-html-deps   # Requires R installed
 # Build JavaScript/TypeScript
 make js-build            # One-time build
 make js-watch            # Continuous rebuild
-```
-
-### Documentation
-```bash
-# Build API docs (slow, run at the end)
-make docs                # Build with quartodoc
-make docs-preview        # Build and serve locally
 ```
 
 ### Testing Shortcuts
@@ -65,133 +69,10 @@ make playwright-examples  # Tests in tests/playwright/examples/
 
 ## Architecture
 
-### Reactive System
-
-The reactive system is based on a **push-pull** model with three core abstractions:
-
-- **Context**: Tracks reactive dependencies during execution. When a reactive consumer (Calc/Effect) runs, it creates a Context that records which reactive sources (Value) it reads from.
-- **Dependents**: Each reactive source maintains a list of downstream consumers that depend on it. When a source invalidates, it notifies all dependents.
-- **ReactiveEnvironment**: Global singleton managing the reactive graph, execution queue, and flush cycles.
-
-Key implementation details:
-- `Value()` is the reactive source (observable)
-- `Calc_()` is a cached computed value (recomputes only when dependencies change)
-- `Effect_()` is a side-effect that re-executes when dependencies change
-- `event()` decorator suppresses reactive dependencies for specific reads
-- The reactive graph is built automatically through the Context's dependency tracking
-- Execution uses a priority queue to ensure correct invalidation ordering
-
-### Session Hierarchy
-
-Sessions manage the lifetime and state of a Shiny application:
-
-- **Session (ABC)**: Base interface defining core session operations
-- **AppSession**: Concrete implementation for a single user's session
-- **SessionProxy**: Thread-safe proxy that delegates to the appropriate AppSession
-- **Inputs/Outputs**: Dynamic objects providing dict-like access to input/output values
-
-Session management:
-- Each WebSocket connection gets its own AppSession
-- `get_current_session()` retrieves the current session from thread-local or async context
-- Sessions track input values, output invalidations, file uploads, downloads, and more
-- Session context is established using `session_context(session)` context manager
-
-### Express vs Core Mode
-
-**Core mode** is imperative: you explicitly construct UI and define server logic in a function.
-
-**Express mode** transforms Python code using AST manipulation:
-- `@render.text` decorators are hoisted into a synthetic `server()` function
-- UI elements are collected into a synthetic `ui` object
-- Top-level code runs in a special context where UI calls are recorded
-- `RecallContextManager` enables UI elements to render themselves automatically
-- The transformation happens at import time via `_run.py` and `_node_transformers.py`
-
-Critical difference: Express mode uses **execution order** (top-to-bottom) for UI layout, while Core mode uses explicit nesting.
-
-### HTML Generation and Dependencies
-
-HTML is generated using the `htmltools` package:
-- UI functions return `Tag` or `TagList` objects
-- Tags are mutable; use `.add_class()`, `.add_style()`, `.attrs()` to modify
-- HTML dependencies are attached to tags and automatically bundled
-- `components_dependencies()` returns bslib component dependencies
-
-Asset vendoring:
-- SCSS source files from bslib are in `shiny/www/shared/sass/bslib/components/scss/`
-- Compiled CSS is generated for all theme presets (27 files in `shiny/www/shared/sass/preset/`)
-- JavaScript bundles are in `shiny/www/shared/bslib/components/components.min.js`
-- `make upgrade-html-deps` runs `scripts/htmlDependencies.R` to update all assets
-
-### Input/Output Bindings
-
-Client-server communication works through bindings:
-
-**Input bindings** (client → server):
-- Registered via CSS class selectors in TypeScript (e.g., `.bslib-input-foo`)
-- Implement `getValue()`, `setValue()`, `subscribe()` methods
-- Send values to server using `Shiny.setInputValue(id, value)`
-- Server receives via `input.foo()` which returns a reactive Value
-
-**Output bindings** (server → client):
-- Server defines output using `@render.text`, `@render.plot`, etc.
-- Renderers inherit from `Renderer` base class
-- Client subscribes to output via `Shiny.bindOutput()` in TypeScript
-- Updates are sent as messages through the WebSocket
-
-**Update functions**:
-- Use `session.send_input_message()` to update input widgets from server
-- Client handles via `receiveMessage()` in the input binding
-
-### Module System
-
-Modules enable namespaced, reusable components:
-- `@module.ui` decorator creates a UI function with automatic ID namespacing
-- `@module.server` decorator creates a server function with namespace context
-- Inside a module, use `resolve_id()` to namespace IDs
-- `resolve_id_or_none()` for optional namespacing
-- Modules can be nested; namespaces compose with `parent-child` format
-
-Implementation: `_namespaces.py` manages the namespace stack, `module.py` provides decorators.
-
-### Testing Architecture
-
-**Unit tests** (`tests/pytest/`):
-- Use standard pytest with syrupy for snapshots
-- Focus on Python API correctness, parameter validation, edge cases
-- Run with `make test` or `pytest`
-
-**Playwright tests** (`tests/playwright/`):
-- End-to-end tests using Playwright with custom controllers
-- Controllers in `shiny/playwright/controller/` provide high-level APIs for interacting with inputs/outputs
-- Each input component should have a controller class
-- Test apps live alongside test files
-- Run with `make playwright` (all browsers) or `make playwright-debug` (chromium, headed)
-
-**Playwright controller pattern**:
-```python
-from shiny.playwright.controller import InputText, OutputText
-
-text_input = InputText(page, "my_input")
-text_input.set("foo")
-text_input.expect_value("foo")
-
-text_output = OutputText(page, "my_output")
-text_output.expect_value("You entered: foo")
-```
-
-### JavaScript/TypeScript Build
-
-Client-side code is in `js/`:
-- Entry point: `js/src/shiny/index.ts`
-- Build tool: esbuild via `js/build.ts`
-- Output: `shiny/www/shared/py-shiny/shiny.js` and minified variant
-- TypeScript definitions for Python-JS interop
-
-Development workflow:
-- `make js-watch` for continuous rebuilds during development
-- Changes to `js/src/` require rebuilding to see effects in Python apps
-- Source maps are generated for debugging
+`.claude/references/architecture.md` explains how the internals work: the reactive
+system, session hierarchy, Express vs Core mode, HTML generation and dependencies,
+input/output bindings, the module system, testing architecture, and the JS build.
+Read the relevant section before working on any of those areas.
 
 ## Key Files
 
@@ -206,9 +87,7 @@ Development workflow:
 - `shiny/module.py` - Module decorators and namespacing
 
 ### Asset Management
-- `scripts/htmlDependencies.R` - Vendors assets from bslib/shiny/sass/htmltools
-- `shiny/_versions.py` - Version tracking for vendored dependencies
-- `shiny/ui/_html_deps_*.py` - HTML dependency definitions
+- `.claude/references/assets.md` - Vendored bslib/shiny assets and the py-shiny JS bundle (key files, commands, pitfalls)
 
 ### Configuration
 - `pyproject.toml` - Package config, dependencies, tool settings
@@ -217,72 +96,16 @@ Development workflow:
 - `.pre-commit-config.yaml` - Pre-commit hook configuration
 
 ### Documentation
-- `docs/_quartodoc-core.yml` - Core API reference config
-- `docs/_quartodoc-express.yml` - Express API reference config
-- `docs/_quartodoc-testing.yml` - Testing API reference config
-- Add new functions here to include in generated docs (alphabetical order within sections)
+- `.claude/references/documentation-style.md` - Docstring conventions, `@add_example()` workflow, quartodoc registration, docs build commands
 
 ## Important Patterns
 
-### Component Implementation Pattern
+### Component and Renderer Implementation
 
-When implementing a UI component:
-1. Create file in `shiny/ui/_component_name.py`
-2. Use `@add_example()` decorator with example from `shiny/api-examples/`
-3. Use `resolve_id()` for module support
-4. Use `restore_input()` for bookmarking support (input components)
-5. Return Tag/TagList with `components_dependencies()` for bslib deps
-6. Export from `shiny/ui/__init__.py` (and `shiny/express/ui/__init__.py` if applicable)
-
-### Renderer Implementation Pattern
-
-When creating a custom renderer:
-1. Inherit from `Renderer[T]` base class
-2. Implement `auto_output_ui()` for automatic UI generation
-3. Implement `render()` async method returning the rendered value
-4. Use `@output_transformer()` decorator for post-processing
-5. Register in `shiny/render/__init__.py`
-
-### Documentation Style
-
-- Use **Google-style docstrings**, not Sphinx/reStructuredText format
-- Parameter descriptions use `name` followed by description on next line, indented
-- Use markdown in docstrings: backticks for code, `**bold**` for emphasis
-- Section headers: `Parameters`, `Returns`, `Yields`, `Raises`, `Examples`, `Note`, `See Also`
-- Example format:
-
-````python
-def foo(x: int, name: str) -> bool:
-    """
-    Brief one-line description.
-
-    Longer description paragraph if needed. Can use markdown formatting
-    like `code`, **bold**, and even code blocks.
-
-    Parameters
-    ----------
-    x
-        Description of x parameter.
-    name
-        Description of name parameter.
-
-    Returns
-    -------
-    :
-        Description of return value.
-
-    Examples
-    --------
-    ```python
-    result = foo(42, "test")
-    ```
-
-    See Also
-    --------
-    * `bar()` - Related function that does something similar
-    * `baz()` - Another related function
-    """
-````
+Before implementing a UI component or output renderer, read
+`.claude/references/component-patterns.md` — it has the step-by-step checklists
+(file layout, exports, examples, controllers, tests) and the rules for pairing
+output components with renderers.
 
 ### Type Checking Notes
 
@@ -326,53 +149,10 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 
 ## Git Commit and PR Conventions
 
-This project uses **conventional commits** for commit messages and PR titles:
-
-### Commit Message Format
-```
-<type>: <description>
-
-[optional body]
-
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
-```
-
-### Common Types
-- **feat**: New feature (e.g., `feat: Add input_submit_textarea component`)
-- **fix**: Bug fix (e.g., `fix: Resolve session context error in modules`)
-- **docs**: Documentation changes (e.g., `docs: Update reactive programming guide`)
-- **refactor**: Code refactoring without behavior change
-- **test**: Adding or updating tests
-- **chore**: Maintenance tasks, dependency updates
-- **perf**: Performance improvements
-- **style**: Code style/formatting changes (not user-facing style)
-
-### Guidelines
-- Use present tense: "Add feature" not "Added feature"
-- Keep the description concise (under 72 characters for the first line)
-- Use sentence case: "Add feature" not "add feature"
-- No period at the end of the subject line
-- Body is optional but useful for explaining "why" not "what"
-- Always include `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` when Claude writes the code
-
-### PR Titles
-PR titles should follow the same conventional commit format:
-- `feat: Add Toolbar component`
-- `fix: Pin griffe to <2.0.0 for quartodoc compatibility`
-- `refactor: Simplify reactive graph invalidation logic`
-
-## Porting from bslib
-
-For comprehensive guidance on porting components from R's bslib package, see `.claude/skills/port-from-bslib/SKILL.md`. Key steps:
-
-1. Locate and study the bslib source (R, TypeScript, SCSS)
-2. Create Python implementation in `shiny/ui/`
-3. Run `make upgrade-html-deps` to vendor compiled assets
-4. Create API examples in `shiny/api-examples/`
-5. Create Playwright controller (if input component)
-6. Port unit tests and create end-to-end tests
-7. Update quartodoc YAML files
-8. Update `CHANGELOG.md`
+Commit messages and PR titles use **conventional commits**. Read
+`.claude/references/commit-conventions.md` for the format, types, and guidelines
+before committing or opening a PR — and for the merge policy and flaky-test
+handling before merging one.
 
 ## Common Pitfalls
 
