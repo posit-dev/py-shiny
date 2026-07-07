@@ -79,15 +79,8 @@ HTML is generated using the `htmltools` package:
 - HTML dependencies are attached to tags and automatically bundled
 - `components_dependencies()` returns bslib component dependencies
 
-Asset vendoring:
-
-- SCSS source files from bslib are in `shiny/www/shared/sass/bslib/components/scss/`
-- Compiled CSS is generated for all theme presets (27 files in
-  `shiny/www/shared/sass/preset/`)
-- JavaScript bundles are in `shiny/www/shared/bslib/components/components.min.js`
-- `make upgrade-html-deps` runs `scripts/htmlDependencies.R` (requires R) to
-  update all vendored assets; versions are tracked in `shiny/_versions.py`
-- HTML dependency definitions live in `shiny/ui/_html_deps_*.py`
+Asset vendoring (bslib CSS/JS, theme presets, `make upgrade-html-deps`) is
+covered in `.claude/references/assets.md`.
 
 ## Input/Output Bindings
 
@@ -165,16 +158,6 @@ text_output.expect_value("You entered: foo")
 
 ## JavaScript/TypeScript Build
 
-Client-side code is in `js/`:
-
-- Entry point: `js/src/shiny/index.ts`
-- Build tool: esbuild via `js/build.ts`
-- Output: `shiny/www/shared/py-shiny/shiny.js` and minified variant
-- TypeScript definitions for Python-JS interop
-
-Development workflow:
-
-- `make js-watch` for continuous rebuilds during development (`js-watch-fast`
-  skips linting and minification)
-- Changes to `js/src/` require rebuilding to see effects in Python apps
-- Source maps are generated for debugging
+Client-side code is in `js/` (entry point `js/src/shiny/index.ts`), bundled
+with esbuild into `shiny/www/shared/py-shiny/`. Build commands and workflow are
+covered in `.claude/references/assets.md`.

@@ -40,6 +40,8 @@ SHINY_LOG_LEVEL=DEBUG shiny run app.py      # Verbose logging
 ```
 
 ### Asset Management
+
+See `.claude/references/assets.md` for details.
 ```bash
 # Vendor assets from upstream (bslib, shiny, sass, htmltools)
 make upgrade-html-deps   # Requires R installed
@@ -105,9 +107,7 @@ See `.claude/references/architecture.md` for the full guide. Topic summaries:
 - `shiny/module.py` - Module decorators and namespacing
 
 ### Asset Management
-- `scripts/htmlDependencies.R` - Vendors assets from bslib/shiny/sass/htmltools
-- `shiny/_versions.py` - Version tracking for vendored dependencies
-- `shiny/ui/_html_deps_*.py` - HTML dependency definitions
+- `.claude/references/assets.md` - Vendored bslib/shiny assets and the py-shiny JS bundle (key files, commands, pitfalls)
 
 ### Configuration
 - `pyproject.toml` - Package config, dependencies, tool settings
@@ -193,16 +193,10 @@ period). Types: feat, fix, docs, refactor, test, chore, perf, style.
 
 ## Porting from bslib
 
-For comprehensive guidance on porting components from R's bslib package, see `.claude/skills/port-from-bslib/SKILL.md`. Key steps:
-
-1. Locate and study the bslib source (R, TypeScript, SCSS)
-2. Create Python implementation in `shiny/ui/`
-3. Run `make upgrade-html-deps` to vendor compiled assets
-4. Create API examples in `shiny/api-examples/`
-5. Create Playwright controller (if input component)
-6. Port unit tests and create end-to-end tests
-7. Update quartodoc YAML files
-8. Update `CHANGELOG.md`
+New Bootstrap components are developed in R's bslib package first, then ported here
+(vendoring bslib's compiled assets rather than reimplementing them). For the complete
+workflow — studying the bslib source, Python implementation, asset vendoring, tests,
+and docs — use the `.claude/skills/port-from-bslib/SKILL.md` skill.
 
 ## Common Pitfalls
 
