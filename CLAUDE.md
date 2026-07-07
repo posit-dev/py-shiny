@@ -223,24 +223,16 @@ Development workflow:
 
 ## Important Patterns
 
-### Component Implementation Pattern
+### Component and Renderer Implementation
 
-When implementing a UI component:
-1. Create file in `shiny/ui/_component_name.py`
-2. Use `@add_example()` decorator with example from `shiny/api-examples/`
-3. Use `resolve_id()` for module support
-4. Use `restore_input()` for bookmarking support (input components)
-5. Return Tag/TagList with `components_dependencies()` for bslib deps
-6. Export from `shiny/ui/__init__.py` (and `shiny/express/ui/__init__.py` if applicable)
+See `.claude/references/component-patterns.md` for the full checklists. In short:
 
-### Renderer Implementation Pattern
-
-When creating a custom renderer:
-1. Inherit from `Renderer[T]` base class
-2. Implement `auto_output_ui()` for automatic UI generation
-3. Implement `render()` async method returning the rendered value
-4. Use `@output_transformer()` decorator for post-processing
-5. Register in `shiny/render/__init__.py`
+- **UI components**: `shiny/ui/_component_name.py`; use `resolve_id()` (modules) and
+  `restore_input()` (bookmarking); export from `shiny/ui/__init__.py` and
+  `shiny/express/ui/__init__.py`; add example, controller, quartodoc entries, tests
+- **Renderers**: inherit `Renderer[IT]`; implement `auto_output_ui()` plus either
+  `transform()` (simple) or `render()` (full control); export from
+  `shiny/render/__init__.py`. Do not use the deprecated `@output_transformer()`
 
 ### Documentation Style
 
