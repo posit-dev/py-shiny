@@ -201,8 +201,13 @@ install-rsconnect: FORCE
 
 
 # All end-to-end tests with playwright
+# `--snapshot-warn-unused` because CI runs each browser and pytest-shard shard
+# as a separate partial job; syrupy (>=5.5.0, under xdist) would otherwise fail
+# the job for snapshots that belong to the tests running in the *other* jobs.
+# Stale snapshots can still be cleaned up with an all-browser, unsharded run
+# using `--snapshot-update`.
 playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
-	pytest $(TEST_FILE) $(PYTEST_BROWSERS)
+	pytest --snapshot-warn-unused $(TEST_FILE) $(PYTEST_BROWSERS)
 
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (TEST_FILE="" from root of repo)
 	pytest -c tests/playwright/playwright-pytest.ini $(TEST_FILE)
