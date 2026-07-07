@@ -129,7 +129,8 @@ See `.claude/references/component-patterns.md` for the full checklists. In short
   `shiny/express/ui/__init__.py`; add example, controller, quartodoc entries, tests
 - **Renderers**: inherit `Renderer[IT]`; implement `auto_output_ui()` plus either
   `transform()` (simple) or `render()` (full control); export from
-  `shiny/render/__init__.py`. Do not use the deprecated `@output_transformer()`
+  `shiny/render/__init__.py`. Do not use the deprecated `@output_transformer()`.
+  Output components and renderers map 1:1 — add them as a pair
 
 ### Documentation Style
 

@@ -42,6 +42,12 @@ representative example):
 
 ## Renderer pattern
 
+Output components and renderers have a **1:1 mapping**: each renderer pairs
+with exactly one `ui.output_*()` function (the one returned by its
+`auto_output_ui()`), and each output component exists to serve exactly one
+renderer. When adding an output component, add its renderer alongside it (and
+vice versa) — don't create shared or orphaned output UI functions.
+
 When creating a custom output renderer (base class:
 `shiny/render/renderer/_renderer.py`):
 
