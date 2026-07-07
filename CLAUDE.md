@@ -67,133 +67,30 @@ make playwright-examples  # Tests in tests/playwright/examples/
 
 ## Architecture
 
-### Reactive System
+See `.claude/references/architecture.md` for the full guide. Topic summaries:
 
-The reactive system is based on a **push-pull** model with three core abstractions:
-
-- **Context**: Tracks reactive dependencies during execution. When a reactive consumer (Calc/Effect) runs, it creates a Context that records which reactive sources (Value) it reads from.
-- **Dependents**: Each reactive source maintains a list of downstream consumers that depend on it. When a source invalidates, it notifies all dependents.
-- **ReactiveEnvironment**: Global singleton managing the reactive graph, execution queue, and flush cycles.
-
-Key implementation details:
-- `Value()` is the reactive source (observable)
-- `Calc_()` is a cached computed value (recomputes only when dependencies change)
-- `Effect_()` is a side-effect that re-executes when dependencies change
-- `event()` decorator suppresses reactive dependencies for specific reads
-- The reactive graph is built automatically through the Context's dependency tracking
-- Execution uses a priority queue to ensure correct invalidation ordering
-
-### Session Hierarchy
-
-Sessions manage the lifetime and state of a Shiny application:
-
-- **Session (ABC)**: Base interface defining core session operations
-- **AppSession**: Concrete implementation for a single user's session
-- **SessionProxy**: Thread-safe proxy that delegates to the appropriate AppSession
-- **Inputs/Outputs**: Dynamic objects providing dict-like access to input/output values
-
-Session management:
-- Each WebSocket connection gets its own AppSession
-- `get_current_session()` retrieves the current session from thread-local or async context
-- Sessions track input values, output invalidations, file uploads, downloads, and more
-- Session context is established using `session_context(session)` context manager
-
-### Express vs Core Mode
-
-**Core mode** is imperative: you explicitly construct UI and define server logic in a function.
-
-**Express mode** transforms Python code using AST manipulation:
-- `@render.text` decorators are hoisted into a synthetic `server()` function
-- UI elements are collected into a synthetic `ui` object
-- Top-level code runs in a special context where UI calls are recorded
-- `RecallContextManager` enables UI elements to render themselves automatically
-- The transformation happens at import time via `_run.py` and `_node_transformers.py`
-
-Critical difference: Express mode uses **execution order** (top-to-bottom) for UI layout, while Core mode uses explicit nesting.
-
-### HTML Generation and Dependencies
-
-HTML is generated using the `htmltools` package:
-- UI functions return `Tag` or `TagList` objects
-- Tags are mutable; use `.add_class()`, `.add_style()`, `.attrs()` to modify
-- HTML dependencies are attached to tags and automatically bundled
-- `components_dependencies()` returns bslib component dependencies
-
-Asset vendoring:
-- SCSS source files from bslib are in `shiny/www/shared/sass/bslib/components/scss/`
-- Compiled CSS is generated for all theme presets (27 files in `shiny/www/shared/sass/preset/`)
-- JavaScript bundles are in `shiny/www/shared/bslib/components/components.min.js`
-- `make upgrade-html-deps` runs `scripts/htmlDependencies.R` to update all assets
-
-### Input/Output Bindings
-
-Client-server communication works through bindings:
-
-**Input bindings** (client → server):
-- Registered via CSS class selectors in TypeScript (e.g., `.bslib-input-foo`)
-- Implement `getValue()`, `setValue()`, `subscribe()` methods
-- Send values to server using `Shiny.setInputValue(id, value)`
-- Server receives via `input.foo()` which returns a reactive Value
-
-**Output bindings** (server → client):
-- Server defines output using `@render.text`, `@render.plot`, etc.
-- Renderers inherit from `Renderer` base class
-- Client subscribes to output via `Shiny.bindOutput()` in TypeScript
-- Updates are sent as messages through the WebSocket
-
-**Update functions**:
-- Use `session.send_input_message()` to update input widgets from server
-- Client handles via `receiveMessage()` in the input binding
-
-### Module System
-
-Modules enable namespaced, reusable components:
-- `@module.ui` decorator creates a UI function with automatic ID namespacing
-- `@module.server` decorator creates a server function with namespace context
-- Inside a module, use `resolve_id()` to namespace IDs
-- `resolve_id_or_none()` for optional namespacing
-- Modules can be nested; namespaces compose with `parent-child` format
-
-Implementation: `_namespaces.py` manages the namespace stack, `module.py` provides decorators.
-
-### Testing Architecture
-
-**Unit tests** (`tests/pytest/`):
-- Use standard pytest with syrupy for snapshots
-- Focus on Python API correctness, parameter validation, edge cases
-- Run with `make test` or `pytest`
-
-**Playwright tests** (`tests/playwright/`):
-- End-to-end tests using Playwright with custom controllers
-- Controllers in `shiny/playwright/controller/` provide high-level APIs for interacting with inputs/outputs
-- Each input component should have a controller class
-- Test apps live alongside test files
-- Run with `make playwright` (all browsers) or `make playwright-debug` (chromium, headed)
-
-**Playwright controller pattern**:
-```python
-from shiny.playwright.controller import InputText, OutputText
-
-text_input = InputText(page, "my_input")
-text_input.set("foo")
-text_input.expect_value("foo")
-
-text_output = OutputText(page, "my_output")
-text_output.expect_value("You entered: foo")
-```
-
-### JavaScript/TypeScript Build
-
-Client-side code is in `js/`:
-- Entry point: `js/src/shiny/index.ts`
-- Build tool: esbuild via `js/build.ts`
-- Output: `shiny/www/shared/py-shiny/shiny.js` and minified variant
-- TypeScript definitions for Python-JS interop
-
-Development workflow:
-- `make js-watch` for continuous rebuilds during development
-- Changes to `js/src/` require rebuilding to see effects in Python apps
-- Source maps are generated for debugging
+- **Reactive system** (`shiny/reactive/`): push-pull model. `Value` is the source,
+  `Calc_` a cached computed value, `Effect_` a side-effect. A per-execution `Context`
+  records dependencies automatically; the `ReactiveEnvironment` singleton manages the
+  graph and flush cycles
+- **Sessions** (`shiny/session/`): each WebSocket connection gets an `AppSession`;
+  `get_current_session()` / `session_context()` manage the active session context
+- **Express vs Core**: Core is explicit UI construction + a server function. Express
+  rewrites the app via AST transformation at import time (`shiny/express/_run.py`,
+  `_node_transformers.py`) and lays out UI in execution order
+- **HTML/assets**: UI functions return `htmltools` `Tag`/`TagList` objects with
+  attached HTML dependencies; bslib CSS/JS/SCSS is vendored under `shiny/www/shared/`
+  via `make upgrade-html-deps`
+- **Input/output bindings**: TypeScript input bindings send values via
+  `Shiny.setInputValue()`; renderers push output over the WebSocket; server-initiated
+  updates go through `session.send_input_message()`
+- **Modules** (`shiny/module.py`, `shiny/_namespaces.py`): `@module.ui` /
+  `@module.server` namespace IDs; `resolve_id()` applies the namespace stack
+- **Testing**: unit tests in `tests/pytest/` (pytest + syrupy snapshots); end-to-end
+  tests in `tests/playwright/` driven by controller classes from
+  `shiny/playwright/controller/`
+- **JS build** (`js/`): esbuild via `js/build.ts` outputs to
+  `shiny/www/shared/py-shiny/`; rebuild (`make js-build` / `js-watch`) to see changes
 
 ## Key Files
 
