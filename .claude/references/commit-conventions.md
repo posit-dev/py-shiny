@@ -64,9 +64,9 @@ and fix it.)
   Search existing issues for the test name first; if one exists, comment with
   the new occurrence instead of filing a duplicate.
 - Label flake issues with **`flaky test`** (groups them for the staleness
-  sweep), **`ai-generated-issue`** (marks the body as AI-written), and
-  **`needs-triage`** (flags it for human attention):
-  `gh issue create --label "flaky test,ai-generated-issue,needs-triage" ...`
+  sweep) and **`ai-generated-issue`** (marks the body as AI-written):
+  `gh issue create --label "flaky test,ai-generated-issue" ...`
+  Do not add `needs-triage`.
 - **Staleness rule**: when a flake issue has had no new occurrences reported
   for **30 days** (check the last occurrence comment's date), close it with a
   note that it can be reopened if the flake returns. Find candidates with
