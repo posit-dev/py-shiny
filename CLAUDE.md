@@ -69,30 +69,10 @@ make playwright-examples  # Tests in tests/playwright/examples/
 
 ## Architecture
 
-See `.claude/references/architecture.md` for the full guide. Topic summaries:
-
-- **Reactive system** (`shiny/reactive/`): push-pull model. `Value` is the source,
-  `Calc_` a cached computed value, `Effect_` a side-effect. A per-execution `Context`
-  records dependencies automatically; the `ReactiveEnvironment` singleton manages the
-  graph and flush cycles
-- **Sessions** (`shiny/session/`): each WebSocket connection gets an `AppSession`;
-  `get_current_session()` / `session_context()` manage the active session context
-- **Express vs Core**: Core is explicit UI construction + a server function. Express
-  rewrites the app via AST transformation at import time (`shiny/express/_run.py`,
-  `_node_transformers.py`) and lays out UI in execution order
-- **HTML/assets**: UI functions return `htmltools` `Tag`/`TagList` objects with
-  attached HTML dependencies; bslib CSS/JS/SCSS is vendored under `shiny/www/shared/`
-  via `make upgrade-html-deps`
-- **Input/output bindings**: TypeScript input bindings send values via
-  `Shiny.setInputValue()`; renderers push output over the WebSocket; server-initiated
-  updates go through `session.send_input_message()`
-- **Modules** (`shiny/module.py`, `shiny/_namespaces.py`): `@module.ui` /
-  `@module.server` namespace IDs; `resolve_id()` applies the namespace stack
-- **Testing**: unit tests in `tests/pytest/` (pytest + syrupy snapshots); end-to-end
-  tests in `tests/playwright/` driven by controller classes from
-  `shiny/playwright/controller/`
-- **JS build** (`js/`): esbuild via `js/build.ts` outputs to
-  `shiny/www/shared/py-shiny/`; rebuild (`make js-build` / `js-watch`) to see changes
+`.claude/references/architecture.md` explains how the internals work: the reactive
+system, session hierarchy, Express vs Core mode, HTML generation and dependencies,
+input/output bindings, the module system, testing architecture, and the JS build.
+Read the relevant section before working on any of those areas.
 
 ## Key Files
 
@@ -122,15 +102,10 @@ See `.claude/references/architecture.md` for the full guide. Topic summaries:
 
 ### Component and Renderer Implementation
 
-See `.claude/references/component-patterns.md` for the full checklists. In short:
-
-- **UI components**: `shiny/ui/_component_name.py`; use `resolve_id()` (modules) and
-  `restore_input()` (bookmarking); export from `shiny/ui/__init__.py` and
-  `shiny/express/ui/__init__.py`; add example, controller, quartodoc entries, tests
-- **Renderers**: inherit `Renderer[IT]`; implement `auto_output_ui()` plus either
-  `transform()` (simple) or `render()` (full control); export from
-  `shiny/render/__init__.py`. Do not use the deprecated `@output_transformer()`.
-  Output components and renderers map 1:1 — add them as a pair
+Before implementing a UI component or output renderer, read
+`.claude/references/component-patterns.md` — it has the step-by-step checklists
+(file layout, exports, examples, controllers, tests) and the rules for pairing
+output components with renderers.
 
 ### Type Checking Notes
 
@@ -174,10 +149,9 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 
 ## Git Commit and PR Conventions
 
-See `.claude/references/commit-conventions.md` for the full guide. In short:
-**conventional commits** for commit messages and PR titles
-(`<type>: <Description>` — sentence case, present tense, ≤72 chars, no trailing
-period). Types: feat, fix, docs, refactor, test, chore, perf, style.
+Commit messages and PR titles use **conventional commits**. Read
+`.claude/references/commit-conventions.md` for the format, types, and guidelines
+before committing or opening a PR.
 
 ## Common Pitfalls
 
