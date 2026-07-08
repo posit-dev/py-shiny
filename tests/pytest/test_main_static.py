@@ -64,7 +64,8 @@ def test_static_assets_unknown_command(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_static_assets_no_args_shows_help() -> None:
     result = CliRunner().invoke(main, ["static-assets"])
 
-    assert result.exit_code != 0
+    # no_args_is_help exits 0 on older click versions and 2 on newer ones
+    assert result.exit_code in (0, 2)
     assert "Usage:" in result.output
 
 
