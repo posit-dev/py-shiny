@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+* `shiny[otel]` now includes `opentelemetry-distro[otlp]`, enabling standard zero-code auto-instrumentation: `opentelemetry-instrument shiny run app.py` works out of the box, with OTLP as the default exporter. (#2348)
+
 * `@add_example()` (internal docs decorator) gained an `example_name=` parameter that looks up the example in the nearest `api-examples/` directory, and all `ex_dir=` call sites that pointed inside an `api-examples/` tree were migrated to it. `ex_dir=` remains only for examples outside the nearest `api-examples/` tree. This also fixed nine call sites that passed the example name positionally (where it was silently treated as `app_file=`), so their examples were missing from the generated docs. (#2328)
 
 * Playwright's `OutputDataFrame.set_filter()` controller now supports multi-column filters (#2093)

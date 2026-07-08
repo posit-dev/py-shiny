@@ -80,7 +80,13 @@ dependencies = [
 
 [project.optional-dependencies]
 theme = ["libsass>=0.23.0", "brand_yml>=0.2.0"]
-otel = ["opentelemetry-sdk>=1.24.0"]
+otel = [
+    "opentelemetry-sdk>=1.24.0",
+    # Provides `opentelemetry-instrument` for zero-code auto-instrumentation;
+    # the [otlp] extra supplies its default (OTLP) exporter. 0.45b0 is the
+    # instrumentation release paired with SDK 1.24.0.
+    "opentelemetry-distro[otlp]>=0.45b0",
+]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
