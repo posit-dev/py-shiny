@@ -6,11 +6,15 @@ import socket
 import sys
 import warnings
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from uvicorn.config import Config
 from uvicorn.server import Server
 from uvicorn.supervisors import ChangeReload, Multiprocess
+
+if TYPE_CHECKING:
+    # Not a runtime import: uvicorn._types is absent in older supported releases.
+    from uvicorn._types import ASGIApplication
 
 from ._hostenv import is_workbench
 from ._typing_extensions import NotRequired, TypedDict
@@ -44,7 +48,7 @@ class ShinyServer(Server):
 
 
 def _run_uvicorn(
-    app: Any,
+    app: ASGIApplication | Callable[..., Any] | str,
     *,
     app_dir: str | None = None,
     on_started: Callable[[], None] | None = None,
