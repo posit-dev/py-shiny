@@ -29,7 +29,7 @@ try:
 except ImportError:
     # Renamed in opentelemetry-sdk 1.39.0; same API under the old name
     from opentelemetry.sdk._logs.export import (
-        InMemoryLogExporter as InMemoryLogRecordExporter,
+        InMemoryLogExporter as InMemoryLogRecordExporter,  # pyright: ignore[reportDeprecated]
     )
 
 from shiny import reactive
