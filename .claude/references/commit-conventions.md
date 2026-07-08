@@ -44,11 +44,15 @@ merged, so the PR title becomes the commit message on `main`):
 
 ## Merging PRs
 
-- When instructed to merge a PR, **squash merge** (`gh pr merge <number> --squash`)
-  only after the **full test suite (150+ GHA jobs) has succeeded** (`gh pr checks`).
-- **Never use `gh pr merge --auto`**: this repo has no required checks, so
-  `--auto` merges instantly instead of waiting for CI. Watch CI to completion,
-  then merge.
+- When instructed to merge a PR, **squash merge with auto-merge**
+  (`gh pr merge <number> --squash --auto`). Branch protection requires the
+  **"PR checks"** status check — the `pr-gate` job in
+  `.github/workflows/pytest.yaml` that fans in every PR job — so `--auto`
+  waits for the full test suite before merging.
+- The gate skips on draft PRs (drafts run a reduced test matrix and cannot be
+  merged anyway); mark the PR ready for review to trigger the full matrix.
+- When adding a job to `pytest.yaml`, add it to the `pr-gate` job's `needs:`
+  list, or its failures will not block merging.
 
 ## Handling flaky test failures in CI
 
