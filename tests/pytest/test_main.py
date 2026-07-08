@@ -8,7 +8,7 @@ from uvicorn.config import Config
 from uvicorn.server import Server
 
 from shiny import _main
-from shiny._main import ShinyServer, _set_workbench_kwargs
+from shiny._uvicorn import ShinyServer, _set_workbench_kwargs
 
 
 def test_shiny_server_calls_on_started(monkeypatch: pytest.MonkeyPatch):
