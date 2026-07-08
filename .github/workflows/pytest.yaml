@@ -326,3 +326,33 @@ jobs:
         uses: ./.github/py-shiny/narwhals-test
         with:
           shiny-dir: "."
+
+  # Single stable check for branch protection / auto-merge. Jobs above may be
+  # renamed or re-matrixed freely, but every PR job MUST be listed in `needs`
+  # below or its failure will not block merging.
+  pr-gate:
+    name: "PR checks"
+    # `always()` is required: without it, an upstream failure would make this
+    # job skip, and GitHub treats a skipped required check as satisfied.
+    # Skipping on draft PRs is safe for the same reason in reverse: drafts
+    # cannot be merged (or auto-merged) regardless, and skipping avoids
+    # failure emails from the reduced draft test matrix. Marking the PR
+    # ready for review re-triggers the workflow with the full matrix.
+    if: always() && github.event_name == 'pull_request' && !github.event.pull_request.draft
+    needs:
+      - check
+      - playwright-shiny
+      - playwright-examples
+      - playwright-ai
+      - playwright-deploys-precheck
+      - test-narwhals-integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify that all PR jobs succeeded
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "Job results: $RESULTS"
+          if echo "$RESULTS" | grep -qE 'failure|cancelled|skipped'; then
+            exit 1
+          fi
