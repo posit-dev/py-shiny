@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-SKILLS_DIR = Path(__file__).parent / ".agents" / "skills"
+SKILLS_DIR = Path(__file__).parent.parent / ".agents" / "skills"
 """Location of the Agent Skills bundled in the shiny package."""
 
 

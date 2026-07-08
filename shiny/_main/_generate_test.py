@@ -8,7 +8,7 @@ from typing import Callable
 import click
 import questionary
 
-from ._main_utils import cli_action, cli_bold, cli_code, path_rel_wd
+from ._utils import cli_action, cli_bold, cli_code, path_rel_wd
 
 
 class ValidationError(Exception):
@@ -128,7 +128,7 @@ def generate_test_file(
         output_path = get_output_file_path(output_file, app_path)
 
         try:
-            from .pytest._generate import ShinyTestGenerator
+            from ..pytest._generate import ShinyTestGenerator
         except ImportError as e:
             raise ValidationError(
                 f"Could not import ShinyTestGenerator: {e}\n"

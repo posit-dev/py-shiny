@@ -19,11 +19,11 @@ import click
 import questionary
 from questionary import Choice
 
-from ._main_create_custom import (
+from ._create_custom import (
     ComponentNameValidator,
     update_component_name_in_template,
 )
-from ._main_utils import (
+from ._utils import (
     cli_action,
     cli_bold,
     cli_code,

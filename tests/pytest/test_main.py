@@ -7,7 +7,7 @@ import pytest
 from uvicorn.config import Config
 from uvicorn.server import Server
 
-from shiny import _main_run
+from shiny._main import _run as _main_run
 from shiny._uvicorn import ShinyServer, _set_workbench_kwargs
 
 

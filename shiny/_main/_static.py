@@ -6,7 +6,11 @@ import click
 
 import shiny
 
-from . import _static
+from .._static import (
+    get_default_shinylive_dir,
+    print_shinylive_local_info,
+    remove_shinylive_local,
+)
 
 
 @click.command(
@@ -52,13 +56,13 @@ Please install shinylive and use `shinylive export` instead of `shiny static`:
 )
 @click.argument("command", type=str)
 def static_assets(command: str) -> None:
-    dir = _static.get_default_shinylive_dir()
+    dir = get_default_shinylive_dir()
 
     if command == "remove":
         print(f"Removing {dir}")
-        _static.remove_shinylive_local(shinylive_dir=dir)
+        remove_shinylive_local(shinylive_dir=dir)
     elif command == "info":
-        _static.print_shinylive_local_info()
+        print_shinylive_local_info()
     else:
         raise click.UsageError(f"Unknown command: {command}")
 

@@ -5,13 +5,13 @@ from typing import Optional
 
 import click
 
-from . import __version__
+from .. import __version__
 
 # Re-exported as `shiny.run_app` (see `shiny/__init__.py`)
-from ._main_run import run
-from ._main_run import run_app as run_app  # noqa: F401
-from ._main_skills import skills
-from ._main_static import cells_to_app, get_shiny_deps, static, static_assets
+from ._run import run
+from ._run import run_app as run_app  # noqa: F401
+from ._skills import skills
+from ._static import cells_to_app, get_shiny_deps, static, static_assets
 
 
 @click.group("main")
@@ -72,7 +72,7 @@ def test(
     provider: str,
     model: str | None,
 ) -> None:
-    from ._main_generate_test import generate_test_file
+    from ._generate_test import generate_test_file
 
     generate_test_file(
         app_file=app, output_file=test_file, provider=provider, model=model
@@ -136,7 +136,7 @@ def create(
     dir: Optional[Path | str] = None,
     package_name: Optional[str] = None,
 ) -> None:
-    from ._main_create import use_github_template, use_internal_template
+    from ._create import use_github_template, use_internal_template
 
     if dir is not None:
         dir = Path(dir)

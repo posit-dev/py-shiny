@@ -4,10 +4,10 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from shiny import _main_skills
+from shiny._main import _skills as _main_skills
 from shiny._main import main
 
-SKILLS_DIR = Path(_main_skills.__file__).parent / ".agents" / "skills"
+SKILLS_DIR = Path(_main_skills.__file__).parent.parent / ".agents" / "skills"
 
 
 def test_skills_list_shows_names_and_descriptions() -> None:

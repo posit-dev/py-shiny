@@ -19,17 +19,17 @@ import uvicorn.config
 
 import shiny
 
-from . import _autoreload, _launchbrowser, _utils
-from ._docstring import no_example
-from ._uvicorn import (
+from .. import _autoreload, _launchbrowser, _utils
+from .._docstring import no_example
+from .._uvicorn import (
     ReloadArgs,
     _run_uvicorn,
     _set_workbench_kwargs,
     maybe_setup_rsw_proxying,
 )
-from .bookmark._bookmark_state import shiny_bookmarks_folder_name
-from .express import is_express_app
-from .express._utils import escape_to_var_name
+from ..bookmark._bookmark_state import shiny_bookmarks_folder_name
+from ..express import is_express_app
+from ..express._utils import escape_to_var_name
 
 stop_shortcut = "Ctrl+C"
 
