@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The shiny package now ships [Agent Skills](https://agentskills.io) under `shiny/.agents/skills/` (the [library-skills](https://library-skills.io) convention), starting with a `debugging` skill that teaches coding agents to inspect running apps via test mode, `shiny.testmode.export_test_values()`, and the test snapshot endpoint. (#2339)
 
-* Added a `bookmarking` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to save and restore app state with `bookmark_store=`, the `session.bookmark` lifecycle hooks, custom bookmark values, and server-side bookmark storage. (#2342)
+* Added a `bookmarking` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to save and restore app state with `bookmark_store=`, the `session.bookmark` lifecycle hooks, custom bookmark values, and server-side bookmark storage. (#2345)
 
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
