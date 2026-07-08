@@ -15,19 +15,18 @@ from pathlib import Path
 from typing import Any, Optional
 
 import click
-import uvicorn
 import uvicorn.config
 
 import shiny
 
 from . import __version__, _autoreload, _launchbrowser, _static, _utils
+from ._docstring import no_example
 from ._uvicorn import (
     ReloadArgs,
     _run_uvicorn,
     _set_workbench_kwargs,
     maybe_setup_rsw_proxying,
 )
-from ._docstring import no_example
 from .bookmark._bookmark_state import shiny_bookmarks_folder_name
 from .express import is_express_app
 from .express._utils import escape_to_var_name
@@ -360,7 +359,9 @@ def run_app(
             )
             reload = False
         else:
-            setup_hot_reload(autoreload_port, port, launch_browser)
+            _autoreload.start_server(
+                autoreload_port, app_port=port, launch_browser=launch_browser
+            )
             # In reload mode, on_started fires in a fresh worker process on every
             # restart, so it cannot remember whether the browser was already opened.
             # reload_end pings the long-lived autoreload server, which both launches
@@ -435,14 +436,6 @@ def run_app(
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
-
-
-def setup_hot_reload(
-    autoreload_port: int,
-    app_port: int,
-    launch_browser: bool,
-) -> None:
-    _autoreload.start_server(autoreload_port, app_port, launch_browser)
 
 
 def is_file(app: str) -> bool:
