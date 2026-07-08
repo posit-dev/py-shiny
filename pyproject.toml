@@ -121,26 +121,6 @@ test = [
     "opentelemetry-sdk>=1.38.0",
     "logfire>=4.0.0",
 ]
-# Minimal tooling for running the unit tests (tests/pytest/) in the
-# "Oldest supported dependencies" CI job, which pins the runtime deps (and the
-# theme/otel extras) at their declared lower bounds. The full `test` extra
-# cannot be used there: it has unbounded entries that a lowest-version
-# resolution would pin to unusably old releases.
-test-oldest = [
-    "shiny[theme,otel]",
-    "pytest>=6.2.4",
-    "pytest-asyncio>=0.17.2",
-    "pytest-playwright>=0.5.2",
-    "playwright>=1.48.0",
-    "pytest-xdist",
-    "pytest-timeout",
-    "pytest-rerunfailures",
-    "syrupy>=5.5.1",
-    "psutil",
-    "pandas",
-    "polars",
-    "pyyaml",
-]
 dev = [
     "black>=26.1.0",
     "flake8>=6.0.0",

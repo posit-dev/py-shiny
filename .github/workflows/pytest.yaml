@@ -95,10 +95,32 @@ jobs:
             --extra theme --extra otel \
             pyproject.toml -o lowest-constraints.txt
           cat lowest-constraints.txt
-          # Install shiny with those deps pinned at their lower bounds via
-          # the constraints file. The `test-oldest` extra (see pyproject.toml)
-          # holds the unit-test tooling, which resolves normally.
-          uv pip install -e ".[test-oldest]" \
+
+          # The unit tests also need the `test` extra's tooling, but some of
+          # its version floors (e.g. shinychat's) sit above the runtime pins,
+          # so extract the same package *names* without their specifiers and
+          # let the constraints file decide the versions. logfire is skipped:
+          # every logfire release compatible with the pinned
+          # opentelemetry-sdk floor predates the API its tests exercise, and
+          # those tests skip when logfire is absent.
+          uv run --no-project --with packaging --with tomli python - > test-tooling.txt <<'EOF'
+          import tomli
+          from packaging.requirements import Requirement
+
+          with open("pyproject.toml", "rb") as f:
+              project = tomli.load(f)["project"]
+
+          for dep in project["optional-dependencies"]["test"]:
+              req = Requirement(dep)
+              if req.name == "logfire":
+                  continue
+              extras = f"[{','.join(sorted(req.extras))}]" if req.extras else ""
+              marker = f" ; {req.marker}" if req.marker else ""
+              print(f"{req.name}{extras}{marker}")
+          EOF
+          cat test-tooling.txt
+
+          uv pip install -e ".[theme,otel]" -r test-tooling.txt \
             --constraint lowest-constraints.txt
 
       - name: Pip list
