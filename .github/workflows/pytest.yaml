@@ -327,6 +327,14 @@ jobs:
         with:
           shiny-dir: "."
 
+  # DEMO ONLY (will be reverted): intentionally failing upstream job to prove
+  # that without `always()` the gate skips and satisfies branch protection.
+  demo-fail:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 1
+
   # Single stable check for branch protection / auto-merge. Jobs above may be
   # renamed or re-matrixed freely, but every PR job MUST be listed in `needs`
   # below or its failure will not block merging.
@@ -338,8 +346,9 @@ jobs:
     # cannot be merged (or auto-merged) regardless, and skipping avoids
     # failure emails from the reduced draft test matrix. Marking the PR
     # ready for review re-triggers the workflow with the full matrix.
-    if: always() && github.event_name == 'pull_request' && !github.event.pull_request.draft
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     needs:
+      - demo-fail
       - check
       - playwright-shiny
       - playwright-examples
