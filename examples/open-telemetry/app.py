@@ -6,76 +6,24 @@ This app shows:
 2. Automatic logging of reactive value updates
 3. How `otel.suppress` suppresses both Shiny's internal spans and value logs
 
-Run with:
-    SHINY_OTEL_COLLECT=all python app.py
+Run under OpenTelemetry zero-code auto-instrumentation (installed with
+`pip install "shiny[otel]"`), printing spans and log events to the console:
 
-Or under OpenTelemetry zero-code auto-instrumentation (the in-code console
-setup below detects the already-installed providers and skips itself):
-    opentelemetry-instrument --traces_exporter console shiny run app.py
-
-Or with shinylive:
-    shinylive export . site
-    python -m http.server --directory site 8008
+    opentelemetry-instrument --traces_exporter console --logs_exporter console \\
+        --metrics_exporter none shiny run app.py
 
 Watch the console for spans and log events as you interact with the app.
 """
 
-# Set up OpenTelemetry logging to the console
-from opentelemetry import trace
-from opentelemetry._logs import get_logger_provider, set_logger_provider
-from opentelemetry.sdk._logs import LoggerProvider
-from opentelemetry.sdk._logs.export import (
-    ConsoleLogRecordExporter,
-    SimpleLogRecordProcessor,
-)
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
-
 from shiny import App, otel, reactive, render, ui
 
-# Configure OpenTelemetry in exactly ONE place: either in code (as below), or
-# externally via `opentelemetry-instrument` / an observability package like
-# logfire -- never both. Providers can only be installed once per process;
-# when one is already installed, calling `set_tracer_provider()` /
-# `set_logger_provider()` again is ignored with an "Overriding of current
-# TracerProvider is not allowed" warning, and the in-code exporter setup
-# silently has no effect.
-#
-# To keep this example runnable both ways, only install the debug console
-# providers when nothing else has configured OpenTelemetry yet.
-# (Console exporters are NOT recommended for production use.)
-
-
-def _tracing_already_configured() -> bool:
-    """Detect a provider installed by e.g. `opentelemetry-instrument` or logfire."""
-    provider = trace.get_tracer_provider()
-    # Real SDK provider, or a wrapper around one (e.g. logfire's proxy provider)
-    return isinstance(provider, TracerProvider) or isinstance(
-        getattr(provider, "provider", None), TracerProvider
-    )
-
-
-if _tracing_already_configured():
-    print("OpenTelemetry is already configured; skipping in-code console setup")
-else:
-    trace_provider = TracerProvider()
-    trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-    trace.set_tracer_provider(trace_provider)
-
-if not isinstance(get_logger_provider(), LoggerProvider):
-    log_provider = LoggerProvider()
-    log_provider.add_log_record_processor(
-        SimpleLogRecordProcessor(ConsoleLogRecordExporter())
-    )
-    set_logger_provider(log_provider)
-
-# # Typical setup behavior:
-# import logfire
-# logfire.configure(
-#     token="fake-token-for-demo",
-#     service_name="shiny-open-telemetry-demo",
-#     environment="development",
-# )
+# This app intentionally contains NO OpenTelemetry setup code. Instrumentation
+# is an operational concern: apply it at launch with `opentelemetry-instrument`
+# (see the module docstring above) and configure exporters via its CLI flags or
+# standard `OTEL_*` environment variables. Configuring providers inside the app
+# (`trace.set_tracer_provider(...)`) is discouraged -- providers can only be
+# installed once per process, so in-code setup conflicts with (and is ignored
+# under) external instrumentation.
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),

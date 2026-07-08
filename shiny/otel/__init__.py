@@ -35,13 +35,13 @@ def server(input, output, session):
 app = App(app_ui, server)
 ```
 
-Run with:
+Run under OpenTelemetry zero-code auto-instrumentation (installed with
+`pip install "shiny[otel]"`):
 ```bash
-export SHINY_OTEL_COLLECT=all
-python app.py
+opentelemetry-instrument --traces_exporter console shiny run app.py
 ```
 
-Watch the console output to see Shiny's spans for `result` and `result_instrumented` but not for `result_private`.
+Watch the console output to see Shiny's spans for `result` and `result_instrumented` but not for `result_private`. Note that the app contains no OpenTelemetry setup code — instrumentation is applied at launch.
 
 ## Table of Contents
 
@@ -111,10 +111,11 @@ pip install "shiny[otel]"
 This installs the OpenTelemetry API (required), the SDK (for exporters), and
 `opentelemetry-distro[otlp]` (for zero-code auto-instrumentation and OTLP export).
 
-### Zero-Code Setup (Recommended)
+### Standard Setup: `opentelemetry-instrument`
 
-The simplest way to enable OpenTelemetry is the standard `opentelemetry-instrument`
-wrapper, which configures the SDK before your app starts — no code changes needed:
+The standard way to enable OpenTelemetry is the `opentelemetry-instrument`
+wrapper, which configures the SDK before your app starts — your app contains no
+instrumentation code at all:
 
 ```bash
 OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument shiny run app.py
@@ -136,65 +137,11 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 - Auto-instrumentation also instruments other libraries your app uses (HTTP clients,
   databases, etc.), so their spans appear alongside Shiny's.
 - Works with `shiny run --reload` — the reloaded process inherits the instrumentation.
-- Do **not** combine this with the programmatic setup below: auto-instrumentation
-  installs the tracer provider before your app code runs, so a manual
-  `trace.set_tracer_provider()` call logs `Overriding of current TracerProvider is
-  not allowed` and is ignored.
-
-### Programmatic Setup
-
-Alternatively (when *not* running under `opentelemetry-instrument`), configure
-OpenTelemetry in code before running your app:
-
-```python
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
-from shiny import App, ui, render, reactive
-
-# Configure OpenTelemetry
-provider = TracerProvider()
-provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-trace.set_tracer_provider(provider)
-
-# Your app code...
-```
-
-**Note**: Shiny uses lazy initialization for its OpenTelemetry tracer, so you can configure it anywhere in your code before the app runs.
-
-**Tip**: A tracer provider can only be installed once per process. If your app might
-also be launched under `opentelemetry-instrument` (or alongside a package like
-`logfire` that configures OpenTelemetry itself), guard the in-code setup so it only
-runs when nothing else has configured a provider yet:
-
-```python
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-
-provider = trace.get_tracer_provider()
-already_configured = isinstance(provider, TracerProvider) or isinstance(
-    getattr(provider, "provider", None), TracerProvider
-)
-if not already_configured:
-    new_provider = TracerProvider()
-    new_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-    trace.set_tracer_provider(new_provider)
-```
-
-See `examples/open-telemetry/` for a complete app using this pattern.
 
 ### Quick Example
 
 ```python
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
-from shiny import App, ui, render, reactive
-
-# Configure OTel
-provider = TracerProvider()
-provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-trace.set_tracer_provider(provider)
+from shiny import App, ui, render
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 1, 100, 50),
@@ -211,11 +158,43 @@ app = App(app_ui, server)
 
 Run with:
 ```bash
-export SHINY_OTEL_COLLECT=all
-python app.py
+opentelemetry-instrument --traces_exporter console shiny run app.py
 ```
 
-You'll see OpenTelemetry spans printed to the console showing Shiny's internal execution.
+You'll see OpenTelemetry spans printed to the console showing Shiny's internal execution. See `examples/open-telemetry/` for a complete app demonstrating collection control.
+
+### In-Code Setup (Discouraged)
+
+Configuring OpenTelemetry inside the app is discouraged: it couples your app to a
+specific observability setup, and it conflicts with external instrumentation.
+Providers can only be installed once per process — under `opentelemetry-instrument`
+the wrapper's provider is installed before your app code runs, so a manual
+`trace.set_tracer_provider()` call logs `Overriding of current TracerProvider is not
+allowed` and is silently ignored. Configure OpenTelemetry in exactly one place.
+
+Legitimate reasons to configure in code include observability SDKs that manage
+OpenTelemetry themselves (e.g. `logfire.configure()` — see
+[Observability Backends](#observability-backends)) and deployment platforms where
+you cannot control the launch command. In those cases, guard the setup so it only
+runs when nothing else has configured a provider yet:
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+
+provider = trace.get_tracer_provider()
+already_configured = isinstance(provider, TracerProvider) or isinstance(
+    getattr(provider, "provider", None), TracerProvider
+)
+if not already_configured:
+    new_provider = TracerProvider()
+    new_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+    trace.set_tracer_provider(new_provider)
+```
+
+**Note**: Shiny uses lazy initialization for its OpenTelemetry tracer, so it picks up
+whichever provider is installed by the time the app runs, regardless of setup method.
 
 ## Collection Levels
 
@@ -255,8 +234,9 @@ All available telemetry (currently equivalent to `reactivity`). Reserved for fut
 
 Via environment variable:
 ```bash
-export SHINY_OTEL_COLLECT=session  # or: none, reactive_update, reactivity, all
-python app.py
+SHINY_OTEL_COLLECT=session \\
+    opentelemetry-instrument shiny run app.py
+# or: none, reactive_update, reactivity, all
 ```
 
 The default level is `all` if not specified.
@@ -427,21 +407,18 @@ with otel.suppress():
 
 ## Best Practices
 
-### 1. Use Batch Processor in Production
+### 1. Use Batch Processing in Production
 
-Replace `SimpleSpanProcessor` with `BatchSpanProcessor` for better performance:
+`opentelemetry-instrument` uses batching span processors by default — nothing to do.
+If you configure the SDK in code instead, replace `SimpleSpanProcessor` with
+`BatchSpanProcessor`, which reduces overhead by buffering spans and sending them in
+batches:
 
 ```python
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-# Instead of:
-# provider.add_span_processor(SimpleSpanProcessor(exporter))
-
-# Use:
 provider.add_span_processor(BatchSpanProcessor(exporter))
 ```
-
-Batching reduces overhead by buffering spans and sending them in batches.
 
 ### 2. Choose Appropriate Collection Level
 
@@ -459,19 +436,12 @@ export SHINY_OTEL_COLLECT=reactive_update  # Balanced
 
 ### 3. Add Resource Attributes
 
-Include service metadata in your traces:
+Include service metadata in your traces via standard environment variables:
 
-```python
-from opentelemetry.sdk.resources import Resource
-
-resource = Resource.create({
-    "service.name": "my-shiny-app",
-    "service.version": "1.2.3",
-    "deployment.environment": "production",
-    "service.namespace": "analytics-team",
-})
-
-provider = TracerProvider(resource=resource)
+```bash
+export OTEL_SERVICE_NAME=my-shiny-app
+export OTEL_RESOURCE_ATTRIBUTES="service.version=1.2.3,deployment.environment=production,service.namespace=analytics-team"
+opentelemetry-instrument shiny run app.py
 ```
 
 ### 4. Protect Sensitive Data
@@ -502,14 +472,14 @@ app = App(app_ui, server, sanitize_errors=True)
 
 ### 6. Use Sampling in High-Traffic Apps
 
-For high-traffic applications, use trace sampling to reduce overhead:
+For high-traffic applications, use trace sampling to reduce overhead. Via standard
+environment variables:
 
-```python
-from opentelemetry.sdk.trace.sampling import ParentBasedTraceIdRatio
-
+```bash
 # Sample 10% of traces
-sampler = ParentBasedTraceIdRatio(0.1)
-provider = TracerProvider(sampler=sampler)
+export OTEL_TRACES_SAMPLER=parentbased_traceidratio
+export OTEL_TRACES_SAMPLER_ARG=0.1
+opentelemetry-instrument shiny run app.py
 ```
 
 ### 7. Add Custom Spans for Business Logic
@@ -532,7 +502,9 @@ def expensive_computation():
 
 ## Observability Backends
 
-Shiny's OpenTelemetry integration works with any OTLP-compatible backend.
+Shiny's OpenTelemetry integration works with any OTLP-compatible backend. In every
+case the app itself stays unchanged — pick the backend by setting standard `OTEL_*`
+environment variables and launching with `opentelemetry-instrument`.
 
 ### Jaeger (Open Source)
 
@@ -547,44 +519,9 @@ docker run -d --name jaeger \\
 ```
 
 **Configuration**:
-```python
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from shiny import App, ui, render, reactive
-
-# Configure OpenTelemetry
-resource = Resource.create({
-    "service.name": "my-shiny-app",
-    "deployment.environment": "development",
-})
-provider = TracerProvider(resource=resource)
-
-# Use OTLP exporter to send traces to Jaeger
-otlp_exporter = OTLPSpanExporter(
-    endpoint="http://localhost:4317",  # Jaeger's OTLP gRPC port
-    insecure=True,  # For local development
-)
-provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-trace.set_tracer_provider(provider)
-
-# Now build your Shiny app
-app_ui = ui.page_fluid(
-    ui.h2("My Shiny App"),
-    ui.input_slider("n", "N", 1, 100, 50),
-    ui.output_text("result"),
-)
-
-def server(input, output, session):
-    @render.text
-    def result():
-        import time
-        time.sleep(0.1)  # Simulate work
-        return f"Value: {input.n()}"
-
-app = App(app_ui, server)
+```bash
+# OTLP to http://localhost:4317 is the default, so only the service name is needed
+OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument shiny run app.py
 ```
 
 **UI**: http://localhost:16686
@@ -620,34 +557,31 @@ from shiny import App, ui
 
 **UI**: https://logfire.pydantic.dev
 
+**Note**: `logfire.configure()` installs the OpenTelemetry provider itself, so run
+the app directly (`shiny run app.py`) — do not also wrap it with
+`opentelemetry-instrument`.
+
 ### Honeycomb (Managed)
 
 Powerful observability platform focused on trace analysis.
 
 **Configuration**:
-```python
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
-exporter = OTLPSpanExporter(
-    endpoint="https://api.honeycomb.io/v1/traces",
-    headers={"x-honeycomb-team": os.environ["HONEYCOMB_API_KEY"]},
-)
+```bash
+export OTEL_SERVICE_NAME=my-shiny-app
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.honeycomb.io"
+export OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=$HONEYCOMB_API_KEY"
+opentelemetry-instrument shiny run app.py
 ```
 
 ### Datadog (Managed)
 
-Enterprise observability platform with APM features.
+Enterprise observability platform with APM features. Send OTLP to your Datadog Agent
+(with [OTLP ingestion enabled](https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest_in_the_agent/)):
 
-**Configuration**:
-```python
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
-exporter = OTLPSpanExporter(
-    endpoint="https://http-intake.logs.datadoghq.com/v1/traces",
-    headers={
-        "DD-API-KEY": os.environ["DD_API_KEY"],
-    },
-)
+```bash
+export OTEL_SERVICE_NAME=my-shiny-app
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
+opentelemetry-instrument shiny run app.py
 ```
 
 ### New Relic (Managed)
@@ -655,23 +589,19 @@ exporter = OTLPSpanExporter(
 Full-stack observability platform.
 
 **Configuration**:
-```python
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
-exporter = OTLPSpanExporter(
-    endpoint="https://otlp.nr-data.net:4317",
-    headers={"api-key": os.environ["NEW_RELIC_LICENSE_KEY"]},
-)
+```bash
+export OTEL_SERVICE_NAME=my-shiny-app
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://otlp.nr-data.net:4317"
+export OTEL_EXPORTER_OTLP_HEADERS="api-key=$NEW_RELIC_LICENSE_KEY"
+opentelemetry-instrument shiny run app.py
 ```
 
 ### Console (Development)
 
-Simple console output for debugging. See the [open-telemetry example](../../examples/open-telemetry/) for a complete working demonstration of console exporters with collection control.
+Simple console output for debugging. See the [open-telemetry example](../../examples/open-telemetry/) for a complete working demonstration of console output with collection control.
 
-```python
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter
-
-exporter = ConsoleSpanExporter()
+```bash
+opentelemetry-instrument --traces_exporter console shiny run app.py
 ```
 
 ## Troubleshooting
@@ -681,7 +611,8 @@ exporter = ConsoleSpanExporter()
 **Problem**: Console/backend shows no spans from Shiny.
 
 **Solutions**:
-1. Verify OpenTelemetry is configured correctly
+1. Verify the app is launched with `opentelemetry-instrument` (or, for in-code
+   setup, that a provider is installed before the app runs)
 
 2. Check collection level:
    ```bash
@@ -698,21 +629,22 @@ exporter = ConsoleSpanExporter()
 **Problem**: Application performance degraded with OpenTelemetry enabled.
 
 **Solutions**:
-1. Use `BatchSpanProcessor` instead of `SimpleSpanProcessor`:
-   ```python
-   from opentelemetry.sdk.trace.export import BatchSpanProcessor
-   provider.add_span_processor(BatchSpanProcessor(exporter))
-   ```
-
-2. Lower collection level:
+1. Lower collection level:
    ```bash
    export SHINY_OTEL_COLLECT=session  # Minimal
    ```
 
-3. Enable sampling:
+2. Enable sampling:
+   ```bash
+   export OTEL_TRACES_SAMPLER=parentbased_traceidratio
+   export OTEL_TRACES_SAMPLER_ARG=0.1  # Sample 10% of traces
+   ```
+
+3. If configuring the SDK in code, use `BatchSpanProcessor` instead of
+   `SimpleSpanProcessor` (`opentelemetry-instrument` already batches by default):
    ```python
-   from opentelemetry.sdk.trace.sampling import ParentBasedTraceIdRatio
-   provider = TracerProvider(sampler=ParentBasedTraceIdRatio(0.1))
+   from opentelemetry.sdk.trace.export import BatchSpanProcessor
+   provider.add_span_processor(BatchSpanProcessor(exporter))
    ```
 
 4. Use `@otel.suppress` for high-frequency operations:
@@ -787,10 +719,9 @@ exporter = ConsoleSpanExporter()
 1. Check exporter endpoint URL and authentication
 2. Verify network connectivity to backend
 3. Check backend-specific requirements (headers, format)
-4. Use `ConsoleSpanExporter` first to verify spans are generated:
-   ```python
-   from opentelemetry.sdk.trace.export import ConsoleSpanExporter
-   provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+4. Use the console exporter first to verify spans are generated:
+   ```bash
+   opentelemetry-instrument --traces_exporter console shiny run app.py
    ```
 
 ### "Overriding of current TracerProvider is not allowed"

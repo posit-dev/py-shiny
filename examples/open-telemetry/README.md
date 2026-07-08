@@ -154,25 +154,27 @@ pip install -r requirements.txt
 
 ### Run the App
 
-```bash
-python app.py
-```
-
-Alternatively, run any Shiny app under OpenTelemetry auto-instrumentation — no in-code
-SDK setup required (`opentelemetry-instrument` ships with `shiny[otel]`):
+Run the app under OpenTelemetry zero-code auto-instrumentation
+(`opentelemetry-instrument` ships with `shiny[otel]`), printing spans and log
+events to the console:
 
 ```bash
-OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument --traces_exporter console shiny run app.py
+opentelemetry-instrument --traces_exporter console --logs_exporter console \
+    --metrics_exporter none shiny run app.py
 ```
 
-Note: OpenTelemetry should be configured in exactly one place — either in code
-(`trace.set_tracer_provider(...)`) or externally via `opentelemetry-instrument`,
-never both. Providers can only be installed once per process: when one is already
-installed, a second `set_tracer_provider()` call is ignored with an "Overriding of
-current TracerProvider is not allowed" warning and the in-code exporter setup
-silently has no effect. This example's `app.py` detects an already-configured
-provider and skips its in-code console setup, so it works under either launch
-method.
+To export to an observability backend instead, drop the exporter flags and use
+standard `OTEL_*` environment variables (OTLP is the default exporter):
+
+```bash
+OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument shiny run app.py
+```
+
+Note: the app itself intentionally contains **no** OpenTelemetry setup code.
+Instrumentation is an operational concern applied at launch. Configuring providers
+inside the app (`trace.set_tracer_provider(...)`) is discouraged: providers can only
+be installed once per process, so in-code setup conflicts with — and is silently
+ignored under — external instrumentation.
 
 The app will open in your browser. As you interact with the buttons:
 
@@ -186,8 +188,8 @@ Watch the console output to see which spans are created.
 You can set the default collection level via environment variable:
 
 ```bash
-export SHINY_OTEL_COLLECT=session
-python app.py
+SHINY_OTEL_COLLECT=session opentelemetry-instrument --traces_exporter console \
+    --logs_exporter console --metrics_exporter none shiny run app.py
 ```
 
 The `otel.suppress` decorator and context manager will override this default.
