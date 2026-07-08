@@ -162,6 +162,27 @@ trace.set_tracer_provider(provider)
 
 **Note**: Shiny uses lazy initialization for its OpenTelemetry tracer, so you can configure it anywhere in your code before the app runs.
 
+**Tip**: A tracer provider can only be installed once per process. If your app might
+also be launched under `opentelemetry-instrument` (or alongside a package like
+`logfire` that configures OpenTelemetry itself), guard the in-code setup so it only
+runs when nothing else has configured a provider yet:
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+
+provider = trace.get_tracer_provider()
+already_configured = isinstance(provider, TracerProvider) or isinstance(
+    getattr(provider, "provider", None), TracerProvider
+)
+if not already_configured:
+    new_provider = TracerProvider()
+    new_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+    trace.set_tracer_provider(new_provider)
+```
+
+See `examples/open-telemetry/` for a complete app using this pattern.
+
 ### Quick Example
 
 ```python
