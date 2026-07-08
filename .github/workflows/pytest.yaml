@@ -65,6 +65,73 @@ jobs:
         run: |
           make ci-check-mypy-can-run
 
+  oldest-deps:
+    name: "Oldest deps"
+    runs-on: ubuntu-latest
+    if: github.event_name != 'release'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install `uv`
+        # Pinned to an exact release; astral-sh/setup-uv has no floating `v8` tag
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+          cache-suffix: py3.10-oldest-deps
+          activate-environment: true
+          # Oldest supported Python (`requires-python` in pyproject.toml)
+          python-version: "3.10"
+
+      - name: Install oldest supported dependencies
+        run: |
+          # Resolve every direct runtime dependency (and the theme/otel
+          # extras) to its declared lower bound. `--no-emit-package shiny`
+          # keeps the released shiny wheel (pulled in transitively via
+          # shinychat) out of the constraints so it cannot conflict with the
+          # editable install below.
+          uv pip compile --resolution lowest-direct --no-emit-package shiny \
+            --extra theme --extra otel \
+            pyproject.toml -o lowest-constraints.txt
+          cat lowest-constraints.txt
+
+          # The unit tests also need the `test` extra's tooling, but some of
+          # its version floors (e.g. shinychat's) sit above the runtime pins,
+          # so extract the same package *names* without their specifiers and
+          # let the constraints file decide the versions. logfire is skipped:
+          # every logfire release compatible with the pinned
+          # opentelemetry-sdk floor predates the API its tests exercise, and
+          # those tests skip when logfire is absent.
+          uv run --no-project --with packaging --with tomli python - > test-tooling.txt <<'EOF'
+          import tomli
+          from packaging.requirements import Requirement
+
+          with open("pyproject.toml", "rb") as f:
+              project = tomli.load(f)["project"]
+
+          for dep in project["optional-dependencies"]["test"]:
+              req = Requirement(dep)
+              if req.name == "logfire":
+                  continue
+              extras = f"[{','.join(sorted(req.extras))}]" if req.extras else ""
+              marker = f" ; {req.marker}" if req.marker else ""
+              print(f"{req.name}{extras}{marker}")
+          EOF
+          cat test-tooling.txt
+
+          uv pip install -e ".[theme,otel]" -r test-tooling.txt \
+            --constraint lowest-constraints.txt
+
+      - name: Pip list
+        run: |
+          uv pip list
+
+      - name: Run unit tests
+        run: |
+          make check-tests
+
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
@@ -342,6 +409,7 @@ jobs:
     if: always() && github.event_name == 'pull_request' && !github.event.pull_request.draft
     needs:
       - check
+      - oldest-deps
       - playwright-shiny
       - playwright-examples
       - playwright-ai

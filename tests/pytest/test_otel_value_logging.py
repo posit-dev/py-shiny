@@ -22,10 +22,15 @@ from unittest.mock import Mock, patch
 import pytest
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.sdk._logs import LoggerProvider
-from opentelemetry.sdk._logs.export import (
-    InMemoryLogRecordExporter,
-    SimpleLogRecordProcessor,
-)
+from opentelemetry.sdk._logs.export import SimpleLogRecordProcessor
+
+try:
+    from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter
+except ImportError:
+    # Renamed in opentelemetry-sdk 1.39.0; same API under the old name
+    from opentelemetry.sdk._logs.export import (
+        InMemoryLogExporter as InMemoryLogRecordExporter,  # pyright: ignore[reportDeprecated]
+    )
 
 from shiny import reactive
 from shiny._namespaces import ResolvedId
