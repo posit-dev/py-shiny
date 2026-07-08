@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The shiny package now ships [Agent Skills](https://agentskills.io) under `shiny/.agents/skills/` (the [library-skills](https://library-skills.io) convention), starting with a `debugging` skill that teaches coding agents to inspect running apps via test mode, `shiny.testmode.export_test_values()`, and the test snapshot endpoint. (#2339)
 
+* Added a bundled `testing` Agent Skill that teaches coding agents to write end-to-end tests for Shiny apps with pytest and Playwright: the `local_app` / `create_app_fixture` app-launch fixtures, the `shiny.playwright.controller` component controllers, and `shiny add test`. (#2344)
+
 * Added a `shiny skills` CLI command group to discover the Agent Skills bundled in the shiny package: `shiny skills list` shows each skill's name and description, `shiny skills get <name>` prints its `SKILL.md` to stdout, and `shiny skills path <name>` prints the skill's directory (for reading its `references/` and `scripts/`). (#2340)
 
 * Added a `bookmarking` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to save and restore app state with `bookmark_store=`, the `session.bookmark` lifecycle hooks, custom bookmark values, and server-side bookmark storage. (#2345)
