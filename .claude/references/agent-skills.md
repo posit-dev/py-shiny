@@ -1,7 +1,8 @@
 # Bundled Agent Skills
 
 The shiny package ships [Agent Skills](https://agentskills.io) under
-`shiny/.agents/skills/` — one directory per skill, each with a `SKILL.md`.
+`shiny/.agents/skills/` — one directory per skill, each with a `SKILL.md`,
+following the [Agent Skills specification](https://agentskills.io/specification).
 They are **package data**: they ship in the wheel and are discovered by
 installers such as [library-skills](https://library-skills.io) (which symlinks
 them into a project's `.agents/skills/` or `.claude/skills/`). A `shiny skills
@@ -14,47 +15,71 @@ skill documents the public API and the reference file documents the internals.
 
 ## Layout
 
+Per the spec, a skill is a directory containing at minimum a `SKILL.md`, plus
+three conventional optional directories:
+
 ```
 shiny/.agents/skills/
   <skill-name>/
-    SKILL.md          # required
-    <supporting>.*    # optional: only for heavy reference or reusable scripts
+    SKILL.md          # required: frontmatter + instructions
+    scripts/          # optional: self-contained runnable code
+    references/       # optional: on-demand docs (loaded only when needed)
+    assets/           # optional: templates, images, data files
 ```
 
-- Directory names are short kebab-case topics: `debugging`, `testing`,
-  `modules`, `express`, ...
+- Skill names are short topics: `debugging`, `testing`, `modules`, `express`, ...
 - Names are **unprefixed** (no `shiny-` prefix): installers namespace skills
   by package, and the description scopes the skill to Shiny for Python.
-- Keep everything in `SKILL.md` unless a supporting file earns its keep
-  (100+ lines of API reference, or a runnable script an agent should copy).
+- Keep everything in `SKILL.md` until a file earns its keep. Heavy reference
+  material (100+ lines) goes in `references/` — agents load those on demand,
+  so smaller focused files cost less context. Link with relative paths from
+  the skill root (`references/REFERENCE.md`) and keep references one level
+  deep — no chains of files pointing at files.
 
-## Frontmatter contract
+## Frontmatter
 
 ```yaml
 ---
-name: <must match the directory name>
-description: Use when <triggering conditions, symptoms, and temptations>...
+name: <skill-name>
+description: <what the skill covers and when to use it>
 ---
 ```
 
-- `description` states **when to load the skill, never what it teaches or the
-  workflow it contains**. If the description summarizes the process, agents
-  follow the summary and skip the body. Good descriptions list the situations,
-  symptoms, and search phrases an agent would have when the skill applies —
-  including the *wrong* approach it might be about to take (e.g. "...or when
-  tempted to add print statements or hidden outputs").
-- Third person, starts with "Use when", under ~500 characters.
-- Descriptions across skills must not overlap: agents pick a skill by
-  description alone, so two skills matching the same symptom means the wrong
-  one gets loaded. When adding a skill, re-read the other descriptions and
-  sharpen the boundaries.
+Required fields (spec constraints):
 
-These rules (name matches directory, description present) are enforced by
+- `name` — 1-64 characters; lowercase letters, numbers, and hyphens only; no
+  leading, trailing, or consecutive hyphens; **must match the directory name**.
+- `description` — 1-1024 characters, non-empty. Covers both *what the skill
+  does* and *when to use it*, with keywords agents would match on.
+
+How to write the description (this is the only part of a skill loaded at
+startup — agents decide from it alone whether to activate the skill):
+
+- Lead with a one-clause summary of what the skill covers, then "Use when…"
+  listing triggering conditions, symptoms, and search phrases — including the
+  *wrong* approach an agent might be about to take (e.g. "…or when tempted to
+  add print statements or hidden outputs").
+- Do **not** summarize the skill's workflow or step-by-step process: agents
+  that get the recipe from the description follow it and skip the body.
+- Third person. Descriptions across skills must not overlap: agents pick a
+  skill by description alone, so two skills matching the same symptom means
+  the wrong one gets loaded. When adding a skill, re-read the other
+  descriptions and sharpen the boundaries.
+
+Optional fields (`license`, `compatibility`, `metadata`, `allowed-tools`) are
+defined by the spec but usually unnecessary here: skills inherit the package's
+MIT license, and `compatibility` is only for skills with environment
+requirements beyond shiny itself (e.g. requires Playwright installed).
+
+The name/directory match and description presence are enforced by
 `tests/pytest/test_packaging.py`.
 
-## Content shape
+## Body content
 
-Skills are reference docs, not tutorials. The shape that works:
+The body is loaded in full once a skill activates, so size it for progressive
+disclosure: keep `SKILL.md` under ~500 lines (well under 5000 tokens), moving
+detail to `references/`. Skills are reference docs, not tutorials. The shape
+that works:
 
 1. **Overview** — the core principle in 1-3 sentences, including what NOT to
    do (the workaround the skill replaces).
@@ -72,6 +97,10 @@ outgrows that, it is probably a second skill. Prefer extending an existing
 skill over creating a new one; create a new directory only for a genuinely
 separate topic with its own triggering conditions.
 
+Anything in `scripts/` must be self-contained (or clearly document its
+dependencies), emit helpful error messages, and handle edge cases — agents
+run these directly.
+
 ## Maintenance
 
 - Bundled skills are **user-facing documentation**. When a PR changes an API
@@ -88,6 +117,9 @@ separate topic with its own triggering conditions.
   `[tool.setuptools.package-data]` globs in `pyproject.toml`. The explicit
   `.agents/**` glob is required because `**` does not match hidden
   directories; without it skills silently drop out of the wheel.
+- The spec's reference validator checks frontmatter and naming conventions:
+  `uvx --from skills-ref agentskills validate shiny/.agents/skills/<name>`
+  (see [skills-ref](https://github.com/agentskills/agentskills/tree/main/skills-ref)).
 - To confirm against a real build:
   `uv build --wheel && unzip -l dist/shiny-*.whl | grep .agents`
 - For a new skill, do a before/after check: give a fresh agent (no skill) a
