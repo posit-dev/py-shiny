@@ -64,6 +64,28 @@ jobs:
         run: |
           make ci-check-mypy-can-run
 
+  # Run the unit tests against the oldest supported uvicorn (the pyproject.toml
+  # floor) so the pin stays honest. Update the pin here when bumping the floor.
+  check-uvicorn-floor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: "3.10"
+
+      - name: Downgrade uvicorn to the version floor
+        run: |
+          uv pip install "uvicorn==0.23.0"
+          uv pip list | grep uvicorn
+
+      - name: Run unit tests
+        run: |
+          make check-tests
+
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
