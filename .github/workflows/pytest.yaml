@@ -44,9 +44,10 @@ jobs:
         run: |
           make check-tests
 
-      - name: Type check
-        if: steps.install.outcome == 'success' && (success() || failure())
+      - name: Type check (not Windows)
+        if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
         run: |
+          # `pythonPlatform: All` covers platform-specific stubs
           make check-types
 
       - name: Lint code
