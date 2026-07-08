@@ -13,12 +13,15 @@ from uvicorn.server import Server
 from uvicorn.supervisors import ChangeReload, Multiprocess
 
 if TYPE_CHECKING:
-    # Not a runtime import: uvicorn._types is absent in older supported releases.
+    # Not a runtime import: uvicorn._types.ASGIApplication only exists in
+    # uvicorn >= 0.23, and we support >= 0.16.
     from uvicorn._types import ASGIApplication
 
 from ._hostenv import is_workbench
 from ._typing_extensions import NotRequired, TypedDict
 
+# Mirrors uvicorn's STARTUP_FAILURE exit code, which is only importable
+# (from uvicorn.config) in uvicorn >= 0.50, and we support >= 0.16.
 _UVICORN_STARTUP_FAILURE = 3
 
 
@@ -70,8 +73,8 @@ def _run_uvicorn(
             sys.exit(_UVICORN_STARTUP_FAILURE)
     elif hasattr(config, "load_app"):
         # Fail fast on app import errors before binding the socket, matching
-        # uvicorn.run(). Config.load_app() only exists in recent Uvicorn releases;
-        # older supported versions (>=0.16) load the app inside serve() instead.
+        # uvicorn.run(). Config.load_app() only exists in uvicorn >= 0.47;
+        # older supported versions (>= 0.16) load the app inside serve() instead.
         config.load_app()
 
     try:
