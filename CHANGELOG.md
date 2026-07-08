@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
-* Raised the minimum supported uvicorn version from 0.16.0 to 0.23.0 (July 2023). The old floor no longer worked in practice: running on Posit Workbench passes uvicorn the `ws_per_message_deflate` option, which requires uvicorn >= 0.17. A new CI job now runs the unit tests against the floor version so the pin stays honest. (#2317)
+* Raised the minimum supported uvicorn version from 0.16.0 to 0.23.0 (July 2023). The old floor no longer worked in practice: running on Posit Workbench passes uvicorn the `ws_per_message_deflate` option, which requires uvicorn >= 0.17. (#2317)
 
 * Optimized the test suite by avoiding network-based dataset downloads and heavy library imports during Playwright test app startup, reducing setup time significantly. (#2314)
 
