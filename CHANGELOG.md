@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed `--launch-browser` so it no longer depends on INFO-level Uvicorn startup logs. Browser launch now works when logs are disabled or `--log-level=warning` is used. (#569)
+
 * `ui.output_data_frame` will now consistently order the filtered columns in ascending column order. (#2093)
 * When resetting a `ui.output_data_frame` filter, numeric range filters will now reset both values. (#2093)
 
@@ -43,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other changes
 
 * CI now runs the unit tests on Ubuntu with the oldest supported Python (3.10) and every runtime dependency resolved to its declared minimum version (via `uv pip compile --resolution lowest-direct`), so stale lower bounds in `pyproject.toml` are caught. As part of this, `starlette` and `prompt-toolkit` gained explicit lower bounds (`>=0.17.1` and `>=3.0.0`), and the `opentelemetry-api`/`opentelemetry-sdk` minimums were raised from 1.20.0 to 1.24.0 — older versions could leak unsanitized error messages in span exception stack traces. Shiny's OpenTelemetry log emission (which relied on the `Logger.emit()` keyword form added in opentelemetry 1.38.0 and was silently dropped on older versions) now falls back to constructing the `LogRecord` manually, so it works across the whole supported range. (#2335)
+
+* Raised the minimum supported uvicorn version from 0.16.0 to 0.23.0 (July 2023). The old floor no longer worked in practice: running on Posit Workbench passes uvicorn the `ws_per_message_deflate` option, which requires uvicorn >= 0.17. (#2317)
 
 * Optimized the test suite by avoiding network-based dataset downloads and heavy library imports during Playwright test app startup, reducing setup time significantly. (#2314)
 
