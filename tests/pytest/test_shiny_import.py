@@ -54,8 +54,10 @@ def test_shiny_import_itself():
                 file_txt = file_txt.split(txt)[0]
 
         for search_txt in ("\nfrom shiny.", "\nfrom shiny ", "\nimport shiny\n"):
-            if search_txt == "\nimport shiny\n" and path.name.endswith("_main.py"):
-                # skip shiny/_main.py file
+            if search_txt == "\nimport shiny\n" and (
+                path.stem.startswith("_main") or "_main" in path.parts
+            ):
+                # skip the shiny/_main* CLI files
                 continue
 
             if search_txt in file_txt:

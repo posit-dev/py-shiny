@@ -7,7 +7,7 @@ import pytest
 from uvicorn.config import Config
 from uvicorn.server import Server
 
-from shiny import _main
+from shiny import _main_run
 from shiny._uvicorn import ShinyServer, _set_workbench_kwargs
 
 
@@ -34,14 +34,14 @@ def test_launch_browser_callback_ignores_log_level(monkeypatch: pytest.MonkeyPat
     def run_uvicorn(app: Any, **kwargs: Any) -> None:
         captured_kwargs.update(kwargs)
 
-    monkeypatch.setattr(_main, "_run_uvicorn", run_uvicorn)
+    monkeypatch.setattr(_main_run, "_run_uvicorn", run_uvicorn)
 
     def launch_browser(host: str, port: int) -> None:
         browser_calls.append((host, port))
 
-    monkeypatch.setattr(_main._launchbrowser, "launch_browser", launch_browser)
+    monkeypatch.setattr(_main_run._launchbrowser, "launch_browser", launch_browser)
 
-    _main.run_app(
+    _main_run.run_app(
         cast(Any, object()),
         host="127.0.0.1",
         port=8765,
@@ -69,17 +69,17 @@ def test_reload_uses_startup_callback_not_log_handler(monkeypatch: pytest.Monkey
     def run_uvicorn(app: Any, **kwargs: Any) -> None:
         captured_kwargs.update(kwargs)
 
-    monkeypatch.setattr(_main, "_run_uvicorn", run_uvicorn)
+    monkeypatch.setattr(_main_run, "_run_uvicorn", run_uvicorn)
     monkeypatch.setattr(
-        _main._autoreload, "reload_end", lambda: reload_calls.append("reload_end")
+        _main_run._autoreload, "reload_end", lambda: reload_calls.append("reload_end")
     )
 
     def start_server(autoreload_port: int, app_port: int, launch_browser: bool) -> None:
         start_server_calls.append((autoreload_port, app_port, launch_browser))
 
-    monkeypatch.setattr(_main._autoreload, "start_server", start_server)
+    monkeypatch.setattr(_main_run._autoreload, "start_server", start_server)
 
-    _main.run_app(
+    _main_run.run_app(
         cast(Any, object()),
         port=8765,
         autoreload_port=8766,
