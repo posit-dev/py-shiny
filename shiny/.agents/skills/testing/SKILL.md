@@ -104,11 +104,37 @@ Controller names follow the UI function: `ui.input_slider` →
 | Navigation | `NavPanel`, `NavsetBar`, `NavsetCardPill`, `NavsetCardTab`, `NavsetCardUnderline`, `NavsetHidden`, `NavsetPill`, `NavsetPillList`, `NavsetTab`, `NavsetUnderline`, `PageNavbar` |
 | Server state | `AppTestValues` |
 
-## Assert server-side values
+## Client-side vs server-side values
 
-To assert on `input`/`output`/internal reactive values rather than rendered
-HTML, use `controller.AppTestValues(page)` and `export_test_values()` — see
-the `debugging` skill for the test-mode snapshot API.
+Component controllers and `AppTestValues` read from different places, and the
+"same" value can legitimately differ between them:
+
+- **Controllers read the browser DOM** — what the user sees. `expect_value()` /
+  `get_value()` inspect the rendered widget, so values are strings formatted
+  for display: a slider reads `"50"` (or `"1,000"` with a thousands separator),
+  a date input reads the displayed date text, an output reads its rendered
+  text/HTML.
+- **`controller.AppTestValues(page)` reads the server's snapshot** — the
+  Python values the server function currently holds: `input.n()` as the int
+  `50`, an output as the render function's return value, plus `export` values
+  (internal reactives surfaced with `export_test_values()`) that have no DOM
+  presence at all.
+
+They can also differ in *time*: the DOM updates instantly when the user
+interacts, but the server only sees the change after the websocket round-trip
+(and any debounce/throttle), so a client-side value can briefly be ahead of
+its server-side counterpart.
+
+Prefer controllers for user-visible behavior; reach for `AppTestValues` when
+asserting server state:
+
+```python
+app_values = controller.AppTestValues(page)
+app_values.expect_input("n", 50)          # server-side: int, not "50"
+app_values.expect_export("doubled", 100)  # internal reactive, no DOM
+```
+
+See the `debugging` skill for the full test-mode snapshot API.
 
 ## Debug a failing test
 
