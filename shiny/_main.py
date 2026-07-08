@@ -361,6 +361,11 @@ def run_app(
             reload = False
         else:
             setup_hot_reload(autoreload_port, port, launch_browser)
+            # In reload mode, on_started fires in a fresh worker process on every
+            # restart, so it cannot remember whether the browser was already opened.
+            # reload_end pings the long-lived autoreload server, which both launches
+            # the browser once (when launch_browser is set) and broadcasts the page
+            # refresh on later restarts. See nudge() in _autoreload.py.
             on_started = _autoreload.reload_end
 
     reload_args: ReloadArgs = {}
@@ -400,7 +405,12 @@ def run_app(
             "reload_dirs": reload_dirs,
         }
 
+    # Launch the browser directly only when the autoreload server isn't already
+    # responsible for it (see the reload branch above). This check must stay after
+    # that branch: on an autoreload port conflict it sets reload = False without
+    # assigning on_started, and this fallback then handles --launch-browser.
     if launch_browser and not reload:
+        assert on_started is None
         on_started = partial(_launchbrowser.launch_browser, host, port)
 
     maybe_setup_rsw_proxying(log_config)
