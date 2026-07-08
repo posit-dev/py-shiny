@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import time
 from contextvars import ContextVar
 from typing import Any, Generator, Union
 
@@ -11,7 +12,7 @@ from opentelemetry import trace
 
 # There is no public API for get_logger_provider.
 # Use private module, similar to logfire: https://github.com/pydantic/logfire/blob/ac3f23b5c03675d6c0f95e037f2a5eab0420f09d/logfire/_internal/logs.py#L11
-from opentelemetry._logs import get_logger_provider
+from opentelemetry._logs import LogRecord, SeverityNumber, get_logger_provider
 from opentelemetry.trace import Tracer
 
 from ._constants import ATTR_SESSION_ID, TRACER_NAME
@@ -191,15 +192,79 @@ def emit_otel_log(
                 resolved_attrs[ATTR_SESSION_ID] = session.id
 
         logger = get_otel_logger()
-        logger.emit(
-            body=body,
-            severity_text=severity_text,
-            attributes=resolved_attrs if resolved_attrs else None,
-        )
+        try:
+            logger.emit(
+                body=body,
+                severity_text=severity_text,
+                attributes=resolved_attrs if resolved_attrs else None,
+            )
+        except TypeError:
+            # opentelemetry-api < 1.38.0: `Logger.emit()` only accepts a
+            # LogRecord argument (the keyword form was added in 1.38.0)
+            _emit_otel_log_record(
+                logger,
+                body=body,
+                severity_text=severity_text,
+                attributes=resolved_attrs if resolved_attrs else None,
+            )
     except Exception:
         # Silently fail if OTel logging is not configured or fails
         # We don't want telemetry issues to break the app
         pass
+
+
+_FALLBACK_SEVERITY_NUMBERS = {
+    "TRACE": SeverityNumber.TRACE,
+    "DEBUG": SeverityNumber.DEBUG,
+    "INFO": SeverityNumber.INFO,
+    "WARN": SeverityNumber.WARN,
+    "ERROR": SeverityNumber.ERROR,
+    "FATAL": SeverityNumber.FATAL,
+}
+"""Severity text to number mapping for the pre-1.38.0 `Logger.emit()` fallback."""
+
+
+def _emit_otel_log_record(
+    logger: Any,
+    *,
+    body: str,
+    severity_text: str,
+    attributes: Union[dict[str, Any], None],
+) -> None:
+    """
+    Emit a log record on opentelemetry-api < 1.38.0.
+
+    Builds the ``LogRecord`` manually, attaching the current span context for
+    trace correlation (the 1.38.0+ keyword form of ``Logger.emit()`` does both
+    automatically).
+    """
+    span_context = trace.get_current_span().get_span_context()
+    record_kwargs: dict[str, Any] = {
+        "timestamp": time.time_ns(),
+        "trace_id": span_context.trace_id,
+        "span_id": span_context.span_id,
+        "trace_flags": span_context.trace_flags,
+        "severity_text": severity_text,
+        "severity_number": _FALLBACK_SEVERITY_NUMBERS.get(severity_text),
+        "body": body,
+        "attributes": attributes,
+    }
+    try:
+        # SDK exporters read `record.resource`, so build the SDK's record type
+        # when the SDK is installed (it always is when a real logger provider
+        # is configured). SDK 1.39.0+ no longer exports this class, but the
+        # matching api of those SDKs supports the keyword form of `emit()`,
+        # so this fallback never runs there.
+        from opentelemetry.sdk._logs import LogRecord as SDKLogRecord  # type: ignore
+
+        record = SDKLogRecord(  # type: ignore[reportUnknownVariableType]
+            resource=getattr(logger, "resource", None), **record_kwargs
+        )
+    except ImportError:
+        # API-only install: the logger provider is a no-op, but emit anyway
+        # for symmetry
+        record = LogRecord(**record_kwargs)
+    logger.emit(record)
 
 
 @contextlib.contextmanager
