@@ -37,6 +37,22 @@ def test_skills_get_unknown_name_lists_available_skills() -> None:
     assert "debugging" in result.output
 
 
+def test_skills_path_prints_skill_directory() -> None:
+    result = CliRunner().invoke(main, ["skills", "path", "debugging"])
+
+    assert result.exit_code == 0
+    assert result.output == f"{SKILLS_DIR / 'debugging'}\n"
+    assert Path(result.output.strip()).is_absolute()
+
+
+def test_skills_path_unknown_name_lists_available_skills() -> None:
+    result = CliRunner().invoke(main, ["skills", "path", "does-not-exist"])
+
+    assert result.exit_code != 0
+    assert "does-not-exist" in result.output
+    assert "debugging" in result.output
+
+
 def test_skills_list_with_empty_skills_dir(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
