@@ -165,10 +165,14 @@ SDK setup required (`opentelemetry-instrument` ships with `shiny[otel]`):
 OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument --traces_exporter console shiny run app.py
 ```
 
-Note: this example app configures the SDK in code (`trace.set_tracer_provider(...)`),
-which conflicts with auto-instrumentation — when running under
-`opentelemetry-instrument`, the wrapper's configuration wins and the in-code setup is
-ignored with a warning. Use one approach or the other.
+Note: OpenTelemetry should be configured in exactly one place — either in code
+(`trace.set_tracer_provider(...)`) or externally via `opentelemetry-instrument`,
+never both. Providers can only be installed once per process: when one is already
+installed, a second `set_tracer_provider()` call is ignored with an "Overriding of
+current TracerProvider is not allowed" warning and the in-code exporter setup
+silently has no effect. This example's `app.py` detects an already-configured
+provider and skips its in-code console setup, so it works under either launch
+method.
 
 The app will open in your browser. As you interact with the buttons:
 

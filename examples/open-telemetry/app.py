@@ -9,6 +9,10 @@ This app shows:
 Run with:
     SHINY_OTEL_COLLECT=all python app.py
 
+Or under OpenTelemetry zero-code auto-instrumentation (the in-code console
+setup below detects the already-installed providers and skips itself):
+    opentelemetry-instrument --traces_exporter console shiny run app.py
+
 Or with shinylive:
     shinylive export . site
     python -m http.server --directory site 8008
@@ -18,7 +22,7 @@ Watch the console for spans and log events as you interact with the app.
 
 # Set up OpenTelemetry logging to the console
 from opentelemetry import trace
-from opentelemetry._logs import set_logger_provider
+from opentelemetry._logs import get_logger_provider, set_logger_provider
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs.export import (
     ConsoleLogRecordExporter,
@@ -29,16 +33,41 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProces
 
 from shiny import App, otel, reactive, render, ui
 
-# Set up debug OpenTelemetry tracing/logging to the console
-# NOT recommended for production use
-trace_provider = TracerProvider()
-trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-trace.set_tracer_provider(trace_provider)
-log_provider = LoggerProvider()
-log_provider.add_log_record_processor(
-    SimpleLogRecordProcessor(ConsoleLogRecordExporter())
-)
-set_logger_provider(log_provider)
+# Configure OpenTelemetry in exactly ONE place: either in code (as below), or
+# externally via `opentelemetry-instrument` / an observability package like
+# logfire -- never both. Providers can only be installed once per process;
+# when one is already installed, calling `set_tracer_provider()` /
+# `set_logger_provider()` again is ignored with an "Overriding of current
+# TracerProvider is not allowed" warning, and the in-code exporter setup
+# silently has no effect.
+#
+# To keep this example runnable both ways, only install the debug console
+# providers when nothing else has configured OpenTelemetry yet.
+# (Console exporters are NOT recommended for production use.)
+
+
+def _tracing_already_configured() -> bool:
+    """Detect a provider installed by e.g. `opentelemetry-instrument` or logfire."""
+    provider = trace.get_tracer_provider()
+    # Real SDK provider, or a wrapper around one (e.g. logfire's proxy provider)
+    return isinstance(provider, TracerProvider) or isinstance(
+        getattr(provider, "provider", None), TracerProvider
+    )
+
+
+if _tracing_already_configured():
+    print("OpenTelemetry is already configured; skipping in-code console setup")
+else:
+    trace_provider = TracerProvider()
+    trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+    trace.set_tracer_provider(trace_provider)
+
+if not isinstance(get_logger_provider(), LoggerProvider):
+    log_provider = LoggerProvider()
+    log_provider.add_log_record_processor(
+        SimpleLogRecordProcessor(ConsoleLogRecordExporter())
+    )
+    set_logger_provider(log_provider)
 
 # # Typical setup behavior:
 # import logfire
