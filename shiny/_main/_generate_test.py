@@ -162,3 +162,54 @@ def generate_test_file(
     except Exception as e:
         click.echo(f"❌ Error generating test: {e}")
         sys.exit(1)
+
+
+@click.group("add", help="""Add files to enhance your Shiny app.""")
+def add() -> None:
+    pass
+
+
+@add.command(
+    "test",
+    help="""Add a test file for a specified Shiny app.
+
+Generate a comprehensive test file for a specified app using AI. The generator
+will analyze your app code and create appropriate test cases with assertions.
+
+After creating the test file, you can use `pytest` to run the tests:
+
+        pytest TEST_FILE
+""",
+)
+@click.option(
+    "--app",
+    "-a",
+    type=str,
+    help="Path to the app file for which you want to generate a test file.",
+)
+@click.option(
+    "--test-file",
+    "-t",
+    type=str,
+    help="Path for the generated test file. If not provided, will be auto-generated.",
+)
+@click.option(
+    "--provider",
+    type=click.Choice(["anthropic", "openai"]),
+    default="anthropic",
+    help="AI provider to use for test generation.",
+)
+@click.option(
+    "--model",
+    type=str,
+    help="Specific model to use (optional). Examples: haiku3.5, sonnet,  gpt-5, gpt-5-mini",
+)
+def test(
+    app: str | None,
+    test_file: str | None,
+    provider: str,
+    model: str | None,
+) -> None:
+    generate_test_file(
+        app_file=app, output_file=test_file, provider=provider, model=model
+    )

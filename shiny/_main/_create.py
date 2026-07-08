@@ -847,3 +847,78 @@ def cli_follow_up(follow_up: ShinyTemplateFollowUp):
         return cli_danger(follow_up.text)
 
     return follow_up.text
+
+
+@click.command(
+    "create",
+    help="""Create a Shiny application from a template.
+
+Create an app based on a template. You will be prompted with
+a number of application types, as well as the destination folder.
+If you don't provide a destination folder, it will be created in the current working
+directory based on the template name.
+
+After creating the application, you use `shiny run`:
+
+    shiny run APPDIR/app.py --reload
+""",
+)
+@click.option(
+    "--template",
+    "-t",
+    type=click.STRING,
+    help="Choose a template for your new application.",
+)
+@click.option(
+    "--mode",
+    "-m",
+    type=click.Choice(
+        ["core", "express"],
+        case_sensitive=False,
+    ),
+    help="Do you want to use a Shiny Express template or a Shiny Core template?",
+)
+@click.option(
+    "--github",
+    "-g",
+    help="""
+    The GitHub repo containing the template, e.g. 'posit-dev/py-shiny-templates'.
+    Can be in the format '{repo_owner}/{repo_name}', '{repo_owner}/{repo_name}@{ref}',
+    or '{repo_owner}/{repo_name}:{path}@{ref}'.
+    Alternatively, a GitHub URL of the template sub-directory, e.g
+    'https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard'.
+    """,
+)
+@click.option(
+    "--dir",
+    "-d",
+    type=str,
+    help="The destination directory, you will be prompted if this is not provided.",
+)
+@click.option(
+    "--package-name",
+    help="""
+    If you are using one of the JavaScript component templates,
+    you can use this flag to specify the name of the resulting package without being prompted.
+    """,
+)
+def create(
+    template: Optional[str] = None,
+    mode: Optional[str] = None,
+    github: Optional[str] = None,
+    dir: Optional[Path | str] = None,
+    package_name: Optional[str] = None,
+) -> None:
+    if dir is not None:
+        dir = Path(dir)
+
+    if github is not None:
+        use_github_template(
+            github,
+            template_name=template,
+            mode=mode,
+            dest_dir=dir,
+            package_name=package_name,
+        )
+    else:
+        use_internal_template(template, mode, dir, package_name)
