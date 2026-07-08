@@ -366,6 +366,7 @@ def run_app(
             # reload_end pings the long-lived autoreload server, which both launches
             # the browser once (when launch_browser is set) and broadcasts the page
             # refresh on later restarts. See nudge() in _autoreload.py.
+            assert on_started is None
             on_started = _autoreload.reload_end
 
     reload_args: ReloadArgs = {}
