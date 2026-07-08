@@ -9,8 +9,11 @@ build-backend = "setuptools.build_meta"
 # `**` does not match hidden files (the package templates ship .gitignore files).
 include-package-data = false
 
+# The `.agents/**` glob is needed because `**` does not match hidden
+# directories: Agent Skills ship inside the package under `shiny/.agents/skills/`
+# (the library-skills convention). Guarded by tests/pytest/test_packaging.py.
 [tool.setuptools.package-data]
-shiny = ["**", "**/.gitignore"]
+shiny = ["**", "**/.gitignore", ".agents/**"]
 
 [tool.setuptools.packages.find]
 where = ["."]
