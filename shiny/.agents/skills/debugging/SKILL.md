@@ -26,9 +26,30 @@ so calls can be left in production code.
 
 Each session serves `GET /session/{id}/dataobj/shinytest` returning
 `{"input": {...}, "output": {...}, "export": {...}}` with sorted keys.
-`session.get_test_snapshot_url()` returns the exact URL (with a cache-busting
-nonce). Select blocks with query params: `?input=1` (whole block),
-`?output=a,b` (specific keys); no params returns all three blocks.
+
+**Getting the URL:** the session id only exists after the client connects — do
+not guess it or scrape it from the page. Obtain the URL through one of two
+paths:
+
+1. **From the browser** (devtools console, browser automation) — ask the Shiny
+   client, then GET the result from the page context (so any auth
+   cookies/headers come along):
+
+   ```js
+   window.Shiny.shinyapp.getTestSnapshotBaseUrl({ fullUrl: true })
+   // -> "http://127.0.0.1:8000/session/<id>/dataobj/shinytest?w=...&nonce=..."
+   ```
+
+   This is undefined until the app has connected; wait for it to exist before
+   calling. (In Playwright, prefer `AppTestValues` below, which handles the
+   waiting and fetching.)
+
+2. **From server code** (inside the `server` function, where `session` is in
+   scope) — `session.get_test_snapshot_url()` returns the relative URL with a
+   cache-busting nonce; log it or surface it to wherever you need it.
+
+Select blocks with query params: `?input=1` (whole block), `?output=a,b`
+(specific keys); no params returns all three blocks.
 
 Values that fail to serialize appear as visible markers instead of erroring:
 `{"__shiny_serialization_error__": ...}`, output render errors as
