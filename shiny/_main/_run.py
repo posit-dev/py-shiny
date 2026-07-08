@@ -19,28 +19,17 @@ import uvicorn.config
 
 import shiny
 
-from . import __version__, _autoreload, _launchbrowser, _static, _utils
-from ._docstring import no_example
-from ._main_skills import skills
-from ._uvicorn import (
+from .. import _autoreload, _launchbrowser, _utils
+from .._docstring import no_example
+from .._uvicorn import (
     ReloadArgs,
     _run_uvicorn,
     _set_workbench_kwargs,
     maybe_setup_rsw_proxying,
 )
-from .bookmark._bookmark_state import shiny_bookmarks_folder_name
-from .express import is_express_app
-from .express._utils import escape_to_var_name
-
-
-@click.group("main")
-@click.version_option(__version__)
-def main() -> None:
-    pass
-
-
-main.add_command(skills)
-
+from ..bookmark._bookmark_state import shiny_bookmarks_folder_name
+from ..express import is_express_app
+from ..express._utils import escape_to_var_name
 
 stop_shortcut = "Ctrl+C"
 
@@ -66,7 +55,9 @@ RELOAD_EXCLUDES_DEFAULT = (
 )
 
 
-@main.command(help=f"""Run a Shiny app (press {stop_shortcut} to stop).
+@click.command(
+    "run",
+    help=f"""Run a Shiny app (press {stop_shortcut} to stop).
 
 The APP argument indicates the Python file (or module) and attribute where the
 shiny.App object can be found. For example, if the current directory contains
@@ -79,7 +70,8 @@ any of the following will work:
   * shiny run app.py      # :app is assumed
   * shiny run app:app
   * shiny run app.py:app
-""")
+""",
+)
 @click.argument("app", default="app.py:app")
 @click.option(
     "-h",
@@ -504,201 +496,6 @@ def try_import_module(module: str) -> Optional[types.ModuleType]:
     # missing dependencies can be misreported to the user as the app module itself not
     # being found.
     return importlib.import_module(module)
-
-
-@main.group(help="""Add files to enhance your Shiny app.""")
-def add() -> None:
-    pass
-
-
-@add.command(help="""Add a test file for a specified Shiny app.
-
-Generate a comprehensive test file for a specified app using AI. The generator
-will analyze your app code and create appropriate test cases with assertions.
-
-After creating the test file, you can use `pytest` to run the tests:
-
-        pytest TEST_FILE
-""")
-@click.option(
-    "--app",
-    "-a",
-    type=str,
-    help="Path to the app file for which you want to generate a test file.",
-)
-@click.option(
-    "--test-file",
-    "-t",
-    type=str,
-    help="Path for the generated test file. If not provided, will be auto-generated.",
-)
-@click.option(
-    "--provider",
-    type=click.Choice(["anthropic", "openai"]),
-    default="anthropic",
-    help="AI provider to use for test generation.",
-)
-@click.option(
-    "--model",
-    type=str,
-    help="Specific model to use (optional). Examples: haiku3.5, sonnet,  gpt-5, gpt-5-mini",
-)
-# Param for app.py, param for test_name
-def test(
-    app: str | None,
-    test_file: str | None,
-    provider: str,
-    model: str | None,
-) -> None:
-    from ._main_generate_test import generate_test_file
-
-    generate_test_file(
-        app_file=app, output_file=test_file, provider=provider, model=model
-    )
-
-
-@main.command(help="""Create a Shiny application from a template.
-
-Create an app based on a template. You will be prompted with
-a number of application types, as well as the destination folder.
-If you don't provide a destination folder, it will be created in the current working
-directory based on the template name.
-
-After creating the application, you use `shiny run`:
-
-    shiny run APPDIR/app.py --reload
-""")
-@click.option(
-    "--template",
-    "-t",
-    type=click.STRING,
-    help="Choose a template for your new application.",
-)
-@click.option(
-    "--mode",
-    "-m",
-    type=click.Choice(
-        ["core", "express"],
-        case_sensitive=False,
-    ),
-    help="Do you want to use a Shiny Express template or a Shiny Core template?",
-)
-@click.option(
-    "--github",
-    "-g",
-    help="""
-    The GitHub repo containing the template, e.g. 'posit-dev/py-shiny-templates'.
-    Can be in the format '{repo_owner}/{repo_name}', '{repo_owner}/{repo_name}@{ref}',
-    or '{repo_owner}/{repo_name}:{path}@{ref}'.
-    Alternatively, a GitHub URL of the template sub-directory, e.g
-    'https://github.com/posit-dev/py-shiny-templates/tree/main/dashboard'.
-    """,
-)
-@click.option(
-    "--dir",
-    "-d",
-    type=str,
-    help="The destination directory, you will be prompted if this is not provided.",
-)
-@click.option(
-    "--package-name",
-    help="""
-    If you are using one of the JavaScript component templates,
-    you can use this flag to specify the name of the resulting package without being prompted.
-    """,
-)
-def create(
-    template: Optional[str] = None,
-    mode: Optional[str] = None,
-    github: Optional[str] = None,
-    dir: Optional[Path | str] = None,
-    package_name: Optional[str] = None,
-) -> None:
-    from ._main_create import use_github_template, use_internal_template
-
-    if dir is not None:
-        dir = Path(dir)
-
-    if github is not None:
-        use_github_template(
-            github,
-            template_name=template,
-            mode=mode,
-            dest_dir=dir,
-            package_name=package_name,
-        )
-    else:
-        use_internal_template(template, mode, dir, package_name)
-
-
-@main.command(
-    help="""The functionality from `shiny static` has been moved to the shinylive package.
-Please install shinylive and use `shinylive export` instead of `shiny static`:
-
-  \b
-  shiny static-assets remove
-  pip install shinylive
-  shinylive export APPDIR DESTDIR
-
-""",
-    context_settings=dict(
-        ignore_unknown_options=True,
-        allow_extra_args=True,
-    ),
-)
-def static() -> None:
-    print(
-        """The functionality from `shiny static` has been moved to the shinylive package.
-Please install shinylive and use `shinylive export` instead of `shiny static`:
-
-  shiny static-assets remove
-  pip install shinylive
-  shinylive export APPDIR DESTDIR
-"""
-    )
-    sys.exit(1)
-
-
-@main.command(
-    no_args_is_help=True,
-    help="""Manage local copy of assets for static app deployment. (Deprecated)
-
-    \b
-    Commands:
-        remove: Remove local copies of assets.
-        info: Print information about the local assets.
-
-""",
-)
-@click.argument("command", type=str)
-def static_assets(command: str) -> None:
-    dir = _static.get_default_shinylive_dir()
-
-    if command == "remove":
-        print(f"Removing {dir}")
-        _static.remove_shinylive_local(shinylive_dir=dir)
-    elif command == "info":
-        _static.print_shinylive_local_info()
-    else:
-        raise click.UsageError(f"Unknown command: {command}")
-
-
-@main.command(help="""Convert a JSON file with code cells to a py file.""")
-@click.argument(
-    "json_file",
-    type=str,
-)
-@click.argument(
-    "py_file",
-    type=str,
-)
-def cells_to_app(json_file: str, py_file: str) -> None:
-    shiny.quarto.convert_code_cells_to_app_py(json_file, py_file)
-
-
-@main.command(help="""Get Shiny's HTML dependencies as JSON.""")
-def get_shiny_deps() -> None:
-    print(shiny.quarto.get_shiny_deps())
 
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the

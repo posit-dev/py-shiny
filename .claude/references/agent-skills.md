@@ -6,7 +6,7 @@ following the [Agent Skills specification](https://agentskills.io/specification)
 They are **package data**: they ship in the wheel and are discovered by
 installers such as [library-skills](https://library-skills.io) (which symlinks
 them into a project's `.agents/skills/` or `.claude/skills/`). The `shiny
-skills list|get|path` CLI subcommands (implemented in `shiny/_main_skills.py`)
+skills list|get|path` CLI subcommands (implemented in `shiny/_main/_skills.py`)
 are a zero-dependency way to read them: `get <name>` prints the SKILL.md, and
 `path <name>` prints the skill's directory so supporting files
 (`references/`, `scripts/`) can be read from the installed package.
