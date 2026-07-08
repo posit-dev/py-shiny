@@ -64,6 +64,54 @@ jobs:
         run: |
           make ci-check-mypy-can-run
 
+  test-oldest-deps:
+    name: "Oldest supported dependencies"
+    runs-on: ubuntu-latest
+    if: github.event_name != 'release'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install `uv`
+        # Pinned to an exact release; astral-sh/setup-uv has no floating `v8` tag
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+          cache-suffix: py3.10-oldest-deps
+          activate-environment: true
+          # Oldest supported Python (`requires-python` in pyproject.toml)
+          python-version: "3.10"
+
+      - name: Install oldest supported dependencies
+        run: |
+          # Resolve every direct runtime dependency to its declared lower
+          # bound. `--no-emit-package shiny` keeps the released shiny wheel
+          # (pulled in transitively via shinychat) out of the constraints so
+          # it cannot conflict with the editable install below.
+          uv pip compile --resolution lowest-direct --no-emit-package shiny \
+            pyproject.toml -o lowest-constraints.txt
+          cat lowest-constraints.txt
+          # Install shiny with runtime deps pinned at their lower bounds via
+          # the constraints file. The test tooling resolves normally (the full
+          # `test` extra has unbounded deps that `lowest-direct` would resolve
+          # to unusable versions), so only what the unit tests need is listed.
+          uv pip install -e . \
+            pytest pytest-asyncio pytest-playwright playwright \
+            pytest-xdist pytest-timeout pytest-rerunfailures \
+            syrupy psutil pandas polars pyyaml \
+            opentelemetry-sdk libsass brand_yml \
+            --constraint lowest-constraints.txt
+
+      - name: Pip list
+        run: |
+          uv pip list
+
+      - name: Run unit tests
+        run: |
+          make check-tests
+
   pypi:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest

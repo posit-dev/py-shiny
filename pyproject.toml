@@ -51,7 +51,7 @@ classifiers = [
 dependencies = [
     "typing-extensions>=4.10.0",
     "uvicorn>=0.16.0;platform_system!='Emscripten'",
-    "starlette",
+    "starlette>=0.17.1",
     "websockets>=13.0",
     "htmltools>=0.7.0",
     "click>=8.1.4;platform_system!='Emscripten'",
@@ -63,18 +63,20 @@ dependencies = [
     "packaging>=20.9",
     "watchfiles>=0.18.0;platform_system!='Emscripten'",
     "questionary>=2.0.0;platform_system!='Emscripten'",
-    "prompt-toolkit;platform_system!='Emscripten'",
+    "prompt-toolkit>=3.0.0;platform_system!='Emscripten'",
     "python-multipart>=0.0.7;platform_system!='Emscripten'",
     "setuptools;python_version>='3.12'",
     "narwhals>=1.10.0",
     "orjson>=3.10.7",
     "shinychat>=0.1.0",
-    "opentelemetry-api>=1.20.0",
+    # 1.38.0+ required for `Logger.emit(body=..., ...)` keyword arguments
+    # (older versions silently no-op shiny's otel log emission)
+    "opentelemetry-api>=1.38.0",
 ]
 
 [project.optional-dependencies]
 theme = ["libsass>=0.23.0", "brand_yml>=0.2.0"]
-otel = ["opentelemetry-sdk>=1.20.0"]
+otel = ["opentelemetry-sdk>=1.38.0"]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
@@ -116,7 +118,7 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
-    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-sdk>=1.38.0",
     "logfire>=4.0.0",
 ]
 dev = [

@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other changes
 
+* CI now runs the unit tests on Ubuntu with the oldest supported Python (3.10) and every runtime dependency resolved to its declared minimum version (via `uv pip compile --resolution lowest-direct`), so stale lower bounds in `pyproject.toml` are caught. As part of this, `starlette` and `prompt-toolkit` gained explicit lower bounds (`>=0.17.1` and `>=3.0.0`), and the `opentelemetry-api`/`opentelemetry-sdk` minimums were raised from 1.20.0 to 1.38.0 — older versions silently dropped Shiny's OpenTelemetry log records (which use `Logger.emit()` keyword arguments, added in 1.38.0) and could leak unsanitized error messages in span exception stack traces (fixed upstream in 1.24.0). (#2335)
+
 * Optimized the test suite by avoiding network-based dataset downloads and heavy library imports during Playwright test app startup, reducing setup time significantly. (#2314)
 
 * Packaging metadata now uses a PEP 639 SPDX license expression instead of the deprecated `license` table and license classifier, and stale `MANIFEST.in` rules were removed. Building the package (e.g. with `uv build`) no longer emits setuptools deprecation or manifest warnings. Wheel and sdist contents are unchanged. (#2304)
