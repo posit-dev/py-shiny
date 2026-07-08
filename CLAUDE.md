@@ -107,6 +107,16 @@ Before implementing a UI component or output renderer, read
 (file layout, exports, examples, controllers, tests) and the rules for pairing
 output components with renderers.
 
+### Bundled Agent Skills
+
+The shiny package ships Agent Skills under `shiny/.agents/skills/` — reference
+docs that teach coding agents how to use shiny's public APIs (debugging,
+testing, etc.). Treat them like user-facing documentation: when a change
+touches an API that a skill documents, update the skill in the same PR. Before
+adding or editing a skill, read `.claude/references/agent-skills.md` for the
+layout, frontmatter contract, content shape, scoping rules, and validation
+steps.
+
 ### Type Checking Notes
 
 - Pyright is the primary type checker (not mypy)
@@ -163,3 +173,4 @@ handling before merging one.
 - **Reactive graph debugging**: Use `reactive.flush()` to force synchronous execution in tests
 - **Playwright timing**: Use `.expect_*()` methods which auto-wait; avoid manual `sleep()`
 - **Asset updates**: After running `make upgrade-html-deps`, verify theme preset files were updated
+- **Stale bundled skills**: When changing a public API, grep `shiny/.agents/skills/` for it — bundled Agent Skills document public APIs and must be updated in the same PR

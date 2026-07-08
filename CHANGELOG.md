@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Test-mode snapshot values can now be preprocessed before they are written to the snapshot, e.g. to scrub timestamps or temp paths: `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) for inputs and `my_output.snapshot_preprocess(fn)` for outputs. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
 
+* The shiny package now ships [Agent Skills](https://agentskills.io) under `shiny/.agents/skills/` (the [library-skills](https://library-skills.io) convention), starting with a `debugging` skill that teaches coding agents to inspect running apps via test mode, `shiny.testmode.export_test_values()`, and the test snapshot endpoint. (#2339)
+
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
 ### Improvements
