@@ -1,3 +1,5 @@
+from itertools import count
+
 from shiny import reactive
 from shiny.express import input, ui
 
@@ -49,6 +51,13 @@ def do_submit_and_focus():
     )
 
 
+# Number each response so the test can tell consecutive submissions of the
+# same message apart (otherwise an assertion on the latest message can be
+# satisfied by the previous, identical response while the new one is still in
+# flight).
+submit_counter = count(1)
+
+
 @chat.on_user_submit
 async def on_user_submit(message: str):
-    await chat.append_message(f"You said: {message}")
+    await chat.append_message(f"You said ({next(submit_counter)}): {message}")
