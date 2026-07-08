@@ -1,6 +1,6 @@
 ---
 name: debugging
-description: Use when debugging a Shiny for Python (py-shiny) app or testing one - inspecting reactive/calc values in a running session, capturing current input/output state, exposing internal values to a test harness, writing snapshot tests, or when tempted to add print statements or hidden outputs to see server-side values.
+description: Use when observing server-side state of a Shiny for Python (py-shiny) app - inspecting reactive/calc values in a running session, capturing current input/output state, exposing internal values to a test harness, asserting server-side values in snapshot tests, or when tempted to add print statements or hidden outputs to see server-side values. (For writing Playwright end-to-end tests against the rendered UI, use the testing skill.)
 ---
 
 # Debugging Shiny for Python apps

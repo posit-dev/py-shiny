@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The shiny package now ships [Agent Skills](https://agentskills.io) under `shiny/.agents/skills/` (the [library-skills](https://library-skills.io) convention), starting with a `debugging` skill that teaches coding agents to inspect running apps via test mode, `shiny.testmode.export_test_values()`, and the test snapshot endpoint. (#2339)
 
+* Added a bundled `testing` Agent Skill that teaches coding agents to write end-to-end tests for Shiny apps with pytest and Playwright: the `local_app` / `create_app_fixture` app-launch fixtures, the `shiny.playwright.controller` component controllers, and `shiny add test`. (#2344)
+
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
 ### Improvements
