@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging
 import os
 import socket
@@ -83,7 +84,21 @@ def _run_uvicorn(
             ChangeReload(config, target=server.run, sockets=[sock]).run()
         elif config.workers > 1:
             sock = config.bind_socket()
-            Multiprocess(config, target=server.run, sockets=[sock]).run()
+            # uvicorn 0.51.0 removed Multiprocess's target parameter: each worker
+            # now builds its own Server from config, so on_started does not fire
+            # in multi-worker mode there. Older supported versions require the
+            # target. Only one spelling can match the generated stubs at a time,
+            # hence the pyright ignores on both.
+            if "target" in inspect.signature(Multiprocess.__init__).parameters:
+                Multiprocess(
+                    config,
+                    target=server.run,  # pyright: ignore[reportCallIssue]
+                    sockets=[sock],
+                ).run()
+            else:
+                Multiprocess(
+                    config, sockets=[sock]
+                ).run()  # pyright: ignore[reportCallIssue]
         else:
             server.run()
     except KeyboardInterrupt:
