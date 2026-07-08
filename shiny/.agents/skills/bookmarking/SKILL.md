@@ -9,10 +9,19 @@ description: Use when a Shiny for Python (py-shiny) app needs to save and restor
 
 Bookmarking snapshots an app's `input` values (plus optional custom values) and
 restores them later from a URL. Use it instead of manually encoding state into
-query strings or building a custom persistence layer. Two stores: `"url"`
-(state encoded in the query string — shareable, keep under ~65k characters) and
-`"server"` (state saved to disk, URL carries only an id). Prefer `"url"` when
-the state fits.
+query strings or building a custom persistence layer.
+
+## Store values
+
+`bookmark_store` (on `App(...)` or `app_opts(...)`) accepts three values:
+
+| Value | Where state lives | Trade-offs |
+|---|---|---|
+| `"url"` | Entirely in the URL query string | Shareable anywhere with zero server setup. Keep the serialized state under ~65k characters; file inputs cannot be serialized. |
+| `"server"` | On disk; the URL carries only a state id | Handles large state and file inputs (files are copied into the state directory). URLs only restore on a deployment that still has that directory — the hosting environment must persist it (see "Server-side storage location"). |
+| `"disable"` | Nowhere (the default) | Bookmarking is off: `session.bookmark()` warns and does nothing. |
+
+Prefer `"url"` whenever the state fits — it needs no storage management.
 
 ## Enable bookmarking
 
