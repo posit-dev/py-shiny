@@ -9,20 +9,24 @@ import platform
 import re
 import sys
 import types
-import warnings
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from typing import Any, Optional
 
 import click
-import uvicorn
 import uvicorn.config
 
 import shiny
 
-from . import __version__, _autoreload, _hostenv, _static, _utils
+from . import __version__, _autoreload, _launchbrowser, _static, _utils
 from ._docstring import no_example
-from ._hostenv import is_workbench
-from ._typing_extensions import NotRequired, TypedDict
+from ._uvicorn import (
+    ReloadArgs,
+    _run_uvicorn,
+    _set_workbench_kwargs,
+    maybe_setup_rsw_proxying,
+)
 from .bookmark._bookmark_state import shiny_bookmarks_folder_name
 from .express import is_express_app
 from .express._utils import escape_to_var_name
@@ -304,8 +308,6 @@ def run_app(
     if port == 0:
         port = _utils.random_port(host=host)
 
-    os.environ["SHINY_BROWSER_HOST"] = host
-    os.environ["SHINY_BROWSER_PORT"] = str(port)
     if dev_mode:
         os.environ["SHINY_DEV_MODE"] = "1"
 
@@ -336,6 +338,8 @@ def run_app(
         if app_dir is not None:
             reload_dirs = [app_dir]
 
+    on_started: Callable[[], None] | None = None
+
     if reload:
         # Always watch the app_dir
         if app_dir and app_dir not in reload_dirs:
@@ -355,7 +359,16 @@ def run_app(
             )
             reload = False
         else:
-            setup_hot_reload(log_config, autoreload_port, port, launch_browser)
+            _autoreload.start_server(
+                autoreload_port, app_port=port, launch_browser=launch_browser
+            )
+            # In reload mode, on_started fires in a fresh worker process on every
+            # restart, so it cannot remember whether the browser was already opened.
+            # reload_end pings the long-lived autoreload server, which both launches
+            # the browser once (when launch_browser is set) and broadcasts the page
+            # refresh on later restarts. See nudge() in _autoreload.py.
+            assert on_started is None
+            on_started = _autoreload.reload_end
 
     reload_args: ReloadArgs = {}
     if reload:
@@ -394,14 +407,19 @@ def run_app(
             "reload_dirs": reload_dirs,
         }
 
+    # Launch the browser directly only when the autoreload server isn't already
+    # responsible for it (see the reload branch above). This check must stay after
+    # that branch: on an autoreload port conflict it sets reload = False without
+    # assigning on_started, and this fallback then handles --launch-browser.
     if launch_browser and not reload:
-        setup_launch_browser(log_config)
+        assert on_started is None
+        on_started = partial(_launchbrowser.launch_browser, host, port)
 
     maybe_setup_rsw_proxying(log_config)
 
     _set_workbench_kwargs(kwargs)
 
-    uvicorn.run(  # pyright: ignore[reportUnknownMemberType]
+    _run_uvicorn(
         app,
         host=host,
         port=port,
@@ -409,6 +427,7 @@ def run_app(
         log_level=log_level,
         log_config=log_config,
         app_dir=app_dir,
+        on_started=on_started,
         factory=factory,
         lifespan="on",
         # Don't allow shiny to use uvloop!
@@ -417,46 +436,6 @@ def run_app(
         **reload_args,  # pyright: ignore[reportArgumentType]
         **kwargs,
     )
-
-
-def setup_hot_reload(
-    log_config: dict[str, Any],
-    autoreload_port: int,
-    app_port: int,
-    launch_browser: bool,
-) -> None:
-    # The only way I've found to get notified when uvicorn decides to reload, is by
-    # inserting a custom log handler.
-    log_config["handlers"]["shiny_hot_reload"] = {
-        "class": "shiny._autoreload.HotReloadHandler",
-        "level": "INFO",
-    }
-    if "handlers" not in log_config["loggers"]["uvicorn.error"]:
-        log_config["loggers"]["uvicorn.error"]["handlers"] = []
-    log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_hot_reload")
-
-    _autoreload.start_server(autoreload_port, app_port, launch_browser)
-
-
-def setup_launch_browser(log_config: dict[str, Any]):
-    log_config["handlers"]["shiny_launch_browser"] = {
-        "class": "shiny._launchbrowser.LaunchBrowserHandler",
-        "level": "INFO",
-    }
-    if "handlers" not in log_config["loggers"]["uvicorn.error"]:
-        log_config["loggers"]["uvicorn.error"]["handlers"] = []
-    log_config["loggers"]["uvicorn.error"]["handlers"].append("shiny_launch_browser")
-
-
-def maybe_setup_rsw_proxying(log_config: dict[str, Any]) -> None:
-    # Replace localhost URLs emitted to the log, with proxied URLs
-    if _hostenv.is_workbench():
-        if "filters" not in log_config:
-            log_config["filters"] = {}
-        log_config["filters"]["rsw_proxy"] = {"()": "shiny._hostenv.ProxyUrlFilter"}
-        if "filters" not in log_config["handlers"]["default"]:
-            log_config["handlers"]["default"]["filters"] = []
-        log_config["handlers"]["default"]["filters"].append("rsw_proxy")
 
 
 def is_file(app: str) -> bool:
@@ -716,25 +695,6 @@ def cells_to_app(json_file: str, py_file: str) -> None:
 @main.command(help="""Get Shiny's HTML dependencies as JSON.""")
 def get_shiny_deps() -> None:
     print(shiny.quarto.get_shiny_deps())
-
-
-class ReloadArgs(TypedDict):
-    reload: NotRequired[bool]
-    reload_includes: NotRequired[list[str]]
-    reload_excludes: NotRequired[list[str]]
-    reload_dirs: NotRequired[list[str]]
-
-
-def _set_workbench_kwargs(kwargs: dict[str, Any]) -> None:
-    if is_workbench():
-        if kwargs.get("ws_per_message_deflate"):
-            # Workaround for nginx/uvicorn issue within Workbench
-            # https://github.com/rstudio/rstudio-pro/issues/7368#issuecomment-2918016088
-            warnings.warn(
-                "Overwriting kwarg `ws_per_message_deflate=True` to `False` to avoid breaking issue in Workbench",
-                stacklevel=2,
-            )
-        kwargs["ws_per_message_deflate"] = False
 
 
 # Check that the version of rsconnect supports Shiny Express; can be removed in the

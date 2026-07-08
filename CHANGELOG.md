@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed `--launch-browser` so it no longer depends on INFO-level Uvicorn startup logs. Browser launch now works when logs are disabled or `--log-level=warning` is used. (#569)
+
 * `ui.output_data_frame` will now consistently order the filtered columns in ascending column order. (#2093)
 * When resetting a `ui.output_data_frame` filter, numeric range filters will now reset both values. (#2093)
 
@@ -41,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed the `value_box()` `id` parameter docstring, which previously documented the wrong reactive-value syntax (`input.<id>()["full_screen"]`) for observing the value box's full screen state. It now correctly documents `input.<id>_full_screen()`, matching `card()`. (#2324)
 
 ### Other changes
+
+* Raised the minimum supported uvicorn version from 0.16.0 to 0.23.0 (July 2023). The old floor no longer worked in practice: running on Posit Workbench passes uvicorn the `ws_per_message_deflate` option, which requires uvicorn >= 0.17. (#2317)
 
 * Optimized the test suite by avoiding network-based dataset downloads and heavy library imports during Playwright test app startup, reducing setup time significantly. (#2314)
 
