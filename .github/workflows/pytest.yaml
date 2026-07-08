@@ -65,7 +65,7 @@ jobs:
         run: |
           make ci-check-mypy-can-run
 
-  check-oldest-deps:
+  oldest-deps:
     name: "Oldest deps"
     runs-on: ubuntu-latest
     if: github.event_name != 'release'
@@ -409,7 +409,7 @@ jobs:
     if: always() && github.event_name == 'pull_request' && !github.event.pull_request.draft
     needs:
       - check
-      - check-oldest-deps
+      - oldest-deps
       - playwright-shiny
       - playwright-examples
       - playwright-ai
