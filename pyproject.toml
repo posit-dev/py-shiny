@@ -80,7 +80,14 @@ dependencies = [
 
 [project.optional-dependencies]
 theme = ["libsass>=0.23.0", "brand_yml>=0.2.0"]
-otel = ["opentelemetry-sdk>=1.24.0"]
+otel = [
+    # 1.24.0+ required: same sanitized-stack-trace floor as opentelemetry-api above
+    "opentelemetry-sdk>=1.24.0",
+    # Enables zero-code auto-instrumentation via `opentelemetry-instrument shiny run
+    # app.py`. The [otlp] extra provides the default `otlp` exporter so the bare
+    # command works without extra flags (and allows switching between gRPC/HTTP).
+    "opentelemetry-distro[otlp]>=0.45b0",
+]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",

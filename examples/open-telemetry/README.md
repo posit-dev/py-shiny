@@ -158,6 +158,18 @@ pip install -r requirements.txt
 python app.py
 ```
 
+Alternatively, run any Shiny app under OpenTelemetry auto-instrumentation — no in-code
+SDK setup required (`opentelemetry-instrument` ships with `shiny[otel]`):
+
+```bash
+OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument --traces_exporter console shiny run app.py
+```
+
+Note: this example app configures the SDK in code (`trace.set_tracer_provider(...)`),
+which conflicts with auto-instrumentation — when running under
+`opentelemetry-instrument`, the wrapper's configuration wins and the in-code setup is
+ignored with a warning. Use one approach or the other.
+
 The app will open in your browser. As you interact with the buttons:
 
 - **"Compute (Normal Telemetry)"**: Creates Shiny spans for reactive execution

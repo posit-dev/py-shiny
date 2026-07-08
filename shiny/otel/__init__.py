@@ -108,11 +108,43 @@ Install Shiny with OpenTelemetry support:
 pip install "shiny[otel]"
 ```
 
-This installs both the OpenTelemetry API (required) and SDK (for exporters).
+This installs the OpenTelemetry API (required), the SDK (for exporters), and
+`opentelemetry-distro[otlp]` (for zero-code auto-instrumentation and OTLP export).
 
-### Basic Setup
+### Zero-Code Setup (Recommended)
 
-Configure OpenTelemetry before running your app:
+The simplest way to enable OpenTelemetry is the standard `opentelemetry-instrument`
+wrapper, which configures the SDK before your app starts — no code changes needed:
+
+```bash
+OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument shiny run app.py
+```
+
+By default this exports traces over OTLP to `http://localhost:4317`. Everything is
+configurable through standard [OpenTelemetry environment
+variables](https://opentelemetry.io/docs/languages/sdk-configuration/) or CLI flags.
+For example, to print spans to the console while developing:
+
+```bash
+opentelemetry-instrument --traces_exporter console shiny run app.py
+```
+
+**Notes**:
+
+- Set `OTEL_SERVICE_NAME` (or `OTEL_RESOURCE_ATTRIBUTES`); otherwise traces are
+  reported with `service.name: unknown_service`.
+- Auto-instrumentation also instruments other libraries your app uses (HTTP clients,
+  databases, etc.), so their spans appear alongside Shiny's.
+- Works with `shiny run --reload` — the reloaded process inherits the instrumentation.
+- Do **not** combine this with the programmatic setup below: auto-instrumentation
+  installs the tracer provider before your app code runs, so a manual
+  `trace.set_tracer_provider()` call logs `Overriding of current TracerProvider is
+  not allowed` and is ignored.
+
+### Programmatic Setup
+
+Alternatively (when *not* running under `opentelemetry-instrument`), configure
+OpenTelemetry in code before running your app:
 
 ```python
 from opentelemetry import trace
@@ -739,6 +771,21 @@ exporter = ConsoleSpanExporter()
    from opentelemetry.sdk.trace.export import ConsoleSpanExporter
    provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
    ```
+
+### "Overriding of current TracerProvider is not allowed"
+
+**Problem**: This warning appears at startup, and your in-code exporter configuration
+seems to have no effect.
+
+**Cause**: The app calls `trace.set_tracer_provider()` while also running under
+`opentelemetry-instrument`, which already installed a tracer provider before your app
+code ran. The manual call is ignored.
+
+**Solution**: Pick one configuration method:
+
+- Keep `opentelemetry-instrument` and delete the manual setup — configure exporters
+  via `OTEL_*` environment variables or CLI flags instead, or
+- Keep the manual setup and run the app directly (`shiny run app.py`).
 
 ### ImportError: No module named 'opentelemetry'
 
