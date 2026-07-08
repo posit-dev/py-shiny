@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -18,7 +19,10 @@ def test_skills_list_shows_names_and_descriptions() -> None:
     debugging_line = next(
         line for line in result.output.splitlines() if "debugging" in line
     )
-    assert "test mode" in debugging_line or "debugging a Shiny" in debugging_line
+    skill_md = (SKILLS_DIR / "debugging" / "SKILL.md").read_text()
+    match = re.search(r"^description: (.+)$", skill_md, re.MULTILINE)
+    assert match is not None
+    assert match.group(1)[:40] in debugging_line
 
 
 def test_skills_get_prints_skill_md() -> None:
