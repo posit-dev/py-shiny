@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Awaitable, Callable, cast
 
+from ._docstring import add_example
+
 # Import from `shiny.session._utils` directly (not the `shiny.session` package
 # __init__): `shiny.session._session` imports from this module, so importing the
 # package here would be circular.
@@ -16,6 +18,7 @@ __all__ = (
 )
 
 
+@add_example()
 def export_test_values(**kwargs: Callable[[], Any]) -> None:
     """
     Register named values to include in the test-mode snapshot.
@@ -49,30 +52,15 @@ def export_test_values(**kwargs: Callable[[], Any]) -> None:
     RuntimeError
         If there is no active session.
 
-    Examples
+    See Also
     --------
-    ```python
-    from shiny import App, Inputs, Outputs, Session, reactive, ui
-    from shiny.testmode import export_test_values
-
-    app_ui = ui.page_fluid(ui.input_slider("n", "n", 0, 100, 20))
-
-    def server(input: Inputs, output: Outputs, session: Session):
-        @reactive.calc
-        def doubled():
-            return input.n() * 2
-
-        # Surface an internal reactive value in the test-mode snapshot.
-        # No effect unless `SHINY_TESTMODE=1` is set.
-        export_test_values(doubled=doubled)
-
-    app = App(app_ui, server)
-    ```
+    * :func:`~shiny.testmode.snapshot_preprocess_input`
     """
     session = require_active_session(None)
     session._export_test_values(**kwargs)
 
 
+@add_example()
 def snapshot_preprocess_input(
     id: str,
     fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]],
@@ -98,25 +86,10 @@ def snapshot_preprocess_input(
     RuntimeError
         If there is no active session.
 
-    Examples
-    --------
-    ```python
-    from shiny import App, Inputs, Outputs, Session, ui
-    from shiny.testmode import snapshot_preprocess_input
-
-    app_ui = ui.page_fluid(ui.input_text("secret", "Secret", value="hunter2"))
-
-    def server(input: Inputs, output: Outputs, session: Session):
-        # Scrub the value shown in test-mode snapshots; the live input value
-        # is untouched. No effect unless `SHINY_TESTMODE=1` is set.
-        snapshot_preprocess_input("secret", lambda value: "<redacted>")
-
-    app = App(app_ui, server)
-    ```
-
     See Also
     --------
-    * `shiny.render.renderer.Renderer.snapshot_preprocess`
+    * :meth:`~shiny.render.renderer.Renderer.snapshot_preprocess`
+    * :func:`~shiny.testmode.export_test_values`
     """
     session = require_active_session(None)
     session.input.set_snapshot_preprocess(id, fn)
