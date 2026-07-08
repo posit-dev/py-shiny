@@ -21,6 +21,7 @@ import shiny
 
 from . import __version__, _autoreload, _launchbrowser, _static, _utils
 from ._docstring import no_example
+from ._main_skills import skills
 from ._uvicorn import (
     ReloadArgs,
     _run_uvicorn,
@@ -36,6 +37,9 @@ from .express._utils import escape_to_var_name
 @click.version_option(__version__)
 def main() -> None:
     pass
+
+
+main.add_command(skills)
 
 
 stop_shortcut = "Ctrl+C"

@@ -40,7 +40,9 @@ def test_validate_chat_update_user_input(page: Page, local_app: ShinyAppProc) ->
     submit.loc.focus()
     submit.click()
     chat.expect_user_input(set_msg)  # User doesn't lose what they had written
-    chat.expect_latest_message("You said: This chat was sent on behalf of the user.")
+    chat.expect_latest_message(
+        "You said (1): This chat was sent on behalf of the user."
+    )
     expect(chat.loc_input_button).to_be_enabled()
     expect(chat.loc_input).not_to_be_focused()
 
@@ -54,7 +56,14 @@ def test_validate_chat_update_user_input(page: Page, local_app: ShinyAppProc) ->
     submit.loc.focus()
     submit.click()
     chat.expect_user_input("")
-    chat.expect_latest_message("You said: This chat was sent on behalf of the user.")
+    # The "(2)" suffix distinguishes this response from the identical message
+    # submitted above. Waiting on it guarantees this submission's round trip
+    # has finished (and the chat input is re-enabled) before the next click;
+    # otherwise the next submit would be silently dropped while the input is
+    # disabled awaiting this response (#2337).
+    chat.expect_latest_message(
+        "You said (2): This chat was sent on behalf of the user."
+    )
     expect(chat.loc_input_button).to_be_disabled()
     expect(chat.loc_input).not_to_be_focused()
 
@@ -63,7 +72,7 @@ def test_validate_chat_update_user_input(page: Page, local_app: ShinyAppProc) ->
     submit_and_focus.click()
     chat.expect_user_input("")
     chat.expect_latest_message(
-        "You said: This chat was sent on behalf of the user. Input will still be focused."
+        "You said (3): This chat was sent on behalf of the user. Input will still be focused."
     )
     expect(chat.loc_input_button).to_be_disabled()
     expect(chat.loc_input).to_be_focused()
