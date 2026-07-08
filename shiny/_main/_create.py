@@ -219,7 +219,7 @@ class ShinyInternalTemplates:
     def _templates(self, dir: str = "templates") -> list[ShinyTemplate]:
         if dir in self.templates:
             return self.templates[dir]
-        self.templates[dir] = find_templates(Path(__file__).parent / dir)
+        self.templates[dir] = find_templates(Path(__file__).parent.parent / dir)
         return self.templates[dir]
 
     @property

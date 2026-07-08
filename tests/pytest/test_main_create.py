@@ -68,3 +68,9 @@ def test_create_rejects_invalid_mode(captured_templates: dict[str, Any]) -> None
 
     assert result.exit_code != 0
     assert captured_templates == {}
+
+
+def test_internal_templates_are_discovered() -> None:
+    # Guards the __file__-relative lookup of shiny/templates/
+    assert len(_create.shiny_internal_templates.apps) > 0
+    assert len(_create.shiny_internal_templates.packages) > 0
