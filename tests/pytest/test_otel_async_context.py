@@ -423,15 +423,21 @@ class TestAsyncContextIsolation:
         """Test that asyncio.as_completed() maintains separate context for each task"""
         provider, memory_exporter = otel_tracer_provider
 
-        async def task_with_span(task_id: str, delay: float):
-            """Create a span with a unique name and delay"""
+        async def task_with_span(
+            task_id: str,
+            start: "asyncio.Event | None",
+            done: asyncio.Event,
+        ):
+            """Create a span; complete after `start` is set, then signal `done`"""
             async with shiny_otel_span(
                 f"ascompleted.{task_id}",
                 infer_session_id=True,
                 attributes={"task.id": task_id},
                 required_level=OtelCollectLevel.ALL,
             ):
-                await asyncio.sleep(delay)
+                if start is not None:
+                    await start.wait()
+                done.set()
                 return task_id
 
         with patch_otel_tracing_state(tracing_enabled=True):
@@ -440,11 +446,16 @@ class TestAsyncContextIsolation:
                 infer_session_id=True,
                 required_level=OtelCollectLevel.ALL,
             ):
-                # Create tasks with different delays
+                # Chain completion events so the tasks deterministically finish
+                # in the order Q -> R -> P (different from creation order),
+                # without relying on timing (sleep durations are flaky on CI)
+                q_done = asyncio.Event()
+                r_done = asyncio.Event()
+                p_done = asyncio.Event()
                 tasks = [
-                    asyncio.create_task(task_with_span("P", 0.03)),
-                    asyncio.create_task(task_with_span("Q", 0.01)),
-                    asyncio.create_task(task_with_span("R", 0.02)),
+                    asyncio.create_task(task_with_span("P", r_done, p_done)),
+                    asyncio.create_task(task_with_span("Q", None, q_done)),
+                    asyncio.create_task(task_with_span("R", q_done, r_done)),
                 ]
 
                 # Process tasks as they complete
@@ -462,7 +473,8 @@ class TestAsyncContextIsolation:
         # Should have three task spans
         assert len(task_spans) == 3
 
-        # Verify completion order (Q finished first, then R, then P)
+        # Verify completion order (Q completes first, unblocking R, which
+        # unblocks P — guaranteed by the event chain, not by timing)
         assert completion_order == ["Q", "R", "P"]
 
         # Verify all task spans have the same parent (the parent.operation span)
