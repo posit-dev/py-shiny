@@ -17,7 +17,7 @@ auto-retry.
 ## Setup
 
 ```bash
-pip install pytest playwright pytest-playwright
+uv pip install pytest playwright pytest-playwright
 playwright install chromium
 ```
 
