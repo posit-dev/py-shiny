@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added the `shiny.playwright.controller.AppTestValues` Playwright controller for reading a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests. (#2269)
 
+* `AppTestValues` expect methods now accept predicates: pass any callable (e.g. `app_values.expect_input("n", is_integer)`) in place of an expected value, and the expectation retries until the predicate returns a truthy value. (#2357)
+
 * The test-mode snapshot endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys). Unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
 
 * Test-mode snapshot values can now be preprocessed before they are written to the snapshot, e.g. to scrub timestamps or temp paths: `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) for inputs and `my_output.snapshot_preprocess(fn)` for outputs. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)

@@ -132,7 +132,12 @@ asserting server state:
 app_values = controller.AppTestValues(page)
 app_values.expect_input("n", 50)          # server-side: int, not "50"
 app_values.expect_export("doubled", 100)  # internal reactive, no DOM
+app_values.expect_input("n", is_integer)  # predicate: any callable(actual) -> bool
 ```
+
+Expected values may be predicates (callables taking the actual value, retried
+until truthy). Use named functions, not lambdas — the function's name appears
+in failure messages.
 
 See the `debugging` skill for the full test-mode snapshot API.
 
