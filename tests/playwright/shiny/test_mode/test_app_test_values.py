@@ -37,6 +37,16 @@ def test_app_test_values(page: Page, local_app: ShinyAppProc) -> None:
     app_values.expect_output("double_txt", "doubled = 60")
     app_values.expect_export("doubled", 60)
 
+    # Predicates: any callable stands in for an expected value and is retried
+    # until it returns truthy; a failing predicate raises with its name.
+    def is_integer(value: object) -> bool:
+        return isinstance(value, int)
+
+    app_values.expect_export("doubled", is_integer)
+    app_values.expect_inputs({"n": is_integer, "name": "xyz"})
+    with pytest.raises(AssertionError, match="does not satisfy is_integer"):
+        app_values.expect_input("name", is_integer, timeout=1)
+
     # Whole-block expectations: subset (default) checks only the given keys,
     # ignoring other keys present in the block.
     app_values.expect_inputs({"name": "xyz"})

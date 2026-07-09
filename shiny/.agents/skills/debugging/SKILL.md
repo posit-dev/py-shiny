@@ -94,6 +94,9 @@ app_values.expect_export("doubled", 40)
 snapshot = app_values.get()  # full {"input", "output", "export"} dict
 ```
 
+Expected values may also be predicates: any callable taking the actual value,
+retried until it returns truthy (e.g. `app_values.expect_input("n", is_integer)`).
+
 Requires the app loaded in the page and test mode on (a `RuntimeError` with a
 fix hint is raised otherwise).
 
