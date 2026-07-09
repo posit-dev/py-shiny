@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added a `bookmarking` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to save and restore app state with `bookmark_store=`, the `session.bookmark` lifecycle hooks, custom bookmark values, and server-side bookmark storage. (#2345)
 
+* Added an `otel` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to observe Shiny apps with OpenTelemetry: zero-code auto-instrumentation via `opentelemetry-instrument shiny run`, collection levels with `SHINY_OTEL_COLLECT`, per-object control with `otel.suppress`/`otel.collect`, and exporting to OTLP backends. (#2356)
+
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
 ### Improvements
