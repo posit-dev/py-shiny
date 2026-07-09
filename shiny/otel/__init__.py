@@ -651,6 +651,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 **Problem**: Console/backend shows no spans from Shiny.
 
 **Solutions**:
+
 1. Verify the app is launched with `opentelemetry-instrument` (or, for code-based
    setup, that a provider is installed before the app runs)
 
@@ -669,6 +670,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 **Problem**: Application performance degraded with OpenTelemetry enabled.
 
 **Solutions**:
+
 1. Lower collection level:
    ```bash
    export SHINY_OTEL_COLLECT=session  # Minimal
@@ -700,6 +702,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 **Problem**: Passwords or API keys appearing in span attributes.
 
 **Solutions**:
+
 1. Use `@otel.suppress` decorator on sensitive reactive functions:
 
    ```python
@@ -744,6 +747,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 **Problem**: Parent-child relationships incorrect in traces.
 
 **Solutions**:
+
 1. Ensure you're using async context propagation correctly
 2. Check that custom spans use `start_as_current_span()`:
 
