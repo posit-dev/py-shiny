@@ -6,52 +6,42 @@ This app shows:
 2. Automatic logging of reactive value updates
 3. How `otel.suppress` suppresses both Shiny's internal spans and value logs
 
-Run with:
-    SHINY_OTEL_COLLECT=all python app.py
+Run under OpenTelemetry zero-code auto-instrumentation (installed with
+`pip install "shiny[otel]"`), printing spans and log events to the console:
 
-Or with shinylive:
-    shinylive export . site
-    python -m http.server --directory site 8008
+    opentelemetry-instrument --traces_exporter console --logs_exporter console \\
+        --metrics_exporter none shiny run app.py
+
+To see how the global collect level interacts with `otel.suppress` / `otel.collect`,
+lower it with `SHINY_OTEL_COLLECT` (the app displays the active level):
+
+    SHINY_OTEL_COLLECT=session opentelemetry-instrument --traces_exporter console \\
+        --logs_exporter console --metrics_exporter none shiny run app.py
+
+At `session` level the "Normal" card stops producing spans, but the
+`otel.collect` card still does -- see the comment on `with otel.collect():`
+below for why.
 
 Watch the console for spans and log events as you interact with the app.
 """
 
-# Set up OpenTelemetry logging to the console
-from opentelemetry import trace
-from opentelemetry._logs import set_logger_provider
-from opentelemetry.sdk._logs import LoggerProvider
-from opentelemetry.sdk._logs.export import (
-    ConsoleLogRecordExporter,
-    SimpleLogRecordProcessor,
-)
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
-
 from shiny import App, otel, reactive, render, ui
 
-# Set up debug OpenTelemetry tracing/logging to the console
-# NOT recommended for production use
-trace_provider = TracerProvider()
-trace_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-trace.set_tracer_provider(trace_provider)
-log_provider = LoggerProvider()
-log_provider.add_log_record_processor(
-    SimpleLogRecordProcessor(ConsoleLogRecordExporter())
-)
-set_logger_provider(log_provider)
-
-# # Typical setup behavior:
-# import logfire
-# logfire.configure(
-#     token="fake-token-for-demo",
-#     service_name="shiny-open-telemetry-demo",
-#     environment="development",
-# )
+# This app intentionally contains NO OpenTelemetry setup code. Instrumentation
+# is an operational concern: apply it at launch with `opentelemetry-instrument`
+# (see the module docstring above) and configure exporters via its CLI flags or
+# standard `OTEL_*` environment variables. Configuring providers inside the app
+# (`trace.set_tracer_provider(...)`) is discouraged -- providers can only be
+# installed once per process, so code-based setup conflicts with (and is ignored
+# under) external instrumentation.
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),
-    ui.markdown("""
+    ui.markdown(f"""
         This demo shows how `otel.suppress` controls **Shiny's internal spans and value logs**.
+
+        Global collect level: **`{otel.get_level().name.lower()}`**
+        (set via `SHINY_OTEL_COLLECT`; defaults to `all`)
 
         Watch the console to see:
         - **Spans**: Session lifecycle, reactive execution
@@ -88,7 +78,8 @@ app_ui = ui.page_fluid(
             ui.markdown("""
                 **Telemetry:** ✅ Shiny spans + value logs
                 Uses `@otel.collect` to re-enable Shiny telemetry inside
-                a broad `otel.suppress()` block.
+                a broad `otel.suppress()` block — even when the global
+                `SHINY_OTEL_COLLECT` level is lower.
                 """),
         ),
     ),
@@ -147,8 +138,17 @@ def server(input, output, session):
             counter_val = private_counter()
             return f"Slider: {slider_val}\nCounter: {counter_val}\n\n❌ No telemetry"
 
+        # Demonstrates re-enabling telemetry within a suppressed context.
+        #
+        # Note: `otel.collect` is an ABSOLUTE per-object setting, not a relative
+        # one. Reactive objects created inside this block capture level ALL at
+        # creation time, which takes precedence over the global level -- so
+        # `output collect_counter_display` still produces spans even when
+        # SHINY_OTEL_COLLECT is set lower (e.g. `session`). `otel.suppress` is
+        # symmetric: it forces telemetry off even when the global level is
+        # `all`. Use `collect` to keep a few critical outputs observable while
+        # the rest of the app runs quiet.
         with otel.collect():
-            # Demonstrates re-enabling telemetry within a suppressed context
             collect_counter = reactive.value(0)
 
             @reactive.effect
