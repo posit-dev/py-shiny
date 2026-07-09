@@ -2107,6 +2107,13 @@ class Inputs:
         fn
             A function that takes the input value and returns the value to
             write to the test snapshot.
+
+        See Also
+        --------
+        * :func:`~shiny.testmode.snapshot_preprocess_input`
+        * :meth:`~shiny.render.renderer.Renderer.snapshot_preprocess`
+        * :func:`~shiny.testmode.export_test_values`
+        * :class:`~shiny.playwright.controller.AppTestValues`
         """
         self._snapshot_preprocessors[self._ns(id)] = wrap_async(fn)
 

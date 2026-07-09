@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `@add_example()` (internal docs decorator) gained an `example_name=` parameter that looks up the example in the nearest `api-examples/` directory, and all `ex_dir=` call sites that pointed inside an `api-examples/` tree were migrated to it. `ex_dir=` remains only for examples outside the nearest `api-examples/` tree. This also fixed nine call sites that passed the example name positionally (where it was silently treated as `app_file=`), so their examples were missing from the generated docs. (#2328)
 
+* Added api-examples for `shiny.testmode.export_test_values()`, `shiny.testmode.snapshot_preprocess_input()`, and `Renderer.snapshot_preprocess()`, demonstrating how to surface reactive values in the test-mode snapshot and how to scrub sensitive or nondeterministic input/output values from it. (#2284)
+
 * Playwright's `OutputDataFrame.set_filter()` controller now supports multi-column filters (#2093)
 * Add api-example for `ui.output_code` (#2093)
 * Update controllers for `DownloadLink` and `DownloadButton` (#2093)

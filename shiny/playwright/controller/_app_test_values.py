@@ -62,6 +62,12 @@ class AppTestValues:
 
     app_values.expect_input("n", is_integer)
     ```
+
+    See Also
+    --------
+    * :func:`~shiny.testmode.export_test_values`
+    * :func:`~shiny.testmode.snapshot_preprocess_input`
+    * :meth:`~shiny.render.renderer.Renderer.snapshot_preprocess`
     """
 
     page: Page
