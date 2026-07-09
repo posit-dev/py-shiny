@@ -37,6 +37,7 @@ app = App(app_ui, server)
 
 Run under OpenTelemetry zero-code auto-instrumentation (installed with
 `pip install "shiny[otel]"`):
+
 ```bash
 opentelemetry-instrument --traces_exporter console shiny run app.py
 ```
@@ -157,6 +158,7 @@ app = App(app_ui, server)
 ```
 
 Run with:
+
 ```bash
 opentelemetry-instrument --traces_exporter console shiny run app.py
 ```
@@ -233,6 +235,7 @@ All available telemetry (currently equivalent to `reactivity`). Reserved for fut
 ### Setting Collection Level
 
 Via environment variable:
+
 ```bash
 SHINY_OTEL_COLLECT=session \\
     opentelemetry-instrument shiny run app.py
@@ -432,11 +435,13 @@ provider.add_span_processor(BatchSpanProcessor(exporter))
 ### 2. Choose Appropriate Collection Level
 
 Development:
+
 ```bash
 export SHINY_OTEL_COLLECT=reactivity  # Full detail for debugging
 ```
 
 Production:
+
 ```bash
 export SHINY_OTEL_COLLECT=session  # Minimal overhead
 # or
@@ -522,6 +527,7 @@ Perfect for local development and self-hosted monitoring.
 **UI**: [http://localhost:16686](http://localhost:16686)
 
 **Setup**:
+
 ```bash
 docker run -d --name jaeger \\
     -p 16686:16686 \\
@@ -530,6 +536,7 @@ docker run -d --name jaeger \\
 ```
 
 **Configuration**:
+
 ```bash
 # OTLP to http://localhost:4317 is the default, so only the service name is needed
 OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument shiny run app.py
@@ -591,6 +598,7 @@ Powerful observability platform focused on trace analysis.
 **UI**: [ui.honeycomb.io](https://ui.honeycomb.io/)
 
 **Configuration**:
+
 ```bash
 export OTEL_SERVICE_NAME=my-shiny-app
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.honeycomb.io"
@@ -620,6 +628,7 @@ Full-stack observability platform.
 **UI**: [one.newrelic.com](https://one.newrelic.com/)
 
 **Configuration**:
+
 ```bash
 export OTEL_SERVICE_NAME=my-shiny-app
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://otlp.nr-data.net:4317"
@@ -692,6 +701,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 
 **Solutions**:
 1. Use `@otel.suppress` decorator on sensitive reactive functions:
+
    ```python
    @reactive.calc
    @otel.suppress
@@ -702,6 +712,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 
 2. Use `with otel.suppress():` when defining reactive objects that handle sensitive data
    (the setting is captured at initialization time):
+
    ```python
    with otel.suppress():
        @reactive.calc
@@ -711,11 +722,13 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
    ```
 
 3. Enable error sanitization:
+
    ```python
    app = App(app_ui, server, sanitize_errors=True)
    ```
 
 4. Use `otel.collect` to re-enable telemetry for specific calcs inside a broad suppress block:
+
    ```python
    with otel.suppress():
        # Most of the app has telemetry suppressed
@@ -733,6 +746,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 **Solutions**:
 1. Ensure you're using async context propagation correctly
 2. Check that custom spans use `start_as_current_span()`:
+
    ```python
    # CORRECT
    with tracer.start_as_current_span("my_span"):
@@ -747,10 +761,12 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 **Problem**: OpenTelemetry configured but backend shows no data.
 
 **Solutions**:
+
 1. Check exporter endpoint URL and authentication
 2. Verify network connectivity to backend
 3. Check backend-specific requirements (headers, format)
 4. Use the console exporter first to verify spans are generated:
+
    ```bash
    opentelemetry-instrument --traces_exporter console shiny run app.py
    ```
@@ -775,6 +791,7 @@ code ran. The manual call is ignored.
 **Problem**: OpenTelemetry not installed.
 
 **Solution**:
+
 ```bash
 pip install "shiny[otel]"
 ```
