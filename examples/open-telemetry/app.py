@@ -32,7 +32,7 @@ from shiny import App, otel, reactive, render, ui
 # (see the module docstring above) and configure exporters via its CLI flags or
 # standard `OTEL_*` environment variables. Configuring providers inside the app
 # (`trace.set_tracer_provider(...)`) is discouraged -- providers can only be
-# installed once per process, so in-code setup conflicts with (and is ignored
+# installed once per process, so code-based setup conflicts with (and is ignored
 # under) external instrumentation.
 
 app_ui = ui.page_fluid(
