@@ -545,12 +545,26 @@ Open the Jaeger UI to explore your Shiny app's traces. You'll see:
 
 Modern observability platform with excellent Python support.
 
-**Setup**:
+**Zero-code configuration** (recommended): Logfire accepts OTLP directly, so the
+standard `opentelemetry-instrument` setup works with no app-code changes. Create a
+write token in your Logfire project settings, then:
+
+```bash
+export OTEL_SERVICE_NAME=my-shiny-app
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf  # Logfire speaks OTLP over HTTP, not gRPC
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://logfire-us.pydantic.dev"  # or logfire-eu
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=$LOGFIRE_TOKEN"
+opentelemetry-instrument shiny run app.py
+```
+
+**Alternative — Logfire SDK** (in-code): the `logfire` package configures
+OpenTelemetry itself and adds auto-detected credentials (`logfire auth`) and its own
+instrumentation helpers, at the cost of touching app code:
+
 ```bash
 pip install logfire
 ```
 
-**Configuration**:
 ```python
 import logfire
 
@@ -566,9 +580,9 @@ from shiny import App, ui
 
 **UI**: https://logfire.pydantic.dev
 
-**Note**: `logfire.configure()` installs the OpenTelemetry provider itself, so run
-the app directly (`shiny run app.py`) — do not also wrap it with
-`opentelemetry-instrument`.
+**Note**: use exactly one of the two — `logfire.configure()` installs the
+OpenTelemetry provider itself, so with the SDK route run the app directly
+(`shiny run app.py`) and do not also wrap it with `opentelemetry-instrument`.
 
 ### Honeycomb (Managed)
 
