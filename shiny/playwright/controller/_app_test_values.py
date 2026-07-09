@@ -12,6 +12,21 @@ __all__ = ("AppTestValues",)
 _DEFAULT_TIMEOUT_SECS = 30
 
 
+def _matches(actual: Any, expected: Any) -> bool:
+    # Snapshot values are JSON-decoded, so they can never be callables; a callable
+    # `expected` is unambiguously a predicate to apply to the actual value.
+    if callable(expected):
+        return bool(expected(actual))
+    return actual == expected
+
+
+def _mismatch_message(block: str, key: str, actual: Any, expected: Any) -> str:
+    if callable(expected):
+        name = getattr(expected, "__name__", repr(expected))
+        return f"{block}[{key!r}] == {actual!r}, which does not satisfy {name}"
+    return f"{block}[{key!r}] == {actual!r}, expected {expected!r}"
+
+
 class AppTestValues:
     """
     Read a Shiny session's test-mode snapshot of `input`, `output`, and `export`
@@ -37,6 +52,15 @@ class AppTestValues:
     app_values.expect_output("greeting", "Hello abc")
     app_values.expect_export("upper", "ABC")
     snapshot = app_values.get()  # {"input": {...}, "output": {...}, "export": {...}}
+
+
+    # Expected values may also be predicates (any callable taking the actual
+    # value); prefer named functions over lambdas for readable failure messages.
+    def is_integer(value):
+        return isinstance(value, int)
+
+
+    app_values.expect_input("n", is_integer)
     ```
 
     See Also
@@ -115,9 +139,9 @@ class AppTestValues:
                     f"Present keys: {sorted(section)}"
                 )
             actual = section[key]
-            if actual != value:
+            if not _matches(actual, value):
                 raise AssertionError(
-                    f"{block}[{key!r}] == {actual!r}, expected {value!r}"
+                    _mismatch_message(block, key, actual=actual, expected=value)
                 )
 
         _()
@@ -128,6 +152,11 @@ class AppTestValues:
         """
         Expect the input `key` to equal `value` (JSON-decoded), retrying until it
         matches or `timeout` seconds elapse.
+
+        `value` may instead be a predicate (a callable taking the actual value):
+        the expectation retries until it returns a truthy value. A predicate may
+        also raise `AssertionError` itself to provide a richer failure message;
+        any other exception it raises propagates immediately without retrying.
         """
         self._expect_value("input", key, value, timeout)
 
@@ -137,6 +166,8 @@ class AppTestValues:
         """
         Expect the output `key` to equal `value` (JSON-decoded), retrying until it
         matches or `timeout` seconds elapse.
+
+        `value` may instead be a predicate; see `expect_input` for the semantics.
         """
         self._expect_value("output", key, value, timeout)
 
@@ -146,6 +177,8 @@ class AppTestValues:
         """
         Expect the exported value `key` to equal `value` (JSON-decoded), retrying
         until it matches or `timeout` seconds elapse.
+
+        `value` may instead be a predicate; see `expect_input` for the semantics.
         """
         self._expect_value("export", key, value, timeout)
 
@@ -171,7 +204,9 @@ class AppTestValues:
             # This applies to BOTH modes: "exact" must verify values too, not
             # just that the key sets are equal.
             mismatched = sorted(
-                key for key in values if key in section and section[key] != values[key]
+                key
+                for key in values
+                if key in section and not _matches(section[key], values[key])
             )
 
             if not (missing or extra or mismatched):
@@ -183,7 +218,7 @@ class AppTestValues:
             if extra:
                 problems.append(f"unexpected keys {extra}")
             problems += [
-                f"{block}[{key!r}] == {section[key]!r}, expected {values[key]!r}"
+                _mismatch_message(block, key, actual=section[key], expected=values[key])
                 for key in mismatched
             ]
             raise AssertionError(f"{block} (match={match!r}): " + "; ".join(problems))
@@ -204,7 +239,9 @@ class AppTestValues:
         Parameters
         ----------
         values
-            A mapping of (namespaced) input ids to their expected values.
+            A mapping of (namespaced) input ids to their expected values. Any
+            expected value may instead be a predicate (a callable taking the
+            actual value); see `expect_input` for the semantics.
         match
             `"subset"` (the default) requires every key in `values` to be present
             and equal, ignoring any additional keys in the snapshot. `"exact"`
@@ -228,7 +265,9 @@ class AppTestValues:
         Parameters
         ----------
         values
-            A mapping of (namespaced) output ids to their expected values.
+            A mapping of (namespaced) output ids to their expected values. Any
+            expected value may instead be a predicate (a callable taking the
+            actual value); see `expect_input` for the semantics.
         match
             `"subset"` (the default) requires every key in `values` to be present
             and equal, ignoring any additional keys in the snapshot. `"exact"`
@@ -253,6 +292,8 @@ class AppTestValues:
         ----------
         values
             A mapping of (namespaced) exported names to their expected values.
+            Any expected value may instead be a predicate (a callable taking the
+            actual value); see `expect_input` for the semantics.
         match
             `"subset"` (the default) requires every key in `values` to be present
             and equal, ignoring any additional keys in the snapshot. `"exact"`

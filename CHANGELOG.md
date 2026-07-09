@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added the `shiny.playwright.controller.AppTestValues` Playwright controller for reading a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests. (#2269)
 
+* `AppTestValues` expect methods now accept predicates: pass any callable (e.g. `app_values.expect_input("n", is_integer)`) in place of an expected value, and the expectation retries until the predicate returns a truthy value. (#2357)
+
 * The test-mode snapshot endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys). Unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
 
 * Test-mode snapshot values can now be preprocessed before they are written to the snapshot, e.g. to scrub timestamps or temp paths: `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) for inputs and `my_output.snapshot_preprocess(fn)` for outputs. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
@@ -27,9 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added a `bookmarking` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to save and restore app state with `bookmark_store=`, the `session.bookmark` lifecycle hooks, custom bookmark values, and server-side bookmark storage. (#2345)
 
+* Added an `otel` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to observe Shiny apps with OpenTelemetry: zero-code auto-instrumentation via `opentelemetry-instrument shiny run`, collection levels with `SHINY_OTEL_COLLECT`, per-object control with `otel.suppress`/`otel.collect`, and exporting to OTLP backends. (#2356)
+
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
 ### Improvements
+
+* The `shiny[otel]` optional dependency group now includes `opentelemetry-distro[otlp]`, so OpenTelemetry zero-code auto-instrumentation works out of the box: `opentelemetry-instrument shiny run app.py`. This is now the documented standard way to enable OpenTelemetry — the docs and the `examples/open-telemetry/` example no longer configure providers inside the app (in-code `set_tracer_provider()` setup is silently ignored when a provider is already installed, e.g. under `opentelemetry-instrument`). The OTLP exporters are also included, making it easy to switch between gRPC and HTTP export via standard `OTEL_*` environment variables. Note that `opentelemetry-distro` pins `opentelemetry-sdk` to a matching minor version, so if you combine `shiny[otel]` with other packages that pin the OpenTelemetry SDK (e.g. `logfire`), the resolver may need matching versions. (#2349)
 
 * `@add_example()` (internal docs decorator) gained an `example_name=` parameter that looks up the example in the nearest `api-examples/` directory, and all `ex_dir=` call sites that pointed inside an `api-examples/` tree were migrated to it. `ex_dir=` remains only for examples outside the nearest `api-examples/` tree. This also fixed nine call sites that passed the example name positionally (where it was silently treated as `app_file=`), so their examples were missing from the generated docs. (#2328)
 

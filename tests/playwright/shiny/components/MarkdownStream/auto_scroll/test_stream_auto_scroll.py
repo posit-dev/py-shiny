@@ -44,6 +44,33 @@ GROWN_AND_SETTLED_SCRIPT = """(args) => {
 }"""
 
 
+# Scrolls the container and flags when the resulting scroll *event* is
+# delivered. shinychat updates its pinned/unpinned state inside its own scroll
+# handler, and scroll events are dispatched asynchronously (on Firefox, tied to
+# paint ticks that can lag under CI load) — so waiting on scrollTop alone races
+# the event delivery. Our once-listener registers after shinychat's, so by the
+# time the flag is set, shinychat has already processed the same event.
+SCROLL_TO_SCRIPT = """(args) => {
+    const el = document.querySelector(args.selector);
+    delete el.__testScrollEventSeen;
+    el.addEventListener(
+        "scroll",
+        () => { el.__testScrollEventSeen = true; },
+        { once: true },
+    );
+    el.scrollTo(0, args.to === "bottom" ? el.scrollHeight : 0);
+}"""
+
+
+def scroll_to_and_wait_for_scroll_event(page: Page, selector: str, to: str) -> None:
+    page.evaluate(SCROLL_TO_SCRIPT, {"selector": selector, "to": to})
+    page.wait_for_function(
+        """(sel) => document.querySelector(sel).__testScrollEventSeen === true""",
+        arg=selector,
+        timeout=30_000,
+    )
+
+
 def scroll_state(page: Page, selector: str) -> dict[str, float]:
     return page.evaluate(
         """(sel) => {
@@ -120,20 +147,17 @@ def test_auto_scroll_pinning(page: Page, local_app: ShinyAppProc) -> None:
         expect_not_scrolled(page, UNPINNED)
 
     # Phase B: scrolling away from the bottom unpins; new content must NOT
-    # drag the container back down.
-    page.evaluate(f"""() => document.querySelector({PINNED!r}).scrollTo(0, 0)""")
-    page.wait_for_function(
-        f"""() => document.querySelector({PINNED!r}).scrollTop === 0"""
-    )
+    # drag the container back down. Waiting for the scroll event (not just
+    # scrollTop) guarantees shinychat has registered the unpin before the next
+    # chunk arrives.
+    scroll_to_and_wait_for_scroll_event(page, PINNED, "top")
     next_chunk_and_wait_for_render(page, next_chunk, 4)
     expect_not_scrolled(page, PINNED)
 
     # Phase C: scrolling back to the bottom re-pins; the next chunk is
-    # followed again.
-    page.evaluate(f"""() => {{
-            const el = document.querySelector({PINNED!r});
-            el.scrollTo(0, el.scrollHeight);
-        }}""")
+    # followed again. Same rationale: shinychat only re-pins inside its scroll
+    # handler, so wait for the event to be delivered before streaming more.
+    scroll_to_and_wait_for_scroll_event(page, PINNED, "bottom")
     expect_at_bottom(page, PINNED)
     next_chunk_and_wait_for_render(page, next_chunk, 5)
     expect_at_bottom(page, PINNED)
