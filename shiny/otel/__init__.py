@@ -292,6 +292,15 @@ when the reactive function executes. This means `otel.suppress` affects whether
 telemetry is suppressed on the reactive object during its definition, and that
 setting is used for all subsequent executions.
 
+**Precedence**: `otel.suppress` and `otel.collect` are *absolute* per-object settings
+that take precedence over the global `SHINY_OTEL_COLLECT` level. `suppress` forces
+telemetry off for the stamped objects even when the global level is `all`, and
+`collect` forces it on (level `ALL`) even when the global level is lower (e.g.
+`session`) -- so a `collect`-stamped output still produces spans in a
+`SHINY_OTEL_COLLECT=session` run. Infrastructure spans (`session_start`,
+`session_end`, `reactive_update`) follow only the environment variable and are never
+affected by `suppress`/`collect`.
+
 ### Decorator
 
 Use `otel.suppress` as a decorator to disable Shiny telemetry for a reactive function.

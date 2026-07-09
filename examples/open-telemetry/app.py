@@ -12,6 +12,16 @@ Run under OpenTelemetry zero-code auto-instrumentation (installed with
     opentelemetry-instrument --traces_exporter console --logs_exporter console \\
         --metrics_exporter none shiny run app.py
 
+To see how the global collect level interacts with `otel.suppress` / `otel.collect`,
+lower it with `SHINY_OTEL_COLLECT` (the app displays the active level):
+
+    SHINY_OTEL_COLLECT=session opentelemetry-instrument --traces_exporter console \\
+        --logs_exporter console --metrics_exporter none shiny run app.py
+
+At `session` level the "Normal" card stops producing spans, but the
+`otel.collect` card still does -- see the comment on `with otel.collect():`
+below for why.
+
 Watch the console for spans and log events as you interact with the app.
 """
 
@@ -27,8 +37,11 @@ from shiny import App, otel, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.h2("OpenTelemetry: Collection Control & Value Logging"),
-    ui.markdown("""
+    ui.markdown(f"""
         This demo shows how `otel.suppress` controls **Shiny's internal spans and value logs**.
+
+        Global collect level: **`{otel.get_level().name.lower()}`**
+        (set via `SHINY_OTEL_COLLECT`; defaults to `all`)
 
         Watch the console to see:
         - **Spans**: Session lifecycle, reactive execution
@@ -65,7 +78,8 @@ app_ui = ui.page_fluid(
             ui.markdown("""
                 **Telemetry:** ✅ Shiny spans + value logs
                 Uses `@otel.collect` to re-enable Shiny telemetry inside
-                a broad `otel.suppress()` block.
+                a broad `otel.suppress()` block — even when the global
+                `SHINY_OTEL_COLLECT` level is lower.
                 """),
         ),
     ),
@@ -124,8 +138,17 @@ def server(input, output, session):
             counter_val = private_counter()
             return f"Slider: {slider_val}\nCounter: {counter_val}\n\n❌ No telemetry"
 
+        # Demonstrates re-enabling telemetry within a suppressed context.
+        #
+        # Note: `otel.collect` is an ABSOLUTE per-object setting, not a relative
+        # one. Reactive objects created inside this block capture level ALL at
+        # creation time, which takes precedence over the global level -- so
+        # `output collect_counter_display` still produces spans even when
+        # SHINY_OTEL_COLLECT is set lower (e.g. `session`). `otel.suppress` is
+        # symmetric: it forces telemetry off even when the global level is
+        # `all`. Use `collect` to keep a few critical outputs observable while
+        # the rest of the app runs quiet.
         with otel.collect():
-            # Demonstrates re-enabling telemetry within a suppressed context
             collect_counter = reactive.value(0)
 
             @reactive.effect

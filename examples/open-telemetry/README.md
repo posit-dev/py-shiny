@@ -198,10 +198,15 @@ The `otel.suppress` decorator and context manager will override this default.
 
 ### Default Collection Level
 
-The default collection level is set by:
+The default collection level is set by the `SHINY_OTEL_COLLECT` environment variable
+(defaults to `all`).
 
-1. The `SHINY_OTEL_COLLECT` environment variable (defaults to `all`)
-2. Can be overridden programmatically with `otel.suppress` / `otel.suppress()`
+`otel.suppress` and `otel.collect` are *absolute* per-object overrides that take
+precedence over the global level: `suppress` forces telemetry off even when the
+global level is `all`, and `collect` forces it on even when the global level is
+lower — running this app with `SHINY_OTEL_COLLECT=session` still produces spans for
+the `otel.collect` card. Infrastructure spans (`session_start`, `session_end`,
+`reactive_update`) follow only the environment variable.
 
 ### Span Hierarchy
 
