@@ -202,6 +202,7 @@ class Renderer(Generic[IT]):
         """
         self.output_id = output_id
 
+    @add_example()
     def snapshot_preprocess(
         self,
         fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]],
@@ -224,6 +225,10 @@ class Renderer(Generic[IT]):
         fn
             A function that takes the output value and returns the value to
             write to the test snapshot.
+
+        See Also
+        --------
+        * :func:`~shiny.testmode.snapshot_preprocess_input`
         """
         self._snapshot_preprocess_fn = wrap_async(fn)
 
