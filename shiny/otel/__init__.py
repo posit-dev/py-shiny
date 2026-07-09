@@ -163,7 +163,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 
 You'll see OpenTelemetry spans printed to the console showing Shiny's internal execution. See `examples/open-telemetry/` for a complete app demonstrating collection control.
 
-### In-Code Setup (Discouraged)
+### Code-based Setup (Discouraged)
 
 Configuring OpenTelemetry inside the app is discouraged: it couples your app to a
 specific observability setup, and it conflicts with external instrumentation.
@@ -519,6 +519,8 @@ environment variables and launching with `opentelemetry-instrument`.
 
 Perfect for local development and self-hosted monitoring.
 
+**UI**: [http://localhost:16686](http://localhost:16686)
+
 **Setup**:
 ```bash
 docker run -d --name jaeger \\
@@ -533,8 +535,6 @@ docker run -d --name jaeger \\
 OTEL_SERVICE_NAME=my-shiny-app opentelemetry-instrument shiny run app.py
 ```
 
-**UI**: http://localhost:16686
-
 Open the Jaeger UI to explore your Shiny app's traces. You'll see:
 - Session lifecycle spans
 - Reactive update cycles
@@ -544,6 +544,8 @@ Open the Jaeger UI to explore your Shiny app's traces. You'll see:
 ### Pydantic Logfire (Managed)
 
 Modern observability platform with excellent Python support.
+
+**UI**: [logfire.pydantic.dev](https://logfire.pydantic.dev/)
 
 **Zero-code configuration** (recommended): Logfire accepts OTLP directly, so the
 standard `opentelemetry-instrument` setup works with no app-code changes. Create a
@@ -557,7 +559,7 @@ export OTEL_EXPORTER_OTLP_HEADERS="Authorization=$LOGFIRE_TOKEN"
 opentelemetry-instrument shiny run app.py
 ```
 
-**Alternative — Logfire SDK** (in-code): the `logfire` package configures
+**Alternative — Logfire SDK** (code-based): the `logfire` package configures
 OpenTelemetry itself and adds auto-detected credentials (`logfire auth`) and its own
 instrumentation helpers, at the cost of touching app code:
 
@@ -578,8 +580,6 @@ logfire.configure(
 from shiny import App, ui
 ```
 
-**UI**: https://logfire.pydantic.dev
-
 **Note**: use exactly one of the two — `logfire.configure()` installs the
 OpenTelemetry provider itself, so with the SDK route run the app directly
 (`shiny run app.py`) and do not also wrap it with `opentelemetry-instrument`.
@@ -587,6 +587,8 @@ OpenTelemetry provider itself, so with the SDK route run the app directly
 ### Honeycomb (Managed)
 
 Powerful observability platform focused on trace analysis.
+
+**UI**: [ui.honeycomb.io](https://ui.honeycomb.io/)
 
 **Configuration**:
 ```bash
@@ -598,7 +600,11 @@ opentelemetry-instrument shiny run app.py
 
 ### Datadog (Managed)
 
-Enterprise observability platform with APM features. Send OTLP to your Datadog Agent
+Enterprise observability platform with APM features.
+
+**UI**: [app.datadoghq.com](https://app.datadoghq.com/)
+
+**Configuration**: send OTLP to your Datadog Agent
 (with [OTLP ingestion enabled](https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest_in_the_agent/)):
 
 ```bash
@@ -610,6 +616,8 @@ opentelemetry-instrument shiny run app.py
 ### New Relic (Managed)
 
 Full-stack observability platform.
+
+**UI**: [one.newrelic.com](https://one.newrelic.com/)
 
 **Configuration**:
 ```bash
@@ -634,7 +642,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 **Problem**: Console/backend shows no spans from Shiny.
 
 **Solutions**:
-1. Verify the app is launched with `opentelemetry-instrument` (or, for in-code
+1. Verify the app is launched with `opentelemetry-instrument` (or, for code-based
    setup, that a provider is installed before the app runs)
 
 2. Check collection level:
@@ -749,7 +757,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 
 ### "Overriding of current TracerProvider is not allowed"
 
-**Problem**: This warning appears at startup, and your in-code exporter configuration
+**Problem**: This warning appears at startup, and your code-based exporter configuration
 seems to have no effect.
 
 **Cause**: The app calls `trace.set_tracer_provider()` while also running under
@@ -775,14 +783,14 @@ pip install "shiny[otel]"
 
 - **Examples**: Check out `examples/open-telemetry/` for working example apps
 - **API Reference**: See API documentation for `shiny.otel` module
-- **OpenTelemetry Docs**: https://opentelemetry.io/docs/languages/python/
-- **Shiny Docs**: https://shiny.posit.co/py/
+- **OpenTelemetry Docs**: [opentelemetry.io/docs/languages/python](https://opentelemetry.io/docs/languages/python/)
+- **Shiny Docs**: [shiny.posit.co/py](https://shiny.posit.co/py/)
 
 ## Getting Help
 
-- **GitHub Issues**: https://github.com/posit-dev/py-shiny/issues
-- **Community**: https://forum.posit.co/c/shiny
-- **OpenTelemetry Community**: https://cloud-native.slack.com (#otel-python channel)
+- **GitHub Issues**: [github.com/posit-dev/py-shiny/issues](https://github.com/posit-dev/py-shiny/issues)
+- **Community**: [forum.posit.co/c/shiny](https://forum.posit.co/c/shiny)
+- **OpenTelemetry Community**: [cloud-native.slack.com](https://cloud-native.slack.com) (#otel-python channel)
 """
 
 from __future__ import annotations
