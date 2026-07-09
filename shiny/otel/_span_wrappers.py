@@ -17,6 +17,7 @@ Python's contextvars provide automatic context propagation to child tasks:
   automatically use the correct parent
 
 When you use `tracer.start_as_current_span()`, the SDK:
+
 1. Sets the span as "current" in the OpenTelemetry context (using contextvars)
 2. Python's contextvars automatically copy to new async tasks
 3. Child spans created within those tasks automatically use the context parent

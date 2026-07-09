@@ -656,6 +656,7 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
    setup, that a provider is installed before the app runs)
 
 2. Check collection level:
+
    ```bash
    # Make sure it's not "none"
    export SHINY_OTEL_COLLECT=all
@@ -672,11 +673,13 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 **Solutions**:
 
 1. Lower collection level:
+
    ```bash
    export SHINY_OTEL_COLLECT=session  # Minimal
    ```
 
 2. Enable sampling:
+
    ```bash
    export OTEL_TRACES_SAMPLER=parentbased_traceidratio
    export OTEL_TRACES_SAMPLER_ARG=0.1  # Sample 10% of traces
@@ -684,12 +687,14 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
 
 3. If configuring the SDK in code, use `BatchSpanProcessor` instead of
    `SimpleSpanProcessor` (`opentelemetry-instrument` already batches by default):
+
    ```python
    from opentelemetry.sdk.trace.export import BatchSpanProcessor
    provider.add_span_processor(BatchSpanProcessor(exporter))
    ```
 
 4. Use `@otel.suppress` for high-frequency operations:
+
    ```python
    @reactive.calc
    @otel.suppress

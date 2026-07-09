@@ -25,12 +25,14 @@ class OtelCollectLevel(IntEnum):
     Examples
     --------
     Set collect level via environment variable:
+
     ```bash
     export SHINY_OTEL_COLLECT=session
     python app.py
     ```
 
     Or suppress telemetry programmatically:
+
     ```python
     from shiny import otel
 
@@ -81,6 +83,7 @@ def get_level() -> OtelCollectLevel:
     Get the current OpenTelemetry collect level.
 
     The collect level is determined in the following order:
+
     1. Context variable (set via ``otel.suppress()`` context manager)
     2. SHINY_OTEL_COLLECT environment variable
     3. Default: ALL
