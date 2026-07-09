@@ -55,6 +55,8 @@ def export_test_values(**kwargs: Callable[[], Any]) -> None:
     See Also
     --------
     * :func:`~shiny.testmode.snapshot_preprocess_input`
+    * :meth:`~shiny.render.renderer.Renderer.snapshot_preprocess`
+    * :class:`~shiny.playwright.controller.AppTestValues`
     """
     session = require_active_session(None)
     session._export_test_values(**kwargs)
@@ -90,6 +92,7 @@ def snapshot_preprocess_input(
     --------
     * :meth:`~shiny.render.renderer.Renderer.snapshot_preprocess`
     * :func:`~shiny.testmode.export_test_values`
+    * :class:`~shiny.playwright.controller.AppTestValues`
     """
     session = require_active_session(None)
     session.input.set_snapshot_preprocess(id, fn)

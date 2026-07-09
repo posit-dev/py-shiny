@@ -229,6 +229,8 @@ class Renderer(Generic[IT]):
         See Also
         --------
         * :func:`~shiny.testmode.snapshot_preprocess_input`
+        * :func:`~shiny.testmode.export_test_values`
+        * :class:`~shiny.playwright.controller.AppTestValues`
         """
         self._snapshot_preprocess_fn = wrap_async(fn)
 
