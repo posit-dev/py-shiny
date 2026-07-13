@@ -313,6 +313,20 @@ def test_serialize_frame(df_f: IntoDataFrame):
     }
 
 
+def test_serialize_frame_numeric_column_names():
+    # Regression test: numeric column names (e.g. `0`, `1`) previously raised in
+    # serialize_frame because `data[col_name]` was interpreted as positional/row
+    # access on the narwhals frame instead of column access.
+    df = pd.DataFrame([["a", 1], ["b", 2], ["c", 3]], columns=[0, 1])
+
+    with session_context(test_session):
+        res = serialize_frame(as_data_frame(df))
+
+    assert res["columns"] == [0, 1]
+    assert [hint["type"] for hint in res["typeHints"]] == ["string", "numeric"]
+    assert res["data"] == [["a", 1], ["b", 2], ["c", 3]]
+
+
 def test_subset_frame(df_f: IntoDataFrame):
     # TODO: this assumes subset_frame doesn't reset index
     res = subset_frame(as_data_frame(df_f), rows=[1], cols=["chr", "num"])
@@ -366,7 +380,6 @@ def test_dtype_coverage():
     errs: list[str] = []
 
     for dtype_name in dtype_names:
-
         # Skip known types or imports that are not dtypes
         if dtype_name.endswith("Type"):
             # "DType",
