@@ -169,7 +169,7 @@ def apply_frame_patches(
 
     # Upgrade the Scatter info to new column Series objects
     scatter_columns = [
-        nw_data[column_name].scatter(
+        nw_data.get_column(column_name).scatter(
             scatter_values["row_indexes"], scatter_values["values"]
         )
         for column_name, scatter_values in cell_patches_by_column.items()
@@ -237,7 +237,12 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     data = as_data_frame(into_data)
 
-    type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
+    # Use `get_column` rather than `data[col_name]`: for a numeric column name
+    # (e.g. `0`) the latter is interpreted as row/positional access and returns a
+    # row frame instead of the column, which then fails downstream.
+    type_hints = [
+        serialize_dtype(data.get_column(col_name)) for col_name in data.columns
+    ]
 
     # TODO-future-barret; Swich serialization to "by column", rather than "by row"
     # * This would allow for a single column to be serialized in a single operation

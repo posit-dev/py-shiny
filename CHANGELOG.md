@@ -47,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* `render.data_frame` now renders data frames whose column names are non-string (e.g. numeric) instead of failing with an obscure error. Columns are now accessed via `get_column()`, which avoids narwhals interpreting a numeric column name as positional row access. (#2115)
+
 * Fixed `--launch-browser` so it no longer depends on INFO-level Uvicorn startup logs. Browser launch now works when logs are disabled or `--log-level=warning` is used. (#569)
 
 * `ui.output_data_frame` will now consistently order the filtered columns in ascending column order. (#2093)
