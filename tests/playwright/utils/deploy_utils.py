@@ -281,11 +281,6 @@ def local_deploys_app_url_fixture(
         elif deploy_location in deploy_locations:
 
             if deploy_location == "connect":
-                if server_url and "dogfood" in server_url:
-                    # TODO: dogfood server does not have public links now, the team will migrate to spinning their own connect server in the future.
-                    pytest.skip(
-                        "dogfood server does not have public links now, the team will migrate to spinning their own connect server in the future."
-                    )
                 if not (server_url and api_key):
                     pytest.skip(
                         "Connect server url or api key not found. Cannot deploy."

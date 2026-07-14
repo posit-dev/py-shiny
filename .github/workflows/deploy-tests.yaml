@@ -24,31 +24,16 @@ jobs:
         python-version: ["3.10"]
         os: [ubuntu-latest]
         config:
-          # Released server, shiny, and rsconnect
-          # TEMPORARILY DISABLED: Connect server missing uv binary at /opt/rstudio-connect/mnt/python-environments/_bootstrap/3.10.15/uv/bin/uv
-          # TODO: Re-enable once the Connect server is fixed
-          # - name: "pypi-shiny-rsconnect-connect"
-          #   released_connect_server: true
-          #   pypi_shiny: true
-          #   pypi_rsconnect: true
-          #   base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
-          #   app_name: "pypi-shiny-rsconnect"
-          #   test_shinyappsio: false
-
-          # Released shiny and rsconnect
-          # Dev server
-          - name: "pypi-shiny-rsconnect-dogfood"
-            released_connect_server: false
+          # Released Connect, shiny, and rsconnect
+          - name: "pypi-shiny-rsconnect-local-connect"
             pypi_shiny: true
             pypi_rsconnect: true
             base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
             app_name: "pypi-shiny-rsconnect"
             test_shinyappsio: false
 
-          # Released shiny
-          # Dogfood server and rsconnect
-          - name: "pypi-shiny-dev-rsconnect-dogfood"
-            released_connect_server: false
+          # Released Connect and shiny; development rsconnect
+          - name: "pypi-shiny-dev-rsconnect-local-connect"
             pypi_shiny: true
             pypi_rsconnect: false
             base_test_dir: "./tests/playwright/deploys/express-page_sidebar"
@@ -56,9 +41,8 @@ jobs:
             test_shinyappsio: false
 
           # GitHub shiny v1.0.0 - test if github packages can be installed
-          # Dogfood server and rsconnect
-          - name: "github-shiny-dev-rsconnect-dogfood"
-            released_connect_server: false
+          # Released Connect; development rsconnect
+          - name: "github-shiny-dev-rsconnect-local-connect"
             github_shiny: true
             pypi_shiny: false
             pypi_rsconnect: false
@@ -66,9 +50,8 @@ jobs:
             app_name: "pypi-shiny-dev-rsconnect"
             test_shinyappsio: false
 
-          # Dev server, shiny, and rsconnect
-          - name: "dev-shiny-rsconnect-dogfood"
-            released_connect_server: false
+          # Released Connect; development shiny and rsconnect
+          - name: "dev-shiny-rsconnect-local-connect"
             pypi_shiny: false
             pypi_rsconnect: false
             base_test_dir: "./tests/playwright/deploys"
@@ -117,11 +100,17 @@ jobs:
         run: |
           make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv"
 
+      - name: Start local Connect
+        id: connect
+        uses: posit-dev/with-connect@main
+        with:
+          license: "${{ secrets.CONNECT_LICENSE_FILE }}"
+
       - name: Deploy apps and run tests (on `push` or `deploy**` branches)
         env:
           DEPLOY_APPS: "true"
-          DEPLOY_CONNECT_SERVER_URL: "${{ (matrix.config.released_connect_server && 'https://connect.posit.it/') || 'https://dogfood.team.pct.posit.it/' }}"
-          DEPLOY_CONNECT_SERVER_API_KEY: "${{ (matrix.config.released_connect_server && secrets.DEPLOY_CONNECT_POSIT_SERVER_API_KEY) || secrets.DEPLOY_CONNECT_SERVER_API_KEY }}"
+          DEPLOY_CONNECT_SERVER_URL: "${{ steps.connect.outputs.CONNECT_SERVER }}"
+          DEPLOY_CONNECT_SERVER_API_KEY: "${{ steps.connect.outputs.CONNECT_API_KEY }}"
           DEPLOY_SHINYAPPS_NAME: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_NAME }}"
           DEPLOY_SHINYAPPS_TOKEN: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_TOKEN }}"
           DEPLOY_SHINYAPPS_SECRET: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_SECRET }}"
@@ -132,6 +121,13 @@ jobs:
         # we can have many local processes waiting for deployment to finish
         run: |
           make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv --numprocesses 12"
+
+      - name: Stop local Connect
+        if: ${{ always() && steps.connect.outputs.CONTAINER_ID != '' }}
+        uses: posit-dev/with-connect@main
+        with:
+          license: "${{ secrets.CONNECT_LICENSE_FILE }}"
+          stop: "${{ steps.connect.outputs.CONTAINER_ID }}"
 
       # - uses: actions/upload-artifact@v4
       #   if: failure()
