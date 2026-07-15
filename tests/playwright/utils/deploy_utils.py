@@ -293,11 +293,8 @@ def local_deploys_app_url_fixture(
                     pytest.skip(
                         "Connect server url or api key not found. Cannot deploy."
                     )
-            if (
-                deploy_location == "shinyapps"
-                and shinyappsio_name
-                and shinyappsio_token
-                and shinyappsio_secret
+            if deploy_location == "shinyapps" and not (
+                shinyappsio_name and shinyappsio_token and shinyappsio_secret
             ):
                 pytest.skip(
                     "Shinyapps.io name, token or secret not found. Cannot deploy."
