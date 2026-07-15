@@ -29,8 +29,12 @@ __all__ = (
 )
 
 # connect
-server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
-api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
+server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL") or os.environ.get(
+    "CONNECT_SERVER"
+)
+api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY") or os.environ.get(
+    "CONNECT_API_KEY"
+)
 # shinyapps.io
 shinyappsio_name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
 shinyappsio_token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
@@ -136,9 +140,13 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
         raise RuntimeError("No api key found. Cannot deploy.")
 
     # check if connect app is already deployed to avoid duplicates
-    connect_server_lookup_command = f"rsconnect content search --server {server_url} --api-key {api_key} --title-contains {app_name}"
+    connect_server_lookup_command = (
+        f"rsconnect content search --title-contains {app_name}"
+    )
     app_details = run_command(connect_server_lookup_command)
-    connect_server_deploy = f"rsconnect deploy shiny {app_dir} --server {server_url} --api-key {api_key} --title {app_name} --verbose"
+    connect_server_deploy = (
+        f"rsconnect deploy shiny {app_dir} --title {app_name} --verbose"
+    )
     # only if the app exists do we replace existing app with new version
     if json.loads(app_details):
         app_id = json.loads(app_details)[0]["guid"]

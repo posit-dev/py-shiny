@@ -20,8 +20,8 @@ jobs:
       packages: write
     strategy:
       matrix:
-        # Matches deploy server python version
-        python-version: ["3.10"]
+        # Matches the Python version available in the Connect image
+        python-version: ["3.14"]
         os: [ubuntu-latest]
         config:
           # Released Connect, shiny, and rsconnect
@@ -100,19 +100,11 @@ jobs:
         run: |
           make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv"
 
-      - name: Start local Connect
-        id: connect
+      - name: Deploy apps and run tests with local Connect
         uses: posit-dev/with-connect@main
         env:
           UV_PYTHON: "3.13"
-        with:
-          license: "${{ secrets.CONNECT_LICENSE_FILE }}"
-
-      - name: Deploy apps and run tests (on `push` or `deploy**` branches)
-        env:
           DEPLOY_APPS: "true"
-          DEPLOY_CONNECT_SERVER_URL: "${{ steps.connect.outputs.CONNECT_SERVER }}"
-          DEPLOY_CONNECT_SERVER_API_KEY: "${{ steps.connect.outputs.CONNECT_API_KEY }}"
           DEPLOY_SHINYAPPS_NAME: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_NAME }}"
           DEPLOY_SHINYAPPS_TOKEN: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_TOKEN }}"
           DEPLOY_SHINYAPPS_SECRET: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_SECRET }}"
@@ -121,17 +113,10 @@ jobs:
         timeout-minutes: 30
         # Given we are waiting for external servers to finish,
         # we can have many local processes waiting for deployment to finish
-        run: |
-          make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv --numprocesses 12"
-
-      - name: Stop local Connect
-        if: ${{ always() && steps.connect.outputs.CONTAINER_ID != '' }}
-        uses: posit-dev/with-connect@main
-        env:
-          UV_PYTHON: "3.13"
         with:
           license: "${{ secrets.CONNECT_LICENSE_FILE }}"
-          stop: "${{ steps.connect.outputs.CONTAINER_ID }}"
+          command: |
+            make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv --numprocesses 12"
 
       # - uses: actions/upload-artifact@v4
       #   if: failure()
