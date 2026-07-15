@@ -103,6 +103,8 @@ jobs:
       - name: Start local Connect
         id: connect
         uses: posit-dev/with-connect@main
+        env:
+          UV_PYTHON: "3.13"
         with:
           license: "${{ secrets.CONNECT_LICENSE_FILE }}"
 
@@ -125,6 +127,8 @@ jobs:
       - name: Stop local Connect
         if: ${{ always() && steps.connect.outputs.CONTAINER_ID != '' }}
         uses: posit-dev/with-connect@main
+        env:
+          UV_PYTHON: "3.13"
         with:
           license: "${{ secrets.CONNECT_LICENSE_FILE }}"
           stop: "${{ steps.connect.outputs.CONTAINER_ID }}"
