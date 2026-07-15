@@ -176,7 +176,7 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
 # TODO-future: Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
 def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
     # Deploy to shinyapps.io
-    shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {shinyappsio_name} --token {shinyappsio_token} --secret {shinyappsio_secret} --title {app_name} --verbose"
+    shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {shinyappsio_name} --token {shinyappsio_token} --secret {shinyappsio_secret} --title {app_name} --override-python-version 3.10 --verbose"
     shinyapps_env = os.environ.copy()
     shinyapps_env.pop("CONNECT_API_KEY", None)
     shinyapps_env.pop("CONNECT_SERVER", None)
