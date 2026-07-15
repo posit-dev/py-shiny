@@ -3,6 +3,7 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 from utils.deploy_utils import (
+    goto_deployed_app,
     local_deploys_app_url_fixture,
     reruns,
     reruns_delay,
@@ -15,7 +16,7 @@ app_url = local_deploys_app_url_fixture("shiny_client_console_error")
 @skip_if_not_chrome
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 def test_shiny_client_console_error(page: Page, app_url: str) -> None:
-    page.goto(app_url)
+    goto_deployed_app(page, app_url)
 
     assert page.locator("#same_id").count() == 2
     shiny_error_message = page.locator("shiny-error-message")

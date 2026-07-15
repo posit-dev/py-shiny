@@ -1,6 +1,7 @@
 import pytest
 from playwright.sync_api import Page
 from utils.deploy_utils import (
+    goto_deployed_app,
     local_deploys_app_url_fixture,
     reruns,
     reruns_delay,
@@ -15,7 +16,7 @@ app_url = local_deploys_app_url_fixture("shiny_express_accordion")
 @skip_if_not_chrome
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 def test_express_accordion(page: Page, app_url: str) -> None:
-    page.goto(app_url)
+    goto_deployed_app(page, app_url)
 
     acc = controller.Accordion(page, "express_accordion")
     acc_panel_2 = acc.accordion_panel("Panel 2")

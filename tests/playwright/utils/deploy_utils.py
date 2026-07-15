@@ -8,12 +8,11 @@ import subprocess
 import sys
 import tempfile
 import time
-import warnings
 from typing import Any, Callable, List, Optional, TypeVar
 
 import pytest
-import requests
 from conftest import ScopeName
+from playwright.sync_api import Page
 
 from shiny.run._run import shiny_app_gen
 
@@ -24,6 +23,7 @@ reruns_delay = 1
 LOCAL_LOCATION = "local"
 
 __all__ = (
+    "goto_deployed_app",
     "local_deploys_app_url_fixture",
     "skip_if_not_chrome",
 )
@@ -135,6 +135,16 @@ def redact_api_key(cmd: str) -> str:
     return re.sub(r"(--api-key\s+)(\S+)", r"\1***", cmd)
 
 
+def goto_deployed_app(page: Page, app_url: str) -> None:
+    headers: dict[str, str] = {}
+    if server_url and api_key and app_url.startswith(f"{server_url.rstrip('/')}/"):
+        headers["Authorization"] = f"Key {api_key}"
+
+    # The page fixture is shared, so clear the Connect header for other targets.
+    page.set_extra_http_headers(headers)
+    page.goto(app_url)
+
+
 def deploy_to_connect(app_name: str, app_dir: str) -> str:
     if not api_key:
         raise RuntimeError("No api key found. Cannot deploy.")
@@ -158,26 +168,6 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
     # look up content url in connect server once app is deployed
     output = run_command(connect_server_lookup_command)
     url = json.loads(output)[0]["content_url"]
-    app_id = json.loads(output)[0]["guid"]
-
-    # change visibility of app to public
-    connect_app_url = f"{server_url}/__api__/v1/content/{app_id}"
-    payload = '{"access_type":"all"}'
-    headers = {
-        "Authorization": f"Key {api_key}",
-        "Accept": "application/json",
-    }
-    response = requests.request("PATCH", connect_app_url, headers=headers, data=payload)
-    if response.status_code != 200:
-        warnings.warn(
-            f"Failed to change visibility of app. {response.text}",
-            RuntimeWarning,
-            stacklevel=1,
-        )
-        pytest.skip(
-            "Skipping test as deployed app is not visible to public. Test is kept as it does confirm the app deployment has succeeded."
-        )
-        return
 
     return url
 
