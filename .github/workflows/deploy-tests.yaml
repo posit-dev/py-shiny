@@ -105,9 +105,9 @@ jobs:
         env:
           UV_PYTHON: "3.13"
           DEPLOY_APPS: "true"
-          DEPLOY_SHINYAPPS_NAME: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_NAME }}"
-          DEPLOY_SHINYAPPS_TOKEN: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_TOKEN }}"
-          DEPLOY_SHINYAPPS_SECRET: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_SECRET }}"
+          DEPLOY_SHINYAPPS_NAME: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_NAME || '' }}"
+          DEPLOY_SHINYAPPS_TOKEN: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_TOKEN || '' }}"
+          DEPLOY_SHINYAPPS_SECRET: "${{ matrix.config.test_shinyappsio && secrets.DEPLOY_SHINYAPPS_SECRET || '' }}"
           EXPRESS_PAGE_SIDEBAR_NAME: "${{ matrix.config.app_name }}"
           DEPLOY_GITHUB_REQUIREMENTS_TXT: "${{ !matrix.config.pypi_shiny }}"
         timeout-minutes: 30

@@ -105,11 +105,12 @@ def skip_on_python_version(
     return _
 
 
-def run_command(cmd: str) -> str:
+def run_command(cmd: str, env: Optional[dict[str, str]] = None) -> str:
     output = subprocess.run(
         cmd,
         check=False,
         capture_output=True,
+        env=env,
         text=True,
         shell=True,
     )
@@ -176,7 +177,10 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
 def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
     # Deploy to shinyapps.io
     shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {shinyappsio_name} --token {shinyappsio_token} --secret {shinyappsio_secret} --title {app_name} --verbose"
-    run_command(shinyapps_deploy)
+    shinyapps_env = os.environ.copy()
+    shinyapps_env.pop("CONNECT_API_KEY", None)
+    shinyapps_env.pop("CONNECT_SERVER", None)
+    run_command(shinyapps_deploy, env=shinyapps_env)
     return f"https://{shinyappsio_name}.shinyapps.io/{app_name}/"
 
 
