@@ -290,7 +290,7 @@ def local_deploys_app_url_fixture(
             if deploy_location == "shinyapps" and not (
                 shinyappsio_name and shinyappsio_token and shinyappsio_secret
             ):
-                pytest.skip(
+                raise RuntimeError(
                     "Shinyapps.io name, token or secret not found. Cannot deploy."
                 )
 
