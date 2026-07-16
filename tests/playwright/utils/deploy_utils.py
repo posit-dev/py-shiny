@@ -8,12 +8,11 @@ import subprocess
 import sys
 import tempfile
 import time
-import warnings
 from typing import Any, Callable, List, Optional, TypeVar
 
 import pytest
-import requests
 from conftest import ScopeName
+from playwright.sync_api import Page
 
 from shiny.run._run import shiny_app_gen
 
@@ -24,13 +23,18 @@ reruns_delay = 1
 LOCAL_LOCATION = "local"
 
 __all__ = (
+    "goto_deployed_app",
     "local_deploys_app_url_fixture",
     "skip_if_not_chrome",
 )
 
 # connect
-server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL")
-api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY")
+server_url = os.environ.get("DEPLOY_CONNECT_SERVER_URL") or os.environ.get(
+    "CONNECT_SERVER"
+)
+api_key = os.environ.get("DEPLOY_CONNECT_SERVER_API_KEY") or os.environ.get(
+    "CONNECT_API_KEY"
+)
 # shinyapps.io
 shinyappsio_name = os.environ.get("DEPLOY_SHINYAPPS_NAME")
 shinyappsio_token = os.environ.get("DEPLOY_SHINYAPPS_TOKEN")
@@ -101,11 +105,12 @@ def skip_on_python_version(
     return _
 
 
-def run_command(cmd: str) -> str:
+def run_command(cmd: str, env: Optional[dict[str, str]] = None) -> str:
     output = subprocess.run(
         cmd,
         check=False,
         capture_output=True,
+        env=env,
         text=True,
         shell=True,
     )
@@ -131,14 +136,28 @@ def redact_api_key(cmd: str) -> str:
     return re.sub(r"(--api-key\s+)(\S+)", r"\1***", cmd)
 
 
+def goto_deployed_app(page: Page, app_url: str) -> None:
+    headers: dict[str, str] = {}
+    if server_url and api_key and app_url.startswith(f"{server_url.rstrip('/')}/"):
+        headers["Authorization"] = f"Key {api_key}"
+
+    # The page fixture is shared, so clear the Connect header for other targets.
+    page.set_extra_http_headers(headers)
+    page.goto(app_url)
+
+
 def deploy_to_connect(app_name: str, app_dir: str) -> str:
     if not api_key:
         raise RuntimeError("No api key found. Cannot deploy.")
 
     # check if connect app is already deployed to avoid duplicates
-    connect_server_lookup_command = f"rsconnect content search --server {server_url} --api-key {api_key} --title-contains {app_name}"
+    connect_server_lookup_command = (
+        f"rsconnect content search --title-contains {app_name}"
+    )
     app_details = run_command(connect_server_lookup_command)
-    connect_server_deploy = f"rsconnect deploy shiny {app_dir} --server {server_url} --api-key {api_key} --title {app_name} --verbose"
+    connect_server_deploy = (
+        f"rsconnect deploy shiny {app_dir} --title {app_name} --verbose"
+    )
     # only if the app exists do we replace existing app with new version
     if json.loads(app_details):
         app_id = json.loads(app_details)[0]["guid"]
@@ -150,26 +169,6 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
     # look up content url in connect server once app is deployed
     output = run_command(connect_server_lookup_command)
     url = json.loads(output)[0]["content_url"]
-    app_id = json.loads(output)[0]["guid"]
-
-    # change visibility of app to public
-    connect_app_url = f"{server_url}/__api__/v1/content/{app_id}"
-    payload = '{"access_type":"all"}'
-    headers = {
-        "Authorization": f"Key {api_key}",
-        "Accept": "application/json",
-    }
-    response = requests.request("PATCH", connect_app_url, headers=headers, data=payload)
-    if response.status_code != 200:
-        warnings.warn(
-            f"Failed to change visibility of app. {response.text}",
-            RuntimeWarning,
-            stacklevel=1,
-        )
-        pytest.skip(
-            "Skipping test as deployed app is not visible to public. Test is kept as it does confirm the app deployment has succeeded."
-        )
-        return
 
     return url
 
@@ -177,8 +176,11 @@ def deploy_to_connect(app_name: str, app_dir: str) -> str:
 # TODO-future: Supress web browser from opening after deploying - https://github.com/rstudio/rsconnect-python/issues/462
 def deploy_to_shinyapps(app_name: str, app_dir: str) -> str:
     # Deploy to shinyapps.io
-    shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {shinyappsio_name} --token {shinyappsio_token} --secret {shinyappsio_secret} --title {app_name} --verbose"
-    run_command(shinyapps_deploy)
+    shinyapps_deploy = f"rsconnect deploy shiny {app_dir} --account {shinyappsio_name} --token {shinyappsio_token} --secret {shinyappsio_secret} --title {app_name} --override-python-version 3.10 --verbose"
+    shinyapps_env = os.environ.copy()
+    shinyapps_env.pop("CONNECT_API_KEY", None)
+    shinyapps_env.pop("CONNECT_SERVER", None)
+    run_command(shinyapps_deploy, env=shinyapps_env)
     return f"https://{shinyappsio_name}.shinyapps.io/{app_name}/"
 
 
@@ -281,20 +283,12 @@ def local_deploys_app_url_fixture(
         elif deploy_location in deploy_locations:
 
             if deploy_location == "connect":
-                if server_url and "dogfood" in server_url:
-                    # TODO: dogfood server does not have public links now, the team will migrate to spinning their own connect server in the future.
-                    pytest.skip(
-                        "dogfood server does not have public links now, the team will migrate to spinning their own connect server in the future."
-                    )
                 if not (server_url and api_key):
                     pytest.skip(
                         "Connect server url or api key not found. Cannot deploy."
                     )
-            if (
-                deploy_location == "shinyapps"
-                and shinyappsio_name
-                and shinyappsio_token
-                and shinyappsio_secret
+            if deploy_location == "shinyapps" and not (
+                shinyappsio_name and shinyappsio_token and shinyappsio_secret
             ):
                 pytest.skip(
                     "Shinyapps.io name, token or secret not found. Cannot deploy."
