@@ -408,6 +408,20 @@ def update_radio_buttons(
     )
 
 
+def _stringify_selected(
+    selected: Optional[str | list[str] | tuple[str, ...]],
+) -> Optional[str | list[str]]:
+    # Choice values are rendered as strings in the DOM, so the `selected` sent to
+    # the client must be stringified too; otherwise integer keys (accepted by
+    # input_checkbox_group / input_radio_buttons) never match the option values
+    # on update. See #2272.
+    if selected is None:
+        return None
+    if isinstance(selected, (list, tuple)):
+        return [str(el) for el in selected]
+    return str(selected)
+
+
 def _update_choice_input(
     id: str,
     *,
@@ -436,7 +450,7 @@ def _update_choice_input(
     msg = {
         "label": session._process_ui(label) if label is not None else None,
         "options": options,
-        "value": selected,
+        "value": _stringify_selected(selected),
     }
     session.send_input_message(id, drop_none(msg))
 
