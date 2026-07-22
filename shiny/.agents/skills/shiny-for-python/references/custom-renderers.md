@@ -1,4 +1,3 @@
-
 # Authoring custom output renderers in Shiny for Python
 
 ## Overview

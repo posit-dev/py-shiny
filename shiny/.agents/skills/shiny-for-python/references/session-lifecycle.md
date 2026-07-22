@@ -1,4 +1,3 @@
-
 # Session lifecycle in Shiny for Python
 
 ## Overview

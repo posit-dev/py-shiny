@@ -1,4 +1,3 @@
-
 # Testing Shiny for Python apps with Playwright
 
 ## Overview

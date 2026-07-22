@@ -1,4 +1,3 @@
-
 # Dynamic UI in Shiny for Python (Core)
 
 ## Overview

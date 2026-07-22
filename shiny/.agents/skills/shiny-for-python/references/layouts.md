@@ -1,4 +1,3 @@
-
 # Layouts in Shiny for Python (Core)
 
 ## Overview

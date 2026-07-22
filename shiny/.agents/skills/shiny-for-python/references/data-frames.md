@@ -1,4 +1,3 @@
-
 # Rendering interactive data frames in Shiny for Python
 
 ## Overview

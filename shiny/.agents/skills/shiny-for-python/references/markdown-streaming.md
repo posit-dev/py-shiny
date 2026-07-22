@@ -1,4 +1,3 @@
-
 # Streaming Markdown with `ui.MarkdownStream`
 
 ## Overview

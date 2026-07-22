@@ -1,4 +1,3 @@
-
 # Extended tasks in Shiny for Python
 
 ## Overview

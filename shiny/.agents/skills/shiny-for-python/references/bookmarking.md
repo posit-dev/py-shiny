@@ -1,4 +1,3 @@
-
 # Bookmarking Shiny for Python apps
 
 ## Overview

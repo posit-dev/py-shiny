@@ -1,4 +1,3 @@
-
 # Custom JavaScript components in Shiny for Python
 
 ## Overview

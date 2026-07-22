@@ -1,4 +1,3 @@
-
 # Rendering plots and images in Shiny for Python
 
 ## Overview

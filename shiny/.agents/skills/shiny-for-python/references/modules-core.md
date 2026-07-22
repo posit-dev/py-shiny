@@ -1,4 +1,3 @@
-
 # Shiny for Python modules (Core mode)
 
 ## Overview

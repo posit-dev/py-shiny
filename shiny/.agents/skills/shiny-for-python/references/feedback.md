@@ -1,4 +1,3 @@
-
 # Transient user feedback in Shiny for Python
 
 ## Overview

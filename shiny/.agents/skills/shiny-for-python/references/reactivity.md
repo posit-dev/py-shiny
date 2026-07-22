@@ -1,4 +1,3 @@
-
 # Reactivity in Shiny for Python
 
 ## Overview

@@ -1,4 +1,3 @@
-
 # Debugging Shiny for Python apps
 
 ## Overview

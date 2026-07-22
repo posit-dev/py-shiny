@@ -1,4 +1,3 @@
-
 # OpenTelemetry for Shiny for Python apps
 
 ## Overview

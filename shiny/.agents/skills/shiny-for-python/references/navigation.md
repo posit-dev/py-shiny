@@ -1,4 +1,3 @@
-
 # Navigation in Shiny for Python
 
 ## Overview

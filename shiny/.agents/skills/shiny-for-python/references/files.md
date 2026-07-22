@@ -1,4 +1,3 @@
-
 # File uploads and downloads in Shiny for Python
 
 ## Overview

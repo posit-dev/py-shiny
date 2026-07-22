@@ -1,4 +1,3 @@
-
 # Theming Shiny for Python apps
 
 ## Overview
