@@ -79,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Docs builds now fail when an `@add_example()` API reference is missing its example app, instead of emitting a warning and silently omitting the example. Several APIs whose examples had gone missing this way were fixed, and missing Shiny Express examples were added. (Thanks, @EltonChang1!) (#2278)
 
-* Consolidated the 22 bundled Agent Skills under `shiny/.agents/skills/` into a single `shiny-for-python` router skill: its `SKILL.md` is now a grouped index of topics, and each former skill's content lives in its own `references/<topic>.md` file. (#2365)
+* Consolidated the 22 bundled Agent Skills under `shiny/.agents/skills/` into a single `shiny-for-python` router skill: its `SKILL.md` is now a grouped index of topics, and each former skill's content lives in its own `references/<topic>.md` file. (#XXXX)
 
 ## [1.6.3] - 2026-06-01
 
