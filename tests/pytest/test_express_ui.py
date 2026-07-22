@@ -93,20 +93,64 @@ def test_render_output_controls():
 def test_render_output_controls_complete():
     """
     Enforce the 1:1 mapping between output render decorators and output UI components.
-    A new output renderer or output UI component that is not paired (and not explicitly
-    allowlisted in `_known_missing_renderer`) fails this test.
+
+    The pairing is by naming convention: ``ui.output_<name>`` pairs with
+    ``render.<name>``. A new ``ui.output_*`` component with no matching renderer -- or a
+    new renderer with no matching UI component -- fails this test unless it is
+    explicitly allowlisted below. Renderers whose UI component does not follow the
+    ``output_`` convention (e.g. the download renderers) are listed in
+    ``renderer_ui_pairs``.
     """
     import inspect
 
-    from shiny.render._render import (
-        _known_missing_renderer,
-        _renderer_output_ui_pairs,
-    )
     from shiny.render.renderer import Renderer
 
-    # (1) Every mapped renderer's auto-placed UI matches its UI component's HTML.
-    for renderer_cls, ui_fn in _renderer_output_ui_pairs.items():
-        fn_name = renderer_cls.__name__
+    # Renderers (in shiny.render.__all__) that deliberately have no paired UI component.
+    known_missing_renderers = {
+        "express",  # meta-renderer (Renderer[None]); no paired UI component
+        "download",  # deprecated alias of download_button
+    }
+    # output_* UI components (in shiny.ui.__all__) that deliberately have no renderer.
+    known_missing_output_ui = {
+        "output_text_verbatim",  # legacy alias of output_code
+        "output_markdown_stream",  # class-based (ui.MarkdownStream)
+    }
+    # Renderers whose UI component does not follow the `output_<name>` convention.
+    # Maps renderer name -> ui function name.
+    renderer_ui_pairs = {
+        "download_button": "download_button",
+        "download_link": "download_link",
+    }
+
+    # Renderer subclasses exported by shiny.render, keyed by their export name.
+    render_classes: dict[str, type[Renderer[Any]]] = {}
+    for name in render.__all__:
+        obj = getattr(render, name)
+        if inspect.isclass(obj) and issubclass(obj, Renderer):
+            render_classes[name] = obj
+
+    # (1) Fail-safe: every `ui.output_*` component must have a corresponding renderer
+    #     (by convention `output_<name>` -> `render.<name>`), unless allowlisted.
+    for name in ui.__all__:
+        if not name.startswith("output_") or name in known_missing_output_ui:
+            continue
+        renderer_name = name[len("output_") :]
+        assert renderer_name in render_classes, (
+            f"ui.{name} has no corresponding render.{renderer_name}; add the renderer "
+            f"or allowlist ui.{name} in known_missing_output_ui"
+        )
+
+    # (2) Every renderer must map to a UI component, and its auto-placed UI must match
+    #     that component's HTML, unless the renderer is allowlisted.
+    for name, renderer_cls in render_classes.items():
+        if name in known_missing_renderers:
+            continue
+        ui_fn_name = renderer_ui_pairs.get(name, f"output_{name}")
+        ui_fn = getattr(ui, ui_fn_name, None)
+        assert ui_fn is not None, (
+            f"render.{name} expects ui.{ui_fn_name}, which does not exist; add the UI "
+            f"component, list the pair in renderer_ui_pairs, or allowlist the renderer"
+        )
 
         @renderer_cls
         def out():
@@ -124,28 +168,7 @@ def test_render_output_controls_complete():
         ):
             ui_fn_kwargs["label"] = "Download"
         expected = ui.TagList(ui_fn("out", **ui_fn_kwargs)).get_html_string()
-        assert rendered == expected, f"{fn_name} auto_output_ui mismatch"
-
-    # (2) Every Renderer subclass exported by shiny.render is mapped or allowlisted.
-    mapped_renderers = {cls.__name__ for cls in _renderer_output_ui_pairs}
-    allowed_renderers = set(_known_missing_renderer["shiny.render"])
-    for name in render.__all__:
-        obj = getattr(render, name)
-        if inspect.isclass(obj) and issubclass(obj, Renderer):
-            assert name in mapped_renderers or name in allowed_renderers, (
-                f"render.{name} is a Renderer with no paired UI component; "
-                f"add it to _renderer_output_ui_pairs or _known_missing_renderer"
-            )
-
-    # (3) Every output_*/download_* UI component is a mapping target or allowlisted.
-    mapped_ui = {fn.__name__ for fn in _renderer_output_ui_pairs.values()}
-    allowed_ui = set(_known_missing_renderer["shiny.ui"])
-    for name in ui.__all__:
-        if name.startswith("output_") or name.startswith("download_"):
-            assert name in mapped_ui or name in allowed_ui, (
-                f"ui.{name} is an output component with no paired renderer; "
-                f"add it to _renderer_output_ui_pairs or _known_missing_renderer"
-            )
+        assert rendered == expected, f"render.{name} auto_output_ui mismatch"
 
 
 def test_hold():

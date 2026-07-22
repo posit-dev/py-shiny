@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, cast
 
 from htmltools import Tag, TagAttrValue, TagChild
 
-from ._data_frame import data_frame as _data_frame
 from ._data_frame_utils._tbl_data import as_data_frame
 from ._data_frame_utils._types import IntoDataFrame
 
@@ -826,35 +825,3 @@ class download(download_button):
         )
         if fn is not None:
             self(fn)
-
-
-# --------------------------------------------------------------------------------------
-# Render ↔ UI 1:1 mapping (verified by tests/pytest/test_express_ui.py)
-# --------------------------------------------------------------------------------------
-
-# Maps each output render decorator to the UI component it pairs 1:1 with.
-_renderer_output_ui_pairs: dict[type[Renderer[Any]], Callable[..., Tag]] = {
-    text: _ui.output_text,
-    code: _ui.output_code,
-    plot: _ui.output_plot,
-    image: _ui.output_image,
-    table: _ui.output_table,
-    ui: _ui.output_ui,
-    _data_frame: _ui.output_data_frame,
-    download_button: _ui.download_button,
-    download_link: _ui.download_link,
-}
-
-# Deliberate exceptions to the render↔ui 1:1 mapping.
-_known_missing_renderer: dict[str, tuple[str, ...]] = {
-    # Renderers (in shiny.render.__all__) with no 1:1 output UI component.
-    "shiny.render": (
-        "express",  # meta-renderer (Renderer[None]); no paired UI component
-        "download",  # deprecated alias of download_button
-    ),
-    # Output UI components (in shiny.ui.__all__) with no 1:1 renderer.
-    "shiny.ui": (
-        "output_text_verbatim",  # legacy alias of output_code
-        "output_markdown_stream",  # class-based (ui.MarkdownStream)
-    ),
-}
