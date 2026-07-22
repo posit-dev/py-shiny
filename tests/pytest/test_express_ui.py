@@ -71,6 +71,24 @@ def test_render_output_controls():
     with pytest.raises(TypeError, match="width"):
         code2.tagify()
 
+    @render.download_button
+    def dl_btn():
+        yield "data"
+
+    assert (
+        ui.TagList(dl_btn.tagify()).get_html_string()
+        == ui.download_button("dl_btn", label="Download").get_html_string()
+    )
+
+    @render.download_link
+    def dl_link():
+        yield "data"
+
+    assert (
+        ui.TagList(dl_link.tagify()).get_html_string()
+        == ui.download_link("dl_link", label="Download").get_html_string()
+    )
+
 
 def test_hold():
     old_displayhook = sys.displayhook
