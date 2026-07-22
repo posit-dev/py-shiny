@@ -13,13 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # setuptools_scm needs tags/history to produce a version compatible
+          # with shinychat's shiny>=1.4.0 dependency.
+          fetch-depth: 0
 
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
-          # Python 3.14 currently has an unrelated shiny/shinychat resolution
-          # conflict; use the newest setup that can install the shared test env.
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Generate third-party stubs used by Pyright
         run: make pyright-typings
