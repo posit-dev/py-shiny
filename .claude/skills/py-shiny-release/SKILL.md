@@ -35,6 +35,9 @@ this verification checklist with the user**:
    - CI status (link to the passing run)
    - Changelog entry (show the relevant section)
    - Dependency check result (any git-based deps found?)
+   - **`TODO: release` markers** — run `grep -rn "TODO: release" . | grep -v '\.git/'` and
+     list every marker with its holding PR and whether it acts before/after publish (see
+     "Release-blocking `TODO: release` markers" above). None may be left unaddressed.
    - For py-shiny: shinylive example test results
 2. **Ask for explicit confirmation**:
    > "Ready to release **{package} v{version}**? This will tag the commit and publish
@@ -47,8 +50,43 @@ this verification checklist with the user**:
 1. Ask the user which version of py-shiny is being released (e.g., `1.3.0`)
 2. Ask if py-htmltools also needs a release (and what version)
 3. Ask if any Shiny HTML Dependencies were updated (triggers shinyswatch prerequisite)
-4. Create a TodoWrite checklist of all 13 phases
-5. Begin with Phase 1
+4. **Scan for release-blocking `TODO: release` markers** (see below) and fold each into
+   the TodoWrite checklist
+5. Create a TodoWrite checklist of all 13 phases plus any `TODO: release` items
+6. Begin with Phase 1
+
+## Release-blocking `TODO: release` markers
+
+Some changes cannot land on their own and must be actioned during a release — e.g. a
+temporary CI pin to an unmerged "holding" PR in a downstream repo, a dependency that
+can only be un-pinned once an upstream package is on PyPI, or a docs version bump. These
+are marked in-code with a greppable comment of the form:
+
+```
+TODO: release - <what to do, and when (before/after PyPI publish), plus the holding PR link>
+```
+
+**At the start of every release, and again at the pre-release gate, scan the py-shiny
+repo for these markers and resolve each one:**
+
+```bash
+grep -rn "TODO: release" . ':!*.lock' 2>/dev/null | grep -v '\.git/'
+```
+
+For each marker:
+1. Read it — it says what to do and whether it happens **before** or **after** the PyPI
+   publish, and links the holding PR it depends on.
+2. Add it to the TodoWrite checklist at the correct point in the phase order.
+3. Do NOT complete the release while any `TODO: release` marker is unresolved: either the
+   action has been performed and the marker removed, or the user has explicitly deferred it.
+
+**Known holding item (as of py-shiny #2364 — `render.download` deprecation):**
+`.github/workflows/pytest.yaml` temporarily pins the `py-shiny-templates` checkout to the
+branch of [posit-dev/py-shiny-templates#55](https://github.com/posit-dev/py-shiny-templates/pull/55)
+(which migrates the templates to `render.download_button`/`render.download_link`). During
+Phase 3 (py-shiny), **after** this py-shiny version is published to PyPI: merge
+py-shiny-templates#55, then open a follow-up py-shiny PR removing the `ref:` pin so CI
+tracks the templates' default branch again. Remove the `TODO: release` comment in that PR.
 
 ## Phase Overview
 
