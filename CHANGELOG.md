@@ -21,22 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Test-mode snapshot values can now be preprocessed before they are written to the snapshot, e.g. to scrub timestamps or temp paths: `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) for inputs and `my_output.snapshot_preprocess(fn)` for outputs. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
 
-* The shiny package now ships [Agent Skills](https://agentskills.io) under `shiny/.agents/skills/` (the [library-skills](https://library-skills.io) convention), starting with a `debugging` skill that teaches coding agents to inspect running apps via test mode, `shiny.testmode.export_test_values()`, and the test snapshot endpoint. (#2339)
-
-* Added a bundled `testing` Agent Skill that teaches coding agents to write end-to-end tests for Shiny apps with pytest and Playwright: the `local_app` / `create_app_fixture` app-launch fixtures, the `shiny.playwright.controller` component controllers, and `shiny add test`. (#2344)
+* The shiny package now ships bundled [Agent Skills](https://agentskills.io) under `shiny/.agents/skills/` (the [library-skills](https://library-skills.io) convention): a single `shiny-for-python` skill whose `SKILL.md` is a grouped index that routes coding agents to a per-topic reference file for each of shiny's public APIs. (#2339, #2344, #2345, #2356, #2365, #2366)
+  * Foundations: `reactivity` (the reactive graph — `reactive.value`/`calc`/`effect`/`event`, `req`, `isolate`, `poll`), `express` (Express mode), `modules-core` / `modules-express` (reusable namespaced components), and `session-lifecycle` (`on_ended`/`on_flush`, request info, dynamic routes).
+  * Layout and navigation: `layouts` (pages, cards, sidebars, columns, value boxes), `navigation` (navsets and `page_navbar`), `dynamic-ui` (`@render.ui`, `update_*`, `insert_ui`, `panel_conditional`), and `theming` (`ui.Theme`, presets, dark mode).
+  * Outputs and rendering: `plots` (`render.plot`/`render.image` and interactions), `data-frames` (`render.data_frame`), and `files` (upload/download).
+  * Feedback and interactivity: `feedback` (notifications, modals, progress, busy indicators), `extended-tasks` (non-blocking long-running work), and `bookmarking` (save/restore app state with `bookmark_store=` and `session.bookmark` hooks).
+  * Generative AI: `chat` (`ui.Chat`) and `markdown-streaming` (`ui.MarkdownStream`).
+  * Extending shiny: `custom-renderers` (authoring a `Renderer` subclass) and `custom-components` (custom JavaScript input/output bindings).
+  * Testing and observability: `testing` (end-to-end tests with pytest and Playwright), `debugging` (inspect running apps via test mode), and `otel` (OpenTelemetry observability).
 
 * Added a `shiny skills` CLI command group to discover the Agent Skills bundled in the shiny package: `shiny skills list` shows each skill's name and description, `shiny skills get <name>` prints its `SKILL.md` to stdout, and `shiny skills path <name>` prints the skill's directory (for reading its `references/` and `scripts/`). (#2340)
-
-* Added a `bookmarking` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to save and restore app state with `bookmark_store=`, the `session.bookmark` lifecycle hooks, custom bookmark values, and server-side bookmark storage. (#2345)
-
-* Added an `otel` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to observe Shiny apps with OpenTelemetry: zero-code auto-instrumentation via `opentelemetry-instrument shiny run`, collection levels with `SHINY_OTEL_COLLECT`, per-object control with `otel.suppress`/`otel.collect`, and exporting to OTLP backends. (#2356)
-
-* Added 17 more bundled Agent Skills (under `shiny/.agents/skills/`) that document shiny's public APIs for coding agents, joining the existing `debugging`, `testing`, `bookmarking`, and `otel` skills: (#2365)
-  * Core concepts: `reactivity` (the reactive graph — `reactive.value`/`calc`/`effect`/`event`, `req`, `isolate`, `poll`), `express` (Express mode), and `modules-core` / `modules-express` (reusable namespaced components).
-  * Layout and UI: `layouts` (pages, cards, sidebars, columns, value boxes), `navigation` (navsets and `page_navbar`), `dynamic-ui` (`@render.ui`, `update_*`, `insert_ui`, `panel_conditional`), and `theming` (`ui.Theme`, presets, dark mode).
-  * Outputs and generative AI: `data-frames` (`render.data_frame`), `plots` (`render.plot`/`render.image` and interactions), `chat` (`ui.Chat`), and `markdown-streaming` (`ui.MarkdownStream`).
-  * App capabilities: `files` (upload/download), `feedback` (notifications, modals, progress, busy indicators), `extended-tasks` (non-blocking long-running work), and `session-lifecycle` (`on_ended`/`on_flush`, request info, dynamic routes).
-  * Extending shiny: `custom-components` (custom JavaScript input/output bindings) and `custom-renderers` (authoring a `Renderer` subclass).
 
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
@@ -78,8 +72,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `shiny.run.run_shiny_app()` (and therefore `shiny.pytest.create_app_fixture()`) now picks random app ports from a disjoint per-worker port range when running under pytest-xdist, instead of the full 1024-49151 range shared by all workers. This prevents parallel test workers from racing to bind the same port and from reusing each other's recycled ports. When not running under pytest-xdist, the behavior is unchanged: ports are picked from `random_port()`'s full default range (1024-49151). (#2297)
 
 * Docs builds now fail when an `@add_example()` API reference is missing its example app, instead of emitting a warning and silently omitting the example. Several APIs whose examples had gone missing this way were fixed, and missing Shiny Express examples were added. (Thanks, @EltonChang1!) (#2278)
-
-* Consolidated the 22 bundled Agent Skills under `shiny/.agents/skills/` into a single `shiny-for-python` router skill: its `SKILL.md` is now a grouped index of topics, and each former skill's content lives in its own `references/<topic>.md` file. (#XXXX)
 
 ## [1.6.3] - 2026-06-01
 
