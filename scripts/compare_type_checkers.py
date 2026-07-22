@@ -28,7 +28,7 @@ class DiagnosticSummary:
     files_checked: int | None = None
     project_lines: int | None = None
     baselined_count: int = 0
-    baseline_categories: dict[str, int] = field(default_factory=dict)
+    baseline_categories: dict[str, int] = field(default_factory=dict[str, int])
 
 
 @dataclass
