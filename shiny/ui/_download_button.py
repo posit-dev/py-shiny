@@ -41,7 +41,7 @@ def download_button(
 
     See Also
     --------
-    * :class:`~shiny.render.download`
+    * :class:`~shiny.render.download_button`
     * :func:`~shiny.ui.download_link`
     """
 
@@ -97,7 +97,7 @@ def download_link(
 
     See Also
     --------
-    * :class:`~shiny.render.download`
+    * :class:`~shiny.render.download_link`
     * :func:`~shiny.ui.download_button`
     """
 
