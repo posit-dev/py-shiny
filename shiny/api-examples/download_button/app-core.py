@@ -10,7 +10,7 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.download(
+    @render.download_button(
         filename=lambda: f"新型-{date.today().isoformat()}-{random.randint(100, 999)}.csv"
     )
     async def downloadData():

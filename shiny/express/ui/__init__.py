@@ -346,7 +346,7 @@ __all__ = (
 
 
 # This is used for unit tests to verify that shiny.ui and shiny.express.ui stay in sync.
-_known_missing = {
+_known_missing_express_ui = {
     # Items from shiny.ui that don't have a counterpart in shiny.express.ui
     "shiny.ui": (
         "column",  # Deprecated in favor of layout_columns

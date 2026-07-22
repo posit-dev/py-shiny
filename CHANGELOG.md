@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
+* Added `@render.download_button` and `@render.download_link`, which pair 1:1 with `ui.download_button()` and `ui.download_link()`. (#2364)
+
 ### Improvements
 
 * The `shiny[otel]` optional dependency group now includes `opentelemetry-distro[otlp]`, so OpenTelemetry zero-code auto-instrumentation works out of the box: `opentelemetry-instrument shiny run app.py`. This is now the documented standard way to enable OpenTelemetry — the docs and the `examples/open-telemetry/` example no longer configure providers inside the app (in-code `set_tracer_provider()` setup is silently ignored when a provider is already installed, e.g. under `opentelemetry-instrument`). The OTLP exporters are also included, making it easy to switch between gRPC and HTTP export via standard `OTEL_*` environment variables. Note that `opentelemetry-distro` pins `opentelemetry-sdk` to a matching minor version, so if you combine `shiny[otel]` with other packages that pin the OpenTelemetry SDK (e.g. `logfire`), the resolver may need matching versions. (#2349)
@@ -45,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Playwright's `OutputDataFrame.set_filter()` controller now supports multi-column filters (#2093)
 * Add api-example for `ui.output_code` (#2093)
 * Update controllers for `DownloadLink` and `DownloadButton` (#2093)
+
+### Deprecations
+
+* Deprecated `@render.download`; use `@render.download_button` (or `@render.download_link`) instead. (#2364)
 
 ### Bug fixes
 

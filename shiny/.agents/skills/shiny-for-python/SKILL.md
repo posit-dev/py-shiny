@@ -41,7 +41,7 @@ reference file before writing code** for that area.
 |---|---|---|
 | Plots & images | Rendering matplotlib/seaborn/plotnine figures or images; plot click/hover/brush interactions | `references/plots.md` |
 | Data frames | Interactive tables via `@render.data_frame` (DataGrid/DataTable) — sort, filter, select, edit | `references/data-frames.md` |
-| Files | File uploads (`ui.input_file`) and generated-file downloads (`@render.download`) | `references/files.md` |
+| Files | File uploads (`ui.input_file`) and generated-file downloads (`@render.download_button`/`@render.download_link`) | `references/files.md` |
 
 ## Feedback & interactivity
 

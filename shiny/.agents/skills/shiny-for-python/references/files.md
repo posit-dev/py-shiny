@@ -4,9 +4,9 @@
 
 Shiny handles the browser plumbing for you. For uploads, `ui.input_file`
 receives the file, stores it in a temp file, and hands the server a
-`list[FileInfo]` describing each upload. For downloads, `@render.download`
-registers a handler that streams bytes to the browser when a paired
-`ui.download_button`/`ui.download_link` is clicked.
+`list[FileInfo]` describing each upload. For downloads, `@render.download_button`
+(or `@render.download_link`) registers a handler that streams bytes to the
+browser when the paired `ui.download_button`/`ui.download_link` is clicked.
 
 Do NOT build a raw `<input type="file">`, parse multipart bodies yourself, or
 add a custom Starlette route to serve a file — Shiny already exposes both
@@ -50,12 +50,16 @@ file picker: extensions (`".csv"`), MIME types (`"text/plain"`), or wildcards
 (`"image/*"`). It only filters the picker; it is not enforced server-side, so
 still validate the uploaded file's type/name yourself.
 
-## Download a generated file: `@render.download`
+## Download a generated file: `@render.download_button` / `@render.download_link`
 
-Pair a handler with a `ui.download_button` (or `ui.download_link`) whose id
-matches the function name. The handler either **returns a path** to an existing
-file on disk, or **yields** strings/bytes for content generated on the fly.
-When yielding, pass `filename=` so the browser knows what to name it.
+Pair `@render.download_button` with a `ui.download_button` (or
+`@render.download_link` with a `ui.download_link`) whose id matches the function
+name. The handler either **returns a path** to an existing file on disk, or
+**yields** strings/bytes for content generated on the fly. When yielding, pass
+`filename=` so the browser knows what to name it.
+
+(`@render.download` is the older, now-deprecated name — it still works but emits
+a deprecation warning; use `@render.download_button` or `@render.download_link`.)
 
 ```python
 import io
@@ -68,7 +72,7 @@ app_ui = ui.page_fluid(
 )
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.download(filename=lambda: f"data-{date.today().isoformat()}.csv")
+    @render.download_button(filename=lambda: f"data-{date.today().isoformat()}.csv")
     def download_csv():
         df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
         with io.StringIO() as buf:
@@ -84,8 +88,9 @@ file that already exists on disk — for temp files you create, `yield` the
 bytes instead so Shiny does not leave the temp file behind. The handler may be
 sync or async.
 
-In Express mode, `@render.download` renders its own button — pass
-`label=` and skip the separate `ui.download_button` (see `references/express.md`).
+In Express mode, `@render.download_button` renders its own button (and
+`@render.download_link` its own link) — pass `label=` and skip the separate
+`ui.download_button`/`ui.download_link` (see `references/express.md`).
 
 ## Quick reference
 
@@ -96,8 +101,8 @@ In Express mode, `@render.download` renders its own button — pass
 | Open uploaded data | `open(fileinfo["datapath"])` / `pd.read_csv(fileinfo["datapath"])` |
 | Guard empty upload | `req(input.id())` before reading |
 | Download button / link | `ui.download_button("id", "Label")` / `ui.download_link(...)` |
-| Download handler | `@render.download(filename=...)` returning a path or yielding bytes/str |
-| Dynamic filename | `@render.download(filename=lambda: ...)` |
+| Download handler | `@render.download_button(filename=...)` (or `@render.download_link`) returning a path or yielding bytes/str |
+| Dynamic filename | `@render.download_button(filename=lambda: ...)` |
 
 ## Common mistakes
 
@@ -114,4 +119,5 @@ In Express mode, `@render.download` renders its own button — pass
 - Download button never fires -> the function name must match the button id,
   and the button must be registered in the UI.
 - Building a raw `<input type="file">` or a custom download route -> use
-  `ui.input_file` and `@render.download`; Shiny wires the transport for you.
+  `ui.input_file` and `@render.download_button`/`@render.download_link`; Shiny
+  wires the transport for you.

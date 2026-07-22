@@ -217,6 +217,8 @@ quartodoc:
         - render.ui
         - render.express
         - render.download
+        - render.download_button
+        - render.download_link
         - render.data_frame
         - render.DataGrid
         - render.DataTable
