@@ -43,7 +43,7 @@ __all__ = (
     "image",
     "table",
     "ui",
-    # "download" is re-added in Task 2 when the deprecated `download` class returns.
+    "download",
     "download_button",
     "download_link",
 )
@@ -778,3 +778,50 @@ class download_link(_DownloadBase):
         kwargs: dict[str, Any] = {}
         set_kwargs_value(kwargs, "width", width, self.width)
         return _ui.download_link(self.output_id, label=self.label, **kwargs)
+
+
+@add_example(example_name="download")
+class download(download_button):
+    """
+    Deprecated. Use :class:`~shiny.render.download_button` (or
+    :class:`~shiny.render.download_link`) instead.
+
+    See Also
+    --------
+    * :class:`~shiny.render.download_button`
+    * :class:`~shiny.render.download_link`
+    """
+
+    def __init__(
+        self,
+        fn: Optional[DownloadHandler] = None,
+        *,
+        filename: Optional[str | Callable[[], str]] = None,
+        media_type: None | str | Callable[[], str] = None,
+        encoding: str = "utf-8",
+        label: TagChild = "Download",
+        width: str | None = None,
+    ) -> None:
+        # Local import to avoid a circular import: shiny/_deprecated.py imports
+        # `shiny.render`, which imports this module.
+        from .._deprecated import warn_deprecated
+
+        warn_deprecated(
+            "render.download is deprecated. Use render.download_button "
+            "(or render.download_link) instead.",
+            stacklevel=3,
+        )
+        # Call `super().__init__()` without `fn` (and invoke `self(fn)` ourselves
+        # below) so that the call stack depth seen by `validate_no_params()` (in
+        # `_DownloadBase.__call__()`) matches that of `download_button`/
+        # `download_link`, keeping its `stacklevel`-based warnings pointed at the
+        # user's code instead of this subclass's `__init__`.
+        super().__init__(
+            filename=filename,
+            media_type=media_type,
+            encoding=encoding,
+            label=label,
+            width=width,
+        )
+        if fn is not None:
+            self(fn)

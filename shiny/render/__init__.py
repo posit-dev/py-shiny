@@ -25,6 +25,7 @@ from ._express import (
 )
 from ._render import (
     code,
+    download,
     download_button,
     download_link,
     image,

@@ -152,8 +152,10 @@ def test_download_warning_stacklevel_points_to_caller():
         def my_download(x: str = "file.txt") -> str:
             return x
 
-    assert len(w) == 1
-    assert w[0].filename == __file__
+    # `render.download` now also emits its own deprecation warning (in addition to
+    # the default-params warning), so both warnings should point to the caller.
+    assert len(w) == 2
+    assert all(warning.filename == __file__ for warning in w)
 
 
 def test_effect():
@@ -163,3 +165,13 @@ def test_effect():
         @render.text
         def my_output():
             return "42"
+
+
+def test_render_download_is_deprecated():
+    from shiny._deprecated import ShinyDeprecationWarning
+
+    with pytest.warns(ShinyDeprecationWarning, match="render.download_button"):
+
+        @render.download
+        def dl():
+            yield "data"
