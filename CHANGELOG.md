@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
-* Added `@render.download_button` and `@render.download_link`, which pair 1:1 with `ui.download_button()` and `ui.download_link()`. (#<PR>)
+* Added `@render.download_button` and `@render.download_link`, which pair 1:1 with `ui.download_button()` and `ui.download_link()`. (#2364)
 
 ### Improvements
 
@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecations
 
-* Deprecated `@render.download`; use `@render.download_button` (or `@render.download_link`) instead. (#<PR>)
+* Deprecated `@render.download`; use `@render.download_button` (or `@render.download_link`) instead. (#2364)
 
 ### Bug fixes
 
