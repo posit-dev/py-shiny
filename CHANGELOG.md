@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added an `otel` Agent Skill (under `shiny/.agents/skills/`) that teaches coding agents to observe Shiny apps with OpenTelemetry: zero-code auto-instrumentation via `opentelemetry-instrument shiny run`, collection levels with `SHINY_OTEL_COLLECT`, per-object control with `otel.suppress`/`otel.collect`, and exporting to OTLP backends. (#2356)
 
+* Added 17 more bundled Agent Skills (under `shiny/.agents/skills/`) that document shiny's public APIs for coding agents, joining the existing `debugging`, `testing`, `bookmarking`, and `otel` skills: (#2365)
+  * Core concepts: `reactivity` (the reactive graph — `reactive.value`/`calc`/`effect`/`event`, `req`, `isolate`, `poll`), `express` (Express mode), and `modules-core` / `modules-express` (reusable namespaced components).
+  * Layout and UI: `layouts` (pages, cards, sidebars, columns, value boxes), `navigation` (navsets and `page_navbar`), `dynamic-ui` (`@render.ui`, `update_*`, `insert_ui`, `panel_conditional`), and `theming` (`ui.Theme`, presets, dark mode).
+  * Outputs and generative AI: `data-frames` (`render.data_frame`), `plots` (`render.plot`/`render.image` and interactions), `chat` (`ui.Chat`), and `markdown-streaming` (`ui.MarkdownStream`).
+  * App capabilities: `files` (upload/download), `feedback` (notifications, modals, progress, busy indicators), `extended-tasks` (non-blocking long-running work), and `session-lifecycle` (`on_ended`/`on_flush`, request info, dynamic routes).
+  * Extending shiny: `custom-components` (custom JavaScript input/output bindings) and `custom-renderers` (authoring a `Renderer` subclass).
+
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
 ### Improvements
