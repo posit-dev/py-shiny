@@ -140,7 +140,8 @@ dev = [
     "isort>=5.10.1",
     "libsass>=0.23.0",
     "brand_yml>=0.2.0",
-    "pyrefly>=1.1.1",
+    # Baselines are checker-version-specific; upgrade intentionally with the baseline.
+    "pyrefly==1.1.1",
     "pyright>=1.1.407",
     "pre-commit>=2.15.0",
     "wheel",

@@ -96,6 +96,8 @@ check-pyright: pyright-typings
 check-pyrefly: pyright-typings
 	@echo "-------- Checking types with pyrefly --------"
 	pyrefly check
+update-pyrefly-baseline: pyright-typings ## Accept current Pyrefly errors as the baseline
+	pyrefly check --baseline pyrefly-baseline.json --update-baseline
 check-pytest: FORCE
 	@echo "-------- Running tests with pytest ----------"
 	python tests/pytest/asyncio_prevent.py

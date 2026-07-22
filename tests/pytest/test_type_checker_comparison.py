@@ -1,9 +1,25 @@
 from scripts.compare_type_checkers import (
     CheckerResult,
     build_report,
+    summarize_baseline,
     summarize_pyrefly,
     summarize_pyright,
 )
+
+
+def test_summarize_baseline_counts_diagnostic_kinds() -> None:
+    count, categories = summarize_baseline(
+        {
+            "errors": [
+                {"name": "bad-argument-type"},
+                {"name": "bad-argument-type"},
+                {"name": "missing-attribute"},
+            ]
+        }
+    )
+
+    assert count == 3
+    assert categories == {"bad-argument-type": 2, "missing-attribute": 1}
 
 
 def test_summarize_pyright_normalizes_zero_based_locations() -> None:

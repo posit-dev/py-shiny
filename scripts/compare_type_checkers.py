@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -27,6 +27,8 @@ class DiagnosticSummary:
     locations: set[Location]
     files_checked: int | None = None
     project_lines: int | None = None
+    baselined_count: int = 0
+    baseline_categories: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -130,6 +132,14 @@ def summarize_pyrefly(data: dict[str, Any], stderr: str) -> DiagnosticSummary:
     )
 
 
+def summarize_baseline(data: dict[str, Any]) -> tuple[int, dict[str, int]]:
+    diagnostics = data.get("errors", [])
+    categories = Counter(
+        diagnostic.get("name", "unknown") for diagnostic in diagnostics
+    )
+    return len(diagnostics), dict(categories)
+
+
 def _run_command(command: Sequence[str], repo_root: Path) -> CommandResult:
     time_output = repo_root / ".type-checker-time.txt"
     wrapped_command = list(command)
@@ -209,6 +219,11 @@ def benchmark_checker(
         if name == "Pyright"
         else summarize_pyrefly(data, first.stderr)
     )
+    baseline_path = repo_root / "pyrefly-baseline.json"
+    if name == "Pyrefly" and baseline_path.exists():
+        diagnostics.baselined_count, diagnostics.baseline_categories = (
+            summarize_baseline(json.loads(baseline_path.read_text()))
+        )
     memory_values = [
         result.peak_memory_mib
         for result in command_results
@@ -235,6 +250,14 @@ def _format_optional(value: int | float | None, suffix: str = "") -> str:
 def _top_categories(result: CheckerResult) -> str:
     categories = sorted(
         result.diagnostics.categories.items(), key=lambda item: (-item[1], item[0])
+    )[:10]
+    return ", ".join(f"`{name}` ({count})" for name, count in categories) or "none"
+
+
+def _top_baseline_categories(result: CheckerResult) -> str:
+    categories = sorted(
+        result.diagnostics.baseline_categories.items(),
+        key=lambda item: (-item[1], item[0]),
     )[:10]
     return ", ".join(f"`{name}` ({count})" for name, count in categories) or "none"
 
@@ -268,6 +291,7 @@ def build_report(pyright: CheckerResult, pyrefly: CheckerResult, runs: int) -> s
         f"{_format_optional(pyright.peak_memory_mib, ' MiB')} | "
         f"{_format_optional(pyrefly.peak_memory_mib, ' MiB')} |",
         f"| Diagnostics | {pyright.diagnostics.diagnostic_count:,} | {pyrefly.diagnostics.diagnostic_count:,} |",
+        f"| Baselined diagnostics | {pyright.diagnostics.baselined_count:,} | {pyrefly.diagnostics.baselined_count:,} |",
         f"| Files with diagnostics | {pyright.diagnostics.diagnostic_files:,} | {pyrefly.diagnostics.diagnostic_files:,} |",
         "| Files/modules analyzed | "
         f"{_format_optional(pyright.diagnostics.files_checked)} | "
@@ -280,6 +304,8 @@ def build_report(pyright: CheckerResult, pyrefly: CheckerResult, runs: int) -> s
         f"**Pyright top diagnostic rules:** {_top_categories(pyright)}",
         "",
         f"**Pyrefly top diagnostic kinds:** {_top_categories(pyrefly)}",
+        "",
+        f"**Pyrefly top baseline kinds:** {_top_baseline_categories(pyrefly)}",
         "",
         "> Wall time includes process startup and uses the median to reduce noise. Peak RSS is measured by GNU `time` on Linux. Files and modules are checker-specific units, so treat that row as context rather than exact coverage parity. Full JSON and stderr outputs are attached as the `type-checker-comparison` artifact.",
         "",
@@ -300,6 +326,8 @@ def _metrics(result: CheckerResult) -> dict[str, Any]:
         "files_checked": result.diagnostics.files_checked,
         "project_lines": result.diagnostics.project_lines,
         "categories": result.diagnostics.categories,
+        "baselined_diagnostics": result.diagnostics.baselined_count,
+        "baseline_categories": result.diagnostics.baseline_categories,
     }
 
 

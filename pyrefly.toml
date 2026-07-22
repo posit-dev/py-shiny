@@ -3,6 +3,16 @@
 # same project scope during the CI evaluation.
 python-platform = "linux"
 infer-with-first-use = false
+baseline = "pyrefly-baseline.json"
+search-path = [
+    ".",
+    "tests/pytest",
+    "tests/playwright",
+    "tests/playwright/examples",
+    "tests/playwright/shiny/bugs/0666-sidebar",
+    "tests/playwright/shiny/bugs/0696-resolve-id",
+    "tests/playwright/shiny/TODO/sidebar",
+]
 project-excludes = [
     "shiny/api-examples",
     "examples",
@@ -26,3 +36,9 @@ no-access = "ignore"
 
 [[sub-config]]
 matches = "examples/"
+
+[[sub-config]]
+matches = "tests/playwright/**"
+# The repository has separate top-level conftest modules for pytest and
+# Playwright. A single project search path cannot disambiguate both names.
+replace-imports-with-any = ["conftest"]
