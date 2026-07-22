@@ -124,6 +124,7 @@ docs/source/reference/
 _dev/
 tests/playwright/deploys/**/requirements.txt
 test-results/
+type-checker-results/
 shiny_bookmarks/
 .posit/
 

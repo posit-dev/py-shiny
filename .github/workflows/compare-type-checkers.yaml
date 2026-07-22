@@ -1,0 +1,33 @@
+name: Compare type checkers
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: "3.14"
+
+      - name: Generate third-party stubs used by Pyright
+        run: make pyright-typings
+
+      - name: Benchmark Pyright and Pyrefly
+        run: python scripts/compare_type_checkers.py --runs 3
+
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: type-checker-comparison
+          path: type-checker-results/

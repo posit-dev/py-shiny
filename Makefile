@@ -93,6 +93,9 @@ check-isort: FORCE
 check-pyright: pyright-typings
 	@echo "-------- Checking types with pyright --------"
 	pyright
+check-pyrefly: pyright-typings
+	@echo "-------- Checking types with pyrefly --------"
+	pyrefly check
 check-pytest: FORCE
 	@echo "-------- Running tests with pytest ----------"
 	python tests/pytest/asyncio_prevent.py
@@ -100,6 +103,8 @@ check-pytest: FORCE
 
 # Check types with pyright
 pyright: check-types
+# Compare Pyrefly without replacing the required Pyright check yet
+pyrefly: check-pyrefly
 # Check style with flake8
 lint: check-lint
 test: check-tests ## check tests quickly with the default Python
