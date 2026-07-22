@@ -77,7 +77,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.download()
+    # Uses @render.download_button (replaces the deprecated download renderer).
+    @render.download_button()
     def download1():
         """
         This is the simplest case. The implementation simply returns the name of a file.
@@ -88,12 +89,12 @@ def server(input: Inputs, output: Outputs, session: Session):
         path = os.path.join(os.path.dirname(__file__), "mtcars.csv")
         return path
 
-    @render.download(filename="image.png")
+    @render.download_button(filename="image.png")
     def download2():
         """
         Another way to implement a file download is by yielding bytes; either all at
         once, like in this case, or by yielding multiple times. When using this
-        approach, you should pass a filename argument to @render.download, which
+        approach, you should pass a filename argument to @render.download_button, which
         determines what the browser will name the downloaded file.
         """
 
@@ -107,7 +108,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             plt.savefig(buf, format="png")
             yield buf.getvalue()
 
-    @render.download(
+    @render.download_button(
         filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100, 999)}.csv"
     )
     async def download3():
@@ -117,7 +118,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         yield "型,4,5\n"
 
     @output(id="download4")
-    @render.download(filename="failuretest.txt")
+    @render.download_button(filename="failuretest.txt")
     async def _():
         yield "hello"
         raise Exception("This error was caused intentionally")
