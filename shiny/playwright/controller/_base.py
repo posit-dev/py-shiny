@@ -6,7 +6,6 @@
 # TODO-barret; Note: We have access to the panel via `.nav_panel("key")`
 # TODO-barret; Maybe add `.loc_sidebar` for the sidebar?
 
-
 from __future__ import annotations
 
 import typing
@@ -83,7 +82,7 @@ def not_is_missing(x: R | MISSING_TYPE) -> TypeGuard[R]:
     return not isinstance(x, MISSING_TYPE)
 
 
-def all_missing(*args: object) -> TypeGuard[MISSING_TYPE]:
+def all_missing(*args: object) -> bool:
     for arg in args:
         if not_is_missing(arg):
             return False
@@ -269,6 +268,8 @@ class UiWithContainer(UiBase):
             id=id,
             loc=loc,
         )
+        if not isinstance(loc_container, Locator):
+            raise AssertionError("loc_container must have been resolved to a Locator")
         self.loc_container = loc_container
 
 

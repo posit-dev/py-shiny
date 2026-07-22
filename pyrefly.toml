@@ -1,9 +1,24 @@
-# Generated from pyrightconfig.json with `pyrefly init --migrate-from pyright`.
-# Pyright's ignored paths are explicit excludes so both checkers report on the
-# same project scope during the CI evaluation.
+# Translation of pyrightconfig.json for the parallel CI evaluation.
+#
+# Direct mappings:
+# - pythonPlatform=All -> linux (Pyrefly's documented cross-platform fallback)
+# - ignore -> project-excludes
+# - stubPath's Pyright default (./typings) -> site-package-path
+# - reportPrivateUsage=none -> no-access="ignore"
+#
+# Pyrefly's default project preset is the migration target for Pyright strict;
+# its similarly named strict preset additionally enables checks (including
+# mandatory @override decorators) that Pyright strict explicitly leaves off.
+#
+# Pyrefly 1.1.1 has no diagnostics corresponding to reportImportCycles,
+# reportUnusedFunction, or reportUnnecessaryIsInstance, so those Pyright
+# disables require no Pyrefly override. The examples/ execution environment is
+# also redundant because examples/ is excluded from both checkers.
 python-platform = "linux"
 infer-with-first-use = false
+permissive-ignores = true
 baseline = "pyrefly-baseline.json"
+site-package-path = ["typings"]
 search-path = [
     ".",
     "tests/pytest",
@@ -33,9 +48,6 @@ project-excludes = [
 
 [errors]
 no-access = "ignore"
-
-[[sub-config]]
-matches = "examples/"
 
 [[sub-config]]
 matches = "tests/playwright/**"

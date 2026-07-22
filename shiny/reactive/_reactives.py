@@ -181,6 +181,7 @@ class Value(Generic[T]):
         # Optional name for OpenTelemetry logging and debugging
         # Priority during initialization: 1) explicit name parameter, 2) inferred from assignment, 3) None
         # Can be overwritten later by Inputs class when value is added/accessed
+        self._name: str | None
         if name is not None:
             self._name = name
         else:

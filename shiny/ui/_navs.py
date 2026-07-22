@@ -1570,7 +1570,7 @@ def navset_bar(
     """
 
     # If args contains any lists, flatten them into args.
-    new_args: Sequence[NavSetArg | MetadataNode] = []
+    new_args: list[NavSetArg | MetadataNode] = []
     for arg in args:
         if isinstance(arg, (list, tuple)):
             new_args.extend(arg)
