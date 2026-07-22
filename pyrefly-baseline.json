@@ -181,6 +181,18 @@
       "severity": "error"
     },
     {
+      "line": 95,
+      "column": 21,
+      "stop_line": 95,
+      "stop_column": 27,
+      "path": "shiny/_uvicorn.py",
+      "code": -2,
+      "name": "unexpected-keyword",
+      "description": "Unexpected keyword argument `target` in function `uvicorn.supervisors.multiprocess.Multiprocess.__init__`",
+      "concise_description": "Unexpected keyword argument `target` in function `uvicorn.supervisors.multiprocess.Multiprocess.__init__`",
+      "severity": "error"
+    },
+    {
       "line": 481,
       "column": 42,
       "stop_line": 481,
