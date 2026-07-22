@@ -727,7 +727,7 @@ class download_button(_DownloadBase):
     def auto_output_ui(
         self,
         *,
-        width: str | None | MISSING_TYPE = MISSING,
+        width: str | MISSING_TYPE = MISSING,
     ) -> Tag:
         kwargs: dict[str, Any] = {}
         set_kwargs_value(kwargs, "width", width, self.width)
@@ -774,7 +774,7 @@ class download_link(_DownloadBase):
     def auto_output_ui(
         self,
         *,
-        width: str | None | MISSING_TYPE = MISSING,
+        width: str | MISSING_TYPE = MISSING,
     ) -> Tag:
         kwargs: dict[str, Any] = {}
         set_kwargs_value(kwargs, "width", width, self.width)
