@@ -16,17 +16,17 @@ from shiny.express._run import run_express
 def test_express_ui_is_complete():
     """
     Make sure shiny.express.ui covers everything that shiny.ui does, or explicitly lists
-    the item in `_known_missing`.
-    These entries are in `_known_missing` in shiny/express/ui/__init__.py
+    the item in `_known_missing_express_ui`.
+    These entries are in `_known_missing_express_ui` in shiny/express/ui/__init__.py
     """
 
     ui_all = set(ui.__all__)
     xui_all = set(xui.__all__)
-    ui_known_missing = set(xui._known_missing["shiny.ui"])
-    xui_known_missing = set(xui._known_missing["shiny.express.ui"])
+    ui_known_missing = set(xui._known_missing_express_ui["shiny.ui"])
+    xui_known_missing = set(xui._known_missing_express_ui["shiny.express.ui"])
 
     # Make sure that there's no overlap between shiny.express.ui.__all__ and
-    # _known_missing["shiny.ui"]; and same for other combinations. Note that the use of
+    # _known_missing_express_ui["shiny.ui"]; and same for other combinations. Note that the use of
     # `.intersection() == set()` instead of `disjoint()` is intentional, because if the
     # test fails, the first form provides an error message that shows the difference,
     # while the second form does note.
@@ -39,7 +39,7 @@ def test_express_ui_is_complete():
     assert ui_known_missing.difference(ui_all) == set()
 
     # Make sure that everything from shiny.ui is either exported by shiny.express.ui, or
-    # explicitly listed in shiny.express.ui._known_missing.
+    # explicitly listed in shiny.express.ui._known_missing_express_ui.
     assert ui_all.union(xui_known_missing) == xui_all.union(ui_known_missing)
 
 
