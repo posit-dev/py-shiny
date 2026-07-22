@@ -634,7 +634,7 @@ class _DownloadBase(Renderer[str]):
     ) -> Self:
         from .._utils import validate_no_params
 
-        validate_no_params(fn, "render.download", stacklevel=4)
+        validate_no_params(fn, f"render.{type(self).__name__}", stacklevel=4)
 
         # For downloads, the value function (which is passed to `__call__()`) is
         # different than for other renderers. For normal renderers, the user supplies
