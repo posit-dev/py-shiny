@@ -1,7 +1,3 @@
----
-name: custom-components
-description: Covers integrating custom browser JavaScript with Shiny for Python (py-shiny) - shipping component JS/CSS via an htmltools.HTMLDependency, writing custom input and output bindings against Shiny's client-side registries, reading custom inputs with Shiny.setInputValue, and pushing data from the server with session.send_custom_message. Use when integrating a third-party JavaScript widget or web component, building a custom input or output binding, sending messages from the server to browser JS, shipping component assets from a www/ folder, or when tempted to inject <script> tags ad hoc, poll the DOM, or manipulate elements outside Shiny's binding system.
----
 
 # Custom JavaScript components in Shiny for Python
 
@@ -16,7 +12,7 @@ values, reconnects, and namespacing for you.
 Do NOT reach into `#id` elements from stray `<script>` tags, poll the DOM, or
 open your own socket. Ship assets through an `HTMLDependency` (never a bare
 `<script src>` pointing outside the app) so ordering and deduplication work. For
-pure-Python dynamic UI use the dynamic-ui skill; to wrap an existing Jupyter
+pure-Python dynamic UI see `references/dynamic-ui.md`; to wrap an existing Jupyter
 widget use shinywidgets (external) rather than writing a binding by hand.
 
 ## Ship a component's JS/CSS
@@ -122,7 +118,7 @@ Shiny.addCustomMessageHandler("flash", (msg) => {   // type must match
 
 `send_custom_message` is async - `await` it (or call from an async effect). To
 run code right before/after values are sent to the client, use
-`@session.on_flush` / `@session.on_flushed` (see the session-lifecycle skill).
+`@session.on_flush` / `@session.on_flushed` (see `references/session-lifecycle.md`).
 
 ## Quick reference
 
@@ -149,7 +145,7 @@ run code right before/after values are sent to the client, use
 - Hardcoded ids inside a module -> collisions. Wrap ids with `resolve_id()`;
   input/output bindings namespace automatically via `find()`.
 - Reading `input.id()` before JS has ever called `setInputValue` -> value is
-  `None`; guard with `req(input.id())` (reactivity skill).
+  `None`; guard with `req(input.id())` (see `references/reactivity.md`).
 - Need a build step (TypeScript, Lit, React)? Start from the `shiny create`
   custom-component templates rather than hand-rolling the toolchain.
 ```

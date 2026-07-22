@@ -1,7 +1,3 @@
----
-name: chat
-description: Covers building an LLM chatbot interface in Shiny for Python with `ui.Chat` - rendering the chat, handling user submissions, and streaming model responses. Use when building an AI chatbot or LLM chat interface, wiring a provider (chatlas / OpenAI / Anthropic / LangChain / Ollama) into a Shiny app, streaming model output token-by-token, seeding or reactively reading chat history, transforming or guard-railing user input, or when tempted to hand-roll a message list with text inputs and manual output updates.
----
 
 # Building chatbots with `ui.Chat`
 

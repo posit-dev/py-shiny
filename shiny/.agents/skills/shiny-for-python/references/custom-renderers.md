@@ -1,7 +1,3 @@
----
-name: custom-renderers
-description: Covers authoring a reusable output renderer in Shiny for Python (py-shiny) by subclassing shiny.render.renderer.Renderer - turning a Python return value into a JSON-serializable client payload, supplying an auto_output_ui() so it works in both Core and Express, and accepting decorator arguments. Use when creating a reusable @render.xxx output decorator, subclassing shiny.render.renderer.Renderer, implementing transform()/render(), turning a Python value into a custom client payload/output, making one output work in both Core and Express, reaching for the deprecated output_transformer/OutputRenderer, or when tempted to hand-roll rendering logic inside every @render.ui or duplicate output-formatting code across apps.
----
 
 # Authoring custom output renderers in Shiny for Python
 
@@ -18,7 +14,7 @@ function, and do NOT reach for `shiny.render.transformer.output_transformer` or
 `OutputRenderer` — those are **deprecated/superseded by `Renderer`**. If you
 only need custom *client* rendering (a JS widget), you still author the payload
 here; the browser side is a separate output binding — see the
-`custom-components` skill.
+`references/custom-components.md`.
 
 ## Subclass and transform the value
 
@@ -111,12 +107,12 @@ def title():
 `ui.output_*` placeholder whose id equals the function name (as in the first
 example). `auto_output_ui()` returns the output placeholder that matches your
 renderer, such as `output_code` for `render_capitalize`, or the renderer's
-corresponding `ui.output_*` content (see the custom-components skill for wiring
+corresponding `ui.output_*` content (see `references/custom-components.md` for wiring
 a custom output binding).
 
 The app author's function may be sync **or** async — `self.fn` is always awaited,
 so `transform`/`render` are `async` and handle both. Scrub non-deterministic
-snapshot values with `self.snapshot_preprocess(fn)` (see the `testing` skill).
+snapshot values with `self.snapshot_preprocess(fn)` (see `references/testing.md`).
 
 ## Quick reference
 
@@ -147,5 +143,5 @@ snapshot values with `self.snapshot_preprocess(fn)` (see the `testing` skill).
   is always awaitable.
 - Reaching for `output_transformer`/`OutputRenderer` → deprecated; subclass
   `Renderer`. Need the browser to draw a custom payload → author the payload
-  here and register the client `OutputBinding` per the `custom-components` skill.
+  here and register the client `OutputBinding` per `references/custom-components.md`.
 ```

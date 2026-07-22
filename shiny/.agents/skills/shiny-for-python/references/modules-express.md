@@ -1,7 +1,3 @@
----
-name: modules-express
-description: Use when a Shiny for Python (py-shiny) Express-mode app (top-level UI, no explicit app_ui/server) needs a reusable, repeatable component - the same widget or panel appearing multiple times, avoiding input/output id collisions across copies, or when tempted to manually prefix input ids or copy-paste a block of Express UI+logic to reuse it. Uses the single `@module` decorator from `shiny.express`. For Core-mode apps (explicit app_ui + server), use the modules-core skill instead.
----
 
 # Shiny for Python modules (Express mode)
 
@@ -73,7 +69,7 @@ never assemble that string yourself.
 | Link UI to logic | automatic — they live in the same function |
 | Pass reactive data in | extra param; call it inside the module |
 | Namespaced id (rare) | `session.make_scope(id).ns("child_id")` |
-| Core equivalent | see the **modules-core** skill |
+| Core equivalent | see `references/modules-core.md` |
 
 ## Common mistakes
 

@@ -1,7 +1,3 @@
----
-name: feedback
-description: Covers transient, server-driven user feedback in Shiny for Python (py-shiny) - ui.notification_show / ui.notification_remove for toast messages, ui.modal / ui.modal_show / ui.modal_remove / ui.modal_button for dialog boxes, ui.Progress for progress bars during multi-step work, and ui.busy_indicators.use / ui.busy_indicators.options for spinner and pulse loading indicators. Use when showing a toast/notification, popping a modal dialog, reporting progress during a long or multi-step operation, adding loading spinners, or when tempted to fake a popup with panel_conditional + render.ui, print status to the console, or block the app with a bare sleep and no feedback. For persistent UI that changes use dynamic-ui; for tooltips/popovers/cards use layouts; for long-running task buttons use extended-tasks.
----
 
 # Transient user feedback in Shiny for Python
 
@@ -104,8 +100,8 @@ app = App(app_ui, server)
 ```
 
 For a single long-running computation triggered by a button, an
-`@ui.input_task_button` with an extended task often fits better (see the
-extended-tasks skill); `Progress` is for reporting incremental steps.
+`@ui.input_task_button` with an extended task often fits better (see
+`references/extended-tasks.md`); `Progress` is for reporting incremental steps.
 
 ## Busy indicators (spinners and pulse)
 

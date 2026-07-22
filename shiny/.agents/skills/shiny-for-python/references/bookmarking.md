@@ -1,7 +1,3 @@
----
-name: bookmarking
-description: Use when a Shiny for Python (py-shiny) app needs to save and restore its state - shareable URLs that reproduce the current inputs, restoring state after a page refresh, persisting session state to the server, excluding inputs from saved state, or when tempted to hand-roll query-string parsing or a custom persistence layer to remember input values.
----
 
 # Bookmarking Shiny for Python apps
 

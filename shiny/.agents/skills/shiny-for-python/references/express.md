@@ -1,7 +1,3 @@
----
-name: express
-description: Covers writing Shiny for Python apps in Express mode, where top-level code in the app file is the UI and outputs are defined inline. Use when writing or converting a Shiny Express app, using `from shiny.express import input, render, ui`, laying out UI with context managers like `with ui.sidebar():`/`with ui.card():`, setting page options with `page_opts()`, reusing UI with `@expressify`, deciding between Express and Core, or when tempted to add an explicit `app_ui`/`server()` split or nest UI calls the Core way inside an Express app. (For reusable namespaced components with `@module`, use the modules-express skill.)
----
 
 # Writing Shiny Express apps
 
@@ -137,7 +133,7 @@ can place it elsewhere (e.g. pass it as a `footer=`).
 
 For reusable, namespaced components, Express uses a single `@module` decorator
 (`from shiny.express import module`) — the counterpart to Core's
-`module.ui()` / `module.server()` pair. See the **modules-express** skill for
+`module.ui()` / `module.server()` pair. See `references/modules-express.md` for
 the full pattern.
 
 ## When to choose Express vs Core
@@ -160,7 +156,7 @@ the full pattern.
 | `ui.page_*(..., title=...)` | `ui.page_opts(title=...)` |
 | `ui.sidebar(child1, child2)` | `with ui.sidebar():` then children |
 | `ui.card(ui.output_plot("p"))` + `@render.plot def p()` | `with ui.card():` then `@render.plot def p()` |
-| `module.ui()` + `module.server()` | `@module` on one Express function (see modules-express skill) |
+| `module.ui()` + `module.server()` | `@module` on one Express function (see `references/modules-express.md`) |
 | reusable UI helper returning a Tag | `@expressify` helper emitting UI |
 
 ## Common mistakes

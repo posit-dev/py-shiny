@@ -1,7 +1,3 @@
----
-name: otel
-description: Use when adding observability to a Shiny for Python (py-shiny) app with OpenTelemetry - tracing reactive execution, profiling slow outputs or update cycles, monitoring sessions in production, exporting spans to a backend (Jaeger, Logfire, Honeycomb, Datadog, OTLP), suppressing telemetry for sensitive code, or when tempted to call trace.set_tracer_provider() inside app code to set up instrumentation.
----
 
 # OpenTelemetry for Shiny for Python apps
 

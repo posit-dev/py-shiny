@@ -1,7 +1,3 @@
----
-name: markdown-streaming
-description: Covers streaming Markdown/LLM output into a non-chat UI region in Shiny for Python with `ui.MarkdownStream` - rendering the target, pushing an (async) generator with `.stream()`, choosing markdown/html/text content, and replacing vs. appending. Use when progressively revealing a generated report, summary, or LLM response token-by-token into a card or page area that is NOT a conversation, streaming any incremental text into an output region, or when tempted to repeatedly overwrite an `output_text`/`render.ui` on a timer to fake streaming. For a full chatbot conversation (transcript + submit box) use the `chat` skill and `ui.Chat` instead.
----
 
 # Streaming Markdown with `ui.MarkdownStream`
 
@@ -140,7 +136,7 @@ ui.output_markdown_stream("x", content_type="text")  # Core
   The generator may be sync or async, but `.stream()` itself must be awaited.
 - Rebuilding the whole string and re-yielding it each tick -> yield only the new
   chunk; `MarkdownStream` accumulates them.
-- Using it for a back-and-forth conversation -> that is `ui.Chat` (see the
-  `chat` skill). `MarkdownStream` has no message history or input box.
+- Using it for a back-and-forth conversation -> that is `ui.Chat` (see
+  `references/chat.md`). `MarkdownStream` has no message history or input box.
 - Passing UI/output bindings as `content_type="text"` -> they render as literal
   text; use `"markdown"` or `"html"` for embedded UI.

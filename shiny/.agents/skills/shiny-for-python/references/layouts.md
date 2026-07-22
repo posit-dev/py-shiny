@@ -1,7 +1,3 @@
----
-name: layouts
-description: Covers Shiny for Python (py-shiny) Core-mode page structure and bslib layout containers - page_sidebar, page_fillable, page_fluid, page_fixed, sidebar()/layout_sidebar(), card()/card_header()/card_footer(), layout_columns() and layout_column_wrap() (12-column grid), value_box() for KPIs, accordion()/accordion_panel(), and fill/fillable sizing. Use when arranging a dashboard into cards, columns, or a sidebar, adding value boxes or collapsible accordions, making content fill the browser window, or when tempted to hand-write Bootstrap grid `<div class='row'>`/`col-*` markup or raw CSS flexbox for app layout. Does NOT cover navsets/tabs/page_navbar (see navigation), @render.ui/insert_ui/conditional_panel (see dynamic-ui), or theming/colors (see theming).
----
 
 # Layouts in Shiny for Python (Core)
 
@@ -14,8 +10,8 @@ a filling body; inside it you nest `card()`, `layout_columns()`,
 `layout_sidebar()`, `value_box()`, and `accordion()`. These containers are
 responsive and theme-aware for free.
 
-This skill documents the Core (function-call) form, e.g. `ui.card(...)`. For the
-Express context-manager form (`with ui.card():`) see the `express` skill.
+This reference documents the Core (function-call) form, e.g. `ui.card(...)`. For the
+Express context-manager form (`with ui.card():`) see `references/express.md`.
 
 ## Choose a page function
 

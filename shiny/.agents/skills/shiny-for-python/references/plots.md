@@ -1,7 +1,3 @@
----
-name: plots
-description: Covers rendering matplotlib/seaborn/plotnine figures and static images in a Shiny for Python (py-shiny) app with @render.plot and @render.image, plus reading plot click/hover/brush interactions. Use when displaying a figure or image, sizing a plot, making a plot respond to clicks/hover/brush selection, reading which points or region a user selected (input.<id>_click / _brush / _hover), or when tempted to save a figure to a temp PNG and serve it manually, poll for plot clicks, or wire up JavaScript event handlers by hand. For fully interactive JS charts (Plotly/Altair/ipywidgets) use shinywidgets instead.
----
 
 # Rendering plots and images in Shiny for Python
 
@@ -44,7 +40,7 @@ Set the display size on `ui.output_plot(width=, height=)` (CSS units; the plot
 auto-fits). `@render.plot(alt=...)` sets screen-reader text; `@render.plot(width=,
 height=)` forces a pixel size and is rarely needed. Extra kwargs pass through to
 the backend's save method (e.g. matplotlib `savefig`). In Express, the same
-decorator works inline with no `output_plot` call — see the `express` skill.
+decorator works inline with no `output_plot` call — see `references/express.md`.
 
 ## Render a static image
 

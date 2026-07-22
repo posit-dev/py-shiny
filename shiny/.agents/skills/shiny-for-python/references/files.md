@@ -1,7 +1,3 @@
----
-name: files
-description: Covers Shiny for Python (py-shiny) file uploads and downloads - ui.input_file plus the list[FileInfo] server value, and @render.download paired with ui.download_button / ui.download_link. Use when letting users upload a file and reading its contents on the server, reading an uploaded CSV/image/data file from its datapath, offering a generated file (CSV, report, image, zip) for download, setting a dynamic download filename, guarding an output against an empty file input, or when tempted to build a raw HTML <input type=file>, write your own multipart parser, or wire a custom Starlette route to serve a download.
----
 
 # File uploads and downloads in Shiny for Python
 
@@ -20,8 +16,8 @@ directions through the components below.
 ## Upload a file: `ui.input_file`
 
 Add the input to the UI; read it in the server as `list[FileInfo]`. The value
-is `None` until the user picks a file, so guard with `req` (see the
-**reactivity** skill) before touching it. Each `FileInfo` is a dict with
+is `None` until the user picks a file, so guard with `req` (see
+`references/reactivity.md`) before touching it. Each `FileInfo` is a dict with
 `name` (the browser filename), `size`, `type` (MIME), and `datapath` (path to
 a temp file holding the data — open this, not `name`).
 
@@ -90,7 +86,7 @@ bytes instead so Shiny does not leave the temp file behind. The handler may be
 sync or async.
 
 In Express mode, `@render.download` renders its own button — pass
-`label=` and skip the separate `ui.download_button` (see the **express** skill).
+`label=` and skip the separate `ui.download_button` (see `references/express.md`).
 
 ## Quick reference
 

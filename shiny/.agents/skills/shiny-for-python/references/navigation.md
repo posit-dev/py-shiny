@@ -1,7 +1,3 @@
----
-name: navigation
-description: Covers Shiny for Python (py-shiny) multi-panel navigation - the navset_*() family (tab, pill, underline, card variants, pill_list, bar, hidden), nav_panel/nav_menu/nav_control/nav_spacer children, page_navbar() for a top-level navbar app, reading the active panel via the navset id input, switching it with update_navset(), and adding/removing panels at runtime with insert_nav_panel/remove_nav_panel/update_nav_panel. Use when organizing an app into tabs, pills, or a navbar with multiple pages, reading or switching the active tab from the server, adding or removing tabs at runtime, or when tempted to build tab buttons with input_action_button + conditional_panel to fake tabbed navigation.
----
 
 # Navigation in Shiny for Python
 
@@ -18,7 +14,7 @@ change which panel is active, give the container an `id=` (see below); don't
 track the selection in a separate `reactive.value`.
 
 This documents the Core form. Express mode uses `with ui.nav_panel(...):`
-context managers — see the `express` skill.
+context managers — see `references/express.md`.
 
 ## Choose a container
 

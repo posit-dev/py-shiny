@@ -1,7 +1,3 @@
----
-name: data-frames
-description: Covers rendering interactive data frames (grids/tables) in a Shiny for Python (py-shiny) app with @render.data_frame returning render.DataGrid or render.DataTable. Use when displaying a pandas/polars DataFrame with sorting, filtering, row/cell selection, or cell editing; reading which rows a user selected or how they sorted/filtered/edited the table; pushing selections or new data back to the grid; or when tempted to render an HTML table by hand, build a custom <table>, or poll the whole DataFrame on a timer to detect a row selection.
----
 
 # Rendering interactive data frames in Shiny for Python
 
@@ -139,4 +135,4 @@ drops edits, keeps sort/filter), and `await grid.update_cell_value(v, row=0, col
 - `update_*` raising "not awaited" or silently no-op → these are async; call them with `await` inside a `@reactive.effect`.
 - Selection ignored on programmatic update → `.selection_mode` must be `"row"`/`"rows"`; `update_cell_selection` warns and clears under `"none"`.
 - Mutating `.data_view()` / `.data()` in place corrupts the source — they are shallow copies; `.copy()` before mutating.
-- Need to assert on the grid in a Playwright test → see the `testing` skill (`controller.OutputDataFrame`).
+- Need to assert on the grid in a Playwright test → see `references/testing.md` (`controller.OutputDataFrame`).

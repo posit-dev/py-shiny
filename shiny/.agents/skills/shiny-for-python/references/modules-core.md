@@ -1,7 +1,3 @@
----
-name: modules-core
-description: Use when a Shiny for Python (py-shiny) Core-mode app (explicit app_ui + server) needs a reusable, repeatable UI+server component - the same widget or panel appearing multiple times, avoiding input/output id collisions across copies, sharing one piece of server logic, destroying a dynamically added module instance, or when tempted to manually prefix input ids (like "counter1_button") or copy-paste server functions to make ids unique. For Express-mode apps, use the modules-express skill instead.
----
 
 # Shiny for Python modules (Core mode)
 
@@ -130,8 +126,8 @@ value intact for the next instance.
 
 ## Express mode
 
-Express-mode apps use a different, single-decorator module API. See the
-**modules-express** skill.
+Express-mode apps use a different, single-decorator module API. See
+`references/modules-express.md`.
 
 ## Quick reference
 
@@ -146,7 +142,7 @@ Express-mode apps use a different, single-decorator module API. See the
 | Send values out | `return` from the server function |
 | Namespaced id (rare) | `session.make_scope(id).ns("child_id")` |
 | Destroy a dynamic instance | `await session.destroy(id)` (async) |
-| Express equivalent | see the **modules-express** skill |
+| Express equivalent | see `references/modules-express.md` |
 
 ## Common mistakes
 

@@ -1,7 +1,3 @@
----
-name: reactivity
-description: Covers Shiny for Python (py-shiny) reactive programming - reactive.value, reactive.calc, reactive.effect, reactive.event, req(), isolate(), invalidate_later, poll, and file_reader - the reactive graph that decides when code re-runs. Use when a value should recompute or an output update as inputs change, when deciding between a calc and an effect, when an output recomputes an expensive value on every render instead of caching it, when reactivity fires too often or not at all, when code reads input.x() outside a reactive context and errors, when tempted to poll a database or file in a loop, or when a mutable value must be shared reactively across outputs.
----
 
 # Reactivity in Shiny for Python
 
@@ -17,7 +13,7 @@ read `input.x()` at module top level or inside a plain helper. Reactive sources
 are only readable inside a reactive context: a `@render.*` output, a
 `@reactive.calc`, a `@reactive.effect`, or an `isolate()` block. For work that
 blocks the session (a slow API call, a long computation), do not run it in a
-calc/effect either — use `reactive.extended_task` (see the tasks skill).
+calc/effect either — use `reactive.extended_task` (see `references/extended-tasks.md`).
 
 ## Share a mutable value: `reactive.value`
 

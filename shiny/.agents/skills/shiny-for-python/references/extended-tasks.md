@@ -1,7 +1,3 @@
----
-name: extended-tasks
-description: Covers running non-blocking, long-running work in Shiny for Python (py-shiny) with reactive.extended_task - invoking an async task off the reactive flush, reading its result and status, cancelling it, and pairing it with input_task_button / update_task_button for automatic busy state. Use when running a slow API call, model inference, or long computation without freezing the app, keeping the UI (and other users' sessions) responsive during background work, showing a busy button while a task runs, or when tempted to run blocking work in a reactive.calc/effect or block the event loop with a long synchronous call.
----
 
 # Extended tasks in Shiny for Python
 

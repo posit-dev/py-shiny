@@ -1,7 +1,3 @@
----
-name: theming
-description: Covers styling and appearance of Shiny for Python (py-shiny) apps with the ui.Theme Python API - applying a preset (Bootstrap/Bootswatch/shiny), customizing Sass variables (colors, fonts) via add_defaults/add_rules/add_mixins, brand.yml via Theme.from_brand, and light/dark mode with input_dark_mode/update_dark_mode. Use when changing an app's colors, fonts, or Bootstrap theme, applying a Bootswatch preset, adding a light/dark mode toggle, customizing Sass variables, or when tempted to paste large raw CSS overrides or hand-edit compiled Bootstrap CSS instead of using ui.Theme. Not for card/sidebar/navset layout structure.
----
 
 # Theming Shiny for Python apps
 
@@ -23,7 +19,7 @@ extra install.
 ## Apply a preset
 
 Pass a `ui.Theme` (or just its preset name via the constructor) to the page's
-`theme=`. In Express, use `ui.page_opts(theme=...)` (see the `express` skill).
+`theme=`. In Express, use `ui.page_opts(theme=...)` (see `references/express.md`).
 
 ```python
 from shiny import App, ui

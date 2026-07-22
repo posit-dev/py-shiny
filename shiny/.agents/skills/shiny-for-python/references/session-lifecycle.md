@@ -1,7 +1,3 @@
----
-name: session-lifecycle
-description: Covers the Shiny for Python (py-shiny) Session object - per-session cleanup with session.on_ended, before/after reactive-flush hooks with on_flush/on_flushed, reading the incoming request (headers, cookies, URL) via session.http_conn and session.clientdata, registering a per-session HTTP endpoint with session.dynamic_route, and obtaining the session with require_active_session. Use when running cleanup as a user disconnects (close a DB handle, cancel work), reading request headers/cookies/URL, serving a session-specific URL for another client to fetch, hooking work immediately before or after the reactive flush is sent to the client, or when tempted to use a module-level global for per-session state or a teardown at import time that never fires per user.
----
 
 # Session lifecycle in Shiny for Python
 
@@ -47,7 +43,7 @@ def server(input, output, session):
 
 `on_ended` fires when the whole session disconnects. To tear down just one
 module instance's reactive graph (not the entire session), use
-`session.destroy(id)` — see the modules-core skill.
+`session.destroy(id)` — see `references/modules-core.md`.
 
 ## Read the incoming request: `http_conn` and `clientdata`
 
@@ -134,11 +130,11 @@ def server(input, output, session):
 - Passing a coroutine function to `on_ended`/`on_flush` -> fine, they accept
   sync *or* async callbacks; just don't call the function yourself.
 
-## Related skills
+## Related references
 
 - Module namespaces (`session.make_scope`, `session.destroy(id)`,
-  `session.on_destroy`) -> **modules-core**.
-- Sending custom JS messages (`session.send_custom_message`) -> **custom-components**.
-  This skill owns `session.send_input_message` (the low-level primitive behind
+  `session.on_destroy`) -> `references/modules-core.md`.
+- Sending custom JS messages (`session.send_custom_message`) -> `references/custom-components.md`.
+  This reference owns `session.send_input_message` (the low-level primitive behind
   `ui.update_*`; prefer the `ui.update_*` wrappers).
-- Saving/restoring session state across reconnects -> **bookmarking**.
+- Saving/restoring session state across reconnects -> `references/bookmarking.md`.

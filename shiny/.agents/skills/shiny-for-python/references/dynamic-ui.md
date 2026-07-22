@@ -1,7 +1,3 @@
----
-name: dynamic-ui
-description: Covers Shiny for Python (py-shiny) UI that changes after initial render - @render.ui / ui.output_ui to compute a chunk of UI reactively, ui.update_* to change an existing input's value/label/choices from the server, ui.insert_ui / ui.remove_ui to inject or remove arbitrary UI, and ui.panel_conditional to show/hide UI from a client-side JS condition. Use when generating UI that depends on inputs or data, populating or updating a select's choices or an input's value/label from the server, showing or hiding a section, inserting or removing controls at runtime, or when tempted to rebuild the whole page, manipulate the DOM with custom JavaScript, or hard-code every possible input state. For nav/tab insertion use the navigation skill; for cards/sidebars use layouts; for dark mode use theming.
----
 
 # Dynamic UI in Shiny for Python (Core)
 
@@ -16,10 +12,10 @@ round-trip.
 
 Do NOT rebuild the whole page, write custom JavaScript to poke the DOM, or
 hard-code every possible input state and toggle visibility by hand. Reactivity
-(`@reactive.effect`; see the reactivity skill) drives all of this.
+(`@reactive.effect`; see `references/reactivity.md`) drives all of this.
 
 This documents the Core form. In Express mode, use `@render.express` instead of
-`@render.ui` (see the express skill); everything else below is identical.
+`@render.ui` (see `references/express.md`); everything else below is identical.
 
 ## Compute UI reactively: `@render.ui` + `ui.output_ui`
 
@@ -126,12 +122,12 @@ app = App(app_ui, server)
 | Need | Use |
 |---|---|
 | UI that depends on inputs/data | `@render.ui` + `ui.output_ui(id)` |
-| Express: same, capture syntax | `@render.express` (express skill) |
+| Express: same, capture syntax | `@render.express` (see `references/express.md`) |
 | Change an input's value/label/choices | `ui.update_*(id, ...)` in a `@reactive.effect` |
 | Inject persistent/accumulating UI | `ui.insert_ui(ui, selector, where=)` |
 | Remove injected UI | `ui.remove_ui(selector)` |
 | Show/hide static UI, no round-trip | `ui.panel_conditional("input.x", ...)` |
-| Insert/update nav or tab panels | navigation skill (`nav_insert`, `update_navs`) |
+| Insert/update nav or tab panels | see `references/navigation.md` (`nav_insert`, `update_navs`) |
 
 ## Common mistakes
 
