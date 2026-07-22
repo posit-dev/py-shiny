@@ -17,7 +17,9 @@ jobs:
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
-          python-version: "3.14"
+          # Python 3.14 currently has an unrelated shiny/shinychat resolution
+          # conflict; use the newest setup that can install the shared test env.
+          python-version: "3.13"
 
       - name: Generate third-party stubs used by Pyright
         run: make pyright-typings
