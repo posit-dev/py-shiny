@@ -90,6 +90,64 @@ def test_render_output_controls():
     )
 
 
+def test_render_output_controls_complete():
+    """
+    Enforce the 1:1 mapping between output render decorators and output UI components.
+    A new output renderer or output UI component that is not paired (and not explicitly
+    allowlisted in `_known_missing_renderer`) fails this test.
+    """
+    import inspect
+
+    from shiny.render._render import (
+        _known_missing_renderer,
+        _renderer_output_ui_pairs,
+    )
+    from shiny.render.renderer import Renderer
+
+    # (1) Every mapped renderer's auto-placed UI matches its UI component's HTML.
+    for renderer_cls, ui_fn in _renderer_output_ui_pairs.items():
+        fn_name = renderer_cls.__name__
+
+        @renderer_cls
+        def out():
+            yield "x"
+
+        rendered = ui.TagList(out.tagify()).get_html_string()
+        # Some UI components (e.g. download_button/download_link) have a required
+        # `label` parameter with no default; auto_output_ui() supplies the renderer's
+        # own default ("Download") for it, so mirror that here for a fair comparison.
+        ui_fn_kwargs: dict[str, Any] = {}
+        ui_fn_sig = inspect.signature(ui_fn)
+        if (
+            "label" in ui_fn_sig.parameters
+            and ui_fn_sig.parameters["label"].default is inspect.Parameter.empty
+        ):
+            ui_fn_kwargs["label"] = "Download"
+        expected = ui.TagList(ui_fn("out", **ui_fn_kwargs)).get_html_string()
+        assert rendered == expected, f"{fn_name} auto_output_ui mismatch"
+
+    # (2) Every Renderer subclass exported by shiny.render is mapped or allowlisted.
+    mapped_renderers = {cls.__name__ for cls in _renderer_output_ui_pairs}
+    allowed_renderers = set(_known_missing_renderer["shiny.render"])
+    for name in render.__all__:
+        obj = getattr(render, name)
+        if inspect.isclass(obj) and issubclass(obj, Renderer):
+            assert name in mapped_renderers or name in allowed_renderers, (
+                f"render.{name} is a Renderer with no paired UI component; "
+                f"add it to _renderer_output_ui_pairs or _known_missing_renderer"
+            )
+
+    # (3) Every output_*/download_* UI component is a mapping target or allowlisted.
+    mapped_ui = {fn.__name__ for fn in _renderer_output_ui_pairs.values()}
+    allowed_ui = set(_known_missing_renderer["shiny.ui"])
+    for name in ui.__all__:
+        if name.startswith("output_") or name.startswith("download_"):
+            assert name in mapped_ui or name in allowed_ui, (
+                f"ui.{name} is an output component with no paired renderer; "
+                f"add it to _renderer_output_ui_pairs or _known_missing_renderer"
+            )
+
+
 def test_hold():
     old_displayhook = sys.displayhook
     try:
