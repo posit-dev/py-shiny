@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, List
 
-from htmltools import Tag
+from htmltools import Tag, TagAttrs
 
 from shiny import App, ui
 from shiny.types import NavSetArg
@@ -68,7 +68,7 @@ def make_navset(
 ):
     prefix = name + "()"
 
-    args = []
+    args: List[NavSetArg] = []
     if controls:
         args = nav_controls(prefix)
 
@@ -85,6 +85,8 @@ def make_navset(
     return ui.TagList(ui.tags.h4(prefix), fn(*args, **kwargs))
 
 
+footer_attrs: TagAttrs = {"style": "width:80%;margin: 0 auto"}
+
 app_ui = ui.page_navbar(
     *nav_controls("page_navbar()"),
     # bg="#0062cc",
@@ -93,7 +95,7 @@ app_ui = ui.page_navbar(
     header="page_navbar(): Header",
     fillable=False,
     footer=ui.div(
-        {"style": "width:80%;margin: 0 auto"},
+        footer_attrs,
         ui.tags.style("""
             h4 {
                 margin-top: 3em;

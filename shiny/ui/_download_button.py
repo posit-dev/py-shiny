@@ -2,7 +2,7 @@ __all__ = ("download_button", "download_link")
 
 from typing import Optional
 
-from htmltools import Tag, TagAttrValue, TagChild, css, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._shinyenv import is_pyodide
@@ -45,13 +45,14 @@ def download_button(
     * :func:`~shiny.ui.download_link`
     """
 
+    button_attrs: TagAttrs = {
+        "class": "btn btn-default shiny-download-link disabled",
+        "style": css(width=width),
+    }
     return tags.a(
         icon,
         label,
-        {
-            "class": "btn btn-default shiny-download-link disabled",
-            "style": css(width=width),
-        },
+        button_attrs,
         id=resolve_id(id),
         href="",
         target="_blank",
@@ -101,10 +102,14 @@ def download_link(
     * :func:`~shiny.ui.download_button`
     """
 
+    link_attrs: TagAttrs = {
+        "class": "shiny-download-link disabled",
+        "style": css(width=width),
+    }
     return tags.a(
         icon,
         label,
-        {"class": "shiny-download-link disabled", "style": css(width=width)},
+        link_attrs,
         id=resolve_id(id),
         href="",
         target="_blank",

@@ -139,17 +139,20 @@ def tooltip(
     if len(children) == 0:
         raise RuntimeError("At least one value must be provided to `*args: TagChild`")
 
+    tooltip_attrs: TagAttrs = {
+        "id": resolve_id_or_none(id),
+        "placement": placement,
+        "bsOptions": json.dumps(options) if options else None,
+    }
+    template_attrs: TagAttrs = {"style": "display:none;"}
+
     res = web_component(
         "bslib-tooltip",
-        {
-            "id": resolve_id_or_none(id),
-            "placement": placement,
-            "bsOptions": json.dumps(options) if options else None,
-        },
+        tooltip_attrs,
         attrs,
         # Use display:none instead of <template> since shiny.js
         # doesn't bind to the contents of the latter
-        tags.template(*children, {"style": "display:none;"}),
+        tags.template(*children, template_attrs),
         trigger,
     )
 

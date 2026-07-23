@@ -199,7 +199,9 @@ class AppTestValues:
             # Keys expected but absent (both modes) and, for "exact" only, keys
             # present in the snapshot that were not expected.
             missing = sorted(set(values) - set(section))
-            extra = sorted(set(section) - set(values)) if match == "exact" else []
+            extra: list[str] = (
+                sorted(set(section) - set(values)) if match == "exact" else []
+            )
             # Value mismatches, checked for every expected key that is present.
             # This applies to BOTH modes: "exact" must verify values too, not
             # just that the key sets are equal.

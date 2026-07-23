@@ -98,6 +98,7 @@ def _run_uvicorn(
                     sockets=[sock],
                 ).run()
             else:
+                # pyrefly: ignore[missing-argument]
                 Multiprocess(
                     config, sockets=[sock]
                 ).run()  # pyright: ignore[reportCallIssue]
@@ -118,10 +119,12 @@ def maybe_setup_rsw_proxying(log_config: dict[str, Any]) -> None:
     # Replace localhost URLs emitted to the log, with proxied URLs
     if is_workbench():
         if "filters" not in log_config:
-            log_config["filters"] = {}
+            log_filters: dict[str, Any] = {}
+            log_config["filters"] = log_filters
         log_config["filters"]["rsw_proxy"] = {"()": "shiny._hostenv.ProxyUrlFilter"}
         if "filters" not in log_config["handlers"]["default"]:
-            log_config["handlers"]["default"]["filters"] = []
+            default_handler_filters: list[str] = []
+            log_config["handlers"]["default"]["filters"] = default_handler_filters
         log_config["handlers"]["default"]["filters"].append("rsw_proxy")
 
 

@@ -295,8 +295,11 @@ def as_browser_cell_selection(
                 )
         return tuple(arr)
 
-    rows = to_int_tuple_or_none(x.get("rows", None), name="rows")
-    cols = to_int_tuple_or_none(x.get("cols", None), name="cols")
+    # `x` is a union of TypedDicts, not all of which declare `rows`/`cols`, so
+    # `.get()` cannot be typed precisely; view it as a plain dict for lookups.
+    x_dict = cast("dict[str, Any]", x)
+    rows = to_int_tuple_or_none(x_dict.get("rows", None), name="rows")
+    cols = to_int_tuple_or_none(x_dict.get("cols", None), name="cols")
 
     assert "type" in x, "`type` field is required in CellSelection"
 

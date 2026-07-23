@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import polars as pl
+from htmltools import TagAttrs
 
 # pyright: reportMissingTypeStubs = false
 from palmerpenguins import load_penguins_raw
@@ -27,6 +28,8 @@ df_styles: list[StyleInfo] = [
     },
 ]
 
+page_attrs: TagAttrs = {"class": "p-3"}
+
 app_ui = ui.page_fillable(
     ui.tags.style("""
         .everywhere {
@@ -37,7 +40,7 @@ app_ui = ui.page_fillable(
             background-color: lightblue !important;
         }
         """),
-    {"class": "p-3"},
+    page_attrs,
     ui.card(
         ui.card_header("Pandas Styles List:"),
         ui.output_data_frame("pd_list_styles"),

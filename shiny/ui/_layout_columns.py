@@ -125,18 +125,20 @@ def layout_columns(
 
     col_widths_spec = as_col_spec(col_widths, len(children))
 
+    grid_attrs: TagAttrs = {
+        "class": "bslib-grid grid bslib-mb-spacing",
+        "style": css(
+            gap=as_css_unit(gap),
+            height=as_css_unit(height),
+            min_height=as_css_unit(min_height),
+            max_height=as_css_unit(max_height),
+        ),
+    }
+
     # Create the bslib-layout-columns element
     tag = Tag(
         "bslib-layout-columns",
-        {
-            "class": "bslib-grid grid bslib-mb-spacing",
-            "style": css(
-                gap=as_css_unit(gap),
-                height=as_css_unit(height),
-                min_height=as_css_unit(min_height),
-                max_height=as_css_unit(max_height),
-            ),
-        },
+        grid_attrs,
         col_widths_attrs(col_widths_spec),
         attrs,
         row_heights_attrs(row_heights),

@@ -12,7 +12,7 @@ __all__ = (
 
 from typing import Optional
 
-from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagFunction, css, div, tags
 
 from .._docstring import add_example
 from ..module import resolve_id
@@ -367,7 +367,8 @@ def output_table(id: str, **kwargs: TagAttrValue) -> Tag:
     --------
     * :class:`~shiny.render.table`
     """
-    return tags.div({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
+    table_attrs: TagAttrs = {"class": "shiny-html-output"}
+    return tags.div(table_attrs, id=resolve_id(id), **kwargs)
 
 
 @add_example()
@@ -412,7 +413,8 @@ def output_ui(
 
     if not container:
         container = tags.span if inline else tags.div
-    res = container({"class": "shiny-html-output"}, id=resolve_id(id), **kwargs)
+    output_attrs: TagAttrs = {"class": "shiny-html-output"}
+    res = container(output_attrs, id=resolve_id(id), **kwargs)
     if fill:
         res = as_fill_item(res)
     if fillable:

@@ -2,7 +2,7 @@ __all__ = ("input_action_button", "input_action_link")
 
 from typing import Optional
 
-from htmltools import Tag, TagAttrValue, TagChild, css, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from ..module import resolve_id
@@ -67,8 +67,12 @@ def input_action_button(
     if label is not None:
         label = tags.span(label, class_="action-label")
 
+    button_attrs: TagAttrs = {
+        "class": "btn btn-default action-button",
+        "style": css(width=width),
+    }
     return tags.button(
-        {"class": "btn btn-default action-button", "style": css(width=width)},
+        button_attrs,
         icon,
         label,
         id=resolve_id(id),
@@ -125,8 +129,9 @@ def input_action_link(
     if label is not None:
         label = tags.span(label, class_="action-label")
 
+    link_attrs: TagAttrs = {"class": "action-button action-link"}
     return tags.a(
-        {"class": "action-button action-link"},
+        link_attrs,
         icon,
         label,
         id=resolve_id(id),

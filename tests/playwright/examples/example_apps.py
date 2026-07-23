@@ -208,6 +208,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         ]
 
         # Remove any app specific errors that are allowed
+        app_allowable_errors: typing.Union[Literal[True], str, typing.List[str]]
         if short_app_path in app_allow_shiny_errors:
             app_allowable_errors = app_allow_shiny_errors[short_app_path]
         else:
