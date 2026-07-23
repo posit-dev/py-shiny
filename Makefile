@@ -78,7 +78,7 @@ check: check-format check-lint check-types check-tests  ## check code, style, ty
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
 check-format: check-black check-isort
 check-lint: check-flake8
-check-types: check-pyright
+check-types: check-pyrefly
 check-tests: check-pytest
 
 check-flake8: FORCE
@@ -93,13 +93,20 @@ check-isort: FORCE
 check-pyright: pyright-typings
 	@echo "-------- Checking types with pyright --------"
 	pyright
+check-pyrefly: pyright-typings
+	@echo "-------- Checking types with pyrefly --------"
+	pyrefly check
+update-pyrefly-baseline: pyright-typings ## Accept current Pyrefly errors as the baseline
+	pyrefly check --baseline pyrefly-baseline.json --update-baseline
 check-pytest: FORCE
 	@echo "-------- Running tests with pytest ----------"
 	python tests/pytest/asyncio_prevent.py
 	pytest
 
 # Check types with pyright
-pyright: check-types
+pyright: check-pyright
+# Check types with pyrefly
+pyrefly: check-pyrefly
 # Check style with flake8
 lint: check-lint
 test: check-tests ## check tests quickly with the default Python

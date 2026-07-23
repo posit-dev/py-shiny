@@ -140,6 +140,7 @@ dev = [
     "isort>=5.10.1",
     "libsass>=0.23.0",
     "brand_yml>=0.2.0",
+    "pyrefly>=1.1.1",
     "pyright>=1.1.407",
     "pre-commit>=2.15.0",
     "wheel",
@@ -217,3 +218,55 @@ skip = [
 # Note: This setting can not be done via CLI and must be set within a config
 ignore_errors = true
 exclude = ["shiny/api-examples", "shiny/templates"]
+
+# Pyrefly's default project preset is the migration target for Pyright strict;
+# its similarly named strict preset additionally enables checks (including
+# mandatory @override decorators) that Pyright strict explicitly leaves off.
+[tool.pyrefly]
+infer-with-first-use = false
+# Until pyright is completely removed, we need to maintain `permissive-ignores = true`.
+# Once removed, convert all `# pyright: ignore` to `# pyrefly: ignore`. Use specific rules when possible.
+permissive-ignores = true
+# Known pre-existing diagnostics are baselined so `pyrefly check` only fails
+# on new errors. Regenerate with `make update-pyrefly-baseline` after
+# intentionally fixing baselined errors.
+baseline = "pyrefly-baseline.json"
+site-package-path = ["typings"]
+search-path = [
+    ".",
+    "tests/pytest",
+    "tests/playwright",
+    "tests/playwright/examples",
+    "tests/playwright/shiny/bugs/0666-sidebar",
+    "tests/playwright/shiny/bugs/0696-resolve-id",
+    "tests/playwright/shiny/TODO/sidebar",
+]
+project-excludes = [
+    "shiny/api-examples",
+    "examples",
+    "build",
+    "dist",
+    "typings",
+    "sandbox",
+    "_dev",
+    ".context",
+    "docs",
+    "tests/playwright/deploys/*/app.py",
+    "shiny/templates",
+    "tests/playwright/ai_generated_apps/*/*/app*.py",
+    "tests/inspect-ai/apps/*/app*.py",
+    "shiny/pytest/_generate/_main.py",
+    "tests/inspect-ai/scripts/evaluation.py",
+]
+
+[tool.pyrefly.errors]
+no-access = "ignore"
+unused-ignore = "error"
+implicit-any = "error"
+
+[[tool.pyrefly.sub-config]]
+matches = "tests/playwright/**"
+# The repository has separate top-level conftest modules for pytest and
+# Playwright. A single project search path cannot disambiguate both names.
+replace-imports-with-any = ["conftest"]
+

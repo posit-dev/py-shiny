@@ -72,11 +72,13 @@ def _run_uvicorn(
                 "'reload' or 'workers'."
             )
             sys.exit(_UVICORN_STARTUP_FAILURE)
-    elif hasattr(config, "load_app"):
+    else:
         # Fail fast on app import errors before binding the socket, matching
         # uvicorn.run(). Config.load_app() only exists in uvicorn >= 0.47;
         # older supported versions (>= 0.23) load the app inside serve() instead.
-        config.load_app()
+        load_app = getattr(config, "load_app", None)
+        if load_app is not None:
+            load_app()
 
     try:
         if config.should_reload:
