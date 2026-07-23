@@ -227,6 +227,10 @@ infer-with-first-use = false
 # Until pyright is completely removed, we need to maintain `permissive-ignores = true`.
 # Once removed, convert all `# pyright: ignore` to `# pyrefly: ignore`. Use specific rules when possible.
 permissive-ignores = true
+# Known pre-existing diagnostics are baselined so `pyrefly check` only fails
+# on new errors. Regenerate with `make update-pyrefly-baseline` after
+# intentionally fixing baselined errors.
+baseline = "pyrefly-baseline.json"
 site-package-path = ["typings"]
 search-path = [
     ".",
