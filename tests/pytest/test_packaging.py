@@ -16,6 +16,7 @@ import glob
 import os
 import re
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -93,15 +94,30 @@ def test_router_skill_index_matches_reference_files() -> None:
 
 
 def test_skill_frontmatter_has_name_and_description() -> None:
-    # Minimal SKILL.md frontmatter contract (agentskills.io specification);
-    # also what `shiny skills list` will surface.
+    # Minimal SKILL.md frontmatter contract (agentskills.io specification).
+    # Parse the frontmatter as real YAML (installers like library-skills use a
+    # strict parser): a `: ` or other special sequence in an unquoted scalar is
+    # invalid YAML and must fail here, not silently ship a skill that installers
+    # cannot read.
+    yaml = pytest.importorskip("yaml")
     for skill_dir in skill_dirs():
         text = (skill_dir / "SKILL.md").read_text()
         assert text.startswith("---\n"), f"{skill_dir}: SKILL.md missing frontmatter"
         frontmatter = text.split("---", 2)[1]
+        try:
+            loaded = yaml.safe_load(frontmatter)
+        except yaml.YAMLError as e:
+            raise AssertionError(
+                f"{skill_dir}: SKILL.md frontmatter is not valid YAML: {e}"
+            )
+        assert isinstance(
+            loaded, dict
+        ), f"{skill_dir}: frontmatter is not a YAML mapping"
+        data = cast("dict[str, object]", loaded)
         assert (
-            f"name: {skill_dir.name}" in frontmatter
+            data.get("name") == skill_dir.name
         ), f"{skill_dir}: frontmatter `name` must match its directory name"
+        description = data.get("description")
         assert (
-            "description:" in frontmatter
-        ), f"{skill_dir}: frontmatter is missing `description`"
+            isinstance(description, str) and description.strip()
+        ), f"{skill_dir}: frontmatter is missing a non-empty `description`"

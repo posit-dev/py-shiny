@@ -7,11 +7,12 @@ grouped router: a short index of topics, each pointing at a
 `references/<topic>.md` file with the actual instructions. It is **package
 data**: it ships in the wheel and is discovered by installers such as
 [library-skills](https://library-skills.io) (which symlinks it into a
-project's `.agents/skills/` or `.claude/skills/`). The `shiny
-skills list|get|path` CLI subcommands (implemented in `shiny/_main/_skills.py`)
-are a zero-dependency way to read it: `get <name>` prints the SKILL.md, and
-`path <name>` prints the skill's directory so supporting files
-(`references/`, `scripts/`) can be read from the installed package.
+project's `.agents/skills/` or `.claude/skills/`). The `shiny skills
+list|path` CLI subcommands (implemented in `shiny/_main/_skills.py`) are a
+zero-dependency way to inspect it: `list` shows each bundled skill's name and
+description, and `path <name>` prints the skill's directory so its `SKILL.md`
+and supporting files (`references/`, `scripts/`) can be read from the installed
+package.
 
 **Audience:** coding agents *using* shiny to build, test, and debug apps — not
 contributors to shiny itself. Contributor-facing guidance belongs in
@@ -85,7 +86,11 @@ MIT license, and `compatibility` is only for skills with environment
 requirements beyond shiny itself (e.g. requires Playwright installed).
 
 The name/directory match and description presence are enforced by
-`tests/pytest/test_packaging.py`.
+`tests/pytest/test_packaging.py`, which parses the frontmatter as real YAML
+(installers like library-skills use a strict parser). Watch for YAML-special
+sequences in an unquoted `description`: a `: ` (colon-space) or ` #` makes the
+value invalid YAML — wrap the whole description in double quotes if it contains
+one (e.g. `description: "…Index skill: read this…"`).
 
 ## Body content
 
