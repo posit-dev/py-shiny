@@ -47,7 +47,9 @@ jobs:
       - name: Type check (not Windows)
         if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
         run: |
-          # `pythonPlatform: All` covers platform-specific stubs
+          # Pyrefly is checked across the OS/Python matrix; Pyright still
+          # runs separately (see the `pyright` job) until shinylive's
+          # typings are validated under Pyrefly.
           make check-types
 
       - name: Lint code
@@ -64,6 +66,25 @@ jobs:
         if: steps.install.outcome == 'success' && (success() || failure()) && matrix.os != 'windows-latest'
         run: |
           make ci-check-mypy-can-run
+
+  pyright:
+    # `check-types` runs Pyrefly across the matrix above; keep a single
+    # Pyright run for now, until shinylive's typings are validated under
+    # Pyrefly.
+    name: "Pyright"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: "3.13"
+
+      - name: Type check with Pyright
+        run: |
+          make check-pyright
 
   oldest-deps:
     name: "Oldest deps"
@@ -409,6 +430,7 @@ jobs:
     if: always() && github.event_name == 'pull_request' && !github.event.pull_request.draft
     needs:
       - check
+      - pyright
       - oldest-deps
       - playwright-shiny
       - playwright-examples

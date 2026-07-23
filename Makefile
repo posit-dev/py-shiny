@@ -78,7 +78,7 @@ check: check-format check-lint check-types check-tests  ## check code, style, ty
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
 check-format: check-black check-isort
 check-lint: check-flake8
-check-types: check-pyright
+check-types: check-pyrefly
 check-tests: check-pytest
 
 check-flake8: FORCE
@@ -102,8 +102,8 @@ check-pytest: FORCE
 	pytest
 
 # Check types with pyright
-pyright: check-types
-# Compare Pyrefly without replacing the required Pyright check yet
+pyright: check-pyright
+# Check types with pyrefly
 pyrefly: check-pyrefly
 # Check style with flake8
 lint: check-lint
