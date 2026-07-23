@@ -7,7 +7,7 @@ import socket
 import sys
 import warnings
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from uvicorn.config import Config
 from uvicorn.server import Server
@@ -89,19 +89,17 @@ def _run_uvicorn(
             # uvicorn 0.51.0 removed Multiprocess's target parameter: each worker
             # now builds its own Server from config, so on_started does not fire
             # in multi-worker mode there. Older supported versions require the
-            # target. Only one spelling can match the generated stubs at a time,
-            # hence the pyright ignores on both.
+            # target. Treat the constructor as version-dependent while retaining
+            # Multiprocess as the return type.
+            multiprocess = cast(Callable[..., Multiprocess], Multiprocess)
             if "target" in inspect.signature(Multiprocess.__init__).parameters:
-                Multiprocess(
+                multiprocess(
                     config,
-                    target=server.run,  # pyright: ignore[reportCallIssue]
+                    target=server.run,
                     sockets=[sock],
                 ).run()
             else:
-                # pyrefly: ignore[missing-argument]
-                Multiprocess(
-                    config, sockets=[sock]
-                ).run()  # pyright: ignore[reportCallIssue]
+                multiprocess(config, sockets=[sock]).run()
         else:
             server.run()
     except KeyboardInterrupt:
