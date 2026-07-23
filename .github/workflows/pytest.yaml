@@ -292,6 +292,12 @@ jobs:
         with:
           repository: posit-dev/py-shiny-templates
           path: py-shiny-templates
+          # TODO: release - Temporarily pinned to the branch of
+          # posit-dev/py-shiny-templates#55, which migrates the templates to
+          # render.download_button/link (deprecating render.download, py-shiny#2364).
+          # Before release: merge py-shiny-templates#55 after this py-shiny version is
+          # on PyPI, then remove this `ref:` so CI tracks the default branch again.
+          ref: migrate-render-download-button
 
       - name: Install py-shiny-templates dependencies
         run: |

@@ -44,6 +44,8 @@ __all__ = (
     "table",
     "ui",
     "download",
+    "download_button",
+    "download_link",
 )
 # ======================================================================================
 # RenderText
@@ -595,55 +597,15 @@ class ui(Renderer[TagChild]):
 # ======================================================================================
 # RenderDownload
 # ======================================================================================
-@add_example(example_name="download")
-class download(Renderer[str]):
+class _DownloadBase(Renderer[str]):
     """
-    Decorator to register a function to handle a download.
+    Shared implementation for the download renderers.
 
-    This decorator is used to register a function that will be called when the user
-    clicks a download link or button. The decorated function may be sync or async, and
-    should do one of the following:
-
-    * Return a string. This will be assumed to be a filename; Shiny will return this
-      file to the browser, and the downloaded file will have the same filename as the
-      original, with an inferred mime type. This is the most convenient IF the file
-      already exists on disk. But if the function must create a temporary file, then
-      this method should not be used, because the temporary file will not be deleted by
-      Shiny. Use the `yield` method instead.
-    * `yield` one or more strings or bytestrings (`b"..."` or
-      `io.BytesIO().getvalue()`). If strings are yielded, they'll be encoded in UTF-8.
-      (This is better for temp files as after you're done yielding you can delete the
-      temp file, or use a tempfile.TemporaryFile context manager) With this method, it's
-      important that the `@render.download` decorator have a `filename` argument, as the
-      decorated function won't help with that.
-
-    Parameters
-    ----------
-    filename
-        The filename of the download.
-    media_type
-        The media type of the download.
-    encoding
-        The encoding of the download.
-    label
-        (Express only) A label for the button. Defaults to "Download".
-
-    Returns
-    -------
-    :
-        The decorated function.
-
-    See Also
-    --------
-    * :func:`~shiny.ui.download_button`
-    * :func:`~shiny.ui.download_link`
+    The download control is itself an output whose rendered value is a URL. When the
+    user clicks it, the browser initiates a download from that URL, and the server
+    provides the file via ``session._downloads``. Subclasses differ only in which UI
+    control (`download_button` vs `download_link`) they auto-place in Express.
     """
-
-    def auto_output_ui(self) -> Tag:
-        return _ui.download_button(
-            self.output_id,
-            label=self.label,
-        )
 
     def __init__(
         self,
@@ -653,6 +615,7 @@ class download(Renderer[str]):
         media_type: None | str | Callable[[], str] = None,
         encoding: str = "utf-8",
         label: TagChild = "Download",
+        width: str | None = None,
     ) -> None:
         super().__init__()
 
@@ -660,6 +623,7 @@ class download(Renderer[str]):
         self.media_type = media_type
         self.encoding = encoding
         self.label = label
+        self.width = width
 
         if fn is not None:
             self(fn)
@@ -670,19 +634,19 @@ class download(Renderer[str]):
     ) -> Self:
         from .._utils import validate_no_params
 
-        validate_no_params(fn, "render.download", stacklevel=4)
+        validate_no_params(fn, f"render.{type(self).__name__}", stacklevel=4)
 
         # For downloads, the value function (which is passed to `__call__()`) is
         # different than for other renderers. For normal renderers, the user supplies
         # the value function. This function returns a value which is transformed,
         # serialized to JSON, and then sent to the browser.
         #
-        # For downloads, the download button itself is actually an output. The value
-        # that it renders is a URL; when the user clicks the button, the browser
+        # For downloads, the download control itself is actually an output. The value
+        # that it renders is a URL; when the user clicks the control, the browser
         # initiates a download from that URL, and the server provides the file via
         # `session._downloads`.
         #
-        # The `url()` function here is the value function for the download button. It
+        # The `url()` function here is the value function for the download control. It
         # returns the URL for downloading the file.
         def url() -> str:
             from urllib.parse import quote
@@ -702,8 +666,7 @@ class download(Renderer[str]):
 
         # Register the download handler for the session. The reason we check for session
         # not being None or a stub session is because in Express, when the UI is
-        # rendered, this function `render.download()()`  called once before any sessions
-        # have been started.
+        # rendered, this function is called once before any sessions have been started.
         session = get_current_session()
         if session is not None and not session.is_stub_session():
             # All download objects are stored in the root session.
@@ -719,3 +682,146 @@ class download(Renderer[str]):
 
     async def transform(self, value: str) -> Jsonifiable:
         return value
+
+
+@add_example(example_name="download_button")
+class download_button(_DownloadBase):
+    """
+    Reactively render a download button.
+
+    Register a function that generates a download, and (in Express) auto-place a
+    download button. The decorated function may be sync or async, and should either
+    return a filename (str) to send an existing file, or ``yield`` one or more strings
+    or bytestrings for a generated file (in which case pass a ``filename`` argument).
+
+    Parameters
+    ----------
+    filename
+        The filename of the download.
+    media_type
+        The media type of the download.
+    encoding
+        The encoding of the download.
+    label
+        (Express only) A label for the button. Defaults to "Download".
+    width
+        (Express only) The width of the button.
+
+    Returns
+    -------
+    :
+        The decorated function.
+
+    Tip
+    ----
+    In Shiny Core, pair this with :func:`~shiny.ui.download_button` in the UI (the
+    decorated function's name should match the ``id``).
+
+    See Also
+    --------
+    * :class:`~shiny.render.download_link`
+    * :func:`~shiny.ui.download_button`
+    """
+
+    def auto_output_ui(
+        self,
+        *,
+        width: str | MISSING_TYPE = MISSING,
+    ) -> Tag:
+        kwargs: dict[str, Any] = {}
+        set_kwargs_value(kwargs, "width", width, self.width)
+        return _ui.download_button(self.output_id, label=self.label, **kwargs)
+
+
+@add_example(example_name="download_link")
+class download_link(_DownloadBase):
+    """
+    Reactively render a download link.
+
+    Identical to :class:`~shiny.render.download_button` except that in Express it
+    auto-places a download *link* instead of a button.
+
+    Parameters
+    ----------
+    filename
+        The filename of the download.
+    media_type
+        The media type of the download.
+    encoding
+        The encoding of the download.
+    label
+        (Express only) A label for the link. Defaults to "Download".
+    width
+        (Express only) The width of the link.
+
+    Returns
+    -------
+    :
+        The decorated function.
+
+    Tip
+    ----
+    In Shiny Core, pair this with :func:`~shiny.ui.download_link` in the UI (the
+    decorated function's name should match the ``id``).
+
+    See Also
+    --------
+    * :class:`~shiny.render.download_button`
+    * :func:`~shiny.ui.download_link`
+    """
+
+    def auto_output_ui(
+        self,
+        *,
+        width: str | MISSING_TYPE = MISSING,
+    ) -> Tag:
+        kwargs: dict[str, Any] = {}
+        set_kwargs_value(kwargs, "width", width, self.width)
+        return _ui.download_link(self.output_id, label=self.label, **kwargs)
+
+
+@add_example(example_name="download")
+class download(download_button):
+    """
+    Deprecated. Use :class:`~shiny.render.download_button` (or
+    :class:`~shiny.render.download_link`) instead.
+
+    See Also
+    --------
+    * :class:`~shiny.render.download_button`
+    * :class:`~shiny.render.download_link`
+    """
+
+    def __init__(
+        self,
+        fn: Optional[DownloadHandler] = None,
+        *,
+        filename: Optional[str | Callable[[], str]] = None,
+        media_type: None | str | Callable[[], str] = None,
+        encoding: str = "utf-8",
+        label: TagChild = "Download",
+        width: str | None = None,
+    ) -> None:
+        # Local import to avoid a circular import: shiny/_deprecated.py imports
+        # `shiny.render`, which imports this module.
+        from .._deprecated import warn_deprecated
+
+        warn_deprecated(
+            "render.download is deprecated. Use render.download_button "
+            "(or render.download_link) instead.",
+            stacklevel=3,
+        )
+        # Call `super().__init__()` without `fn` (and invoke `self(fn)` ourselves
+        # below) so that the call stack depth seen by `validate_no_params()` (in
+        # `_DownloadBase.__call__()`) matches that of `download_button`/
+        # `download_link`, keeping its `stacklevel`-based warnings pointed at the
+        # user's code instead of this subclass's `__init__`.
+        super().__init__(
+            filename=filename,
+            media_type=media_type,
+            encoding=encoding,
+            label=label,
+            width=width,
+        )
+        if fn is not None:
+            self(fn)

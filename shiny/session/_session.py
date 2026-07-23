@@ -563,7 +563,7 @@ class Session(ABC):
         encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
         """
-        Deprecated. Please use :class:`~shiny.render.download` instead.
+        Deprecated. Please use :class:`~shiny.render.download_button` instead.
 
         Parameters
         ----------
@@ -1216,7 +1216,7 @@ class AppSession(Session):
                                 warnings.warn(
                                     "Unable to infer a filename for the "
                                     f"'{download_id}' download handler; please use "
-                                    "@render.download(filename=) to specify one "
+                                    "@render.download_button(filename=) to specify one "
                                     "manually",
                                     SessionWarning,
                                     stacklevel=2,
@@ -1578,7 +1578,7 @@ class AppSession(Session):
         encoding: str = "utf-8",
     ) -> Callable[[DownloadHandler], None]:
         warn_deprecated(
-            "session.download() is deprecated. Please use render.download() instead."
+            "session.download() is deprecated. Please use render.download_button() instead."
         )
 
         def wrapper(fn: DownloadHandler):

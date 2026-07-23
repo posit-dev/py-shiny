@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import click
@@ -25,7 +24,12 @@ def _skill_description(skill_dir: Path) -> str:
     frontmatter = text.split("---", 2)[1]
     for line in frontmatter.splitlines():
         if line.startswith("description:"):
-            return line.removeprefix("description:").strip()
+            value = line.removeprefix("description:").strip()
+            # The description may be a quoted YAML scalar (required when it
+            # contains a `: ` or other YAML-special sequence); unwrap it.
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            return value
     return ""
 
 
@@ -47,11 +51,21 @@ def _find_skill(name: str) -> Path:
 
 @click.group(
     "skills",
-    help="""List and read the Agent Skills bundled in the shiny package.
+    help="""List and locate the Agent Skills bundled in the shiny package.
 
     Agent Skills are reference docs that teach coding agents how to use shiny's
     public APIs (debugging, testing, etc.). They ship inside the package under
     `shiny/.agents/skills/`.
+
+    To make these skills available to your coding agent, install them with
+    `library-skills` (https://library-skills.io), which symlinks the packaged
+    skill into your project so it stays in sync when you upgrade shiny:
+
+    \b
+        uvx library-skills --claude   # Claude Code (installs into .claude/skills)
+        uvx library-skills            # standard .agents/skills location
+
+    (add `--copy` on Windows).
     """,
 )
 def skills() -> None:
@@ -67,20 +81,20 @@ def skills_list() -> None:
     width = max(len(p.name) for p in skill_dirs)
     for skill_dir in skill_dirs:
         print(f"{skill_dir.name:<{width}}  {_skill_description(skill_dir)}")
-
-
-@skills.command("get", help="Print a bundled Agent Skill's SKILL.md to stdout.")
-@click.argument("name", type=str)
-def skills_get(name: str) -> None:
-    sys.stdout.write((_find_skill(name) / "SKILL.md").read_text())
+    print(
+        "\nInstall these into your coding agent with `library-skills`:\n"
+        "    uvx library-skills --claude   # Claude Code (.claude/skills)\n"
+        "    uvx library-skills            # standard .agents/skills location\n"
+        "See https://library-skills.io for details."
+    )
 
 
 @skills.command(
     "path",
     help="""Print the directory of a bundled Agent Skill.
 
-    Use this to read a skill's supporting files (`references/`, `scripts/`,
-    `assets/`) directly from the installed package.
+    Use this to read a skill's `SKILL.md` and its supporting files
+    (`references/`, `scripts/`, `assets/`) directly from the installed package.
     """,
 )
 @click.argument("name", type=str)

@@ -52,6 +52,8 @@ quartodoc:
         - express.render.text
         - express.render.ui
         - express.render.download
+        - express.render.download_button
+        - express.render.download_link
         - express.render.image
         - express.render.express
     - title: Layouts and other UI tools
@@ -188,6 +190,8 @@ quartodoc:
       contents:
         - express.ui.input_file
         - express.render.download
+        - express.render.download_button
+        - express.render.download_link
     - title: Dynamic UI
       desc: Dynamically show/hide UI elements.
       contents:

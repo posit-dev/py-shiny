@@ -71,7 +71,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         include_summary()
         sync_controls()
 
-    @render.download(filename=lambda: f"{current_prefix}-plain.txt")
+    @render.download_link(filename=lambda: f"{current_prefix}-plain.txt")
     async def plain_link():
         nonlocal plain_total
         plain_total += 1
@@ -82,7 +82,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         if include_footer:
             yield "Summary: plain link\n"
 
-    @render.download(filename=lambda: f"{current_prefix}-styled.csv")
+    @render.download_link(filename=lambda: f"{current_prefix}-styled.csv")
     async def styled_link():
         nonlocal styled_total
         styled_total += 1

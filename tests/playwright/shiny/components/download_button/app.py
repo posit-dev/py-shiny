@@ -39,7 +39,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         nonlocal inventory_total
         inventory_total += 1
 
-    @render.download(filename=lambda: f"plain-{plain_total + 1}.csv")
+    @render.download_button(filename=lambda: f"plain-{plain_total + 1}.csv")
     async def plain_csv():
         nonlocal plain_total
         plain_total += 1
@@ -48,7 +48,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         yield "kind,inventory,count\n"
         yield f"plain,{current_inventory},{current_plain}\n"
 
-    @render.download(
+    @render.download_button(
         filename=lambda: f"styled-{inventory_total}-{styled_total + 1}.csv"
     )
     async def styled_csv():

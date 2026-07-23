@@ -31,6 +31,12 @@ make playwright-shiny SUB_FILE="inputs/test_foo.py"  # Single test
 # Comprehensive checks
 make check               # Format, lint, types, unit tests
 make check-fix           # Same but auto-fixes formatting
+
+# Before opening a PR, run the checks through uv so the pinned toolchain is
+# used (bare `make` may pick up a system black/isort/pyright with different
+# versions and miss failures that CI catches, e.g. a py3.14 black target or a
+# pyright error). This must pass:
+uv run make format check-lint check-types
 ```
 
 ### Running Apps
@@ -163,6 +169,11 @@ Commit messages and PR titles use **conventional commits**. Read
 `.claude/references/commit-conventions.md` for the format, types, and guidelines
 before committing or opening a PR — and for the merge policy and flaky-test
 handling before merging one.
+
+Before creating a PR, confirm `uv run make format check-lint check-types`
+passes. Run it through `uv run` (not bare `make`) so the pinned black/isort/
+pyright versions are used — a system toolchain can silently miss failures that
+CI then rejects.
 
 ## Common Pitfalls
 

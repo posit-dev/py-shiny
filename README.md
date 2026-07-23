@@ -24,21 +24,33 @@ If you have questions about Shiny for Python, or want to help us decide what to 
 
 ## Getting started
 
-To get started with shiny follow the [installation instructions](https://shiny.posit.co/py/docs/install-create-run.html) or just install it from pip.
+To get started with shiny follow the [installation instructions](https://shiny.posit.co/py/docs/install-create-run.html) or just install it with [uv](https://docs.astral.sh/uv/).
 
 ```sh
-pip install shiny
+uv pip install shiny
 ```
 
 To install the latest development version:
 
 ```sh
-# First install htmltools, then shiny
-pip install git+https://github.com/posit-dev/py-htmltools.git#egg=htmltools
-pip install git+https://github.com/posit-dev/py-shiny.git#egg=shiny
+uv pip install git+https://github.com/posit-dev/py-shiny.git
 ```
 
 You can create and run your first application with `shiny create`, the CLI will ask you which template you would like to use. You can either run the app with the Shiny extension, or call `shiny run app.py --reload --launch-browser`.
+
+### Agent Skills
+
+The `shiny` package ships bundled [Agent Skills](https://agentskills.io) — reference docs that teach coding agents (Claude Code, Cursor, and others) how to build, style, test, and debug Shiny for Python apps using shiny's public APIs. They are installed with the package, so once `shiny` is a dependency of your project you can make the skills available to your agent with [`library-skills`](https://library-skills.io):
+
+```sh
+# Claude Code (installs into .claude/skills):
+uvx library-skills --claude
+
+# Standard .agents/skills location (add --copy on Windows):
+uvx library-skills
+```
+
+`library-skills` symlinks the packaged skill into your project, so it stays in sync when you upgrade `shiny`. See `shiny skills --help` for more details.
 
 ## Development
 
@@ -58,7 +70,7 @@ git fetch --tags upstream
 Then install:
 
 ```sh
-pip install -e ".[dev,test,doc]"
+uv pip install -e ".[dev,test,doc]"
 ```
 
 Additionally, you can install pre-commit hooks which will automatically reformat and lint the code when you make a commit:
@@ -89,9 +101,9 @@ In a **separate** application directory, use can use `-e` to reference your loca
 
 ```sh
 # Rather than
-#   pip install shiny
+#   uv pip install shiny
 # run:
-pip install -e ../py-shiny --config-settings editable_mode=compat
+uv pip install -e ../py-shiny --config-settings editable_mode=compat
 ```
 
 See the [docs README](docs/README.md) for instructions on building the documentation locally.

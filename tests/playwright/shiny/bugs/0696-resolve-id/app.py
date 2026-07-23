@@ -256,7 +256,7 @@ def mod_x_server(
 
     download_button_count = 0
 
-    @render.download(filename=lambda: f"download_button-{session.ns}.csv")
+    @render.download_button(filename=lambda: f"download_button-{session.ns}.csv")
     async def download_button():
         nonlocal download_button_count
         download_button_count += 1
@@ -265,7 +265,7 @@ def mod_x_server(
 
     download_link_count = 0
 
-    @render.download(filename=lambda: f"download_link-{session.ns}.csv")
+    @render.download_button(filename=lambda: f"download_link-{session.ns}.csv")
     async def download_link():
         nonlocal download_link_count
         download_link_count += 1

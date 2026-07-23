@@ -1,9 +1,3 @@
----
-name: testing
-description: Use when writing or running end-to-end tests for a Shiny for Python (py-shiny) app - launching an app under pytest, locating and asserting on UI components (inputs, outputs, cards, navsets), simulating user interaction with Playwright, or when tempted to hand-roll CSS selectors, raw Playwright locators, or sleep() waits against Shiny-rendered HTML.
-compatibility: Requires the playwright, pytest, and pytest-playwright packages, plus Playwright browsers (`playwright install`).
----
-
 # Testing Shiny for Python apps with Playwright
 
 ## Overview
@@ -139,7 +133,7 @@ Expected values may be predicates (callables taking the actual value, retried
 until truthy). Use named functions, not lambdas — the function's name appears
 in failure messages.
 
-See the `debugging` skill for the full test-mode snapshot API.
+See `references/debugging.md` for the full test-mode snapshot API.
 
 ## Debug a failing test
 
