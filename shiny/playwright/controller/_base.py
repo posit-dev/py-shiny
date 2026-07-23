@@ -82,7 +82,9 @@ def not_is_missing(x: R | MISSING_TYPE) -> TypeGuard[R]:
     return not isinstance(x, MISSING_TYPE)
 
 
-def all_missing(*args: object) -> bool:
+def all_missing(  # pyrefly: ignore[bad-function-definition]
+    *args: object,
+) -> TypeGuard[MISSING_TYPE]:
     for arg in args:
         if not_is_missing(arg):
             return False

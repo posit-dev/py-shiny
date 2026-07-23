@@ -140,7 +140,6 @@ dev = [
     "isort>=5.10.1",
     "libsass>=0.23.0",
     "brand_yml>=0.2.0",
-    # Keep the lockfile current with Pyrefly releases and refresh the baseline as needed.
     "pyrefly>=1.1.1",
     "pyright>=1.1.407",
     "pre-commit>=2.15.0",
@@ -220,25 +219,13 @@ skip = [
 ignore_errors = true
 exclude = ["shiny/api-examples", "shiny/templates"]
 
-# Translation of pyrightconfig.json for the parallel CI evaluation.
-#
-# Direct mappings:
-# - pythonPlatform=All -> linux (Pyrefly's documented cross-platform fallback)
-# - ignore -> project-excludes
-# - stubPath's Pyright default (./typings) -> site-package-path
-# - reportPrivateUsage=none -> no-access="ignore"
-#
 # Pyrefly's default project preset is the migration target for Pyright strict;
 # its similarly named strict preset additionally enables checks (including
 # mandatory @override decorators) that Pyright strict explicitly leaves off.
-#
-# Pyrefly 1.1.1 has no diagnostics corresponding to reportImportCycles,
-# reportUnusedFunction, or reportUnnecessaryIsInstance, so those Pyright
-# disables require no Pyrefly override. The examples/ execution environment is
-# also redundant because examples/ is excluded from both checkers.
 [tool.pyrefly]
-python-platform = "linux"
 infer-with-first-use = false
+# Until pyright is completely removed, we need to maintain `permissive-ignores = true`.
+# Once removed, convert all `# pyright: ignore` to `# pyrefly: ignore`. Use specific rules when possible.
 permissive-ignores = true
 site-package-path = ["typings"]
 search-path = [
@@ -270,6 +257,8 @@ project-excludes = [
 
 [tool.pyrefly.errors]
 no-access = "ignore"
+unused-ignore = "error"
+implicit-any = "error"
 
 [[tool.pyrefly.sub-config]]
 matches = "tests/playwright/**"
