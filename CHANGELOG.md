@@ -30,7 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Extending shiny: `custom-renderers` (authoring a `Renderer` subclass) and `custom-components` (custom JavaScript input/output bindings).
   * Testing and observability: `testing` (end-to-end tests with pytest and Playwright), `debugging` (inspect running apps via test mode), and `otel` (OpenTelemetry observability).
 
-* Added a `shiny skills` CLI command group to discover the Agent Skills bundled in the shiny package: `shiny skills list` shows each skill's name and description, `shiny skills get <name>` prints its `SKILL.md` to stdout, and `shiny skills path <name>` prints the skill's directory (for reading its `references/` and `scripts/`). (#2340)
+* Added a `shiny skills` CLI command group to discover the Agent Skills bundled in the shiny package: `shiny skills list` shows each skill's name and description, and `shiny skills path <name>` prints the skill's directory, so its `SKILL.md` and supporting files (`references/`, `scripts/`) can be read from the installed package. (#2340)
+
+* Documented how to install the bundled Agent Skills into a coding agent: the README and the `shiny skills` CLI help now use [`library-skills`](https://library-skills.io) for installing agent skills (`uvx library-skills --claude`). (#2367)
 
 * Added `offcanvas()` for creating sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
 
