@@ -32,6 +32,7 @@ quartodoc:
         - ui.layout_column_wrap
         - ui.card
         - ui.card_header
+        - ui.card_body
         - ui.card_footer
         - ui.offcanvas
         - ui.popover
