@@ -5,7 +5,7 @@ __all__ = ("input_submit_textarea", "update_submit_textarea")
 import copy
 from typing import Literal, Optional
 
-from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._utils import drop_none
@@ -132,16 +132,19 @@ def input_submit_textarea(
     button2 = copy.copy(button)
     button2.add_class("bslib-submit-textarea-btn")
 
+    container_attrs: TagAttrs = {
+        "class": "bslib-input-submit-textarea shiny-input-container bslib-mb-spacing",
+        "style": css(width=width),
+    }
+    textarea_attrs: TagAttrs = {"class": "form-control", "style": css(width="100%")}
+
     return div(
-        {
-            "class": "bslib-input-submit-textarea shiny-input-container bslib-mb-spacing",
-            "style": css(width=width),
-        },
+        container_attrs,
         shiny_input_label(resolved_id, label),
         div(
             tags.textarea(
                 value,
-                {"class": "form-control", "style": css(width="100%")},
+                textarea_attrs,
                 id=resolved_id,
                 placeholder=placeholder,
                 data_needs_modifier="" if needs_modifier else None,

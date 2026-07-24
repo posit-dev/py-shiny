@@ -478,7 +478,6 @@ class BookmarkApp(Bookmark):
         if self.store == "disable":
             return None
 
-        from ..bookmark._bookmark import BookmarkState
         from ..session import session_context
 
         async def root_state_on_save(state: BookmarkState) -> None:
@@ -602,8 +601,6 @@ class BookmarkProxy(Bookmark):
     # The goal of this method is to save the scope's values. All namespaced inputs
     # will already exist within the `root_state`.
     async def _scoped_on_bookmark(self, root_state: BookmarkState) -> None:
-        from ..bookmark._bookmark import BookmarkState
-
         scoped_state = BookmarkState(
             input=self._proxy_session.input,
             exclude=self.exclude,

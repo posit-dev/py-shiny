@@ -1,4 +1,6 @@
 from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny.types import Jsonifiable
+from shiny.ui._utils import JSEval
 
 states = {
     "East Coast": {"NY": "New York", "NJ": "New Jersey", "CT": "Connecticut"},
@@ -8,6 +10,11 @@ states = {
 
 state_without_groups = {"NY": "New York", "NJ": "New Jersey", "CT": "Connecticut"}
 state_without_keys = ["New York", "New Jersey", "Connecticut"]
+
+clear_button_plugins: list[Jsonifiable] = ["clear_button"]
+clear_button_options: dict[str, Jsonifiable | JSEval] = {
+    "plugins": clear_button_plugins
+}
 
 app_ui = ui.page_fluid(
     ui.input_selectize(
@@ -36,7 +43,7 @@ app_ui = ui.page_fluid(
         "Single Selectize",
         state_without_groups,
         multiple=False,
-        options={"plugins": ["clear_button"]},
+        options=clear_button_options,
     ),
     ui.input_selectize(
         "state4",

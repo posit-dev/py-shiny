@@ -128,7 +128,12 @@ def mock_session() -> Mock:
 class TestEmitLog:
     """Tests for the emit_otel_log helper function"""
 
-    def test_emit_log_basic(self, otel_log_provider_and_exporter):
+    def test_emit_log_basic(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+    ):
         """Test basic log emission"""
         provider, exporter = otel_log_provider_and_exporter
         emit_otel_log("Test message", infer_session_id=True)
@@ -143,7 +148,12 @@ class TestEmitLog:
         assert len(test_logs) == 1
         assert test_logs[0].log_record.severity_text == "INFO"
 
-    def test_emit_log_with_severity(self, otel_log_provider_and_exporter):
+    def test_emit_log_with_severity(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+    ):
         """Test log emission with custom severity"""
         provider, exporter = otel_log_provider_and_exporter
         emit_otel_log("Debug message", severity_text="DEBUG", infer_session_id=True)
@@ -155,7 +165,12 @@ class TestEmitLog:
         assert len(test_logs) == 1
         assert test_logs[0].log_record.severity_text == "DEBUG"
 
-    def test_emit_log_with_attributes(self, otel_log_provider_and_exporter):
+    def test_emit_log_with_attributes(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+    ):
         """Test log emission with attributes"""
         provider, exporter = otel_log_provider_and_exporter
         emit_otel_log(
@@ -188,7 +203,13 @@ class TestEmitLog:
 class TestValueUpdateLogging:
     """Tests for reactive Value update logging"""
 
-    def test_value_set_logs_update(self, otel_log_provider_and_exporter, mock_session):
+    def test_value_set_logs_update(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
+    ):
         """Test that setting a value logs an update"""
         provider, exporter = otel_log_provider_and_exporter
         with session_context(mock_session):
@@ -210,7 +231,8 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
 
@@ -225,7 +247,11 @@ class TestValueUpdateLogging:
         assert attrs.get("session.id") == "test-session-123"
 
     def test_value_set_with_namespace(
-        self, otel_log_provider_and_exporter, mock_session
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
     ):
         """Test that value updates include namespace in log message"""
         provider, exporter = otel_log_provider_and_exporter
@@ -245,12 +271,19 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
         assert value_logs[0].log_record.body == "Set reactive.value mymodule:my_input"
 
-    def test_value_set_unnamed(self, otel_log_provider_and_exporter, mock_session):
+    def test_value_set_unnamed(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
+    ):
         """Test that unnamed values log as <anonymous>"""
         provider, exporter = otel_log_provider_and_exporter
         with session_context(mock_session):
@@ -270,13 +303,20 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 2
         assert value_logs[0].log_record.body == "Set reactive.value <anonymous>"
         assert value_logs[1].log_record.body == "Set reactive.value <anonymous>"
 
-    def test_name_unset_from_fn(self, otel_log_provider_and_exporter, mock_session):
+    def test_name_unset_from_fn(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
+    ):
         """Test that if name is unset from function, it logs as <anonymous>"""
         provider, exporter = otel_log_provider_and_exporter
 
@@ -295,12 +335,18 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
         assert value_logs[0].log_record.body == "Set reactive.value <anonymous>"
 
-    def test_value_set_no_session(self, otel_log_provider_and_exporter):
+    def test_value_set_no_session(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+    ):
         """Test that value updates do NOT log without a session (too early)"""
         provider, exporter = otel_log_provider_and_exporter
         with patch_otel_tracing_state(tracing_enabled=True):
@@ -315,13 +361,17 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         # Should have NO logs without a session (intentionally returns early)
         assert len(value_logs) == 0
 
     def test_value_set_no_log_when_tracing_disabled(
-        self, otel_log_provider_and_exporter
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
     ):
         """Test that no logs are emitted when tracing is disabled"""
         provider, exporter = otel_log_provider_and_exporter
@@ -338,12 +388,17 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) == 0
 
     def test_value_set_no_log_when_collection_level_low(
-        self, otel_log_provider_and_exporter, mock_session
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
     ):
         """Test that no logs are emitted when collection level is below REACTIVITY"""
         provider, exporter = otel_log_provider_and_exporter
@@ -362,12 +417,17 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) == 0
 
     def test_value_set_multiple_updates(
-        self, otel_log_provider_and_exporter, mock_session
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
     ):
         """Test that multiple value updates each produce a log"""
         provider, exporter = otel_log_provider_and_exporter
@@ -388,14 +448,18 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body
+            if isinstance(log.log_record.body, str)
             and "Set reactive.value counter" in log.log_record.body
         ]
         # Should have 3 logs for 3 updates
         assert len(value_logs) == 3
 
     def test_value_set_same_value_no_update(
-        self, otel_log_provider_and_exporter, mock_session
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
     ):
         """Test that setting same value doesn't log (because _set returns False)"""
         provider, exporter = otel_log_provider_and_exporter
@@ -417,12 +481,17 @@ class TestValueUpdateLogging:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) == 0
 
     def test_read_only_attribute_in_logs(
-        self, otel_log_provider_and_exporter, mock_session
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
     ):
         """Test that read-only values have read-only attribute in logs"""
         provider, exporter = otel_log_provider_and_exporter
@@ -446,7 +515,8 @@ class TestValueUpdateLogging:
         readonly_logs = [
             log
             for log in logs
-            if log.log_record.body and "readonly_val" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "readonly_val" in log.log_record.body
         ]
         assert len(readonly_logs) >= 1
         readonly_log = readonly_logs[0]
@@ -457,7 +527,8 @@ class TestValueUpdateLogging:
         regular_logs = [
             log
             for log in logs
-            if log.log_record.body and "regular_val" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "regular_val" in log.log_record.body
         ]
         assert len(regular_logs) >= 1
         regular_log = regular_logs[0]
@@ -612,7 +683,13 @@ class TestValueNaming:
         # Names should be None because inference fails for list comprehensions
         assert all(v._name is None for v in values)
 
-    def test_name_used_in_logging(self, otel_log_provider_and_exporter, mock_session):
+    def test_name_used_in_logging(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
+    ):
         """Test that explicit name is used in logs"""
         provider, exporter = otel_log_provider_and_exporter
         with session_context(mock_session):
@@ -627,13 +704,18 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
         assert value_logs[0].log_record.body == "Set reactive.value explicit_counter"
 
     def test_inferred_name_used_in_logging(
-        self, otel_log_provider_and_exporter, mock_session
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
     ):
         """Test that inferred name is used in logs"""
         provider, exporter = otel_log_provider_and_exporter
@@ -649,13 +731,18 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
         assert value_logs[0].log_record.body == "Set reactive.value inferred_counter"
 
     def test_inferred_name_used_in_logging_lowercase(
-        self, otel_log_provider_and_exporter, mock_session
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
     ):
         """Test that inferred name is used in logs with lowercase value()"""
         provider, exporter = otel_log_provider_and_exporter
@@ -671,7 +758,8 @@ class TestValueNaming:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
         assert (
@@ -690,7 +778,7 @@ class TestValueNaming:
         assert my_input._name == "input.id"
         assert my_input._name != original_name
 
-    def test_inputs_sets_name_with_prefix(self, mock_session):
+    def test_inputs_sets_name_with_prefix(self, mock_session: Mock):
         """Test that Inputs class sets names with 'input.' prefix"""
         from shiny._namespaces import ResolvedId
         from shiny.session._session import Inputs
@@ -754,7 +842,11 @@ class TestValueSourceReference:
     """Tests for source reference tracking in value updates"""
 
     def test_source_ref_in_log_attributes(
-        self, otel_log_provider_and_exporter, mock_session
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+        mock_session: Mock,
     ):
         """Test that source reference attributes are included in logs"""
         provider, exporter = otel_log_provider_and_exporter
@@ -770,7 +862,8 @@ class TestValueSourceReference:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         assert len(value_logs) >= 1
 
@@ -782,11 +875,16 @@ class TestValueSourceReference:
         assert "code.function.name" in attrs
 
         # Verify the filepath points to this test file
-        assert "test_otel_value_logging.py" in attrs["code.file.path"]
+        assert "test_otel_value_logging.py" in str(attrs["code.file.path"])
         # Verify the function is this test
         assert attrs["code.function.name"] == "test_source_ref_in_log_attributes"
 
-    def test_source_ref_without_session(self, otel_log_provider_and_exporter):
+    def test_source_ref_without_session(
+        self,
+        otel_log_provider_and_exporter: Tuple[
+            LoggerProvider, InMemoryLogRecordExporter
+        ],
+    ):
         """Test that NO logs are emitted without a session (too early)"""
         provider, exporter = otel_log_provider_and_exporter
         with patch_otel_tracing_state(tracing_enabled=True):
@@ -800,7 +898,8 @@ class TestValueSourceReference:
         value_logs = [
             log
             for log in logs
-            if log.log_record.body and "Set reactive.value" in log.log_record.body
+            if isinstance(log.log_record.body, str)
+            and "Set reactive.value" in log.log_record.body
         ]
         # Should have NO logs without a session (intentionally returns early)
         assert len(value_logs) == 0

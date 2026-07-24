@@ -183,7 +183,7 @@ def emit_otel_log(
         # Auto-add session.id if not already present and a session is available.
         # This works because session.id is consistent across sessions and modules
         # (a SessionProxy shares the same id as its parent AppSession).
-        resolved_attrs = dict(attributes) if attributes else {}
+        resolved_attrs: dict[str, Any] = dict(attributes) if attributes else {}
         if infer_session_id and ATTR_SESSION_ID not in resolved_attrs:
             from ..session._utils import get_current_session
 

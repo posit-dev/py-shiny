@@ -422,14 +422,15 @@ class Sidebar:
         )
 
         # Create the sidebar content div
+        content_attrs: TagAttrs = {
+            "class": "sidebar-content bslib-gap-spacing",
+            "style": css(
+                gap=self.gap,
+                padding=self.padding,
+            ),
+        }
         sidebar_content = div(
-            {
-                "class": "sidebar-content bslib-gap-spacing",
-                "style": css(
-                    gap=self.gap,
-                    padding=self.padding,
-                ),
-            },
+            content_attrs,
             self.title,
             *self.children,
             self.attrs,
@@ -441,15 +442,19 @@ class Sidebar:
             sidebar_content = as_fillable_container(sidebar_content)
 
         # Create the sidebar tag
+        aside_attrs: TagAttrs = {
+            "id": id,
+            "class": "sidebar",
+            "hidden": "true" if is_hidden_initially else None,
+            "data-resizable": "" if self.resizable else None,
+        }
+        # If the user provided an id, we make the sidebar an input to report state
+        input_attrs: TagAttrs | None = (
+            {"class": "bslib-sidebar-input"} if self.id is not None else None
+        )
         sidebar_tag = tags.aside(
-            {
-                "id": id,
-                "class": "sidebar",
-                "hidden": "true" if is_hidden_initially else None,
-                "data-resizable": "" if self.resizable else None,
-            },
-            # If the user provided an id, we make the sidebar an input to report state
-            {"class": "bslib-sidebar-input"} if self.id is not None else None,
+            aside_attrs,
+            input_attrs,
             sidebar_content,
             class_=self.class_,
         )
@@ -698,14 +703,15 @@ def layout_sidebar(
 
     attrs, children = consolidate_attrs(*args, **kwargs)
 
+    main_attrs: TagAttrs = {
+        "class": f"main{' bslib-gap-spacing' if fillable else ''}",
+        "style": css(
+            gap=as_css_unit(gap),
+            padding=as_css_padding(padding),
+        ),
+    }
     main = div(
-        {
-            "class": f"main{' bslib-gap-spacing' if fillable else ''}",
-            "style": css(
-                gap=as_css_unit(gap),
-                padding=as_css_padding(padding),
-            ),
-        },
+        main_attrs,
         attrs,
         *children,
     )
@@ -717,10 +723,18 @@ def layout_sidebar(
     else:
         contents = (main, sidebar)
 
+    layout_attrs: TagAttrs = {"class": "bslib-sidebar-layout bslib-mb-spacing"}
+    right_attrs: TagAttrs | None = (
+        {"class": "sidebar-right"} if sidebar.position == "right" else None
+    )
+    collapsed_attrs: TagAttrs | None = (
+        {"class": "sidebar-collapsed"} if sidebar.open().desktop == "closed" else None
+    )
+
     res = div(
-        {"class": "bslib-sidebar-layout bslib-mb-spacing"},
-        {"class": "sidebar-right"} if sidebar.position == "right" else None,
-        {"class": "sidebar-collapsed"} if sidebar.open().desktop == "closed" else None,
+        layout_attrs,
+        right_attrs,
+        collapsed_attrs,
         *contents,
         components_dependencies(),
         _sidebar_init_js(),
@@ -844,7 +858,8 @@ def _sidebar_init_js() -> Tag:
     # Note: if we want to avoid inline `<script>` tags in the future for
     # initialization code, we might be able to do so by turning the sidebar layout
     # container into a web component
+    init_attrs: TagAttrs = {"data-bslib-sidebar-init": True}
     return tags.script(
-        {"data-bslib-sidebar-init": True},
+        init_attrs,
         "bslib.Sidebar.initCollapsibleAll()",
     )

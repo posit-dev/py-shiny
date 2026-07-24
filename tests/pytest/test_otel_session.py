@@ -32,7 +32,7 @@ class TestHttpAttributes:
         mock_conn = Mock()
         mock_conn.url = mock_url
         mock_conn.headers = {"origin": "https://example.com"}
-        mock_conn.scope = {}
+        mock_conn.scope = dict[str, object]()
 
         attributes = extract_http_attributes(mock_conn)
 
@@ -46,7 +46,7 @@ class TestHttpAttributes:
         # Create mock HTTP connection with scope but no url
         mock_conn = Mock()
         mock_conn.url = None
-        mock_conn.headers = {}
+        mock_conn.headers = dict[str, str]()
         mock_conn.scope = {
             "server": ("127.0.0.1", 5000),
             "path": "/api/data",
@@ -65,8 +65,8 @@ class TestHttpAttributes:
         # Create mock HTTP connection with no url or scope
         mock_conn = Mock()
         mock_conn.url = None
-        mock_conn.headers = {}
-        mock_conn.scope = {}
+        mock_conn.headers = dict[str, str]()
+        mock_conn.scope = dict[str, object]()
 
         attributes = extract_http_attributes(mock_conn)
 
@@ -83,7 +83,7 @@ class TestHttpAttributes:
 
         mock_conn = Mock()
         mock_conn.url = mock_url
-        mock_conn.headers = {}
+        mock_conn.headers = dict[str, str]()
         mock_conn.scope = {"server": ("example.com", 443)}
 
         attributes = extract_http_attributes(mock_conn)
@@ -125,7 +125,7 @@ class TestHttpAttributes:
 
         mock_conn = Mock()
         mock_conn.url = mock_url
-        mock_conn.headers = {}
+        mock_conn.headers = dict[str, str]()
         mock_conn.scope = {
             "path": "/from-scope",
             "headers": [
@@ -150,7 +150,7 @@ class TestHttpAttributes:
 
         mock_conn = Mock()
         mock_conn.url = mock_url
-        mock_conn.headers = {}
+        mock_conn.headers = dict[str, str]()
         mock_conn.scope = {"headers": [(b"x-forwarded-for", b"127.0.0.1")]}
 
         attributes = extract_http_attributes(mock_conn)

@@ -33,7 +33,9 @@ def get_coordmap(fig: Figure) -> Coordmap | None:
 
     all_axes = cast(
         "list[Axes]",  # pyright: ignore
-        fig.get_axes(),
+        # The generated matplotlib stubs declare `get_axes = ...`, which pyrefly
+        # does not consider callable.
+        fig.get_axes(),  # pyrefly: ignore[not-callable]
     )
 
     panels: list[CoordmapPanel] = []
@@ -223,12 +225,11 @@ def _get_mappings(p: PlotnineFigure) -> CoordmapPanelMapping:
 
     # The names (not values) of panel vars are the same across all panels.
     if type(p.layout.facet).__name__ == "facet_grid":
-        n = 1
-        if len(p.layout.facet.cols) > 0:
-            mapping[f"panelvar{n}"] = p.layout.facet.cols[0]
-            n += 1
-        if len(p.layout.facet.rows) > 0:
-            mapping[f"panelvar{n}"] = p.layout.facet.rows[0]
+        panelvars = [*p.layout.facet.cols[:1], *p.layout.facet.rows[:1]]
+        if len(panelvars) > 0:
+            mapping["panelvar1"] = panelvars[0]
+        if len(panelvars) > 1:
+            mapping["panelvar2"] = panelvars[1]
 
     elif type(p.layout.facet).__name__ == "facet_wrap":
         mapping["panelvar1"] = p.layout.facet.vars[0]

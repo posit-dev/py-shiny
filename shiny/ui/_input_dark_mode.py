@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from htmltools import Tag, TagAttrValue, css
+from htmltools import Tag, TagAttrs, TagAttrValue, css
 
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
@@ -52,18 +52,20 @@ def input_dark_mode(
     if mode is not None:
         mode = validate_dark_mode_option(mode)
 
+    dark_mode_attrs: TagAttrs = {
+        "style": css(
+            **{
+                "--text-1": "var(--bs-emphasis-color)",
+                "--text-2": "var(--bs-tertiary-color)",
+                # TODO: Fix the vertical correction to work better with Bootstrap
+                "--vertical-correction": " ",
+            },
+        )
+    }
+
     return web_component(
         "bslib-input-dark-mode",
-        {
-            "style": css(
-                **{
-                    "--text-1": "var(--bs-emphasis-color)",
-                    "--text-2": "var(--bs-tertiary-color)",
-                    # TODO: Fix the vertical correction to work better with Bootstrap
-                    "--vertical-correction": " ",
-                },
-            )
-        },
+        dark_mode_attrs,
         id=resolved_id,
         attribute="data-bs-theme",
         mode=restore_input(resolved_id, mode),

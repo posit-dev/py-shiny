@@ -13,7 +13,7 @@ __all__ = (
 import warnings
 from typing import Literal, Optional
 
-from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._utils import drop_none, private_random_int
@@ -95,8 +95,13 @@ def toolbar(
     gap_css = as_css_unit(gap) if gap is not None else None
     width_css = as_css_unit(width) if width is not None else None
 
+    toolbar_attrs: TagAttrs = {
+        "class": "bslib-toolbar bslib-gap-spacing",
+        "data-align": align,
+    }
+
     tag = div(
-        {"class": "bslib-toolbar bslib-gap-spacing", "data-align": align},
+        toolbar_attrs,
         *args,
         components_dependencies(),
         style=css(gap=gap_css, width=width_css),
@@ -147,13 +152,13 @@ def toolbar_divider(
 
     style_str = "; ".join(style_parts) if style_parts else None
 
-    return div(
-        {
-            "class": "bslib-toolbar-divider",
-            "aria-hidden": "true",
-            "style": style_str,
-        },
-    )
+    divider_attrs: TagAttrs = {
+        "class": "bslib-toolbar-divider",
+        "aria-hidden": "true",
+        "style": style_str,
+    }
+
+    return div(divider_attrs)
 
 
 @add_example()
@@ -183,7 +188,8 @@ def toolbar_spacer() -> Tag:
     * :func:`~shiny.ui.toolbar_divider`
 
     """
-    return div({"class": "bslib-toolbar-spacer", "aria-hidden": "true"})
+    spacer_attrs: TagAttrs = {"class": "bslib-toolbar-spacer", "aria-hidden": "true"}
+    return div(spacer_attrs)
 
 
 @add_example()
@@ -305,27 +311,27 @@ def toolbar_input_button(
     # Wrap icon to ensure it's always treated as decorative
     icon_elem = None
     if icon is not None:
-        icon_elem = span(
-            icon,
-            {
-                "class": "bslib-toolbar-icon action-icon",
-                "aria-hidden": "true",
-                "style": "pointer-events: none;",
-            },
-        )
+        icon_attrs: TagAttrs = {
+            "class": "bslib-toolbar-icon action-icon",
+            "aria-hidden": "true",
+            "style": "pointer-events: none;",
+        }
+        icon_elem = span(icon, icon_attrs)
 
     border_class = "border-0" if not border else "border-1"
+
+    button_attrs: TagAttrs = {
+        "id": resolved_id,
+        "type": "button",
+        "class": f"bslib-toolbar-input-button btn btn-default btn-sm action-button {border_class}",
+        "data-type": btn_type,
+        "aria-labelledby": label_id,
+    }
 
     button = tags.button(
         icon_elem,
         label_elem,
-        {
-            "id": resolved_id,
-            "type": "button",
-            "class": f"bslib-toolbar-input-button btn btn-default btn-sm action-button {border_class}",
-            "data-type": btn_type,
-            "aria-labelledby": label_id,
-        },
+        button_attrs,
         kwargs,
         disabled="" if disabled else None,
     )
@@ -531,25 +537,27 @@ def toolbar_input_select(
     # Select element gets its own ID for label association
     select_id = f"{resolved_id}-select"
 
+    select_attrs: TagAttrs = {
+        "id": select_id,
+        "class": "form-select form-select-sm bslib-toolbar-select",
+        "data-shiny-no-bind-input": True,
+    }
     select_tag = tags.select(
         _render_choices(choices_normalized, selected),
-        {
-            "id": select_id,
-            "class": "form-select form-select-sm bslib-toolbar-select",
-            "data-shiny-no-bind-input": True,
-        },
+        select_attrs,
     )
 
     # Always create icon element for consistent DOM structure (even if empty)
     # This allows dynamic icon updates via update_toolbar_input_select()
+    icon_attrs: TagAttrs = {
+        "class": "bslib-toolbar-icon action-icon",
+        "aria-hidden": "true",
+        "role": "none",
+        "tabindex": "-1",
+    }
     icon_elem = span(
         icon,
-        {
-            "class": "bslib-toolbar-icon action-icon",
-            "aria-hidden": "true",
-            "role": "none",
-            "tabindex": "-1",
-        },
+        icon_attrs,
         style="pointer-events: none",
     )
 
@@ -557,23 +565,25 @@ def toolbar_input_select(
     if not show_label:
         label_span_classes += " visually-hidden"
 
+    label_attrs: TagAttrs = {
+        "id": f"{resolved_id}-label",
+        "class": "control-label",
+        "for": select_id,
+    }
     label_elem = tags.label(
         icon_elem,
         span(
             label,
             class_=label_span_classes,
         ),
-        {
-            "id": f"{resolved_id}-label",
-            "class": "control-label",
-            "for": select_id,
-        },
+        label_attrs,
     )
 
     tooltip_text: Optional[TagChild] = None
     if tooltip is True:
         # Hide from screen readers since it repeats the label content
-        tooltip_text = span(label, {"aria-hidden": "true"})
+        tooltip_hidden_attrs: TagAttrs = {"aria-hidden": "true"}
+        tooltip_text = span(label, tooltip_hidden_attrs)
     elif isinstance(tooltip, str):
         tooltip_text = tooltip
 
@@ -585,13 +595,15 @@ def toolbar_input_select(
             placement="bottom",
         )
 
+    container_attrs: TagAttrs = {
+        "id": resolved_id,
+        "class": "bslib-toolbar-input-select shiny-input-container",
+    }
+
     return div(
         label_elem,
         select_tag,
-        {
-            "id": resolved_id,
-            "class": "bslib-toolbar-input-select shiny-input-container",
-        },
+        container_attrs,
         kwargs,
     )
 

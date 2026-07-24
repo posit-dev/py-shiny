@@ -148,29 +148,32 @@ class Toast:
         body_has_close_btn = self.header is None and self.closable
 
         if not body_has_close_btn and self.icon is None:
-            body_tag = div({"class": "toast-body"}, self.body)
+            body_attrs: TagAttrs = {"class": "toast-body"}
+            body_tag = div(body_attrs, self.body)
         else:
             body_contents: list[TagChild] = []
 
             if self.icon is not None:
                 body_contents.append(tags.span(self.icon, class_="toast-body-icon"))
 
-            body_contents.append(
-                div({"class": "toast-body-content flex-grow-1"}, self.body)
-            )
+            body_content_attrs: TagAttrs = {"class": "toast-body-content flex-grow-1"}
+            body_contents.append(div(body_content_attrs, self.body))
 
             if body_has_close_btn:
                 body_contents.append(close_button)
 
-            body_tag = div({"class": "toast-body d-flex gap-2"}, *body_contents)
+            body_flex_attrs: TagAttrs = {"class": "toast-body d-flex gap-2"}
+            body_tag = div(body_flex_attrs, *body_contents)
 
         contents.append(body_tag)
 
+        toast_attrs: TagAttrs = {
+            "class": " ".join(classes),
+            "id": id or self.id or _toast_random_id(),
+        }
+
         return div(
-            {
-                "class": " ".join(classes),
-                "id": id or self.id or _toast_random_id(),
-            },
+            toast_attrs,
             *contents,
             components_dependencies(),
             role=role,
@@ -306,7 +309,8 @@ class ToastHeader:
         if close_button is not None:
             contents.append(close_button)
 
-        return div({"class": "toast-header"}, *contents, **self.attribs)
+        header_attrs: TagAttrs = {"class": "toast-header"}
+        return div(header_attrs, *contents, **self.attribs)
 
 
 def toast_header(

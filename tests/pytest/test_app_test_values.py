@@ -41,10 +41,13 @@ def _fake_page(
     if json_error:
         response.json.side_effect = ValueError("not json")
     else:
+        empty_snapshot: dict[str, dict[str, Any]] = {
+            "input": {},
+            "output": {},
+            "export": {},
+        }
         response.json.return_value = (
-            snapshot
-            if snapshot is not None
-            else {"input": {}, "output": {}, "export": {}}
+            snapshot if snapshot is not None else empty_snapshot
         )
     page.request.get.return_value = response
     return page

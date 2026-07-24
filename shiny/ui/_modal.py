@@ -48,10 +48,11 @@ def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue)
     * :func:`~shiny.ui.modal_show`
     * :func:`~shiny.ui.modal_remove`
     """
+    button_attrs: TagAttrs = {"class": "btn btn-default"}
     return tags.button(
         icon,
         label,
-        {"class": "btn btn-default"},
+        button_attrs,
         type="button",
         data_dismiss="modal",
         data_bs_dismiss="modal",
@@ -119,10 +120,11 @@ def modal(
     if footer is not None:
         footer = div(footer, class_="modal-footer")
 
+    body_attrs: TagAttrs = {"class": "modal-body"}
     dialog = div(
         div(
             title_div,
-            div({"class": "modal-body"}, *args, **kwargs),
+            div(body_attrs, *args, **kwargs),
             footer,
             class_="modal-content",
         ),

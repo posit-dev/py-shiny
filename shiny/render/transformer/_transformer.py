@@ -201,6 +201,13 @@ class OutputRenderer(
     * :class:`~shiny.render.transformer.OutputRendererAsync`
     """
 
+    # `IT` and `P` are scoped to `__init__` (the class is only generic over `OT`),
+    # so these attributes are declared with those type variables erased. `_params`
+    # is left to be inferred from its `__init__` assignment (with a pyrefly ignore)
+    # because erasing `P` there would make `.args`/`.kwargs` unknown to pyright.
+    _value_fn: ValueFn[Any]
+    _transformer: TransformFn[Any, ..., OT]
+
     def __init__(
         self,
         *,
@@ -248,7 +255,7 @@ class OutputRenderer(
         self.output_id = value_fn.__name__
 
         self._transformer = transform_fn
-        self._params = params
+        self._params = params  # pyrefly: ignore[invalid-type-var]
         self._default_ui = default_ui
         self._default_ui_passthrough_args = default_ui_passthrough_args
 
@@ -534,6 +541,7 @@ class OutputTransformer(Generic[IT, OT, P]):
     ) -> OutputRenderer[OT] | OutputRendererDecorator[IT, OT]:
         if params is None:
             params = (
+                # pyrefly: ignore[invalid-param-spec]
                 self.params()
             )  # pyright: ignore[reportCallIssue] ; Missing param spec args; False positive error as we know there should be no args.
         if not isinstance(params, TransformerParams):
@@ -566,6 +574,10 @@ def output_transformer(
 
 
 @overload
+# pyrefly's generics solver mis-unifies `IT` (through `ValueFn`'s `Awaitable`
+# union) when comparing this overload against the implementation signature;
+# the overload return type is a member of the implementation's return union.
+# pyrefly: ignore[inconsistent-overload]
 def output_transformer(
     transform_fn: TransformFn[IT, P, OT],
 ) -> OutputTransformer[IT, OT, P]: ...
