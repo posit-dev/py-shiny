@@ -65,6 +65,7 @@ quartodoc:
         - express.ui.layout_column_wrap
         - express.ui.card
         - express.ui.card_header
+        - express.ui.card_body
         - express.ui.card_footer
         - express.ui.value_box
         - express.ui.value_box_theme
