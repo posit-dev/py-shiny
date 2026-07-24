@@ -8,3 +8,5 @@ license-url: "https://github.com/posit-dev/py-shiny/blob/main/LICENSE"
 repository-code: "https://github.com/posit-dev/py-shiny"
 type: software
 url: "https://shiny.posit.co/py/"
+version: "1.6.3"
+date-released: "2026-06-01"
