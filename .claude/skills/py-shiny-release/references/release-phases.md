@@ -56,7 +56,7 @@ Repo: `posit-dev/py-shiny`
 - [ ] Verify `pyproject.toml` has no git-based dependencies (e.g., no `htmltools @ git+https://...`)
 - [ ] Note: for py-shiny, tagging the commit triggers the version bump automatically (no manual `__init__.py` edit needed)
 - [ ] Bump version in CHANGELOG.md
-- [ ] Update `CITATION.cff`: set `version:` to `X.Y.Z` and `date-released:` to today's date (`YYYY-MM-DD`, the intended release date). This keeps GitHub's "Cite this repository" metadata current — see [issue #2359](https://github.com/posit-dev/py-shiny/issues/2359).
+- [ ] Update `CITATION.cff`: set `version:` to `X.Y.Z` and `date-released:` to today's date (`YYYY-MM-DD`, the intended release date).
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
 - [ ] Verify no additional commits were added beyond release prep
