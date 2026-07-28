@@ -400,12 +400,9 @@ class App:
         request for / occurs.
         """
         ui: RenderedHTML
-        if self.bookmark_store == "disable":
-            restore_ctx = RestoreContext()
-        else:
-            restore_ctx = await RestoreContext.from_query_string(
-                request.url.query, app=self
-            )
+        restore_ctx = await RestoreContext.from_query_string(
+            request.url.query, app=self
+        )
 
         if callable(self.ui):
             # At this point, if `app.bookmark_store != "disable"`, then we've already
