@@ -1,4 +1,4 @@
-"""Tests for bookmark id validation and restore gating (423aae3e).
+"""Tests for bookmark id validation and restore gating (ab10e069).
 
 Covers the `_state_id_` id allowlist, the rule that a restore only reads from
 disk under `bookmark_store="server"`, and the file-input restore source checks.
