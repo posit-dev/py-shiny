@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## [1.6.4] - 2026-07-28
+
+### Bug fixes
+
+* Fixed a path-traversal vulnerability in bookmark restore (CWE-22). Introduced in 1.4.0. Reported by @0xRenSec.
+
+* When bookmarked state cannot be restored, the notification shown in the client is now a generic message. The reason is logged server-side as a warning on the `shiny.bookmark._restore_state` logger, so app authors can still see it. (1d8ecb46)
+
 ## [1.6.3] - 2026-06-01
 
 ### New features
