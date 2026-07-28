@@ -134,6 +134,11 @@ set_global_save_dir_fn(save_dir)
 set_global_restore_dir_fn(lambda id: bookmark_dir / id)
 ```
 
+Shiny validates `id` before calling these functions: it is always a single path
+segment matching `[A-Za-z0-9_-]+`, so `bookmark_dir / id` stays inside
+`bookmark_dir`. Don't reuse these functions on an id from another source without
+checking it yourself.
+
 ## Quick reference
 
 | Need | API |

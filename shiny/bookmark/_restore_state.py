@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import warnings
+import logging
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from pathlib import Path
@@ -9,13 +9,15 @@ from urllib.parse import parse_qs, parse_qsl
 
 from .._docstring import add_example
 from ..module import ResolvedId
-from ._bookmark_state import local_restore_dir
+from ._bookmark_state import local_restore_dir, validate_bookmark_id
 from ._global import get_bookmark_restore_dir_fn
 from ._types import BookmarkRestoreDirFn
 from ._utils import from_json_file, from_json_str, in_shiny_server
 
 if TYPE_CHECKING:
     from .._app import App
+
+_logger = logging.getLogger(__name__)
 
 
 class RestoreState:
@@ -110,8 +112,22 @@ class RestoreContext:
     async def from_query_string(query_string: str, *, app: App) -> "RestoreContext":
         res_ctx = RestoreContext()
 
+        # Restore only when bookmarking is enabled.
+        if app.bookmark_store == "disable":
+            return res_ctx
+
         if query_string.startswith("?"):
             query_string = query_string[1:]
+
+        # IMPORTANT: once bookmarking is enabled, every request below yields an
+        # *active* restore context -- including an ordinary page load with no
+        # query string. `shinychat`'s `ui.Chat.enable_bookmarking()` destroys its
+        # own message-init effect and renders `ui.Chat(messages=)` from an
+        # `on_restore` callback instead, and `_bookmark.py` only invokes
+        # `on_restore` / `on_restored` when the context is active. Marking any of
+        # these cases inactive silently stops chat apps rendering their initial
+        # messages. Shiny for R is stricter here (it guards with `nzchar()`);
+        # matching it needs a coordinated `shinychat` release.
 
         try:
             # withLogErrors
@@ -125,22 +141,39 @@ class RestoreContext:
                 # Ignore subapps in shiny docs
                 res_ctx.reset()
 
-            elif "_state_id_" in query_string_dict and query_string_dict["_state_id_"]:
-                # If we have a "_state_id_" key, restore from saved state and
-                # ignore other key/value pairs. If not, restore from key/value
-                # pairs in the query string.
+            elif app.bookmark_store not in ("url", "server"):
+                raise ValueError(
+                    f"Unexpected `bookmark_store` value: {app.bookmark_store!r}"
+                )
+
+            elif (
+                app.bookmark_store == "server"
+                and "_state_id_" in query_string_dict
+                and query_string_dict["_state_id_"]
+            ):
+                # The only branch that reads from disk, and it requires
+                # `bookmark_store="server"`. A `"url"` app never writes
+                # server-side state, so honoring `_state_id_` there would let a
+                # client read a `shiny_bookmarks/` tree left by a sibling or
+                # previous `"server"` deployment. (Shiny for R dispatches on
+                # `_state_id_` presence regardless of store type.)
                 res_ctx.active = True
                 await res_ctx._load_state_qs(query_string, app=app)
 
             else:
-                # The query string contains the saved keys and values
+                # Nothing to load from disk: decode whatever is in the query
+                # string, which never touches the filesystem. Under `"url"` a
+                # stray `_state_id_` is simply an unrecognized key here.
                 res_ctx.active = True
                 await res_ctx._decode_state_qs(query_string)
 
         except Exception as e:
             res_ctx.reset()
             res_ctx._init_error_msg = str(e)
-            print(e)
+            # Server-side only. The client is shown a generic notification (see
+            # `BookmarkApp._create_effects`), so log the detail here for the app
+            # author. Not deduplicated, so repeated failures stay visible.
+            _logger.warning("Could not restore bookmarked state: %s", e)
 
         return res_ctx
 
@@ -189,6 +222,9 @@ class RestoreContext:
             raise ValueError("Missing `_state_id_` from query string")
 
         id = id[0]
+
+        # Validate at the source so custom restore-dir fns are covered too.
+        validate_bookmark_id(id)
 
         load_bookmark_fn: BookmarkRestoreDirFn | None = get_bookmark_restore_dir_fn(
             app._bookmark_restore_dir_fn
@@ -262,10 +298,16 @@ class RestoreContext:
                     elif storing_to == "values":
                         value_vals[qs_key] = from_json_str(qs_value)
                 except Exception as e:
-                    warnings.warn(
-                        f'Failed to parse URL parameter "{qs_key}"', stacklevel=3
+                    # Server-side only: the value came from the client, so don't
+                    # echo it back. Not deduplicated, so repeated malformed
+                    # parameters stay visible.
+                    _logger.warning(
+                        'Ignoring bookmarked %s parameter "%s": its value could '
+                        "not be parsed as JSON: %s",
+                        storing_to,
+                        qs_key,
+                        e,
                     )
-                    print(e, storing_to, qs_key, qs_value)
 
         self.input = RestoreInputSet(input_vals)
         self.values = value_vals

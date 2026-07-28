@@ -67,6 +67,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed the `value_box()` `id` parameter docstring, which previously documented the wrong reactive-value syntax (`input.<id>()["full_screen"]`) for observing the value box's full screen state. It now correctly documents `input.<id>_full_screen()`, matching `card()`. (#2324)
 
+* Fixed a path-traversal vulnerability in bookmark restore (CWE-22). Introduced in 1.4.0. Reported by @0xRenSec.
+
+* When bookmarked state cannot be restored, the notification shown in the client is now a generic message. The reason is logged server-side as a warning on the `shiny.bookmark._restore_state` logger, so app authors can still see it. (423aae3e)
+
 ### Other changes
 
 * CI now runs the unit tests on Ubuntu with the oldest supported Python (3.10) and every runtime dependency resolved to its declared minimum version (via `uv pip compile --resolution lowest-direct`), so stale lower bounds in `pyproject.toml` are caught. As part of this, `starlette` and `prompt-toolkit` gained explicit lower bounds (`>=0.17.1` and `>=3.0.0`), and the `opentelemetry-api`/`opentelemetry-sdk` minimums were raised from 1.20.0 to 1.24.0 — older versions could leak unsanitized error messages in span exception stack traces. Shiny's OpenTelemetry log emission (which relied on the `Logger.emit()` keyword form added in opentelemetry 1.38.0 and was silently dropped on older versions) now falls back to constructing the `LogRecord` manually, so it works across the whole supported range. (#2335)

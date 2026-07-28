@@ -386,8 +386,11 @@ class BookmarkApp(Bookmark):
             @otel_suppress
             def init_error_message():
                 if self._restore_context and self._restore_context._init_error_msg:
+                    # Keep the detail server-side (it is logged by
+                    # `RestoreContext.from_query_string`): the message can echo
+                    # client-supplied input and resolved server paths.
                     notification_show(
-                        f"Error in RestoreContext initialization: {self._restore_context._init_error_msg}",
+                        "Error restoring bookmarked state.",
                         duration=None,
                         type="error",
                         session=root_session,

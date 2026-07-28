@@ -103,6 +103,26 @@ See Also
 """
 
 
+def _restore_file_source(restore_dir: Path, name: str) -> Path:
+    """Resolve a bookmarked file-input source, refusing anything unsafe.
+
+    ``shutil.copy2()`` follows symlinks, so a symlinked entry in the restore
+    directory could otherwise pull in a file from outside the bookmark store.
+    Require a regular file that stays within ``restore_dir`` once resolved.
+
+    Raises
+    ------
+    ValueError
+        If ``name`` is not a regular file directly inside ``restore_dir``.
+    """
+    src = restore_dir / name
+    if src.is_symlink() or not src.is_file():
+        raise ValueError(f"Invalid file input path: {name!r}")
+    if src.resolve().parent != restore_dir.resolve():
+        raise ValueError(f"Invalid file input path: {name!r}")
+    return src
+
+
 @input_handlers.add("shiny.date")
 def _(
     value: str | list[str] | None, name: ResolvedId, session: Session
@@ -240,7 +260,7 @@ def _(value: Any, name: ResolvedId, session: Session) -> Any:
             data_path = f["datapath"]
 
             # Prepend the persistent dir
-            old_file = restore_ctx_dir / data_path
+            old_file = _restore_file_source(restore_ctx_dir, data_path)
 
             # Copy the original file to a new temp dir, so that a restored session can't
             # modify the original.
