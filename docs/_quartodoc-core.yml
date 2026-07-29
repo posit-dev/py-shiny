@@ -216,7 +216,6 @@ quartodoc:
         - render.code
         - render.ui
         - render.express
-        - render.download
         - render.download_button
         - render.download_link
         - render.data_frame
@@ -411,6 +410,7 @@ quartodoc:
       desc: ""
       contents:
         - ui.output_text_verbatim
+        - render.download
         - render.transformer.output_transformer
         - render.transformer.resolve_value_fn
     - title: Experimental
