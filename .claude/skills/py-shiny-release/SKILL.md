@@ -23,6 +23,36 @@ explicit user confirmation before proceeding to the next.
 - If the user says "skip", mark the phase done and move on
 - If a phase fails, help debug before moving on
 - Never proceed to the next phase until the current one is resolved or explicitly skipped
+- **Shut down every long-running process a phase started before marking it complete** (see
+  below)
+
+### Clean up background processes at the end of each phase
+
+Several phases start servers or watchers that never exit on their own — most notably Phase 6's
+`make serve` (a watch-mode dev server on port 3000). Left running, they hold ports, keep
+rebuilding on file changes, and clutter the background task list for the rest of a release that
+spans many hours.
+
+When a phase is done, before marking it complete:
+
+1. Identify what the phase left behind, e.g.:
+   ```bash
+   lsof -nP -iTCP:3000 -sTCP:LISTEN     # Phase 6 `make serve`
+   lsof -nP -iTCP:8100 -sTCP:LISTEN     # Playwright's _shinylive webServer
+   ```
+2. Kill it and confirm the port actually closed, rather than assuming:
+   ```bash
+   kill <pid>
+   curl -s -o /dev/null -m 3 -w "%{http_code}\n" http://localhost:3000/ || echo closed
+   ```
+3. Say in the phase wrap-up which processes were shut down.
+
+Only keep a server alive past its phase if a later step genuinely needs it, and say so
+explicitly. Note that Playwright's own `webServer` (port 8100) stops itself when a run
+finishes — it is `make serve` that lingers.
+
+Watchers that poll CI or PyPI are fine to leave; they exit on their own. It is the servers
+that need killing.
 
 ### Pre-release gate (REQUIRED before any release action)
 

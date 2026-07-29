@@ -292,6 +292,13 @@ land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likew
 - [ ] **DEPLOY GATE 2 (shinylive.io)**: Wait for the `deploy` branch deploy to shinylive.io to finish. Then bust all browser caches and verify apps work on shinylive.io using the same testing procedure with cache-busting (fresh incognito context or `?v={timestamp}` query params).
 - [ ] Create GH Release. Check existing release note conventions (`gh api repos/posit-dev/shinylive/releases --jq '.[:3] | .[] | .body'`) and match the format used by recent releases.
 - [ ] Wait for release to succeed and build artifact to appear in GH Release page
+- [ ] Confirm the artifact really uploaded — `gh release view vX.Y.Z --repo posit-dev/shinylive
+      --json assets` should show `shinylive-X.Y.Z.tar.gz` with `state=uploaded` (it is ~435 MB,
+      so it appears a while after the release object does). Phases 7 and 8 pin this as
+      `SHINYLIVE_ASSETS_VERSION`, so a missing artifact blocks both.
+- [ ] **Clean up**: kill the `make serve` dev server this phase started (port 3000) and confirm
+      the port closed. See "Clean up background processes at the end of each phase" in
+      `SKILL.md`.
 
 ### Local shinylive example testing procedure
 
