@@ -202,6 +202,27 @@ Repo: `posit-dev/shinylive`
 - [ ] Cross-check the built wheels: `ls build/shinylive/pyodide/*.whl` should show the
       expected versions of shiny, shinyswatch, htmltools, shinywidgets and faicons.
 - [ ] Run `npm install --package-lock-only` to sync `package-lock.json` version with `package.json`
+- [ ] **Grep the bundled examples for anything the new py-shiny deprecated** — see
+      "Deprecations break the bundled examples" below.
+
+### Deprecations break the bundled examples
+
+A py-shiny release that deprecates a renderer or UI function will make any shinylive example
+still using it print a `ShinyDeprecationWarning` on load, and `examples-smoke-test` fails on
+that: `SUSPECT_PATTERNS` in `playwright/examples-smoke-helpers.ts` matches `/Warning\b/` and
+`/Deprecat/i` in the shinylive terminal.
+
+So for every entry in the new release's **Deprecations** changelog section:
+
+```bash
+grep -rn "render\.download\|<other deprecated API>" examples/ export_template/ site_template/
+```
+
+Migrate what turns up, in the release PR. (In v1.7.0, `examples/python/file_download_core`
+used `@render.download` three times and had to move to `@render.download_button`.)
+`export_template/` and `site_template/` matter too — they ship to users. Ignore hits under
+`_shinylive/py`, `_shinylive/r`, `venv/`, `build/` and `packages/`: those are build output or
+submodules.
 
 ### The `latest` trap: PyPI pins do not update themselves
 
@@ -255,6 +276,17 @@ land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likew
 - [ ] Squash merge the RC PR into `main` via GitHub
 - [ ] Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
 - [ ] **DEPLOY GATE 1 (github.io)**: Wait for the `main` branch deploy to github.io to finish. Then bust all browser caches and verify apps work on github.io using the Playwright-based example testing procedure. **Important**: When testing, always append a cache-busting query parameter (e.g., `?v={timestamp}`) to URLs or use a fresh incognito/private browser context to ensure you're testing the newly deployed version, not a cached old version. **Do NOT push to `deploy` until github.io is verified.**
+- [ ] **Confirm the deployed bundle is actually the new one** before reading the sweep results.
+      A stale CDN response passes the sweep while proving nothing, so check the served
+      lockfile rather than assuming:
+
+      ```bash
+      curl -s "https://posit-dev.github.io/shinylive/shinylive/shinylive_lock.json?v=$(date +%s)" \
+        | python -c "import json,sys; d=json.load(sys.stdin); print(d['shiny']['version'], d['shinyswatch']['version'])"
+      ```
+
+      Tell the user which surface is live and which is not at this point — github.io is
+      staging; shinylive.io is untouched and still serving the previous release.
 - [ ] Ask user: "github.io apps have been tested — X passed, Y failed. Ready to push to `deploy` (shinylive.io)?" Get explicit confirmation.
 - [ ] Only after github.io verification passes and user confirms: push to `deploy` branch (for shinylive.io) using `git push origin main:deploy`
 - [ ] **DEPLOY GATE 2 (shinylive.io)**: Wait for the `deploy` branch deploy to shinylive.io to finish. Then bust all browser caches and verify apps work on shinylive.io using the same testing procedure with cache-busting (fresh incognito context or `?v={timestamp}` query params).
@@ -263,24 +295,43 @@ land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likew
 
 ### Local shinylive example testing procedure
 
-Use the same [`references/test_shinylive_site.py`](test_shinylive_site.py) script as Phase 3,
-pointed at the local dev server.
+**Run the repo's own smoke suite — `test_shinylive_site.py` is not a substitute for it.**
 
-**The local URL layout differs from the deployed one.** `make serve` binds **port 3000**, and
-serves examples at **`/examples/`** — `/py/examples/` exists only on the deployed site and
-404s locally. Root serves `/app/`, `/editor/`, `/examples/` and `/shinylive/`.
+```bash
+make examples-smoke-test                       # everything
+npx playwright test --config playwright-examples.config.ts --project=py
+npx playwright test --config playwright-examples.config.ts --project=py -g "File download"
+```
+
+`examples-smoke.spec.ts` asserts three things per example: no suspect lines in the shinylive
+**terminal**, no `.shiny-output-error` in the app frame, and no browser console errors. The
+release skill's `test_shinylive_site.py` only covers console errors plus tracebacks in the app
+iframe — it has no notion of the terminal pane, so it will happily pass a bundle whose
+examples emit deprecation warnings on load. That exact gap let a broken bundle look clean
+during the v1.7.0 train; only `examples-smoke-test` caught it.
+
+Expect one fewer test than there are examples: the `Non-Apps` category holds entries that load
+a plain script into the editor and never start an app, and `exampleAppTitles()` filters them
+out (`NON_APP_CATEGORIES`). In v1.7.0 that was 27 tests for 28 examples.
+
+**The smoke test reads `_shinylive/`, not `build/`.** `readExamplesJson()` loads
+`_shinylive/<engine>/shinylive/examples.json` and the config serves that directory on port
+8100. So after editing an example, `make all` is not enough — run `make _shinylive`
+(`rm -rf _shinylive/py _shinylive/r` first for a clean rebuild) or the suite will keep testing
+the old copy and appear not to have fixed anything.
+
+`test_shinylive_site.py` is still useful as a quick check against a running dev server. Note
+the local URL layout differs from the deployed one: `make serve` binds **port 3000** and serves
+examples at **`/examples/`** — `/py/examples/` exists only on the deployed site and 404s
+locally. Root serves `/app/`, `/editor/`, `/examples/` and `/shinylive/`.
 
 ```bash
 python references/test_shinylive_site.py "http://localhost:3000/examples/"
 ```
 
-Present the same summary table and broken app links as in Phase 3, and ask the user to verify
-any broken apps before proceeding.
-
-Sanity checks on the build while the server is up:
+Sanity check the example counts against `examples/index.json`:
 
 ```bash
-# expect 28 python apps / 11 r apps (or whatever examples/index.json now lists)
 python -c "
 import json; d = json.load(open('build/shinylive/examples.json'))
 [print(e['engine'], sum(len(c['apps']) for c in e['examples'])) for e in d]
