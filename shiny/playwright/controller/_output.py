@@ -244,7 +244,7 @@ class OutputTextVerbatim(_OutputTextValue):
             The ID of the verbatim text output.
         """
         warn_deprecated(
-            "`controller.OutputTextVerbatim` was deprecated in v1.8.0, along with "
+            "`controller.OutputTextVerbatim` is deprecated, along with "
             "`ui.output_text_verbatim()`. Please use `controller.OutputCode` instead."
         )
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")

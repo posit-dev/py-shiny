@@ -336,10 +336,9 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
 
     warn_deprecated(
-        "`ui.output_text_verbatim()` was deprecated in v1.8.0. "
-        "Please use `ui.output_code()` / `@render.code` to create an output container "
-        "for monospaced text, or `ui.output_text()` / `@render.text` to create an "
-        "output container for plain text."
+        "`ui.output_text_verbatim()` is deprecated. Please use `ui.output_code()` / "
+        "`@render.code` for monospaced text, or `ui.output_text()` / `@render.text` "
+        "for plain text."
     )
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
