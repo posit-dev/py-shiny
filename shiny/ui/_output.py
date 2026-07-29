@@ -331,6 +331,7 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     See Also
     --------
     * :func:`~shiny.ui.output_code`
+    * :class:`~shiny.render.code`
     * :func:`~shiny.ui.output_text`
     """
 
