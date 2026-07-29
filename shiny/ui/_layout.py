@@ -187,12 +187,12 @@ def wrap_all_in_gap_spaced_container(
     if class_ is not None:
         item_class = f"{item_class} {class_}"
 
-    item_attrs: TagAttrs = {"class": item_class}
-
     # Use a new list so that we don't mutate the original `children`
     wrapped_children: list[TagChild] = []
     for child_value in children:
-        child = div(item_attrs, child_value)
+        # `class_=` (rather than a positional `{"class": ...}` dict) keeps each
+        # wrapper's attributes independent and needs no `TagAttrs` annotation.
+        child = div(child_value, class_=item_class)
         if fillable:
             child = as_fillable_container(child)
         wrapped_children.append(child)
