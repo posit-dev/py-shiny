@@ -1,8 +1,10 @@
 import textwrap
 
+import pytest
 from htmltools import HTMLDocument, TagList, tags
 
 from shiny import ui
+from shiny._deprecated import ShinyDeprecationWarning
 from shiny.ui._input_select import _update_options
 
 
@@ -210,3 +212,11 @@ def test_tooltip_options():
     t2_str = str(t2)
     # Should still render properly
     assert "bslib-tooltip" in t2_str, "Tooltip should render without options"
+
+
+def test_output_text_verbatim_warns_deprecated():
+    with pytest.warns(ShinyDeprecationWarning, match="`ui.output_text_verbatim\\(\\)`"):
+        verbatim = ui.output_text_verbatim("txt")
+
+    # Still renders the same markup as its replacement, `ui.output_code()`.
+    assert str(verbatim) == str(ui.output_code("txt", placeholder=False))

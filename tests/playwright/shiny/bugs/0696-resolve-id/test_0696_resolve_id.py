@@ -30,8 +30,8 @@ def expect_outputs(page: Page, module_id: str, letter: str, count: int):
     controller.OutputText(page, resolve_id("out_text")).expect_value(
         f"Output text content. `input.radio_buttons()`: `{letter}`"
     )
-    controller.OutputTextVerbatim(page, resolve_id("out_text_verbatim")).expect_value(
-        f"Output text verbatim content. `input.radio_buttons()`: `{letter}`"
+    controller.OutputCode(page, resolve_id("out_code")).expect_value(
+        f"Output Code content. `input.radio_buttons()`: `{letter}`"
     )
     controller.OutputTable(page, resolve_id("out_table")).expect_nrow(count + 1)
 

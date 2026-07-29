@@ -9,7 +9,7 @@ app_ui = ui.page_fluid(
     # Provide an id to create a shiny input binding
     ui.accordion(*items, id="acc"),
     ui.h4("Accordion:"),
-    ui.output_text_verbatim("acc_val", placeholder=True),
+    ui.output_code("acc_val", placeholder=True),
 )
 
 
@@ -18,7 +18,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         print(input.acc())
 
-    @render.text
+    @render.code
     def acc_val():
         return "input.acc(): " + str(input.acc())
 

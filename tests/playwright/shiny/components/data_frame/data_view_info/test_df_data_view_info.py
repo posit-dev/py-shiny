@@ -24,14 +24,14 @@ def test_validate_html_columns(
     tab = controller.NavsetUnderline(page, "tab")
     tab.set(tab_name)
 
-    controller.OutputTextVerbatim(page, f"{tab_name}-df_type").expect_value(
+    controller.OutputCode(page, f"{tab_name}-df_type").expect_value(
         re.compile(tab_name)
     )
 
-    sort = controller.OutputTextVerbatim(page, f"{tab_name}-sort")
-    filter = controller.OutputTextVerbatim(page, f"{tab_name}-filter")
-    rows = controller.OutputTextVerbatim(page, f"{tab_name}-rows")
-    selected_rows = controller.OutputTextVerbatim(page, f"{tab_name}-selected_rows")
+    sort = controller.OutputCode(page, f"{tab_name}-sort")
+    filter = controller.OutputCode(page, f"{tab_name}-filter")
+    rows = controller.OutputCode(page, f"{tab_name}-rows")
+    selected_rows = controller.OutputCode(page, f"{tab_name}-selected_rows")
 
     sort.expect_value("()")
     filter.expect_value("()")

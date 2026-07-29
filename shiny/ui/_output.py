@@ -14,7 +14,8 @@ from typing import Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
-from .._docstring import add_example
+from .._deprecated import warn_deprecated
+from .._docstring import add_example, no_example
 from ..module import resolve_id
 from ..types import MISSING, MISSING_TYPE
 from ._plot_output_opts import (
@@ -263,7 +264,7 @@ def output_text(
     See Also
     --------
     * :class:`~shiny.render.text`
-    * :func:`~shiny.ui.output_text_verbatim`
+    * :func:`~shiny.ui.output_code`
     """
 
     if not container:
@@ -293,31 +294,25 @@ def output_code(id: str, placeholder: bool = True) -> Tag:
     :
         A UI element
 
-    Note
-    ----
-    This function is currently the same as :func:`~shiny.ui.output_text_verbatim`, but
-    this may change in future versions of Shiny.
-
     See Also
     --------
-    * :class:`~shiny.render.text`
+    * :class:`~shiny.render.code`
     * :func:`~shiny.ui.output_text`
-    * :func:`~shiny.ui.output_text_verbatim`
-
     """
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     return tags.pre(id=resolve_id(id), class_=cls)
 
 
-@add_example(example_name="input_text")
+@no_example()
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
-    Create a output container for some text.
+    Deprecated. Use :func:`~shiny.ui.output_code` (for monospaced text) or
+    :func:`~shiny.ui.output_text` (for plain text) instead.
 
-    Place a :class:`~shiny.render.text` result in the user interface.
-    Differs from :func:`~shiny.ui.output_text` in that it wraps the text in a
-    fixed-width container with a gray-ish background color and border.
+    Create a output container for some text. Place a :class:`~shiny.render.text` result
+    in the user interface. Differs from :func:`~shiny.ui.output_text` in that it wraps
+    the text in a fixed-width container with a gray-ish background color and border.
 
     Parameters
     ----------
@@ -335,13 +330,16 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
 
     See Also
     --------
-    * :class:`~shiny.render.text`
+    * :func:`~shiny.ui.output_code`
+    * :class:`~shiny.render.code`
     * :func:`~shiny.ui.output_text`
-
-    Example
-    -------
-    See :func:`~shiny.ui.output_text`
     """
+
+    warn_deprecated(
+        "`ui.output_text_verbatim()` is deprecated. Please use `ui.output_code()` / "
+        "`@render.code` for monospaced text, or `ui.output_text()` / `@render.text` "
+        "for plain text."
+    )
 
     cls = "shiny-text-output" + (" noplaceholder" if not placeholder else "")
     return tags.pre(id=resolve_id(id), class_=cls)

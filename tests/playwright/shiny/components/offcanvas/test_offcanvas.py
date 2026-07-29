@@ -8,7 +8,7 @@ def test_offcanvas_trigger(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     panel = controller.Offcanvas(page, "trigger_panel")
-    state = controller.OutputTextVerbatim(page, "trigger_state")
+    state = controller.OutputCode(page, "trigger_state")
 
     panel.expect_open(False)
     state.expect_value("closed")
@@ -27,7 +27,7 @@ def test_offcanvas_server_toggle(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     panel = controller.Offcanvas(page, "server_panel")
-    state = controller.OutputTextVerbatim(page, "server_state")
+    state = controller.OutputCode(page, "server_state")
 
     panel.expect_open(False)
     state.expect_value("closed")

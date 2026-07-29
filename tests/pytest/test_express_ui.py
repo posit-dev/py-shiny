@@ -112,7 +112,7 @@ def test_render_output_controls_complete():
     }
     # output_* UI components (in shiny.ui.__all__) that deliberately have no renderer.
     known_missing_output_ui = {
-        "output_text_verbatim",  # legacy alias of output_code
+        "output_text_verbatim",  # deprecated alias of output_code
         "output_markdown_stream",  # class-based (ui.MarkdownStream)
     }
     # Renderers whose UI component does not follow the `output_<name>` convention.

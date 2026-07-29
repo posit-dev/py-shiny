@@ -6,7 +6,7 @@ app_ui = ui.page_sidebar(
     ui.input_action_button("close_sidebar", label="Close sidebar", class_="me-3"),
     ui.br(),
     ui.br(),
-    ui.output_text_verbatim("state"),
+    ui.output_code("state"),
     fillable=False,
 )
 
@@ -22,7 +22,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         ui.update_sidebar("sidebar", show=False)
 
-    @render.text
+    @render.code
     def state():
         return f"input.sidebar(): {input.sidebar()}"
 

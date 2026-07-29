@@ -54,7 +54,7 @@ app_ui = ui.page_fluid(
             ui.card_header("Normal Telemetry (Full Collection)"),
             ui.input_slider("normal_slider", "Slider", 0, 100, 50),
             ui.input_action_button("normal_increment", "Increment Counter"),
-            ui.output_text_verbatim("normal_counter_display"),
+            ui.output_code("normal_counter_display"),
             ui.markdown("""
                 **Telemetry:** ✅ Shiny spans + value logs
                 This section generates full Shiny telemetry.
@@ -64,7 +64,7 @@ app_ui = ui.page_fluid(
             ui.card_header("Suppressed Telemetry (No Collection)"),
             ui.input_slider("private_slider", "Slider", 0, 100, 50),
             ui.input_action_button("private_increment", "Increment Counter"),
-            ui.output_text_verbatim("private_counter_display"),
+            ui.output_code("private_counter_display"),
             ui.markdown("""
                 **Telemetry:** ❌ No Shiny spans, no value logs
                 Uses `@otel.suppress` to suppress all Shiny telemetry.
@@ -74,7 +74,7 @@ app_ui = ui.page_fluid(
             ui.card_header("Re-enabled Telemetry (otel.collect)"),
             ui.input_slider("collect_slider", "Slider", 0, 100, 50),
             ui.input_action_button("collect_increment", "Increment Counter"),
-            ui.output_text_verbatim("collect_counter_display"),
+            ui.output_code("collect_counter_display"),
             ui.markdown("""
                 **Telemetry:** ✅ Shiny spans + value logs
                 Uses `@otel.collect` to re-enable Shiny telemetry inside
@@ -93,8 +93,8 @@ app_ui = ui.page_fluid(
         ),
     ),
     ui.layout_columns(
-        ui.output_text_verbatim("result"),
-        ui.output_text_verbatim("result_private"),
+        ui.output_code("result"),
+        ui.output_code("result_private"),
     ),
 )
 
@@ -110,7 +110,7 @@ def server(input, output, session):
         normal_counter.set(normal_counter.get() + 1)
         print(f"\n>>> Normal counter updated to: {normal_counter.get()}")
 
-    @render.text
+    @render.code
     def normal_counter_display():
         # Reading slider and counter generates telemetry
         slider_val = input.normal_slider()
@@ -131,7 +131,7 @@ def server(input, output, session):
                 f"\n>>> Private counter updated to: {private_counter.get()} (NO LOGS)"
             )
 
-        @render.text
+        @render.code
         def private_counter_display():
             # No telemetry for slider reads or counter reads
             slider_val = input.private_slider()
@@ -159,7 +159,7 @@ def server(input, output, session):
                     f"\n>>> Collect counter updated to: {collect_counter.get()} (TELEMETRY RE-ENABLED)"
                 )
 
-            @render.text
+            @render.code
             def collect_counter_display():
                 slider_val = input.collect_slider()
                 counter_val = collect_counter()
@@ -180,7 +180,7 @@ def server(input, output, session):
     def _():
         compute_counter_private.set(compute_counter_private.get() + 1)
 
-    @render.text
+    @render.code
     def result():
         """Normal computation with full telemetry."""
         count = compute_counter.get()
@@ -191,7 +191,7 @@ def server(input, output, session):
         total = sum(range(1, 101))
         return f"Sum 1..100 = {total:,}\nRun #{count}\n\n✅ Shiny spans + value logs"
 
-    @render.text
+    @render.code
     @otel.suppress  # Explicitly disable Shiny OTel for this output
     def result_private():
         """Private computation with no telemetry."""

@@ -10,7 +10,7 @@ app_ui = ui.page_fluid(
     ui.input_action_button("hide_btn", "Hide panel"),
     ui.br(),
     ui.br(),
-    ui.output_text_verbatim("state"),
+    ui.output_code("state"),
 )
 
 
@@ -25,7 +25,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         ui.hide_offcanvas("panel")
 
-    @render.text
+    @render.code
     def state():
         return f"Panel is {'open' if input.panel() else 'closed'}"
 

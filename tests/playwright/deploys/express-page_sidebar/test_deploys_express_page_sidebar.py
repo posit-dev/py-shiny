@@ -26,5 +26,5 @@ def test_express_page_sidebar(page: Page, app_url: str) -> None:
 
     sidebar = controller.Sidebar(page, "sidebar")
     sidebar.expect_text("SidebarTitle Sidebar Content")
-    output_txt = controller.OutputTextVerbatim(page, "txt")
+    output_txt = controller.OutputCode(page, "txt")
     output_txt.expect_value("50")

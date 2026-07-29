@@ -28,11 +28,11 @@ from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 0, 100, 20),
-    ui.output_text_verbatim("txt"),
+    ui.output_code("txt"),
 )
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def txt():
         return f"n*2 is {input.n() * 2}"
 
@@ -50,7 +50,7 @@ def test_doubles_slider_value(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     slider = controller.InputSlider(page, "n")
-    txt = controller.OutputTextVerbatim(page, "txt")
+    txt = controller.OutputCode(page, "txt")
 
     slider.expect_value("20")
     txt.expect_value("n*2 is 40")
@@ -92,7 +92,7 @@ Controller names follow the UI function: `ui.input_slider` →
 | Category | Controllers |
 |---|---|
 | Inputs | `InputActionButton`, `InputActionLink`, `InputBookmarkButton`, `InputCheckbox`, `InputCheckboxGroup`, `InputCodeEditor`, `InputDarkMode`, `InputDate`, `InputDateRange`, `InputFile`, `InputNumeric`, `InputPassword`, `InputRadioButtons`, `InputSelect`, `InputSelectize`, `InputSlider`, `InputSliderRange`, `InputSubmitTextarea`, `InputSwitch`, `InputTaskButton`, `InputText`, `InputTextArea` |
-| Outputs | `OutputCode`, `OutputDataFrame`, `OutputImage`, `OutputPlot`, `OutputTable`, `OutputText`, `OutputTextVerbatim`, `OutputUi` |
+| Outputs | `OutputCode`, `OutputDataFrame`, `OutputImage`, `OutputPlot`, `OutputTable`, `OutputText`, `OutputUi` |
 | Downloads | `DownloadButton`, `DownloadLink` |
 | Containers | `Accordion`, `AccordionPanel`, `Card`, `ValueBox`, `Sidebar`, `Offcanvas`, `Popover`, `Tooltip`, `Toast`, `Chat`, `ToolbarInputButton`, `ToolbarInputSelect` |
 | Navigation | `NavPanel`, `NavsetBar`, `NavsetCardPill`, `NavsetCardTab`, `NavsetCardUnderline`, `NavsetHidden`, `NavsetPill`, `NavsetPillList`, `NavsetTab`, `NavsetUnderline`, `PageNavbar` |

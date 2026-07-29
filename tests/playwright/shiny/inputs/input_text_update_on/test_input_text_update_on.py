@@ -17,7 +17,7 @@ def test_text_input_change(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     input = controller.InputText(page, "change-txt")
-    output = controller.OutputTextVerbatim(page, "change-value_txt")
+    output = controller.OutputCode(page, "change-value_txt")
     update = controller.InputActionButton(page, "change-update_text")
 
     # Test textInput() -- updateOn='change'
@@ -43,7 +43,7 @@ def test_text_input_blur(page: Page, local_app: ShinyAppProc):
 
     # Test textInput() -- updateOn='blur'
     input = controller.InputText(page, "blur-txt")
-    output = controller.OutputTextVerbatim(page, "blur-value_txt")
+    output = controller.OutputCode(page, "blur-value_txt")
     update = controller.InputActionButton(page, "blur-update_text")
 
     the_value = "Hello"
@@ -86,7 +86,7 @@ def test_text_area_input_change(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     input = controller.InputTextArea(page, "change-txtarea")
-    output = controller.OutputTextVerbatim(page, "change-value_txtarea")
+    output = controller.OutputCode(page, "change-value_txtarea")
     update = controller.InputActionButton(page, "change-update_text_area")
 
     the_value = "Hello"
@@ -110,7 +110,7 @@ def test_text_area_input_blur(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     input = controller.InputTextArea(page, "blur-txtarea")
-    output = controller.OutputTextVerbatim(page, "blur-value_txtarea")
+    output = controller.OutputCode(page, "blur-value_txtarea")
     update = controller.InputActionButton(page, "blur-update_text_area")
 
     the_value = "Hello"
@@ -161,7 +161,7 @@ def test_numeric_input_change(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     input = controller.InputNumeric(page, "change-num")
-    output = controller.OutputTextVerbatim(page, "change-value_num")
+    output = controller.OutputCode(page, "change-value_num")
     update = controller.InputActionButton(page, "change-update_number")
 
     the_value = "10"
@@ -186,7 +186,7 @@ def test_numeric_input_blur(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     input = controller.InputNumeric(page, "blur-num")
-    output = controller.OutputTextVerbatim(page, "blur-value_num")
+    output = controller.OutputCode(page, "blur-value_num")
     update = controller.InputActionButton(page, "blur-update_number")
 
     the_value = "10"
@@ -228,7 +228,7 @@ def test_password_input_change(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     input = controller.InputPassword(page, "change-pwd")
-    output = controller.OutputTextVerbatim(page, "change-value_pwd")
+    output = controller.OutputCode(page, "change-value_pwd")
     update = controller.InputActionButton(page, "change-update_pwd")
 
     the_value = "H3ll0"
@@ -252,7 +252,7 @@ def test_password_input_blur(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     input = controller.InputPassword(page, "blur-pwd")
-    output = controller.OutputTextVerbatim(page, "blur-value_pwd")
+    output = controller.OutputCode(page, "blur-value_pwd")
     update = controller.InputActionButton(page, "blur-update_pwd")
 
     the_value = "H3ll0"

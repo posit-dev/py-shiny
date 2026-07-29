@@ -12,7 +12,7 @@ def test_row_selection(page: Page, local_app: ShinyAppProc) -> None:
     df = controller.OutputDataFrame(page, "df1")
     add_row = controller.InputActionButton(page, "add_row")
     clear_table = controller.InputActionButton(page, "clear_table")
-    selected_rows = controller.OutputTextVerbatim(page, "number_of_selected_rows")
+    selected_rows = controller.OutputCode(page, "number_of_selected_rows")
 
     df.expect_nrow(0)
     selected_rows.expect_value("Selected rows: 0")

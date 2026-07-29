@@ -41,12 +41,12 @@ def test_slider_regular(page: Page, local_app: ShinyAppProc) -> None:
     s0.expect_timezone(None)
     s0.expect_drag_range(None)
     s0.expect_animate(exists=False)
-    controller.OutputTextVerbatim(page, "txt0").expect_value("500")
+    controller.OutputCode(page, "txt0").expect_value("500")
 
     new_val = "20"
     s0.set(new_val)
     s0.expect_value(new_val)
-    controller.OutputTextVerbatim(page, "txt0").expect_value(new_val)
+    controller.OutputCode(page, "txt0").expect_value(new_val)
 
     # A value the slider cannot produce raises with the slider's actual values
     with pytest.raises(ValueError, match="Could not find value '20.5'"):
@@ -70,7 +70,7 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     s1.expect_timezone(None)
     s1.expect_drag_range("true")
     s1.expect_animate(exists=False)
-    controller.OutputTextVerbatim(page, "txt1").expect_value("(200, 500)")
+    controller.OutputCode(page, "txt1").expect_value("(200, 500)")
 
     new_val = ("605", "840")
     s1.set(new_val)
@@ -81,16 +81,14 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     s1.expect_value((new_val[0], MISSING))
     s1.expect_value((MISSING, new_val[1]))
     s1.expect_value(new_val)
-    controller.OutputTextVerbatim(page, "txt1").expect_value(
-        f"({new_val[0]}, {new_val[1]})"
-    )
+    controller.OutputCode(page, "txt1").expect_value(f"({new_val[0]}, {new_val[1]})")
 
     # A range completely below the current one exercises the `from`-first move
     # ordering (the completely-higher range above exercised `to`-first)
     lower_val = ("50", "150")
     s1.set(lower_val)
     s1.expect_value(lower_val)
-    controller.OutputTextVerbatim(page, "txt1").expect_value(
+    controller.OutputCode(page, "txt1").expect_value(
         f"({lower_val[0]}, {lower_val[1]})"
     )
 
@@ -99,7 +97,7 @@ def test_slider_range(page: Page, local_app: ShinyAppProc) -> None:
     inner_val = ("75", "100")
     s1.set(inner_val)
     s1.expect_value(inner_val)
-    controller.OutputTextVerbatim(page, "txt1").expect_value(
+    controller.OutputCode(page, "txt1").expect_value(
         f"({inner_val[0]}, {inner_val[1]})"
     )
 
@@ -121,11 +119,11 @@ def test_slider_custom_format(page: Page, local_app: ShinyAppProc) -> None:
     s2.expect_timezone(None)
     s2.expect_drag_range(None)
     s2.expect_animate_options(loop=True, interval=500)
-    controller.OutputTextVerbatim(page, "txt2").expect_value("0")
+    controller.OutputCode(page, "txt2").expect_value("0")
 
     s2.set("$7,500.00")
     s2.expect_value("$7,500.00")
-    controller.OutputTextVerbatim(page, "txt2").expect_value("7500")
+    controller.OutputCode(page, "txt2").expect_value("7500")
 
 
 def test_slider_loop(page: Page, local_app: ShinyAppProc) -> None:
@@ -145,11 +143,11 @@ def test_slider_loop(page: Page, local_app: ShinyAppProc) -> None:
     s3.expect_timezone(None)
     s3.expect_drag_range(None)
     s3.expect_animate_options(loop=True, interval=300)
-    controller.OutputTextVerbatim(page, "txt3").expect_value("1000")
+    controller.OutputCode(page, "txt3").expect_value("1000")
 
     s3.set("1,441")
     s3.expect_value("1,441")
-    controller.OutputTextVerbatim(page, "txt3").expect_value("1441")
+    controller.OutputCode(page, "txt3").expect_value("1441")
 
     # Play for a little bit
     s3.click_play()
@@ -179,7 +177,7 @@ def test_slider_play(page: Page, local_app: ShinyAppProc) -> None:
     s4.expect_timezone(None)
     s4.expect_drag_range(None)
     s4.expect_animate_options(loop=False, interval=100)
-    controller.OutputTextVerbatim(page, "txt4").expect_value("1")
+    controller.OutputCode(page, "txt4").expect_value("1")
 
     s4.click_play()
     s4.expect_value("5")
@@ -198,12 +196,12 @@ def test_slider_date_format(page: Page, local_app: ShinyAppProc) -> None:
     s5.expect_time_format("%m/%d/%y")
     s5.expect_timezone("0000")
     s5.expect_drag_range(None)
-    controller.OutputTextVerbatim(page, "txt5").expect_value("2024-01-05")
+    controller.OutputCode(page, "txt5").expect_value("2024-01-05")
 
     new_val = "01/08/24"
     s5.set(new_val)
     s5.expect_value(new_val)
-    controller.OutputTextVerbatim(page, "txt5").expect_value("2024-01-08")
+    controller.OutputCode(page, "txt5").expect_value("2024-01-08")
 
 
 def test_slider_time_format(page: Page, local_app: ShinyAppProc) -> None:
@@ -218,12 +216,12 @@ def test_slider_time_format(page: Page, local_app: ShinyAppProc) -> None:
     s6.expect_time_format("%F %T")
     s6.expect_width("600px")
     s6.expect_drag_range(None)
-    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-01-05 12:00:00")
+    controller.OutputCode(page, "txt6").expect_value("2024-01-05 12:00:00")
 
     new_val = "2024-01-01 00:00:00"
     s6.set(new_val)
     s6.expect_value(new_val)
-    controller.OutputTextVerbatim(page, "txt6").expect_value("2024-01-01 00:00:00")
+    controller.OutputCode(page, "txt6").expect_value("2024-01-01 00:00:00")
 
 
 def test_slider_drag_range_disabled(page: Page, local_app: ShinyAppProc) -> None:
@@ -237,6 +235,4 @@ def test_slider_drag_range_disabled(page: Page, local_app: ShinyAppProc) -> None
     s7.expect_drag_range("false")
     new_val = ("25", "502")
     s7.set(new_val)
-    controller.OutputTextVerbatim(page, "txt7").expect_value(
-        f"({new_val[0]}, {new_val[1]})"
-    )
+    controller.OutputCode(page, "txt7").expect_value(f"({new_val[0]}, {new_val[1]})")

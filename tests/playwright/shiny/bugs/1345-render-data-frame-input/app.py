@@ -4,8 +4,8 @@ from shiny import App, Inputs, reactive, render, ui
 
 app_ui = ui.page_fluid(
     ui.output_data_frame("df1"),
-    ui.output_text_verbatim("selected_rows", placeholder=True),
-    ui.output_text_verbatim("cell_selection", placeholder=True),
+    ui.output_code("selected_rows", placeholder=True),
+    ui.output_code("cell_selection", placeholder=True),
 )
 
 
@@ -16,11 +16,11 @@ def server(input: Inputs):
     def df1():
         return render.DataGrid(df(), selection_mode="rows")
 
-    @render.text
+    @render.code
     def selected_rows():
         return f"Input selected rows: {input.df1_selected_rows()}"
 
-    @render.text
+    @render.code
     def cell_selection():
         return f"Cell selection rows: {df1.cell_selection()['rows']}"
 

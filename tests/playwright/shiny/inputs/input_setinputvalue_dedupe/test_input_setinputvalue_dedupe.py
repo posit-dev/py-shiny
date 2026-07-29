@@ -9,10 +9,10 @@ from shiny.run import ShinyAppProc
 def test_setinputvalue_dedupe(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
-    int_default_count = controller.OutputTextVerbatim(page, "int_default_count")
-    int_event_count = controller.OutputTextVerbatim(page, "int_event_count")
-    list_default_count = controller.OutputTextVerbatim(page, "list_default_count")
-    list_event_count = controller.OutputTextVerbatim(page, "list_event_count")
+    int_default_count = controller.OutputCode(page, "int_default_count")
+    int_event_count = controller.OutputCode(page, "int_event_count")
+    list_default_count = controller.OutputCode(page, "list_default_count")
+    list_event_count = controller.OutputCode(page, "list_event_count")
 
     int_default_count.expect_value("0")
     int_event_count.expect_value("0")
@@ -49,7 +49,7 @@ def test_setinputvalue_event_priority_strings(
     """Regression test for https://github.com/posit-dev/py-shiny/issues/1600"""
     page.goto(local_app.url)
 
-    result = controller.OutputTextVerbatim(page, "str_event_count")
+    result = controller.OutputCode(page, "str_event_count")
     result.expect_value("0")
 
     btn_empty = page.locator("#btn_str_empty")

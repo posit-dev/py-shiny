@@ -21,7 +21,7 @@ app_ui = ui.page_fillable(
             language="python",
             height="200px",
         ),
-        ui.output_text_verbatim("code_value", placeholder=True),
+        ui.output_code("code_value", placeholder=True),
         ui.hr(),
         ui.h3("Read-only Editor"),
         ui.input_code_editor(
@@ -41,7 +41,7 @@ app_ui = ui.page_fillable(
             language="markdown",
             height="150px",
         ),
-        ui.output_text_verbatim("markdown_value", placeholder=True),
+        ui.output_code("markdown_value", placeholder=True),
         ui.hr(),
         ui.h3("Custom themed Editor"),
         ui.input_code_editor(
@@ -62,11 +62,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     read_only_state = reactive.value(False)  # Match initial editor state
     line_numbers_state = reactive.value(True)
 
-    @render.text
+    @render.code
     def code_value():
         return f"Current value:\n{input.code()}"
 
-    @render.text
+    @render.code
     def markdown_value():
         return f"Current value:\n{input.markdown()}"
 

@@ -5,6 +5,7 @@ from typing import Any, Literal, Protocol, Sequence, cast
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
+from ..._deprecated import warn_deprecated
 from ...render._data_frame import ColumnFilter, ColumnSort, assert_column_filters
 from ...types import ListOrTuple
 from .._types import AttrValue, ListPatternOrStr, PatternOrStr, StyleValue, Timeout
@@ -216,7 +217,15 @@ class OutputCode(_OutputTextValue):
 
 
 class OutputTextVerbatim(_OutputTextValue):
-    """Controller for :func:`shiny.ui.output_text_verbatim`."""
+    """
+    Deprecated. Use :class:`~shiny.playwright.controller.OutputCode` instead.
+
+    Controller for :func:`shiny.ui.output_text_verbatim`.
+
+    See Also
+    --------
+    * :class:`~shiny.playwright.controller.OutputCode`
+    """
 
     loc: Locator
     """
@@ -234,6 +243,10 @@ class OutputTextVerbatim(_OutputTextValue):
         id
             The ID of the verbatim text output.
         """
+        warn_deprecated(
+            "`controller.OutputTextVerbatim` is deprecated, along with "
+            "`ui.output_text_verbatim()`. Please use `controller.OutputCode` instead."
+        )
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
 
     def expect_has_placeholder(

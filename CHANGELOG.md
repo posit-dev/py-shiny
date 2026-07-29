@@ -5,7 +5,13 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [Unreleased]
+
+### Deprecations
+
+* `ui.output_text_verbatim()` is deprecated and now emits a `ShinyDeprecationWarning`. Please use `ui.output_code()` / `@render.code` to create an output container for code (monospaced text), or `ui.output_text()` / `@render.text` to create an output container for plain text. (#2097)
+
+* `playwright.controller.OutputTextVerbatim` is deprecated alongside `ui.output_text_verbatim()` and now emits a `ShinyDeprecationWarning` when constructed. Please use `playwright.controller.OutputCode` instead. (#2097)
 
 ### Bug fixes
 

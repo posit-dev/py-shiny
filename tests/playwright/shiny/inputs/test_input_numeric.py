@@ -62,7 +62,7 @@ def test_input_numeric_app(page: Page, app: ShinyAppProc) -> None:
     # obs.label.expect.to_have_text("Observed")
     obs.expect.to_have_value("10")
 
-    value = controller.OutputTextVerbatim(page, "value")
+    value = controller.OutputCode(page, "value")
     value.expect_value("10")
 
     output = page.locator("#value")

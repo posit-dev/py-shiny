@@ -14,7 +14,7 @@ def expect_state(
     value: object,
 ):
     new_module_id = f"{module_id}-" if module_id else ""
-    controller.OutputTextVerbatim(
+    controller.OutputCode(
         page,
         f"{new_module_id}status_{key}",
     ).expect_value(f"ui.{key}: `{value}`")
@@ -28,7 +28,7 @@ def expect_x_state(
 ):
     new_module_id = f"{module_id}-" if module_id else ""
     new_key = key.replace("x_", "")
-    controller.OutputTextVerbatim(
+    controller.OutputCode(
         page,
         f"{new_module_id}status_x_{new_key}",
     ).expect_value(f"x.ui.{new_key}: `{value}`")

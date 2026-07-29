@@ -86,7 +86,6 @@ quartodoc:
         - playwright.controller.OutputPlot
         - playwright.controller.OutputTable
         - playwright.controller.OutputText
-        - playwright.controller.OutputTextVerbatim
         - playwright.controller.OutputUi
     - title: App test values
       desc: Read a session's test-mode snapshot of input, output, and export values.
@@ -111,3 +110,7 @@ quartodoc:
       contents:
         - run.run_shiny_app
         - run.ShinyAppProc
+    - title: Deprecated
+      desc: ""
+      contents:
+        - playwright.controller.OutputTextVerbatim

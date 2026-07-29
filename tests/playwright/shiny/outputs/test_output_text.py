@@ -12,8 +12,8 @@ def test_output_text_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     txt = controller.InputText(page, "txt")
     text = controller.OutputText(page, "text")
-    verb = controller.OutputTextVerbatim(page, "verb")
-    verb_no_placeholder = controller.OutputTextVerbatim(page, "verb_no_placeholder")
+    verb = controller.OutputCode(page, "verb")
+    verb_no_placeholder = controller.OutputCode(page, "verb_no_placeholder")
 
     txt.set("")  # Reset text
 

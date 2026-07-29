@@ -18,7 +18,7 @@ def test_slider_app(page: Page, local_app: ShinyAppProc) -> None:
     ):
         slider_times = controller.InputSlider(page, f"{id}-times")
         btn_reset = controller.InputActionButton(page, f"{id}-reset")
-        out_txt = controller.OutputTextVerbatim(page, f"{id}-txt")
+        out_txt = controller.OutputCode(page, f"{id}-txt")
 
         if value[0] is not None:
             out_txt.expect_value(value[0])
