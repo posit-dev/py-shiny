@@ -413,6 +413,9 @@ quartodoc:
         - render.download
         - render.transformer.output_transformer
         - render.transformer.resolve_value_fn
+        # `ui.update_navs()` is deprecated (superseded by `ui.update_navset()`) but
+        # still exists. It is deliberately left undocumented; uncomment to publish it.
+        # - ui.update_navs
     - title: Experimental
       desc: >
         These methods are under consideration and are considered unstable.
