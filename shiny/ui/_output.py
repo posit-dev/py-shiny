@@ -15,7 +15,7 @@ from typing import Optional
 from htmltools import Tag, TagAttrValue, TagFunction, css, div, tags
 
 from .._deprecated import warn_deprecated
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ..module import resolve_id
 from ..types import MISSING, MISSING_TYPE
 from ._plot_output_opts import (
@@ -304,7 +304,7 @@ def output_code(id: str, placeholder: bool = True) -> Tag:
     return tags.pre(id=resolve_id(id), class_=cls)
 
 
-@add_example(example_name="input_text")
+@no_example()
 def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     """
     Deprecated. Use :func:`~shiny.ui.output_code` (for monospaced text) or
@@ -332,10 +332,6 @@ def output_text_verbatim(id: str, placeholder: bool = False) -> Tag:
     --------
     * :func:`~shiny.ui.output_code`
     * :func:`~shiny.ui.output_text`
-
-    Example
-    -------
-    See :func:`~shiny.ui.output_text`
     """
 
     warn_deprecated(
