@@ -23,15 +23,17 @@ def click_extended_task_button(
 
 def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    y = controller.InputNumeric(page, "y")
-    y.set("4")
     result = controller.OutputCode(page, "show_result")
     current_time = controller.OutputCode(page, "current_time")
-    # Make sure the time has content
-    current_time.expect.not_to_be_empty()
 
     # Wait until shiny is stable
-    result.expect_value("3")
+    result.expect_value("3", timeout=10 * 1000)
+
+    # Make sure the time has content
+    current_time.expect.not_to_be_empty(timeout=10 * 1000)
+
+    y = controller.InputNumeric(page, "y")
+    y.set("4")
 
     # Extended task
     button_task = controller.InputTaskButton(page, "btn_task")
