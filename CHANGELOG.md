@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.output_text_verbatim()` is deprecated and now emits a `ShinyDeprecationWarning`. Please use `ui.output_code()` / `@render.code` to create an output container for code (monospaced text), or `ui.output_text()` / `@render.text` to create an output container for plain text. (#2097)
 
+* `playwright.controller.OutputTextVerbatim` is deprecated alongside `ui.output_text_verbatim()` and now emits a `ShinyDeprecationWarning` when constructed. Please use `playwright.controller.OutputCode` instead. (#2097)
+
 ### Bug fixes
 
 * The `ui.Theme` API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`. The example directory now declares `libsass` in a `requirements.txt`. (#2386)
