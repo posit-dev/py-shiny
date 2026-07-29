@@ -125,7 +125,11 @@ def input_task_button(
     if icon_busy is MISSING:
         icon_busy = HTML(spinner_icon)
 
-    css_class = "bslib-task-button" + f" btn btn-{type}" if type is not None else ""
+    # `.bslib-task-button` is how bslib's input binding finds the button, so it must be
+    # present even when `type=None` drops the Bootstrap-specific classes.
+    css_class = "bslib-task-button"
+    if type is not None:
+        css_class += f" btn btn-{type}"
 
     return tags.button(
         {"class": css_class, "style": css(width=width), "data-auto-reset": auto_reset},
