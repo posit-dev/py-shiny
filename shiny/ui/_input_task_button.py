@@ -125,8 +125,6 @@ def input_task_button(
     if icon_busy is MISSING:
         icon_busy = HTML(spinner_icon)
 
-    # `.bslib-task-button` is how bslib's input binding finds the button, so it must be
-    # present even when `type=None` drops the Bootstrap-specific classes.
     css_class = "bslib-task-button"
     if type is not None:
         css_class += f" btn btn-{type}"
