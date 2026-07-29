@@ -208,7 +208,6 @@ quartodoc:
         - ui.output_data_frame
         - ui.output_text
         - ui.output_code
-        - ui.output_text_verbatim
         - ui.output_ui
         - render.plot
         - render.image
@@ -411,6 +410,7 @@ quartodoc:
     - title: Deprecated
       desc: ""
       contents:
+        - ui.output_text_verbatim
         - render.transformer.output_transformer
         - render.transformer.resolve_value_fn
     - title: Experimental
