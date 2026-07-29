@@ -77,16 +77,20 @@ For each marker:
 1. Read it — it says what to do and whether it happens **before** or **after** the PyPI
    publish, and links the holding PR it depends on.
 2. Add it to the TodoWrite checklist at the correct point in the phase order.
-3. Do NOT complete the release while any `TODO: release` marker is unresolved: either the
+3. **Scan the holding PR's own diff for `TODO: release` markers before merging it.** A
+   holding PR frequently carries its own stopgaps — most often a `requirements.txt` or
+   `pyproject.toml` switched to `git+https://github.com/posit-dev/py-shiny.git@main`
+   because the API it needs is not on PyPI yet. Merging the holding PR without reverting
+   those leaves a **git dependency in the downstream repo**, which is exactly what the
+   pre-release gate screens for everywhere else. Resolve them, verify against the newly
+   published wheel that the API really exists (check the parameter names the downstream
+   code passes, not just that the symbol imports), then merge.
+4. Do NOT complete the release while any `TODO: release` marker is unresolved: either the
    action has been performed and the marker removed, or the user has explicitly deferred it.
 
-**Known holding item (as of py-shiny #2364 — `render.download` deprecation):**
-`.github/workflows/pytest.yaml` temporarily pins the `py-shiny-templates` checkout to the
-branch of [posit-dev/py-shiny-templates#55](https://github.com/posit-dev/py-shiny-templates/pull/55)
-(which migrates the templates to `render.download_button`/`render.download_link`). During
-Phase 3 (py-shiny), **after** this py-shiny version is published to PyPI: merge
-py-shiny-templates#55, then open a follow-up py-shiny PR removing the `ref:` pin so CI
-tracks the templates' default branch again. Remove the `TODO: release` comment in that PR.
+There is no standing holding item at the moment. When one exists, describe it here with
+its holding PR link and whether it acts before or after publish, and delete the note once
+the release that consumes it has shipped.
 
 ## Phase Overview
 
@@ -141,19 +145,51 @@ Many phases (2-5, 7) follow this common flow:
 
 ### GH Release naming conventions
 
-Each repo's PyPI publish workflow triggers based on the GH Release **title** matching a specific
-prefix. Always check the workflow file if unsure, but the known patterns are:
+Most repos' PyPI publish workflows are gated on the GH Release **title**. The gate is not
+the same everywhere — check the workflow file if unsure. Use the titles below regardless,
+for consistency:
 
-| Repo | Release title must start with | Example |
-|------|-------------------------------|---------|
-| py-htmltools | `htmltools` | `htmltools 0.6.1` |
-| py-shiny | `shiny` | `shiny 1.6.1` |
-| py-shinyswatch | `shinyswatch` | `shinyswatch 0.10.0` |
-| py-shinywidgets | `shinywidgets` | `shinywidgets 0.8.0` |
-| py-shinylive | `shinylive` | `shinylive 0.8.8` |
+| Repo | Title to use | Publish gate |
+|------|--------------|--------------|
+| py-htmltools | `htmltools 0.7.0` | starts with `htmltools` |
+| py-shiny | `shiny 1.7.0` | starts with `shiny` |
+| py-shinyswatch | `shinyswatch 0.12.0` | **not** `TEST` (see below) |
+| py-shinywidgets | `shinywidgets 0.8.1` | starts with `shinywidgets` |
+| py-shinylive | `shinylive 0.8.10` | starts with `shinylive` |
+
+**Two different failure modes**, so it matters which gate a repo uses:
+
+- **Prefix gates** (py-shiny, py-htmltools, py-shinywidgets, py-shinylive) fail *silently*:
+  a mistitled release makes the publish step skip while the workflow still reports success,
+  so the package never reaches PyPI. See Phase 7 for how to recover (recreate the GH Release
+  object to re-fire `release: published`; keep the tag).
+- **py-shinyswatch inverts this.** `.github/workflows/pytest.yaml` gates prod publish on
+  `if: ${{ !startsWith(github.event.release.name, 'TEST') }}` and test-PyPI publish on
+  `startsWith(..., 'TEST')`. So *any* non-`TEST` title publishes to prod — the title is
+  cosmetic, and the real hazard is the opposite one: an accidental `TEST` prefix silently
+  diverts the release to test.pypi.org.
 
 Also, before writing release notes, check existing releases for format conventions:
 `gh api repos/<org>/<repo>/releases --jq '.[:3] | .[] | .body'`
+
+### Publishing to PyPI is not instantaneous
+
+After a `Deploy to PyPI` job reports success, PyPI's index can lag by minutes. Two
+consequences:
+
+- Poll **PyPI itself**, not just the workflow, before starting a phase that installs the
+  new version: `curl -s https://pypi.org/pypi/<pkg>/json | jq -r .info.version`.
+- A downstream repo's CI may still fail to resolve the new floor
+  (`ERROR: Could not find a version that satisfies the requirement shiny>=X.Y.Z`) on one
+  runner while the rest of the matrix succeeds. That is a stale index, not a bad pin —
+  **rerun the job**, do not weaken the requirement.
+
+### Verifying build commands
+
+When running a long build through a pipe (`make all 2>&1 | tail -60`), the reported exit
+status comes from `tail`, not from `make` — a failed build looks like success. Either drop
+the pipe, use `set -o pipefail`, or verify the build from its artifacts (expected wheels
+present and at the expected versions) rather than from the exit code.
 
 ## Parallelism
 

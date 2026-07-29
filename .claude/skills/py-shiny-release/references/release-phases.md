@@ -2,8 +2,32 @@
 
 ## Phase 1: Prerequisites
 
-- [ ] Check if any Shiny HTML Dependencies were updated or added
+- [ ] Check if any Shiny HTML Dependencies were updated or added. A quick signal is
+      `git diff v<PREV>..origin/main -- shiny/_versions.py shiny/www/` — a bumped
+      `shiny_html_deps` plus changes under `shiny/www/shared/sass/` means the theme
+      presets moved.
 - [ ] If yes, show the user which files changed (e.g., `git diff main -- shiny/www/shared/`) and ask if py-shinyswatch and/or py-shinywidgets need to be updated before proceeding
+
+**py-shinyswatch is almost always affected, and the answer is Phase 4, not Phase 1.**
+shinyswatch *commits* pre-built CSS — `shinyswatch/bsw5/<theme>/bootswatch.min.css`, 26
+files — compiled from shiny's own theme presets by `scripts/update_themes.py`. Those files
+go stale whenever shiny's preset SCSS changes, and the staleness is invisible: apps render,
+just without the new component's styles.
+
+Because the script compiles against the *installed* shiny, it can only run once the new
+py-shiny is on PyPI. So nothing blocks Phase 3 — but plan on a shinyswatch release in
+Phase 4 whenever the presets moved.
+
+To confirm whether a regeneration is actually needed, grep the committed CSS for a selector
+that the new shiny release added, e.g.:
+
+```bash
+# 0 matches in shinyswatch => stale
+gh api repos/posit-dev/py-shinyswatch/contents/shinyswatch/bsw5/darkly/bootswatch.min.css \
+  --jq '.content' | base64 -d | grep -c "offcanvas-footer"
+```
+
+py-shinywidgets does **not** vendor shiny SCSS, so it is usually unaffected.
 - [ ] **Python version check**: Look up the current [Python release schedule](https://devguide.python.org/versions/) and check if any Python versions have reached end-of-life since the last release. If so, ask the user whether to drop them from the following packages during this release cycle:
   - py-shiny (`pyproject.toml`, CI workflow)
   - py-htmltools (`pyproject.toml`, CI workflow)
@@ -104,7 +128,41 @@ Repo: `posit-dev/py-shinyswatch`
 
 - [ ] **Confirm version**: Look up the current version (`gh api repos/posit-dev/py-shinyswatch/releases/latest --jq .tag_name`), suggest the next minor bump, and ask the user to confirm the release version
 
-Follow the general package release pattern (same as Phase 2).
+Follow the general package release pattern (same as Phase 2), plus the theme regeneration
+below when Phase 1 found that shiny's presets moved.
+
+### Regenerating the pre-built themes
+
+Must happen **after** the new py-shiny is on PyPI — the script compiles against the
+installed shiny.
+
+- [ ] Install the *released* shiny plus shinyswatch's dev extras into a venv. The extras
+      matter: `scripts/update_themes.py` imports `black` and `sass`, and
+      `scripts/get_theme_values.py` imports `tinycss2`. All are declared under
+      `[options.extras_require] dev` in `setup.cfg`, so `pip install -e ".[dev]"` is the
+      right move — a hand-rolled minimal venv will fail **partway through**, after all 26
+      CSS files are already written but before `_bsw5.py`/`theme.py` are regenerated, which
+      looks deceptively like a successful run.
+- [ ] Run `make update-bootswatch` (= `python3 scripts/update_themes.py`)
+- [ ] **Verify the regeneration actually took**, by grepping the regenerated CSS for a
+      selector the new shiny release added — do not assume the script worked:
+
+      ```bash
+      # expect this to go from 0 -> 1, in every theme
+      for f in shinyswatch/bsw5/*/bootswatch.min.css; do
+        grep -c "offcanvas-footer" "$f" | grep -q '^0$' && echo "MISSING: $f"
+      done
+      ```
+
+      `git status` should show ~26 modified `bootswatch.min.css` files. `_bsw5.py` and
+      `theme.py` change only when the theme list or Bootstrap version changed.
+- [ ] Bump `__version__` in `shinyswatch/__init__.py` (`setup.cfg` resolves the version
+      from this attribute via `version = attr:`, so this is the real bump)
+- [ ] Raise the shiny floor in `setup.cfg` (`install_requires`) to the new release
+- [ ] `CHANGELOG.md`: follow the established wording — "Update pre-built shinyswatch themes
+      for use with Shiny vX.Y.Z." — plus a line noting the new shiny floor
+
+Note: py-shinyswatch has no conda-forge feedstock, so Phase 11 does not apply to it.
 
 Ask user: "Is py-shinyswatch being released? What version? Do we need to update docs after shinylive updates?"
 
@@ -137,9 +195,49 @@ Repo: `posit-dev/shinylive`
   - `packages/py-htmltools` → latest py-htmltools tag (if released this cycle)
   - `packages/py-shinywidgets` → latest py-shinywidgets tag
   - `packages/py-faicons` → check if update needed
+- [ ] **Update the PyPI-sourced pins by hand** — see "The `latest` trap" below. At minimum
+      check `shinyswatch`, which tracks a py-shiny release of its own.
 - [ ] Run `make clean && make all`
 - [ ] **Verify `shinylive_lock.json`** — check that ALL package versions match their latest releases. The lockfile reflects what's actually bundled. Don't trust that updating one submodule will cascade to others.
+- [ ] Cross-check the built wheels: `ls build/shinylive/pyodide/*.whl` should show the
+      expected versions of shiny, shinyswatch, htmltools, shinywidgets and faicons.
 - [ ] Run `npm install --package-lock-only` to sync `package-lock.json` version with `package.json`
+
+### The `latest` trap: PyPI pins do not update themselves
+
+`shinylive_requirements.json` marks some packages `{"source": "pypi", "version": "latest"}`.
+**`make all` will not move them.** It runs `update_packages_lock_local`, which filters the
+requirements down to `source: "local"` and then merges into the existing lockfile — PyPI
+entries are carried over verbatim and never re-resolved. `"latest"` means "latest as of the
+last full regen". This is how `shinyswatch` sat at 0.8.0 (April 2023) until shinylive#235
+noticed, two and a half years later.
+
+The obvious fix is unavailable: a full `make update_packages_lock` is **broken** — see
+[shinylive#233](https://github.com/posit-dev/shinylive/issues/233). It moves ~28 packages
+and yields a lockfile that fails at runtime with
+`No known package with name 'jupyterlab_widgets'`, breaking every shinywidgets app. **Do not
+run it** as part of a release.
+
+Instead, edit the single entry, generating it with the repo's own helper so field order and
+formatting match the file (this also pulls the package's real dependency specs from PyPI, so
+e.g. a raised `shiny>=` floor comes along automatically):
+
+```bash
+python -c "
+import sys, json; sys.path.insert(0, 'scripts')
+import pyodide_packages as pp
+print(json.dumps(pp._get_pypi_package_info('shinyswatch', 'latest'), indent=2))
+"
+```
+
+Splice `version`, `filename`, `sha256`, `url` and `depends` into the existing block, keeping
+the file's compact one-line-per-dependency style. Expect a ~5-line diff. Re-verify after
+`make all` that the edit survived (it should — the local pass does not disturb it).
+
+Harmless finding, so don't chase it: `build/shinylive/pyodide` will contain a couple of
+wheels not referenced by `pyodide-lock.json` (e.g. `anyio`, `narwhals`). Those are pyodide's
+own upstream versions, which shinylive's older pins override in the merged lock. Both files
+land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likewise expected.
 
 ### Local testing and PR
 
@@ -165,19 +263,29 @@ Repo: `posit-dev/shinylive`
 
 ### Local shinylive example testing procedure
 
-Same approach as the Phase 3 shinylive testing, but against the local `make serve` URL:
+Use the same [`references/test_shinylive_site.py`](test_shinylive_site.py) script as Phase 3,
+pointed at the local dev server.
 
-1. Determine the local serve URL (typically `http://localhost:8080`)
-2. List Python examples from the local repo's `examples/python/` directory
-3. The base URL for each example is:
-   `http://localhost:8080/py/examples/#EXAMPLE_NAME`
-4. For each example, use Playwright MCP tools to:
-   a. Navigate to the example URL (`browser_navigate`)
-   b. Wait for the app to load (`browser_wait_for`)
-   c. Check browser console messages (`browser_console_messages`) for Python errors/tracebacks
-   d. Record the result (pass/fail + any error text)
-5. Present the same summary table and broken app links as in Phase 3
-6. Ask user to verify any broken apps before proceeding
+**The local URL layout differs from the deployed one.** `make serve` binds **port 3000**, and
+serves examples at **`/examples/`** — `/py/examples/` exists only on the deployed site and
+404s locally. Root serves `/app/`, `/editor/`, `/examples/` and `/shinylive/`.
+
+```bash
+python references/test_shinylive_site.py "http://localhost:3000/examples/"
+```
+
+Present the same summary table and broken app links as in Phase 3, and ask the user to verify
+any broken apps before proceeding.
+
+Sanity checks on the build while the server is up:
+
+```bash
+# expect 28 python apps / 11 r apps (or whatever examples/index.json now lists)
+python -c "
+import json; d = json.load(open('build/shinylive/examples.json'))
+[print(e['engine'], sum(len(c['apps']) for c in e['examples'])) for e in d]
+"
+```
 
 If release fails, delete tag and GH Release, fix, redo.
 
