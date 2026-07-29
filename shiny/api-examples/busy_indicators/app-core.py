@@ -46,7 +46,7 @@ def server(input):
             pulse="pulse" in input.indicator_types(),
         )
 
-    @render.download
+    @render.download_button
     def download():
         time.sleep(3)
         path = os.path.join(os.path.dirname(__file__), "app-core.py")

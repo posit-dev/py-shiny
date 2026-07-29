@@ -14,10 +14,16 @@ def local_app(request: pytest.FixtureRequest) -> Generator[ShinyAppProc, None, N
     """
     Create a local Shiny app for testing.
 
+    The app is launched in Shiny test mode (``SHINY_TESTMODE=1``), enabling the
+    `AppTestValues` controller.
+
     Parameters:
         request (pytest.FixtureRequest): The request object for the fixture.
     """
     # Get the app_file from the parametrize marker if available
     app_file = getattr(request, "param", "app.py")
-    sa_gen = shiny_app_gen(PurePath(request.path).parent / app_file)
+    sa_gen = shiny_app_gen(
+        PurePath(request.path).parent / app_file,
+        env={"SHINY_TESTMODE": "1"},
+    )
     yield next(sa_gen)

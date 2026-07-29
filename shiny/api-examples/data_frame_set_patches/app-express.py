@@ -20,8 +20,7 @@ def _sync_mtcars_to_edited_df():
     edited_df.set(mtcars_df())
 
 
-ui.markdown(
-    """
+ui.markdown("""
     #### Instructions:
     * Run the app locally so that the edits to the underlying CSV file will persist.
     * Edit the cells in the table.
@@ -30,8 +29,7 @@ ui.markdown(
     The data frame will not be re-rendered as the result of `df()` has not updated.
 
     Once the `df()` is invalidated, all local edits are forgotten, and the data frame will be re-rendered. However, since the edits were saved to the CSV file, the edits will persist between refreshes (when run locally).
-    """
-)
+    """)
 
 with ui.card():
 

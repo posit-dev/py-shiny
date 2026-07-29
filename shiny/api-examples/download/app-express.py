@@ -14,7 +14,8 @@ with ui.accordion(open=True):
     with ui.accordion_panel("Simple case"):
         ui.markdown("Downloads a pre-existing file, using its existing name on disk.")
 
-        @render.download(label="Download CSV")
+        # Uses @render.download_button (replaces the deprecated download renderer).
+        @render.download_button(label="Download CSV")
         def download1():
             """
             This is the simplest case. The implementation simply returns the name of a file.
@@ -31,13 +32,13 @@ with ui.accordion(open=True):
         ui.input_text("title", "Plot title", "Random scatter plot")
         ui.input_slider("num_points", "Number of data points", min=1, max=100, value=50)
 
-        @render.download(label="Download plot", filename="image.png")
+        @render.download_button(label="Download plot", filename="image.png")
         def download2():
             """
             Another way to implement a file download is by yielding bytes; either all at
             once, like in this case, or by yielding multiple times. When using this
-            approach, you should pass a filename argument to @render.download, which
-            determines what the browser will name the downloaded file.
+            approach, you should pass a filename argument to @render.download_button,
+            which determines what the browser will name the downloaded file.
             """
 
             print(input.num_points())
@@ -55,7 +56,7 @@ with ui.accordion(open=True):
             "Demonstrates that filenames can be generated on the fly (and use Unicode characters!)."
         )
 
-        @render.download(
+        @render.download_button(
             label="Download filename",
             filename=lambda: f"新型-{date.today().isoformat()}-{np.random.randint(100, 999)}.csv",
         )
@@ -70,7 +71,7 @@ with ui.accordion(open=True):
             "Throws an error in the download handler, download should not succeed."
         )
 
-        @render.download(label="Download", filename="failuretest.txt")
+        @render.download_button(label="Download", filename="failuretest.txt")
         async def download4():
             yield "hello"
             raise Exception("This error was caused intentionally")

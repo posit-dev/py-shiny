@@ -15,7 +15,7 @@ R = TypeVar("R")
 __all__ = ("module",)
 
 
-@add_example(ex_dir="../api-examples/Module")
+@add_example(example_name="Module")
 def module(
     fn: Callable[Concatenate[Inputs, Outputs, Session, P], R],
 ) -> Callable[Concatenate[Id, P], R]:

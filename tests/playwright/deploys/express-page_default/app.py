@@ -1,11 +1,9 @@
 from shiny.express import ui
 
-ui.tags.style(
-    """
+ui.tags.style("""
     #shell div{
     background-color: #00000022}
-"""
-)
+""")
 with ui.div(id="shell"):
     with ui.layout_columns(col_widths=[8, 4]):
         "R1C1R1"

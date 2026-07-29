@@ -34,28 +34,6 @@ def autoreload_url() -> Optional[str]:
         return get_proxy_url(f"ws://127.0.0.1:{port}/autoreload")
 
 
-# Instantiated by Uvicorn in worker process when reload is enabled
-class HotReloadHandler(logging.Handler):
-    """Uvicorn log reader, detects reload events."""
-
-    def __init__(self):
-        logging.Handler.__init__(self)
-
-    def emit(self, record: logging.LogRecord) -> None:
-        # https://github.com/encode/uvicorn/blob/266db48888f3f1ba56710a49ec82e12eecde3aa3/uvicorn/supervisors/statreload.py#L46
-        # https://github.com/encode/uvicorn/blob/266db48888f3f1ba56710a49ec82e12eecde3aa3/uvicorn/supervisors/watchgodreload.py#L148
-        if "Reloading..." in record.getMessage():
-            reload_begin()
-        # https://github.com/encode/uvicorn/blob/926a8f5dc2c9265d5fb5daaafce13878f477e264/uvicorn/lifespan/on.py#L59
-        elif "Application startup complete." in record.getMessage():
-            reload_end()
-
-
-# Called from child process when old application instance is shut down
-def reload_begin():
-    pass
-
-
 # Called from child process when new application instance starts up
 def reload_end():
     import websockets

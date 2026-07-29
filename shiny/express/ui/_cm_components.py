@@ -65,6 +65,7 @@ def sidebar(
     gap: Optional[CssUnit] = None,
     padding: Optional[CssUnit | list[CssUnit]] = None,
     fillable: bool = False,
+    resizable: bool = True,
     **kwargs: TagAttrValue,
 ) -> RecallContextManager[ui.Sidebar]:
     """
@@ -127,6 +128,10 @@ def sidebar(
         Whether or not the sidebar should be considered a fillable container.
         When `True`, the sidebar and its content can use `fill` to consume
         available vertical space.
+    resizable
+        Whether or not the sidebar can be resized by dragging. When `True` (the
+        default), a resize handle is shown at the edge of the sidebar that allows
+        the user to drag to resize the sidebar width.
     **kwargs
         Named attributes are supplied to the sidebar content container.
     """
@@ -145,6 +150,7 @@ def sidebar(
             gap=gap,
             padding=padding,
             fillable=fillable,
+            resizable=resizable,
             **kwargs,
         ),
     )

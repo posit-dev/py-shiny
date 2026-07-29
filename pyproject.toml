@@ -1,9 +1,32 @@
 [build-system]
-requires = ["setuptools>=60", "wheel", "setuptools_scm>=8.0"]
+requires = ["setuptools>=77", "wheel", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = { find = { include = ["shiny", "shiny.*"] } }
+# Declare package data explicitly (instead of the default include-package-data
+# manifest scan) so build_py does not warn that asset/template directories are
+# "absent from the `packages` configuration". The second glob is needed because
+# `**` does not match hidden files (the package templates ship .gitignore files).
+include-package-data = false
+
+# The `.agents/**` glob is needed because `**` does not match hidden
+# directories: Agent Skills ship inside the package under `shiny/.agents/skills/`
+# (the library-skills convention). Guarded by tests/pytest/test_packaging.py.
+[tool.setuptools.package-data]
+shiny = ["**", "**/.gitignore", ".agents/**"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shiny*"]
+# Keep `false` so only directories with an `__init__.py` are packaged as code.
+# `true` would register every asset/template directory (shiny/www/..., etc.) as
+# a PEP 420 namespace package and sweep in any stray directory or .py file that
+# lands under shiny/, over-exposing the package surface. Those directories are
+# instead shipped as data files via the package-data globs above.
+namespaces = false
+
+[tool.setuptools.exclude-package-data]
+"*" = ["api-examples/**"]
 
 [tool.setuptools_scm]
 write_to = "shiny/_version.py"
@@ -16,11 +39,11 @@ authors = [{ name = "Winston Chang", email = "winston@posit.co" }]
 description = "A web development framework for Python."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -30,10 +53,10 @@ classifiers = [
 ]
 dependencies = [
     "typing-extensions>=4.10.0",
-    "uvicorn>=0.16.0;platform_system!='Emscripten'",
-    "starlette",
+    "uvicorn>=0.23.0;platform_system!='Emscripten'",
+    "starlette>=0.17.1",
     "websockets>=13.0",
-    "htmltools>=0.6.0",
+    "htmltools>=0.7.0",
     "click>=8.1.4;platform_system!='Emscripten'",
     "markdown-it-py>=1.1.0",
     "mdit-py-plugins>=0.3.0",
@@ -43,33 +66,47 @@ dependencies = [
     "packaging>=20.9",
     "watchfiles>=0.18.0;platform_system!='Emscripten'",
     "questionary>=2.0.0;platform_system!='Emscripten'",
-    "prompt-toolkit;platform_system!='Emscripten'",
+    "prompt-toolkit>=3.0.0;platform_system!='Emscripten'",
     "python-multipart>=0.0.7;platform_system!='Emscripten'",
     "setuptools;python_version>='3.12'",
     "narwhals>=1.10.0",
     "orjson>=3.10.7",
     "shinychat>=0.1.0",
+    # 1.24.0+ required: older SDKs formatted span exception stack traces from
+    # the active exception instead of the sanitized one shiny passes to
+    # `record_exception()`, leaking unsanitized error messages
+    "opentelemetry-api>=1.24.0",
 ]
 
 [project.optional-dependencies]
-theme = ["libsass>=0.23.0", "brand_yml>=0.1.0"]
+theme = ["libsass>=0.23.0", "brand_yml>=0.2.0"]
+otel = [
+    # 1.24.0+ required: same sanitized-stack-trace floor as opentelemetry-api above
+    "opentelemetry-sdk>=1.24.0",
+    # Enables zero-code auto-instrumentation via `opentelemetry-instrument shiny run
+    # app.py`. The [otlp] extra provides the default `otlp` exporter so the bare
+    # command works without extra flags (and allows switching between gRPC/HTTP).
+    "opentelemetry-distro[otlp]>=0.45b0",
+]
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
     "pytest-playwright>=0.5.2",
     "playwright>=1.48.0",
     "pytest-xdist",
+    "pytest-shard",
     "pytest-timeout",
     "pytest-rerunfailures",
     "pytest-cov",
     "coverage",
-    "syrupy>=4.7.1",
+    "syrupy>=5.5.1",
     "psutil",
     "astropy",
     "suntime",
     "timezonefinder ; platform_system != 'Windows'",
     "ipyleaflet",
     "shinywidgets",
+    "shinychat>=0.6.0",
     "seaborn",
     "plotnine",
     "plotly",
@@ -84,7 +121,7 @@ test = [
     "rsconnect-python",
     "scikit-learn",
     "folium",
-    "palmerpenguins",
+    "palmerpenguins>=0.1.5",                         # type stubs available
     "faicons",
     "ridgeplot",
     "great_tables",
@@ -92,15 +129,18 @@ test = [
     "dask[dataframe]",
     "pyarrow",
     "pyarrow-stubs",
+    "opentelemetry-sdk>=1.24.0",
+    "logfire>=4.0.0",
 ]
 dev = [
-    "black>=24.0",
+    "black>=26.1.0",
     "flake8>=6.0.0",
     "flake8-bugbear>=23.2.13",
     "Flake8-pyproject>=1.2.3",
     "isort>=5.10.1",
     "libsass>=0.23.0",
-    "brand_yml>=0.1.0",
+    "brand_yml>=0.2.0",
+    "pyrefly>=1.1.1",
     "pyright>=1.1.407",
     "pre-commit>=2.15.0",
     "wheel",
@@ -119,10 +159,10 @@ doc = [
     "jupyter",
     "jupyter_client < 8.0.0",
     "tabulate",
-    "shinylive",
+    "shinylive>=0.8.11",
     "pydantic>=2.7.4",
     "quartodoc>=0.8.1",
-    "griffe>=1.3.2",
+    "griffe>=1.3.2,<2.0.0",
 ]
 add-test = [
     "chatlas[anthropic,openai]",
@@ -152,8 +192,11 @@ shiny-test = "shiny.pytest._pytest"
 testpaths = ["tests"]
 
 [tool.flake8]
-extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev"]
+extend-exclude = ["docs", ".venv", "venv", "typings", "build", "_dev", ".context"]
 ignore = ["E302", "E501", "F403", "F405", "W503", "E203", "E701", "E704"]
+
+[tool.black]
+extend-exclude = ".context"
 
 [tool.isort]
 profile = "black"
@@ -161,6 +204,7 @@ skip = [
     "__init__.py",
     "typings/",
     "_dev/",
+    ".context/",
     ".venv",
     "venv",
     ".tox",
@@ -174,3 +218,55 @@ skip = [
 # Note: This setting can not be done via CLI and must be set within a config
 ignore_errors = true
 exclude = ["shiny/api-examples", "shiny/templates"]
+
+# Pyrefly's default project preset is the migration target for Pyright strict;
+# its similarly named strict preset additionally enables checks (including
+# mandatory @override decorators) that Pyright strict explicitly leaves off.
+[tool.pyrefly]
+infer-with-first-use = false
+# Until pyright is completely removed, we need to maintain `permissive-ignores = true`.
+# Once removed, convert all `# pyright: ignore` to `# pyrefly: ignore`. Use specific rules when possible.
+permissive-ignores = true
+# Known pre-existing diagnostics are baselined so `pyrefly check` only fails
+# on new errors. Regenerate with `make update-pyrefly-baseline` after
+# intentionally fixing baselined errors.
+baseline = "pyrefly-baseline.json"
+site-package-path = ["typings"]
+search-path = [
+    ".",
+    "tests/pytest",
+    "tests/playwright",
+    "tests/playwright/examples",
+    "tests/playwright/shiny/bugs/0666-sidebar",
+    "tests/playwright/shiny/bugs/0696-resolve-id",
+    "tests/playwright/shiny/TODO/sidebar",
+]
+project-excludes = [
+    "shiny/api-examples",
+    "examples",
+    "build",
+    "dist",
+    "typings",
+    "sandbox",
+    "_dev",
+    ".context",
+    "docs",
+    "tests/playwright/deploys/*/app.py",
+    "shiny/templates",
+    "tests/playwright/ai_generated_apps/*/*/app*.py",
+    "tests/inspect-ai/apps/*/app*.py",
+    "shiny/pytest/_generate/_main.py",
+    "tests/inspect-ai/scripts/evaluation.py",
+]
+
+[tool.pyrefly.errors]
+no-access = "ignore"
+unused-ignore = "error"
+implicit-any = "error"
+
+[[tool.pyrefly.sub-config]]
+matches = "tests/playwright/**"
+# The repository has separate top-level conftest modules for pytest and
+# Playwright. A single project search path cannot disambiguate both names.
+replace-imports-with-any = ["conftest"]
+

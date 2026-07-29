@@ -63,7 +63,7 @@
   > * {
     flex: 0 0 auto;
     -webkit-flex: 0 0 auto;
-    width: divide(100%, $count);
+    width: percentage(divide(1, $count));
   }
 }
 
@@ -79,8 +79,8 @@
     @include media-breakpoint-up($breakpoint, $breakpoints) {
       // Provide basic `.col-{bp}` classes for equal-width flexbox columns
       .col#{$infix} {
-        flex: 1 0 0%; // Flexbugs #4: https://github.com/philipwalton/flexbugs#flexbug-4
-        -webkit-flex: 1 0 0%; // Flexbugs #4: https://github.com/philipwalton/flexbugs#flexbug-4
+        flex: 1 0 0;
+        -webkit-flex: 1 0 0;
       }
 
       .row-cols#{$infix}-auto > * {
@@ -146,7 +146,7 @@
           }
         }
 
-        // Start with `1` because `0` is and invalid value.
+        // Start with `1` because `0` is an invalid value.
         // Ends with `$columns - 1` because offsetting by the width of an entire row isn't possible.
         @for $i from 1 through ($columns - 1) {
           .g-start#{$infix}-#{$i} {

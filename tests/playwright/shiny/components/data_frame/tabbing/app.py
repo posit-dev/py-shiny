@@ -1,13 +1,17 @@
 import pandas as pd
 import polars as pl
-import seaborn as sns
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 
+# Mock Iris dataset subset for testing to avoid importing seaborn and downloading from GitHub
 df = pd.DataFrame(
-    sns.load_dataset(  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-        "iris"
-    )
+    {
+        "sepal_length": [5.1, 4.9, 4.7, 4.6, 5.0],
+        "sepal_width": [3.5, 3.0, 3.2, 3.1, 3.6],
+        "petal_length": [1.4, 1.4, 1.3, 1.5, 1.4],
+        "petal_width": [0.2, 0.2, 0.2, 0.2, 0.2],
+        "species": ["setosa", "setosa", "setosa", "setosa", "setosa"],
+    }
 )
 pl_df = pl.from_pandas(df)
 df["sepal_length"] = df["sepal_length"].apply(lambda x: ui.tags.u(x))  # pyright: ignore

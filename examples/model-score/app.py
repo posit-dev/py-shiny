@@ -48,9 +48,7 @@ def df():
         params=[150],
     )
     # Convert timestamp to datetime object, which SQLite doesn't support natively
-    tbl["timestamp"] = pd.to_datetime(
-        tbl["timestamp"], utc=True, format="%Y-%m-%d %H:%M:%S.%f"
-    )
+    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], format="ISO8601")
     # Create a short label for readability
     tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
     # Reverse order of rows
@@ -66,9 +64,7 @@ def read_time_period(from_time, to_time):
         params=[from_time, to_time],
     )
     # Treat timestamp as a continuous variable
-    tbl["timestamp"] = pd.to_datetime(
-        tbl["timestamp"], utc=True, format="%Y-%m-%d %H:%M:%S.%f"
-    )
+    tbl["timestamp"] = pd.to_datetime(tbl["timestamp"], format="ISO8601")
     tbl["time"] = tbl["timestamp"].dt.strftime("%H:%M:%S")
 
     return tbl
@@ -289,7 +285,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     def update_time_range():
         """
-        Every 5 seconds, update the custom time range slider's min and max values to
+        Every 15 seconds, update the custom time range slider's min and max values to
         reflect the current min and max values in the database.
         """
 
@@ -299,6 +295,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 con.execute(
                     "select min(timestamp), max(timestamp) from accuracy_scores"
                 ).fetchone(),
+                format="ISO8601",
                 utc=True,
             )
             ui.update_slider(

@@ -57,8 +57,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @session.bookmark.on_bookmark
     async def _(state: BookmarkState):
         print("Bookmark state:", state.input, state.values, state.dir)
-        with reactive.isolate():
-            state.values["lowercase"] = lowercase_letter()
+        state.values["lowercase"] = lowercase_letter()
 
     # After saving state, we will update the query string with the bookmark URL.
     @session.bookmark.on_bookmarked

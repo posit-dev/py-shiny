@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import palmerpenguins
 import polars as pl
 import pyarrow as pa
 

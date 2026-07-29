@@ -15,6 +15,8 @@ from ._tag import consolidate_attrs
 from .css._css_unit import CssUnit, as_css_unit
 
 if TYPE_CHECKING:
+    from htmltools import Tagified
+
     from ..session import Session
 
 __all__ = (
@@ -159,7 +161,7 @@ class AccordionPanel:
             ),
         )
 
-    def tagify(self) -> Tag:
+    def tagify(self) -> Tagified:
         """
         Resolve the :class:`~shiny.ui.AccordionPanel` into a
         :class:`~htmltools.Tag`.

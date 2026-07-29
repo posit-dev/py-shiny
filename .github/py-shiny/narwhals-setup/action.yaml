@@ -1,0 +1,27 @@
+name: "Narwhals integration setup"
+description: "Install py-shiny dependencies and set up Docker Playwright for narwhals downstream testing"
+inputs:
+  shiny-dir:
+    description: "Path to the py-shiny checkout"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Verify uv is installed
+      shell: bash
+      run: |
+        if ! command -v uv &> /dev/null; then
+          echo "::error::uv is required but not installed. Please add 'astral-sh/setup-uv@v7' before this action."
+          exit 1
+        fi
+
+    - name: Install py-shiny dependencies
+      shell: bash
+      working-directory: ${{ inputs.shiny-dir }}
+      env:
+        UV_SYSTEM_PYTHON: "1"
+      run: |
+        make ci-install-deps
+
+    - name: Setup remote Playwright
+      uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@main

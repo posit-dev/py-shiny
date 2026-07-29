@@ -173,7 +173,11 @@ def test_implicit_output():
         has_implicit_outputs()
         assert len(d) == 1
         d0 = cast(Tagifiable, d[0])
-        assert d0.tagify() == ui.output_code("foo")
+        # `Renderer.tagify()` now returns a `TagifiedTag` (immutable
+        # sibling of `Tag` from htmltools >= 0.7.0 / py-htmltools#120),
+        # so `==` is never true across the two sibling types. Compare
+        # rendered HTML instead.
+        assert str(d0.tagify()) == str(ui.output_code("foo"))
 
 
 def test_no_nested_transform_unless_explicit():

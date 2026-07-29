@@ -175,6 +175,53 @@ async def test_reactive_value_is_set():
 
 
 # ======================================================================
+# Value._set(force=True) does not spuriously invalidate is_set() dependents
+# ======================================================================
+@pytest.mark.asyncio
+async def test_reactive_value_force_set_preserves_is_set():
+    v = Value[int]()
+    v_is_set: bool = False
+    value_count: int = 0
+
+    @effect()
+    def is_set_observer():
+        nonlocal v_is_set
+        v_is_set = v.is_set()
+
+    @effect()
+    def value_observer():
+        nonlocal value_count
+        if v.is_set():
+            v()
+            value_count += 1
+
+    await flush()
+    assert is_set_observer._exec_count == 1
+    assert v_is_set is False
+    assert value_count == 0
+
+    # Initial set: both is_set and value dependents fire
+    v._set(1)
+    await flush()
+    assert is_set_observer._exec_count == 2
+    assert v_is_set is True
+    assert value_count == 1
+
+    # force=True with same value: value dependents fire, is_set does NOT
+    v._set(1, force=True)
+    await flush()
+    assert is_set_observer._exec_count == 2  # unchanged
+    assert v_is_set is True
+    assert value_count == 2  # re-ran
+
+    # force=True again: same behavior
+    v._set(1, force=True)
+    await flush()
+    assert is_set_observer._exec_count == 2  # still unchanged
+    assert value_count == 3  # re-ran again
+
+
+# ======================================================================
 # Recursive calls to calcs
 # ======================================================================
 @pytest.mark.asyncio
@@ -1365,3 +1412,159 @@ async def test_observer_async_suspended_resumed_observers_run_at_most_once():
     a.set(4)
     await flush()
     assert obs._exec_count == 2
+
+
+def test_calc_rejects_function_with_params():
+    with pytest.raises(TypeError, match="no required parameters"):
+
+        @calc  # pyright: ignore[reportArgumentType,reportCallIssue,reportUntypedFunctionDecorator]
+        def bad_calc(x: int) -> int:
+            return x
+
+
+def test_calc_accepts_function_with_no_params():
+    @calc
+    def good_calc():
+        return 1
+
+
+def test_calc_warns_function_with_default_params():
+    with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+        @calc
+        def good_calc(x: int = 1) -> int:
+            return x
+
+
+def test_effect_rejects_function_with_params():
+    with pytest.raises(TypeError, match="no required parameters"):
+
+        @effect  # pyright: ignore[reportArgumentType]
+        def bad_effect(x: int) -> None:
+            pass
+
+
+def test_effect_accepts_function_with_no_params():
+    @effect
+    def good_effect():
+        pass
+
+
+def test_effect_warns_function_with_default_params():
+    with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+        @effect
+        def good_effect(x: int = 1) -> None:
+            pass
+
+
+def test_calc_warning_stacklevel_points_to_caller():
+    import warnings
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @calc
+        def my_calc(x: int = 1) -> int:
+            return x
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+
+
+def test_effect_warning_stacklevel_points_to_caller():
+    import warnings
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @effect
+        def my_effect(x: int = 1) -> None:
+            pass
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+
+
+# -- reactive.event validation ------------------------------------------------
+
+
+def test_event_rejects_function_with_params():
+    trigger = Value(0)
+
+    with pytest.raises(TypeError, match="no required parameters"):
+
+        @event(trigger)  # pyright: ignore[reportArgumentType]
+        def bad_event(x: int) -> None:
+            pass
+
+
+def test_event_accepts_function_with_no_params():
+    trigger = Value(0)
+
+    @event(trigger)
+    def good_event():
+        pass
+
+
+def test_event_warns_function_with_default_params():
+    trigger = Value(0)
+
+    with pytest.warns(UserWarning, match="parameter.*with default values: x"):
+
+        @event(trigger)
+        def good_event(x: int = 1) -> None:
+            pass
+
+
+def test_event_warning_stacklevel_points_to_caller():
+    import warnings
+
+    trigger = Value(0)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @event(trigger)
+        def my_event(x: int = 1) -> None:
+            pass
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+
+
+def test_event_calc_stacked_warns_only_once():
+    import warnings
+
+    trigger = Value(0)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @calc
+        @event(trigger)
+        def my_calc(x: int = 1) -> int:
+            return x
+
+    assert len(w) == 1
+    assert "reactive.event" in str(w[0].message)
+
+
+def test_event_effect_stacked_warns_only_once():
+    import warnings
+
+    trigger = Value(0)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @effect
+        @event(trigger)
+        def my_effect(x: int = 1) -> None:
+            pass
+
+    assert len(w) == 1
+    assert "reactive.event" in str(w[0].message)
+
+    assert len(w) == 1
+    assert w[0].filename == __file__

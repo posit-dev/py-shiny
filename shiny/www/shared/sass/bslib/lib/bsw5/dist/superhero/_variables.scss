@@ -1,4 +1,4 @@
-// Superhero 5.3.1
+// Superhero 5.3.8
 // Bootswatch
 
 $theme: "superhero" !default;
@@ -30,7 +30,7 @@ $green:   #5cb85c !default;
 $teal:    #20c997 !default;
 $cyan:    #5bc0de !default;
 
- // Body
+// Body
 $body-bg: #0f2537 !default;
 $body-color: $gray-100 !default;
 
@@ -67,6 +67,7 @@ $text-muted:                  rgba($contrast-bg, .4) !default;
 
 // Tables
 
+$table-color:                 initial !default;
 $table-accent-bg:             rgba($contrast-bg, .05) !default;
 $table-hover-bg:              rgba($contrast-bg, .075) !default;
 $table-border-color:          rgba($contrast-fg, .15) !default;
@@ -85,7 +86,6 @@ $input-disabled-bg:                 $body-color !default;
 
 $input-color:                       $gray-900 !default;
 $input-border-color:                transparent !default;
-$input-border-width:                0 !default;
 
 $input-placeholder-color:               $gray-500 !default;
 
@@ -112,12 +112,17 @@ $dropdown-link-color:               $body-color !default;
 $dropdown-link-hover-color:         $dropdown-link-color !default;
 $dropdown-link-hover-bg:            $table-hover-bg !default;
 
+$dropdown-header-color:             $gray-500 !default;
+
 // Navs
 
 $nav-link-disabled-color:           rgba(255, 255, 255, .4) !default;
 $nav-tabs-border-color:             body-mix(80%) !default;
+$nav-tabs-link-hover-border-color:  $nav-tabs-border-color !default;
 $nav-tabs-link-active-color:        $body-color !default;
 $nav-tabs-link-active-border-color: body-mix(80%) !default;
+
+$nav-underline-link-active-color:   $contrast-bg !default;
 
 // Navbar
 

@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 _note = """
     The input updater functions send a message to the client, telling it to change the
     settings of an input object. The messages are collected and sent after all the
-    observers (including outputs) have finished running.
+    reactive effects (including outputs) have finished running.
 
     The syntax of these functions is similar to the functions that created the inputs in
     the first place. For example, :func:`~shiny.ui.input_numeric` and
@@ -114,7 +114,7 @@ def update_action_button(
     session.send_input_message(id, drop_none(msg))
 
 
-@add_example(ex_dir="../api-examples/update_action_button")
+@add_example(example_name="update_action_button")
 @doc_format(note=_note)
 def update_action_link(
     id: str,
@@ -824,15 +824,22 @@ def update_selectize(
         conjunction = any if qparams.get("conju", "and") == "or" else all
 
         # i.e. searchFields (defaults to ['label'])
-        search_fields: list[str] = json.loads(qparams.get("field", "['label']"))
-        if len(search_fields) == 0:
+        search_fields_raw: object = json.loads(qparams.get("field", '["label"]'))
+        if not isinstance(search_fields_raw, list):
+            raise ValueError("The selectize.js searchFields option must be a list")
+        search_fields_json = cast(list[object], search_fields_raw)
+        if len(search_fields_json) == 0:
             raise ValueError("The selectize.js searchFields option must be non-empty")
 
         # For some odd (probably wrong) reason, shiny.js is wrapping searchFields in an additional array
         # https://github.com/rstudio/shiny/blob/78d77ce/srcts/src/bindings/input/selectInput.ts#L139
         # https://github.com/rstudio/shiny/blob/78d77c/R/update-input.R#L801
-        if isinstance(search_fields[0], list):
-            search_fields = search_fields[0]
+        if isinstance(search_fields_json[0], list):
+            search_fields_json = cast(list[object], search_fields_json[0])
+
+        if not all(isinstance(field, str) for field in search_fields_json):
+            raise ValueError("The selectize.js searchFields options must be strings")
+        search_fields = cast(list[str], search_fields_json)
 
         if set(search_fields).difference(set(["label", "value", "optgroup"])):
             raise ValueError(
@@ -858,7 +865,7 @@ def update_selectize(
 
             match = False
             for f in search_fields:
-                val: Optional[str] = choice.get(f, None)
+                val = cast(Optional[str], choice.get(f, None))
                 # optgroup could be requested, but not necessarily present/relevant
                 if val is None:
                     continue
@@ -1034,7 +1041,7 @@ update_text_area.__doc__ = update_text.__doc__
 
 
 # TODO: we should probably provide a nav_select() alias for this as well
-@add_example()
+@no_example()
 @doc_format(note=_note)
 def update_navs(
     id: str, selected: Optional[str] = None, session: Optional[Session] = None
@@ -1058,6 +1065,7 @@ def update_navs(
 
     See Also
     --------
+    * :func:`~shiny.ui.update_navset`
     * :func:`~shiny.ui.navset_tab`
     * :func:`~shiny.ui.navset_pill`
     * :func:`~shiny.ui.page_navbar`

@@ -34,6 +34,11 @@ make playwright-shiny SUB_FILE="--headed e2e/async"
 make playwright-debug
 ```
 
+In CI, Linux Playwright jobs can connect to a remote browser server started in Docker.
+That mode is enabled by setting `PW_TEST_CONNECT_WS_ENDPOINT`; local development does
+not set that environment variable, so local runs continue to install and launch browsers
+directly. `make playwright-debug` remains a local headed-debug workflow.
+
 ## Shiny app fixtures
 
 Playwright for Python launches and controls (headless or headful) browsers, but does not

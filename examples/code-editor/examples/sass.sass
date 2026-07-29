@@ -1,0 +1,52 @@
+$primary-color: #3498db
+$spacing-unit: 1rem
+$border-radius: 4px
+
+=flexbox-center
+  display: flex
+  align-items: center
+  justify-content: center
+
+=responsive-padding($mobile, $desktop)
+  padding: $mobile
+  @media (min-width: 768px)
+    padding: $desktop
+
+@function calculate-spacing($multiplier)
+  @return $spacing-unit * $multiplier
+
+.button
+  +flexbox-center
+  background-color: $primary-color
+  border-radius: $border-radius
+  padding: calculate-spacing(1)
+  color: white
+  font-weight: bold
+  cursor: pointer
+  transition: all 0.3s ease
+
+  &:hover
+    background-color: darken($primary-color, 10%)
+    transform: translateY(-2px)
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2)
+
+  &:active
+    transform: translateY(0)
+
+  &.secondary
+    background-color: #95a5a6
+    +responsive-padding(calculate-spacing(0.5), calculate-spacing(1))
+
+    &:hover
+      background-color: darken(#95a5a6, 10%)
+
+.card
+  +responsive-padding(calculate-spacing(1), calculate-spacing(2))
+  border-radius: $border-radius
+  background: white
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
+
+  .card-title
+    color: $primary-color
+    font-size: 1.5rem
+    margin-bottom: calculate-spacing(0.5)

@@ -91,6 +91,9 @@ app_allow_external_errors: typing.List[str] = [
     "FutureWarning: use_inf_as_na option is deprecated",
     "pd.option_context('mode.use_inf_as_na",  # continutation of line above,
     "RuntimeWarning: invalid value encountered in dot",  # some groups didn't have enough data points to create a meaningful line
+    # yfinance deprecation warning (Pandas 4.0 compatibility)
+    "Pandas4Warning: Timestamp.utcnow is deprecated",
+    "dt_now = pd.Timestamp.utcnow()",  # continuation of line above
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "examples/brownian": ["Failed to acquire camera feed:"],
@@ -176,9 +179,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
 
     page.on("console", on_console_msg)
 
-    # Makes sure the app is closed when exiting the code block
     with sa:
-        page.goto(sa.url)
+        page.goto(sa.url, wait_until="domcontentloaded")
 
         app_name = os.path.basename(os.path.dirname(ex_app_path))
         short_app_path = f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"

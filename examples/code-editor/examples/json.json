@@ -1,0 +1,36 @@
+{
+  "apiVersion": "1.0.0",
+  "status": "success",
+  "metadata": {
+    "timestamp": "2025-12-29T10:30:45Z",
+    "requestId": "req-abc123def456",
+    "cached": true
+  },
+  "data": {
+    "users": [
+      {
+        "id": 1001,
+        "name": "Alice Johnson",
+        "email": "alice@example.com",
+        "active": true,
+        "roles": ["admin", "editor"],
+        "permissions": null
+      },
+      {
+        "id": 1002,
+        "name": "Bob Smith",
+        "email": "bob@example.com",
+        "active": false,
+        "roles": ["viewer"],
+        "lastLogin": "2025-12-28T15:22:10Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 50,
+      "totalItems": 1242,
+      "hasMore": true
+    }
+  },
+  "errors": []
+}

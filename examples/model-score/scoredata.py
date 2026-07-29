@@ -19,7 +19,7 @@ def init_db():
         con.execute("PRAGMA journal_mode=WAL")
         con.execute("drop table if exists accuracy_scores")
 
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         position = now.minute * 60 + now.second + 1
 
         # Simulate 100 seconds of historical data
@@ -47,7 +47,7 @@ async def update_db(position):
         while True:
             new_data = accuracy_scores.loc[position].copy()
             # del new_data["second"]
-            new_data["timestamp"] = datetime.datetime.utcnow()
+            new_data["timestamp"] = datetime.datetime.now(datetime.timezone.utc)
             new_data.to_sql("accuracy_scores", con, index=False, if_exists="append")
             position = (position % (60 * 60)) + 1
             await asyncio.sleep(1)
@@ -61,10 +61,15 @@ def begin():
     # task. (This is the case when running via `shiny run` and shinylive.) Otherwise, we
     # need to launch a background thread and run an asyncio event loop there. (This is
     # the case when running via shinyapps.io or Posit Connect.)
-
-    if asyncio.get_event_loop().is_running():
-        asyncio.create_task(update_db(position))
-    else:
+    #
+    # Use `asyncio.get_running_loop()` (raises if no loop is running) rather than
+    # `asyncio.get_event_loop()`: the latter's auto-create behavior is deprecated in
+    # Python 3.12 and removed in 3.14, where it raises a RuntimeError instead.
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
         from threading import Thread
 
         Thread(target=lambda: asyncio.run(update_db(position)), daemon=True).start()
+    else:
+        asyncio.create_task(update_db(position))

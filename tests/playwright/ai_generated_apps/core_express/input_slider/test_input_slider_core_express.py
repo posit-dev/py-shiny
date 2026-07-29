@@ -1,3 +1,5 @@
+import re
+
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -90,6 +92,21 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     slider9.expect_value(("2023-03-01", "2023-09-30"))
     slider9.expect_drag_range("true")
 
+    # Set a date range above the current one, then one completely below it
+    # (exercising both handle-move orderings). The slider's step is a hundredth
+    # of its span (~3.64 days), so target dates must sit on that step grid and
+    # the values the server receives carry a time-of-day component.
+    slider9.set(("2023-05-26", "2023-11-24"))
+    slider9.expect_value(("2023-05-26", "2023-11-24"))
+    value9.expect_value(
+        re.compile(r"datetime\.datetime\(2023, 5, 26.*datetime\.datetime\(2023, 11, 24")
+    )
+    slider9.set(("2023-01-15", "2023-02-17"))
+    slider9.expect_value(("2023-01-15", "2023-02-17"))
+    value9.expect_value(
+        re.compile(r"datetime\.datetime\(2023, 1, 15.*datetime\.datetime\(2023, 2, 17")
+    )
+
     # Test datetime slider
     slider10 = controller.InputSlider(page, "slider10")
     value10 = controller.OutputText(page, "value10")
@@ -100,3 +117,8 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     slider10.expect_value("2023-06-15 12:30")
     slider10.expect_time_format("%Y-%m-%d %H:%M")
     slider10.expect_timezone("UTC")
+
+    # Set a datetime value (on the slider's step grid)
+    slider10.set("2023-08-11 15:35")
+    slider10.expect_value("2023-08-11 15:35")
+    value10.expect_value(re.compile(r"Value: 2023-08-11 15:35"))

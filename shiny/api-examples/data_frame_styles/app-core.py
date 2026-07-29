@@ -74,9 +74,7 @@ app_ui = ui.page_fillable(
     ui.h2("Data Frame with Styles applied to 4 cells"),
     ui.output_data_frame("my_df"),
     ui.hr(),
-    ui.tags.style(
-        ui.HTML(
-            """
+    ui.tags.style(ui.HTML("""
         .posit-bg {
             background-color: #242a26 ;
         }
@@ -86,9 +84,7 @@ app_ui = ui.page_fillable(
         .posit-orange-bg {
             background-color: #ED642F ;
         }
-        """
-        )
-    ),
+        """)),
     ui.h2(
         "Custom styles applied to all cells within a data frame ", ui.HTML("&#128075;")
     ),

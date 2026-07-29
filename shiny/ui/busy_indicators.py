@@ -17,7 +17,7 @@ __all__ = (
 )
 
 
-@add_example(ex_dir="../api-examples/busy_indicators")
+@add_example(example_name="busy_indicators")
 def options(
     *,
     spinner_type: BusySpinnerType | Path | None = None,

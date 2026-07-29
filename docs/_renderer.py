@@ -12,6 +12,9 @@ import quartodoc.ast as qast
 from griffe import (
     Alias,
     DocstringAttribute,
+    DocstringParameter,
+    DocstringReturn,
+    DocstringSectionReturns,
     DocstringSectionText,
     Expr,
     ExprName,
@@ -22,8 +25,6 @@ from plum import dispatch
 from quartodoc import MdRenderer
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 from quartodoc.renderers.md_renderer import ParamRow
-
-# from quartodoc.ast import preview
 
 SHINY_PATH = Path(files("shiny").joinpath())
 
@@ -106,6 +107,29 @@ class Renderer(MdRenderer):
             annotation=self.render_annotation(el.annotation),
         )
         return row
+
+    @dispatch
+    def render(self, el: DocstringParameter) -> ParamRow:
+        param_row = super().render(el)
+        # Escape leading asterisks to prevent markdown bold/italic collision.
+        # e.g. "**kwargs" -> r"\*\*kwargs", "*args" -> r"\*args"
+        param_row.name = re.sub(
+            r"^\*+", lambda m: "".join(r"\*" for _ in m.group()), param_row.name
+        )
+
+        return param_row
+
+    @dispatch
+    def render(self, el: DocstringSectionReturns):
+        if len(el.value) == 1:
+            if isinstance(el.value[0], DocstringReturn):
+                if not el.value[0].name and not el.value[0].annotation:
+                    # When name and annotation are both empty (common for class docstrings
+                    # where griffe cannot resolve a return type), the default rendering
+                    # produces an orphaned colon. Override to use an empty definition term.
+                    return self.render(el.value[0].description)
+
+        return super().render(el)
 
     @dispatch
     def render_annotation(self, el: None):

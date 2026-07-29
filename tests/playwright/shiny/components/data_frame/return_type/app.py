@@ -1,4 +1,4 @@
-from palmerpenguins import load_penguins_raw  # pyright: ignore[reportMissingTypeStubs]
+from palmerpenguins import load_penguins_raw
 
 from shiny.express import render
 

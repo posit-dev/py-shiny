@@ -11,6 +11,173 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.output_text_verbatim()` is deprecated. Please use `ui.output_text()` if you want to create an output container for some text, or `ui.output_code()` if you want to create an output container for code (monospaced text). (#2097)
 
+### Bug fixes
+
+* The `ui.Theme` API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`. The example directory now declares `libsass` in a `requirements.txt`. (#2386)
+
+* Fixed the error message raised when a package required for theme compilation is missing: it interpolated the package name into the first sentence but printed a literal `pip install {pkg}` in the second. (#2386)
+
+## [1.7.0] - 2026-07-28
+
+### New features
+
+* Added test mode, enabled via the `SHINY_TESTMODE=1` environment variable or the `App(test_mode=)` argument (which defaults to that env var). The pytest app-launch fixtures (`local_app`, `create_app_fixture`) now run apps in test mode. (#2269)
+
+* When test mode is enabled, each session serves a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.testmode.export_test_values()`. The endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys); unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
+
+* `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) and `my_output.snapshot_preprocess(fn)` preprocess test-mode snapshot values before they are written, e.g. to scrub timestamps or temp paths. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
+
+* `shiny.playwright.controller.AppTestValues` reads a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests. Its expect methods accept predicates: pass any callable (e.g. `app_values.expect_input("n", is_integer)`) in place of an expected value, and the expectation retries until the predicate returns a truthy value. (#2269, #2357)
+
+* `offcanvas()` creates sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
+
+* `@render.download_button` and `@render.download_link` pair 1:1 with `ui.download_button()` and `ui.download_link()`. (#2364)
+
+* The shiny package now ships bundled [Agent Skills](https://agentskills.io) under `shiny/.agents/skills/` (the [library-skills](https://library-skills.io) convention): a single `shiny-for-python` skill whose `SKILL.md` is a grouped index that routes coding agents to a per-topic reference file for each of shiny's public APIs. (#2339, #2344, #2345, #2356, #2365, #2366)
+  * Foundations: `reactivity` (the reactive graph — `reactive.value`/`calc`/`effect`/`event`, `req`, `isolate`, `poll`), `express` (Express mode), `modules-core` / `modules-express` (reusable namespaced components), and `session-lifecycle` (`on_ended`/`on_flush`, request info, dynamic routes).
+  * Layout and navigation: `layouts` (pages, cards, sidebars, columns, value boxes), `navigation` (navsets and `page_navbar`), `dynamic-ui` (`@render.ui`, `update_*`, `insert_ui`, `panel_conditional`), and `theming` (`ui.Theme`, presets, dark mode).
+  * Outputs and rendering: `plots` (`render.plot`/`render.image` and interactions), `data-frames` (`render.data_frame`), and `files` (upload/download).
+  * Feedback and interactivity: `feedback` (notifications, modals, progress, busy indicators), `extended-tasks` (non-blocking long-running work), and `bookmarking` (save/restore app state with `bookmark_store=` and `session.bookmark` hooks).
+  * Generative AI: `chat` (`ui.Chat`) and `markdown-streaming` (`ui.MarkdownStream`).
+  * Extending shiny: `custom-renderers` (authoring a `Renderer` subclass) and `custom-components` (custom JavaScript input/output bindings).
+  * Testing and observability: `testing` (end-to-end tests with pytest and Playwright), `debugging` (inspect running apps via test mode), and `otel` (OpenTelemetry observability).
+
+* `shiny skills list` shows each bundled skill's name and description, and `shiny skills path <name>` prints the skill's directory, so its `SKILL.md` and supporting files (`references/`, `scripts/`) can be read from the installed package. To install the skills into a coding agent, the README and the `shiny skills` CLI help now point at [`library-skills`](https://library-skills.io) (`uvx library-skills --claude`). (#2340, #2367)
+
+### Improvements
+
+* The `shiny[otel]` optional dependency group now includes `opentelemetry-distro[otlp]`, so OpenTelemetry zero-code auto-instrumentation works out of the box: `opentelemetry-instrument shiny run app.py`. This is now the documented standard way to enable OpenTelemetry — the docs and the `examples/open-telemetry/` example no longer configure providers inside the app (in-code `set_tracer_provider()` setup is silently ignored when a provider is already installed, e.g. under `opentelemetry-instrument`). The OTLP exporters are also included, making it easy to switch between gRPC and HTTP export via standard `OTEL_*` environment variables. Note that `opentelemetry-distro` pins `opentelemetry-sdk` to a matching minor version, so if you combine `shiny[otel]` with other packages that pin the OpenTelemetry SDK (e.g. `logfire`), the resolver may need matching versions. (#2349)
+
+* The Playwright controllers `DownloadButton` and `DownloadLink` now share a common base class and gain `expect_label()`, and `DownloadLink` gains the width expectations previously available only on `DownloadButton`. (#2093)
+
+* `OutputDataFrame.set_filter()` now supports multi-column filters. (#2093)
+
+### Deprecations
+
+* `@render.download` is deprecated; use `@render.download_button` (or `@render.download_link`) instead. (#2364)
+
+### Bug fixes
+
+* Fixed rare tabset ID collisions in pages with many navsets. Randomly generated `data-tabsetid` values were drawn from a pool of ~1 million, so a page with dozens of tabsets could occasionally produce two navsets with the same ID (a birthday collision), resulting in duplicate DOM ids and broken tab switching. IDs are now drawn from a pool of 9 trillion. (#2296)
+
+* `shiny run --launch-browser` now opens the browser even when Uvicorn's INFO-level startup logs are unavailable, e.g. when logs are disabled or `--log-level=warning` is used. (#569)
+
+* `InputSlider.set()` and `InputSliderRange.set()` now compute the target value's position from the slider's step configuration and drag the handle directly to it, verifying the landing position against the widget's state (finishing with arrow-key presses when the slider has more steps than the track has pixels). Previously the handle was swept one pixel at a time while polling the label, which was slow and could intermittently miss the target when the browser coalesced or dropped mouse-move events (a recurring webkit CI flake). `InputSliderRange.set()` orders the two handle moves so neither is clamped by its sibling, instead of parking both handles at their extremes first. Setting a value the slider cannot produce now raises an error listing the slider's actual values. (#2311, #2326)
+
+* `ui.output_data_frame()` now consistently orders the filtered columns in ascending column order (#2093), and resetting a numeric range filter resets both values (#2093).
+
+* `value_box()`'s `id` docstring now documents `input.<id>_full_screen()` for observing the value box's full screen state, matching `card()`. It previously documented the wrong reactive-value syntax, `input.<id>()["full_screen"]`. (#2324)
+
+### Other changes
+
+* CI now runs the unit tests on Ubuntu with the oldest supported Python (3.10) and every runtime dependency resolved to its declared minimum version (via `uv pip compile --resolution lowest-direct`), so stale lower bounds in `pyproject.toml` are caught. As part of this, `starlette` and `prompt-toolkit` gained explicit lower bounds (`>=0.17.1` and `>=3.0.0`), and the `opentelemetry-api`/`opentelemetry-sdk` minimums were raised from 1.20.0 to 1.24.0 — older versions could leak unsanitized error messages in span exception stack traces. Shiny's OpenTelemetry log emission (which relied on the `Logger.emit()` keyword form added in opentelemetry 1.38.0 and was silently dropped on older versions) now falls back to constructing the `LogRecord` manually, so it works across the whole supported range. (#2335)
+
+* Optimized the test suite by avoiding network-based dataset downloads and heavy library imports during Playwright test app startup, reducing setup time significantly. (#2314)
+
+* Packaging metadata now uses a PEP 639 SPDX license expression instead of the deprecated `license` table and license classifier, and stale `MANIFEST.in` rules were removed. Building the package (e.g. with `uv build`) no longer emits setuptools deprecation or manifest warnings. Wheel and sdist contents are unchanged. (#2304)
+
+* Raised the minimum supported uvicorn version from 0.16.0 to 0.23.0 (July 2023). The old floor no longer worked in practice: running on Posit Workbench passes uvicorn the `ws_per_message_deflate` option, which requires uvicorn >= 0.17. (#2317)
+
+* `@add_example()` gained an `example_name=` parameter that looks up the example in the nearest `api-examples/` directory, and all `ex_dir=` call sites that pointed inside an `api-examples/` tree were migrated to it; `ex_dir=` remains only for examples outside the nearest `api-examples/` tree. This also fixed nine call sites that passed the example name positionally, where it was silently treated as `app_file=` and the example was missing from the generated docs (#2328). Docs builds now fail when an `@add_example()` API reference is missing its example app, instead of emitting a warning and silently omitting the example; several APIs whose examples had gone missing this way were fixed, and missing Shiny Express examples were added. (Thanks, @EltonChang1!) (#2278)
+
+* Added api-examples for `shiny.testmode.export_test_values()`, `shiny.testmode.snapshot_preprocess_input()`, and `Renderer.snapshot_preprocess()`, demonstrating how to surface reactive values in the test-mode snapshot and how to scrub sensitive or nondeterministic input/output values from it (#2284), and for `ui.output_code()` (#2093).
+
+* `shiny.run.run_shiny_app()` (and therefore `shiny.pytest.create_app_fixture()`) now picks random app ports from a disjoint per-worker port range when running under pytest-xdist, instead of the full 1024-49151 range shared by all workers. This prevents parallel test workers from racing to bind the same port and from reusing each other's recycled ports. When not running under pytest-xdist, the behavior is unchanged: ports are picked from `random_port()`'s full default range (1024-49151). (#2297)
+
+## [1.6.4] - 2026-07-28
+
+### Bug fixes
+
+* Fixed a path-traversal vulnerability in bookmark restore (CWE-22). Introduced in 1.4.0. Reported by @0xRenSec.
+
+* When bookmarked state cannot be restored, the notification shown in the client is now a generic message. The reason is logged server-side as a warning on the `shiny.bookmark._restore_state` logger, so app authors can still see it. (ab10e069)
+
+## [1.6.3] - 2026-06-01
+
+### New features
+
+* `session.destroy()` now accepts an optional module `id`. The parent that inserted a module's UI under an `id` can tear down that module's scope with `session.destroy(id)`, without the module having to hand back a cleanup handle. (#2264)
+
+* Added the `brite` theme preset, available wherever Shiny theme presets are accepted (e.g. `ui.Theme()` and `ui.page_*(theme=)`). (#2246)
+
+### Bug fixes
+
+* Fixed output resize/visibility detection for nested HTML outputs. The `IntersectionObserver` now observes the nearest non-`shiny-html-output` ancestor, so the native-observer pipeline introduced in 1.6.1 works correctly when outputs are nested inside other dynamic UI. (#2246)
+
+* Fixed `ui.input_submit_textarea()` failing inside module namespaces. The internal submit button's ID was built from the already-resolved (namespaced) textarea ID, causing a double-namespace when `input_task_button` resolved it again. (#2262)
+
+
+## [1.6.2] - 2026-05-21
+
+### Bug fixes
+
+* Adapted py-shiny to the `htmltools` 0.7.0 sibling-classes refactor. No runtime behavior change. (#2244)
+
+* Bumped `lodash`/`lodash-es` to `4.18.1` in the `js-react` template lockfile for CVE-2025-13465. (#2233)
+
+* Fixed `render.DataGrid()` column headers and hovered rows not adapting to dark mode when `ui.input_dark_mode()` is enabled. The data grid now uses Bootstrap 5.3 mode-aware color tokens (`--bs-tertiary-bg`, `--bs-primary-bg-subtle`, `--bs-emphasis-color`, `--bs-secondary-color`), with the legacy values preserved as fallbacks. (#1635)
+
+## [1.6.1] - 2026-05-01
+
+### New features
+
+* Added `session.destroy()` and `session.on_destroy()` for cleaning up reactive objects (effects, calcs, values) when dynamically inserted module UI is removed. Calling `session.destroy()` on a module's session fires all registered destroy callbacks, which stop effects, invalidate calcs and values, and remove namespaced inputs and outputs from the reactive graph. Reactive objects automatically register weak destroy callbacks so they can be garbage collected when no longer referenced, even before session end. (#2209)
+
+### Improvements
+
+* `@reactive.calc`, `@reactive.effect`, and render decorators (e.g. `@render.text`) now raise a `TypeError` if the decorated function has required parameters, since Shiny never supplies arguments to these functions. Functions with default parameter values emit a warning, as the defaults will always be used. (Thanks, @mvanhorn!) (#2200)
+
+* Output resize/visibility detection now uses native browser observers (`ResizeObserver`, `IntersectionObserver`) instead of relying on jQuery `shown`/`hidden` events and `window.resize`. This makes Shiny's client-side output-info pipeline (image/plot sizing, hidden-state tracking, theme reporting) work automatically in any layout — including CSS-only show/hide, third-party tab components, and non-Bootstrap frameworks — without requiring custom event hooks. This also introduces a `shiny:themechange` event for code that needs to trigger theme clientdata refreshes after changing surrounding visual theme context. (rstudio/shiny#3682)
+
+* `panel_conditional()` no longer briefly flashes its contents on app start
+  when the condition is initially `False`. (rstudio/shiny#3505)
+
+### Bug fixes
+
+* Fixed server-side input deduplication so that all values received from the client always trigger reactive invalidation. (#1600, #2219)
+
+* Fixed a caret drift issue in `ui.input_code_editor()` where the cursor would appear to the right of the actual text insertion point when certain themes or on some operating systems. (#2223)
+
+* Fixed OpenTelemetry name inference for `reactive.Value` to handle type-annotated assignments (e.g., `counter: reactive.Value[int] = reactive.Value(0)`), generic subscript calls (e.g., `reactive.Value[int](0)`), and multiline assignments where the `Value()` call is on a continuation line (e.g., assignments split across lines with parentheses or multiline type annotations). This fixes anonymous OTel labels for packages like `shinychat` that use multiline `reactive.Value` assignments. (#2205)
+
+
+## [1.6.0] - 2026-03-20
+
+### OpenTelemetry
+
+* Added the `SHINY_OTEL_COLLECT` environment variable to set the default collection level globally. Available levels: (#2143)
+  * `"none"` - Disables all Shiny-specific telemetry collection. Use this for sensitive operations where you don't want Shiny to emit any spans or logs.
+  * `"session"` - Captures session lifecycle spans that track when user sessions are starting and ending. This provides basic visibility into session activity without detailed reactive execution information.
+  * `"reactive_update"` - Captures everything from `"session"` plus reactive flush cycle spans that show when reactive invalidation and re-execution occurs. This helps identify performance bottlenecks in reactive updates without the overhead of per-reactive-component instrumentation.
+  * `"reactivity"` - Captures everything from `"reactive_update"` plus individual reactive execution spans (`reactive.calc`, `reactive.effect`, `extended_task`), info-level logs for reactive value updates (including source file, line number, and column position), and debug-level logs for extended task queue operations. This provides comprehensive visibility into reactive execution flow and timing.
+  * `"all"` \[Default\] - Currently equivalent to `"reactivity"` and represents the most comprehensive telemetry available. This is the default collection level when `SHINY_OTEL_COLLECT` is not set (or is explicitly set to `all`).
+
+* Added `otel.suppress` and `otel.collect` to control Shiny's internal OpenTelemetry instrumentation per-function or per-block. Use `@otel.suppress` / `@otel.collect` (no-parens decorators) to stamp a single function, or `with otel.suppress():` / `with otel.collect():` (context managers) to control telemetry during reactive object creation. `otel.suppress` disables Shiny's internal reactivity telemetry; `otel.collect` re-enables reactivity telemetry when the global default has been lowered. Both only affect Shiny's internal spans — user-defined OpenTelemetry spans are unaffected. (#2143)
+
+* Added OpenTelemetry example application (`examples/open-telemetry/`) demonstrating console exporter, collection control with `@otel.suppress` and `@otel.collect`, and side-by-side comparison of normal, suppressed, and force-enabled telemetry. The OpenTelemetry SDK is available via the optional `[otel]` dependency group: `pip install shiny[otel]`. Note: If you're already using an observability package with OpenTelemetry integration (e.g., `logfire`), it likely already includes `opentelemetry-sdk`, so you may not need to explicitly install the `[otel]` group. (#2143)
+
+### New features
+
+* Added toolbar component with `ui.toolbar()`, `ui.toolbar_input_button()`, `ui.toolbar_input_select()`, `ui.toolbar_divider()`, `ui.toolbar_spacer()`, `ui.update_toolbar_input_button()`, and `ui.update_toolbar_input_select()`. Toolbars are compact UI containers designed for small form elements suitable for card headers, footers, and other constrained spaces. They support flexible alignment (left/right), custom spacing and width, icon-only or labeled buttons with optional tooltips, select inputs with grouped choices, visual dividers for separating elements, and flexible spacers for split layouts. Server-side updates allow dynamic modification of button and select properties. (#2155)
+
+* Added a new `ui.input_code_editor()` element that allows for light-weight code editing with syntax highlighting, using the [prism-code-editor](https://prism-code-editor.netlify.app/) library. The editor supports 20+ languages, more than a dozen themes, and automatic light/dark mode switching. (#2128)
+
+### Improvements
+
+* Reduced installed package size by ~400KB by excluding `api-examples/` directories from wheel and source distributions. These examples are only needed when building documentation from the source repository. (#2126)
+
+* Improved reactive value name inference to support all import styles: `reactive.Value()`, `reactive.value()`, `Value()`, and `value()` now all correctly infer variable names for better OpenTelemetry log messages. (#2178)
+
+* Enhanced OpenTelemetry source reference attributes by adding `code.column.number` to track the column position of reactive value updates alongside existing file path, line number, and function name. (#2178)
+
+* Improved OpenTelemetry collection level handling: reactive values now capture the collection level at initialization time (matching behavior of `Calc` and `Effect`), ensuring consistent telemetry behavior throughout the value's lifetime. (#2178)
+
+### Other changes
+
+* Updated `palmerpenguins` dependency to version `>=0.1.5` to include type stubs, removing the need for type ignore comments in tests. (#2157)
+
+## [1.5.1] - 2025-12-08
+
 ### New features
 
 * Added toast notification system with `ui.toast()`, `ui.toast_header()`, `ui.show_toast()`, and `ui.hide_toast()`. Toast notifications are temporary, non-intrusive messages that support multiple semantic types (success, warning, error, etc.), flexible positioning (9 positions: top/middle/bottom × left/center/right), auto-hide with configurable duration, optional headers with icons, and programmatic control. (#2111)

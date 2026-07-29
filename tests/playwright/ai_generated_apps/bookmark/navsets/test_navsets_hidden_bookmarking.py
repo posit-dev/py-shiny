@@ -43,6 +43,14 @@ def test_navset_hidden_bookmarking(
     mod_navset_btn = controller.InputActionButton(page, f"first-{navset_id}_button")
     mod_navset_btn.click()
 
+    # Selecting a panel in a hidden navset requires a server round trip (button
+    # click -> reactive effect -> `ui.update_navset()` -> client applies the
+    # selection and reports it back to the server). Wait for the selections to
+    # reach the DOM before bookmarking; otherwise the bookmark can serialize
+    # stale navset values.
+    navset_cont.expect_value(f"{navset_id}_c")
+    mod_navset_cont.expect_value(f"{navset_id}_b")
+
     existing_url = page.url
 
     # Click bookmark button

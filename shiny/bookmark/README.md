@@ -325,8 +325,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     # Store custom values before bookmarking
     @session.bookmark.on_bookmark
     async def _(state: BookmarkState):
-        with reactive.isolate():
-            state.values["lowercase"] = lowercase_letter()
+        state.values["lowercase"] = lowercase_letter()
 
     # Update URL after bookmarking
     @session.bookmark.on_bookmarked

@@ -78,8 +78,8 @@ def test_validate_html_columns(
     # Sorting should not work for columns that are HTML columns
     # Verify that the sorting is reset
     with pytest.raises(AssertionError) as e:
-        data_frame.set_sort(3, timeout=0)
-        assert "header-html" in str(e)
+        data_frame.set_sort(3)
+    assert "header-html" in str(e.value)
     data_frame.expect_cell("1", row=0, col=1)
 
     # filter by Individual IDs

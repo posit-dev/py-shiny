@@ -1,4 +1,4 @@
-// Cerulean 5.3.1
+// Cerulean 5.3.8
 // Bootswatch
 
 
@@ -10,6 +10,26 @@ $text-shadow: 0 1px 0 rgba(0, 0, 0, .05) !default;
 
 @mixin btn-shadow-bootswatch($color){
   @include gradient-y-three-colors(tint-color($color, 16%), $color, 60%, shade-color($color, 6%));
+}
+
+@mixin btn-shadow-hover-bootswatch($color){
+  @include gradient-y-three-colors($color, shade-color($color, 5%), 60%, shade-color($color, 15%));
+}
+
+@mixin btn-shadow-active-bootswatch($color){
+  @include gradient-y-three-colors(shade-color($color, 20%), shade-color($color, 20%), 60%, shade-color($color, 30%));
+}
+
+// Tables
+
+.table-primary,
+.table-secondary,
+.table-success,
+.table-warning,
+.table-danger,
+.table-info,
+.table-light {
+  --#{$prefix}table-color: #{$body-color};
 }
 
 // Navbar
@@ -41,6 +61,18 @@ $text-shadow: 0 1px 0 rgba(0, 0, 0, .05) !default;
 @each $color, $value in $theme-colors {
   .btn-#{$color} {
     @include btn-shadow-bootswatch($value);
+  }
+
+  .btn-#{$color}:hover {
+    @include btn-shadow-hover-bootswatch($value);
+  }
+
+  .btn-#{$color}:active {
+    @include btn-shadow-active-bootswatch($value);
+  }
+
+  .btn-check:checked + .btn-#{$color} {
+    @include btn-shadow-active-bootswatch($value);
   }
 }
 

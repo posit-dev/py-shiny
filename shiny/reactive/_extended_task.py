@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import (
+    Any,
     Awaitable,
     Callable,
     Generic,
@@ -12,10 +13,17 @@ from typing import (
     overload,
 )
 
+from .. import otel
 from .._docstring import add_example
 from .._typing_extensions import ParamSpec
 from .._utils import is_async_callable
 from .._validation import req
+from ..otel._attributes import extract_source_ref, get_session_id_attrs
+from ..otel._collect import OtelCollectLevel
+from ..otel._core import emit_otel_log, is_otel_tracing_enabled
+from ..otel._function_attrs import resolve_func_otel_level
+from ..otel._labels import create_otel_span_name
+from ..otel._span_wrappers import shiny_otel_span
 from ._core import Context, flush, lock
 from ._reactives import Value, isolate
 
@@ -53,29 +61,50 @@ class ExtendedTask(Generic[P, R]):
         self._func = func
         self._task: Optional[asyncio.Task[R]] = None
 
-        self.status: Value[Status] = Value("initial")
-        """
-        Reactive value that tracks the current status of the task. The value will be one
-        of "initial", "running", "success", "error", or "cancelled".
-        """
+        # Extract OpenTelemetry attributes at initialization time
+        from ..session import get_current_session
 
-        self.value: Value[R] = Value()
-        """
-        Reactive value that tracks the result of the task, if the current status is
-        "success". If the status is not "success", the value will be unset, and a silent
-        exception will be raised if you try to read it. Calling code should generally
-        not read this value directly, but instead use the `result()` method, which is
-        designed to behave correctly regardless of the current status.
-        """
+        session = get_current_session()
+        self._otel_attrs: dict[str, Any] = {
+            **get_session_id_attrs(session),
+            **extract_source_ref(func),
+        }
 
-        self.error: Value[BaseException] = Value()
-        """
-        Reactive value that tracks the error raised by the task, if the current status
-        is "error". If the status is not "error", the value will be unset, and a silent
-        exception will be raised if you try to read it. Calling code should generally
-        not read this value directly, but instead use the `result()` method, which is
-        designed to behave correctly regardless of the current status.
-        """
+        # Generate label for task execution span
+        self._otel_label: str = create_otel_span_name(
+            func, "extended_task", session=session
+        )
+        self._otel_log_label: str = self._otel_label.replace(
+            "extended_task", "extended_task queued", 1
+        )
+
+        # Extract collection level from function attribute (e.g., set by `@otel.suppress` or `@otel.collect` decorators)
+        self._otel_level: OtelCollectLevel = resolve_func_otel_level(func)
+
+        with otel.suppress():
+            self.status: Value[Status] = Value("initial")
+            """
+            Reactive value that tracks the current status of the task. The value will be one
+            of "initial", "running", "success", "error", or "cancelled".
+            """
+
+            self.value: Value[R] = Value()
+            """
+            Reactive value that tracks the result of the task, if the current status is
+            "success". If the status is not "success", the value will be unset, and a silent
+            exception will be raised if you try to read it. Calling code should generally
+            not read this value directly, but instead use the `result()` method, which is
+            designed to behave correctly regardless of the current status.
+            """
+
+            self.error: Value[BaseException] = Value()
+            """
+            Reactive value that tracks the error raised by the task, if the current status
+            is "error". If the status is not "error", the value will be unset, and a silent
+            exception will be raised if you try to read it. Calling code should generally
+            not read this value directly, but instead use the `result()` method, which is
+            designed to behave correctly regardless of the current status.
+            """
 
         # If invoked while a previous invocation is still running, we queue up.
         self._invocation_queue: list[Callable[[], None]] = []
@@ -107,6 +136,20 @@ class ExtendedTask(Generic[P, R]):
         with isolate():
             if self.status() == "running" or len(self._invocation_queue) > 0:
                 self._invocation_queue.append(lambda: self._invoke(*args, **kwargs))
+                # Log queue operation at DEBUG level if OTel is enabled and collection level is sufficient
+                if (
+                    is_otel_tracing_enabled()
+                    and self._otel_level >= OtelCollectLevel.REACTIVITY
+                ):
+                    emit_otel_log(
+                        self._otel_log_label,
+                        severity_text="DEBUG",
+                        attributes={
+                            **self._otel_attrs,
+                            "queue.size": len(self._invocation_queue),
+                        },
+                        infer_session_id=False,
+                    )
             else:
                 self._invoke(*args, **kwargs)
 
@@ -125,10 +168,18 @@ class ExtendedTask(Generic[P, R]):
 
     async def _execution_wrapper(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """
-        Wraps the user code in a context that denies access to reactive sources.
+        Wraps the user code in a context that denies access to reactive sources,
+        and creates an OpenTelemetry span to track the task execution.
         """
-        with DenialContext()():
-            return await self._func(*args, **kwargs)
+        async with shiny_otel_span(
+            self._otel_label,
+            attributes=self._otel_attrs,
+            infer_session_id=False,
+            required_level=OtelCollectLevel.REACTIVITY,
+            collection_level=self._otel_level,
+        ):
+            with DenialContext()():
+                return await self._func(*args, **kwargs)
 
     def _done_callback(self, task: asyncio.Task[R]) -> None:
         """

@@ -1,0 +1,42 @@
+# Application Configuration
+app:
+  name: "MyApplication"
+  version: 1.2.3
+  debug: true
+
+database:
+  host: localhost
+  port: 5432
+  credentials: &db_creds
+    username: admin
+    timeout: 30
+
+servers:
+  - name: production
+    url: https://api.example.com
+    credentials: *db_creds
+    retry_attempts: 3
+
+  - name: staging
+    url: https://staging-api.example.com
+    enabled: false
+
+description: |
+  This is a multiline string that spans
+  across multiple lines with preserved
+  newlines and indentation.
+
+features:
+  analytics: >
+    This is a folded scalar that will
+    collapse multiple lines into a
+    single line with spaces.
+
+  notifications:
+    - email
+    - sms
+    - push
+
+thresholds:
+  warning: 0.75
+  critical: 0.95

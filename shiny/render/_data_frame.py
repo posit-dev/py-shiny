@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, Union, cast
 
 from htmltools import Tag
 
-from .. import reactive, ui
+from .. import otel, reactive, ui
 from .._docstring import add_example
 from .._utils import wrap_async
 from .._validation import req
@@ -242,6 +242,7 @@ class data_frame(
         return self._req_value().data
 
     @reactive_calc_method
+    @otel.suppress
     def _nw_data(self) -> DataFrame[IntoDataFrameT]:
         """
         Reactive calculation of the data frame's data wrapped by narwhals.
@@ -330,6 +331,7 @@ class data_frame(
         return list(self._cell_patch_map().values())
 
     @reactive_calc_method
+    @otel.suppress
     def _nw_data_patched(self) -> DataFrame[IntoDataFrameT]:
         """
         Reactive calculation of the data frame's patched data.
@@ -405,6 +407,7 @@ class data_frame(
         return patched_subsetted_into_data
 
     @reactive_calc_method
+    @otel.suppress
     def _data_view_all(self) -> IntoDataFrameT:
         """
         Reactive calculation of the full (sorted and filtered) data.
@@ -417,9 +420,10 @@ class data_frame(
         return self._subset_data_view(selected=False)
 
     @reactive_calc_method
+    @otel.suppress
     def _data_view_selected(self) -> IntoDataFrameT:
         """
-        Reactive calcuation of the selected rows of the (sorted and filtered) data.
+        Reactive calculation of the selected rows of the (sorted and filtered) data.
 
         Returns
         -------
@@ -428,7 +432,7 @@ class data_frame(
         """
         return self._subset_data_view(selected=True)
 
-    @add_example(ex_dir="../api-examples/data_frame_data_view")
+    @add_example(example_name="data_frame_data_view")
     def data_view(self, *, selected: bool = False) -> IntoDataFrameT:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
@@ -562,31 +566,32 @@ class data_frame(
         self._updated_data.unset()
 
     def _init_reactives(self) -> None:
+        with otel.suppress():
 
-        # Init
-        self._value = reactive.Value(None)
-        self._cell_patch_map = reactive.Value({})
-        self._updated_data = reactive.Value()  # Create with no value
+            # Init
+            self._value = reactive.Value(None)
+            self._cell_patch_map = reactive.Value({})
+            self._updated_data = reactive.Value()  # Create with no value
 
-        # Update the styles any time the cell patch map or new data updates
-        def should_update_styles():
-            return (
-                self._cell_patch_map(),
-                # If the udpated data is unset, use a `None` value which is not allowed.
-                self._updated_data() if self._updated_data.is_set() else None,
+            # Update the styles any time the cell patch map or new data updates
+            def should_update_styles():
+                return (
+                    self._cell_patch_map(),
+                    # If the updated data is unset, use a `None` value which is not allowed.
+                    self._updated_data() if self._updated_data.is_set() else None,
+                )
+
+            @reactive.effect
+            @reactive.event(
+                should_update_styles,
+                # Do not run the first time through!
+                # The styles are being sent with the initial blob.
+                ignore_init=True,
             )
-
-        @reactive.effect
-        @reactive.event(
-            should_update_styles,
-            # Do not run the first time through!
-            # The styles are being sent with the initial blob.
-            ignore_init=True,
-        )
-        async def _():
-            # Be sure this is called within `isolate()` to isolate any reactivity
-            # It currently is, as `@reactive.event()` is being used
-            await self._attempt_update_cell_style()
+            async def _():
+                # Be sure this is called within `isolate()` to isolate any reactivity
+                # It currently is, as `@reactive.event()` is being used
+                await self._attempt_update_cell_style()
 
     def _get_session(self) -> Session:
         if self._session is None:
@@ -595,7 +600,7 @@ class data_frame(
             )
         return self._session
 
-    @add_example(ex_dir="../api-examples/data_frame_data_view")
+    @add_example(example_name="data_frame_data_view")
     def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> None:
         """
         Decorator to set the function that updates a single cell in the data frame.
@@ -617,7 +622,7 @@ class data_frame(
         # from .._typing_extensions import Self
         # return self
 
-    @add_example(ex_dir="../api-examples/data_frame_set_patches")
+    @add_example(example_name="data_frame_set_patches")
     def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> None:
         """
         Decorator to set the function that updates a batch of cells in the data frame.
@@ -1098,7 +1103,7 @@ class data_frame(
             {"cellSelection": cell_selection},
         )
 
-    @add_example(ex_dir="../api-examples/data_frame_update_sort")
+    @add_example(example_name="data_frame_update_sort")
     async def update_sort(
         self,
         sort: ListOrTuple[ColumnSort | int] | int | ColumnSort | None,
@@ -1150,7 +1155,7 @@ class data_frame(
             {"sort": vals},
         )
 
-    @add_example(ex_dir="../api-examples/data_frame_update_filter")
+    @add_example(example_name="data_frame_update_filter")
     async def update_filter(
         self,
         filter: ListOrTuple[ColumnFilter] | None,
@@ -1172,31 +1177,7 @@ class data_frame(
             with reactive.isolate():
                 ncol = self._nw_data().shape[1]
 
-            for column_filter, i in zip(filter, range(len(filter))):
-                assert isinstance(column_filter, dict)
-                assert isinstance(column_filter["col"], int)
-                assert 0 <= column_filter["col"] < ncol
-                if isinstance(column_filter["value"], str):
-                    ...
-                elif isinstance(column_filter["value"], (list, tuple)):
-                    assert len(column_filter["value"]) == 2
-                    if (
-                        column_filter["value"][0] is None
-                        and column_filter["value"][1] is None
-                    ):
-                        raise TypeError(
-                            "Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
-                        )
-                    assert isinstance(
-                        column_filter["value"][0], (int, float, type(None))
-                    )
-                    assert isinstance(
-                        column_filter["value"][1], (int, float, type(None))
-                    )
-                else:
-                    raise TypeError(
-                        f"Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `{type(column_filter['value'])}`"
-                    )
+            assert_column_filters(filter, ncol)
 
         await self._send_message_to_browser(
             "updateColumnFilter",
@@ -1221,6 +1202,27 @@ class data_frame(
             return None
 
         return self.cell_selection()
+
+
+def assert_column_filters(filters: ListOrTuple[ColumnFilter], ncol: int) -> None:
+    for column_filter, i in zip(filters, range(len(filters))):
+        assert isinstance(column_filter, dict)
+        assert isinstance(column_filter["col"], int)
+        assert 0 <= column_filter["col"] < ncol
+        if isinstance(column_filter["value"], str):
+            ...
+        elif isinstance(column_filter["value"], (list, tuple)):
+            assert len(column_filter["value"]) == 2
+            if column_filter["value"][0] is None and column_filter["value"][1] is None:
+                raise TypeError(
+                    "Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
+                )
+            assert isinstance(column_filter["value"][0], (int, float, type(None)))
+            assert isinstance(column_filter["value"][1], (int, float, type(None)))
+        else:
+            raise TypeError(
+                f"Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `{type(column_filter['value'])}`"
+            )
 
 
 # TODO-barret; Make request to GT: Add class for gt location

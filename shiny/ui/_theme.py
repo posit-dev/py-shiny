@@ -41,7 +41,9 @@ class SassCompileArgs(TypedDict):
 theme_temporary_directories: set[tempfile.TemporaryDirectory[str]] = set()
 
 
-@add_example()
+# The example directory is lowercase `theme`, which only resolves from `Theme` on
+# case-insensitive filesystems; name it explicitly so Linux docs builds find it.
+@add_example(example_name="theme")
 class Theme:
     """
     Create a custom Shiny theme.
@@ -513,7 +515,7 @@ class Theme:
             return self._css
 
         check_theme_pkg_installed("libsass", "sass")
-        import sass
+        import sass  # pyright: ignore[reportMissingTypeStubs]
 
         args: SassCompileArgs = {} if compile_args is None else compile_args
 
@@ -529,7 +531,12 @@ class Theme:
             **args,
         }
 
-        self._css = sass.compile(string=self.to_sass(), **args)
+        css = sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            string=self.to_sass(),
+            **args,
+        )
+        assert isinstance(css, str)
+        self._css = css
 
         return self._css
 
@@ -723,7 +730,7 @@ def check_theme_pkg_installed(pkg: str, spec: str | None = None) -> None:
     if importlib.util.find_spec(spec or pkg) is None:
         raise ImportError(
             f"The '{pkg}' package is required to compile custom themes. "
-            'Please install it with `pip install {pkg}` or `pip install "shiny[theme]"`.',
+            f'Please install it with `pip install {pkg}` or `pip install "shiny[theme]"`.',
         )
 
 

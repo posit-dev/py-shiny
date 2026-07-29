@@ -4,15 +4,13 @@ from shiny.express import input, render, ui
 
 # Add some descriptive text
 ui.h2("Date Range Input Example")
-ui.markdown(
-    """
+ui.markdown("""
 This example demonstrates a date range input with various customization options:
 - Custom date format (mm/dd/yyyy)
 - Restricted date range (2020-2025)
 - Week starting on Monday
 - Custom separator
-"""
-)
+""")
 
 with ui.layout_column_wrap():
     # Create a date range input with all possible parameters

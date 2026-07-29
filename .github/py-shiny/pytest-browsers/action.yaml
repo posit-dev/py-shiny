@@ -9,38 +9,19 @@ inputs:
     description: 'Force all pytest browsers to used when testing'
     required: false
     default: 'false'
-  disable-playwright-diagnostics:
-    description: 'Disable playwright diagnostics: tracing, video, screenshot'
-    required: false
-    default: 'true'
 outputs:
   browsers:
     description: 'pytest browsers to use'
     value: ${{ steps.browsers.outputs.browsers }}
-  has-playwright-diagnostics:
-    description: 'Whether playwright diagnostics have been enabled'
-    value: ${{ steps.browsers.outputs.has-playwright-diagnostics }}
-  playwright-diagnostic-args:
-    description: 'Args to supply to `make playwright` like commands.'
-    value: ${{ steps.browsers.outputs.playwright-diagnostic-args }}
 runs:
   using: "composite"
   steps:
+
       - name: Determine browsers to use
         shell: bash
         id: browsers
         run: |
           # Determine which browsers to use
-
-          if [ "${{ inputs.disable-playwright-diagnostics }}" == "true" ]; then
-            echo "Disabling playwright diagnostics!"
-            echo 'has-playwright-diagnostics=false' >> "$GITHUB_OUTPUT"
-            echo 'playwright-diagnostic-args=--tracing off --video off --screenshot off' >> "$GITHUB_OUTPUT"
-          else
-            echo "Using playwright diagnostics!"
-            echo 'has-playwright-diagnostics=true' >> "$GITHUB_OUTPUT"
-            echo 'playwright-diagnostic-args=--tracing=retain-on-failure --screenshot=only-on-failure --full-page-screenshot --video off --output=test-results' >> "$GITHUB_OUTPUT"
-          fi
 
           if [ "${{ inputs.browser }}" != "" ]; then
             BROWSER="${{ inputs.browser }}"

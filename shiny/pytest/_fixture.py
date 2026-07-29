@@ -37,6 +37,7 @@ def create_app_fixture(
     app: PurePath | str | list[PurePath | str],
     scope: ScopeName = "module",
     timeout_secs: float = 30,
+    env: dict[str, str] | None = None,
 ):
     """
     Create a fixture for a local Shiny app directory.
@@ -73,6 +74,14 @@ def create_app_fixture(
         for more details.
     timeout_secs
         The maximum number of seconds to wait for the app to become ready.
+    env
+        Extra environment variables for the launched app subprocess, merged over the
+        parent environment. When ``None`` (the default), ``{"SHINY_TESTMODE": "1"}``
+        is used so the app runs in Shiny test mode (enabling the `AppTestValues`
+        controller). Pass an explicit dict to override, e.g. ``{"SHINY_TESTMODE":
+        "0"}`` to reliably disable test mode. Note that ``{}`` only stops this
+        fixture from *setting* ``SHINY_TESTMODE``; because the value is merged over
+        the parent environment, an inherited ``SHINY_TESTMODE=1`` would still apply.
 
     Returns
     -------
@@ -124,6 +133,12 @@ def create_app_fixture(
     ```
     """
 
+    # Launched apps run in Shiny test mode by default so the `AppTestValues`
+    # controller works out of the box. Pass `env={"SHINY_TESTMODE": "0"}` to
+    # reliably disable it (a bare `env={}` merges over the parent environment, so
+    # an inherited `SHINY_TESTMODE=1` would still apply).
+    effective_env = {"SHINY_TESTMODE": "1"} if env is None else env
+
     def get_app_path(request: pytest.FixtureRequest, app: PurePath | str):
         app_purepath_exists = isinstance(app, PurePath) and Path(app).is_file()
         app_path = app if app_purepath_exists else request.path.parent / app
@@ -136,7 +151,9 @@ def create_app_fixture(
         @pytest.fixture(scope=scope, params=app)
         def fixture_func(request: pytest.FixtureRequest):
             app_path = get_app_path(request, request.param)
-            sa_gen = shiny_app_gen(app_path, timeout_secs=timeout_secs)
+            sa_gen = shiny_app_gen(
+                app_path, timeout_secs=timeout_secs, env=effective_env
+            )
             yield next(sa_gen)
 
     else:
@@ -145,7 +162,9 @@ def create_app_fixture(
         @pytest.fixture(scope=scope)
         def fixture_func(request: pytest.FixtureRequest):
             app_path = get_app_path(request, app)
-            sa_gen = shiny_app_gen(app_path, timeout_secs=timeout_secs)
+            sa_gen = shiny_app_gen(
+                app_path, timeout_secs=timeout_secs, env=effective_env
+            )
             yield next(sa_gen)
 
     return fixture_func

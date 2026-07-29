@@ -37,7 +37,6 @@ def mod_btn(idx: int):
 
 @module.server
 def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 3):
-
     @render.ui
     def ui_html():
         return ui.TagList(
@@ -69,13 +68,10 @@ def btn_server(input: Inputs, output: Outputs, session: Session, idx: int = 3):
 
     @session.bookmark.on_restore
     def _(restore_state: RestoreState) -> None:
-
         if "btn2" in restore_state.values:
-
             ui.update_radio_buttons("btn2", selected=restore_state.values["btn2"])
 
         if "dyn2" in restore_state.values:
-
             ui.update_radio_buttons("dyn2", selected=restore_state.values["dyn2"])
 
 
@@ -92,7 +88,6 @@ def app_ui(request: Request) -> ui.Tag:
 
 # Needs access to the restore context to the dynamic UI
 def server(input: Inputs, output: Outputs, session: Session):
-
     session.bookmark.on_bookmarked(session.bookmark.update_query_string)
 
     @render.code
@@ -103,9 +98,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         btn_server(f"mod{i}", i)
 
 
-SHINY_BOOKMARK_STORE: Literal["url", "server"] = os.getenv(
-    "SHINY_BOOKMARK_STORE", "url"
-)  # pyright: ignore[reportAssignmentType]
-if SHINY_BOOKMARK_STORE not in ["url", "server"]:
+_bookmark_store_env = os.getenv("SHINY_BOOKMARK_STORE", "url")
+if _bookmark_store_env not in ("url", "server"):
     raise ValueError("SHINY_BOOKMARK_STORE must be either 'url' or 'server'")
+SHINY_BOOKMARK_STORE: Literal["url", "server"] = _bookmark_store_env
 app = App(app_ui, server, bookmark_store=SHINY_BOOKMARK_STORE, debug=False)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-import palmerpenguins  # pyright: ignore[reportMissingTypeStubs]
+import palmerpenguins
 
 from shiny.express import render, ui
 

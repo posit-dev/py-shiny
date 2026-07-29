@@ -1,4 +1,4 @@
-// Darkly 5.3.1
+// Darkly 5.3.8
 // Bootswatch
 
 
@@ -6,7 +6,7 @@
 
 $web-font-path: "https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap" !default;
 @if $web-font-path {
-  @import url($web-font-path);
+  @import url("#{$web-font-path}");
 }
 
 // Typography
@@ -15,6 +15,10 @@ $web-font-path: "https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0
   &-footer {
     color: body-mix(75%);
   }
+}
+
+.text-secondary {
+  color: var(--bs-secondary-color) !important;
 }
 
 // Forms
@@ -34,19 +38,6 @@ $web-font-path: "https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0
 }
 
 // Navs
-
-.nav-tabs,
-.nav-pills {
-  .nav-link,
-  .nav-link.active,
-  .nav-link.active:focus,
-  .nav-link.active:hover,
-  .nav-item.open .nav-link,
-  .nav-item.open .nav-link:focus,
-  .nav-item.open .nav-link:hover {
-    color: $body-color;
-  }
-}
 
 .breadcrumb a {
   color: $body-color;

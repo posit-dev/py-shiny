@@ -18,6 +18,7 @@ quartodoc:
         - playwright.controller.Accordion
         - playwright.controller.AccordionPanel
         - playwright.controller.Card
+        - playwright.controller.Offcanvas
         - playwright.controller.Popover
         - playwright.controller.Sidebar
         - playwright.controller.Toast
@@ -30,6 +31,7 @@ quartodoc:
         - playwright.controller.InputBookmarkButton
         - playwright.controller.InputCheckbox
         - playwright.controller.InputCheckboxGroup
+        - playwright.controller.InputCodeEditor
         - playwright.controller.InputDarkMode
         - playwright.controller.InputDate
         - playwright.controller.InputDateRange
@@ -45,6 +47,8 @@ quartodoc:
         - playwright.controller.InputTaskButton
         - playwright.controller.InputText
         - playwright.controller.InputTextArea
+        - playwright.controller.ToolbarInputButton
+        - playwright.controller.ToolbarInputSelect
     - title: Value boxes
       desc: Methods for interacting with Shiny app valuebox controller.
       contents:
@@ -84,6 +88,10 @@ quartodoc:
         - playwright.controller.OutputText
         - playwright.controller.OutputTextVerbatim
         - playwright.controller.OutputUi
+    - title: App test values
+      desc: Read a session's test-mode snapshot of input, output, and export values.
+      contents:
+        - playwright.controller.AppTestValues
     - title: "Playwright Expect"
       desc: "Methods for testing the state of a locator within a Shiny app."
       contents:

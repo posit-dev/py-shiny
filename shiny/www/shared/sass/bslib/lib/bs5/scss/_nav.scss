@@ -180,10 +180,10 @@
 .nav-justified {
   > .nav-link,
   .nav-item {
-    flex-basis: 0;
-    -webkit-flex-basis: 0;
     flex-grow: 1;
     -webkit-flex-grow: 1;
+    flex-basis: 0;
+    -webkit-flex-basis: 0;
     text-align: center;
   }
 }

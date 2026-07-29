@@ -3,6 +3,7 @@ import os
 import pytest
 from playwright.sync_api import Page
 from utils.deploy_utils import (
+    goto_deployed_app,
     local_deploys_app_url_fixture,
     reruns,
     reruns_delay,
@@ -21,7 +22,7 @@ app_url = local_deploys_app_url_fixture(
 @skip_if_not_chrome
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 def test_express_page_sidebar(page: Page, app_url: str) -> None:
-    page.goto(app_url)
+    goto_deployed_app(page, app_url)
 
     sidebar = controller.Sidebar(page, "sidebar")
     sidebar.expect_text("SidebarTitle Sidebar Content")

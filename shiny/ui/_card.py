@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from typing import TYPE_CHECKING, Optional, Protocol
 
 from htmltools import (
     HTML,
@@ -14,6 +14,9 @@ from htmltools import (
     div,
     tags,
 )
+
+if TYPE_CHECKING:
+    from htmltools import Tagified
 
 from .._docstring import add_example
 from .._namespaces import resolve_id_or_none
@@ -82,9 +85,9 @@ def card(
     class_
         Additional CSS classes for the returned Tag.
     id
-        Provide a unique identifier for the :func:`~shiny.ui.card` or to report its
-        full screen state to Shiny. For example, using `id="my_card"`, you can observe
-        the card's full screen state with `input.my_card_full_screen()`.
+        A unique identifier for the card. If provided, the card's full screen
+        state is reported to Shiny at `input.<id>_full_screen()` (e.g.,
+        `input.my_card_full_screen()` for `id="my_card"`).
     **kwargs
         HTML attributes on the returned Tag.
 
@@ -429,7 +432,7 @@ class CardItem:
         """
         return self._item
 
-    def tagify(self) -> TagList:
+    def tagify(self) -> Tagified:
         """
         Tagify the `item`
 
