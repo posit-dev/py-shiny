@@ -384,12 +384,51 @@ Use the shinylive JS version from Phase 6 (already known at this point).
 - [ ] Check for any existing open PRs that bump `SHINYLIVE_ASSETS_VERSION` (`gh pr list --repo posit-dev/r-shinylive --state open --search "SHINYLIVE_ASSETS_VERSION"`). If found, close them.
 - [ ] Create a branch with the following changes:
   - Update `SHINYLIVE_ASSETS_VERSION` in `R/version.R` to the Phase 6 shinylive JS version
-  - Bump `Version` in `DESCRIPTION` to the next dev version (e.g., `0.4.1.9000`)
-  - Add a `NEWS.md` entry under the dev version heading (e.g., `# shinylive 0.4.1.9000`) noting the assets update
+  - Bump `Version` in `DESCRIPTION` to the next dev version (e.g., `0.4.1.9000`) — **only if
+    it is not already a dev version**. If it already ends in `.9000` there is nothing to do,
+    and the NEWS entry goes under the existing `# shinylive (development version)` heading.
+  - Add a `NEWS.md` entry noting the assets update. Match the established wording, which
+    links the release and calls out what changed for R users — usually whether the bundled
+    webR moved, since a py-shiny-only bump does not affect R apps.
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
 - [ ] Ask user to confirm before merging the PR
 - [ ] Merge PR (squash merge)
+
+**This does not ship to users.** r-shinylive releases through CRAN, so a dev-version assets
+bump reaches R users only at its next CRAN release. Say so when reporting the phase complete,
+or it reads as though the R side is live like the PyPI packages are.
+
+**Note the assets version may skip releases.** If a shinylive version was cut but never
+deployed to shinylive.io (see the note on v0.10.13), r-shinylive will be behind by more than
+one. Bump to the current one and mention the skip in the PR body.
+
+### A formatter bot may push to your PR branch
+
+`r-shinylive` runs an `air format` workflow that commits fixes directly to PR branches. Two
+consequences:
+
+1. Your PR can pick up an **unrelated** formatting change (a pre-existing violation elsewhere
+   in the package). Harmless, but mention it in the squash-merge body so it does not look like
+   part of the release change.
+2. Because the push is from a bot, GitHub gates the resulting workflow run as
+   `action_required` with **zero jobs**. This makes `gh pr checks` report
+   *"no checks reported on the branch"* and the PR show `mergeStateStatus: BLOCKED`, which
+   looks exactly like CI never ran — when in fact it passed on your commit.
+
+Diagnose by listing runs with their SHAs rather than trusting the PR-level view:
+
+```bash
+gh run list --repo posit-dev/r-shinylive --limit 5 \
+  --json databaseId,status,conclusion,headSha,event
+gh pr view <N> --repo posit-dev/r-shinylive --json headRefOid   # compare
+```
+
+Then approve the gated run so checks report against the new head:
+
+```bash
+gh api -X POST repos/posit-dev/r-shinylive/actions/runs/<RUN_ID>/approve
+```
 
 ---
 
@@ -409,14 +448,56 @@ Repo: `posit-dev/py-shiny`
 
 Repo: `posit-dev/py-shiny-site`
 
-- [ ] Update the py-shiny submodule to point to the release tag
-- [ ] Update py-shinylive version in `requirements.txt`
+- [ ] Update the py-shiny submodule to point to the release tag. **Check how far behind it
+      was** — if it lagged by more than one release, the PR also lands the intermediate ones,
+      which is worth saying in the PR body (a skipped security patch especially).
+- [ ] Update py-shinylive version in `requirements.txt`. Note this is an **exact** pin
+      (`shinylive==0.8.11`), not a floor.
 - [ ] Create a PR
 - [ ] Use deployment preview to verify:
-  - [ ] API docs are correct
-  - [ ] Examples run properly
+  - [ ] API docs are correct — especially pages for APIs the release added
+  - [ ] Deprecations render as deprecated
+  - [ ] Examples run properly. Embedded editors now execute the new shiny, so an example using
+        a newly deprecated API will print a deprecation warning in the browser console.
 - [ ] Ask user to confirm before merging the PR
 - [ ] Merge PR
+
+### Expect the doc-coverage test to fail when the release adds UI components
+
+`components/test_ui_api_has_page.py::test_every_ui_export_has_a_page` asserts that every
+`shiny.ui` / `shiny.express.ui` export is either documented or explicitly opted out. It
+computes `API - DOCUMENTED - KNOWN_MISSING_COMPONENTS`, so **any new UI export fails the
+`apps` job until a page exists**:
+
+```
+AssertionError: These shiny.ui / shiny.express.ui exports have no doc page:
+  ['Offcanvas', 'hide_offcanvas', 'offcanvas', 'show_offcanvas', 'toggle_offcanvas'].
+```
+
+This is predictable rather than surprising: scan the release's **New features** changelog
+section for new UI exports before opening the PR. Options are to write the `components/` page
+and list the exports in its `relevant-functions` front-matter, or add them to
+`KNOWN_MISSING_COMPONENTS` (`_TODO_NEEDS_COMPONENT_PAGE` is the bucket for "real component,
+page not written yet"). Writing docs mid-release-train is usually out of scope, so the normal
+outcome is to file an issue, get the user's sign-off, and merge with the failure — but surface
+it rather than letting it look like an unexplained red check.
+
+### The deploy preview URL is not posted as a comment
+
+Nothing comments the Netlify URL on the PR. It follows the pattern
+`https://pr-<N>--pyshiny.netlify.app`, and can be confirmed from the `deploy` job log:
+
+```bash
+gh api repos/posit-dev/py-shiny-site/actions/jobs/<JOB_ID>/logs | grep -a environment_url
+```
+
+### `main` requires an approving review
+
+`required_approving_review_count: 1`, so `mergeStateStatus: BLOCKED` here usually means
+"needs review", not "CI failed" — check which before reporting. Merging therefore needs either
+a reviewer or, with the user's explicit approval, `gh pr merge --squash --admin`. If merging
+with a known failure, record the failure and its tracking issue in the squash-merge body so
+the history explains itself.
 
 Ask user: "Ready to update the docs site? I'll help create the PR."
 
@@ -424,25 +505,130 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 
 ## Phase 11: Conda-forge
 
-- [ ] Check `conda-forge/py-htmltools-feedstock` for auto-created PR from bot (only if py-htmltools was released)
-- [ ] Check `conda-forge/py-shiny-feedstock` for auto-created PR from bot
-- [ ] If PRs exist and tests pass, they should auto-merge (look for `[bot-automerge]` prefix)
-- [ ] If auto-merge doesn't happen, create an issue with the appropriate bot command
-- [ ] Note: Only py-htmltools and py-shiny have conda-forge feedstocks. py-shinyswatch, py-shinywidgets, and py-shinylive do NOT have feedstocks as of 2026-03.
+- [ ] Check `conda-forge/py-shiny-feedstock` for an auto-created bot PR (and
+      `conda-forge/py-htmltools-feedstock`, only if py-htmltools was released)
+- [ ] **Read the existing PRs' comments before investigating anything.** Prior cycles'
+      analysis usually lives there, and re-deriving it wastes a lot of time.
+- [ ] **Sync `recipe/meta.yaml`'s `run:` section by hand** — see below. The bot does not do
+      this, and it is the usual reason a bump fails.
+- [ ] Verify `about/license_file` against the new sdist, in both directions (below)
+- [ ] If tests pass, `[bot-automerge]` lands it without help
+- [ ] Feedstocks: py-shiny and py-htmltools. py-shinyswatch and shinychat were submitted to
+      `staged-recipes` in July 2026 (#34339, #34338) — check whether they now have feedstocks
+      that also need bumping. py-shinywidgets and py-shinylive still do not.
+
+### The bot bumps the version; it does not add dependencies
+
+This is the single biggest trap in this phase. A bot PR only changes `version`, `sha256` and
+`build/number`, then re-renders. **Whenever py-shiny gains a runtime dependency, the recipe
+must be updated by hand or the build fails in the test phase**, typically with a
+`ModuleNotFoundError` for the new dep during `import shiny`.
+
+This failure mode is silent across releases: the bot keeps opening PRs, each fails the same
+way, and they get closed. In July 2026 the feedstock was found stuck on **1.4.0 since April
+2025** — every bump from 1.5.0 onward had failed because `shinychat` (new in 1.5.0) and
+`opentelemetry-api` (new in 1.6.0) were never added.
+
+Compute the gap from PyPI metadata rather than reading `pyproject.toml` by eye:
+
+```bash
+curl -s https://pypi.org/pypi/shiny/<VERSION>/json -o /tmp/shiny.json
+python - <<'EOF'
+import json, re
+d = json.load(open("/tmp/shiny.json"))
+for r in (d["info"]["requires_dist"] or []):
+    if "extra ==" not in r:
+        print(" ", r)
+EOF
+```
+
+Diff that against the recipe's `run:` list. Check for three things: **missing** deps, deps
+that were **replaced** upstream (`appdirs` → `platformdirs`), and **floors that drifted**
+behind `pyproject.toml`. py-shiny raises floors fairly often — its lowest-direct-resolution
+CI job exists precisely to catch stale minimums, so its bounds move more than most packages'.
+
+Also apply the linter's `noarch: python` hint if it appears: `run:` should use
+`python >={{ python_min }}`, not `python {{ python_min }}`.
+
+### Triggering a bot PR
+
+If no bot PR exists (or you want one for a newer version), open an **issue** on the feedstock
+titled exactly:
+
+```
+@conda-forge-admin, please update version
+```
+
+`conda-forge-webservices` replies with a link to the PR it opened. Note it works in two
+stages — first a `dummy commit for rerendering`, then the real
+`ENH: updated version to X.Y.Z & Re-rendered ...`. Between those, the PR looks like it only
+touched `README.md`; wait for the second commit before concluding anything.
+
+The bot stops issuing PRs when more than 3 of its version-bump PRs are open, so close
+superseded ones.
+
+### Pushing to a bot PR's branch
+
+Bot branches live on the **bot's fork**, not the feedstock. Check `maintainerCanModify` (it is
+normally `true`), then push to that remote explicitly:
+
+```bash
+gh pr view <N> --repo conda-forge/py-shiny-feedstock \
+  --json maintainerCanModify,headRepositoryOwner,headRefName
+git remote add bot https://github.com/conda-forge-admin/py-shiny-feedstock.git
+git fetch bot <branch> && git checkout -B <branch> bot/<branch>
+# ... edit recipe/meta.yaml ...
+git push bot HEAD:<branch>
+```
+
+The owner is `conda-forge-admin` for webservice PRs and `regro-cf-autotick-bot` for autotick
+PRs. `git fetch origin <branch>` fails with `couldn't find remote ref` — that is the giveaway
+that you are looking at the wrong repo.
+
+Current `recipe-maintainers`: `cpsievert`, `schloerke`, `wch`, `sugatoray` — so both Carson
+and Barret can push directly. (Verify with the recipe's `extra/recipe-maintainers` rather
+than trusting this list.)
 
 ### Known issue: license_file references
 
-The feedstock `recipe/meta.yaml` has an `about/license_file` section that lists bundled license files from py-shiny (e.g., `shiny/www/shared/highlight/LICENSE`, `shiny/www/shared/busy-indicators/spinners/LICENSE`, `shiny/www/shared/jqueryui/LICENSE.txt`). If py-shiny removes or renames any vendored dependency between releases, these paths become stale and the conda-forge build will fail with `ValueError: License file ... does not exist`.
+`about/license_file` lists bundled license files from py-shiny. Check it **both ways** against
+the new sdist:
 
-**If a build fails for this reason:**
-1. Identify which license files no longer exist by checking `shiny/www/shared/` in the current release
-2. Comment on the bot PR explaining which line(s) to remove from `license_file`
-3. The feedstock maintainers (currently `wch` and `sugatoray`) can push the fix to the bot's branch or request a `bot-rerun` after updating `meta.yaml` on main
-4. Note: Carson (cpsievert) is **not** a feedstock maintainer and cannot push directly — if this is needed, ask to be added or request a maintainer to act
+```bash
+curl -sL "https://pypi.org/packages/source/s/shiny/shiny-<VERSION>.tar.gz" -o /tmp/s.tar.gz
+# 1. every listed path must still exist -- a stale one fails the build with
+#    `ValueError: License file ... does not exist`
+tar tzf /tmp/s.tar.gz | grep -iE "LICENSE|COPYING" | sed 's|^shiny-<VERSION>/||'
+```
+
+- **Stale paths** (listed but gone, because a vendored dependency was removed or renamed)
+  break the build.
+- **Missing paths** (bundled in the sdist but not listed) do not break the build but are a
+  licensing-compliance gap. In July 2026 `shiny/www/shared/busy-indicators/spinners/LICENSE`
+  was bundled and unlisted.
 
 ### Bot PR timing
 
-The conda-forge bot (`regro-cf-autotick-bot`) typically creates PRs within a few hours of a PyPI release, but it can sometimes take up to a day. If no PR appears after 24 hours, check the bot's [status page](https://github.com/regro/cf-scripts) for outages.
+The conda-forge bot (`regro-cf-autotick-bot`) typically creates PRs within a few hours of a
+PyPI release, but it can sometimes take up to a day. If no PR appears after 24 hours, check
+the bot's [status page](https://github.com/regro/cf-scripts) for outages, or trigger one with
+the issue command above.
+
+### When a dependency is not on conda-forge at all
+
+A new py-shiny dependency may have no conda-forge package. Then the feedstock cannot build
+until someone submits it to
+[`conda-forge/staged-recipes`](https://github.com/conda-forge/staged-recipes), which is a
+separate review queue with its own latency. Check with:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://api.anaconda.org/package/conda-forge/<name>
+```
+
+A build in a personal anaconda.org channel does not count — conda-forge recipes may only
+depend on conda-forge packages. When this happens, still push the corrected recipe (it will
+fail to solve, which is expected and explainable) so that the only remaining action once the
+dependency lands is a CI rerun.
 
 Ask user: "Have the conda-forge bot PRs appeared? Any issues with auto-merge?"
 

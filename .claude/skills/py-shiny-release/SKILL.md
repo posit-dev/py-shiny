@@ -221,6 +221,46 @@ status comes from `tail`, not from `make` — a failed build looks like success.
 the pipe, use `set -o pipefail`, or verify the build from its artifacts (expected wheels
 present and at the expected versions) rather than from the exit code.
 
+### Never report CI status from a truncated or PR-level view
+
+Two ways a status report goes wrong, both of which happened during the v1.7.0 train — once
+claiming green when a check was failing, once claiming no-CI when everything had passed:
+
+- **Do not pipe the check list through `head`.** These repos have 8-350 checks and the failing
+  one is rarely in the first few. Aggregate instead of sampling, then list only what is not
+  passing:
+
+  ```bash
+  gh pr checks <N> --repo <repo> --json state \
+    --jq '[.[]|.state]|group_by(.)|map({state:.[0],n:length})'
+  gh pr checks <N> --repo <repo> --json name,state,link \
+    --jq '.[]|select(.state!="SUCCESS" and .state!="SKIPPED")|"\(.name) \(.state)\n  \(.link)"'
+  ```
+
+- **`gh pr checks` reports on the PR's current head.** If anything pushed a commit after
+  yours (a formatter bot, for instance), checks can read as missing or blocked even though CI
+  passed on your commit. Confirm by listing runs with their SHAs (`gh run list --json
+  headSha,status,conclusion`) and comparing against `gh pr view --json headRefOid`.
+
+Relatedly, `mergeStateStatus: BLOCKED` does **not** mean CI failed — it usually means a
+required review is missing, or a check suite is awaiting approval. Check which before
+reporting.
+
+### Read existing PR and issue comments before investigating
+
+Downstream repos accumulate diagnosis in comment threads across release cycles. Before
+digging into a failure — especially a recurring one on a conda-forge feedstock — read the
+comments on the open and recently closed PRs. During the v1.7.0 train a full root-cause
+analysis of the feedstock failure already existed in a PR comment, and was re-derived from
+scratch instead.
+
+### Clone downstream repos outside the py-shiny working tree
+
+Cloning a release repo into a subdirectory of py-shiny (e.g. `.context/`) makes tooling walk
+up and pick up py-shiny's configuration. `pytest` in particular resolves py-shiny's
+`pytest.ini` as its rootdir and then fails with `unrecognized arguments: --numprocesses`.
+Clone to a sibling directory, or override with `-o addopts="" --rootdir=.`.
+
 ## Parallelism
 
 Once the PyPI packages are published (phases 2-7), several later phases can run concurrently
