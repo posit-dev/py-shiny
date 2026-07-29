@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecations
 
-* `ui.output_text_verbatim()` is deprecated. Please use `ui.output_text()` if you want to create an output container for some text, or `ui.output_code()` if you want to create an output container for code (monospaced text). (#2097)
+* `ui.output_text_verbatim()` is deprecated and now emits a `ShinyDeprecationWarning`. Please use `ui.output_code()` / `@render.code` to create an output container for code (monospaced text), or `ui.output_text()` / `@render.text` to create an output container for plain text. (#2097)
 
 ### Bug fixes
 
