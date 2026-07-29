@@ -4,12 +4,12 @@ from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_text("name", "Name", value="Shiny"),
-    ui.output_text_verbatim("greeting"),
+    ui.output_code("greeting"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def greeting() -> str:
         return f"Hello, {input.name()}! It is {datetime.now().isoformat()}."
 

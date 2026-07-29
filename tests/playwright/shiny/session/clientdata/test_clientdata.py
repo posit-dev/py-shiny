@@ -10,7 +10,7 @@ def test_output_image_kitchen(page: Page, local_app: ShinyAppProc) -> None:
 
     page.goto(local_app.url)
 
-    text = controller.OutputTextVerbatim(page, "clientdatatext")
+    text = controller.OutputCode(page, "clientdatatext")
 
     # This doesn't cover all the clientdata values since we already have
     # tests that cover the frontend logic

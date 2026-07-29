@@ -9,7 +9,7 @@ from shiny.render.transformer import (
     output_transformer,
     resolve_value_fn,
 )
-from shiny.ui import output_text_verbatim
+from shiny.ui import output_code
 
 #######
 # DEPRECATED. Please see `shiny.render.renderer.Renderer` for the latest API.
@@ -25,7 +25,7 @@ from shiny.ui import output_text_verbatim
 
 
 # Create renderer components from the async handler function: `capitalize_components()`
-@output_transformer(default_ui=output_text_verbatim)
+@output_transformer(default_ui=output_code)
 async def CapitalizeTransformer(
     # Contains information about the render call: `name` and `session`
     _meta: TransformerMetadata,

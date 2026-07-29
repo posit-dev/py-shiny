@@ -64,7 +64,7 @@ def test_input_slider_output(page: Page, template_app: ShinyAppProc) -> None:
     page.goto(template_app.url)
 
     slider = controller.InputSlider(page, "n")
-    txt = controller.OutputTextVerbatim(page, "txt")
+    txt = controller.OutputCode(page, "txt")
 
     txt.expect_value("n*2 is 40")
     slider.expect_label("N")

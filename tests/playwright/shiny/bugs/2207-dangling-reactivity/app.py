@@ -36,7 +36,7 @@ def panel_ui():
         ),
         ui.input_checkbox("show_dynamic", "Show dynamic UI", value=True),
         ui.output_ui("dynamic_area"),
-        ui.card_footer(ui.output_text_verbatim("local_status")),
+        ui.card_footer(ui.output_code("local_status")),
     )
 
 
@@ -101,7 +101,7 @@ def panel_server(
     def calc_display():
         return derived_message()
 
-    @render.text
+    @render.code
     def local_status():
         return f"Effect has fired {effect_counter.get()} times"
 

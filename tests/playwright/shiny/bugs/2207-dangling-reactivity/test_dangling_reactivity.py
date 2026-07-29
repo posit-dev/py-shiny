@@ -25,7 +25,7 @@ def test_create_panel_renders_ui(page: Page, local_app: ShinyAppProc):
     title.expect_value("Panel 1")
 
     # Effect counter starts incrementing
-    status = controller.OutputTextVerbatim(page, "panel_1-local_status")
+    status = controller.OutputCode(page, "panel_1-local_status")
     status.expect_value(re.compile(r"Effect has fired \d+ times"))
 
     # Dynamic input and calc output appear
@@ -63,7 +63,7 @@ def test_destroy_stops_effect_counter(page: Page, local_app: ShinyAppProc):
 
     # Create and wait for the panel to start running
     create_btn.click()
-    status = controller.OutputTextVerbatim(page, "panel_1-local_status")
+    status = controller.OutputCode(page, "panel_1-local_status")
     status.expect_value(re.compile(r"Effect has fired \d+ times"))
 
     # Wait for the effect to fire a few times so we can capture the count
@@ -111,9 +111,9 @@ def test_multiple_panels_independent_destroy(page: Page, local_app: ShinyAppProc
     title2.expect_value("Panel 2")
 
     # Both panels are running
-    status1 = controller.OutputTextVerbatim(page, "panel_1-local_status")
+    status1 = controller.OutputCode(page, "panel_1-local_status")
     status1.expect_value(re.compile(r"Effect has fired \d+ times"))
-    status2 = controller.OutputTextVerbatim(page, "panel_2-local_status")
+    status2 = controller.OutputCode(page, "panel_2-local_status")
     status2.expect_value(re.compile(r"Effect has fired \d+ times"))
 
     # Remove panel 1
@@ -160,7 +160,7 @@ def test_panel_recreation_after_destroy(page: Page, local_app: ShinyAppProc):
     title2 = controller.OutputText(page, "panel_2-panel_title")
     title2.expect_value("Panel 2")
 
-    status2 = controller.OutputTextVerbatim(page, "panel_2-local_status")
+    status2 = controller.OutputCode(page, "panel_2-local_status")
     status2.expect_value(re.compile(r"Effect has fired \d+ times"))
 
     calc2 = controller.OutputText(page, "panel_2-calc_display")

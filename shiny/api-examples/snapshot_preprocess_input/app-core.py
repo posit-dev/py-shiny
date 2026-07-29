@@ -3,7 +3,7 @@ from shiny.testmode import snapshot_preprocess_input
 
 app_ui = ui.page_fluid(
     ui.input_text("secret", "Secret", value="hunter2"),
-    ui.output_text_verbatim("shout"),
+    ui.output_code("shout"),
 )
 
 
@@ -14,7 +14,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     # production code.
     snapshot_preprocess_input("secret", lambda value: "<redacted>")
 
-    @render.text
+    @render.code
     def shout() -> str:
         return str(input.secret()).upper()
 

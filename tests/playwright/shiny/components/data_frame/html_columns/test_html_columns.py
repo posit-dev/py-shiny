@@ -19,7 +19,7 @@ def test_validate_html_columns(
     data_frame = controller.OutputDataFrame(page, f"{df_type}_df")
 
     tab = controller.NavsetCardUnderline(page, "tab")
-    output_txt = controller.OutputTextVerbatim(page, f"{df_type}_test_cell_text")
+    output_txt = controller.OutputCode(page, f"{df_type}_test_cell_text")
     test_button = controller.InputActionButton(page, f"{df_type}_test_cell_button")
 
     tab.set(df_type)

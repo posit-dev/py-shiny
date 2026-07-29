@@ -16,8 +16,8 @@ app_ui = ui.page_fluid(
         id="server_panel",
     ),
     ui.br(),
-    ui.output_text_verbatim("trigger_state"),
-    ui.output_text_verbatim("server_state"),
+    ui.output_code("trigger_state"),
+    ui.output_code("server_state"),
 )
 
 
@@ -32,11 +32,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         ui.toggle_offcanvas("server_panel", show=False)
 
-    @render.text
+    @render.code
     def trigger_state():
         return "open" if input.trigger_panel() else "closed"
 
-    @render.text
+    @render.code
     def server_state():
         return "open" if input.server_panel() else "closed"
 

@@ -53,7 +53,7 @@ def test_input_text_app(page: Page, app: ShinyAppProc) -> None:
     caption = controller.InputText(page, "caption")
     caption.expect.to_have_value("Data summary")
 
-    value = controller.OutputTextVerbatim(page, "value")
+    value = controller.OutputCode(page, "value")
     value.expect_value("Data summary")
 
     caption.set("test value")

@@ -7,8 +7,8 @@ app_ui = ui.page_fluid(
     ui.input_text("name", "Name", value="abc"),
     ui.input_text("secret", "Secret", value="hunter2"),
     ui.input_slider("n", "N", min=0, max=100, value=20),
-    ui.output_text_verbatim("double_txt"),
-    ui.output_text_verbatim("stamp"),
+    ui.output_code("double_txt"),
+    ui.output_code("stamp"),
 )
 
 
@@ -20,11 +20,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     def doubled() -> int:
         return int(input.n()) * 2
 
-    @render.text
+    @render.code
     def double_txt() -> str:
         return f"doubled = {doubled()}"
 
-    @render.text
+    @render.code
     def stamp() -> str:
         return f"time = {datetime.now().isoformat()}"
 

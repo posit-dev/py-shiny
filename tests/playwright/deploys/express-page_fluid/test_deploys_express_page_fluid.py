@@ -19,7 +19,7 @@ def test_express_page_fluid(page: Page, app_url: str) -> None:
     goto_deployed_app(page, app_url)
 
     card = controller.Card(page, "card")
-    output_txt = controller.OutputTextVerbatim(page, "txt")
+    output_txt = controller.OutputCode(page, "txt")
     output_txt.expect_value("50")
     bounding_box = card.loc.bounding_box()
     assert bounding_box is not None

@@ -50,7 +50,7 @@ def test_busy_indicators(page: Page, local_app: ShinyAppProc) -> None:
         assert get_spinner_computed_property(page, element_id, "width") == height
 
     # Verify pulse indicator behavior
-    output_txt = controller.OutputTextVerbatim(page, "counter")
+    output_txt = controller.OutputCode(page, "counter")
     output_txt.expect_value("0")
     spinner_type.set("pulse")
     render_button.click()

@@ -18,7 +18,7 @@ app_ui = ui.page_fluid(
             ),
         ),
         ui.card_body(
-            ui.output_text_verbatim("value"),
+            ui.output_code("value"),
         ),
     ),
 )
@@ -26,7 +26,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
     @output
-    @render.text
+    @render.code
     def value():
         return str(input.select())
 

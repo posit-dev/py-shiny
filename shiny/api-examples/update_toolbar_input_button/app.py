@@ -13,7 +13,7 @@ app_ui = ui.page_fluid(
             ui.toolbar(ui.toolbar_input_button("btn", label="Click me"), align="right"),
         ),
         ui.card_body(
-            ui.output_text_verbatim("count"),
+            ui.output_code("count"),
         ),
     ),
     ui.card(
@@ -27,7 +27,7 @@ app_ui = ui.page_fluid(
             ),
         ),
         ui.card_body(
-            ui.output_text_verbatim("count_icon"),
+            ui.output_code("count_icon"),
         ),
     ),
 )
@@ -35,7 +35,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session) -> None:
     @output
-    @render.text
+    @render.code
     def count():
         return f"Button clicked {input.btn()} times"
 
@@ -46,7 +46,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             ui.update_toolbar_input_button("btn", label="Clicked!")
 
     @output
-    @render.text
+    @render.code
     def count_icon():
         return f"Button clicked {input.btn_icon()} times"
 

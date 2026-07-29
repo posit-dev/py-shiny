@@ -3,7 +3,7 @@ from shiny.testmode import export_test_values
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "N", min=0, max=100, value=20),
-    ui.output_text_verbatim("txt"),
+    ui.output_code("txt"),
 )
 
 
@@ -12,7 +12,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def doubled() -> int:
         return input.n() * 2
 
-    @render.text
+    @render.code
     def txt() -> str:
         return f"n * 2 = {doubled()}"
 

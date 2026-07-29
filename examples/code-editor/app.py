@@ -96,8 +96,8 @@ app_ui = ui.page_sidebar(
         ),
         ui.layout_columns(
             ui.navset_card_underline(
-                ui.nav_panel("Value", ui.output_text_verbatim("code_output")),
-                ui.nav_panel("Settings", ui.output_text_verbatim("editor_info")),
+                ui.nav_panel("Value", ui.output_code("code_output")),
+                ui.nav_panel("Settings", ui.output_code("editor_info")),
                 title="Editor Info",
             ),
             ui.card(
@@ -211,14 +211,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         new_mode = "dark" if current_mode == "light" else "light"
         ui.update_dark_mode(new_mode)
 
-    @render.text
+    @render.code
     def code_output():
         code = input.code()
         if code is None or code == "":
             return "[Editor is empty]"
         return code
 
-    @render.text
+    @render.code
     def editor_info():
         code = input.code()
         if code is None:

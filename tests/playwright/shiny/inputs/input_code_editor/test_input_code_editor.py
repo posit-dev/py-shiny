@@ -66,7 +66,7 @@ def test_input_code_editor_set_and_submit(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     code = controller.InputCodeEditor(page, "code")
-    value_output = controller.OutputTextVerbatim(page, "code_value")
+    value_output = controller.OutputCode(page, "code_value")
 
     code.set("print('Submitted!')", submit=True)
     code.expect_value("print('Submitted!')")
@@ -77,7 +77,7 @@ def test_input_code_editor_submit(page: Page, local_app: ShinyAppProc):
     page.goto(local_app.url)
 
     code = controller.InputCodeEditor(page, "code")
-    value_output = controller.OutputTextVerbatim(page, "code_value")
+    value_output = controller.OutputCode(page, "code_value")
 
     code.set("x = 42")
     code.submit()
