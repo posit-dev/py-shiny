@@ -125,7 +125,9 @@ def input_task_button(
     if icon_busy is MISSING:
         icon_busy = HTML(spinner_icon)
 
-    css_class = "bslib-task-button" + f" btn btn-{type}" if type is not None else ""
+    css_class = "bslib-task-button"
+    if type is not None:
+        css_class += f" btn btn-{type}"
 
     button_attrs: TagAttrs = {
         "class": css_class,
