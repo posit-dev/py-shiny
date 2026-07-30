@@ -23,15 +23,23 @@ def click_extended_task_button(
 
 def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
-    y = controller.InputNumeric(page, "y")
-    y.set("4")
     result = controller.OutputCode(page, "show_result")
     current_time = controller.OutputCode(page, "current_time")
-    # Make sure the time has content
-    current_time.expect.not_to_be_empty()
+    renders_during_block = controller.OutputCode(page, "renders_during_block")
 
-    # Wait until shiny is stable
-    result.expect_value("3")
+    # Wait for the startup extended task to finish.
+    result.expect_value("3", timeout=10 * 1000)
+
+    # The ignore_none=False blocking handler also runs during startup. This
+    # output is only updated after that handler completes, so use it as the
+    # explicit synchronization point before checking the ticking output.
+    renders_during_block.expect_value("0", timeout=10 * 1000)
+
+    # Make sure the time has content after startup has completed.
+    current_time.expect.not_to_be_empty(timeout=10 * 1000)
+
+    y = controller.InputNumeric(page, "y")
+    y.set("4")
 
     # Extended task
     button_task = controller.InputTaskButton(page, "btn_task")
@@ -60,14 +68,6 @@ def test_input_action_task_button(page: Page, local_app: ShinyAppProc) -> None:
     # set up Blocking test
     y.set("15")
     result.expect_value("5")
-
-    # Blocking verification. The server records how many current_time renders
-    # occur inside each blocking window; this avoids sampling the display on a
-    # timer from the client, which races against in-flight output updates.
-    renders_during_block = controller.OutputCode(page, "renders_during_block")
-    # The `ignore_none=False` handler already ran one blocking window at
-    # startup; it must not have allowed any renders either.
-    renders_during_block.expect_value("0")
 
     button_block = controller.InputTaskButton(page, "btn_block")
     button_block.expect_label_busy("\n  \n Blocking...")
