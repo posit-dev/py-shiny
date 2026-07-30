@@ -314,11 +314,14 @@ def subset_frame(
 
     # The nested if-else structure is used to navigate around narwhals' typing system and lack of `:` operator outside of `[`, `]`.
 
+    # Note: pyright resolves `DataFrame.__getitem__` to the overload returning `Self`
+    # (i.e. `DataFrameT`), but pyrefly resolves `Self` to the type variable's bound
+    # (`DataFrame[Any]`), hence the pyrefly ignores on the subsetted returns.
     if cols is None:
         if rows is None:
             return data
         else:
-            return data[rows, :]
+            return data[rows, :]  # pyrefly: ignore[bad-return]
     else:
         # `cols` is not None
         col_names = [data.columns[col] if isinstance(col, int) else col for col in cols]
@@ -326,12 +329,12 @@ def subset_frame(
         # Return a DataFrame with no rows or columns
         # If there are no columns, there are no Series objects to support any rows
         if len(col_names) == 0:
-            return data[[], []]
+            return data[[], []]  # pyrefly: ignore[bad-return]
 
         if rows is None:
-            return data[:, col_names]
+            return data[:, col_names]  # pyrefly: ignore[bad-return]
         else:
-            return data[rows, col_names]
+            return data[rows, col_names]  # pyrefly: ignore[bad-return]
 
 
 class ScatterValues(TypedDict):

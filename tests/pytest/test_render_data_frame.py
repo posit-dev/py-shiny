@@ -75,6 +75,7 @@ def test_as_selection_modes_legacy():
 def test_as_selection_modes():
     with pytest.raises(ValueError) as e:
         SelectionModes(
+            # pyrefly: ignore[bad-argument-type]
             selection_mode_set={
                 "foo",  # pyright: ignore[reportArgumentType,reportGeneralTypeIssues]
             }

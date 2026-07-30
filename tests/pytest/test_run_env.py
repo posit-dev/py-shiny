@@ -29,8 +29,8 @@ def test_run_shiny_app_passes_env_to_popen() -> None:
     captured: dict[str, object] = {}
 
     class _FakeProc:
-        stdout = None
-        stderr = None
+        stdout: None = None
+        stderr: None = None
 
         def wait(self) -> int:
             return 0

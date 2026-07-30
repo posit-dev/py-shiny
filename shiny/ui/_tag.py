@@ -37,7 +37,12 @@ def consolidate_attrs(
     attrs = cast(TagAttrs, dict(tag.attrs))
 
     # Do not alter children structure (like `TagList` does)
-    children = [child for child in args if not isinstance(child, dict)]
+    # Cast because excluding `dict` (i.e. `TagAttrs`) leaves only `TagChildT` values,
+    # but type checkers cannot fully narrow the union via `isinstance(child, dict)`.
+    children = cast(
+        "list[TagChildT]",
+        [child for child in args if not isinstance(child, dict)],
+    )
     return (attrs, children)
 
 

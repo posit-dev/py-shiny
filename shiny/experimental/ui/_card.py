@@ -124,16 +124,19 @@ def card_image(
         "bottom": "card-img-bottom",
     }
 
+    img_attrs: TagAttrs = {
+        "src": src,
+        "class": "img-fluid",
+        "style": css(
+            height=as_css_unit(height),
+            width=as_css_unit(width),
+        ),
+    }
+    border_radius_attrs: TagAttrs = {"class": card_class_map.get(border_radius, None)}
+
     image = tags.img(
-        {
-            "src": src,
-            "class": "img-fluid",
-            "style": css(
-                height=as_css_unit(height),
-                width=as_css_unit(width),
-            ),
-        },
-        {"class": card_class_map.get(border_radius, None)},
+        img_attrs,
+        border_radius_attrs,
         *args,
         class_=class_,
         **kwargs,

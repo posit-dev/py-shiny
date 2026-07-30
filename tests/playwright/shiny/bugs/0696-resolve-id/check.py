@@ -5,6 +5,9 @@ from __future__ import annotations
 import datetime
 from typing import NamedTuple
 
+# pyrefly resolves `app` to a different first-party `app.py`, so it cannot see
+# this sibling module's attributes.
+# pyrefly: ignore[missing-module-attribute]
 from app import input_keys, x_input_keys
 
 # TODO-karan: Verify inputs work within modules

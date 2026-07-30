@@ -16,7 +16,9 @@ import pkgutil
 # A: Doesn't seem possible for now
 import great_tables as gt
 import palmerpenguins
+import pandas as pd
 import polars as pl
+from htmltools import TagAttrs
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
 from shiny.render import CellPatch
@@ -24,8 +26,10 @@ from shiny.render._data_frame_utils._styles import StyleInfo
 from shiny.types import Jsonifiable
 
 pd_penguins = palmerpenguins.load_penguins_raw()
+penguins_csv = pkgutil.get_data("palmerpenguins", "data/penguins-raw.csv")
+assert penguins_csv is not None
 pl_penguins = pl.read_csv(
-    pkgutil.get_data("palmerpenguins", "data/penguins-raw.csv"),
+    penguins_csv,
     null_values="NA",
 )
 
@@ -143,8 +147,10 @@ def mod_ui():
     )
 
 
+page_attrs: TagAttrs = {"class": "p-3"}
+
 app_ui = ui.page_fillable(
-    {"class": "p-3"},
+    page_attrs,
     # ui.markdown(
     #     "**Instructions**: Select one or more countries in the table below to see more information."
     # ),
@@ -193,9 +199,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
         df_styles = gt_styles(df_gt)
         counter = 0
 
-        import pandas as pd
-
-        def df_styles_fn(data: pd.DataFrame) -> list[StyleInfo]:
+        def df_styles_fn(data: pd.DataFrame | pl.DataFrame) -> list[StyleInfo]:
             nonlocal counter
             counter = counter + 2
             if counter > 5:
@@ -220,6 +224,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
             styles=df_styles_fn,
         )
         # Ideal
+        # pyrefly: ignore[bad-specialization]
         return render.DataGrid(
             df_gt,
             # selection_mode=("rows"),
@@ -261,6 +266,8 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     #     print(summary_data._type_hints())
     from shinywidgets import render_widget
 
+    # shinywidgets does not statically know plotly's Figure is renderable
+    # pyrefly: ignore[bad-argument-type]
     @render_widget
     def country_detail_pop():  # pyright: ignore[reportUnknownParameterType]
         import plotly.express as px

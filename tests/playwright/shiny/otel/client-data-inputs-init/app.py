@@ -79,7 +79,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         # Convert logs to a readable format
         logs_info: list[dict[str, Any]] = []
         for log_record in log_records:
-            log_dict = {
+            log_dict: dict[str, Any] = {
                 "body": str(log_record.log_record.body),
                 "severity_text": log_record.log_record.severity_text,
                 "attributes": (

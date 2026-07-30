@@ -13,7 +13,7 @@ import copy
 from json import dumps
 from typing import Any, Mapping, Optional, Union, cast
 
-from htmltools import Tag, TagChild, TagList, css, div, tags
+from htmltools import Tag, TagAttrs, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from ..bookmark import restore_input
@@ -266,12 +266,14 @@ def _input_select_impl(
 
     choices_tags = _render_choices(choices_, selected)
 
+    select_attrs: TagAttrs = {"class": "shiny-input-select"}
+
     return div(
         shiny_input_label(resolved_id, label),
         div(
             tags.select(
                 *choices_tags,
-                {"class": "shiny-input-select"},
+                select_attrs,
                 class_=None if selectize else "form-select",
                 id=resolved_id,
                 multiple=multiple,

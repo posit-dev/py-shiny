@@ -105,7 +105,8 @@ def reactive_calc_method(fn: Callable[[S], R]) -> Callable[[S], R]:
             # key. After these lines, it is stored on self's `__dict__` and should not
             # be garbage collected until `self` is garbage collected.
             if not hasattr(self.__dict__, "_reactive_calc_method"):
-                self.__dict__["_reactive_calc_method"] = {}
+                empty_calc_cache: dict[str, reactive.Calc_[R]] = {}
+                self.__dict__["_reactive_calc_method"] = empty_calc_cache
 
             # Can't use `# pyright: ignore[reportUnknownVariableType]` on the line below
             # as Black can't format it properly

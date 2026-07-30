@@ -5,7 +5,7 @@ __all__ = ("input_task_button",)
 from functools import partial
 from typing import Callable, Optional, TypeVar, cast, overload
 
-from htmltools import HTML, Tag, TagAttrValue, TagChild, css, tags
+from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._typing_extensions import ParamSpec
@@ -127,8 +127,13 @@ def input_task_button(
 
     css_class = "bslib-task-button" + f" btn btn-{type}" if type is not None else ""
 
+    button_attrs: TagAttrs = {
+        "class": css_class,
+        "style": css(width=width),
+        "data-auto-reset": auto_reset,
+    }
     return tags.button(
-        {"class": css_class, "style": css(width=width), "data-auto-reset": auto_reset},
+        button_attrs,
         Tag(
             "bslib-switch-inline",
             tags.span(

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Literal, overload
 
+from htmltools import TagAttrs
+
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
 random_values: dict[str, list[str | float]] = {
@@ -141,15 +143,15 @@ def text_input_server(input: Inputs, output: Outputs, session: Session):
         ui.update_text("pwd", value=random_value("password", input.update_pwd()))
 
 
+col_attrs: TagAttrs = {"class": "col-sm-12"}
+
 app_ui = ui.page_fluid(
     ui.row(
         ui.column(
             6,
-            ui.div({"class": "col-sm-12"}, text_input_ui("change", update_on="change")),
+            ui.div(col_attrs, text_input_ui("change", update_on="change")),
         ),
-        ui.column(
-            6, ui.div({"class": "col-sm-12"}, text_input_ui("blur", update_on="blur"))
-        ),
+        ui.column(6, ui.div(col_attrs, text_input_ui("blur", update_on="blur"))),
     )
 )
 

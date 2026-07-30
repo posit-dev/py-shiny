@@ -797,7 +797,7 @@ def update_selectize(
 
     # Find any selected choices now so we have them ready to send to the client
     if selected_values is None:
-        selected_choices = []
+        selected_choices: list[FlatSelectChoice] = []
     else:
         selected_choices = [x for x in flat_choices if x["value"] in selected_values]
 

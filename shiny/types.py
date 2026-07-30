@@ -257,6 +257,7 @@ class PlotnineTheme(NamedTuple):
 
 class PlotnineThemeables(TypedDict):
     figure_size: PlotnineThemeable | None
+    dpi: PlotnineThemeable | None
 
 
 class PlotnineThemeable(NamedTuple):

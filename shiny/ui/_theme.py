@@ -566,6 +566,9 @@ class Theme:
             name=make_valid_path_str(self._dep_name()),
             version=self._version,
             source={"subdir": str(css_path.parent)},
+            # The extra `data-shiny-theme` key is intentional (rendered onto the
+            # <link> tag) but is not part of htmltools' `StylesheetItem` TypedDict.
+            # pyrefly: ignore[bad-argument-type]
             stylesheet={
                 "href": css_path.name,
                 "data-shiny-theme": self.name or self._preset,  # type: ignore

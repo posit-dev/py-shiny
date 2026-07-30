@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Callable
 
 import pytest
 from playwright.sync_api import Page
@@ -28,16 +28,14 @@ def test_navsets_bookmarking_demo(
     app: ShinyAppProc,
     navset_name: str,
     navset_variant: str,
-    navset_controller: Type[controller._navs._NavsetBase],
+    navset_controller: Callable[[Page, str], controller._navs._NavsetBase],
 ) -> None:
     page.goto(app.url)
 
     # Non-module navsets
     navset_collection = controller.NavsetTab(page, "navsets_collection")
     navset_collection.set(navset_name)
-    navset_cont = navset_controller(
-        page, f"{navset_name}_{navset_variant}"  # pyright: ignore[reportCallIssue]
-    )
+    navset_cont = navset_controller(page, f"{navset_name}_{navset_variant}")
     navset_cont.set(f"{navset_name}_c")
 
     # Module navsets
@@ -45,8 +43,8 @@ def test_navsets_bookmarking_demo(
     mod_navset_collection.set(navset_name)
     mod_navset_cont = navset_controller(
         page,
-        f"first-{navset_name}_{navset_variant}",  # pyright: ignore[reportCallIssue]
-    )  # pyright: ignore[reportCallIssue]
+        f"first-{navset_name}_{navset_variant}",
+    )
     mod_navset_cont.set(f"{navset_name}_b")
 
     existing_url = page.url

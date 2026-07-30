@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from htmltools import TagAttrs
+
 from shiny import App, ui
 from shiny.types import NavSetArg
 
@@ -40,6 +42,8 @@ def nav_items(prefix: str) -> list[NavSetArg]:
     return [a, b, c, space, links]
 
 
+footer_attrs: TagAttrs = {"style": "width:80%; margin: 0 auto"}
+
 app = App(
     ui=ui.page_navbar(
         # theme = bs_theme(),
@@ -51,7 +55,7 @@ app = App(
             "Testing app for `bslib::nav_spacer()` and `bslib::nav_item()` [#319](https://github.com/rstudio/bslib/pull/319)."
         ),
         footer=ui.div(
-            {"style": "width:80%; margin: 0 auto"},
+            footer_attrs,
             ui.h4("navset_card_tab()"),
             ui.navset_card_tab(
                 *nav_items("navset_card_tab()"),
