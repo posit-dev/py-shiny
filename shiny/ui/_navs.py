@@ -1626,7 +1626,9 @@ def render_navset(
     selected: Optional[str],
     context: dict[str, Any],
 ) -> tuple[Tag, Tag]:
-    tabsetid = nav_random_int()
+    # Derive the tabset ID from the user-supplied (already module-resolved)
+    # input id when available; fall back to a random ID for anonymous navsets.
+    tabsetid = id if id is not None else nav_random_int()
 
     # Separate MetadataNodes from NavSetArgs.
     metadata_args: list[MetadataNode] = []

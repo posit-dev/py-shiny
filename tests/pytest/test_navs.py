@@ -78,12 +78,12 @@ def test_navset_pill_markup():
         x = ui.navset_pill(menu, a, id="navset_pill_id")
 
     assert TagList(x).render()["html"] == textwrap.dedent("""\
-        <ul class="nav nav-pills shiny-tab-input" id="navset_pill_id" data-tabsetid="7776790190029">
+        <ul class="nav nav-pills shiny-tab-input" id="navset_pill_id" data-tabsetid="navset_pill_id">
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
-            <ul class="dropdown-menu" data-tabsetid="1710475945045">
+            <ul class="dropdown-menu" data-tabsetid="7776790190029">
               <li>
-                <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-1710475945045-0">c</a>
+                <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-7776790190029-0">c</a>
               </li>
               <li class="dropdown-divider"></li>
               <li class="dropdown-header">Plain text</li>
@@ -92,12 +92,12 @@ def test_navset_pill_markup():
             </ul>
           </li>
           <li class="nav-item">
-            <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link" href="#tab-7776790190029-1">a</a>
+            <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link" href="#tab-navset_pill_id-1">a</a>
           </li>
         </ul>
-        <div class="tab-content" data-tabsetid="7776790190029">
-          <div class="tab-pane active" role="tabpanel" data-value="c" id="tab-1710475945045-0">c</div>
-          <div class="tab-pane" role="tabpanel" data-value="a" id="tab-7776790190029-1">a</div>
+        <div class="tab-content" data-tabsetid="navset_pill_id">
+          <div class="tab-pane active" role="tabpanel" data-value="c" id="tab-7776790190029-0">c</div>
+          <div class="tab-pane" role="tabpanel" data-value="a" id="tab-navset_pill_id-1">a</div>
         </div>""")
 
 
