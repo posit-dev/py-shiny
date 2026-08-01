@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -40,7 +41,7 @@ def test_checkbox_demo(page: Page, app: ShinyAppProc) -> None:
     page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     # reload the page to test bookmark
-    page.reload()
+    load_bookmark_url(page)
 
     # Check if the basic checkbox is checked
     basic_checkbox.expect_checked(True)

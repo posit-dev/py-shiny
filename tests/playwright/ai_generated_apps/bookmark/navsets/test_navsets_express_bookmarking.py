@@ -2,6 +2,7 @@ from typing import Callable
 
 import pytest
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -53,7 +54,7 @@ def test_navsets_bookmarking_demo(
     controller.InputBookmarkButton(page).click()
     page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
     # Reload page
-    page.reload()
+    load_bookmark_url(page)
 
     # Assert
     navset_collection.expect_value(navset_name)
