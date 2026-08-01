@@ -624,6 +624,7 @@ class _DownloadBase(Renderer[str]):
         self.encoding = encoding
         self.label = label
         self.width = width
+        self._download_handler: DownloadHandler | None = None
 
         if fn is not None:
             self(fn)
@@ -658,27 +659,49 @@ class _DownloadBase(Renderer[str]):
         # Unlike most value functions, this one's name is `url`. But we want to get the
         # name from the user-supplied function.
         url.__name__ = fn.__name__
+        self._download_handler = fn
 
         # We invoke `super().__call__()` now, because it indirectly invokes
         # `Outputs.__call__()`, which sets `output_id` (and `self.__name__`), which is
         # then used below.
         super().__call__(url)
 
+        self._register_download()
+
+        return self
+
+    def _register_download(self) -> None:
         # Register the download handler for the session. The reason we check for session
         # not being None or a stub session is because in Express, when the UI is
         # rendered, this function is called once before any sessions have been started.
         session = get_current_session()
-        if session is not None and not session.is_stub_session():
+        if (
+            session is not None
+            and not session.is_stub_session()
+            and self._download_handler is not None
+        ):
             # All download objects are stored in the root session.
             # They must be fully namespaced
             session._downloads[session.ns(self.output_id)] = DownloadInfo(
                 filename=self.filename,
                 content_type=self.media_type,
-                handler=fn,
+                handler=self._download_handler,
                 encoding=self.encoding,
             )
 
-        return self
+    def _on_register(self) -> None:
+        if self._auto_registered:
+            session = require_active_session(None)
+            download_id = session.ns(self.__name__)
+            download_info = session._downloads.get(download_id)
+            if (
+                download_info is not None
+                and download_info.handler is self._download_handler
+            ):
+                del session._downloads[download_id]
+
+        super()._on_register()
+        self._register_download()
 
     async def transform(self, value: str) -> Jsonifiable:
         return value
