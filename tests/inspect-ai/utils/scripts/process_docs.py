@@ -171,6 +171,12 @@ def parse_qmd_content(content: str) -> Optional[Dict[str, Any]]:
     return data
 
 
+def _controller_name(controller: Dict[str, Any]) -> str:
+    """Sort key: the controller's name, or ``""`` when it is missing."""
+    name = controller.get("controller_name", "")
+    return name if isinstance(name, str) else ""
+
+
 def convert_xml_to_json(xml_file_path: Path) -> str:
     """
     Parses an XML file containing multiple .qmd docs and converts it to a
@@ -217,7 +223,7 @@ def convert_xml_to_json(xml_file_path: Path) -> str:
                 if controller_data and controller_data.get("methods"):
                     all_controllers_data.append(controller_data)
 
-    all_controllers_data.sort(key=lambda x: x.get("controller_name", ""))
+    all_controllers_data.sort(key=_controller_name)
 
     return json.dumps(all_controllers_data, indent=2)
 
