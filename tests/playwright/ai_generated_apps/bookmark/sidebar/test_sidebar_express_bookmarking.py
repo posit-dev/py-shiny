@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -31,7 +32,7 @@ def test_sidebar_bookmarking_demo(page: Page, app: ShinyAppProc) -> None:
     right_sidebar.set(True)
 
     # reload page
-    page.reload()
+    load_bookmark_url(page)
 
     left_sidebar.expect_open(False)
     right_sidebar.expect_open(False)

@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -51,7 +52,7 @@ def test_date_range_input(page: Page, app: ShinyAppProc) -> None:
     )
 
     # Reload the page to test bookmark
-    page.reload()
+    load_bookmark_url(page)
 
     basic_text.expect_value(
         "Date range values: (datetime.date(2024, 1, 1), datetime.date(2024, 1, 31))"

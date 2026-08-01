@@ -1,4 +1,5 @@
 from playwright.sync_api import FilePayload, Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -51,7 +52,7 @@ def test_file_input_bookmarking(page: Page, app: ShinyAppProc) -> None:
     bookmark_button.click()
     page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
-    page.reload()
+    load_bookmark_url(page)
 
     # Check if the values are retained after reloading the page
     file_output_txt.expect_value("File name(s): users.csv")

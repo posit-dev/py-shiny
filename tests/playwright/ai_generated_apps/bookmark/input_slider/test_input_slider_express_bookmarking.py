@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -44,7 +45,7 @@ def test_slider_parameters(page: Page, app: ShinyAppProc) -> None:
     mod_value1.expect_value("Slider value: 1")
 
     # Reload the page to test bookmark
-    page.reload()
+    load_bookmark_url(page)
 
     value1.expect_value("Slider value: 0")
     mod_value1.expect_value("Slider value: 0")

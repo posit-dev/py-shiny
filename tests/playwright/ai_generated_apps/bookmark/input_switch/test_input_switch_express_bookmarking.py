@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -40,7 +41,7 @@ def test_switch_demo(page: Page, app: ShinyAppProc) -> None:
     switch2.set(False)
     switch2.expect_checked(False)
 
-    page.reload()
+    load_bookmark_url(page)
     basic_txt.expect_value("Switch value: True")
     module_txt.expect_value("Switch value: True")
     switch1.expect_checked(True)
