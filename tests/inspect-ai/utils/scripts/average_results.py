@@ -13,6 +13,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Union
 
 
+def _attempt_number(attempt_dir: Path) -> int:
+    """Sort key: the numeric suffix of an ``attempt_<n>`` directory name."""
+    return int(attempt_dir.name.split("_")[1])
+
+
 def process_inspect_ai_results(attempts_dir: Path) -> Dict[str, Any]:
     """
     Process and average inspect-ai results across multiple attempts.
@@ -28,7 +33,7 @@ def process_inspect_ai_results(attempts_dir: Path) -> Dict[str, Any]:
         for d in attempts_dir.iterdir()
         if d.is_dir() and d.name.startswith("attempt_")
     ]
-    attempt_dirs.sort(key=lambda x: int(x.name.split("_")[1]))
+    attempt_dirs.sort(key=_attempt_number)
 
     if not attempt_dirs:
         print("No attempt directories found")
@@ -148,7 +153,7 @@ def process_pytest_results(attempts_dir: Path) -> Dict[str, Any]:
         for d in attempts_dir.iterdir()
         if d.is_dir() and d.name.startswith("attempt_")
     ]
-    attempt_dirs.sort(key=lambda x: int(x.name.split("_")[1]))
+    attempt_dirs.sort(key=_attempt_number)
 
     if not attempt_dirs:
         print("No attempt directories found for pytest results")
