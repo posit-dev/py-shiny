@@ -12,6 +12,7 @@ from htmltools import Tagifiable
 
 from shiny import render, ui
 from shiny.express import expressify
+from shiny.express.expressify_decorator._expressify import expressify_unwrap_inplace
 
 
 @contextlib.contextmanager
@@ -160,6 +161,21 @@ def test_annotations():
     assert annotated.__doc__ == "Here's a docstring"
 
     assert inspect.getsource(annotated) == inspect.getsource(annotated.__wrapped__)  # type: ignore
+
+
+def test_name_mutating_decorator_matches_original_ast_name():
+    def append_name(fn):
+        fn.__name__ = f"{fn.__name__}_modified"
+        return fn
+
+    @expressify_unwrap_inplace()
+    @append_name
+    def name_mutated():
+        "value"
+
+    with capture_display() as d:
+        name_mutated()
+        assert d == ["value"]
 
 
 def test_implicit_output():

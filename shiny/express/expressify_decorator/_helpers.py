@@ -42,4 +42,4 @@ def ast_matches_func(node: ast.AST, func: FunctionType) -> bool:
     if not isinstance(node, ast.FunctionDef):
         return False
     linenos = [*[dec.lineno for dec in node.decorator_list], node.lineno]
-    return func.__code__.co_firstlineno in linenos and func.__name__ == node.name
+    return func.__code__.co_firstlineno in linenos and func.__code__.co_name == node.name
