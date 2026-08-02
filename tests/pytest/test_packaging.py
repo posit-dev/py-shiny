@@ -12,6 +12,7 @@ patterns so a regression fails loudly here instead.
 
 from __future__ import annotations
 
+import fnmatch
 import glob
 import os
 import re
@@ -26,18 +27,36 @@ REPO_ROOT = Path(__file__).parents[2]
 PACKAGE_DIR = REPO_ROOT / "shiny"
 SKILLS_DIR = PACKAGE_DIR / ".agents" / "skills"
 ROUTER_SKILL_DIR = SKILLS_DIR / "shiny-for-python"
+API_EXAMPLES_DIR = PACKAGE_DIR / "api-examples"
+
+
+def _platform_patterns(
+    spec: dict[str, list[str]], package: str, src_dir: Path
+) -> list[str]:
+    raw_patterns = spec.get("", []) + spec.get(package, [])
+    return [os.path.join(str(src_dir), pattern) for pattern in raw_patterns]
 
 
 def package_data_files() -> set[Path]:
     """Files shipped as `shiny` package data, per pyproject.toml globs."""
     with open(REPO_ROOT / "pyproject.toml", "rb") as f:
         pyproject = tomllib.load(f)
-    patterns: list[str] = pyproject["tool"]["setuptools"]["package-data"]["shiny"]
+    package = "shiny"
+    setuptools_config = pyproject["tool"]["setuptools"]
+    patterns = _platform_patterns(
+        setuptools_config["package-data"], package, PACKAGE_DIR
+    )
+    exclude_patterns = _platform_patterns(
+        setuptools_config.get("exclude-package-data", {}), package, PACKAGE_DIR
+    )
 
     matched: set[Path] = set()
     for pattern in patterns:
-        for match in glob.glob(os.path.join(str(PACKAGE_DIR), pattern), recursive=True):
-            if os.path.isfile(match):
+        for match in glob.glob(pattern, recursive=True):
+            if os.path.isfile(match) and not any(
+                fnmatch.fnmatch(match, exclude_pattern)
+                for exclude_pattern in exclude_patterns
+            ):
                 matched.add(Path(match))
     return matched
 
@@ -65,6 +84,17 @@ def test_skill_files_are_covered_by_package_data_globs() -> None:
         "Files under shiny/.agents/ are not matched by any "
         "[tool.setuptools.package-data] glob in pyproject.toml and would be "
         f"silently dropped from the wheel: {missing}"
+    )
+
+
+def test_api_examples_are_excluded_from_package_data() -> None:
+    shipped = package_data_files()
+    api_example_files = [p for p in API_EXAMPLES_DIR.rglob("*") if p.is_file()]
+    assert len(api_example_files) > 0
+    included = [p for p in api_example_files if p in shipped]
+    assert not included, (
+        "Files under shiny/api-examples are matched by wheel package data "
+        f"globs and should be excluded: {included}"
     )
 
 
