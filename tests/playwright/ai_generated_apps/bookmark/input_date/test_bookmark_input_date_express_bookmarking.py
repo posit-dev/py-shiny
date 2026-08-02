@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -38,7 +39,7 @@ def test_bookmark_date_inputs(page: Page, app: ShinyAppProc) -> None:
     text2.expect_value("Date value: 2024-04-04")
 
     # Reload the page to test bookmark
-    page.reload()
+    load_bookmark_url(page)
 
     date1.expect_value("2024-01-01")
     text1.expect_value("Date value: 2024-01-01")

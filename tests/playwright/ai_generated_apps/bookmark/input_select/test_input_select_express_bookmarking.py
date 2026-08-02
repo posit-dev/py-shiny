@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -43,7 +44,7 @@ def test_input_select_demo(page: Page, app: ShinyAppProc) -> None:
     mod_select_txt.expect_value("Select value: choiceC")
 
     # Reload the page to test bookmark
-    page.reload()
+    load_bookmark_url(page)
 
     basic_select_txt.expect_value("Select value: option2")
 

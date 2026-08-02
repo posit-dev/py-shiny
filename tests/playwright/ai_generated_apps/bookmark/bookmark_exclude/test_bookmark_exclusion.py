@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -30,7 +31,7 @@ def test_bookmark_exclusion(page: Page, app: ShinyAppProc) -> None:
     mod1_excluded_txt.expect_value("Excluded text: Hello excluded")
 
     # reload page
-    page.reload()
+    load_bookmark_url(page)
 
     mod1_txt.expect_value("Included text: Hello world")
     mod1_num_txt.expect_value("Included num: 10")

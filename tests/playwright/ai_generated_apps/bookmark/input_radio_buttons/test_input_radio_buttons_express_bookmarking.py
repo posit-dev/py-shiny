@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -36,7 +37,7 @@ def test_radio_buttons_demo(page: Page, app: ShinyAppProc) -> None:
     selection_output.expect_value("Radio button value: Option 3")
 
     # Reload the page to test bookmark
-    page.reload()
+    load_bookmark_url(page)
 
     radio_buttons.expect_selected("Option 2")
     selection_output.expect_value("Radio button value: Option 2")

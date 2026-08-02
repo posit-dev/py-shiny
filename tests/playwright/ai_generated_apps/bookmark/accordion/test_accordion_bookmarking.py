@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -27,7 +28,7 @@ def test_accordion_bookmarking_demo(page: Page, app: ShinyAppProc) -> None:
     page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     # reload page
-    page.reload()
+    load_bookmark_url(page)
 
     acc_single.expect_open(["Section B"])
     acc_mod.expect_open(["Section C"])
@@ -42,7 +43,7 @@ def test_accordion_bookmarking_demo(page: Page, app: ShinyAppProc) -> None:
     page.wait_for_url(lambda url: url != existing_url, timeout=5 * 1000)
 
     # reload page
-    page.reload()
+    load_bookmark_url(page)
 
     acc_single.expect_open([])
     acc_mod.expect_open([])
