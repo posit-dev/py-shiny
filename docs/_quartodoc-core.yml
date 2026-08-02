@@ -16,7 +16,6 @@ quartodoc:
       contents:
         - ui.page_sidebar
         - ui.page_navbar
-        - ui.page_sidebar
         - ui.page_fillable
         - ui.page_fluid
         - ui.page_fixed
