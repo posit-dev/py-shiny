@@ -44,7 +44,8 @@ def test_navset_tab_markup():
     with private_seed_n():
         x = ui.navset_tab(a, b, ui.nav_control("Some item"), menu)
 
-    assert TagList(x).render()["html"] == textwrap.dedent("""\
+    assert TagList(x).render()["html"] == textwrap.dedent(
+        """\
         <ul class="nav nav-tabs" data-tabsetid="7776790190029">
           <li class="nav-item">
             <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link active" href="#tab-7776790190029-0">a</a>
@@ -70,14 +71,16 @@ def test_navset_tab_markup():
           <div class="tab-pane active" role="tabpanel" data-value="a" id="tab-7776790190029-0">a</div>
           <div class="tab-pane" role="tabpanel" data-value="b" id="tab-7776790190029-1">b</div>
           <div class="tab-pane" role="tabpanel" data-value="c" id="tab-1710475945045-0">c</div>
-        </div>""")
+        </div>"""
+    )
 
 
 def test_navset_pill_markup():
     with private_seed_n():
         x = ui.navset_pill(menu, a, id="navset_pill_id")
 
-    assert TagList(x).render()["html"] == textwrap.dedent("""\
+    assert TagList(x).render()["html"] == textwrap.dedent(
+        """\
         <ul class="nav nav-pills shiny-tab-input" id="navset_pill_id" data-tabsetid="navset_pill_id">
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
@@ -98,7 +101,8 @@ def test_navset_pill_markup():
         <div class="tab-content" data-tabsetid="navset_pill_id">
           <div class="tab-pane active" role="tabpanel" data-value="c" id="tab-7776790190029-0">c</div>
           <div class="tab-pane" role="tabpanel" data-value="a" id="tab-navset_pill_id-1">a</div>
-        </div>""")
+        </div>"""
+    )
 
 
 def test_navset_card_pill_markup():
@@ -110,7 +114,8 @@ def test_navset_card_pill_markup():
             selected="c",
         )
 
-    assert TagList(x).render()["html"] == textwrap.dedent("""\
+    assert TagList(x).render()["html"] == textwrap.dedent(
+        """\
         <div class="card bslib-card bslib-mb-spacing html-fill-item html-fill-container" data-bslib-card-init="">
           <div class="card-header">
             <ul class="nav nav-pills card-header-pills" data-tabsetid="7776790190029">
@@ -138,7 +143,8 @@ def test_navset_card_pill_markup():
             </div>
           </div>
           <script data-bslib-card-init="">window.bslib.Card.initializeAllCards();</script>
-        </div>""")
+        </div>"""
+    )
 
 
 def test_navset_bar_markup():
@@ -150,7 +156,8 @@ def test_navset_bar_markup():
             header="Page header",
         )
 
-    assert TagList(x).render()["html"] == textwrap.dedent("""\
+    assert TagList(x).render()["html"] == textwrap.dedent(
+        """\
         <nav class="navbar navbar-expand-md navbar-default" data-bs-theme="auto">
           <div class="container-fluid">
             <span class="navbar-brand">Page title</span><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse-9549180827234" aria-controls="navbar-collapse-9549180827234" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
@@ -175,7 +182,8 @@ def test_navset_bar_markup():
             <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" role="tabpanel" data-value="c" id="tab-1710475945045-1" style="--bslib-navbar-margin:0;;">c</div>
           </div>
           Page footer
-        </div>""")
+        </div>"""
+    )
 
 
 # navbar_options() -------------------------------------------------------------------
