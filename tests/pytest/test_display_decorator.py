@@ -12,6 +12,7 @@ from htmltools import Tagifiable
 
 from shiny import render, ui
 from shiny.express import expressify
+from shiny.express.expressify_decorator._expressify import expressify_unwrap_inplace
 
 
 @contextlib.contextmanager
@@ -205,3 +206,23 @@ def test_no_nested_transform_unless_explicit():
     with capture_display() as d:
         inner1()
         assert d == [1, 2, 5, 6]
+
+
+def test_name_mutating_decorator_matches_original_ast_name():
+    def append_to_name(suffix: str):
+        def decorator(fn):
+            fn.__name__ = fn.__name__ + suffix
+            return fn
+
+        return decorator
+
+    @expressify_unwrap_inplace()
+    @append_to_name("_changed")
+    def displays_value():
+        "value"
+
+    assert displays_value.__name__ == "displays_value_changed"
+
+    with capture_display() as d:
+        displays_value()
+        assert d == ["value"]
