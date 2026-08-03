@@ -313,6 +313,19 @@ def test_serialize_frame(df_f: IntoDataFrame):
     }
 
 
+def test_serialize_frame_with_numeric_pandas_column_names():
+    df = pd.DataFrame([["a", 1], ["b", 2]], columns=[0, 1])
+
+    res = serialize_frame(df)
+
+    assert res == {
+        "columns": [0, 1],
+        "data": [["a", 1], ["b", 2]],
+        "typeHints": [{"type": "string"}, {"type": "numeric"}],
+        "htmlDeps": [],
+    }
+
+
 def test_subset_frame(df_f: IntoDataFrame):
     # TODO: this assumes subset_frame doesn't reset index
     res = subset_frame(as_data_frame(df_f), rows=[1], cols=["chr", "num"])
