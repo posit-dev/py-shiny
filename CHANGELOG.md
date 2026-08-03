@@ -96,6 +96,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * When bookmarked state cannot be restored, the notification shown in the client is now a generic message. The reason is logged server-side as a warning on the `shiny.bookmark._restore_state` logger, so app authors can still see it. (ab10e069)
 
+### Bug fixes
+
+* Fixed `session.user` and `session.groups` raising `AttributeError` in module sessions (`SessionProxy`) and Express apps (`ExpressStubSession`). Both now correctly return the authenticated user's identity from the root session. As part of this fix, `user` and `groups` are now read-only properties on the `Session` ABC — app code can no longer accidentally overwrite credentials that are derived from immutable HTTP headers. (#2276)
+
 ## [1.6.3] - 2026-06-01
 
 ### New features
