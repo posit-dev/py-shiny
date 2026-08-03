@@ -1119,11 +1119,11 @@ def navbar_options(
     ```python
     ui.page_navbar(
       theme=ui.Theme(version=5, preset="flatly"),
-      navbar_options=ui.navbar_options(class="bg-primary", theme="dark")
+      navbar_options=ui.navbar_options(class_="bg-primary", theme="dark")
     )
     ```
 
-    This particular combination of `class="bg-primary"` and `theme="dark"` works well
+    This particular combination of `class_="bg-primary"` and `theme="dark"` works well
     for most Bootswatch presets. Note that in Shiny Express, `theme` and
     `navbar_options` both are set using :func:`~shiny.express.ui.page_opts`.
 
@@ -1133,7 +1133,7 @@ def navbar_options(
     ```python
     ui.page_navbar(
       theme = ui.Theme(version=5, preset="flatly"),
-      navbar_options = ui.navbar_options(class="bg-light", theme="light")
+      navbar_options = ui.navbar_options(class_="bg-light", theme="light")
     )
     ```
 

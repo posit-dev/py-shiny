@@ -160,10 +160,8 @@ def panel_conditional(
     (Be sure not to modify the input/output objects, as this may cause unpredictable
     behavior.)
 
-    You are not recommended to use special JavaScript characters such as a period . in
-    the input id's, but if you do use them anyway, for example, `id = "foo.bar"`, you
-    will have to use `input["foo.bar"]` instead of ``input.foo.bar`` to read the input
-    value.
+    Within a module, refer to inputs by their unprefixed, module-local IDs (for example,
+    ``input.foo``). Shiny applies the module namespace prefix automatically.
 
     Tip
     ---

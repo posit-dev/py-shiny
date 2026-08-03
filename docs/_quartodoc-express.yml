@@ -51,7 +51,6 @@ quartodoc:
         - express.render.DataGrid
         - express.render.text
         - express.render.ui
-        - express.render.download
         - express.render.download_button
         - express.render.download_link
         - express.render.image
@@ -190,7 +189,6 @@ quartodoc:
       desc: Allow users to upload and download files.
       contents:
         - express.ui.input_file
-        - express.render.download
         - express.render.download_button
         - express.render.download_link
     - title: Dynamic UI
@@ -235,3 +233,7 @@ quartodoc:
       contents:
         - express.is_express_app
         - express.wrap_express_app
+    - title: Deprecated
+      desc: ""
+      contents:
+        - express.render.download
