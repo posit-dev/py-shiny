@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any, Iterator
 
 import pytest
@@ -43,19 +44,25 @@ def test_quartodoc_configs_have_unique_contents():
     for config_path in QUARTODOC_CONFIGS:
         for section in load_quartodoc_sections(config_path):
             section_location = f"section {section.get('title')!r}"
-            seen: set[str] = set()
-            duplicates: list[str] = []
+            locations: dict[str, list[str]] = defaultdict(list)
 
             for name, location in _iter_rendered_links(
                 section.get("contents"), section_location
             ):
-                if name in seen:
-                    duplicates.append(f"{name} (in {location})")
-                else:
-                    seen.add(name)
+                locations[name].append(location)
+
+            duplicates = {
+                name: where for name, where in locations.items() if len(where) > 1
+            }
 
             if duplicates:
-                duplicate_list = "\n".join(sorted(f"  - {x}" for x in duplicates))
+                duplicate_list = "\n".join(
+                    sorted(
+                        f"  - {name} rendered {len(where)} times"
+                        f" (in {', '.join(dict.fromkeys(where))})"
+                        for name, where in duplicates.items()
+                    )
+                )
                 error_messages.append(
                     f"Duplicate contents in {config_path}:\n{duplicate_list}"
                 )
