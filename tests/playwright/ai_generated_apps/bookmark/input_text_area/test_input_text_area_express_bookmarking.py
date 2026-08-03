@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -36,7 +37,7 @@ def test_text_area_demo(page: Page, app: ShinyAppProc) -> None:
     mod_output_txt.expect_value("Text area value: Hello again Miami")
 
     # reload page
-    page.reload()
+    load_bookmark_url(page)
 
     text_output.expect_value("Text area value: Hello world")
     mod_output_txt.expect_value("Text area value: Hello Miami")

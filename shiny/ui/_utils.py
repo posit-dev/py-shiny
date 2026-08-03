@@ -62,7 +62,7 @@ def _find_child_strings(x: TagList | TagNode) -> str:
         x = x.children
     if isinstance(x, TagList):
         strings = [_find_child_strings(y) for y in x]
-        return " ".join(filter(lambda x: x != "", strings))
+        return " ".join(string for string in strings if string != "")
     if isinstance(x, str):
         return x
     return ""

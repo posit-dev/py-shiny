@@ -716,6 +716,15 @@ def _new_destroy_callbacks() -> _utils.AsyncCallbacks:
     return _utils.AsyncCallbacks(on_error=_print_exception)
 
 
+def _ns_depth(ns_key: str) -> int:
+    """
+    Nesting depth of a namespace key, measured by its dash count.
+
+    Used as a sort key so that deeper (more nested) namespaces sort first.
+    """
+    return ns_key.count("-")
+
+
 async def _invoke_destroy_callbacks(
     callbacks_by_ns: dict[str, _utils.AsyncCallbacks],
     ns: str,
@@ -747,7 +756,7 @@ async def _invoke_destroy_callbacks(
     # Sort deepest namespaces first (most dashes → most nested) so that
     # children are destroyed before parents, mirroring the reverse of
     # construction order.
-    matching_keys.sort(key=lambda k: k.count("-"), reverse=True)
+    matching_keys.sort(key=_ns_depth, reverse=True)
 
     for ns_key in matching_keys:
         callbacks = callbacks_by_ns.pop(ns_key, None)
