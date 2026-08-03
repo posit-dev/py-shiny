@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `playwright.controller.OutputTextVerbatim` is deprecated alongside `ui.output_text_verbatim()` and now emits a `ShinyDeprecationWarning` when constructed. Please use `playwright.controller.OutputCode` instead. (#2097)
 
+### Improvements
+
+* Navsets created with an `id` (e.g. `ui.navset_tab(id="tabs")`) now use that `id` as their `data-tabsetid`, so their tab panes get stable `tab-tabs-0` style DOM ids instead of ones built from a random integer. This makes the rendered markup reproducible across renders and easier to target from custom CSS and JavaScript. Navsets without an `id`, and `ui.nav_menu()` dropdowns, keep the random ID. (Thanks, @pevolution-ahmed!) (#2410)
+
 ### Bug fixes
 
 * The `ui.Theme` API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`. The example directory now declares `libsass` in a `requirements.txt`. (#2386)
