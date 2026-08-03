@@ -49,7 +49,6 @@ CROSS_SECTION_ALLOWLIST: dict[str, frozenset[str]] = {
     # "Uploads & downloads".
     "_quartodoc-express.yml": frozenset(
         {
-            "express.render.download",
             "express.render.download_button",
             "express.render.download_link",
         }
