@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Iterator
 
 import pytest
 
@@ -19,26 +19,45 @@ def _quartodoc_content_name(content: str | dict[str, Any]) -> str:
     return str(content.get("name") or content["path"])
 
 
+def _iter_rendered_links(
+    contents: list[Any] | None, location: str
+) -> Iterator[tuple[str, str]]:
+    """
+    Yield `(name, location)` for every link a `contents` list renders.
+
+    `kind: page` groups render a link of their own and are then walked, because a
+    duplicate nested inside a group renders twice just like one at section level.
+    """
+    for content in contents or []:
+        name = _quartodoc_content_name(content)
+        yield name, location
+
+        nested = content.get("contents") if isinstance(content, dict) else None
+        if nested:
+            yield from _iter_rendered_links(nested, f"{location} > page {name!r}")
+
+
 def test_quartodoc_configs_have_unique_contents():
     error_messages: list[str] = []
 
     for config_path in QUARTODOC_CONFIGS:
         for section in load_quartodoc_sections(config_path):
+            section_location = f"section {section.get('title')!r}"
             seen: set[str] = set()
             duplicates: list[str] = []
 
-            for content in section.get("contents") or []:
-                content_name = _quartodoc_content_name(content)
-                if content_name in seen:
-                    duplicates.append(content_name)
+            for name, location in _iter_rendered_links(
+                section.get("contents"), section_location
+            ):
+                if name in seen:
+                    duplicates.append(f"{name} (in {location})")
                 else:
-                    seen.add(content_name)
+                    seen.add(name)
 
             if duplicates:
                 duplicate_list = "\n".join(sorted(f"  - {x}" for x in duplicates))
                 error_messages.append(
-                    f"Duplicate contents in {config_path}, "
-                    f"section {section.get('title')!r}:\n{duplicate_list}"
+                    f"Duplicate contents in {config_path}:\n{duplicate_list}"
                 )
 
     if error_messages:
