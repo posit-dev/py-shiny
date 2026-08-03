@@ -25,7 +25,7 @@ def test_quartodoc_configs_have_unique_contents():
             seen: set[str] = set()
             duplicates: list[str] = []
 
-            for content in section.get("contents", []):
+            for content in section.get("contents") or []:
                 content_name = _quartodoc_content_name(content)
                 if content_name in seen:
                     duplicates.append(content_name)

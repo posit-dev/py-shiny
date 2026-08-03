@@ -30,7 +30,7 @@ def get_documented_controllers() -> Set[str]:
     return {
         content.split(".")[-1]
         for section in load_quartodoc_sections(DOCS_CONFIG)
-        for content in section.get("contents", [])
+        for content in section.get("contents") or []
         if isinstance(content, str) and content.startswith("playwright.controller.")
     }
 

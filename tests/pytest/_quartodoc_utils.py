@@ -19,4 +19,7 @@ def load_quartodoc_sections(config_path: Path) -> list[dict[str, Any]]:
     except Exception as e:
         pytest.fail(f"Failed to load or parse {config_path}: {e}")
 
-    return config.get("quartodoc", {}).get("sections", [])
+    # An empty or comments-only config parses to `None`, and a key with nothing
+    # under it (`sections:`) parses to `None` rather than an empty list.
+    quartodoc = (config or {}).get("quartodoc") or {}
+    return quartodoc.get("sections") or []
