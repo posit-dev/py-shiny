@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Iterator
+from typing import Iterator
 
 import pytest
 
-from ._quartodoc_utils import QUARTODOC_CONFIGS, load_quartodoc_sections
+from ._quartodoc_utils import (
+    QUARTODOC_CONFIGS,
+    QuartodocContent,
+    load_quartodoc_sections,
+    section_contents,
+)
 
 
-def _quartodoc_content_name(content: str | dict[str, Any]) -> str:
+def _quartodoc_content_name(content: QuartodocContent) -> str:
     """
     Return the symbol or page name a `contents` entry renders a link for.
 
@@ -21,7 +26,7 @@ def _quartodoc_content_name(content: str | dict[str, Any]) -> str:
 
 
 def _iter_rendered_links(
-    contents: list[Any] | None, location: str
+    contents: list[QuartodocContent], location: str
 ) -> Iterator[tuple[str, str]]:
     """
     Yield `(label, location)` for every link a `contents` list renders.
@@ -32,9 +37,11 @@ def _iter_rendered_links(
     different namespaces, and a page deliberately named after a class it extends
     (e.g. the `Session` page) is not a duplicate of that class.
     """
-    for content in contents or []:
+    for content in contents:
         name = _quartodoc_content_name(content)
-        nested = content.get("contents") if isinstance(content, dict) else None
+        nested: list[QuartodocContent] = (
+            content.get("contents") or [] if isinstance(content, dict) else []
+        )
 
         yield (f"page {name!r}" if nested else name), location
 
@@ -69,7 +76,7 @@ def test_quartodoc_configs_have_unique_contents():
         locations: dict[str, list[str]] = defaultdict(list)
         for section in load_quartodoc_sections(config_path):
             for name, location in _iter_rendered_links(
-                section.get("contents"), f"section {section.get('title')!r}"
+                section_contents(section), f"section {section.get('title')!r}"
             ):
                 locations[name].append(location)
 

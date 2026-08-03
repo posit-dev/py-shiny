@@ -6,7 +6,7 @@ from typing import Set
 
 import pytest
 
-from ._quartodoc_utils import load_quartodoc_sections
+from ._quartodoc_utils import load_quartodoc_sections, section_contents
 
 root = Path(__file__).parent.parent.parent
 
@@ -30,7 +30,7 @@ def get_documented_controllers() -> Set[str]:
     return {
         content.split(".")[-1]
         for section in load_quartodoc_sections(DOCS_CONFIG)
-        for content in section.get("contents") or []
+        for content in section_contents(section)
         if isinstance(content, str) and content.startswith("playwright.controller.")
     }
 
