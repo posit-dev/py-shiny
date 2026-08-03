@@ -2,14 +2,16 @@
 
 import contextlib
 import random
+import re
 import textwrap
 from typing import Generator
 
 import pytest
-from htmltools import TagList
+from htmltools import TagChild, TagList
 
 from shiny import ui
 from shiny._deprecated import ShinyDeprecationWarning
+from shiny._namespaces import namespace_context
 from shiny._utils import private_seed
 from shiny.ui._navs import (
     NavbarOptions,
@@ -176,6 +178,60 @@ def test_navset_bar_markup():
           </div>
           Page footer
         </div>""")
+
+
+# tabset IDs ---------------------------------------------------------------------------
+
+
+def tabset_ids(x: TagChild) -> list[str]:
+    """All `data-tabsetid` values in `x`, in document order."""
+    return re.findall(r'data-tabsetid="([^"]*)"', TagList(x).render()["html"])
+
+
+def test_navset_tabsetid_uses_the_input_id():
+    x = ui.navset_tab(a, b, id="my_tabs")
+    html = TagList(x).render()["html"]
+
+    assert tabset_ids(x) == ["my_tabs", "my_tabs"]
+    assert 'id="tab-my_tabs-0"' in html
+    assert 'href="#tab-my_tabs-0"' in html
+
+
+def test_navset_tabsetid_is_stable_across_renders():
+    # The point of deriving the tabset ID from the input id: two independent
+    # renders of the same navset produce byte-identical markup.
+    first = TagList(ui.navset_tab(a, b, id="my_tabs")).render()["html"]
+    second = TagList(ui.navset_tab(a, b, id="my_tabs")).render()["html"]
+
+    assert first == second
+
+
+def test_navset_tabsetid_is_module_namespaced():
+    with namespace_context("mod"):
+        x = ui.navset_tab(a, b, id="my_tabs")
+
+    assert tabset_ids(x) == ["mod-my_tabs", "mod-my_tabs"]
+    assert 'id="tab-mod-my_tabs-0"' in TagList(x).render()["html"]
+
+
+def test_navset_tabsetid_is_random_when_anonymous():
+    first = tabset_ids(ui.navset_tab(a, b))
+    second = tabset_ids(ui.navset_tab(a, b))
+
+    # Both the <ul> and the <div class="tab-content"> share one ID...
+    assert len(first) == 2 and first[0] == first[1]
+    assert re.fullmatch(r"\d{13}", first[0])
+    # ...but separate renders do not, since there is no id to key off.
+    assert first[0] != second[0]
+
+
+def test_nav_menu_tabsetid_stays_random_inside_an_identified_navset():
+    # `nav_menu()` dropdowns are nested tabsets with no id of their own, so they
+    # must keep the random fallback rather than inherit the parent's ID.
+    outer, dropdown, _content = tabset_ids(ui.navset_tab(a, menu, id="my_tabs"))
+
+    assert outer == "my_tabs"
+    assert re.fullmatch(r"\d{13}", dropdown)
 
 
 # navbar_options() -------------------------------------------------------------------
