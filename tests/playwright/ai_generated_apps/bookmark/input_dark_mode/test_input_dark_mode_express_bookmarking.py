@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from utils.bookmark_utils import load_bookmark_url
 
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
@@ -33,7 +34,7 @@ def test_dark_mode_demo(page: Page, app: ShinyAppProc) -> None:
     module_text.expect_value("Dark mode value: dark")
 
     # Reload the page to test bookmark
-    page.reload()
+    load_bookmark_url(page)
 
     basic_text.expect_value("Dark mode value: light")
     module_text.expect_value("Dark mode value: light")

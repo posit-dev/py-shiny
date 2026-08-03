@@ -33,6 +33,10 @@ here_root = here.parent.parent
 _NAVIGATION_WEDGED_ATTR = "_shiny_navigation_wedged"
 
 
+def _mark_navigation_wedged(crashed_page: Page) -> None:
+    setattr(crashed_page, _NAVIGATION_WEDGED_ATTR, True)
+
+
 def _new_session_page(browser: BrowserContext) -> Page:
     """
     Create a shared page whose `goto()` verifies the navigation committed.
@@ -42,7 +46,7 @@ def _new_session_page(browser: BrowserContext) -> Page:
         Page: The newly created page.
     """
     page = browser.new_page()
-    page.on("crash", lambda page: setattr(page, _NAVIGATION_WEDGED_ATTR, True))
+    page.on("crash", _mark_navigation_wedged)
     original_goto = page.goto
 
     def goto_and_verify_commit(url: str, **kwargs: typing.Any) -> Response | None:
