@@ -13,10 +13,17 @@ QUARTODOC_CONFIGS = tuple(sorted(DOCS_DIR.glob("_quartodoc-*.yml")))
 
 
 def load_quartodoc_sections(config_path: Path) -> list[dict[str, Any]]:
-    """Return the `quartodoc.sections` entries of a Quartodoc config file."""
+    """
+    Return the `quartodoc.sections` entries of a Quartodoc config file.
+
+    Raises
+    ------
+    Fails the calling test if the file cannot be read (`OSError`) or is not
+    valid YAML (`yaml.YAMLError`).
+    """
     try:
         config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    except Exception as e:
+    except (OSError, yaml.YAMLError) as e:
         pytest.fail(f"Failed to load or parse {config_path}: {e}")
 
     # An empty or comments-only config parses to `None`, and a key with nothing
