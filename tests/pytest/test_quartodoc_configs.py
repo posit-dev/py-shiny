@@ -1,20 +1,22 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
-import yaml
 
 from ._quartodoc_utils import QUARTODOC_CONFIGS, load_quartodoc_sections
 
 
-def _quartodoc_content_name(content: object) -> str:
+def _quartodoc_content_name(content: str | dict[str, Any]) -> str:
+    """
+    Return the symbol or page name a `contents` entry renders a link for.
+
+    A `contents` entry is either a bare symbol name or a mapping carrying a
+    `name` (a symbol with options) or a `path` (a `kind: page` group).
+    """
     if isinstance(content, str):
         return content
-    if isinstance(content, dict):
-        name = content.get("name") or content.get("path")
-        if isinstance(name, str):
-            return name
-        return yaml.safe_dump(content, sort_keys=True)
-    return repr(content)
+    return str(content.get("name") or content["path"])
 
 
 def test_quartodoc_configs_have_unique_contents():
