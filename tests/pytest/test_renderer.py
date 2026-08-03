@@ -4,9 +4,10 @@ from typing import Optional
 
 import pytest
 
-from shiny import reactive, render
+from shiny import App, reactive, render, ui
+from shiny._connection import MockConnection
 from shiny.render.renderer import Renderer, ValueFn
-from shiny.session import Session, get_current_session
+from shiny.session import Session, get_current_session, session_context
 
 
 class RendererWithSession(Renderer[str]):
@@ -175,3 +176,17 @@ def test_render_download_is_deprecated():
         @render.download
         def dl():
             yield "data"
+
+
+def test_download_button_output_id_registers_download_handler():
+    session = App(ui.TagList(), None)._create_session(MockConnection())
+
+    with session_context(session):
+
+        @session.output(id="download4")
+        @render.download_button(filename="failuretest.txt")
+        async def _():
+            yield "hello"
+
+    assert "download4" in session._downloads
+    assert "_" not in session._downloads
