@@ -1327,6 +1327,9 @@ class AppSession(Session):
                                     headers=headers,
                                     media_type=content_type,
                                 )
+                            # The handler has finished running, so publish
+                            # whatever reactive values it set.
+                            await self._flush_after_download()
                             return file_response
 
                         wrapped_contents: AsyncIterable[bytes]
@@ -1346,6 +1349,10 @@ class AppSession(Session):
                                             else:
                                                 yield chunk
 
+                                    # The handler has finished running, so publish
+                                    # whatever reactive values it set.
+                                    await self._flush_after_download()
+
                             wrapped_contents = wrap_content_async()
 
                         else:  # isinstance(contents, Iterable):
@@ -1358,6 +1365,10 @@ class AppSession(Session):
                                                 yield chunk.encode(download.encoding)
                                             else:
                                                 yield chunk
+
+                                    # The handler has finished running, so publish
+                                    # whatever reactive values it set.
+                                    await self._flush_after_download()
 
                             wrapped_contents = wrap_content_sync()
 
@@ -1559,6 +1570,28 @@ class AppSession(Session):
 
     def _request_flush(self) -> None:
         self.app._request_flush(self)
+
+    async def _flush_after_download(self) -> None:
+        """
+        Flush the reactive graph after a download handler has finished running.
+
+        Downloads are served over a plain HTTP request, outside of the WebSocket
+        message cycle that is otherwise the only thing that flushes the reactive
+        graph. Without this, any :class:`~shiny.reactive.Value` that a download
+        handler sets stays invalidated-but-unflushed (and the session stays
+        "busy") until some unrelated client message happens to arrive.
+        (https://github.com/posit-dev/py-shiny/issues/1785)
+
+        Shiny for R does the equivalent: it brackets the download's `content`
+        function with `incrementBusyCount()`/`decrementBusyCount()`, and
+        `decrementBusyCount()` calls `requestFlush()`; R's event loop then calls
+        `flushReact()` on the next tick.
+
+        The reactive lock is acquired because this runs on a different asyncio
+        task than the session's message loop, which may be flushing concurrently.
+        """
+        async with lock():
+            await reactive_flush()
 
     async def _flush(self) -> None:
         with session_context(self):

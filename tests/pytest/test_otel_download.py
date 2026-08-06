@@ -246,6 +246,9 @@ class TestDownloadHandlerSpans:
             )
         }
         mock_session._debug = False
+        # The download handler flushes reactives once it has run, so that call
+        # needs to be awaitable on the mock session.
+        mock_session._flush_after_download = AsyncMock()
 
         # Build a mock GET request
         mock_request = MagicMock()
