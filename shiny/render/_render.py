@@ -20,7 +20,7 @@ from .. import ui as _ui
 from .._docstring import add_example
 from .._typing_extensions import Self
 from ..module import ResolvedId
-from ..session import get_current_session, require_active_session
+from ..session import require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
 from ._try_render_plot import (
@@ -607,6 +607,9 @@ class _DownloadBase(Renderer[str]):
     control (`download_button` vs `download_link`) they auto-place in Express.
     """
 
+    _download_handler: DownloadHandler
+    """App-supplied function that produces the download's contents."""
+
     def __init__(
         self,
         fn: Optional[DownloadHandler] = None,
@@ -659,26 +662,48 @@ class _DownloadBase(Renderer[str]):
         # name from the user-supplied function.
         url.__name__ = fn.__name__
 
+        # Keep the download handler around; it is registered with the session in
+        # `._set_output_metadata()`, once the final `output_id` is known.
+        self._download_handler = fn
+
         # We invoke `super().__call__()` now, because it indirectly invokes
-        # `Outputs.__call__()`, which sets `output_id` (and `self.__name__`), which is
-        # then used below.
+        # `Outputs.__call__()`, which sets `output_id` (and `self.__name__`).
         super().__call__(url)
 
-        # Register the download handler for the session. The reason we check for session
-        # not being None or a stub session is because in Express, when the UI is
-        # rendered, this function is called once before any sessions have been started.
-        session = get_current_session()
-        if session is not None and not session.is_stub_session():
-            # All download objects are stored in the root session.
-            # They must be fully namespaced
-            session._downloads[session.ns(self.output_id)] = DownloadInfo(
-                filename=self.filename,
-                content_type=self.media_type,
-                handler=fn,
-                encoding=self.encoding,
-            )
-
         return self
+
+    def _set_output_metadata(self, *, output_id: str) -> None:
+        # Always set by `Renderer.__call__()` before it can auto-register the output.
+        prev_output_id = self.output_id
+        super()._set_output_metadata(output_id=output_id)
+
+        # The download handler is registered here rather than in `.__call__()` because
+        # `output_id` is not final until now, and the URL produced by `url()` above uses
+        # whatever `output_id` ends up being.
+        #
+        # With `@output(id=)`, this method runs twice: once for the auto-registration
+        # inside `.__call__()` (under the value function's name), then again with the
+        # explicit id. Drop the first registration so that the download isn't also
+        # served under a name the app never declared.
+        #
+        # The reason we check for session not being None or a stub session is because in
+        # Express, when the UI is rendered, this method is called once before any
+        # sessions have been started.
+        session = self._session
+        if session is None or session.is_stub_session():
+            return
+
+        if prev_output_id != output_id:
+            session._downloads.pop(session.ns(prev_output_id), None)
+
+        # All download objects are stored in the root session.
+        # They must be fully namespaced
+        session._downloads[session.ns(output_id)] = DownloadInfo(
+            filename=self.filename,
+            content_type=self.media_type,
+            handler=self._download_handler,
+            encoding=self.encoding,
+        )
 
     async def transform(self, value: str) -> Jsonifiable:
         return value
