@@ -36,7 +36,7 @@ from ..input_handler import input_handlers
 from ..module import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
 from ..types import ActionButtonValue
-from ._input_check_radio import ChoicesArg, _generate_options
+from ._input_check_radio import ChoicesArg, _generate_options, _normalize_selected
 from ._input_date import _as_date_attr
 from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
@@ -421,6 +421,13 @@ def _update_choice_input(
     session: Optional[Session] = None,
 ) -> None:
     session = require_active_session(session)
+
+    # The client matches `value` against the HTML `value` attributes of the options,
+    # which are always strings. Normalize the same way `input_checkbox_group()` /
+    # `input_radio_buttons()` do so that, e.g., the `int` keys of a `dict[int, str]`
+    # work here too. https://github.com/posit-dev/py-shiny/issues/2272
+    selected_values = _normalize_selected(selected)
+
     options = None
     if choices is not None:
         # https://github.com/posit-dev/py-shiny/issues/708#issuecomment-1696352934
@@ -431,14 +438,14 @@ def _update_choice_input(
             id=resolved_id,
             type=type,
             choices=choices,
-            selected=selected,
+            selected=selected_values,
             inline=inline,
         )
         options = session._process_ui(opts)["html"]
     msg = {
         "label": session._process_ui(label) if label is not None else None,
         "options": options,
-        "value": selected,
+        "value": selected_values,
     }
     session.send_input_message(id, drop_none(msg))
 
