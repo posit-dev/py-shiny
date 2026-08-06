@@ -150,9 +150,11 @@ def apply_frame_patches(
     # This allows for a single column to be updated in a single operation (rather than multiple updates to the same column)
     #
     # In; patches: List[Dict[row_index: int, column_index: int, value: Any]]
-    # Out; cell_patches_by_column: Dict[column_name: str, List[Dict[row_index: int, value: Any]]]
+    # Out; cell_patches_by_column: Dict[column_name: Any, List[Dict[row_index: int, value: Any]]]
     #
-    cell_patches_by_column: dict[str, ScatterValues] = {}
+    # Column names are not necessarily strings (e.g. pandas' default integer labels),
+    # so the keys are typed as `Any`.
+    cell_patches_by_column: dict[Any, ScatterValues] = {}
     for cell_patch in patches:
         column_name = nw_data.columns[cell_patch["column_index"]]
         if column_name not in cell_patches_by_column:
