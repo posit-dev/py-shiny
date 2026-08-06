@@ -313,7 +313,15 @@ def run_app(
         # default value for `shiny run` is "app.py:app", so we need to handle it.
         app_no_suffix = re.sub(r":app$", "", app)
         if is_express_app(app_no_suffix, app_dir):
-            app_path = Path(app_no_suffix).resolve()
+            # Resolve the app path the same way is_express_app() found the file: relative
+            # to app_dir, if one was given. (If app_no_suffix is absolute, joining it to
+            # app_dir is a no-op.) Resolving it relative to the current working directory
+            # instead would point the express entrypoint at a nonexistent file.
+            # https://github.com/posit-dev/py-shiny/issues/1991
+            if app_dir is None:
+                app_path = Path(app_no_suffix).resolve()
+            else:
+                app_path = (Path(app_dir) / app_no_suffix).resolve()
             # If the file is "/path/to/app.py", our entrypoint with the escaped filename
             # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
             app = "shiny.express.app:" + escape_to_var_name(str(app_path))
