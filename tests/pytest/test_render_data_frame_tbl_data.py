@@ -350,6 +350,25 @@ def test_apply_frame_patches_numeric_column_names():
     assert df.rows(named=False) == [("a", "x"), ("b", "y"), ("c", "z")]
 
 
+def test_apply_frame_patches_non_string_values():
+    # `CellValue` allows non-string scalars so that `@<data_frame>.set_patch_fn` can
+    # coerce the browser's string to the column's type. Writing a `str` into these
+    # columns raises `pandas.errors.LossySetitemError`, so the scalar types must work.
+    df = as_data_frame(
+        pd.DataFrame({"num": [1, 2], "dbl": [1.5, 2.5], "bool": [True, False]})
+    )
+
+    patches: list[CellPatch] = [
+        {"row_index": 0, "column_index": 0, "value": 30},
+        {"row_index": 1, "column_index": 1, "value": 3.5},
+        {"row_index": 0, "column_index": 2, "value": False},
+    ]
+
+    res = apply_frame_patches(df, patches)
+
+    assert res.rows(named=False) == [(30, 1.5, False), (2, 3.5, False)]
+
+
 def test_subset_frame(df_f: IntoDataFrame):
     # TODO: this assumes subset_frame doesn't reset index
     res = subset_frame(as_data_frame(df_f), rows=[1], cols=["chr", "num"])

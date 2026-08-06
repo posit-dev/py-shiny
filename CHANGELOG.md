@@ -72,6 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `@render.data_frame` now renders (and patches edits into) data frames whose column names are not strings, e.g. the integer labels pandas assigns by default. Previously a numeric column name was interpreted as a positional row lookup, and rendering failed with `AttributeError: 'DataFrame' object has no attribute 'dtype'`. (#2115)
 
+* `render.CellValue` now includes the non-string JSON scalars (`int`, `float`, `bool`, `None`) in addition to HTML-like content. A `@<data_frame>.set_patch_fn` that coerces the browser's string to its column's type — as the `data_frame_data_view` example does with `int()` and `float()` — was correct at runtime but reported as a type error. (#2115)
+
 * `value_box()`'s `id` docstring now documents `input.<id>_full_screen()` for observing the value box's full screen state, matching `card()`. It previously documented the wrong reactive-value syntax, `input.<id>()["full_screen"]`. (#2324)
 
 ### Other changes
