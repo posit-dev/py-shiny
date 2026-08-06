@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
+* `ui.input_selectize()`'s `options` docstring now points at `ui.js_eval()` for marking a string as a JavaScript function. It referred to `ui.JS`, which has never existed. (#XXXX)
+
 ## [1.7.0] - 2026-07-28
 
 ### New features
