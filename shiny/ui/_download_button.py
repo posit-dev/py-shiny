@@ -46,10 +46,11 @@ def download_button(
     enabled by Shiny once the server has supplied the download URL (this prevents the
     browser from downloading the app's own HTML if the button is clicked before the
     session is ready). To only offer the download once some condition is met, render
-    the button conditionally instead -- for example, with
-    :class:`~shiny.render.ui` (swapping in a disabled
-    :func:`~shiny.ui.input_action_button` as a placeholder), or by wrapping it in
-    :func:`~shiny.ui.panel_conditional`.
+    the button conditionally with :class:`~shiny.render.ui`, swapping in a disabled
+    :func:`~shiny.ui.input_action_button` as a placeholder until the download is
+    available. :func:`~shiny.ui.panel_conditional` also works, but only for conditions
+    that the browser can evaluate: its condition sees client-side input values, and some
+    inputs (notably :func:`~shiny.ui.input_file`) have no client-side value at all.
 
     See Also
     --------
@@ -115,8 +116,10 @@ def download_link(
     enabled by Shiny once the server has supplied the download URL (this prevents the
     browser from downloading the app's own HTML if the link is clicked before the
     session is ready). To only offer the download once some condition is met, render
-    the link conditionally instead -- for example, with :class:`~shiny.render.ui`, or by
-    wrapping it in :func:`~shiny.ui.panel_conditional`.
+    the link conditionally with :class:`~shiny.render.ui`.
+    :func:`~shiny.ui.panel_conditional` also works, but only for conditions that the
+    browser can evaluate: its condition sees client-side input values, and some inputs
+    (notably :func:`~shiny.ui.input_file`) have no client-side value at all.
 
     See Also
     --------
