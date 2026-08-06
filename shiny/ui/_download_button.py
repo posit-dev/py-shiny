@@ -39,6 +39,18 @@ def download_button(
     :
         A UI element
 
+    Note
+    ----
+    A download button is an *output*, not an input, so it can't be updated with
+    :func:`~shiny.ui.update_action_button`. It is rendered in a disabled state and is
+    enabled by Shiny once the server has supplied the download URL (this prevents the
+    browser from downloading the app's own HTML if the button is clicked before the
+    session is ready). To only offer the download once some condition is met, render
+    the button conditionally instead -- for example, with
+    :class:`~shiny.render.ui` (swapping in a disabled
+    :func:`~shiny.ui.input_action_button` as a placeholder), or by wrapping it in
+    :func:`~shiny.ui.panel_conditional`.
+
     See Also
     --------
     * :class:`~shiny.render.download_button`
@@ -95,6 +107,16 @@ def download_link(
     -------
     :
         A UI element
+
+    Note
+    ----
+    A download link is an *output*, not an input, so it can't be updated with
+    :func:`~shiny.ui.update_action_link`. It is rendered in a disabled state and is
+    enabled by Shiny once the server has supplied the download URL (this prevents the
+    browser from downloading the app's own HTML if the link is clicked before the
+    session is ready). To only offer the download once some condition is met, render
+    the link conditionally instead -- for example, with :class:`~shiny.render.ui`, or by
+    wrapping it in :func:`~shiny.ui.panel_conditional`.
 
     See Also
     --------
