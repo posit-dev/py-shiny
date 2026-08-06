@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import inspect
 import sys as sys1
-from typing import Generator, cast
+from typing import Callable, Generator, cast
 
 import pytest
 from htmltools import Tagifiable
@@ -127,6 +127,51 @@ def test_duplicate_func_names_ok():
     @expressify()
     def inner():
         x + " nobody"
+
+
+def test_renamed_func():
+    """
+    A decorator that changes `__name__` (without changing the code object) should not
+    prevent us from finding the function in the AST. https://github.com/posit-dev/py-shiny/issues/2016
+    """
+
+    def rename(new_name: str):
+        def decorator(fn: Callable[[], None]) -> Callable[[], None]:
+            fn.__name__ = new_name
+            return fn
+
+        return decorator
+
+    @expressify()
+    @rename("renamed")
+    def original():
+        1
+        2
+
+    assert original.__name__ == "renamed"
+
+    with capture_display() as d:
+        original()
+        assert d == [1, 2]
+
+
+def test_renamed_func_unwrap_inplace():
+    """Same as `test_renamed_func()`, but for the in-place variant used by
+    `@render.express`."""
+    from shiny.express.expressify_decorator._expressify import (
+        expressify_unwrap_inplace,
+    )
+
+    def renamed_in_place():
+        1
+        2
+
+    renamed_in_place.__name__ = "some_other_name"
+    fn = expressify_unwrap_inplace()(renamed_in_place)
+
+    with capture_display() as d:
+        fn()
+        assert d == [1, 2]
 
 
 def test_not_decorated():

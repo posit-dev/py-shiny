@@ -42,4 +42,10 @@ def ast_matches_func(node: ast.AST, func: FunctionType) -> bool:
     if not isinstance(node, ast.FunctionDef):
         return False
     linenos = [*[dec.lineno for dec in node.decorator_list], node.lineno]
-    return func.__code__.co_firstlineno in linenos and func.__name__ == node.name
+    # Compare against `co_name` rather than `__name__`: a decorator applied between the
+    # `def` and `expressify()` may have changed `__name__`, but `co_name` always matches
+    # the name at the `def` site (i.e., the name in the AST).
+    # https://github.com/posit-dev/py-shiny/issues/2016
+    return (
+        func.__code__.co_firstlineno in linenos and func.__code__.co_name == node.name
+    )
