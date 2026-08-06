@@ -88,6 +88,11 @@ file that already exists on disk — for temp files you create, `yield` the
 bytes instead so Shiny does not leave the temp file behind. The handler may be
 sync or async.
 
+The handler runs isolated, so reading a reactive value or input does not create a
+dependency. Writing works: a `reactive.Value` the handler sets takes effect once
+the download finishes, so downstream effects and outputs update (e.g. a
+"downloads so far" counter).
+
 In Express mode, `@render.download_button` renders its own button (and
 `@render.download_link` its own link) — pass `label=` and skip the separate
 `ui.download_button`/`ui.download_link` (see `references/express.md`).
