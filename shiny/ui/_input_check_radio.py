@@ -322,17 +322,18 @@ def _generate_options(
     inline: bool,
 ) -> Tag:
     choicez = _normalize_choices(choices)
+    selectedz = _normalize_selected(selected)
 
-    if selected is None:
+    selected_list: list[str]
+    if selectedz is None:
         if type == "radio":
-            selected = list(choicez.keys())[0]
+            selected_list = [list(choicez.keys())[0]]
         else:
-            selected = []
-
-    if isinstance(selected, tuple):
-        selected = list(selected)
-    elif not isinstance(selected, list):
-        selected = [selected]
+            selected_list = []
+    elif isinstance(selectedz, list):
+        selected_list = selectedz
+    else:
+        selected_list = [selectedz]
 
     return div(
         [
@@ -341,7 +342,7 @@ def _generate_options(
                 type,
                 value=choice[0],
                 label=choice[1],
-                checked=choice[0] in selected,
+                checked=choice[0] in selected_list,
                 inline=inline,
             )
             for choice in choicez.items()
@@ -380,7 +381,30 @@ def _generate_option(
 
 
 def _normalize_choices(x: ChoicesArg) -> _Choices:
+    # Choice values end up in an HTML `value` attribute, so they are always strings by
+    # the time they reach the client. Coerce them here (e.g. the `int` keys of a
+    # `dict[int, str]`) so that server-side comparisons against `selected` -- and the
+    # `value` we send in `update_*()` messages -- use the same string form.
     if isinstance(x, (list, tuple)):
-        return {k: k for k in x}
+        return {str(k): k for k in x}
     else:
-        return x
+        return {str(k): v for k, v in x.items()}
+
+
+def _normalize_selected(
+    x: Optional[str | list[str] | tuple[str, ...]],
+) -> Optional[str | list[str]]:
+    """
+    Coerce ``selected`` value(s) to string(s), preserving scalar vs. sequence shape.
+
+    ``selected`` values are matched against choice values, which
+    :func:`_normalize_choices` normalizes to strings, so they must be normalized the
+    same way. Tuples become lists so the result is JSON-serializable for
+    ``update_*()`` messages.
+    """
+    if x is None:
+        return None
+    elif isinstance(x, (list, tuple)):
+        return [str(v) for v in x]
+    else:
+        return str(x)
