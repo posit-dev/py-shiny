@@ -191,6 +191,10 @@ quartodoc:
         - express.ui.input_file
         - express.render.download_button
         - express.render.download_link
+    - title: Bookmarking
+      desc: Saving and restoring app state
+      contents:
+        - express.ui.input_bookmark_button
     - title: Dynamic UI
       desc: Dynamically show/hide UI elements.
       contents:
