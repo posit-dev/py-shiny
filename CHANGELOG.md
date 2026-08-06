@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
-* `ui.update_checkbox_group()` and `ui.update_radio_buttons()` now accept non-string `selected` values (e.g. the `int` keys of a `dict[int, str]` passed as `choices`), matching what `ui.input_checkbox_group()` and `ui.input_radio_buttons()` already allowed. Choice values always reach the browser as strings (they become HTML `value` attributes), but the update functions forwarded `selected` unchanged, so the client-side value matching threw and left every option unselected — silently, and only on update. (#2413)
+* `ui.update_checkbox_group()` and `ui.update_radio_buttons()` now accept non-string `selected` values (e.g. the `int` keys of a `dict[int, str]` passed as `choices`), matching what `ui.input_checkbox_group()` and `ui.input_radio_buttons()` already allowed. Choice values always reach the browser as strings (they become HTML `value` attributes), but the update functions forwarded `selected` unchanged, so the client-side value matching threw and left every option unselected — silently, and only on update. (#2420)
 
 ## [1.7.0] - 2026-07-28
 
