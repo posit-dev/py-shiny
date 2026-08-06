@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Download renderers (`@render.download_button`, `@render.download_link`, and the deprecated `@render.download`) now honor `@output(id=)`. The download handler was registered under the decorated function's name, but the URL rendered by the control used the `@output(id=)` value, so clicking the control returned a 404. (#2415)
 
+* `@render.data_frame` now renders data frames that have a column named `""`. The client did not give its columns an explicit TanStack Table id, so the id was derived from the column name; since TanStack rejects an empty id, a single empty column name threw while building the table and the whole data frame failed to render (leaving a blank output). Columns now get an explicit id, with a synthetic non-empty id for an empty column name, and sorting/filtering column indices sent to (and received from) the server are translated through those ids so they keep matching the right column. (#NNNN)
+
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
 * `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
