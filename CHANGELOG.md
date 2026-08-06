@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * When `@expressify` cannot locate a function's definition, the error now names the function as it appears in the source (rather than a `__name__` a decorator may have rewritten), points at the file and line it looked at, and lists the likely causes — an `async def`, a decorator below `expressify()` that returns a wrapper instead of the original function, or a source file modified after import. (#2016)
 
-* `ui.update_checkbox_group()` and `ui.update_radio_buttons()` now accept non-string `selected` values (e.g. the `int` keys of a `dict[int, str]` passed as `choices`), matching what `ui.input_checkbox_group()` and `ui.input_radio_buttons()` already allowed. Choice values always reach the browser as strings (they become HTML `value` attributes), but the update functions forwarded `selected` unchanged, so the client-side value matching threw and left every option unselected — silently, and only on update. (#2413)
+* `ui.update_checkbox_group()` and `ui.update_radio_buttons()` now accept non-string `selected` values (e.g. the `int` keys of a `dict[int, str]` passed as `choices`), matching what `ui.input_checkbox_group()` and `ui.input_radio_buttons()` already allowed. Choice values always reach the browser as strings (they become HTML `value` attributes), but the update functions forwarded `selected` unchanged, so the client-side value matching threw and left every option unselected — silently, and only on update. (#2420)
 
 ## [1.7.0] - 2026-07-28
 
