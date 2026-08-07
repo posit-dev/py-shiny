@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
-* `ui.input_bookmark_button()` now appears in the Express API reference. It was the only `ui.input_*` function missing from `docs/_quartodoc-express.yml`, so its Express docs page was never generated even though `shiny.express.ui.input_bookmark_button()` is supported. Its docstring also carried a Shiny for R leftover (`[input_action_button()]`), which is now a working cross-reference. (#2418)
+* `ui.input_bookmark_button()` was added to the Express API reference. (#2418)
 
 ## [1.7.0] - 2026-07-28
 

@@ -20,9 +20,9 @@ class BookmarkState:
     """
     The state being written while a bookmark is saved.
 
-    Shiny creates one of these each time a bookmark is taken and passes it to any
-    `session.bookmark.on_bookmark()` callback, which may add entries to
-    `values` or write files into `dir` before the state is persisted.
+    Shiny creates a `BookmarkState` instance each time a bookmark is taken and passes the instance to every
+    `session.bookmark.on_bookmark()` callback. The registered callbacks may add entries to
+    the state's `values` or write files into `dir` (if available) before the state is persisted.
 
     App authors do not construct this class directly.
     """

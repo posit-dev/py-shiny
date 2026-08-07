@@ -39,7 +39,7 @@ class Bookmark(ABC):
     `on_bookmarked`, `on_restore` and `on_restored` callback registrations).
 
     Calling the object (`await session.bookmark()`) is equivalent to
-    `do_bookmark()`: it saves the current state and, depending on `store`, updates
+    `await session.bookmark.do_bookmark()`: it saves the current state and, depending on `store`, updates
     the query string or shows a modal containing the bookmark URL.
 
     App authors do not construct this class directly. Shiny creates the appropriate

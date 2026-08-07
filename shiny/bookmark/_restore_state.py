@@ -28,7 +28,7 @@ class RestoreState:
     `session.bookmark.on_restore()` callback. Within a module, the state is scoped to
     that module, so names are unprefixed.
 
-    Input values are usually restored for you — :func:`~shiny.bookmark.restore_input`
+    Input values are restored using :func:`~shiny.bookmark.restore_input` which
     reads from the active restore context — so this class is mainly of interest for
     reading back `values` or files written during saving.
 
