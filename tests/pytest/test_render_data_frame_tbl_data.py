@@ -16,12 +16,13 @@ import pytest
 from shiny._namespaces import Root
 from shiny.module import ResolvedId
 from shiny.render._data_frame_utils._tbl_data import (
+    apply_frame_patches,
     as_data_frame,
     serialize_dtype,
     serialize_frame,
     subset_frame,
 )
-from shiny.render._data_frame_utils._types import IntoDataFrame
+from shiny.render._data_frame_utils._types import CellPatch, IntoDataFrame
 from shiny.session import Session, session_context
 from shiny.session._session import RenderedDeps
 from shiny.ui import HTML, TagChild, TagList, h1, span
@@ -311,6 +312,61 @@ def test_serialize_frame(df_f: IntoDataFrame):
         ],
         "htmlDeps": [ex_html_dep_dict],
     }
+
+
+def test_serialize_frame_numeric_column_names():
+    # Regression test: numeric column names (e.g. `0`, `1`) previously raised in
+    # serialize_frame because `data[col_name]` was interpreted as positional/row
+    # access on the narwhals frame instead of column access.
+    df = pd.DataFrame([["a", 1], ["b", 2], ["c", 3]], columns=[0, 1])
+
+    with session_context(test_session):
+        res = serialize_frame(as_data_frame(df))
+
+    assert res["columns"] == [0, 1]
+    assert [hint["type"] for hint in res["typeHints"]] == ["string", "numeric"]
+    assert res["data"] == [["a", 1], ["b", 2], ["c", 3]]
+
+
+def test_apply_frame_patches_numeric_column_names():
+    # Regression test: patching a cell of a frame with numeric column names previously
+    # raised in apply_frame_patches because `nw_data[column_name]` was interpreted as
+    # positional/row access, returning a frame (which has no `.scatter()` method).
+    df = as_data_frame(
+        pd.DataFrame([["a", "x"], ["b", "y"], ["c", "z"]], columns=[0, 1])
+    )
+
+    # Patch two different columns so the patches are grouped by column name
+    patches: list[CellPatch] = [
+        {"row_index": 0, "column_index": 0, "value": "A"},
+        {"row_index": 2, "column_index": 1, "value": "Z"},
+    ]
+
+    res = apply_frame_patches(df, patches)
+
+    assert res.columns == [0, 1]
+    assert res.rows(named=False) == [("A", "x"), ("b", "y"), ("c", "Z")]
+    # The original frame is cloned, not patched in place
+    assert df.rows(named=False) == [("a", "x"), ("b", "y"), ("c", "z")]
+
+
+def test_apply_frame_patches_non_string_values():
+    # `CellValue` allows non-string scalars so that `@<data_frame>.set_patch_fn` can
+    # coerce the browser's string to the column's type. Writing a `str` into these
+    # columns raises `pandas.errors.LossySetitemError`, so the scalar types must work.
+    df = as_data_frame(
+        pd.DataFrame({"num": [1, 2], "dbl": [1.5, 2.5], "bool": [True, False]})
+    )
+
+    patches: list[CellPatch] = [
+        {"row_index": 0, "column_index": 0, "value": 30},
+        {"row_index": 1, "column_index": 1, "value": 3.5},
+        {"row_index": 0, "column_index": 2, "value": False},
+    ]
+
+    res = apply_frame_patches(df, patches)
+
+    assert res.rows(named=False) == [(30, 1.5, False), (2, 3.5, False)]
 
 
 def test_subset_frame(df_f: IntoDataFrame):
