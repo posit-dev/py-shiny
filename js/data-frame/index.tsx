@@ -95,6 +95,35 @@ declare module "@tanstack/table-core" {
 // TODO: Drag to resize table/grid
 // TODO: Row numbers
 
+/**
+ * Column IDs used by TanStack Table for the given column names.
+ *
+ * When a column definition has no explicit `id`, TanStack Table derives the id
+ * from the (string) `header`, and it requires that id to be a non-empty string.
+ * A column whose name is `""` therefore makes TanStack Table throw while
+ * creating the column, which takes down the whole data frame render.
+ *
+ * Column names are unique (narwhals rejects duplicated names server-side), so
+ * only the empty name needs a synthetic id here. The synthetic id is extended
+ * until it does not collide with any real column name.
+ *
+ * @param columns Column names, as received from the server.
+ * @returns One TanStack column id per column name, in the same order.
+ */
+function columnNamesToIds(columns: readonly string[]): string[] {
+  const columnNameSet = new Set(columns);
+
+  return columns.map((colname, colIndex) => {
+    if (colname !== "") return colname;
+
+    let id = `empty-column-${colIndex}`;
+    while (columnNameSet.has(id)) {
+      id = `_${id}`;
+    }
+    return id;
+  });
+}
+
 type ShinyDataGridServerInfo<TIndex> = {
   payload: PandasData<TIndex>;
   patchInfo: PatchInfo;
@@ -188,6 +217,19 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   }, [cellEditMap]);
 
   /**
+   * TanStack Table column IDs, in column order.
+   *
+   * These are the column names, except for empty column names, which get a
+   * synthetic (non-empty) id. Sorting and filtering state is keyed by column
+   * id, so this array is also used to translate between column ids and the
+   * column indices that are exchanged with the server.
+   */
+  const columnIds = useMemo<string[]>(
+    () => columnNamesToIds(columns),
+    [columns]
+  );
+
+  /**
    * Column definitions for the table
    */
   const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
@@ -199,6 +241,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         const enableSorting = isHtmlColumn ? false : undefined;
 
         return {
+          id: columnIds[colIndex]!,
           accessorFn: (row, index) => {
             return row[colIndex];
           },
@@ -246,7 +289,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
           enableSorting,
         };
       }),
-    [columns, typeHints]
+    [columnIds, columns, typeHints]
   );
 
   // TODO-barret-future; Possible pagination helper
@@ -314,10 +357,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       setTypeHints(typeHints);
       resetCellEditMap();
 
-      // Make map for quick lookup of type hints
+      // Make map for quick lookup of type hints (keyed by column id, as
+      // sorting and filtering state is keyed by column id)
+      const newColumnIds = columnNamesToIds(columns);
       const newTypeHintMap = new Map<string, TypeHint>();
       typeHints?.forEach((hint, i) => {
-        newTypeHintMap.set(columns[i]!, hint);
+        newTypeHintMap.set(newColumnIds[i]!, hint);
       });
       // Filter out sorting and column filters that are no longer valid
       const newSort = sorting.filter((sort) => newTypeHintMap.has(sort.id));
@@ -599,7 +644,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
       shinySorting.map((sort) => {
         columnSorting.push({
-          id: columns[sort.col]!,
+          id: columnIds[sort.col]!,
           desc: sort.desc,
         });
       });
@@ -622,7 +667,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleColumnSort as EventListener
       );
     };
-  }, [columns, id, setSorting]);
+  }, [columnIds, id, setSorting]);
 
   useEffect(() => {
     const handleColumnFilter = (
@@ -633,7 +678,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       const columnFilters: ColumnFiltersState = [];
       shinyFilters.map((filter) => {
         columnFilters.push({
-          id: columns[filter.col]!,
+          id: columnIds[filter.col]!,
           value: filter.value,
         });
       });
@@ -656,7 +701,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleColumnFilter as EventListener
       );
     };
-  }, [columns, id, setColumnFilters]);
+  }, [columnIds, id, setColumnFilters]);
 
   useEffect(() => {
     const handleStyles = (event: CustomEvent<{ styles: StyleInfo[] }>) => {
@@ -708,7 +753,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     if (!id) return;
     const shinySort: { col: number; desc: boolean }[] = [];
     sorting.map((sortObj) => {
-      const columnNum = columns.indexOf(sortObj.id);
+      const columnNum = columnIds.indexOf(sortObj.id);
       shinySort.push({
         col: columnNum,
         desc: sortObj.desc,
@@ -718,7 +763,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
     // Deprecated as of 2024-05-21
     window.Shiny.setInputValue!(`${id}_column_sort`, shinySort);
-  }, [columns, id, sorting]);
+  }, [columnIds, id, sorting]);
   useEffect(() => {
     if (!id) return;
     const shinyFilter: {
@@ -726,7 +771,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       value: FilterValue;
     }[] = [];
     columnFilters.map((filterObj) => {
-      const columnNum = columns.indexOf(filterObj.id);
+      const columnNum = columnIds.indexOf(filterObj.id);
       shinyFilter.push({
         col: columnNum,
         value: filterObj.value as FilterValue,
@@ -737,7 +782,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
     // Deprecated as of 2024-05-21
     window.Shiny.setInputValue!(`${id}_column_filter`, shinyFilter);
-  }, [id, columnFilters, columns]);
+  }, [id, columnFilters, columnIds]);
   useEffect(() => {
     if (!id) return;
 

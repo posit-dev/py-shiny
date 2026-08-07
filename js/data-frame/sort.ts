@@ -33,10 +33,10 @@ export function useSort<TData>({
             ? sortUpdater(sorting)
             : sortUpdater;
         const coldefs = getColDefs();
+        // Sorting state is keyed by column id, which is not always the column
+        // name (e.g. an empty column name gets a synthetic id).
         const htmlColumnsSet = new Set(
-          coldefs
-            .filter((col) => col.meta!.isHtmlColumn)
-            .map((col) => col.header!)
+          coldefs.filter((col) => col.meta!.isHtmlColumn).map((col) => col.id!)
         );
 
         const filteredSort =

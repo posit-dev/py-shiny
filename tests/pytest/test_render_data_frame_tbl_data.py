@@ -313,6 +313,22 @@ def test_serialize_frame(df_f: IntoDataFrame):
     }
 
 
+@pytest.mark.parametrize("empty_col_index", [0, 1])
+def test_serialize_frame_empty_column_name(empty_col_index: int):
+    # Empty column names must be sent to the client as-is (`""`), no matter their
+    # position. The client is responsible for giving such a column a usable
+    # TanStack Table id. https://github.com/posit-dev/py-shiny/issues/1844
+    names = ["a", "b"]
+    names[empty_col_index] = ""
+    df = pd.DataFrame({names[0]: [1, 2], names[1]: [3, 4]})
+
+    with session_context(test_session):
+        res = serialize_frame(as_data_frame(df))
+
+    assert res["columns"] == names
+    assert res["data"] == [[1, 3], [2, 4]]
+
+
 def test_subset_frame(df_f: IntoDataFrame):
     # TODO: this assumes subset_frame doesn't reset index
     res = subset_frame(as_data_frame(df_f), rows=[1], cols=["chr", "num"])
