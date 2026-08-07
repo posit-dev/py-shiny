@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
+* `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
+
+* `ui.input_bookmark_button()` was added to the Express API reference. (#2418)
+
+* `shiny run --app-dir <dir> <app>` now honors `--app-dir` for Shiny Express apps. Express detection looked for the app file relative to `--app-dir`, but the entrypoint that gets handed to uvicorn was then built by resolving the app path against the current working directory instead, so running an Express app from outside its directory failed with a `FileNotFoundError` for a path that never existed. (#2419)
+
 ## [1.7.0] - 2026-07-28
 
 ### New features
