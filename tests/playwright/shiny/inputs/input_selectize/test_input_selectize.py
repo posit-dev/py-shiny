@@ -5,6 +5,27 @@ from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 
 
+def test_expect_choices_does_not_click_app_background(
+    page: Page, local_app: ShinyAppProc
+) -> None:
+    page.goto(local_app.url)
+
+    page.locator("body").evaluate("""
+        body => {
+            window.bodyClickCount = 0
+            body.addEventListener("click", event => {
+                if (!event.target.closest("#state1 + .selectize-control")) {
+                    window.bodyClickCount += 1
+                }
+            })
+        }
+        """)
+
+    state = controller.InputSelectize(page, "state1")
+    state.expect_choices(["NY", "NJ", "CT", "WA", "OR", "CA", "MN", "WI", "IA"])
+    assert page.evaluate("window.bodyClickCount") == 0
+
+
 def test_input_selectize_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 

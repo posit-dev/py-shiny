@@ -1453,7 +1453,7 @@ class InputSelectize(
         _expect_style_to_have_value(
             self._loc_dropdown, "display", "block", timeout=timeout
         )
-        self.page.locator("body").click(timeout=timeout)
+        self._loc_events.press("Escape", timeout=timeout)
         _expect_style_to_have_value(
             self._loc_dropdown, "display", "none", timeout=timeout
         )
