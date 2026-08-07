@@ -23,6 +23,10 @@ app_ui = ui.page_fluid(
                 icon=faicons.icon_svg("file-csv"),
                 width="560px",
             ),
+            ui.download_button(
+                "explicit_id_csv",
+                "Explicit ID CSV",
+            ),
         ),
     ),
 )
@@ -59,6 +63,13 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         yield "metric,value\n"
         yield f"inventory,{current_inventory}\n"
         yield f"download_number,{current_styled}\n"
+
+    # The download id comes from `@output(id=)` rather than the function name
+    @output(id="explicit_id_csv")
+    @render.download_button(filename="explicit-id.csv")
+    async def _():
+        yield "kind,inventory\n"
+        yield f"explicit,{inventory_total}\n"
 
 
 app = App(app_ui, server)
