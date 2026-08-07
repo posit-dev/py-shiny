@@ -30,6 +30,21 @@ else:
 
 
 class Bookmark(ABC):
+    """
+    A session's bookmarking interface.
+
+    Every session exposes one of these as `session.bookmark`. It controls whether
+    bookmarking is enabled (`store`), which inputs are left out of a bookmark
+    (`exclude`), and when state is saved and restored (the `on_bookmark`,
+    `on_bookmarked`, `on_restore` and `on_restored` callback registrations).
+
+    Calling the object (`await session.bookmark()`) is equivalent to
+    `do_bookmark()`: it saves the current state and, depending on `store`, updates
+    the query string or shows a modal containing the bookmark URL.
+
+    App authors do not construct this class directly. Shiny creates the appropriate
+    subclass for the session.
+    """
 
     _on_get_exclude: list[Callable[[], list[str]]]
     """Callbacks that BookmarkProxy classes utilize to help determine the list of inputs to exclude from bookmarking."""
@@ -70,7 +85,7 @@ class Bookmark(ABC):
         Possible values:
         * `"url"`: Save / reload the bookmark state in the URL.
         * `"server"`: Save / reload the bookmark state on the server.
-        * `"disable"` (default): Bookmarking is diabled.
+        * `"disable"` (default): Bookmarking is disabled.
         """
         ...
 
@@ -114,7 +129,7 @@ class Bookmark(ABC):
         callback
             The callback function to call when the session is bookmarked.
             This method should accept a single argument, which is a
-            :class:`~shiny.bookmark._bookmark.ShinySaveState` object.
+            :class:`~shiny.bookmark.BookmarkState` object.
         """
         return self._on_bookmark_callbacks.register(wrap_async(callback))
 
