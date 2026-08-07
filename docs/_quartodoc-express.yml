@@ -195,6 +195,19 @@ quartodoc:
       desc: Saving and restoring app state
       contents:
         - express.ui.input_bookmark_button
+        - bookmark.restore_input
+        - bookmark.Bookmark
+        - bookmark.BookmarkState
+        - bookmark.RestoreState
+        - kind: page
+          path: bookmark_integration
+          summary:
+            name: "Integration"
+            desc: "Decorators to set save and restore directories."
+          flatten: true
+          contents:
+            - bookmark.set_global_save_dir_fn
+            - bookmark.set_global_restore_dir_fn
     - title: Dynamic UI
       desc: Dynamically show/hide UI elements.
       contents:
