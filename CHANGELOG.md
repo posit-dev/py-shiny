@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed the error message raised when a package required for theme compilation is missing: it interpolated the package name into the first sentence but printed a literal `pip install {pkg}` in the second. (#2386)
 
+* A `reactive.Value` that a `@render.download_button()` / `@render.download_link()` handler sets now takes effect as soon as the download finishes. Downloads are served over a plain HTTP request, but the reactive graph was only ever flushed in response to WebSocket messages, so anything the handler invalidated sat in the pending-flush queue (leaving the session stuck in its "busy" state) until an unrelated client message happened to arrive. Shiny for R flushes after a download for the same reason, so a download counter now behaves the same in both. (#2422)
+
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
 * `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
