@@ -21,9 +21,38 @@ _logger = logging.getLogger(__name__)
 
 
 class RestoreState:
+    """
+    The state read back when a session is restored from a bookmark.
+
+    Shiny creates one of these while a bookmarked session starts up and passes it to any
+    `session.bookmark.on_restore()` callback. Within a module, the state is scoped to
+    that module, so names are unprefixed.
+
+    Input values are restored using :func:`~shiny.bookmark.restore_input` which
+    reads from the active restore context — so this class is mainly of interest for
+    reading back `values` or files written during saving.
+
+    App authors do not construct this class directly.
+    """
+
     input: dict[str, Any]
+    """The saved input values, keyed by input name."""
+
     values: dict[str, Any]
+    """
+    The extra values recorded during saving.
+
+    Whatever an `on_bookmark()` callback put into
+    `BookmarkState.values` appears here.
+    """
+
     dir: Path | None
+    """
+    Directory holding the files saved with this bookmark, or `None`.
+
+    Set only for bookmarks saved server-side (`store="server"`); it is `None` for
+    `store="url"` bookmarks, which keep their state in the query string.
+    """
 
     def __init__(
         self,

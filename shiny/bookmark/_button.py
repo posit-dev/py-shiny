@@ -26,7 +26,9 @@ def input_bookmark_button(
     """
     Button for bookmarking/sharing.
 
-    A `bookmarkButton` is a [input_action_button()] with a default label that consists of a link icon and the text "Bookmark...". It is meant to be used for bookmarking state.
+    A bookmark button is an :func:`~shiny.ui.input_action_button` with a default label
+    that consists of a link icon and the text ``"Bookmark..."``. It is meant to be used
+    for bookmarking state.
 
     Parameters
     ----------
