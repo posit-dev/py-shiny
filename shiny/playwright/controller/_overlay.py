@@ -103,6 +103,12 @@ class _OverlayBase(UiBase):
         """
         return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
 
+    def _is_active(self, *, timeout: Timeout = None) -> bool:
+        return (
+            self.loc_trigger.get_attribute("aria-describedby", timeout=timeout)
+            is not None
+        )
+
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
         Expects the overlay body to have the specified text.
@@ -212,8 +218,9 @@ class Popover(_OverlayBase):
         timeout
             The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
-        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
+        if open != self._is_active(timeout=timeout):
             self._toggle(timeout=timeout)
+        self.expect_active(open, timeout=timeout)
 
     def _toggle(self, timeout: Timeout = None) -> None:
         """
@@ -298,10 +305,12 @@ class Tooltip(_OverlayBase):
         timeout
             The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
         """
-        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
+        is_active = self._is_active(timeout=timeout)
+        if open and not is_active:
             self._toggle(timeout=timeout)
-        if not open:
+        elif not open and is_active:
             self.get_loc_overlay_body(timeout=timeout).click()
+        self.expect_active(open, timeout=timeout)
 
     def _toggle(self, timeout: Timeout = None) -> None:
         """
