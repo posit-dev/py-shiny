@@ -214,3 +214,70 @@ def test_example_retries_one_transient_http_error(
     example_apps.validate_example(page, "shiny/api-examples/todo_list/app-core.py")
 
     assert page.goto_count == 2
+
+
+def test_example_ignores_google_font_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    example_apps = _load_module(
+        "example_apps_for_external_font_test",
+        PLAYWRIGHT_TESTS / "examples" / "example_apps.py",
+    )
+
+    class AppProcess:
+        stderr = ""
+        url = "http://127.0.0.1:8000"
+
+        def __enter__(self) -> AppProcess:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    class ConsoleMessage:
+        type = "error"
+        text = "Failed to load resource: the server responded with a status of 404"
+        location = {"url": ""}
+
+    class Response:
+        status = 404
+        url = "https://fonts.gstatic.com/s/montserrat/v31/font.woff2"
+
+    class Page:
+        def __init__(self) -> None:
+            self.handlers: dict[str, Callable[[Any], None]] = {}
+            self.goto_count = 0
+
+        def on(self, event: str, handler: Callable[[Any], None]) -> None:
+            self.handlers[event] = handler
+
+        def goto(self, url: str, *, wait_until: str) -> None:
+            self.goto_count += 1
+            self.handlers["response"](Response())
+            self.handlers["console"](ConsoleMessage())
+
+        def locator(self, selector: str) -> object:
+            return object()
+
+    class Expectation:
+        def to_have_count(self, count: int) -> None:
+            assert count == 0
+
+    page = Page()
+
+    def run_shiny_app(*args: object, **kwargs: object) -> AppProcess:
+        return AppProcess()
+
+    def wait_for_idle_app(*args: object, **kwargs: object) -> None:
+        return None
+
+    def expect(locator: object) -> Expectation:
+        return Expectation()
+
+    monkeypatch.setattr(example_apps, "run_shiny_app", run_shiny_app)
+    monkeypatch.setattr(example_apps, "wait_for_idle_app", wait_for_idle_app)
+    monkeypatch.setattr(example_apps, "expect", expect)
+
+    example_apps.validate_example(page, "shiny/api-examples/todo_list/app-core.py")
+
+    assert page.goto_count == 1

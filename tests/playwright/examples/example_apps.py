@@ -3,6 +3,7 @@ import sys
 import typing
 from pathlib import PurePath
 from typing import Literal
+from urllib.parse import urlparse
 
 from playwright.sync_api import ConsoleMessage, Page, Response, expect
 
@@ -14,6 +15,9 @@ pyshiny_root = here_tests_e2e_examples.parent.parent.parent
 is_interactive = hasattr(sys, "ps1")
 reruns = 1 if is_interactive else 3
 reruns_delay = 0
+
+_RESOURCE_LOAD_ERROR_PREFIX = "Failed to load resource:"
+_IGNORED_EXTERNAL_RESOURCE_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
 
 def get_apps(path: str) -> typing.List[str]:
@@ -174,6 +178,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
 
     console_errors: typing.List[str] = []
     failed_responses: typing.List[str] = []
+    ignored_failed_responses: typing.List[str] = []
 
     def on_console_msg(msg: ConsoleMessage) -> None:
         if msg.type == "error":
@@ -186,7 +191,11 @@ def validate_example(page: Page, ex_app_path: str) -> None:
 
     def on_response(response: Response) -> None:
         if response.status >= 400 and not response.url.endswith("favicon.ico"):
-            failed_responses.append(f"HTTP {response.status}: {response.url}")
+            response_error = f"HTTP {response.status}: {response.url}"
+            if urlparse(response.url).hostname in _IGNORED_EXTERNAL_RESOURCE_HOSTS:
+                ignored_failed_responses.append(response_error)
+            else:
+                failed_responses.append(response_error)
 
     page.on("response", on_response)
 
@@ -214,6 +223,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         if console_errors and failed_responses:
             console_errors.clear()
             failed_responses.clear()
+            ignored_failed_responses.clear()
             load_app()
 
         # Check for py-shiny errors
@@ -262,6 +272,17 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             assert len(error_lines) == 0
 
         # Check for JavaScript errors
+        ignored_resource_error_count = len(ignored_failed_responses)
+        remaining_console_errors: typing.List[str] = []
+        for error in console_errors:
+            if ignored_resource_error_count and error.startswith(
+                _RESOURCE_LOAD_ERROR_PREFIX
+            ):
+                ignored_resource_error_count -= 1
+                continue
+            remaining_console_errors.append(error)
+        console_errors = remaining_console_errors
+
         if short_app_path in app_allow_js_errors:
             # Remove any errors that are allowed
             console_errors = [
