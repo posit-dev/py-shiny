@@ -13,7 +13,10 @@ from htmltools import Tagifiable
 
 from shiny import render, ui
 from shiny.express import expressify
-from shiny.express.expressify_decorator._expressify import expressify_unwrap_inplace
+from shiny.express.expressify_decorator._expressify import (
+    _describe_func,
+    expressify_unwrap_inplace,
+)
 
 TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 
@@ -500,7 +503,7 @@ def test_expressify_async_is_unsupported():
     so `@expressify` cannot transform an async function. This is pre-existing behavior
     -- `@render.express` rejects async functions up front with a clearer message.
     """
-    with pytest.raises(RuntimeError, match="Failed to find function"):
+    with pytest.raises(RuntimeError, match="Failed to find the definition of function"):
 
         @expressify()
         async def async_fn():
@@ -511,6 +514,61 @@ def test_expressify_async_is_unsupported():
         @render.express
         async def async_out():
             1
+
+
+# ----------------------------------------------------------------------------
+# Error message diagnostics
+# ----------------------------------------------------------------------------
+
+
+def test_describe_func_reports_code_name():
+    def target():
+        pass
+
+    assert _describe_func(target) == "'target'"
+
+    target.__name__ = "renamed"
+    described = _describe_func(target)
+    # Both names must appear: the one we search the AST for, and the one the user sees.
+    assert "'target'" in described
+    assert "'renamed'" in described
+
+
+def test_ast_lookup_failure_message_is_actionable():
+    """
+    The message must name the function as it appears in the *source* (its code-object
+    name), not `__name__`, and must point at the file and line. Reporting only
+    `__name__` sent the reporter of #2016 looking for a name that was never in the AST.
+    """
+    with pytest.raises(RuntimeError) as excinfo:
+
+        @expressify()
+        @rename("name_that_is_not_in_the_source")
+        async def real_source_name():
+            1
+
+    msg = str(excinfo.value)
+
+    # Identifies the function by the name actually present in the source...
+    assert "'real_source_name'" in msg
+    # ...while still mentioning the renamed `__name__`, so the user can connect it
+    # back to the decorator they wrote.
+    assert "name_that_is_not_in_the_source" in msg
+    # Locates the definition.
+    assert __file__ in msg or "test_display_decorator.py" in msg
+    assert "line " in msg
+    # And explains the likely causes rather than only "please file an issue".
+    assert "async def" in msg
+    assert "wrapper" in msg
+
+
+def test_missing_source_file_message():
+    """A function with no source file on disk cannot be expressified."""
+    ns: dict[str, Any] = {}
+    exec("def no_source():\n    1\n", ns)
+
+    with pytest.raises(RuntimeError, match="Failed to (find|read) the source"):
+        expressify()(ns["no_source"])
 
 
 def test_expressify_cannot_see_through_a_wrapper_below_it():
