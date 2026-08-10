@@ -11,6 +11,13 @@ from playwright.sync_api import Error as PlaywrightError
 from shiny.playwright.controller import OutputDataFrame
 
 PLAYWRIGHT_TESTS = Path(__file__).parents[1] / "playwright"
+PLAYWRIGHT_REMOTE_ACTION = (
+    Path(__file__).parents[2]
+    / ".github"
+    / "py-shiny"
+    / "setup-playwright-remote"
+    / "action.yaml"
+)
 
 
 def _load_module(name: str, path: Path) -> ModuleType:
@@ -20,6 +27,20 @@ def _load_module(name: str, path: Path) -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_remote_playwright_server_keeps_stdin_open() -> None:
+    action = PLAYWRIGHT_REMOTE_ACTION.read_text()
+
+    assert "--interactive" in action
+
+
+def test_remote_playwright_readiness_uses_server_metadata() -> None:
+    action = PLAYWRIGHT_REMOTE_ACTION.read_text()
+
+    assert "/json" in action
+    assert "wsEndpointPath" in action
+    assert "socket.socket" not in action
 
 
 def test_new_shared_page_does_not_repeat_initial_blank_navigation(

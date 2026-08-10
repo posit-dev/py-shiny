@@ -145,7 +145,10 @@ runs:
         # No --rm: if the server crashes, the container must survive so the
         # logs-on-failure step below can read it. `docker rm -f` above cleans
         # up any leftover container from a previous attempt.
+        # Playwright exits run-server when stdin closes. Keep stdin open in
+        # detached mode, as required by Playwright's documented Docker setup.
         docker run -d \
+          --interactive \
           --name "${{ inputs.container-name }}" \
           --ipc=host \
           -p "127.0.0.1:${{ inputs.port }}:${{ inputs.port }}" \
@@ -159,28 +162,30 @@ runs:
       shell: bash
       run: |
         python3 - <<'PY'
-        import socket
+        import json
         import time
+        from urllib.request import urlopen
 
         host = "127.0.0.1"
         port = int("${{ inputs.port }}")
+        metadata_url = f"http://{host}:{port}/json"
         deadline = time.time() + 60
         last_error = None
 
         while time.time() < deadline:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.settimeout(1)
-                try:
-                    sock.connect((host, port))
-                except OSError as err:
-                    last_error = err
-                    time.sleep(1)
-                    continue
-                break
+            try:
+                with urlopen(metadata_url, timeout=1) as response:
+                    metadata = json.load(response)
+                if metadata.get("wsEndpointPath") != "/":
+                    raise RuntimeError(f"Unexpected Playwright metadata: {metadata}")
+            except (OSError, ValueError, RuntimeError) as err:
+                last_error = err
+                time.sleep(1)
+                continue
+            break
         else:
             raise SystemExit(
-                f"Timed out waiting for Playwright server on {host}:{port}: "
-                f"{last_error}"
+                f"Timed out waiting for Playwright server at {metadata_url}: {last_error}"
             )
         PY
 
