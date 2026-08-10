@@ -152,8 +152,11 @@ def apply_frame_patches(
     # In; patches: List[Dict[row_index: int, column_index: int, value: Any]]
     # Out; cell_patches_by_column: Dict[column_name: Any, List[Dict[row_index: int, value: Any]]]
     #
-    # Column names are not necessarily strings (e.g. pandas' default integer labels),
-    # so the keys are typed as `Any`.
+    # Narwhals types `get_column(name)`'s `name` as `str`, but its docs note that pandas
+    # does allow non-string column names and that they work when passed to it, as there
+    # is no ambiguity:
+    # https://narwhals-dev.github.io/narwhals/api-reference/dataframe/#narwhals.dataframe.DataFrame.get_column
+    # This dict is not exported, so its key type is relaxed to match.
     cell_patches_by_column: dict[Any, ScatterValues] = {}
     for cell_patch in patches:
         column_name = nw_data.columns[cell_patch["column_index"]]
@@ -239,9 +242,6 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     data = as_data_frame(into_data)
 
-    # Use `get_column` rather than `data[col_name]`: for a numeric column name
-    # (e.g. `0`) the latter is interpreted as row/positional access and returns a
-    # row frame instead of the column, which then fails downstream.
     type_hints = [
         serialize_dtype(data.get_column(col_name)) for col_name in data.columns
     ]
@@ -331,17 +331,23 @@ def subset_frame(
             return data[rows, :]  # pyrefly: ignore[bad-return]
     else:
         # `cols` is not None
-        col_names = [data.columns[col] if isinstance(col, int) else col for col in cols]
+        # Resolve each column to its position rather than its name. Narwhals reads a
+        # list of ints in the column slot as positions, so a non-string column name
+        # (e.g. pandas' integer labels) would be taken as a position instead: selecting
+        # the wrong columns, or raising `IndexError` when it is out of bounds.
+        col_indexes = [
+            col if isinstance(col, int) else data.columns.index(col) for col in cols
+        ]
 
         # Return a DataFrame with no rows or columns
         # If there are no columns, there are no Series objects to support any rows
-        if len(col_names) == 0:
+        if len(col_indexes) == 0:
             return data[[], []]  # pyrefly: ignore[bad-return]
 
         if rows is None:
-            return data[:, col_names]  # pyrefly: ignore[bad-return]
+            return data[:, col_indexes]  # pyrefly: ignore[bad-return]
         else:
-            return data[rows, col_names]  # pyrefly: ignore[bad-return]
+            return data[rows, col_indexes]  # pyrefly: ignore[bad-return]
 
 
 class ScatterValues(TypedDict):

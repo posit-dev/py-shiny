@@ -391,6 +391,23 @@ def test_subset_frame(df_f: IntoDataFrame):
     assert_frame_equal2(res, dst)
 
 
+def test_subset_frame_numeric_column_names():
+    # `cols` entries are positions when `int`, so they must not be handed to narwhals as
+    # column names: with non-string column names narwhals reads the name as a position,
+    # selecting the wrong column or raising `IndexError` when it is out of bounds.
+    df = as_data_frame(pd.DataFrame([["a", 1], ["b", 2]], columns=[10, 20]))
+
+    res = subset_frame(df, cols=[0])
+
+    assert res.columns == [10]
+    assert res.rows(named=False) == [("a",), ("b",)]
+
+    res = subset_frame(df, rows=[1], cols=[1])
+
+    assert res.columns == [20]
+    assert res.rows(named=False) == [(2,)]
+
+
 def test_subset_frame_rows_single(small_df_f: IntoDataFrame):
     res = subset_frame(as_data_frame(small_df_f), rows=[1])
 

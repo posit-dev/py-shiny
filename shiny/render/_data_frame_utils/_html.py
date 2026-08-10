@@ -19,9 +19,6 @@ def as_cell_html(processed_ui: RenderedDeps) -> CellHtml:
 JsonifiableScalarT = TypeVar("JsonifiableScalarT", bound=JsonifiableScalar)
 
 
-# Scalars are never HTML-like, so they are returned unchanged (`str` included, which is
-# why this overload must precede the `TagNode` one). The type var keeps "unchanged"
-# precise: a `str` in yields a `str` out, not the whole scalar union.
 @overload
 def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
     x: JsonifiableScalarT, *, session: Session
