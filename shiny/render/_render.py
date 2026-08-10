@@ -717,6 +717,16 @@ class download_button(_DownloadBase):
     In Shiny Core, pair this with :func:`~shiny.ui.download_button` in the UI (the
     decorated function's name should match the ``id``).
 
+    Note
+    ----
+    A download button is an *output*, not an input, so it can't be enabled or disabled
+    with :func:`~shiny.ui.update_action_button`. To only offer the download once some
+    condition is met, render the button conditionally with :class:`~shiny.render.ui`,
+    swapping in a disabled :func:`~shiny.ui.input_action_button` as a placeholder. In
+    Express, wrap this renderer in :func:`~shiny.express.ui.hold` so the button isn't
+    auto-placed, then place :func:`~shiny.ui.download_button` from inside the
+    :class:`~shiny.render.ui` function.
+
     See Also
     --------
     * :class:`~shiny.render.download_link`
@@ -763,6 +773,15 @@ class download_link(_DownloadBase):
     ----
     In Shiny Core, pair this with :func:`~shiny.ui.download_link` in the UI (the
     decorated function's name should match the ``id``).
+
+    Note
+    ----
+    A download link is an *output*, not an input, so it can't be enabled or disabled
+    with :func:`~shiny.ui.update_action_link`. To only offer the download once some
+    condition is met, render the link conditionally with :class:`~shiny.render.ui`. In
+    Express, wrap this renderer in :func:`~shiny.express.ui.hold` so the link isn't
+    auto-placed, then place :func:`~shiny.ui.download_link` from inside the
+    :class:`~shiny.render.ui` function.
 
     See Also
     --------
