@@ -255,6 +255,18 @@ class Session(ABC):
         """
 
     @abstractmethod
+    def _is_closed(self) -> bool:
+        """
+        Whether the session is being (or has been) torn down because its client
+        went away.
+
+        Distinguishes a whole-session close from an explicit
+        :meth:`~shiny.Session.destroy` call on a still-running session: on close
+        the reactives in the session are left intact, while an explicit
+        ``destroy()`` tears them down.
+        """
+
+    @abstractmethod
     def _is_hidden(self, name: str) -> bool: ...
 
     @add_example(example_name="session_on_ended")
@@ -288,6 +300,14 @@ class Session(ABC):
         ``session.destroy()`` is explicitly called. For ``AppSession`` (root
         sessions), destroy callbacks fire automatically at session end, after
         all ``on_ended`` callbacks have run.
+
+        Note that closing a session is not the same as destroying a scope. An
+        explicit ``destroy()`` tears down the scope's reactive values, calcs,
+        and effects, so reading one afterwards raises
+        ``DestroyedReactiveError``. When the session closes, values and calcs
+        are instead left readable at their last value and reclaimed by ordinary
+        garbage collection, so async work that outlives the connection does not
+        error.
 
         Parameters
         ----------
@@ -323,7 +343,9 @@ class Session(ABC):
             await session.destroy("editor")
         ```
 
-        The following categories of state are cleaned up:
+        An explicit ``destroy()`` call cleans up the following categories of
+        state. (Session *close* is deliberately gentler with reactives — see
+        "Close is not destroy" below.)
 
         - **Reactive objects** — Effects are stopped, calcs and values are
           invalidated. After destruction, ``get()``/``set()`` on a destroyed
@@ -338,9 +360,26 @@ class Session(ABC):
 
         For ``SessionProxy``, this must be called explicitly (typically after
         removing dynamic module UI). For ``AppSession``, this is called
-        automatically at session end, after all ``on_ended`` callbacks.
+        automatically at session end, after all ``on_ended`` callbacks — but
+        that path skips the reactive teardown above, per "Close is not destroy".
 
         Idempotent: calling destroy() more than once has no effect.
+
+        Close is not destroy
+        --------------------
+        The teardown above describes an explicit ``destroy()`` call on a running
+        session. When the session itself closes (the browser tab is closed or
+        refreshed), reactive values and calcs are **not** destroyed: they are
+        left readable at their last value and reclaimed by ordinary garbage
+        collection. Effects are still destroyed, since the session can no longer
+        flush.
+
+        Without this, any async work that outlives the connection — an
+        :class:`~shiny.reactive.ExtendedTask` that settles after the user
+        refreshes the page, an ``asyncio`` task, a callback scheduled with
+        ``loop.call_later()`` — would raise ``DestroyedReactiveError`` on its
+        first reactive access. Writes after close are already inert: the
+        session's effects are gone and outbound messages are dropped.
 
         Composability
         -------------
@@ -877,9 +916,17 @@ class AppSession(Session):
         # Clear file upload directories, if present
         self.on_ended(self._file_upload_manager.rm_upload_dir)
 
+    def _is_closed(self) -> bool:
+        # `_has_run_session_ended_tasks` is set before any teardown callback
+        # runs, so teardown itself can tell a close from an explicit destroy().
+        return self._has_run_session_ended_tasks
+
     async def _run_session_ended_tasks(self) -> None:
         if self._has_run_session_ended_tasks:
             return
+        # Mark the session closed before running any teardown, so that the
+        # destroy callbacks registered by reactive values and calcs can skip
+        # tearing themselves down (see `_weak_destroy_callback`).
         self._has_run_session_ended_tasks = True
 
         # Wrap session cleanup in session_end span (or no-op if not collecting)
@@ -1720,6 +1767,9 @@ class SessionProxy(Session):
 
         self.bookmark = BookmarkProxy(self)
 
+    def _is_closed(self) -> bool:
+        return self._root_session._is_closed()
+
     def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
@@ -1727,7 +1777,10 @@ class SessionProxy(Session):
         Register a callback to run when this module scope is destroyed.
 
         Destroy callbacks fire when ``destroy()`` is explicitly called, or
-        automatically at session end (after ``on_ended`` callbacks).
+        automatically at session end (after ``on_ended`` callbacks). Note that
+        the session-end path leaves the scope's reactive values and calcs
+        readable; only an explicit ``destroy()`` tears them down. See
+        :meth:`~shiny.Session.destroy`.
 
         Parameters
         ----------

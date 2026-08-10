@@ -44,6 +44,15 @@ def server(input, output, session):
 module instance's reactive graph (not the entire session), use
 `session.destroy(id)` — see `references/modules-core.md`.
 
+Closing a session is not the same as destroying a scope. On close, reactive
+values and calcs stay readable at their last value (they are just reclaimed by
+garbage collection), so async work that outlives the connection — an
+`@reactive.extended_task` that settles after the user refreshes the page, a
+stray `asyncio` task — can still touch them without erroring. Effects are
+destroyed, so writes after close are inert. An explicit `session.destroy(id)`
+on a live session does hard-destroy: reading a value from that scope afterwards
+raises `DestroyedReactiveError`.
+
 ## Read the incoming request: `http_conn` and `clientdata`
 
 `session.http_conn` is the Starlette
