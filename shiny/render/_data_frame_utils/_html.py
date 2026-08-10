@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 from htmltools import TagNode
 
@@ -16,12 +16,16 @@ def as_cell_html(processed_ui: RenderedDeps) -> CellHtml:
     return {"isShinyHtml": True, "obj": processed_ui}
 
 
+JsonifiableScalarT = TypeVar("JsonifiableScalarT", bound=JsonifiableScalar)
+
+
 # Scalars are never HTML-like, so they are returned unchanged (`str` included, which is
-# why this overload must precede the `TagNode` one).
+# why this overload must precede the `TagNode` one). The type var keeps "unchanged"
+# precise: a `str` in yields a `str` out, not the whole scalar union.
 @overload
 def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
-    x: JsonifiableScalar, *, session: Session
-) -> JsonifiableScalar: ...
+    x: JsonifiableScalarT, *, session: Session
+) -> JsonifiableScalarT: ...
 @overload
 def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
     x: TagNode, *, session: Session
