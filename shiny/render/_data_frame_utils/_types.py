@@ -246,7 +246,21 @@ BrowserStyleInfo = BrowserStyleInfoBody
 # Cell patches ----------------------------------------------------------
 
 # CellValue = str | TagList | Tag | HTML
-CellValue = TagNode
+#
+# A cell's value is either HTML-like content (`TagNode`, which includes `str`) or a
+# non-string scalar. The scalars are limited to the JSON-native types, as patch values
+# are sent back to the browser with `json.dumps()`; e.g. a `datetime` would serialize
+# the data frame fine but raise when the patch is sent to the client.
+#
+# Non-string scalars matter when patching a non-string column: the browser always sends
+# the edited value as a `str`, and writing that `str` into (say) a numeric column can
+# fail (pandas raises `LossySetitemError`), so `@<data_frame>.set_patch_fn` is expected
+# to coerce the value to the column's type before it is applied.
+#
+# `Jsonifiable`'s containers (list, tuple, dict) are deliberately excluded: a cell holds
+# a single value, not a collection.
+JsonifiableScalar = Union[str, int, float, bool, None]
+CellValue = Union[TagNode, JsonifiableScalar]
 
 
 class CellPatch(TypedDict):
@@ -258,7 +272,9 @@ class CellPatch(TypedDict):
 class CellPatchProcessed(TypedDict):
     row_index: int
     column_index: int
-    value: str | CellHtml
+    # HTML-like values are upgraded to `CellHtml`; the scalars in `CellValue` are passed
+    # through as-is to be sent to the client.
+    value: JsonifiableScalar | CellHtml
     # prev_value: CellValue
 
 

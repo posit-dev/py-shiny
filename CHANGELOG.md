@@ -19,11 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* The `ui.Theme` API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`. The example directory now declares `libsass` in a `requirements.txt`. (#2386)
+* The `ui.Theme` API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`. The example directory now declares `libsass` in a `requirements.txt`. (#2387)
 
-* Fixed the error message raised when a package required for theme compilation is missing: it interpolated the package name into the first sentence but printed a literal `pip install {pkg}` in the second. (#2386)
+* Fixed the error message raised when a package required for theme compilation is missing: it interpolated the package name into the first sentence but printed a literal `pip install {pkg}` in the second. (#2387)
+
+* Download renderers (`@render.download_button`, `@render.download_link`, and the deprecated `@render.download`) now honor `@output(id=)`. The download handler was registered under the decorated function's name, but the URL rendered by the control used the `@output(id=)` value, so clicking the control returned a 404. (#2415)
 
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
+
+* `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
+
+* `ui.input_bookmark_button()` was added to the Express API reference. (#2418)
+
+* `shiny run --app-dir <dir> <app>` now honors `--app-dir` for Shiny Express apps. Express detection looked for the app file relative to `--app-dir`, but the entrypoint that gets handed to uvicorn was then built by resolving the app path against the current working directory instead, so running an Express app from outside its directory failed with a `FileNotFoundError` for a path that never existed. (#2419)
 
 ## [1.7.0] - 2026-07-28
 
@@ -73,6 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `InputSlider.set()` and `InputSliderRange.set()` now compute the target value's position from the slider's step configuration and drag the handle directly to it, verifying the landing position against the widget's state (finishing with arrow-key presses when the slider has more steps than the track has pixels). Previously the handle was swept one pixel at a time while polling the label, which was slow and could intermittently miss the target when the browser coalesced or dropped mouse-move events (a recurring webkit CI flake). `InputSliderRange.set()` orders the two handle moves so neither is clamped by its sibling, instead of parking both handles at their extremes first. Setting a value the slider cannot produce now raises an error listing the slider's actual values. (#2311, #2326)
 
 * `ui.output_data_frame()` now consistently orders the filtered columns in ascending column order (#2093), and resetting a numeric range filter resets both values (#2093).
+
+* `@render.data_frame` now renders (and patches edits into) data frames whose column names are not strings, e.g. the integer labels pandas assigns by default. Previously a numeric column name was interpreted as a positional row lookup, and rendering failed with `AttributeError: 'DataFrame' object has no attribute 'dtype'`. (Thanks, @eeshsaxena!) (#2115)
+
+* `render.CellValue` now includes the non-string JSON scalars (`int`, `float`, `bool`, `None`) in addition to HTML-like content. A `@<data_frame>.set_patch_fn` that coerces the browser's string to its column's type — as the `data_frame_data_view` example does with `int()` and `float()` — was correct at runtime but reported as a type error. (Thanks, @eeshsaxena!) (#2115)
 
 * `value_box()`'s `id` docstring now documents `input.<id>_full_screen()` for observing the value box's full screen state, matching `card()`. It previously documented the wrong reactive-value syntax, `input.<id>()["full_screen"]`. (#2324)
 

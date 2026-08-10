@@ -88,7 +88,8 @@ def input_selectize(
         remove button to multiple selections, but not single selections.
     options
         A dictionary of options. See the documentation of selectize.js for possible options.
-        If you want to pass a JavaScript function, wrap the string in `ui.JS`.
+        If you want to pass a JavaScript function, wrap the string in
+        :func:`~shiny.ui.js_eval`.
 
     Returns
     -------
