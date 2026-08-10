@@ -343,7 +343,9 @@ class Session(ABC):
             await session.destroy("editor")
         ```
 
-        The following categories of state are cleaned up:
+        An explicit ``destroy()`` call cleans up the following categories of
+        state. (Session *close* is deliberately gentler with reactives — see
+        "Close is not destroy" below.)
 
         - **Reactive objects** — Effects are stopped, calcs and values are
           invalidated. After destruction, ``get()``/``set()`` on a destroyed
@@ -358,7 +360,8 @@ class Session(ABC):
 
         For ``SessionProxy``, this must be called explicitly (typically after
         removing dynamic module UI). For ``AppSession``, this is called
-        automatically at session end, after all ``on_ended`` callbacks.
+        automatically at session end, after all ``on_ended`` callbacks — but
+        that path skips the reactive teardown above, per "Close is not destroy".
 
         Idempotent: calling destroy() more than once has no effect.
 
@@ -1774,7 +1777,10 @@ class SessionProxy(Session):
         Register a callback to run when this module scope is destroyed.
 
         Destroy callbacks fire when ``destroy()`` is explicitly called, or
-        automatically at session end (after ``on_ended`` callbacks).
+        automatically at session end (after ``on_ended`` callbacks). Note that
+        the session-end path leaves the scope's reactive values and calcs
+        readable; only an explicit ``destroy()`` tears them down. See
+        :meth:`~shiny.Session.destroy`.
 
         Parameters
         ----------
