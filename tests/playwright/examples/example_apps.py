@@ -4,7 +4,7 @@ import typing
 from pathlib import PurePath
 from typing import Literal
 
-from playwright.sync_api import ConsoleMessage, Page, expect
+from playwright.sync_api import ConsoleMessage, Page, Response, expect
 
 from shiny.run import ShinyAppProc, run_shiny_app
 
@@ -167,8 +167,13 @@ def wait_for_idle_app(
 
 def validate_example(page: Page, ex_app_path: str) -> None:
     sa: ShinyAppProc = run_shiny_app(pyshiny_root / ex_app_path, wait_for_start=True)
+    app_name = os.path.basename(os.path.dirname(ex_app_path))
+    short_app_path = (
+        f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
+    )
 
     console_errors: typing.List[str] = []
+    failed_responses: typing.List[str] = []
 
     def on_console_msg(msg: ConsoleMessage) -> None:
         if msg.type == "error":
@@ -179,11 +184,14 @@ def validate_example(page: Page, ex_app_path: str) -> None:
 
     page.on("console", on_console_msg)
 
-    with sa:
-        page.goto(sa.url, wait_until="domcontentloaded")
+    def on_response(response: Response) -> None:
+        if response.status >= 400 and not response.url.endswith("favicon.ico"):
+            failed_responses.append(f"HTTP {response.status}: {response.url}")
 
-        app_name = os.path.basename(os.path.dirname(ex_app_path))
-        short_app_path = f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
+    page.on("response", on_response)
+
+    def load_app() -> None:
+        page.goto(sa.url, wait_until="domcontentloaded")
 
         if short_app_path in app_hard_wait.keys():
             # Apps are constantly invalidating and will not stabilize
@@ -196,6 +204,17 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 duration=app_idle_wait["duration"],
                 timeout=app_idle_wait["timeout"],
             )
+
+    with sa:
+        load_app()
+
+        # A static resource can briefly race the app server during startup. A
+        # clean reload is cheaper and more targeted than rerunning the entire
+        # parametrized test, and persistent errors still fail below with URLs.
+        if console_errors and failed_responses:
+            console_errors.clear()
+            failed_responses.clear()
+            load_app()
 
         # Check for py-shiny errors
         error_lines = str(sa.stderr).splitlines()
@@ -260,6 +279,11 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             + ex_app_path
             + " had JavaScript console errors!\n"
             + "* ".join(console_errors)
+            + (
+                "\nFailed responses:\n* " + "\n* ".join(failed_responses)
+                if failed_responses
+                else ""
+            )
         )
 
         if ex_app_path not in app_allow_output_error:

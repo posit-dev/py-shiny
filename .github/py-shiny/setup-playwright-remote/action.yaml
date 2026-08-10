@@ -24,7 +24,7 @@ inputs:
     required: false
     default: ""
   browser:
-    description: "Browser to use when verifying the remote Playwright server is ready"
+    description: "Deprecated compatibility input; server readiness is browser-independent"
     required: false
     default: "chromium"
   port:
@@ -159,14 +159,11 @@ runs:
       shell: bash
       run: |
         python3 - <<'PY'
-        from playwright.sync_api import Error, sync_playwright
         import socket
         import time
 
         host = "127.0.0.1"
         port = int("${{ inputs.port }}")
-        browser_name = "${{ inputs.browser }}"
-        ws_endpoint = f"ws://{host}:{port}/"
         deadline = time.time() + 60
         last_error = None
 
@@ -175,26 +172,15 @@ runs:
                 sock.settimeout(1)
                 try:
                     sock.connect((host, port))
-                except OSError:
+                except OSError as err:
+                    last_error = err
                     time.sleep(1)
                     continue
-            try:
-                with sync_playwright() as playwright:
-                    browser_type = getattr(playwright, browser_name)
-                    browser = browser_type.connect(
-                        ws_endpoint,
-                        expose_network="*",
-                        timeout=10000,
-                    )
-                    browser.close()
-                    break
-            except Error as err:
-                last_error = err
-                time.sleep(1)
+                break
         else:
             raise SystemExit(
-                f"Timed out waiting for Playwright {browser_name} server "
-                f"on {ws_endpoint}: {last_error}"
+                f"Timed out waiting for Playwright server on {host}:{port}: "
+                f"{last_error}"
             )
         PY
 
