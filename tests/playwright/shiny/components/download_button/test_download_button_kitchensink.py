@@ -47,3 +47,15 @@ def test_download_button_kitchensink(
     plain_path_2 = tmp_path / plain_download_2.suggested_filename
     plain_download_2.save_as(plain_path_2)
     assert plain_path_2.read_text() == "kind,inventory,count\nplain,2,2\n"
+
+    # A download whose id comes from `@output(id=)` resolves (used to 404)
+    explicit_id_button = controller.DownloadButton(page, "explicit_id_csv")
+    explicit_id_button.expect_label("Explicit ID CSV")
+
+    with page.expect_download() as explicit_id_info:
+        explicit_id_button.click()
+    explicit_id_download = explicit_id_info.value
+    assert explicit_id_download.suggested_filename == "explicit-id.csv"
+    explicit_id_path = tmp_path / explicit_id_download.suggested_filename
+    explicit_id_download.save_as(explicit_id_path)
+    assert explicit_id_path.read_text() == "kind,inventory\nexplicit,2\n"

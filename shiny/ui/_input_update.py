@@ -91,7 +91,9 @@ def update_action_button(
         An icon to appear inline with the button/link.
     disabled
         If `True`, disable the button making it unclickable; if `False`, the button will
-        become enabled and clickable.
+        become enabled and clickable. This has no effect on a
+        :func:`~shiny.ui.download_button`, which is an output rather than an input; see
+        that function's docs for how to conditionally offer a download.
     session
         A :class:`~shiny.Session` instance. If not provided, it is inferred via
         :func:`~shiny.session.get_current_session`.
