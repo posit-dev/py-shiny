@@ -14,7 +14,15 @@ from shiny._app import App
 from shiny._connection import MockConnection
 from shiny._namespaces import ResolvedId
 from shiny.express._stub_session import ExpressStubSession
-from shiny.reactive import Value, calc, effect, flush, invalidate_later, isolate
+from shiny.reactive import (
+    Value,
+    calc,
+    effect,
+    extended_task,
+    flush,
+    invalidate_later,
+    isolate,
+)
 from shiny.reactive._reactives import DestroyedReactiveError, Effect_
 from shiny.render.renderer import Renderer
 from shiny.session._session import (
@@ -553,6 +561,9 @@ def _make_mock_root_session() -> Session:
             self._destroy_callbacks_by_ns: dict[str, _utils.AsyncCallbacks] = {}
 
         def _is_hidden(self, name: str) -> bool:
+            return False
+
+        def _is_closed(self) -> bool:
             return False
 
         def is_stub_session(self) -> bool:
@@ -1699,3 +1710,248 @@ async def test_destroy_by_id_does_not_leak_bookmark_exclude():
     root.make_scope("mod1")
     await root.destroy("mod1")
     assert len(root.bookmark._on_get_exclude) == before
+
+
+# ---- Soft teardown on whole-session close ---------------------------------
+#
+# Closing a session is not the same as destroying a module scope. When the
+# client goes away, every consumer in the session is already gone and the whole
+# object graph is about to be garbage collected, so reactive values and calcs are
+# left intact: async work that outlives the connection (an ExtendedTask settling
+# after a page refresh, a stray asyncio task) must not be poisoned by a
+# DestroyedReactiveError. An explicit `session.destroy(ns)` on a live session
+# still tears down for real.
+
+
+@pytest.mark.asyncio
+async def test_session_close_leaves_value_readable():
+    root = _make_real_app_session()
+    with session_context(root):
+        v = Value(10)
+        v.set(42)
+
+    await root._run_session_ended_tasks()
+
+    assert root._is_closed()
+    with isolate():
+        assert v.get() == 42
+
+
+@pytest.mark.asyncio
+async def test_session_close_leaves_value_writable():
+    root = _make_real_app_session()
+    with session_context(root):
+        v = Value(10)
+
+    await root._run_session_ended_tasks()
+
+    with isolate():
+        v.set(99)
+        assert v.get() == 99
+
+
+@pytest.mark.asyncio
+async def test_session_close_leaves_calc_usable():
+    root = _make_real_app_session()
+    with session_context(root):
+        v = Value(10)
+
+        @calc
+        def double():
+            return v.get() * 2
+
+        with isolate():
+            assert double() == 20
+
+    await root._run_session_ended_tasks()
+
+    with isolate():
+        assert double() == 20
+        v.set(3)
+        assert double() == 6
+
+
+@pytest.mark.asyncio
+async def test_session_close_leaves_module_reactives_usable():
+    """A root close does not tear down reactives owned by module scopes."""
+    root = _make_real_app_session()
+    proxy = root.make_scope("mod1")
+    with session_context(proxy):
+        v = Value(10)
+
+    await root._run_session_ended_tasks()
+
+    with isolate():
+        assert v.get() == 10
+
+
+@pytest.mark.asyncio
+async def test_session_close_still_destroys_effects():
+    """Effects are destroyed on close (via on_ended), so writes stay inert."""
+    root = _make_real_app_session()
+    ran = 0
+
+    with session_context(root):
+        v = Value(0)
+
+        @effect
+        def _():
+            v.get()
+            nonlocal ran
+            ran += 1
+
+        await flush()
+    assert ran == 1
+
+    await root._run_session_ended_tasks()
+
+    with isolate():
+        v.set(1)
+    await flush()
+
+    assert ran == 1
+
+
+@pytest.mark.asyncio
+async def test_session_close_does_not_destroy_inputs():
+    """Input values are readable after close, like any other reactive value."""
+    root = _make_real_app_session()
+    with session_context(root):
+        root.input["n"]._set(7)
+
+    await root._run_session_ended_tasks()
+
+    with isolate():
+        assert root.input["n"].get() == 7
+
+
+@pytest.mark.asyncio
+async def test_module_destroy_after_close_leaves_reactives_intact():
+    """A destroy() that lands during or after teardown is a no-op, not an error."""
+    root = _make_real_app_session()
+    proxy = root.make_scope("mod1")
+    with session_context(proxy):
+        v = Value(10)
+
+    await root._run_session_ended_tasks()
+    await proxy.destroy()
+
+    with isolate():
+        assert v.get() == 10
+
+
+@pytest.mark.asyncio
+async def test_explicit_module_destroy_still_hard_destroys():
+    """Contrast with close: a later access after destroy() is a genuine bug."""
+    root = _make_real_app_session()
+    proxy = root.make_scope("mod1")
+    with session_context(proxy):
+        v = Value(10)
+
+        @calc
+        def double():
+            return v.get() * 2
+
+    await root.destroy("mod1")
+
+    with isolate():
+        with pytest.raises(DestroyedReactiveError):
+            v.get()
+        with pytest.raises(DestroyedReactiveError):
+            double()
+
+
+@pytest.mark.asyncio
+async def test_session_close_still_runs_on_destroy_callbacks():
+    """User-registered destroy callbacks still fire on close."""
+    root = _make_real_app_session()
+    calls: list[str] = []
+    root.on_destroy(lambda: calls.append("root"))
+    root.make_scope("mod1").on_destroy(lambda: calls.append("mod1"))
+
+    await root._run_session_ended_tasks()
+
+    assert sorted(calls) == ["mod1", "root"]
+
+
+@pytest.mark.asyncio
+async def test_session_close_lets_values_be_garbage_collected():
+    """Soft teardown must not keep reactives alive: GC still reclaims them."""
+    root = _make_real_app_session()
+    with session_context(root):
+        v = Value(10)
+    ref = weakref.ref(v)
+
+    await root._run_session_ended_tasks()
+
+    del v
+    gc.collect()
+    assert ref() is None
+
+
+@pytest.mark.asyncio
+async def test_extended_task_settling_after_close_completes():
+    """End-to-end shape of the reported bug: refresh while a task is in flight."""
+    root = _make_real_app_session()
+    loop_errors: list[BaseException] = []
+
+    def on_loop_error(loop: Any, context: dict[str, Any]) -> None:
+        exc = context.get("exception")
+        if exc is not None:
+            loop_errors.append(exc)
+
+    asyncio.get_running_loop().set_exception_handler(on_loop_error)
+
+    started = asyncio.Event()
+    finish: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+
+    with session_context(root):
+
+        @extended_task
+        async def task() -> int:
+            started.set()
+            return await finish
+
+        task()
+        await flush()
+
+    await started.wait()
+    with isolate():
+        assert task.status() == "running"
+
+    await root._run_session_ended_tasks()
+    finish.set_result(42)
+    # Let the task's done callback run.
+    for _ in range(10):
+        await asyncio.sleep(0)
+
+    assert loop_errors == []
+    with isolate():
+        assert task.status() == "success"
+        assert task.result() == 42
+
+
+@pytest.mark.asyncio
+async def test_extended_task_in_module_settling_after_close_completes():
+    """Same as above, for a task owned by a module scope."""
+    root = _make_real_app_session()
+    proxy = root.make_scope("mod1")
+    finish: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+
+    with session_context(proxy):
+
+        @extended_task
+        async def task() -> str:
+            return await finish
+
+        task()
+        await flush()
+
+    await root._run_session_ended_tasks()
+    finish.set_result("streamed")
+    for _ in range(10):
+        await asyncio.sleep(0)
+
+    with isolate():
+        assert task.status() == "success"
+        assert task.result() == "streamed"
