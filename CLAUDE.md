@@ -185,3 +185,4 @@ CI then rejects.
 - **Playwright timing**: Use `.expect_*()` methods which auto-wait; avoid manual `sleep()`
 - **Asset updates**: After running `make upgrade-html-deps`, verify theme preset files were updated
 - **Stale bundled skills**: When changing a public API, grep `shiny/.agents/skills/` for it — bundled Agent Skills document public APIs and must be updated in the same PR
+- **Narwhals column access**: Never subscript a narwhals frame with a column *name* — use `.get_column(name)`. Subscripts are positional, and pandas allows non-string column names, so `data[0]` returns row `0`, not the column named `0`. Keep `[...]` for genuinely positional access (`data[rows, :]`, `data[:, col_indexes]`), resolving names to positions first
