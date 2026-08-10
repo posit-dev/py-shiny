@@ -177,6 +177,22 @@ def expressify(
     return decorator
 
 
+def _describe_func(fn: types.FunctionType) -> str:
+    """
+    Describe a function for use in error messages.
+
+    Reports the name from the function's code object, because that -- not `__name__` --
+    is the name we search the source AST for. The two differ whenever a decorator has
+    rewritten `__name__`, and reporting only `__name__` has sent people looking for a
+    name that never appears in their source at all.
+    https://github.com/posit-dev/py-shiny/issues/2016
+    """
+    code_name = fn.__code__.co_name
+    if fn.__name__ == code_name:
+        return f"'{code_name}'"
+    return f"'{code_name}' (whose `__name__` has since been changed to '{fn.__name__}')"
+
+
 def _transform_body(
     fn: types.FunctionType,
     has_docstring: bool = False,
@@ -197,15 +213,18 @@ def _transform_body(
     filename = inspect.getsourcefile(fn)
     if filename is None:
         raise RuntimeError(
-            f"Failed to find source code for function '{fn.__name__}'."
-            " This should never happen, please file an issue!"
+            f"Failed to find the source file for function {_describe_func(fn)}."
+            " `expressify()` needs to re-read the function's source, so the function"
+            " must be defined in a file (not, say, by `exec()` or in a bare REPL)."
         )
 
     parsed_ast = read_ast(filename)
     if parsed_ast is None:
         raise RuntimeError(
-            f"Failed to read source code for function '{fn.__name__}'."
-            " This should never happen, please file an issue!"
+            f"Failed to read the source code for function {_describe_func(fn)}"
+            f" from '{filename}'."
+            " `expressify()` needs to re-read the function's source; if the file has"
+            " been moved or deleted since it was imported, that is not possible."
         )
 
     # A wrapper for _transform_function_ast that conveys the value of has_docstring.
@@ -221,8 +240,17 @@ def _transform_body(
     new_ast = tft.visit(parsed_ast)
     if not tft.found:
         raise RuntimeError(
-            f"Failed to find function '{fn.__name__}' in AST."
-            " This should never happen, please file an issue!"
+            f"Failed to find the definition of function {_describe_func(fn)} in the"
+            f" source of '{filename}'"
+            f" (looking for a `def` at line {fn.__code__.co_firstlineno})."
+            "\n\nThis can happen if:"
+            "\n* The function is an `async def`. `expressify()` can only transform"
+            " regular functions; use `@render.ui` instead of `@render.express`."
+            "\n* A decorator between the `def` and `expressify()` replaced the function"
+            " with a wrapper. Decorators applied below `expressify()` must return the"
+            " original function, not a wrapper around it."
+            "\n* The source file was modified after it was imported."
+            "\n\nIf none of these apply, please file an issue!"
         )
 
     # The new AST contains new nodes; give them locations so the compiler will
@@ -241,7 +269,8 @@ def _transform_body(
     )
     if fcode is None:
         raise RuntimeError(
-            f"Failed to find code object for function '{fn.__name__}'."
+            f"Failed to find the code object for function {_describe_func(fn)}"
+            f" after recompiling '{filename}'."
             " This should never happen, please file an issue!"
         )
 
