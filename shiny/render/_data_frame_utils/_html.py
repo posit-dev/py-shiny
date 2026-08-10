@@ -6,7 +6,7 @@ from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
 from ...types import Jsonifiable
-from ._types import CellHtml, Series
+from ._types import CellHtml, JsonifiableScalar, Series
 
 if TYPE_CHECKING:
     from ...session import Session
@@ -17,10 +17,12 @@ def as_cell_html(processed_ui: RenderedDeps) -> CellHtml:
     return {"isShinyHtml": True, "obj": processed_ui}
 
 
+# Scalars are never HTML-like, so they are returned unchanged (`str` included, which is
+# why this overload must precede the `TagNode` one).
 @overload
 def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
-    x: str, *, session: Session
-) -> Jsonifiable: ...
+    x: JsonifiableScalar, *, session: Session
+) -> JsonifiableScalar: ...
 @overload
 def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
     x: TagNode, *, session: Session

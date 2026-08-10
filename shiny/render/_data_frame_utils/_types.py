@@ -256,7 +256,11 @@ BrowserStyleInfo = BrowserStyleInfoBody
 # the edited value as a `str`, and writing that `str` into (say) a numeric column can
 # fail (pandas raises `LossySetitemError`), so `@<data_frame>.set_patch_fn` is expected
 # to coerce the value to the column's type before it is applied.
-CellValue = Union[TagNode, int, float, bool, None]
+#
+# `Jsonifiable`'s containers (list, tuple, dict) are deliberately excluded: a cell holds
+# a single value, not a collection.
+JsonifiableScalar = Union[str, int, float, bool, None]
+CellValue = Union[TagNode, JsonifiableScalar]
 
 
 class CellPatch(TypedDict):
@@ -268,9 +272,9 @@ class CellPatch(TypedDict):
 class CellPatchProcessed(TypedDict):
     row_index: int
     column_index: int
-    # HTML-like values are upgraded to `CellHtml`; everything else (including non-string
-    # scalars) is passed through as-is to be sent to the client.
-    value: Jsonifiable | CellHtml
+    # HTML-like values are upgraded to `CellHtml`; the scalars in `CellValue` are passed
+    # through as-is to be sent to the client.
+    value: JsonifiableScalar | CellHtml
     # prev_value: CellValue
 
 

@@ -15,6 +15,7 @@ import pytest
 
 from shiny._namespaces import Root
 from shiny.module import ResolvedId
+from shiny.render._data_frame_utils._html import maybe_as_cell_html
 from shiny.render._data_frame_utils._tbl_data import (
     apply_frame_patches,
     as_data_frame,
@@ -367,6 +368,19 @@ def test_apply_frame_patches_non_string_values():
     res = apply_frame_patches(df, patches)
 
     assert res.rows(named=False) == [(30, 1.5, False), (2, 3.5, False)]
+
+
+def test_maybe_as_cell_html_passes_scalars_through():
+    # `CellPatchProcessed["value"]` is `JsonifiableScalar | CellHtml`, so every
+    # `CellValue` must land in one of those two shapes: scalars unchanged (`str`
+    # included), HTML-like content upgraded to a `CellHtml` dict.
+    for scalar in ("a", 1, 1.5, True, None):
+        assert maybe_as_cell_html(scalar, session=test_session) is scalar
+
+    res = maybe_as_cell_html(HTML("<b>bold</b>"), session=test_session)
+
+    assert res["isShinyHtml"] is True
+    assert res["obj"]["html"] == "<b>bold</b>"
 
 
 def test_subset_frame(df_f: IntoDataFrame):
