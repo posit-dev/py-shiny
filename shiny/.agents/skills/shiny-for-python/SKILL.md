@@ -1,6 +1,6 @@
 ---
 name: shiny-for-python
-description: "Building, styling, testing, debugging, or observing a Shiny for Python (py-shiny) reactive web app - `from shiny import ...`, `shiny run app.py`. Index skill: read this, then open the linked reference for the area you are working in. Covers reactivity (calc/effect/value/event/req/isolate); Express vs Core mode; modules; layout, navigation, dynamic UI, and theming; outputs (plots, data frames, file upload/download, custom renderers); LLM chat and Markdown streaming; notifications, modals, and progress; extended (background) tasks; bookmarking; custom JS input/output components; session lifecycle; Playwright end-to-end testing; server-side debugging; and OpenTelemetry. Use when writing or changing any Shiny for Python app, or when tempted to hand-roll what the framework provides - a custom HTML table, fake tabs, manual DOM manipulation, blocking work inside reactive code, polling loops, or print-debugging server state."
+description: "Building, styling, testing, debugging, or observing a Shiny for Python (py-shiny) reactive web app - `from shiny import ...`, `shiny run app.py`. Index skill: read this, then open the linked reference for the task. Covers dashboard design and visual QA; card toolbars and accessible icons; interactive Plotly charts and maps; reactivity (calc/effect/value/event/req/isolate); Express vs Core; modules; layout, navigation, dynamic UI, and theming; plots, data frames, files, and custom renderers; LLM chat and Markdown streaming; notifications, modals, progress, and background tasks; bookmarking; custom JS components; session lifecycle; Playwright testing; debugging; and OpenTelemetry. Use when writing or changing any Shiny for Python app, especially an analytical dashboard, or when tempted to hand-roll what the framework provides - custom HTML tables, fake tabs, DOM manipulation, blocking reactive work, polling loops, or print-debugging server state."
 ---
 
 # Shiny for Python
@@ -26,6 +26,15 @@ reference file before writing code** for that area.
 | Modules (Express) | The same reusable-component need in an Express app, via the single `@module` decorator | `references/modules-express.md` |
 | Session lifecycle | Per-session cleanup (`on_ended`), reading request headers/cookies/URL, flush hooks, per-session routes | `references/session-lifecycle.md` |
 
+## Dashboard building
+
+| Topic | Use when | Reference |
+|---|---|---|
+| Dashboard design | Turning a dataset or brief into a polished analytical dashboard; planning information hierarchy, shared filters, responsive layout, empty states, and the final visual/functional quality pass | `references/dashboard-design.md` |
+| Dashboard components | Composing cards, KPI value boxes, local card toolbars, accessible icons, tooltips, and popovers | `references/dashboard-components.md` |
+| Interactive charts | Rendering Plotly charts with shinywidgets; choosing chart forms, applying a coherent visual system, formatting hover/data labels, and handling empty data | `references/interactive-charts.md` |
+| Maps | Choosing and rendering a geographic widget; cleaning coordinates, avoiding overplotting, and selecting Plotly, ipyleaflet, or lonboard by interaction and scale | `references/maps.md` |
+
 ## Layout & navigation
 
 | Topic | Use when | Reference |
@@ -39,7 +48,7 @@ reference file before writing code** for that area.
 
 | Topic | Use when | Reference |
 |---|---|---|
-| Plots & images | Rendering matplotlib/seaborn/plotnine figures or images; plot click/hover/brush interactions | `references/plots.md` |
+| Static plots & images | Rendering matplotlib/seaborn/plotnine figures or images; static plot click/hover/brush interactions. For Plotly, read Interactive charts above | `references/plots.md` |
 | Data frames | Interactive tables via `@render.data_frame` (DataGrid/DataTable) — sort, filter, select, edit | `references/data-frames.md` |
 | Files | File uploads (`ui.input_file`) and generated-file downloads (`@render.download_button`/`@render.download_link`) | `references/files.md` |
 
