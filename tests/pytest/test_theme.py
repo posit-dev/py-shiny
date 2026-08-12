@@ -522,6 +522,10 @@ color:
 
         theme = Theme.from_brand(tmpdir)
 
-    assert theme.brand.color.primary.light == "#0066cc"
-    assert theme.brand.color.primary.dark == "#66b2ff"
+    assert theme.brand.color is not None
+    primary = theme.brand.color.primary
+    assert primary is not None
+    assert not isinstance(primary, str)
+    assert primary.light == "#0066cc"
+    assert primary.dark == "#66b2ff"
     assert all("brand_color_primary: {" not in default for default in theme._defaults)
