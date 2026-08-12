@@ -25,7 +25,6 @@ from typing import (
     Any,
     AsyncGenerator,
     AsyncIterable,
-    AsyncIterator,
     Callable,
     Iterable,
     cast,
@@ -126,7 +125,7 @@ class Harness:
 @asynccontextmanager
 async def _running_session(
     server: Callable[[Inputs, Outputs, Session], None],
-) -> AsyncIterator[Harness]:
+) -> AsyncGenerator[Harness, None]:
     """
     Run `server` in a real session, parked and idle, ready to serve a request.
 
