@@ -108,9 +108,9 @@ def test_theme_css_compiles_and_is_cached(preset: ShinyThemePreset):
 
 
 def _css_rule_body(css: str, selector: str) -> str:
-    match = re.search(rf"{re.escape(selector)}\{{([^}}]*)\}}", css)
-    assert match is not None
-    return match.group(1)
+    matches = re.findall(rf"{re.escape(selector)}\s*\{{([^}}]*)\}}", css)
+    assert matches
+    return re.sub(r"\s+", "", matches[-1])
 
 
 def test_theme_update_preset():
@@ -291,12 +291,12 @@ defaults:
         assert any(["brand: brand rules" in r for r in theme._rules])
 
         # Check that the CSS compiles without error
-        css = theme.to_css()
+        css = theme.to_css({"output_style": "expanded"})
         assert isinstance(css, str)
 
 
 @skip_on_windows
-def test_theme_from_brand_light_dark_colors_emit_mode_scoped_variables():
+def test_theme_from_brand_light_dark_colors_emit_complete_mode_layers():
     brand_txt = """
 color:
   foreground:
@@ -336,41 +336,66 @@ typography:
             f.write(brand_txt)
 
         theme = Theme.from_brand(tmpdir)
-        css = theme.to_css()
+        css = theme.to_css({"output_style": "expanded"})
 
     assert '[data-bs-theme="light"]' in css
     assert '[data-bs-theme="dark"]' in css
     assert "--brand-color-foreground: #111111" in css
     assert "--brand-color-foreground: #eeeeee" in css
-    assert "--bs-body-color: var(--brand-color-foreground)" in css
-    assert "--bs-body-bg: var(--brand-color-background)" in css
-    assert "--bs-primary: var(--brand-color-primary)" in css
-    assert "--bs-link-color: var(--brand-color-link)" in css
-    assert "--bs-heading-color: var(--brand-typography-headings-color)" in css
-    assert "--bs-code-color: var(--brand-typography-monospace-inline-color)" in css
-    assert (
-        "--bs-code-bg: var(--brand-typography-monospace-inline-background-color)" in css
+
+    light_root = _css_rule_body(css, "html:not([data-bs-theme])")
+    explicit_light_root = _css_rule_body(css, '[data-bs-theme="light"]')
+    dark_root = _css_rule_body(css, '[data-bs-theme="dark"]')
+
+    for root, expected in (
+        (light_root, ("#111111", "17,17,17", "#ffffff", "255,255,255")),
+        (
+            explicit_light_root,
+            ("#111111", "17,17,17", "#ffffff", "255,255,255"),
+        ),
+        (dark_root, ("#eeeeee", "238,238,238", "#222222", "34,34,34")),
+    ):
+        foreground, foreground_rgb, background, background_rgb = expected
+        assert f"--bs-body-color:{foreground}" in root
+        assert f"--bs-body-color-rgb:{foreground_rgb}" in root
+        assert f"--bs-body-bg:{background}" in root
+        assert f"--bs-body-bg-rgb:{background_rgb}" in root
+
+    assert "--bs-primary:#0066cc" in light_root
+    assert "--bs-primary-rgb:0,102,204" in light_root
+    assert "--bs-link-color:#0055aa" in light_root
+    assert "--bs-link-color-rgb:0,85,170" in light_root
+    assert "--bs-heading-color:#111111" in light_root
+    assert "--bs-code-color:#111111" in light_root
+    assert "--bs-code-bg:#f1f5fa" in light_root
+    assert "--bs-pre-color:#111111" in light_root
+    assert "--bs-pre-bg:#f8f9fa" in light_root
+    assert "--bs-link-bg:#eef6ff" in light_root
+
+    assert "--bs-primary:#66b2ff" in dark_root
+    assert "--bs-primary-rgb:102,178,255" in dark_root
+    assert "--bs-link-color:#99ccff" in dark_root
+    assert "--bs-link-color-rgb:153,204,255" in dark_root
+    assert "--bs-heading-color:#eeeeee" in dark_root
+
+    light_button = _css_rule_body(css, "html:not([data-bs-theme]) .btn-primary")
+    dark_button = _css_rule_body(css, '[data-bs-theme="dark"] .btn-primary')
+    assert "--bs-btn-bg:#0066cc" in light_button
+    assert "--bs-btn-border-color:#0066cc" in light_button
+    assert "--bs-btn-bg:#66b2ff" in dark_button
+    assert "--bs-btn-border-color:#66b2ff" in dark_button
+
+    assert "color:var(--bs-code-color)" in _css_rule_body(
+        css, "html:not([data-bs-theme]) code:not(pre > code)"
     )
-    assert "--bs-pre-color: var(--brand-typography-monospace-block-color)" in css
-    assert (
-        "--bs-pre-bg: var(--brand-typography-monospace-block-background-color)" in css
+    assert "background-color:var(--bs-code-bg)" in _css_rule_body(
+        css, '[data-bs-theme="dark"] code:not(pre > code)'
     )
-    assert "--bs-link-bg: var(--brand-typography-link-background-color)" in css
-    assert (
-        "color:var(--bs-code-color);background-color:var(--bs-code-bg)"
-        in _css_rule_body(css, '[data-bs-theme="light"] code:not(pre>code)')
+    assert "color:var(--bs-pre-color)" in _css_rule_body(
+        css, "html:not([data-bs-theme]) pre"
     )
-    assert (
-        "color:var(--bs-code-color);background-color:var(--bs-code-bg)"
-        in _css_rule_body(css, '[data-bs-theme="dark"] code:not(pre>code)')
-    )
-    assert (
-        "color:var(--bs-pre-color);background-color:var(--bs-pre-bg)"
-        in _css_rule_body(css, '[data-bs-theme="light"] pre')
-    )
-    assert (
-        "color:var(--bs-pre-color);background-color:var(--bs-pre-bg)"
-        in _css_rule_body(css, '[data-bs-theme="dark"] pre')
+    assert "background-color:var(--bs-pre-bg)" in _css_rule_body(
+        css, '[data-bs-theme="dark"] pre'
     )
 
 
@@ -382,6 +407,8 @@ color:
     dark: "#222222"
   primary:
     light: "#0066cc"
+  link:
+    light: "#0055aa"
 typography:
   headings:
     color: background
@@ -400,69 +427,51 @@ typography:
             f.write(brand_txt)
 
         theme = Theme.from_brand(tmpdir)
-        css = theme.to_css()
+        css = theme.to_css({"output_style": "expanded"})
 
     assert "--brand-color-background: #222222" in css
-    assert "--bs-body-bg: var(--brand-color-background)" in css
     assert css.count("--brand-color-background: #222222") == 1
-    assert css.count("--bs-body-bg: var(--brand-color-background)") == 1
     assert "--brand-color-primary: #0066cc" in css
-    assert "--bs-primary: var(--brand-color-primary)" in css
 
-    mode_blocks = [
-        (mode, body)
-        for mode, body in re.findall(
-            r'\[data-bs-theme="(light|dark)"\]\{([^}]*)\}', css
-        )
-        if "--brand-" in body
-    ]
-    assert [mode for mode, _ in mode_blocks] == ["light", "dark", "light", "dark"]
-    light_custom = mode_blocks[0][1]
-    dark_custom = mode_blocks[1][1]
-    light_mapping = mode_blocks[2][1]
-    dark_mapping = mode_blocks[3][1]
+    light_root = _css_rule_body(css, "html:not([data-bs-theme])")
+    explicit_light_root = _css_rule_body(css, '[data-bs-theme="light"]')
+    dark_root = _css_rule_body(css, '[data-bs-theme="dark"]')
 
-    assert "--brand-color-background" not in light_custom
-    assert "--brand-typography-headings-color" not in light_custom
-    assert "--bs-body-bg: var(--brand-color-background)" not in light_custom
-    assert "--brand-color-primary: #0066cc" in light_custom
-    assert "--bs-primary: var(--brand-color-primary)" in light_mapping
-    assert "--bs-heading-color" not in light_mapping
-    assert "--brand-color-primary" not in dark_custom
-    assert "--brand-typography-headings-color: #222222" in dark_custom
-    assert "--brand-color-primary" not in dark_mapping
-    assert "--bs-heading-color: var(--brand-typography-headings-color)" in dark_mapping
-    assert "--brand-typography-monospace-inline-background-color" not in light_custom
-    assert "--brand-typography-monospace-block-color" in light_custom
-    assert "--brand-typography-monospace-block-background-color" not in light_custom
-    assert (
-        "--brand-typography-monospace-inline-background-color: #303030" in dark_custom
+    assert "--bs-primary:#0066cc" in light_root
+    assert "--bs-primary-rgb:0,102,204" in light_root
+    assert "--bs-primary:#0066cc" in explicit_light_root
+    assert "--bs-link-color:#0055aa" in light_root
+    assert "--bs-link-color-rgb:0,85,170" in light_root
+    assert "--bs-body-bg:" not in light_root
+    assert "--bs-heading-color:" not in light_root
+
+    assert "--bs-primary:" not in dark_root
+    assert "--bs-primary-rgb:" not in dark_root
+    assert "--bs-link-color:" not in dark_root
+    assert "--bs-link-color-rgb:" not in dark_root
+    assert "--bs-body-bg:#222222" in dark_root
+    assert "--bs-body-bg-rgb:34,34,34" in dark_root
+    assert "--bs-heading-color:#222222" in dark_root
+    assert "--bs-code-bg:#303030" in dark_root
+    assert "--bs-pre-bg:#181818" in dark_root
+    assert "--bs-pre-color:" not in dark_root
+
+    assert "--bs-btn-bg:#0066cc" in _css_rule_body(
+        css, "html:not([data-bs-theme]) .btn-primary"
     )
-    assert "--brand-typography-monospace-block-background-color: #181818" in dark_custom
+    assert '[data-bs-theme="dark"] .btn-primary{' not in css
+    assert "html:not([data-bs-theme]) code:not(pre > code) {" not in css
     assert (
-        "--bs-code-bg: var(--brand-typography-monospace-inline-background-color)"
-        in dark_mapping
-    )
-    assert (
-        "--bs-pre-bg: var(--brand-typography-monospace-block-background-color)"
-        in dark_mapping
-    )
-    assert (
-        "--bs-pre-color: var(--brand-typography-monospace-block-color)"
-        not in dark_mapping
-    )
-    assert '[data-bs-theme="light"] code:not(pre>code)' not in css
-    assert (
-        _css_rule_body(css, '[data-bs-theme="dark"] code:not(pre>code)')
-        == "background-color:var(--bs-code-bg)"
+        _css_rule_body(css, '[data-bs-theme="dark"] code:not(pre > code)')
+        == "background-color:var(--bs-code-bg);"
     )
     assert (
-        _css_rule_body(css, '[data-bs-theme="light"] pre')
-        == "color:var(--bs-pre-color)"
+        _css_rule_body(css, "html:not([data-bs-theme]) pre")
+        == "color:var(--bs-pre-color);"
     )
     assert (
         _css_rule_body(css, '[data-bs-theme="dark"] pre')
-        == "background-color:var(--bs-pre-bg)"
+        == "background-color:var(--bs-pre-bg);"
     )
 
 
@@ -487,12 +496,10 @@ typography:
             f.write(brand_txt)
 
         theme = Theme.from_brand(tmpdir)
-        css = theme.to_css()
+        css = theme.to_css({"output_style": "expanded"})
 
     assert css.count("--brand-color-primary: #0066cc") == 2
-    assert css.count("--bs-primary: var(--brand-color-primary)") == 2
     assert css.count("--brand-typography-headings-color: #333333") == 2
-    assert css.count("--bs-heading-color: var(--brand-typography-headings-color)") == 2
     assert css.count("--brand-typography-monospace-inline-color: #111111") == 2
     assert (
         css.count("--brand-typography-monospace-inline-background-color: #f1f5fa") == 2
@@ -501,10 +508,23 @@ typography:
     assert (
         css.count("--brand-typography-monospace-block-background-color: #f8f9fa") == 2
     )
-    assert css.count('[data-bs-theme="light"] code:not(pre>code)') == 1
-    assert css.count('[data-bs-theme="dark"] code:not(pre>code)') == 1
-    assert css.count('[data-bs-theme="light"] pre') == 1
-    assert css.count('[data-bs-theme="dark"] pre') == 1
+    light_root = _css_rule_body(css, "html:not([data-bs-theme])")
+    dark_root = _css_rule_body(css, '[data-bs-theme="dark"]')
+    for root in (light_root, dark_root):
+        assert "--bs-primary:#0066cc" in root
+        assert "--bs-primary-rgb:0,102,204" in root
+        assert "--bs-heading-color:#333333" in root
+        assert "--bs-code-color:#111111" in root
+        assert "--bs-code-bg:#f1f5fa" in root
+        assert "--bs-pre-color:#222222" in root
+        assert "--bs-pre-bg:#f8f9fa" in root
+
+    assert "--bs-btn-bg:#0066cc" in _css_rule_body(
+        css, "html:not([data-bs-theme]) .btn-primary"
+    )
+    assert "--bs-btn-bg:#0066cc" in _css_rule_body(
+        css, '[data-bs-theme="dark"] .btn-primary'
+    )
 
 
 @skip_on_windows
@@ -529,3 +549,66 @@ color:
     assert primary.light == "#0066cc"
     assert primary.dark == "#66b2ff"
     assert all("brand_color_primary: {" not in default for default in theme._defaults)
+
+
+@skip_on_windows
+def test_theme_from_brand_primary_supplies_default_link_color():
+    brand_txt = """
+color:
+  primary:
+    light: "#cc0000"
+    dark: "#00aa44"
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(f"{tmpdir}/_brand.yml", "w") as f:
+            f.write(brand_txt)
+
+        css = Theme.from_brand(tmpdir).to_css({"output_style": "expanded"})
+
+    assert "--bs-link-color:#cc0000" in _css_rule_body(css, "html:not([data-bs-theme])")
+    assert "--bs-link-color-rgb:204,0,0" in _css_rule_body(
+        css, "html:not([data-bs-theme])"
+    )
+    assert "--bs-link-color:#00aa44" in _css_rule_body(css, '[data-bs-theme="dark"]')
+    assert "--bs-link-color-rgb:0,170,68" in _css_rule_body(
+        css, '[data-bs-theme="dark"]'
+    )
+
+
+@skip_on_windows
+def test_theme_from_brand_respects_custom_bootstrap_prefix():
+    brand_txt = """
+color:
+  foreground:
+    light: "#111111"
+    dark: "#eeeeee"
+  primary:
+    light: "#cc0000"
+    dark: "#00aa44"
+defaults:
+  bootstrap:
+    defaults:
+      prefix: acme-
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(f"{tmpdir}/_brand.yml", "w") as f:
+            f.write(brand_txt)
+
+        css = Theme.from_brand(tmpdir).to_css({"output_style": "expanded"})
+
+    light_root = _css_rule_body(css, "html:not([data-bs-theme])")
+    dark_root = _css_rule_body(css, '[data-bs-theme="dark"]')
+    light_button = _css_rule_body(css, "html:not([data-bs-theme]) .btn-primary")
+    dark_button = _css_rule_body(css, '[data-bs-theme="dark"] .btn-primary')
+
+    assert "--acme-body-color:#111111" in light_root
+    assert "--acme-body-color-rgb:17,17,17" in light_root
+    assert "--acme-primary:#cc0000" in light_root
+    assert "--acme-primary-rgb:204,0,0" in light_root
+    assert "--acme-btn-bg:#cc0000" in light_button
+    assert "--acme-body-color:#eeeeee" in dark_root
+    assert "--acme-primary:#00aa44" in dark_root
+    assert "--acme-btn-bg:#00aa44" in dark_button
+    assert "--bs-primary:var(--brand-color-primary)" not in css

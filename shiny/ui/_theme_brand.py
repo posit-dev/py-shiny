@@ -177,29 +177,16 @@ class BrandBootstrapConfig:
 
 
 class ThemeBrand(Theme):
-    _COLOR_BOOTSTRAP_VARIABLES: dict[str, tuple[str, ...]] = {
-        "foreground": ("body-color",),
-        "background": ("body-bg",),
-        "primary": ("primary",),
-        "secondary": ("secondary", "secondary-color"),
-        "tertiary": ("tertiary-color",),
-        "success": ("success",),
-        "info": ("info",),
-        "warning": ("warning",),
-        "danger": ("danger",),
-        "light": ("light",),
-        "dark": ("dark",),
-        "link": ("link-color",),
-    }
-    _TYPOGRAPHY_BOOTSTRAP_VARIABLES: dict[tuple[str, str], tuple[str, ...]] = {
-        ("headings", "color"): ("heading-color",),
-        ("link", "color"): ("link-color",),
-        ("link", "background_color"): ("link-bg",),
-        ("monospace_inline", "color"): ("code-color",),
-        ("monospace_inline", "background_color"): ("code-bg",),
-        ("monospace_block", "color"): ("pre-color",),
-        ("monospace_block", "background_color"): ("pre-bg",),
-    }
+    _THEME_COLOR_NAMES = (
+        "primary",
+        "secondary",
+        "success",
+        "info",
+        "warning",
+        "danger",
+        "light",
+        "dark",
+    )
 
     def __init__(
         self,
@@ -350,118 +337,140 @@ class ThemeBrand(Theme):
         return value is None or isinstance(value, (bool, float, int, str))
 
     @staticmethod
-    def _is_color_defined(value: Any, mode: str) -> bool:
+    def _color_value(value: Any, mode: str) -> str | None:
         if isinstance(value, str):
-            return True
+            return value
 
-        return getattr(value, mode, None) is not None
+        mode_value = getattr(value, mode, None)
+        return mode_value if isinstance(mode_value, str) else None
 
     @staticmethod
     def _prepare_css_vars(brand: "Brand") -> str:
         """
-        Emit brand variables and their Bootstrap/Shiny aliases.
+        Emit brand variables and complete Bootstrap color-mode layers.
 
-        The aliases must be omitted when a partial light/dark value does not
-        define the current mode. An omitted alias leaves the Bootstrap value
-        from the base theme in effect.
+        Light colors apply to an ordinary document without a ``data-bs-theme``
+        attribute as well as to explicit light mode. Undefined branches are
+        omitted so Bootstrap's compiled value remains in effect.
         """
         brand_css = brand.css_variables(
             {
-                "light": '[data-bs-theme="light"]',
+                "light": 'html:not([data-bs-theme]), [data-bs-theme="light"]',
                 "dark": '[data-bs-theme="dark"]',
             }
         )
-        mapping_css = ThemeBrand._prepare_css_mappings(brand)
-        return "\n".join([brand_css, mapping_css])
+        mode_rules = [
+            ThemeBrand._prepare_color_mode(brand, mode) for mode in ("light", "dark")
+        ]
+        return "\n".join([brand_css, *mode_rules])
 
     @staticmethod
-    def _prepare_css_mappings(brand: "Brand") -> str:
-        rules: list[str] = []
+    def _typography_color_value(
+        brand: "Brand", field: str, property_name: str, mode: str
+    ) -> tuple[bool, str | None]:
+        if brand.typography is None:
+            return False, None
 
-        for mode in ("light", "dark"):
-            declarations: list[str] = []
-            inline_code_rules: list[str] = []
-            block_code_rules: list[str] = []
+        typography_node = getattr(brand.typography, field, None)
+        if typography_node is None:
+            return False, None
 
-            if brand.color is not None:
-                for (
-                    color_name,
-                    bootstrap_names,
-                ) in ThemeBrand._COLOR_BOOTSTRAP_VARIABLES.items():
-                    value = getattr(brand.color, color_name, None)
-                    if value is None or not ThemeBrand._is_color_defined(value, mode):
-                        continue
+        value = getattr(typography_node, property_name, None)
+        return value is not None, ThemeBrand._color_value(value, mode)
 
-                    brand_variable = f"--brand-color-{color_name.replace('_', '-')}"
-                    declarations.extend(
-                        f"  --bs-{bootstrap_name}: var({brand_variable});"
-                        for bootstrap_name in bootstrap_names
-                    )
+    @staticmethod
+    def _prepare_color_mode(brand: "Brand", mode: str) -> str:
+        color = brand.color
+        theme_colors = {
+            name: ThemeBrand._color_value(getattr(color, name, None), mode)
+            for name in ThemeBrand._THEME_COLOR_NAMES
+            if color is not None
+        }
+        theme_colors = {
+            name: value for name, value in theme_colors.items() if value is not None
+        }
 
-            if brand.typography is not None:
-                for (
-                    field,
-                    property_name,
-                ), bootstrap_names in (
-                    ThemeBrand._TYPOGRAPHY_BOOTSTRAP_VARIABLES.items()
-                ):
-                    typography_node = getattr(brand.typography, field, None)
-                    value = getattr(typography_node, property_name, None)
-                    if value is None or not ThemeBrand._is_color_defined(value, mode):
-                        continue
+        def brand_color(name: str) -> str | None:
+            if color is None:
+                return None
+            return ThemeBrand._color_value(getattr(color, name, None), mode)
 
-                    brand_variable = (
-                        f"--brand-typography-{field.replace('_', '-')}-"
-                        f"{property_name.replace('_', '-')}"
-                    )
-                    declarations.extend(
-                        f"  --bs-{bootstrap_name}: var({brand_variable});"
-                        for bootstrap_name in bootstrap_names
-                    )
+        headings_configured, headings = ThemeBrand._typography_color_value(
+            brand, "headings", "color", mode
+        )
+        link_configured, link = ThemeBrand._typography_color_value(
+            brand, "link", "color", mode
+        )
+        link_background_configured, link_background = (
+            ThemeBrand._typography_color_value(brand, "link", "background_color", mode)
+        )
+        code_configured, code = ThemeBrand._typography_color_value(
+            brand, "monospace_inline", "color", mode
+        )
+        code_background_configured, code_background = (
+            ThemeBrand._typography_color_value(
+                brand, "monospace_inline", "background_color", mode
+            )
+        )
+        pre_configured, pre = ThemeBrand._typography_color_value(
+            brand, "monospace_block", "color", mode
+        )
+        pre_background_configured, pre_background = ThemeBrand._typography_color_value(
+            brand, "monospace_block", "background_color", mode
+        )
 
-                    if field == "monospace_inline":
-                        if property_name == "color":
-                            inline_code_rules.append("  color: var(--bs-code-color);")
-                        elif property_name == "background_color":
-                            inline_code_rules.append(
-                                "  background-color: var(--bs-code-bg);"
-                            )
-                    elif field == "monospace_block":
-                        if property_name == "color":
-                            block_code_rules.append("  color: var(--bs-pre-color);")
-                        elif property_name == "background_color":
-                            block_code_rules.append(
-                                "  background-color: var(--bs-pre-bg);"
-                            )
+        color_link = getattr(color, "link", None) if color is not None else None
+        if not link_configured:
+            if color_link is not None:
+                link = ThemeBrand._color_value(color_link, mode)
+            else:
+                link = theme_colors.get("primary")
 
-            if declarations:
-                rules.extend(
-                    [
-                        f'[data-bs-theme="{mode}"] {{',
-                        *declarations,
-                        "}",
-                    ]
-                )
+        values = {
+            "foreground": brand_color("foreground"),
+            "background": brand_color("background"),
+            "secondary": brand_color("secondary"),
+            "tertiary": brand_color("tertiary"),
+            "headings": headings if headings_configured else None,
+            "link": link,
+            "link-background": (
+                link_background if link_background_configured else None
+            ),
+            "code": code if code_configured else None,
+            "code-background": (
+                code_background if code_background_configured else None
+            ),
+            "pre": pre if pre_configured else None,
+            "pre-background": pre_background if pre_background_configured else None,
+        }
 
-            if inline_code_rules:
-                rules.extend(
-                    [
-                        f'[data-bs-theme="{mode}"] code:not(pre > code) {{',
-                        *inline_code_rules,
-                        "}",
-                    ]
-                )
+        if not theme_colors and not any(value is not None for value in values.values()):
+            return ""
 
-            if block_code_rules:
-                rules.extend(
-                    [
-                        f'[data-bs-theme="{mode}"] pre {{',
-                        *block_code_rules,
-                        "}",
-                    ]
-                )
+        selectors = (
+            '("html:not([data-bs-theme])", \'[data-bs-theme="light"]\')'
+            if mode == "light"
+            else "('[data-bs-theme=\"dark\"]',)"
+        )
+        theme_color_map = ["("]
+        theme_color_map.extend(
+            f'    "{name}": {value},' for name, value in theme_colors.items()
+        )
+        theme_color_map.append("  ),")
 
-        return "\n".join(rules)
+        arguments = [
+            "@include brand-color-mode(",
+            f"  {selectors},",
+            f"  {mode},",
+            *theme_color_map,
+        ]
+        arguments.extend(
+            f"  ${name}: {value},"
+            for name, value in values.items()
+            if value is not None
+        )
+        arguments.append(");")
+        return "\n".join(arguments)
 
     def _add_defaults_hdr(self, header: str, **kwargs: YamlScalarType):
         self.add_defaults(**kwargs)

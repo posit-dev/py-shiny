@@ -16,9 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 
 * `ui.Theme.from_brand()` now supports light/dark brand colors and typography
-  colors. The generated theme emits mode-scoped Bootstrap/Shiny CSS variables
-  that respond to the existing `data-bs-theme` attribute without recompiling
-  the theme.
+  colors. The generated theme applies light colors to ordinary pages and emits
+  complete mode-scoped Bootstrap/Shiny color tokens and component styles that
+  respond to the existing `data-bs-theme` attribute without recompiling.
 
 * Navsets created with an `id` (e.g. `ui.navset_tab(id="tabs")`) now use that `id` as their `data-tabsetid`, so their tab panes get stable `tab-tabs-0` style DOM ids instead of ones built from a random integer. This makes the rendered markup reproducible across renders and easier to target from custom CSS and JavaScript. Navsets without an `id`, and `ui.nav_menu()` dropdowns, keep the random ID. (Thanks, @pevolution-ahmed!) (#2410)
 

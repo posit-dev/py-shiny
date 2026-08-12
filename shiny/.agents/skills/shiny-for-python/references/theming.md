@@ -133,6 +133,24 @@ from shiny.express import ui
 ui.page_opts(theme=ui.Theme.from_brand(__file__))
 ```
 
+Theme and typography colors may use `light` and `dark` variants. Light values
+are the default when the page has no explicit color-mode attribute, and
+`ui.input_dark_mode()` switches the same compiled theme at runtime:
+
+```yaml
+color:
+  foreground: { light: "#17212b", dark: "#edf2f7" }
+  background: { light: "#ffffff", dark: "#17212b" }
+  primary: { light: "#0066cc", dark: "#66b2ff" }
+typography:
+  link:
+    color: { light: "#0055aa", dark: "#99ccff" }
+```
+
+A variant may define only one mode. In that case Shiny preserves Bootstrap's
+theme value in the undefined mode rather than copying the defined color across
+modes. Scalar colors continue to apply in both modes.
+
 For authoring the `_brand.yml` file itself, use the external `shiny:brand-yml`
 skill — do not hand-write the spec here.
 
