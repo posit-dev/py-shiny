@@ -108,6 +108,10 @@ test = [
     "pytest-cov",
     "coverage",
     "syrupy>=5.5.1",
+    # tests/pytest/test_packaging.py builds a wheel to check its contents.
+    # `[build-system].requires` only guarantees setuptools inside an isolated
+    # PEP 517 build, and shiny itself requires it at runtime only on 3.12+.
+    "setuptools>=77",
     "psutil",
     "astropy",
     "suntime",

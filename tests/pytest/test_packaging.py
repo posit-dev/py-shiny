@@ -19,6 +19,7 @@ agrees with itself.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import re
 import shutil
@@ -46,9 +47,35 @@ WHEEL_FILE_COUNT_MIN = 850
 WHEEL_FILE_COUNT_MAX = 1100
 
 
+def unbuildable_reason() -> str | None:
+    """Why the *installed* toolchain cannot build a wheel, or None if it can.
+
+    These tests build with the current environment rather than through an
+    isolated PEP 517 build, so they stay offline and fast. The cost is that
+    they depend on what happens to be installed, which is not the toolchain a
+    real build would provision.
+    """
+    if importlib.util.find_spec("setuptools") is None:
+        return "setuptools is not installed"
+    if importlib.util.find_spec("packaging.licenses") is None:
+        # setuptools>=77 canonicalizes this project's PEP 639 `license = "MIT"`
+        # expression through `packaging.licenses`, added in packaging 24.2.
+        return "the installed `packaging` predates 24.2"
+    return None
+
+
 @pytest.fixture(scope="session")
 def wheel_names(tmp_path_factory: pytest.TempPathFactory) -> list[str]:
     """Names of every entry in a freshly built wheel."""
+    reason = unbuildable_reason()
+    if reason is not None:
+        pytest.skip(
+            f"Cannot build a wheel here: {reason}. A real build gets its "
+            "requirements from an isolated PEP 517 environment, so this only "
+            "limits where the packaging guards run, not whether the published "
+            "wheel is correct."
+        )
+
     build_root = tmp_path_factory.mktemp("wheel")
     src = build_root / "src"
     outdir = build_root / "dist"
