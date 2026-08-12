@@ -260,6 +260,46 @@ class Session(ABC):
         Close the session.
         """
 
+    @add_example(example_name="session_allow_reconnect")
+    def allow_reconnect(self, value: bool | Literal["force"]) -> None:
+        """
+        Allow the client to reconnect to a session after a disconnect.
+
+        By default, when the websocket connection between the browser and the server
+        drops, Shiny displays the "Disconnected from server" overlay and the client
+        gives up. Calling this method with ``True`` tells the client to instead show a
+        countdown dialog and attempt to reconnect to its session.
+
+        On a successful reconnect, the browser sends all of its current input values to
+        the session on the server, and the server recalculates any outputs and sends
+        them back to the client.
+
+        Parameters
+        ----------
+        value
+            One of the following:
+
+            * ``True``: allow the client to reconnect after a disconnect, but only when
+              running in a hosting environment (such as Posit Connect or Shiny Server)
+              that has reconnections enabled.
+            * ``False``: do not allow the client to reconnect. This is the default.
+            * ``"force"``: always attempt to reconnect, regardless of what the hosting
+              environment reports.
+
+        Note
+        ----
+        Reconnecting requires the server to keep the session alive after the client
+        disconnects, which is a feature of the hosting environment rather than of Shiny
+        itself. ``"force"`` exists for testing on a local connection: the client will
+        try to reconnect anywhere, but on a plain ``shiny run`` server the attempt
+        starts a brand new session rather than resuming the old one.
+        """
+        if value is not True and value is not False and value != "force":
+            raise ValueError(
+                f'`value` must be `True`, `False`, or `"force"`, not {value!r}.'
+            )
+        self._send_message_sync({"allowReconnect": value})
+
     @abstractmethod
     def _is_closed(self) -> bool:
         """

@@ -7,6 +7,7 @@ import pytest
 
 from shiny import App, Inputs, Outputs, Session, module, ui
 from shiny._connection import MockConnection
+from shiny.express._stub_session import ExpressStubSession
 from shiny.reactive import effect, flush, isolate
 from shiny.types import SilentException
 
@@ -59,6 +60,32 @@ def test_require_active_session_error_messages():
 
     with pytest.raises(RuntimeError, match=r"notification.remove\(\) must be called.*"):
         ui.notification_remove("abc")
+
+
+def test_allow_reconnect():
+    sent: list[dict[str, object]] = []
+
+    def record(message: dict[str, object]) -> None:
+        sent.append(message)
+
+    session = ExpressStubSession()
+    session._send_message_sync = record
+
+    session.allow_reconnect(True)
+    session.allow_reconnect(False)
+    session.allow_reconnect("force")
+    assert sent == [
+        {"allowReconnect": True},
+        {"allowReconnect": False},
+        {"allowReconnect": "force"},
+    ]
+
+    for value in ("TRUE", 1, None):
+        with pytest.raises(ValueError, match="must be"):
+            session.allow_reconnect(value)  # pyright: ignore[reportArgumentType]
+
+    # Invalid values shouldn't have sent anything more.
+    assert len(sent) == 3
 
 
 def test_input_readonly():
