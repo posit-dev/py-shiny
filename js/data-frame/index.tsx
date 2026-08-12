@@ -6,7 +6,6 @@
 
 import {
   Column,
-  ColumnDef,
   RowData,
   RowModel,
   TableOptions,
@@ -45,7 +44,7 @@ import { StyleInfo, getCellStyle, useStyleInfoMap } from "./style-info";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
-import { PandasData, PatchInfo, TypeHint } from "./types";
+import { DataFrameColumnDef, PandasData, PatchInfo, TypeHint } from "./types";
 
 // TODO-barret-future set selected cell as input! (Might be a followup?)
 
@@ -96,32 +95,46 @@ declare module "@tanstack/table-core" {
 // TODO: Row numbers
 
 /**
- * Column IDs used by TanStack Table for the given column names.
- *
- * When a column definition has no explicit `id`, TanStack Table derives the id
- * from the (string) `header`, and it requires that id to be a non-empty string.
- * A column whose name is `""` therefore makes TanStack Table throw while
- * creating the column, which takes down the whole data frame render.
- *
- * Column names are unique (narwhals rejects duplicated names server-side), so
- * only the empty name needs a synthetic id here. The synthetic id is extended
- * until it does not collide with any real column name.
- *
- * @param columns Column names, as received from the server.
- * @returns One TanStack column id per column name, in the same order.
+ * Prefix shared by every TanStack Table column id. Only needs to keep ids
+ * non-empty and recognizable; it is never shown to the user.
  */
-function columnNamesToIds(columns: readonly string[]): string[] {
-  const columnNameSet = new Set(columns);
+const COLUMN_ID_PREFIX = "col-";
 
-  return columns.map((colname, colIndex) => {
-    if (colname !== "") return colname;
+/**
+ * The TanStack Table column id for the column at `colIndex`.
+ *
+ * Column ids are positional and are never derived from the column name. When a
+ * column definition has no explicit `id`, TanStack Table derives one from the
+ * (string) `header` and requires it to be a non-empty string, so a column named
+ * `""` makes TanStack throw while creating the column, taking down the whole
+ * data frame render (#1844). Names are unusable as ids more generally: pandas
+ * and friends allow non-string column names, which arrive here as raw JSON
+ * values rather than strings, and two distinct names can share one string form
+ * (e.g. the integer `0` and the string `"0"`).
+ *
+ * Sorting and filtering state is keyed by column id while the server exchanges
+ * column *indices*, so a positional id also makes that translation exact.
+ */
+function columnIndexToId(colIndex: number): string {
+  return `${COLUMN_ID_PREFIX}${colIndex}`;
+}
 
-    let id = `empty-column-${colIndex}`;
-    while (columnNameSet.has(id)) {
-      id = `_${id}`;
-    }
-    return id;
-  });
+/**
+ * The column index for a TanStack Table column id, or `null` if the id does not
+ * refer to a column of the current data.
+ *
+ * Sorting and filtering state can outlive the columns it refers to (an
+ * `updateData` message may arrive with fewer columns), and a stale id must not
+ * be reported to the server as if it were a real column index.
+ */
+function columnIdToIndex(columnId: string, ncol: number): number | null {
+  if (!columnId.startsWith(COLUMN_ID_PREFIX)) return null;
+
+  const colIndex = Number(columnId.slice(COLUMN_ID_PREFIX.length));
+  if (!Number.isInteger(colIndex) || colIndex < 0 || colIndex >= ncol) {
+    return null;
+  }
+  return colIndex;
 }
 
 type ShinyDataGridServerInfo<TIndex> = {
@@ -217,22 +230,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   }, [cellEditMap]);
 
   /**
-   * TanStack Table column IDs, in column order.
-   *
-   * These are the column names, except for empty column names, which get a
-   * synthetic (non-empty) id. Sorting and filtering state is keyed by column
-   * id, so this array is also used to translate between column ids and the
-   * column indices that are exchanged with the server.
-   */
-  const columnIds = useMemo<string[]>(
-    () => columnNamesToIds(columns),
-    [columns]
-  );
-
-  /**
    * Column definitions for the table
    */
-  const coldefs = useMemo<ColumnDef<unknown[], unknown>[]>(
+  const coldefs = useMemo<DataFrameColumnDef[]>(
     () =>
       columns.map((colname, colIndex) => {
         const typeHint = typeHints?.[colIndex];
@@ -241,14 +241,17 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         const enableSorting = isHtmlColumn ? false : undefined;
 
         return {
-          id: columnIds[colIndex]!,
+          id: columnIndexToId(colIndex),
           accessorFn: (row, index) => {
             return row[colIndex];
           },
           // TODO: delegate this decision to something in filter.tsx
           filterFn:
             typeHint?.type === "numeric" ? "inNumberRange" : "includesString",
-          header: colname,
+          // Coerced to a string because TanStack's `flexRender()` renders
+          // nothing for a falsy header, which would blank out the label of a
+          // column whose (non-string) name is `0`.
+          header: String(colname),
           meta: {
             colIndex,
             isHtmlColumn,
@@ -289,7 +292,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
           enableSorting,
         };
       }),
-    [columnIds, columns, typeHints]
+    [columns, typeHints]
   );
 
   // TODO-barret-future; Possible pagination helper
@@ -321,7 +324,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   /** Function to update the data in the table */
   const setTableData = _tableData[1];
 
-  const getColDefs = (): ColumnDef<unknown[], unknown>[] => {
+  const getColDefs = (): DataFrameColumnDef[] => {
     return coldefs;
   };
 
@@ -359,10 +362,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
       // Make map for quick lookup of type hints (keyed by column id, as
       // sorting and filtering state is keyed by column id)
-      const newColumnIds = columnNamesToIds(columns);
       const newTypeHintMap = new Map<string, TypeHint>();
       typeHints?.forEach((hint, i) => {
-        newTypeHintMap.set(newColumnIds[i]!, hint);
+        newTypeHintMap.set(columnIndexToId(i), hint);
       });
       // Filter out sorting and column filters that are no longer valid
       const newSort = sorting.filter((sort) => newTypeHintMap.has(sort.id));
@@ -644,7 +646,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
       shinySorting.map((sort) => {
         columnSorting.push({
-          id: columnIds[sort.col]!,
+          id: columnIndexToId(sort.col),
           desc: sort.desc,
         });
       });
@@ -667,7 +669,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleColumnSort as EventListener
       );
     };
-  }, [columnIds, id, setSorting]);
+  }, [id, setSorting]);
 
   useEffect(() => {
     const handleColumnFilter = (
@@ -678,7 +680,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       const columnFilters: ColumnFiltersState = [];
       shinyFilters.map((filter) => {
         columnFilters.push({
-          id: columnIds[filter.col]!,
+          id: columnIndexToId(filter.col),
           value: filter.value,
         });
       });
@@ -701,7 +703,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleColumnFilter as EventListener
       );
     };
-  }, [columnIds, id, setColumnFilters]);
+  }, [id, setColumnFilters]);
 
   useEffect(() => {
     const handleStyles = (event: CustomEvent<{ styles: StyleInfo[] }>) => {
@@ -752,8 +754,12 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   useEffect(() => {
     if (!id) return;
     const shinySort: { col: number; desc: boolean }[] = [];
-    sorting.map((sortObj) => {
-      const columnNum = columnIds.indexOf(sortObj.id);
+    sorting.forEach((sortObj) => {
+      const columnNum = columnIdToIndex(sortObj.id, columns.length);
+      // Skip state left over from columns that no longer exist, rather than
+      // reporting a column index the server cannot resolve.
+      if (columnNum === null) return;
+
       shinySort.push({
         col: columnNum,
         desc: sortObj.desc,
@@ -763,15 +769,19 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
     // Deprecated as of 2024-05-21
     window.Shiny.setInputValue!(`${id}_column_sort`, shinySort);
-  }, [columnIds, id, sorting]);
+  }, [columns.length, id, sorting]);
   useEffect(() => {
     if (!id) return;
     const shinyFilter: {
       col: number;
       value: FilterValue;
     }[] = [];
-    columnFilters.map((filterObj) => {
-      const columnNum = columnIds.indexOf(filterObj.id);
+    columnFilters.forEach((filterObj) => {
+      const columnNum = columnIdToIndex(filterObj.id, columns.length);
+      // Skip state left over from columns that no longer exist, rather than
+      // reporting a column index the server cannot resolve.
+      if (columnNum === null) return;
+
       shinyFilter.push({
         col: columnNum,
         value: filterObj.value as FilterValue,
@@ -782,7 +792,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
 
     // Deprecated as of 2024-05-21
     window.Shiny.setInputValue!(`${id}_column_filter`, shinyFilter);
-  }, [id, columnFilters, columnIds]);
+  }, [id, columnFilters, columns.length]);
   useEffect(() => {
     if (!id) return;
 

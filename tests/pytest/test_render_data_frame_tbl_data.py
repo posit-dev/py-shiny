@@ -383,20 +383,21 @@ def test_maybe_as_cell_html_passes_scalars_through():
     assert res["obj"]["html"] == "<b>bold</b>"
 
 
-@pytest.mark.parametrize("empty_col_index", [0, 1])
+@pytest.mark.parametrize("empty_col_index", [0, 1, 2])
 def test_serialize_frame_empty_column_name(empty_col_index: int):
-    # Empty column names must be sent to the client as-is (`""`), no matter their
-    # position. The client is responsible for giving such a column a usable
-    # TanStack Table id. https://github.com/posit-dev/py-shiny/issues/1844
-    names = ["a", "b"]
+    # Empty column names must be sent to the client as-is (`""`) in first,
+    # middle, and last position. The client is responsible for giving such a
+    # column a usable TanStack Table id.
+    # https://github.com/posit-dev/py-shiny/issues/1844
+    names = ["a", "b", "c"]
     names[empty_col_index] = ""
-    df = pd.DataFrame({names[0]: [1, 2], names[1]: [3, 4]})
+    df = pd.DataFrame({names[0]: [1, 2], names[1]: [3, 4], names[2]: [5, 6]})
 
     with session_context(test_session):
         res = serialize_frame(as_data_frame(df))
 
     assert res["columns"] == names
-    assert res["data"] == [[1, 3], [2, 4]]
+    assert res["data"] == [[1, 3, 5], [2, 4, 6]]
 
 
 def test_subset_frame(df_f: IntoDataFrame):
