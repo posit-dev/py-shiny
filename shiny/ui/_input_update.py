@@ -36,9 +36,28 @@ from ..input_handler import input_handlers
 from ..module import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
 from ..types import ActionButtonValue
-from ._input_check_radio import ChoicesArg, _generate_options, _normalize_selected
+from ._choices import (
+    normalize_selected,
+    normalize_selected_list,
+    normalize_selected_radio,
+    resolve_selected_values,
+)
+from ._input_check_radio import (
+    ChoicesArg,
+    SelectedArg,
+    _choice_value_index,
+    _generate_options,
+)
 from ._input_date import _as_date_attr
-from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
+from ._input_select import (
+    SelectChoicesArg,
+    SelectSelectedArg,
+)
+from ._input_select import _choice_value_index as _select_choice_value_index
+from ._input_select import (
+    _normalize_choices,
+    _render_choices,
+)
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
 from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
@@ -313,7 +332,7 @@ def update_checkbox_group(
     *,
     label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str | list[str] | tuple[str, ...]] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -365,7 +384,7 @@ def update_radio_buttons(
     *,
     label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -416,7 +435,7 @@ def _update_choice_input(
     type: Literal["checkbox", "radio"],
     label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str | list[str] | tuple[str, ...]] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -426,7 +445,22 @@ def _update_choice_input(
     # which are always strings. Normalize the same way `input_checkbox_group()` /
     # `input_radio_buttons()` do so that, e.g., the `int` keys of a `dict[int, str]`
     # work here too. https://github.com/posit-dev/py-shiny/issues/2272
-    selected_values = _normalize_selected(selected)
+    #
+    # When `choices` is given, resolve against it first, so that a `selected` entry which
+    # merely compares equal to a choice value (`1.0` vs. `1`) is sent as the string that
+    # choice actually renders. Normalizing once here and reusing the result for both the
+    # options markup and the message keeps the two in agreement by construction.
+    if choices is not None:
+        selected = resolve_selected_values(selected, _choice_value_index(choices))
+
+    # Shape matters as much as type. A radio group's client-side `setValue()` passes a
+    # non-empty array straight to `$escape()`, which calls `.replace()` on it and throws
+    # -- aborting the handler before it applies the label update or fires `change`. So a
+    # sequence has to collapse to a scalar here, while a checkbox group keeps its array.
+    if type == "radio":
+        selected_values = normalize_selected_radio(selected)
+    else:
+        selected_values = normalize_selected(selected)
 
     options = None
     if choices is not None:
@@ -438,6 +472,11 @@ def _update_choice_input(
             id=resolved_id,
             type=type,
             choices=choices,
+            # `_generate_options()` normalizes again, because the `input_*()`
+            # constructors call it with a raw `selected`. That is a no-op on the value
+            # built above -- resolution maps a string that is already a choice value to
+            # itself, and `str()` is idempotent -- which is what lets the options markup
+            # and the message's `value` below come from one normalization.
             selected=selected_values,
             inline=inline,
         )
@@ -663,7 +702,7 @@ def update_select(
     *,
     label: Optional[TagChild] = None,
     choices: Optional[SelectChoicesArg] = None,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectSelectedArg] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -698,9 +737,16 @@ def update_select(
 
     session = require_active_session(session)
 
-    selected_values = selected
-    if isinstance(selected, str):
-        selected_values = [selected]
+    # `<select>`'s `setValue()` does `$(el).val(value)`, and jQuery matches option values
+    # with a strict `===`, so a non-string `selected` silently deselects everything.
+    # Normalize to strings, matching the option `value` attributes `_render_choices()`
+    # emits. https://github.com/posit-dev/py-shiny/issues/2272
+    if choices is not None:
+        selected = resolve_selected_values(
+            selected, _select_choice_value_index(choices)
+        )
+
+    selected_values = normalize_selected_list(selected)
 
     if choices is None:
         options = None
@@ -729,7 +775,7 @@ def update_selectize(
     *,
     label: Optional[TagChild] = None,
     choices: Optional[SelectChoicesArg] = None,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectSelectedArg] = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
     server: bool = False,
     session: Optional[Session] = None,
@@ -800,9 +846,12 @@ def update_selectize(
                     ]
                 )
 
-    selected_values = selected
-    if isinstance(selected, str):
-        selected_values = [selected]
+    if choices is not None:
+        selected = resolve_selected_values(
+            selected, _select_choice_value_index(choices)
+        )
+
+    selected_values = normalize_selected_list(selected)
 
     # Find any selected choices now so we have them ready to send to the client
     if selected_values is None:

@@ -49,7 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * When `@expressify` cannot locate a function's definition, the error now names the function as it appears in the source (rather than a `__name__` a decorator may have rewritten), points at the file and line it looked at, and lists the likely causes — an `async def`, a decorator below `expressify()` that returns a wrapper instead of the original function, or a source file modified after import. (#2016)
 
-* `ui.update_checkbox_group()` and `ui.update_radio_buttons()` now accept non-string `selected` values (e.g. the `int` keys of a `dict[int, str]` passed as `choices`), matching what `ui.input_checkbox_group()` and `ui.input_radio_buttons()` already allowed. Choice values always reach the browser as strings (they become HTML `value` attributes), but the update functions forwarded `selected` unchanged, so the client-side value matching threw and left every option unselected — silently, and only on update. (#2420)
+* The choice inputs (`ui.input_checkbox_group()`, `ui.input_radio_buttons()`, `ui.input_select()`, `ui.input_selectize()`, `ui.toolbar_input_select()`) and their `update_*()` counterparts now consistently accept non-string choice values and `selected` values — for example the `int` keys of a `dict[int, str]` passed as `choices`. Choice values become HTML `value` attributes, so the browser only ever sees their string form; the `update_*()` functions forwarded `selected` unchanged, so the client-side value matching failed. For `update_checkbox_group()` this threw *after* clearing every box, leaving nothing selected; for `update_radio_buttons()` and `update_select()` it threw before changing anything (so a bundled label update was silently lost) or deselected everything. The parameter type annotations were widened to match, so these calls now also pass a type checker. (#2413, #2420)
+
+* `ui.update_radio_buttons(selected=)` now collapses a list or tuple to a single value. A single-selection binding throws on a non-empty array, which aborted the rest of the update — an `selected=[]` still clears the selection, as documented. (#2420)
+
+* Choice values whose string forms collide (e.g. `choices={0: "zero", "0": "oh"}`) now raise a `ValueError` instead of silently dropping one of the options, and `ui.input_radio_buttons(choices=[])` raises a `ValueError` naming `choices` rather than an `IndexError` from an internal helper. (#2420)
+
+* `None` and `bool` choice values now render as `value="None"`/`"False"`/`"True"`. Previously htmltools dropped the attribute entirely (or emitted `value=""` for `True`), which made the browser report the default `"on"` for such an option. Note this changes what these inputs report; apps relying on the old `""`/`"on"` values, including saved bookmarks, will read the new strings. (#2420)
 
 ## [1.7.0] - 2026-07-28
 

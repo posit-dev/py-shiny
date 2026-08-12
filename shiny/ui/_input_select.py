@@ -18,25 +18,41 @@ from htmltools import Tag, TagAttrs, TagChild, TagList, css, div, tags
 from .._docstring import add_example
 from ..bookmark import restore_input
 from ..module import resolve_id
+from ._choices import (
+    ChoiceSelection,
+    ChoiceValue,
+    normalize_choices_indexed,
+    normalize_choices_mapping,
+    resolve_selected_values,
+)
 from ._html_deps_external import selectize_deps
 from ._utils import JSEval, extract_js_keys, shiny_input_label
 
+# Canonical format for representing select options. Choice values are strings here:
+# `_normalize_choices()` has already coerced them.
 _Choices = Mapping[str, str]
 _OptGrpChoices = Mapping[str, _Choices]
 
-# Canonical format for representing select options.
 _SelectChoices = Union[_Choices, _OptGrpChoices]
 
-# Formats available to the user
+# Formats available to the user. Choice values are coerced with `str()`, so e.g. the
+# `int` keys of a `dict[int, str]` are supported.
 SelectChoicesArg = Union[
-    # ["a", "b", "c"]
-    "list[str]",
-    # ("a", "b", "c")
-    "tuple[str, ...]",
-    # {"a": "Choice A", "b": tags.i("Choice B")}
-    _Choices,
-    # optgroup {"Group A": {"a1": "Choice A1", "a2": tags.i("Choice A2")}, "Group B": {}}
-    _OptGrpChoices,
+    # [0, 1, 2] or ["a", "b", "c"]
+    "list[ChoiceValue]",
+    # (0, 1, 2) or ("a", "b", "c")
+    "tuple[ChoiceValue, ...]",
+    # {"a": "Choice A", 0: "Choice B"}
+    Mapping[ChoiceValue, str],
+    # optgroup {"Group A": {"a1": "Choice A1", "a2": "Choice A2"}, "Group B": {}}
+    Mapping[ChoiceValue, Mapping[ChoiceValue, str]],
+]
+
+# A single choice value, or several.
+SelectSelectedArg = Union[
+    ChoiceValue,
+    "list[ChoiceValue]",
+    "tuple[ChoiceValue, ...]",
 ]
 
 
@@ -54,7 +70,7 @@ def input_selectize(
     label: TagChild,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectSelectedArg] = None,
     multiple: bool = False,
     width: Optional[str] = None,
     remove_button: Optional[bool] = None,
@@ -134,7 +150,7 @@ def input_select(
     label: TagChild,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectSelectedArg] = None,
     multiple: bool = False,
     selectize: bool | MISSING_TYPE = DEPRECATED,
     width: Optional[str] = None,
@@ -239,7 +255,7 @@ def _input_select_impl(
     label: TagChild,
     choices: SelectChoicesArg,
     *,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectSelectedArg] = None,
     multiple: bool = False,
     selectize: bool = False,
     width: Optional[str] = None,
@@ -259,6 +275,8 @@ def _input_select_impl(
     selected = restore_input(resolved_id, selected)
     if selected is None and not multiple:
         selected = _find_first_option(choices_)
+    else:
+        selected = resolve_selected_values(selected, _choice_value_index(choices))
 
     if options is None:
         options = {}
@@ -331,12 +349,49 @@ def _update_options(
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
+    # Coerce choice values to `str` so that the option `value` attributes we render and
+    # the `value` we send in `update_*()` messages agree. Optgroup labels and the choice
+    # values nested inside them get the same treatment.
+    # https://github.com/posit-dev/py-shiny/issues/2272
     if x is None:
         raise TypeError("`choices` must be a list, tuple, or dict.")
     elif isinstance(x, (list, tuple)):
-        return {k: k for k in x}
-    else:
-        return x
+        return normalize_choices_mapping({k: k for k in x})
+
+    # `_SelectChoices` is "all flat" or "all optgroup", with no arm for a per-key mix, so
+    # the comprehension's element type does not fit either. The runtime shape is whatever
+    # the caller passed, which `_render_choices()` handles key by key.
+    normalized = normalize_choices_mapping(x)
+    result: dict[str, Any] = {
+        key: (
+            normalize_choices_mapping(cast("Mapping[Any, str]", value))
+            if isinstance(value, Mapping)
+            else value
+        )
+        for key, value in normalized.items()
+    }
+    return cast(_SelectChoices, result)
+
+
+def _choice_value_index(x: SelectChoicesArg) -> dict[str, Any]:
+    """
+    Map each choice value's string form back to the value as the caller wrote it.
+
+    Optgroup labels are not choice values, so only the options nested inside a group are
+    indexed -- never the group key itself.
+    """
+    if x is None:
+        return {}
+    elif isinstance(x, (list, tuple)):
+        return normalize_choices_indexed({k: k for k in x})[1]
+
+    index: dict[str, Any] = {}
+    for key, value in x.items():
+        if isinstance(value, Mapping):
+            index.update(normalize_choices_indexed(cast("Mapping[Any, str]", value))[1])
+        else:
+            index[str(key)] = key
+    return index
 
 
 def _contains_html(x: _SelectChoices) -> bool:
@@ -353,7 +408,13 @@ def _contains_html(x: _SelectChoices) -> bool:
 
 
 def _render_choices(
-    x: _SelectChoices, selected: Optional[str | list[str]] = None
+    x: _SelectChoices, selected: Optional[SelectSelectedArg] = None
+) -> TagList:
+    return _render_choices_with_selection(x, ChoiceSelection(selected))
+
+
+def _render_choices_with_selection(
+    x: _SelectChoices, selection: ChoiceSelection
 ) -> TagList:
     result = TagList()
 
@@ -364,17 +425,16 @@ def _render_choices(
         if isinstance(v, Mapping):
             result.append(
                 tags.optgroup(
-                    *(_render_choices(cast(_SelectChoices, v), selected)), label=k
+                    *(
+                        _render_choices_with_selection(
+                            cast(_SelectChoices, v), selection
+                        )
+                    ),
+                    label=k,
                 )
             )
         else:
-            is_selected = False
-            if isinstance(selected, list):
-                is_selected = k in selected
-            else:
-                is_selected = k == selected
-
-            result.append(tags.option(v, value=k, selected=is_selected))
+            result.append(tags.option(v, value=k, selected=k in selection))
 
     return result
 

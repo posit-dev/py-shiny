@@ -6,27 +6,42 @@ __all__ = (
     "input_radio_buttons",
 )
 
-from typing import Mapping, Optional, Union
+from typing import Any, Mapping, Optional, Union
 
 from htmltools import Tag, TagAttrs, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from ..bookmark import restore_input
 from ..module import resolve_id
+from ._choices import (
+    ChoiceSelection,
+    ChoiceValue,
+    normalize_choices_indexed,
+    resolve_selected_values,
+)
 from ._html_deps_shinyverse import components_dependencies
 from ._utils import shiny_input_label
 
-# Canonical format for representing select options.
+# Canonical format for representing select options. Choice values are strings here:
+# `_normalize_choices()` has already coerced them.
 _Choices = Mapping[str, TagChild]
 
 # Formats available to the user
 ChoicesArg = Union[
-    # ["a", "b", "c"]
-    "list[str]",
-    # ("a", "b", "c")
-    "tuple[str, ...]",
-    # {"a": "Choice A", "b": tags.i("Choice B")}
-    _Choices,
+    # [0, 1, 2] or ["a", "b", "c"]
+    "list[ChoiceValue]",
+    # (0, 1, 2) or ("a", "b", "c")
+    "tuple[ChoiceValue, ...]",
+    # {"a": "Choice A", 0: tags.i("Choice B")}
+    Mapping[ChoiceValue, TagChild],
+]
+
+# A single choice value, or several. Coerced with `str()`, so e.g. the `int` keys of a
+# `dict[int, str]` passed as `choices` work here too.
+SelectedArg = Union[
+    ChoiceValue,
+    "list[ChoiceValue]",
+    "tuple[ChoiceValue, ...]",
 ]
 
 
@@ -177,7 +192,7 @@ def input_checkbox_group(
     label: TagChild,
     choices: ChoicesArg,
     *,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -249,7 +264,7 @@ def input_radio_buttons(
     label: TagChild,
     choices: ChoicesArg,
     *,
-    selected: Optional[str] = None,
+    selected: Optional[ChoiceValue] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -318,34 +333,35 @@ def _generate_options(
     id: str,
     type: str,
     choices: ChoicesArg,
-    selected: Optional[str | list[str] | tuple[str, ...]],
+    selected: SelectedArg | None,
     inline: bool,
 ) -> Tag:
-    choicez = _normalize_choices(choices)
-    selectedz = _normalize_selected(selected)
+    choicez, choice_values = _normalize_choices_indexed(choices)
 
-    selected_list: list[str]
-    if selectedz is None:
-        if type == "radio":
-            selected_list = [list(choicez.keys())[0]]
-        else:
-            selected_list = []
-    elif isinstance(selectedz, list):
-        selected_list = selectedz
-    else:
-        selected_list = [selectedz]
+    # A radio group must always have something checked, so an omitted `selected` falls
+    # back to the first choice. Note the check is against `None` specifically: an empty
+    # `selected` is an explicit request for nothing checked, and must stay that way.
+    if selected is None and type == "radio":
+        if not choicez:
+            raise ValueError(
+                "`choices` cannot be empty for a radio button group unless "
+                "`selected` is given."
+            )
+        selected = next(iter(choicez))
+
+    selection = ChoiceSelection(resolve_selected_values(selected, choice_values))
 
     return div(
         [
             _generate_option(
                 id,
                 type,
-                value=choice[0],
-                label=choice[1],
-                checked=choice[0] in selected_list,
+                value=value,
+                label=label,
+                checked=value in selection,
                 inline=inline,
             )
-            for choice in choicez.items()
+            for value, label in choicez.items()
         ],
         class_="shiny-options-group",
     )
@@ -381,30 +397,26 @@ def _generate_option(
 
 
 def _normalize_choices(x: ChoicesArg) -> _Choices:
-    # Choice values end up in an HTML `value` attribute, so they are always strings by
-    # the time they reach the client. Coerce them here (e.g. the `int` keys of a
-    # `dict[int, str]`) so that server-side comparisons against `selected` -- and the
-    # `value` we send in `update_*()` messages -- use the same string form.
+    return _normalize_choices_indexed(x)[0]
+
+
+def _choice_value_index(x: ChoicesArg) -> dict[str, Any]:
+    """Map each choice value's string form back to the value as the caller wrote it."""
+    return _normalize_choices_indexed(x)[1]
+
+
+def _normalize_choices_indexed(x: ChoicesArg) -> tuple[_Choices, dict[str, Any]]:
+    # Coerce choice values to `str` so that the server-side comparison against
+    # `selected` -- and the `value` we send in `update_*()` messages -- use the same
+    # string form the client matches on.
+    #
+    # This is *not* always a no-op for the rendered HTML, despite choice values landing
+    # in an HTML `value` attribute either way: htmltools omits an attribute whose value
+    # is `None` or `False` and renders `True` as `value=""`, so `None`/`bool` choice
+    # values now render as `value="None"`/`"False"`/`"True"` rather than being dropped.
+    # That is the intended behavior -- a dropped `value` makes the browser report the
+    # default `"on"` -- but it does change what such an input reports.
     if isinstance(x, (list, tuple)):
-        return {str(k): k for k in x}
+        return normalize_choices_indexed({k: k for k in x})
     else:
-        return {str(k): v for k, v in x.items()}
-
-
-def _normalize_selected(
-    x: Optional[str | list[str] | tuple[str, ...]],
-) -> Optional[str | list[str]]:
-    """
-    Coerce ``selected`` value(s) to string(s), preserving scalar vs. sequence shape.
-
-    ``selected`` values are matched against choice values, which
-    :func:`_normalize_choices` normalizes to strings, so they must be normalized the
-    same way. Tuples become lists so the result is JSON-serializable for
-    ``update_*()`` messages.
-    """
-    if x is None:
-        return None
-    elif isinstance(x, (list, tuple)):
-        return [str(v) for v in x]
-    else:
-        return str(x)
+        return normalize_choices_indexed(x)
