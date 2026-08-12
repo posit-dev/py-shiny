@@ -270,6 +270,27 @@ async def flush() -> None:
     await _reactive_environment.flush()
 
 
+async def flush_out_of_band() -> None:
+    """
+    Flush the reactive environment from outside the session's message cycle.
+
+    Work that originates somewhere other than a client message -- a plain HTTP
+    request, a timer, a background task -- has to flush the reactive graph
+    itself, because nothing else will. Two things have to be true of such a
+    flush, and they are easy to forget one at a time:
+
+    * It takes the reactive lock, because it runs on a different asyncio task
+      than the session's message loop, which may be flushing concurrently.
+    * It detaches from the ambient OpenTelemetry span, so the resulting
+      ``reactive_update`` span is a root span rather than a child of whatever
+      request happened to trigger it. Otherwise that request's recorded
+      duration swallows the entire reactive update.
+    """
+    async with lock():
+        with detached_otel_context():
+            await flush()
+
+
 @no_example()
 def on_flushed(
     func: Callable[[], Awaitable[None]], once: bool = False
