@@ -275,6 +275,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         ignored_resource_error_count = len(ignored_failed_responses)
         remaining_console_errors: typing.List[str] = []
         for error in console_errors:
+            if any(host in error for host in _IGNORED_EXTERNAL_RESOURCE_HOSTS):
+                continue
             if ignored_resource_error_count and error.startswith(
                 _RESOURCE_LOAD_ERROR_PREFIX
             ):

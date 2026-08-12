@@ -281,3 +281,69 @@ def test_example_ignores_google_font_http_error(
     example_apps.validate_example(page, "shiny/api-examples/todo_list/app-core.py")
 
     assert page.goto_count == 1
+
+
+def test_example_ignores_firefox_font_download_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    example_apps = _load_module(
+        "example_apps_for_firefox_font_test",
+        PLAYWRIGHT_TESTS / "examples" / "example_apps.py",
+    )
+
+    class AppProcess:
+        stderr = ""
+        url = "http://127.0.0.1:8000"
+
+        def __enter__(self) -> AppProcess:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    class ConsoleMessage:
+        type = "error"
+        text = (
+            'downloadable font: download failed (font-family: "Montserrat" style:normal'
+            " weight:500 stretch:100 src index:0): status=2147746065 source:"
+            " https://fonts.gstatic.com/s/montserrat/v31/font.woff2"
+        )
+        location = {"url": ""}
+
+    class Page:
+        def __init__(self) -> None:
+            self.handlers: dict[str, Callable[[Any], None]] = {}
+            self.goto_count = 0
+
+        def on(self, event: str, handler: Callable[[Any], None]) -> None:
+            self.handlers[event] = handler
+
+        def goto(self, url: str, *, wait_until: str) -> None:
+            self.goto_count += 1
+            self.handlers["console"](ConsoleMessage())
+
+        def locator(self, selector: str) -> object:
+            return object()
+
+    class Expectation:
+        def to_have_count(self, count: int) -> None:
+            assert count == 0
+
+    page = Page()
+
+    def run_shiny_app(*args: object, **kwargs: object) -> AppProcess:
+        return AppProcess()
+
+    def wait_for_idle_app(*args: object, **kwargs: object) -> None:
+        return None
+
+    def expect(locator: object) -> Expectation:
+        return Expectation()
+
+    monkeypatch.setattr(example_apps, "run_shiny_app", run_shiny_app)
+    monkeypatch.setattr(example_apps, "wait_for_idle_app", wait_for_idle_app)
+    monkeypatch.setattr(example_apps, "expect", expect)
+
+    example_apps.validate_example(page, "shiny/api-examples/todo_list/app-core.py")
+
+    assert page.goto_count == 1
