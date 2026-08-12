@@ -1,3 +1,4 @@
+import re
 import tempfile
 from typing import Callable, Optional
 
@@ -286,3 +287,140 @@ defaults:
         # Check that the CSS compiles without error
         css = theme.to_css()
         assert isinstance(css, str)
+
+
+@skip_on_windows
+def test_theme_from_brand_light_dark_colors_emit_mode_scoped_variables():
+    brand_txt = """
+color:
+  foreground:
+    light: "#111111"
+    dark: "#eeeeee"
+  background:
+    light: "#ffffff"
+    dark: "#222222"
+  primary:
+    light: "#0066cc"
+    dark: "#66b2ff"
+  link:
+    light: "#0055aa"
+    dark: "#99ccff"
+typography:
+  headings:
+    color: foreground
+  monospace-inline:
+    color: foreground
+  link:
+    color: link
+    background-color:
+      light: "#eef6ff"
+      dark: "#203040"
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(f"{tmpdir}/_brand.yml", "w") as f:
+            f.write(brand_txt)
+
+        theme = Theme.from_brand(tmpdir)
+        css = theme.to_css()
+
+    assert '[data-bs-theme="light"]' in css
+    assert '[data-bs-theme="dark"]' in css
+    assert "--brand-color-foreground: #111111" in css
+    assert "--brand-color-foreground: #eeeeee" in css
+    assert "--bs-body-color: var(--brand-color-foreground)" in css
+    assert "--bs-body-bg: var(--brand-color-background)" in css
+    assert "--bs-primary: var(--brand-color-primary)" in css
+    assert "--bs-link-color: var(--brand-color-link)" in css
+    assert "--bs-heading-color: var(--brand-typography-headings-color)" in css
+    assert "--bs-code-color: var(--brand-typography-monospace-inline-color)" in css
+    assert "--bs-link-bg: var(--brand-typography-link-background-color)" in css
+
+
+@skip_on_windows
+def test_theme_from_brand_partial_color_omits_missing_mode_mapping():
+    brand_txt = """
+color:
+  background:
+    dark: "#222222"
+  primary:
+    light: "#0066cc"
+typography:
+  headings:
+    color: background
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(f"{tmpdir}/_brand.yml", "w") as f:
+            f.write(brand_txt)
+
+        theme = Theme.from_brand(tmpdir)
+        css = theme.to_css()
+
+    assert "--brand-color-background: #222222" in css
+    assert "--bs-body-bg: var(--brand-color-background)" in css
+    assert css.count("--brand-color-background: #222222") == 1
+    assert css.count("--bs-body-bg: var(--brand-color-background)") == 1
+    assert "--brand-color-primary: #0066cc" in css
+    assert "--bs-primary: var(--brand-color-primary)" in css
+
+    mode_blocks = re.findall(r'\[data-bs-theme="(light|dark)"\]\{([^}]*)\}', css)[-4:]
+    assert [mode for mode, _ in mode_blocks] == ["light", "dark", "light", "dark"]
+    light_custom = mode_blocks[0][1]
+    dark_custom = mode_blocks[1][1]
+    light_mapping = mode_blocks[2][1]
+    dark_mapping = mode_blocks[3][1]
+
+    assert "--brand-color-background" not in light_custom
+    assert "--brand-typography-headings-color" not in light_custom
+    assert "--bs-body-bg: var(--brand-color-background)" not in light_custom
+    assert "--brand-color-primary: #0066cc" in light_custom
+    assert "--bs-primary: var(--brand-color-primary)" in light_mapping
+    assert "--bs-heading-color" not in light_mapping
+    assert "--brand-color-primary" not in dark_custom
+    assert "--brand-typography-headings-color: #222222" in dark_custom
+    assert "--brand-color-primary" not in dark_mapping
+    assert "--bs-heading-color: var(--brand-typography-headings-color)" in dark_mapping
+
+
+@skip_on_windows
+def test_theme_from_brand_scalar_values_are_emitted_in_both_modes():
+    brand_txt = """
+color:
+  primary: "#0066cc"
+typography:
+  headings:
+    color: "#333333"
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(f"{tmpdir}/_brand.yml", "w") as f:
+            f.write(brand_txt)
+
+        theme = Theme.from_brand(tmpdir)
+        css = theme.to_css()
+
+    assert css.count("--brand-color-primary: #0066cc") == 2
+    assert css.count("--bs-primary: var(--brand-color-primary)") == 2
+    assert css.count("--brand-typography-headings-color: #333333") == 2
+    assert css.count("--bs-heading-color: var(--brand-typography-headings-color)") == 2
+
+
+@skip_on_windows
+def test_theme_from_brand_retains_variant_values_for_runtime_switching():
+    brand_txt = """
+color:
+  primary:
+    light: "#0066cc"
+    dark: "#66b2ff"
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(f"{tmpdir}/_brand.yml", "w") as f:
+            f.write(brand_txt)
+
+        theme = Theme.from_brand(tmpdir)
+
+    assert theme.brand.color.primary.light == "#0066cc"
+    assert theme.brand.color.primary.dark == "#66b2ff"
+    assert all("brand_color_primary: {" not in default for default in theme._defaults)

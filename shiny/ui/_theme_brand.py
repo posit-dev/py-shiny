@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, TypeGuard, Union
 
 if TYPE_CHECKING:
     from brand_yml import Brand
@@ -177,6 +177,27 @@ class BrandBootstrapConfig:
 
 
 class ThemeBrand(Theme):
+    _COLOR_BOOTSTRAP_VARIABLES: dict[str, tuple[str, ...]] = {
+        "foreground": ("body-color",),
+        "background": ("body-bg",),
+        "primary": ("primary",),
+        "secondary": ("secondary", "secondary-color"),
+        "tertiary": ("tertiary-color",),
+        "success": ("success",),
+        "info": ("info",),
+        "warning": ("warning",),
+        "danger": ("danger",),
+        "light": ("light",),
+        "dark": ("dark",),
+        "link": ("link-color",),
+    }
+    _TYPOGRAPHY_BOOTSTRAP_VARIABLES: dict[tuple[str, str], tuple[str, ...]] = {
+        ("headings", "color"): ("heading-color",),
+        ("link", "color"): ("link-color",),
+        ("link", "background_color"): ("link-bg",),
+        ("monospace_inline", "color"): ("code-color",),
+    }
+
     def __init__(
         self,
         brand: "Brand",
@@ -224,6 +245,7 @@ class ThemeBrand(Theme):
 
         # Rules ----
         self.add_rules(*brand_color_palette_rules)
+        self.add_rules(ThemeBrand._prepare_css_vars(brand))
 
         # Bootstrap extras: functions, mixins, rules (defaults handled above)
         self._add_brand_bootstrap_other(brand_bootstrap)
@@ -255,12 +277,16 @@ class ThemeBrand(Theme):
             # ==> $primary: $brand_color_primary !default;
 
             brand_color_var = f"brand_color_{thm_name}"
-            defaults_dict[brand_color_var] = thm_color
+            if ThemeBrand._is_sass_scalar(thm_color):
+                defaults_dict[brand_color_var] = thm_color
 
         brand_color_palette = brand.color.to_dict(include="palette")
 
         # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
         for pal_name, pal_color in brand_color_palette.items():
+            if not ThemeBrand._is_sass_scalar(pal_color):
+                continue
+
             if pal_name in bootstrap_colors:
                 defaults_dict[pal_name] = pal_color
 
@@ -311,9 +337,93 @@ class ThemeBrand(Theme):
         for field, prop in brand_typography.items():
             for prop_key, prop_value in prop.items():
                 typo_sass_var = f"brand_typography_{field}_{prop_key}"
-                mapped[typo_sass_var] = prop_value
+                if ThemeBrand._is_sass_scalar(prop_value):
+                    mapped[typo_sass_var] = prop_value
 
         return mapped
+
+    @staticmethod
+    def _is_sass_scalar(value: Any) -> TypeGuard[YamlScalarType]:
+        return value is None or isinstance(value, (bool, float, int, str))
+
+    @staticmethod
+    def _is_color_defined(value: Any, mode: str) -> bool:
+        if isinstance(value, str):
+            return True
+
+        return getattr(value, mode, None) is not None
+
+    @staticmethod
+    def _prepare_css_vars(brand: "Brand") -> str:
+        """
+        Emit brand variables and their Bootstrap/Shiny aliases.
+
+        The aliases must be omitted when a partial light/dark value does not
+        define the current mode. An omitted alias leaves the Bootstrap value
+        from the base theme in effect.
+        """
+        brand_css = brand.css_variables(
+            {
+                "light": '[data-bs-theme="light"]',
+                "dark": '[data-bs-theme="dark"]',
+            }
+        )
+        mapping_css = ThemeBrand._prepare_css_mappings(brand)
+        return "\n".join([brand_css, mapping_css])
+
+    @staticmethod
+    def _prepare_css_mappings(brand: "Brand") -> str:
+        rules: list[str] = []
+
+        for mode in ("light", "dark"):
+            declarations: list[str] = []
+
+            if brand.color is not None:
+                for (
+                    color_name,
+                    bootstrap_names,
+                ) in ThemeBrand._COLOR_BOOTSTRAP_VARIABLES.items():
+                    value = getattr(brand.color, color_name, None)
+                    if value is None or not ThemeBrand._is_color_defined(value, mode):
+                        continue
+
+                    brand_variable = f"--brand-color-{color_name.replace('_', '-')}"
+                    declarations.extend(
+                        f"  --bs-{bootstrap_name}: var({brand_variable});"
+                        for bootstrap_name in bootstrap_names
+                    )
+
+            if brand.typography is not None:
+                for (
+                    field,
+                    property_name,
+                ), bootstrap_names in (
+                    ThemeBrand._TYPOGRAPHY_BOOTSTRAP_VARIABLES.items()
+                ):
+                    typography_node = getattr(brand.typography, field, None)
+                    value = getattr(typography_node, property_name, None)
+                    if value is None or not ThemeBrand._is_color_defined(value, mode):
+                        continue
+
+                    brand_variable = (
+                        f"--brand-typography-{field.replace('_', '-')}-"
+                        f"{property_name.replace('_', '-')}"
+                    )
+                    declarations.extend(
+                        f"  --bs-{bootstrap_name}: var({brand_variable});"
+                        for bootstrap_name in bootstrap_names
+                    )
+
+            if declarations:
+                rules.extend(
+                    [
+                        f'[data-bs-theme="{mode}"] {{',
+                        *declarations,
+                        "}",
+                    ]
+                )
+
+        return "\n".join(rules)
 
     def _add_defaults_hdr(self, header: str, **kwargs: YamlScalarType):
         self.add_defaults(**kwargs)
