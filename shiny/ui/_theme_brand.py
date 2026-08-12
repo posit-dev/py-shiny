@@ -196,6 +196,9 @@ class ThemeBrand(Theme):
         ("link", "color"): ("link-color",),
         ("link", "background_color"): ("link-bg",),
         ("monospace_inline", "color"): ("code-color",),
+        ("monospace_inline", "background_color"): ("code-bg",),
+        ("monospace_block", "color"): ("pre-color",),
+        ("monospace_block", "background_color"): ("pre-bg",),
     }
 
     def __init__(
@@ -377,6 +380,8 @@ class ThemeBrand(Theme):
 
         for mode in ("light", "dark"):
             declarations: list[str] = []
+            inline_code_rules: list[str] = []
+            block_code_rules: list[str] = []
 
             if brand.color is not None:
                 for (
@@ -414,11 +419,44 @@ class ThemeBrand(Theme):
                         for bootstrap_name in bootstrap_names
                     )
 
+                    if field == "monospace_inline":
+                        if property_name == "color":
+                            inline_code_rules.append("  color: var(--bs-code-color);")
+                        elif property_name == "background_color":
+                            inline_code_rules.append(
+                                "  background-color: var(--bs-code-bg);"
+                            )
+                    elif field == "monospace_block":
+                        if property_name == "color":
+                            block_code_rules.append("  color: var(--bs-pre-color);")
+                        elif property_name == "background_color":
+                            block_code_rules.append(
+                                "  background-color: var(--bs-pre-bg);"
+                            )
+
             if declarations:
                 rules.extend(
                     [
                         f'[data-bs-theme="{mode}"] {{',
                         *declarations,
+                        "}",
+                    ]
+                )
+
+            if inline_code_rules:
+                rules.extend(
+                    [
+                        f'[data-bs-theme="{mode}"] code:not(pre > code) {{',
+                        *inline_code_rules,
+                        "}",
+                    ]
+                )
+
+            if block_code_rules:
+                rules.extend(
+                    [
+                        f'[data-bs-theme="{mode}"] pre {{',
+                        *block_code_rules,
                         "}",
                     ]
                 )

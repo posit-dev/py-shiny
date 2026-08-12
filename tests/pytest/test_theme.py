@@ -107,6 +107,12 @@ def test_theme_css_compiles_and_is_cached(preset: ShinyThemePreset):
     assert second_css.find(".MY_MIXIN") != -1
 
 
+def _css_rule_body(css: str, selector: str) -> str:
+    match = re.search(rf"{re.escape(selector)}\{{([^}}]*)\}}", css)
+    assert match is not None
+    return match.group(1)
+
+
 def test_theme_update_preset():
     theme = Theme("shiny")
     assert theme._preset == "shiny"
@@ -310,6 +316,14 @@ typography:
     color: foreground
   monospace-inline:
     color: foreground
+    background-color:
+      light: "#f1f5fa"
+      dark: "#263746"
+  monospace-block:
+    color: foreground
+    background-color:
+      light: "#f8f9fa"
+      dark: "#1f2933"
   link:
     color: link
     background-color:
@@ -334,7 +348,30 @@ typography:
     assert "--bs-link-color: var(--brand-color-link)" in css
     assert "--bs-heading-color: var(--brand-typography-headings-color)" in css
     assert "--bs-code-color: var(--brand-typography-monospace-inline-color)" in css
+    assert (
+        "--bs-code-bg: var(--brand-typography-monospace-inline-background-color)" in css
+    )
+    assert "--bs-pre-color: var(--brand-typography-monospace-block-color)" in css
+    assert (
+        "--bs-pre-bg: var(--brand-typography-monospace-block-background-color)" in css
+    )
     assert "--bs-link-bg: var(--brand-typography-link-background-color)" in css
+    assert (
+        "color:var(--bs-code-color);background-color:var(--bs-code-bg)"
+        in _css_rule_body(css, '[data-bs-theme="light"] code:not(pre>code)')
+    )
+    assert (
+        "color:var(--bs-code-color);background-color:var(--bs-code-bg)"
+        in _css_rule_body(css, '[data-bs-theme="dark"] code:not(pre>code)')
+    )
+    assert (
+        "color:var(--bs-pre-color);background-color:var(--bs-pre-bg)"
+        in _css_rule_body(css, '[data-bs-theme="light"] pre')
+    )
+    assert (
+        "color:var(--bs-pre-color);background-color:var(--bs-pre-bg)"
+        in _css_rule_body(css, '[data-bs-theme="dark"] pre')
+    )
 
 
 @skip_on_windows
@@ -348,6 +385,14 @@ color:
 typography:
   headings:
     color: background
+  monospace-inline:
+    background-color:
+      dark: "#303030"
+  monospace-block:
+    color:
+      light: "#202020"
+    background-color:
+      dark: "#181818"
 """
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -364,7 +409,13 @@ typography:
     assert "--brand-color-primary: #0066cc" in css
     assert "--bs-primary: var(--brand-color-primary)" in css
 
-    mode_blocks = re.findall(r'\[data-bs-theme="(light|dark)"\]\{([^}]*)\}', css)[-4:]
+    mode_blocks = [
+        (mode, body)
+        for mode, body in re.findall(
+            r'\[data-bs-theme="(light|dark)"\]\{([^}]*)\}', css
+        )
+        if "--brand-" in body
+    ]
     assert [mode for mode, _ in mode_blocks] == ["light", "dark", "light", "dark"]
     light_custom = mode_blocks[0][1]
     dark_custom = mode_blocks[1][1]
@@ -381,6 +432,38 @@ typography:
     assert "--brand-typography-headings-color: #222222" in dark_custom
     assert "--brand-color-primary" not in dark_mapping
     assert "--bs-heading-color: var(--brand-typography-headings-color)" in dark_mapping
+    assert "--brand-typography-monospace-inline-background-color" not in light_custom
+    assert "--brand-typography-monospace-block-color" in light_custom
+    assert "--brand-typography-monospace-block-background-color" not in light_custom
+    assert (
+        "--brand-typography-monospace-inline-background-color: #303030" in dark_custom
+    )
+    assert "--brand-typography-monospace-block-background-color: #181818" in dark_custom
+    assert (
+        "--bs-code-bg: var(--brand-typography-monospace-inline-background-color)"
+        in dark_mapping
+    )
+    assert (
+        "--bs-pre-bg: var(--brand-typography-monospace-block-background-color)"
+        in dark_mapping
+    )
+    assert (
+        "--bs-pre-color: var(--brand-typography-monospace-block-color)"
+        not in dark_mapping
+    )
+    assert '[data-bs-theme="light"] code:not(pre>code)' not in css
+    assert (
+        _css_rule_body(css, '[data-bs-theme="dark"] code:not(pre>code)')
+        == "background-color:var(--bs-code-bg)"
+    )
+    assert (
+        _css_rule_body(css, '[data-bs-theme="light"] pre')
+        == "color:var(--bs-pre-color)"
+    )
+    assert (
+        _css_rule_body(css, '[data-bs-theme="dark"] pre')
+        == "background-color:var(--bs-pre-bg)"
+    )
 
 
 @skip_on_windows
@@ -391,6 +474,12 @@ color:
 typography:
   headings:
     color: "#333333"
+  monospace-inline:
+    color: "#111111"
+    background-color: "#f1f5fa"
+  monospace-block:
+    color: "#222222"
+    background-color: "#f8f9fa"
 """
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -404,6 +493,18 @@ typography:
     assert css.count("--bs-primary: var(--brand-color-primary)") == 2
     assert css.count("--brand-typography-headings-color: #333333") == 2
     assert css.count("--bs-heading-color: var(--brand-typography-headings-color)") == 2
+    assert css.count("--brand-typography-monospace-inline-color: #111111") == 2
+    assert (
+        css.count("--brand-typography-monospace-inline-background-color: #f1f5fa") == 2
+    )
+    assert css.count("--brand-typography-monospace-block-color: #222222") == 2
+    assert (
+        css.count("--brand-typography-monospace-block-background-color: #f8f9fa") == 2
+    )
+    assert css.count('[data-bs-theme="light"] code:not(pre>code)') == 1
+    assert css.count('[data-bs-theme="dark"] code:not(pre>code)') == 1
+    assert css.count('[data-bs-theme="light"] pre') == 1
+    assert css.count('[data-bs-theme="dark"] pre') == 1
 
 
 @skip_on_windows
