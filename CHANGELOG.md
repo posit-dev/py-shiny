@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* The wheel no longer ships `shiny/experimental/api-examples/`. These files are only read when building the documentation, and the exclusion pattern that already dropped the top-level `shiny/api-examples/` tree did not reach nested ones. (#2436)
+
+* The wheel no longer ships `__pycache__` directories. The package-data glob matched them, so building a wheel from a working tree that had been imported added a few hundred `.pyc` files whose contents varied by machine. (#2436)
+
 * Closing a session no longer destroys the reactive values and calcs created in it, so async work that outlives the connection does not error. Since v1.6.1, refreshing the page while an `@reactive.extended_task` (or any `asyncio` task) was in flight could raise `DestroyedReactiveError: Reactive value '<name>' has been destroyed.` once it settled, leaving the task in neither `"success"` nor `"error"`. Values and calcs are now left readable at their last value on close and reclaimed by garbage collection, while an explicit `session.destroy(id)` on a live session still tears them down. Effects are still destroyed on close. (#2428)
 
 * The `ui.Theme` API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`. The example directory now declares `libsass` in a `requirements.txt`. (#2387)
