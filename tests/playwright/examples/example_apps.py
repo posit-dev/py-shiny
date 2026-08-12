@@ -4,7 +4,7 @@ import typing
 from pathlib import PurePath
 from typing import Literal
 
-from playwright.sync_api import ConsoleMessage, Page, expect
+from playwright.sync_api import ConsoleMessage, Page, Request, Response, expect
 
 from shiny.run import ShinyAppProc, run_shiny_app
 
@@ -169,15 +169,36 @@ def validate_example(page: Page, ex_app_path: str) -> None:
     sa: ShinyAppProc = run_shiny_app(pyshiny_root / ex_app_path, wait_for_start=True)
 
     console_errors: typing.List[str] = []
+    # Console messages like "Failed to load resource: ... 404" do not name the
+    # resource, so record the requests themselves to make failures actionable.
+    failed_requests: typing.List[str] = []
+
+    def is_favicon(url: str) -> bool:
+        return url.endswith("favicon.ico")
 
     def on_console_msg(msg: ConsoleMessage) -> None:
         if msg.type == "error":
             # Do not report missing favicon errors
-            if msg.location["url"].endswith("favicon.ico"):
+            if is_favicon(msg.location["url"]):
                 return
             console_errors.append(msg.text)
 
+    def on_response(response: Response) -> None:
+        if response.status >= 400 and not is_favicon(response.url):
+            failed_requests.append(
+                f"HTTP {response.status} - {response.request.method} {response.url}"
+            )
+
+    def on_request_failed(request: Request) -> None:
+        if is_favicon(request.url):
+            return
+        failed_requests.append(
+            f"{request.failure or 'request failed'} - {request.method} {request.url}"
+        )
+
     page.on("console", on_console_msg)
+    page.on("response", on_response)
+    page.on("requestfailed", on_request_failed)
 
     with sa:
         page.goto(sa.url, wait_until="domcontentloaded")
@@ -259,7 +280,13 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             "In app "
             + ex_app_path
             + " had JavaScript console errors!\n"
-            + "* ".join(console_errors)
+            + "\n".join(f"* {error}" for error in console_errors)
+            + (
+                "\nFailed network requests:\n"
+                + "\n".join(f"* {request}" for request in failed_requests)
+                if failed_requests
+                else "\nNo failed network requests were recorded."
+            )
         )
 
         if ex_app_path not in app_allow_output_error:
