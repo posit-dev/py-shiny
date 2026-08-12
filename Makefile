@@ -158,7 +158,7 @@ update-testing-docs: docs update-testing-docs-repomix update-testing-docs-proces
 
 ci-install-ai-deps: FORCE
 	uv pip install -e ".[dev,test,add-test]"
-	$(MAKE) install-playwright
+	"$(MAKE)" install-playwright
 
 run-test-ai-evaluation: FORCE ## Run the AI evaluation script for tests
 	@echo "-------- Running AI evaluation for tests --------"
@@ -253,19 +253,19 @@ playwright-show-trace: ## Show trace of failed tests
 
 # end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
 playwright-shiny: FORCE
-	$(MAKE) playwright TEST_FILE="$(SHINY_TEST_FILE)"
+	"$(MAKE)" playwright TEST_FILE="$(SHINY_TEST_FILE)"
 
 # end-to-end tests on deployed apps with playwright; (SUB_FILE="" within tests/playwright/deploys/)
 playwright-deploys: FORCE
-	$(MAKE) playwright PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)" TEST_FILE="$(DEPLOYS_TEST_FILE)"
+	"$(MAKE)" playwright PYTEST_BROWSERS="$(PYTEST_DEPLOYS_BROWSERS)" TEST_FILE="$(DEPLOYS_TEST_FILE)"
 
 # end-to-end tests on all py-shiny examples with playwright; (SUB_FILE="" within tests/playwright/examples/)
 playwright-examples: FORCE
-	$(MAKE) playwright TEST_FILE="$(EXAMPLES_TEST_FILE)"
+	"$(MAKE)" playwright TEST_FILE="$(EXAMPLES_TEST_FILE)"
 
 # end-to-end tests for all AI generated apps
 playwright-ai: FORCE
-	$(MAKE) playwright TEST_FILE="$(AI_TEST_FILE)"
+	"$(MAKE)" playwright TEST_FILE="$(AI_TEST_FILE)"
 
 coverage: FORCE ## check combined code coverage (must run e2e last)
 	pytest --cov-report term-missing --cov=shiny tests/pytest/ $(SHINY_TEST_FILE) $(PYTEST_BROWSERS)
@@ -337,10 +337,10 @@ upgrade-html-deps: FORCE ## Upgrade Shiny's HTMLDependencies
 
 narwhals-install-shiny: FORCE
 	@echo "-------- Install py-shiny ----------"
-	$(MAKE) ci-install-deps
-	$(MAKE) install-playwright PLAYWRIGHT_BROWSERS=chromium
+	"$(MAKE)" ci-install-deps
+	"$(MAKE)" install-playwright PLAYWRIGHT_BROWSERS=chromium
 narwhals-test-integration: FORCE
 	@echo "-------- Running py-shiny typing and unit tests ----------"
-	$(MAKE) check-types check-tests
+	"$(MAKE)" check-types check-tests
 	@echo "-------- Running py-shiny playwright tests ----------"
-	$(MAKE) playwright TEST_FILE="tests/playwright/shiny/components/data_frame/data_type/" PYTEST_BROWSERS="--browser chromium"
+	"$(MAKE)" playwright TEST_FILE="tests/playwright/shiny/components/data_frame/data_type/" PYTEST_BROWSERS="--browser chromium"
