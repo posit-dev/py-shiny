@@ -5,7 +5,7 @@ from pathlib import PurePath
 from typing import Literal
 from urllib.parse import urlparse
 
-from playwright.sync_api import ConsoleMessage, Page, Response, expect
+from playwright.sync_api import ConsoleMessage, Page, Request, Response, expect
 
 from shiny.run import ShinyAppProc, run_shiny_app
 
@@ -177,27 +177,45 @@ def validate_example(page: Page, ex_app_path: str) -> None:
     )
 
     console_errors: typing.List[str] = []
-    failed_responses: typing.List[str] = []
-    ignored_failed_responses: typing.List[str] = []
+    # Console messages like "Failed to load resource: ... 404" do not name the
+    # resource, so record the requests themselves to make failures actionable.
+    failed_requests: typing.List[str] = []
+    ignored_failed_requests: typing.List[str] = []
+
+    def is_favicon(url: str) -> bool:
+        return url.endswith("favicon.ico")
 
     def on_console_msg(msg: ConsoleMessage) -> None:
         if msg.type == "error":
             # Do not report missing favicon errors
-            if msg.location["url"].endswith("favicon.ico"):
+            if is_favicon(msg.location["url"]):
                 return
             console_errors.append(msg.text)
 
-    page.on("console", on_console_msg)
-
     def on_response(response: Response) -> None:
-        if response.status >= 400 and not response.url.endswith("favicon.ico"):
-            response_error = f"HTTP {response.status}: {response.url}"
+        if response.status >= 400 and not is_favicon(response.url):
+            request_obj = getattr(response, "request", None)
+            method = getattr(request_obj, "method", "GET")
+            request_error = f"HTTP {response.status} - {method} {response.url}"
             if urlparse(response.url).hostname in _IGNORED_EXTERNAL_RESOURCE_HOSTS:
-                ignored_failed_responses.append(response_error)
+                ignored_failed_requests.append(request_error)
             else:
-                failed_responses.append(response_error)
+                failed_requests.append(request_error)
 
+    def on_request_failed(request: Request) -> None:
+        if is_favicon(request.url):
+            return
+        request_error = (
+            f"{request.failure or 'request failed'} - {request.method} {request.url}"
+        )
+        if urlparse(request.url).hostname in _IGNORED_EXTERNAL_RESOURCE_HOSTS:
+            ignored_failed_requests.append(request_error)
+        else:
+            failed_requests.append(request_error)
+
+    page.on("console", on_console_msg)
     page.on("response", on_response)
+    page.on("requestfailed", on_request_failed)
 
     def load_app() -> None:
         page.goto(sa.url, wait_until="domcontentloaded")
@@ -220,10 +238,10 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         # A static resource can briefly race the app server during startup. A
         # clean reload is cheaper and more targeted than rerunning the entire
         # parametrized test, and persistent errors still fail below with URLs.
-        if console_errors and failed_responses:
+        if console_errors and failed_requests:
             console_errors.clear()
-            failed_responses.clear()
-            ignored_failed_responses.clear()
+            failed_requests.clear()
+            ignored_failed_requests.clear()
             load_app()
 
         # Check for py-shiny errors
@@ -272,7 +290,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             assert len(error_lines) == 0
 
         # Check for JavaScript errors
-        ignored_resource_error_count = len(ignored_failed_responses)
+        ignored_resource_error_count = len(ignored_failed_requests)
         remaining_console_errors: typing.List[str] = []
         for error in console_errors:
             if any(host in error for host in _IGNORED_EXTERNAL_RESOURCE_HOSTS):
@@ -301,11 +319,12 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             "In app "
             + ex_app_path
             + " had JavaScript console errors!\n"
-            + "* ".join(console_errors)
+            + "\n".join(f"* {error}" for error in console_errors)
             + (
-                "\nFailed responses:\n* " + "\n* ".join(failed_responses)
-                if failed_responses
-                else ""
+                "\nFailed network requests:\n"
+                + "\n".join(f"* {request}" for request in failed_requests)
+                if failed_requests
+                else "\nNo failed network requests were recorded."
             )
         )
 

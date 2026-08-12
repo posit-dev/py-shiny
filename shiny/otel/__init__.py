@@ -638,7 +638,7 @@ opentelemetry-instrument shiny run app.py
 
 ### Console (Development)
 
-Simple console output for debugging. See the [open-telemetry example](../../examples/open-telemetry/) for a complete working demonstration of console output with collection control.
+Simple console output for debugging. See the [open-telemetry example](https://github.com/posit-dev/py-shiny/tree/main/examples/open-telemetry) for a complete working demonstration of console output with collection control.
 
 ```bash
 opentelemetry-instrument --traces_exporter console shiny run app.py
