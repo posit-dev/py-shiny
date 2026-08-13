@@ -209,6 +209,39 @@ class TestSpanStream:
         download_spans = [s for s in spans if s.name == "download"]
         assert len(download_spans) == 0
 
+    @pytest.mark.asyncio
+    async def test_closing_the_wrapper_closes_the_wrapped_stream(self):
+        """
+        A consumer that stops early must not leave the inner stream suspended.
+
+        Starlette closes the body iterator when a client cancels a download. If
+        that close does not reach the wrapped generator, the generator's cleanup
+        runs whenever the garbage collector finalizes it instead of at close --
+        on Python 3.10, not before the request is over. Anything the download
+        handler does in a `finally` (such as asking for a reactive flush) is
+        then arbitrarily delayed.
+        """
+        closed: list[bool] = []
+
+        async def inner() -> AsyncIterator[bytes]:
+            try:
+                yield b"first"
+                yield b"second"
+            finally:
+                closed.append(True)
+
+        with patch_otel_tracing_state(tracing_enabled=False):
+            stream = shiny_otel_span_stream(
+                "download",
+                inner(),
+                infer_session_id=False,
+                required_level=OtelCollectLevel.REACTIVITY,
+            )
+            assert await stream.__anext__() == b"first"
+            await stream.aclose()
+
+        assert closed == [True]
+
 
 # ---------------------------------------------------------------------------
 # TestDownloadHandlerSpans — tests for OTel integration in the download
