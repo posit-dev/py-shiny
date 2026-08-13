@@ -793,15 +793,25 @@ class Session(ABC):
     def _decrement_busy_count(self) -> None: ...
 
 
-def _cancel_task(task: Optional["asyncio.Task[Any]"]) -> None:
+def _discard_task(task: Optional["asyncio.Task[Any]"]) -> None:
     """
-    Cancel a task if it is still running.
+    Discard a task the message loop no longer needs.
 
-    Used to tear down the message loop's in-flight `receive()` when the loop
-    exits, so it does not outlive the session as a pending task.
+    Used to tear down an in-flight `receive()` when the loop exits, so it does
+    not outlive the session as a pending task. A task that already finished is
+    not cancelled but *is* read, because the loop can exit without ever
+    consuming a receive that failed (say the connection broke while the loop was
+    off servicing a flush, and the flush then raised). Leaving that exception
+    unretrieved makes asyncio log it whenever the task is garbage-collected,
+    long after the session is gone.
     """
-    if task is not None and not task.done():
-        task.cancel()
+    if task is None:
+        return
+    if task.done():
+        if not task.cancelled():
+            task.exception()
+        return
+    task.cancel()
 
 
 def _print_exception(e: Exception) -> None:
@@ -1048,7 +1058,7 @@ class AppSession(Session):
                 # to the next iteration rather than recreated -- recreating it
                 # would drop whatever message the old one had already consumed.
                 pending_receive: Optional[asyncio.Task[str]] = None
-                stack.callback(lambda: _cancel_task(pending_receive))
+                stack.callback(lambda: _discard_task(pending_receive))
 
                 while True:
                     if pending_receive is None:
@@ -1324,20 +1334,29 @@ class AppSession(Session):
     async def _handle_request(
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
+        response: Optional[ASGIApp] = None
         self._increment_busy_count()
         try:
-            return await self._handle_request_impl(request, action, subpath)
+            response = await self._handle_request_impl(request, action, subpath)
+            return response
         finally:
             self._decrement_busy_count()
             # These two actions invoke app-author code, which may have set a
-            # reactive value. The other actions ("upload", "dataobj") only run
-            # Shiny's own plumbing, and uploads arrive one request per chunk, so
-            # asking for a flush there would be pure overhead. A streaming
-            # download asks again when its generator finishes, which is when the
-            # handler body has actually run; this covers the file-path form,
-            # which has already run by now.
-            if action in ("download", "dynamic_route"):
-                self._request_flush()
+            # reactive value. The others ("upload", "dataobj") only run Shiny's
+            # own plumbing, and uploads arrive one request per chunk, so asking
+            # for a flush there would be pure overhead.
+            #
+            # A streaming response is skipped because the handler body has not
+            # run yet -- it runs when the ASGI server iterates the body, after
+            # this returns. Asking now would flush *during* the stream, pushing
+            # half-generated state to the client; the content-wrapping
+            # generators ask for themselves once the stream ends. (A
+            # `dynamic_route` handler that returns a `StreamingResponse` is
+            # therefore not covered, since Shiny does not wrap its iterator.)
+            if action in ("download", "dynamic_route") and not isinstance(
+                response, StreamingResponse
+            ):
+                self._request_out_of_band_flush()
 
     async def _handle_request_impl(
         self, request: Request, action: str, subpath: Optional[str]
@@ -1462,7 +1481,7 @@ class AppSession(Session):
                                     # for a flush, or the values the handler did
                                     # set never reach the client and the session
                                     # stays "busy".
-                                    self._request_flush()
+                                    self._request_out_of_band_flush()
 
                             wrapped_contents = wrap_content_async()
 
@@ -1481,7 +1500,7 @@ class AppSession(Session):
                                                     yield chunk
                                 finally:
                                     # See `wrap_content_async` above.
-                                    self._request_flush()
+                                    self._request_out_of_band_flush()
 
                             wrapped_contents = wrap_content_sync()
 
@@ -1682,16 +1701,18 @@ class AppSession(Session):
         return self._flushed_callbacks.register(wrap_async(fn), once)
 
     def _request_flush(self) -> None:
+        self.app._request_flush(self)
+
+    def _request_out_of_band_flush(self) -> None:
         """
         Ask this session's message loop to flush the reactive graph.
 
-        Reactive work that starts outside the WebSocket message cycle has no
-        flush of its own: a download or dynamic-route handler runs on the ASGI
-        request task, and `send_input_message()` can be called from anywhere.
-        Whatever such code invalidates would otherwise sit in the pending-flush
-        queue -- with the session stuck "busy", because the busy-count
-        increments from the invalidated effects are never balanced -- until an
-        unrelated client message happened to arrive.
+        A download or dynamic-route handler runs on the ASGI request task, which
+        is outside the WebSocket message cycle, so nothing would otherwise flush
+        what it set: the invalidations sit in the pending-flush queue -- with the
+        session stuck "busy", because the busy-count increments from the
+        invalidated effects are never balanced -- until an unrelated client
+        message happens to arrive.
         (https://github.com/posit-dev/py-shiny/issues/1785)
 
         This is Shiny for R's `requestFlush()`: it only marks, and the session's
@@ -1700,9 +1721,18 @@ class AppSession(Session):
         session's task, so it is ordered against client messages, runs under the
         reactive lock the loop already takes, and reports failures through the
         loop's existing error handling.
+
+        Deliberately *not* wired to `_request_flush()`, which
+        `send_input_message()` calls and which is still the no-op stub it has
+        always been. A `session.on_flush` callback that queues a client message
+        -- which is exactly how every `ui.update_*()` delivers itself -- would
+        re-arm the loop from inside the flush it was already part of, costing an
+        extra empty flush per interaction and spinning without bound when such a
+        callback is registered with `once=False`. Making `_request_flush()` live
+        up to its name needs a way to distinguish "deliver the outbound queue"
+        from "flush the reactive graph"; see the PR discussion.
         """
         self._flush_requested.set()
-        self.app._request_flush(self)
 
     async def _flush_reactives(self) -> None:
         """

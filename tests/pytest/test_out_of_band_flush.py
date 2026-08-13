@@ -55,11 +55,23 @@ def _request(action: str, subpath: str) -> Request:
 
 
 async def _read_body(response: object) -> bytes:
-    """Consume the body of a download response, the way an HTTP client would."""
+    """
+    Consume the body of a download response, the way an HTTP client would.
+
+    Yields to the event loop between chunks, because a real ASGI server awaits
+    `send()` for each one. Without that the session's task never gets to run
+    mid-stream, and a test cannot tell "flushed once at the end" apart from
+    "flushed during the stream".
+    """
     if isinstance(response, StreamingResponse):
         chunks: list[bytes] = []
         async for chunk in response.body_iterator:
             chunks.append(chunk.encode() if isinstance(chunk, str) else bytes(chunk))
+            # Generously: a single yield is not enough for the session's task to
+            # get through a whole flush, so one would let a mid-stream flush slip
+            # past unnoticed.
+            for _ in range(50):
+                await asyncio.sleep(0)
         return b"".join(chunks)
     if isinstance(response, FileResponse):
         return Path(response.path).read_bytes()
@@ -116,13 +128,6 @@ class Harness:
         for message in self.sent:
             values.update(message.get("values") or {})  # type: ignore[union-attr]
         return values
-
-    @property
-    def input_messages(self) -> list[dict[str, Any]]:
-        messages: list[dict[str, Any]] = []
-        for message in self.sent:
-            messages.extend(message.get("inputMessages") or [])  # type: ignore[union-attr]
-        return messages
 
 
 @asynccontextmanager
@@ -389,25 +394,39 @@ async def test_dynamic_route_updates_reactives():
 
 
 @pytest.mark.asyncio
-async def test_send_input_message_outside_the_message_cycle_is_delivered():
+async def test_a_flush_callback_that_queues_a_message_does_not_spin_the_loop():
     """
-    `send_input_message()` queues a message and calls `_request_flush()`.
+    `ui.update_*()` must not re-arm the loop from inside the flush it is part of.
 
-    Called from outside the message cycle -- from an `on_ended` callback, a
-    background task, or just directly -- the queued message needs the loop to
-    wake up, or it sits there until the client happens to say something.
+    Every `ui.update_*()` delivers itself by registering a `session.on_flush`
+    callback that calls `send_input_message()`, and session flush callbacks run
+    inside the flush. If queueing a message asked for another flush, each flush
+    would beget the next: with `once=False` that spins without bound, pegging a
+    CPU and spamming every connected client with empty messages.
     """
+    flushes = [0]
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         @render.text
         def count_text():
             return "hi"
 
-    async with _running_session(server) as h:
-        h.session.send_input_message("slider", {"value": 42})
-        await h.settle()
+        session.on_flush(
+            lambda: ui.update_text("txt", value="x", session=session), once=False
+        )
 
-        assert h.input_messages == [{"id": "slider", "message": {"value": 42}}]
+    async with _running_session(server) as h:
+        original = h.session._flush_reactives
+
+        async def counting() -> None:
+            flushes[0] += 1
+            await original()
+
+        h.session._flush_reactives = counting  # type: ignore[method-assign]
+
+        # No client input at all: the session should be idle, not flushing.
+        await h.settle()
+        assert flushes[0] == 0
 
 
 @pytest.mark.asyncio
