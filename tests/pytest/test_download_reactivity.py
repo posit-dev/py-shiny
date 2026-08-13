@@ -328,11 +328,9 @@ async def test_download_flushes_when_the_client_aborts():
     A download the client walks away from still flushes what the handler set.
 
     Starlette closes the body iterator when the client disconnects, which throws
-    `GeneratorExit` in at the `yield`. The flush is scheduled from a `finally`
-    outside the handler's `session_context` rather than awaited inside it: an
-    async generator runs in whichever task resumes it, so a teardown driven from
-    a different task than the one that streamed the response fails while
-    unwinding that context, and an awaited flush inside it would be skipped.
+    `GeneratorExit` in at the `yield`, skipping the rest of the generator body.
+    Only a `finally` -- placed outside the handler's `session_context`, whose
+    own unwinding can raise on a cross-task teardown -- still runs.
     """
     seen: list[int] = []
 

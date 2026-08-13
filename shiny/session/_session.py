@@ -1615,23 +1615,26 @@ class AppSession(Session):
         `decrementBusyCount()` calls `requestFlush()`; R's event loop then calls
         `flushReact()` on the next tick.
 
-        The flush is scheduled rather than awaited, for three reasons:
+        Two separate properties matter here, and they are easy to conflate.
 
-        * A streaming download's handler runs inside an async generator, and an
-          async generator has no contextvars context of its own -- it runs in
-          whichever task resumes it. When a cancelled download is torn down from
-          a different task than the one that streamed it, unwinding the
-          handler's `session_context` raises `ValueError: <Token ...> was
-          created in a different Context`. Only a call that neither awaits nor
-          sits inside that context still runs in that case. (Awaiting in the
-          `finally` is legal Python and works when the same task closes the
-          generator; it is the cross-task teardown that breaks it.)
-        * The flush is global -- it invokes every live session's flush callbacks
-          -- so an error raised by an unrelated session would otherwise
-          propagate out of *this* session's HTTP request, turning a download
-          whose content was produced successfully into a 500 response.
-        * It keeps the response from being held open, and the reactive lock from
-          being held, for the duration of a full reactive update.
+        *Where* this is called from is what makes it reliable: a `finally`, and
+        one placed outside the handler's `session_context`. A handler can raise
+        part-way through streaming, and a client can cancel a download
+        mid-stream, and neither path may skip the flush. Being outside the
+        session context matters too, because a cancelled download can be torn
+        down from a different task than the one that streamed it, and unwinding
+        that context then raises `ValueError: <Token ...> was created in a
+        different Context` (an async generator has no contextvars context of its
+        own, so it runs in whichever task resumes it). A `finally` outside the
+        context still runs when that happens.
+
+        *Scheduling* rather than awaiting buys something narrower: the download's
+        response is not held open, and the reactive lock is not held, for the
+        duration of a full reactive update -- which, since the flush is global,
+        means every pending effect and output render across every live session.
+        Awaiting here would also be correct; it is legal Python even while the
+        generator is being closed. Errors are contained by the guard in
+        `_out_of_band_flush`, not by the scheduling.
         """
         if self._is_closed():
             return
