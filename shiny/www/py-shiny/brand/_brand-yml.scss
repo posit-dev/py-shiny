@@ -176,6 +176,217 @@ $code-block-line-height: null !default;
 $link-bg: null !default;
 $link-weight: null !default;
 
+/*-- scss:mixins --*/
+
+@mixin brand-button-variant(
+  $background,
+  $border,
+  $color: color-contrast($background),
+  $hover-background: if($color == $color-contrast-light, shade-color($background, $btn-hover-bg-shade-amount), tint-color($background, $btn-hover-bg-tint-amount)),
+  $hover-border: if($color == $color-contrast-light, shade-color($border, $btn-hover-border-shade-amount), tint-color($border, $btn-hover-border-tint-amount)),
+  $hover-color: color-contrast($hover-background),
+  $active-background: if($color == $color-contrast-light, shade-color($background, $btn-active-bg-shade-amount), tint-color($background, $btn-active-bg-tint-amount)),
+  $active-border: if($color == $color-contrast-light, shade-color($border, $btn-active-border-shade-amount), tint-color($border, $btn-active-border-tint-amount)),
+  $active-color: color-contrast($active-background),
+  $disabled-background: $background,
+  $disabled-border: $border,
+  $disabled-color: color-contrast($disabled-background)
+) {
+  --#{$prefix}btn-color: #{$color};
+  --#{$prefix}btn-bg: #{$background};
+  --#{$prefix}btn-border-color: #{$border};
+  --#{$prefix}btn-hover-color: #{$hover-color};
+  --#{$prefix}btn-hover-bg: #{$hover-background};
+  --#{$prefix}btn-hover-border-color: #{$hover-border};
+  --#{$prefix}btn-focus-shadow-rgb: #{to-rgb(mix($color, $border, 15%))};
+  --#{$prefix}btn-active-color: #{$active-color};
+  --#{$prefix}btn-active-bg: #{$active-background};
+  --#{$prefix}btn-active-border-color: #{$active-border};
+  --#{$prefix}btn-active-shadow: #{$btn-active-box-shadow};
+  --#{$prefix}btn-disabled-color: #{$disabled-color};
+  --#{$prefix}btn-disabled-bg: #{$disabled-background};
+  --#{$prefix}btn-disabled-border-color: #{$disabled-border};
+}
+
+@mixin brand-button-outline-variant(
+  $color,
+  $color-hover: color-contrast($color),
+  $active-background: $color,
+  $active-border: $color,
+  $active-color: color-contrast($active-background)
+) {
+  --#{$prefix}btn-color: #{$color};
+  --#{$prefix}btn-border-color: #{$color};
+  --#{$prefix}btn-hover-color: #{$color-hover};
+  --#{$prefix}btn-hover-bg: #{$active-background};
+  --#{$prefix}btn-hover-border-color: #{$active-border};
+  --#{$prefix}btn-focus-shadow-rgb: #{to-rgb($color)};
+  --#{$prefix}btn-active-color: #{$active-color};
+  --#{$prefix}btn-active-bg: #{$active-background};
+  --#{$prefix}btn-active-border-color: #{$active-border};
+  --#{$prefix}btn-active-shadow: #{$btn-active-box-shadow};
+  --#{$prefix}btn-disabled-color: #{$color};
+  --#{$prefix}btn-disabled-bg: transparent;
+  --#{$prefix}btn-disabled-border-color: #{$color};
+  --#{$prefix}btn-bg: transparent;
+  --#{$prefix}gradient: none;
+}
+
+@mixin brand-color-mode(
+  $selectors,
+  $mode,
+  $brand-theme-colors: (),
+  $foreground: null,
+  $background: null,
+  $secondary: null,
+  $tertiary: null,
+  $headings: null,
+  $link: null,
+  $link-background: null,
+  $code: null,
+  $code-background: null,
+  $pre: null,
+  $pre-background: null
+) {
+  @each $selector in $selectors {
+    #{$selector} {
+      @if $foreground != null {
+        --#{$prefix}body-color: #{$foreground};
+        --#{$prefix}body-color-rgb: #{to-rgb($foreground)};
+      }
+      @if $background != null {
+        --#{$prefix}body-bg: #{$background};
+        --#{$prefix}body-bg-rgb: #{to-rgb($background)};
+      }
+      @if $secondary != null {
+        --#{$prefix}secondary-color: #{$secondary};
+        --#{$prefix}secondary-color-rgb: #{to-rgb($secondary)};
+      }
+      @if $tertiary != null {
+        --#{$prefix}tertiary-color: #{$tertiary};
+        --#{$prefix}tertiary-color-rgb: #{to-rgb($tertiary)};
+      }
+      @if $headings != null {
+        --#{$prefix}heading-color: #{$headings};
+      }
+      @if $link != null {
+        $link-hover: shift-color(
+          $link,
+          if($mode == dark, -$link-shade-percentage, $link-shade-percentage)
+        );
+        --#{$prefix}link-color: #{$link};
+        --#{$prefix}link-color-rgb: #{to-rgb($link)};
+        --#{$prefix}link-hover-color: #{$link-hover};
+        --#{$prefix}link-hover-color-rgb: #{to-rgb($link-hover)};
+      }
+      @if $link-background != null {
+        --#{$prefix}link-bg: #{$link-background};
+      }
+      @if $code != null {
+        --#{$prefix}code-color: #{$code};
+      }
+      @if $code-background != null {
+        --#{$prefix}code-bg: #{$code-background};
+      }
+      @if $pre != null {
+        --#{$prefix}pre-color: #{$pre};
+      }
+      @if $pre-background != null {
+        --#{$prefix}pre-bg: #{$pre-background};
+      }
+
+      @each $name, $value in $brand-theme-colors {
+        --#{$prefix}#{$name}: #{$value};
+        --#{$prefix}#{$name}-rgb: #{to-rgb($value)};
+
+        @if $mode == dark {
+          --#{$prefix}#{$name}-text-emphasis: #{tint-color($value, 40%)};
+          --#{$prefix}#{$name}-bg-subtle: #{shade-color($value, 80%)};
+          --#{$prefix}#{$name}-border-subtle: #{shade-color($value, 40%)};
+        } @else {
+          --#{$prefix}#{$name}-text-emphasis: #{shade-color($value, 60%)};
+          --#{$prefix}#{$name}-bg-subtle: #{tint-color($value, 80%)};
+          --#{$prefix}#{$name}-border-subtle: #{tint-color($value, 60%)};
+        }
+
+        @if $name == "primary" {
+          --#{$prefix}focus-ring-color: #{rgba($value, $focus-ring-opacity)};
+        }
+
+        .btn-#{$name} {
+          @if $name == "light" {
+            @include brand-button-variant(
+              $value,
+              $value,
+              $hover-background: shade-color($value, $btn-hover-bg-shade-amount),
+              $hover-border: shade-color($value, $btn-hover-border-shade-amount),
+              $active-background: shade-color($value, $btn-active-bg-shade-amount),
+              $active-border: shade-color($value, $btn-active-border-shade-amount)
+            );
+          } @else if $name == "dark" {
+            @include brand-button-variant(
+              $value,
+              $value,
+              $hover-background: tint-color($value, $btn-hover-bg-tint-amount),
+              $hover-border: tint-color($value, $btn-hover-border-tint-amount),
+              $active-background: tint-color($value, $btn-active-bg-tint-amount),
+              $active-border: tint-color($value, $btn-active-border-tint-amount)
+            );
+          } @else {
+            @include brand-button-variant($value, $value);
+          }
+        }
+
+        .btn-outline-#{$name} {
+          @include brand-button-outline-variant($value);
+        }
+
+        .bg-#{$name},
+        .text-bg-#{$name} {
+          color: color-contrast($value) if($enable-important-utilities, !important, null);
+        }
+
+        .link-#{$name}:hover,
+        .link-#{$name}:focus {
+          $hover-color: if(
+            color-contrast($value) == $color-contrast-light,
+            shade-color($value, $link-shade-percentage),
+            tint-color($value, $link-shade-percentage)
+          );
+          color: RGBA(#{to-rgb($hover-color)}, var(--#{$prefix}link-opacity, 1)) if($enable-important-utilities, !important, null);
+          text-decoration-color: RGBA(#{to-rgb($hover-color)}, var(--#{$prefix}link-underline-opacity, 1)) if($enable-important-utilities, !important, null);
+        }
+      }
+
+      @if $link-background != null {
+        a {
+          background-color: var(--#{$prefix}link-bg);
+        }
+      }
+      @if $code != null or $code-background != null {
+        code:not(pre > code) {
+          @if $code != null {
+            color: var(--#{$prefix}code-color);
+          }
+          @if $code-background != null {
+            background-color: var(--#{$prefix}code-bg);
+          }
+        }
+      }
+      @if $pre != null or $pre-background != null {
+        pre {
+          @if $pre != null {
+            color: var(--#{$prefix}pre-color);
+          }
+          @if $pre-background != null {
+            background-color: var(--#{$prefix}pre-bg);
+          }
+        }
+      }
+    }
+  }
+}
+
 /*-- scss:rules --*/
 
 // *---- brand: brand rules to augment Bootstrap rules ----* //

@@ -87,7 +87,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-theme = ["libsass>=0.23.0", "brand_yml>=0.2.0"]
+# TODO: Restore a version floor after posit-dev/brand-yml#120 is released.
+theme = [
+    "libsass>=0.23.0",
+    "brand_yml @ git+https://github.com/posit-dev/brand-yml.git@4f216cacc4b03e45a0e7beef6542d428f46df1f9",
+]
 otel = [
     # 1.24.0+ required: same sanitized-stack-trace floor as opentelemetry-api above
     "opentelemetry-sdk>=1.24.0",
@@ -151,7 +155,7 @@ dev = [
     "Flake8-pyproject>=1.2.3",
     "isort>=5.10.1",
     "libsass>=0.23.0",
-    "brand_yml>=0.2.0",
+    "brand_yml @ git+https://github.com/posit-dev/brand-yml.git@4f216cacc4b03e45a0e7beef6542d428f46df1f9",
     "pyrefly>=1.1.1",
     "pyright>=1.1.407",
     "pre-commit>=2.15.0",
@@ -281,4 +285,3 @@ matches = "tests/playwright/**"
 # The repository has separate top-level conftest modules for pytest and
 # Playwright. A single project search path cannot disambiguate both names.
 replace-imports-with-any = ["conftest"]
-

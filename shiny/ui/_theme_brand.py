@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, TypeGuard, Union
 
 if TYPE_CHECKING:
     from brand_yml import Brand
@@ -177,6 +177,17 @@ class BrandBootstrapConfig:
 
 
 class ThemeBrand(Theme):
+    _THEME_COLOR_NAMES = (
+        "primary",
+        "secondary",
+        "success",
+        "info",
+        "warning",
+        "danger",
+        "light",
+        "dark",
+    )
+
     def __init__(
         self,
         brand: "Brand",
@@ -224,6 +235,7 @@ class ThemeBrand(Theme):
 
         # Rules ----
         self.add_rules(*brand_color_palette_rules)
+        self.add_rules(ThemeBrand._prepare_css_vars(brand))
 
         # Bootstrap extras: functions, mixins, rules (defaults handled above)
         self._add_brand_bootstrap_other(brand_bootstrap)
@@ -255,12 +267,16 @@ class ThemeBrand(Theme):
             # ==> $primary: $brand_color_primary !default;
 
             brand_color_var = f"brand_color_{thm_name}"
-            defaults_dict[brand_color_var] = thm_color
+            if ThemeBrand._is_sass_scalar(thm_color):
+                defaults_dict[brand_color_var] = thm_color
 
         brand_color_palette = brand.color.to_dict(include="palette")
 
         # Map the brand color palette to Bootstrap's named colors, e.g. $red, $blue.
         for pal_name, pal_color in brand_color_palette.items():
+            if not ThemeBrand._is_sass_scalar(pal_color):
+                continue
+
             if pal_name in bootstrap_colors:
                 defaults_dict[pal_name] = pal_color
 
@@ -311,9 +327,150 @@ class ThemeBrand(Theme):
         for field, prop in brand_typography.items():
             for prop_key, prop_value in prop.items():
                 typo_sass_var = f"brand_typography_{field}_{prop_key}"
-                mapped[typo_sass_var] = prop_value
+                if ThemeBrand._is_sass_scalar(prop_value):
+                    mapped[typo_sass_var] = prop_value
 
         return mapped
+
+    @staticmethod
+    def _is_sass_scalar(value: Any) -> TypeGuard[YamlScalarType]:
+        return value is None or isinstance(value, (bool, float, int, str))
+
+    @staticmethod
+    def _color_value(value: Any, mode: str) -> str | None:
+        if isinstance(value, str):
+            return value
+
+        mode_value = getattr(value, mode, None)
+        return mode_value if isinstance(mode_value, str) else None
+
+    @staticmethod
+    def _prepare_css_vars(brand: "Brand") -> str:
+        """
+        Emit brand variables and complete Bootstrap color-mode layers.
+
+        Light colors apply to an ordinary document without a ``data-bs-theme``
+        attribute as well as to explicit light mode. Undefined branches are
+        omitted so Bootstrap's compiled value remains in effect.
+        """
+        brand_css = brand.css_variables(
+            {
+                "light": 'html:not([data-bs-theme]), [data-bs-theme="light"]',
+                "dark": '[data-bs-theme="dark"]',
+            }
+        )
+        mode_rules = [
+            ThemeBrand._prepare_color_mode(brand, mode) for mode in ("light", "dark")
+        ]
+        return "\n".join([brand_css, *mode_rules])
+
+    @staticmethod
+    def _typography_color_value(
+        brand: "Brand", field: str, property_name: str, mode: str
+    ) -> tuple[bool, str | None]:
+        if brand.typography is None:
+            return False, None
+
+        typography_node = getattr(brand.typography, field, None)
+        if typography_node is None:
+            return False, None
+
+        value = getattr(typography_node, property_name, None)
+        return value is not None, ThemeBrand._color_value(value, mode)
+
+    @staticmethod
+    def _prepare_color_mode(brand: "Brand", mode: str) -> str:
+        color = brand.color
+        theme_colors = {
+            name: ThemeBrand._color_value(getattr(color, name, None), mode)
+            for name in ThemeBrand._THEME_COLOR_NAMES
+            if color is not None
+        }
+        theme_colors = {
+            name: value for name, value in theme_colors.items() if value is not None
+        }
+
+        def brand_color(name: str) -> str | None:
+            if color is None:
+                return None
+            return ThemeBrand._color_value(getattr(color, name, None), mode)
+
+        headings_configured, headings = ThemeBrand._typography_color_value(
+            brand, "headings", "color", mode
+        )
+        link_configured, link = ThemeBrand._typography_color_value(
+            brand, "link", "color", mode
+        )
+        link_background_configured, link_background = (
+            ThemeBrand._typography_color_value(brand, "link", "background_color", mode)
+        )
+        code_configured, code = ThemeBrand._typography_color_value(
+            brand, "monospace_inline", "color", mode
+        )
+        code_background_configured, code_background = (
+            ThemeBrand._typography_color_value(
+                brand, "monospace_inline", "background_color", mode
+            )
+        )
+        pre_configured, pre = ThemeBrand._typography_color_value(
+            brand, "monospace_block", "color", mode
+        )
+        pre_background_configured, pre_background = ThemeBrand._typography_color_value(
+            brand, "monospace_block", "background_color", mode
+        )
+
+        color_link = getattr(color, "link", None) if color is not None else None
+        if not link_configured:
+            if color_link is not None:
+                link = ThemeBrand._color_value(color_link, mode)
+            else:
+                link = theme_colors.get("primary")
+
+        values = {
+            "foreground": brand_color("foreground"),
+            "background": brand_color("background"),
+            "secondary": brand_color("secondary"),
+            "tertiary": brand_color("tertiary"),
+            "headings": headings if headings_configured else None,
+            "link": link,
+            "link-background": (
+                link_background if link_background_configured else None
+            ),
+            "code": code if code_configured else None,
+            "code-background": (
+                code_background if code_background_configured else None
+            ),
+            "pre": pre if pre_configured else None,
+            "pre-background": pre_background if pre_background_configured else None,
+        }
+
+        if not theme_colors and not any(value is not None for value in values.values()):
+            return ""
+
+        selectors = (
+            '("html:not([data-bs-theme])", \'[data-bs-theme="light"]\')'
+            if mode == "light"
+            else "('[data-bs-theme=\"dark\"]',)"
+        )
+        theme_color_map = ["("]
+        theme_color_map.extend(
+            f'    "{name}": {value},' for name, value in theme_colors.items()
+        )
+        theme_color_map.append("  ),")
+
+        arguments = [
+            "@include brand-color-mode(",
+            f"  {selectors},",
+            f"  {mode},",
+            *theme_color_map,
+        ]
+        arguments.extend(
+            f"  ${name}: {value},"
+            for name, value in values.items()
+            if value is not None
+        )
+        arguments.append(");")
+        return "\n".join(arguments)
 
     def _add_defaults_hdr(self, header: str, **kwargs: YamlScalarType):
         self.add_defaults(**kwargs)

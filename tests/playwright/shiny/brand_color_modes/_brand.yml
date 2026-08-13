@@ -1,0 +1,38 @@
+color:
+  foreground:
+    light: "#111111"
+    dark: "#eeeeee"
+  background:
+    light: "#ffffff"
+    dark: "#222222"
+  primary:
+    light: "#cc0000"
+    dark: "#00aa44"
+  success: "#8844cc"
+  warning:
+    dark: "#ff8800"
+  link:
+    light: "#0055aa"
+    dark: "#99ccff"
+typography:
+  headings:
+    color: foreground
+  link:
+    background-color:
+      light: "#eef6ff"
+      dark: "#203040"
+  monospace-inline:
+    color: foreground
+    background-color:
+      light: "#f1f5fa"
+      dark: "#263746"
+  monospace-block:
+    color: foreground
+    background-color:
+      light: "#f8f9fa"
+      dark: "#1f2933"
+defaults:
+  bootstrap:
+    preset: bootstrap
+    defaults:
+      prefix: acme-
