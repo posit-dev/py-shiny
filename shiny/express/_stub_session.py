@@ -54,6 +54,9 @@ class ExpressStubSession(Session):
     async def close(self, code: int = 1001) -> None:
         return
 
+    def _is_closed(self) -> bool:
+        return False
+
     # This is needed so that Outputs don't throw an error.
     def _is_hidden(self, name: str) -> bool:
         return False

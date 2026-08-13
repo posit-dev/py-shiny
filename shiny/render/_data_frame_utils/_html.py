@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 from htmltools import TagNode
 
 from ..._typing_extensions import TypeIs
-from ...types import Jsonifiable
-from ._types import CellHtml, Series
+from ._types import CellHtml, CellValue, JsonifiableScalar, Series
 
 if TYPE_CHECKING:
     from ...session import Session
@@ -17,22 +16,23 @@ def as_cell_html(processed_ui: RenderedDeps) -> CellHtml:
     return {"isShinyHtml": True, "obj": processed_ui}
 
 
+JsonifiableScalarT = TypeVar("JsonifiableScalarT", bound=JsonifiableScalar)
+
+
 @overload
 def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
-    x: str, *, session: Session
-) -> Jsonifiable: ...
+    x: JsonifiableScalarT, *, session: Session
+) -> JsonifiableScalarT: ...
 @overload
 def maybe_as_cell_html(  # pyright: ignore[reportOverlappingOverload]
     x: TagNode, *, session: Session
 ) -> CellHtml: ...
-@overload
-def maybe_as_cell_html(x: Jsonifiable, *, session: Session) -> Jsonifiable: ...
 def maybe_as_cell_html(
-    x: Jsonifiable | TagNode, *, session: Session
-) -> Jsonifiable | CellHtml:
+    x: CellValue, *, session: Session
+) -> JsonifiableScalar | CellHtml:
     if ui_must_be_processed(x):
         return as_cell_html(session._process_ui(x))
-    return cast(Jsonifiable, x)
+    return x
 
 
 def series_contains_htmltoolslike(ser: Series) -> bool:
