@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* `playwright.controller.InputSelectize` no longer clicks the page body to close the selectize dropdown. `expect_choices()` has to open the dropdown to make selectize render its choices, and the click used to close it again landed on app content, firing the app's own click handlers. The controller now presses `"Escape"` on the selectize input instead. (#2426)
+* `playwright.controller.InputSelectize` no longer clicks the page body to close the selectize dropdown. `expect_choices()` has to open the dropdown to make selectize render its choices, and the click used to close it again landed on app content, firing the app's own click handlers. The controller now closes the dropdown through selectize's own API instead. (#2426)
 
 * Closing a session no longer destroys the reactive values and calcs created in it, so async work that outlives the connection does not error. Since v1.6.1, refreshing the page while an `@reactive.extended_task` (or any `asyncio` task) was in flight could raise `DestroyedReactiveError: Reactive value '<name>' has been destroyed.` once it settled, leaving the task in neither `"success"` nor `"error"`. Values and calcs are now left readable at their last value on close and reclaimed by garbage collection, while an explicit `session.destroy(id)` on a live session still tears them down. Effects are still destroyed on close. (#2428)
 

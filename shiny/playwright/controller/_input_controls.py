@@ -1227,6 +1227,16 @@ class InputSelectize(
 ):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
+    _CLOSE_DROPDOWN_JS = """async (el) => {
+        el.selectize.close();
+        el.selectize.blur();
+        // The click that opened the dropdown can leave selectize with queued work
+        // that re-opens it. That work runs on the next tick, so close once more
+        // after the tick. A second close on a closed dropdown does nothing.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        el.selectize.close();
+    }"""
+
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"#{id} + .selectize-control")
         self._loc_dropdown = self.loc.locator("> .selectize-dropdown")
@@ -1245,12 +1255,15 @@ class InputSelectize(
 
     def _close_dropdown(self, *, timeout: Timeout = None) -> None:
         """
-        Close the dropdown by pressing `"Escape"` on the selectize input.
+        Close the dropdown through selectize's own API.
 
         Clicking elsewhere on the page also closes the dropdown, but the click lands
-        on app content and fires the app's own click handlers.
+        on app content and fires the app's own click handlers. Pressing `"Escape"`
+        avoids that, but only closes the dropdown when the control holds focus and
+        the keydown reaches selectize's handler, which is not true in every
+        environment. Calling `close()` does not depend on either.
         """
-        self._loc_events.press("Escape", timeout=timeout)
+        self.loc.evaluate(self._CLOSE_DROPDOWN_JS, timeout=timeout)
 
     def set(
         self,
@@ -1265,7 +1278,7 @@ class InputSelectize(
         1. Click on the selectize input to open the dropdown.
         2. Starting from the first selected item, each position in the currently selected list should match `selected`. If the item is not a match, remove it and try again.
         3. Add any remaining items in `selected` that are not currently selected by clicking on them in the dropdown.
-        4. Press the `"Escape"` key to close the dropdown.
+        4. Close the dropdown.
 
         Parameters
         ----------
