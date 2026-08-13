@@ -1,0 +1,8 @@
+// Workaround for shiny #4388 (bslib #1326): a dynamically-rendered output in a
+// title-less popover/tooltip collapses to 0 width, so its ResizeObserver never
+// fires and it stays stuck "recalculating". A tiny min-width guarantees a
+// non-zero box so the observer fires. Remove once shiny's IntersectionObserver
+// handles display:contents wrappers.
+:is(.popover, .tooltip) .shiny-html-output {
+  min-width: 1px;
+}
