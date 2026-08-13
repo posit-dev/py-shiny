@@ -84,6 +84,7 @@ ui.value_box(
   text or an icon.
 - Keep showcase icons semantically related. A tiny sparkline may replace an icon when
   the recent trajectory matters, but it must not duplicate a larger chart below.
+- Unless there is previous motivation, try to keep the font color (light or dark) of the value boxes the same throughout the app
 
 ## Use icons accessibly
 
