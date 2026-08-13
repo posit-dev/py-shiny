@@ -445,6 +445,37 @@ async def test_a_flush_request_does_not_swallow_the_next_client_message():
 
 
 @pytest.mark.asyncio
+async def test_interleaved_messages_and_flush_requests_lose_nothing():
+    """
+    Every client message survives a stream of flush requests racing it.
+
+    The single-request guard above covers the parked case; this covers the
+    contended one, where messages and flush requests keep arriving together and
+    the loop is choosing between them on every iteration.
+    """
+    seen: list[int] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _():
+            seen.append(input.n())
+
+        @render.text
+        def count_text():
+            return "hi"
+
+    async with _running_session(server) as h:
+        for i in range(1, 21):
+            h.conn.cause_receive(json.dumps({"method": "update", "data": {"n": i}}))
+            h.session._request_flush()
+
+        await _wait_for(lambda: len(seen) >= 20, "all 20 updates to be processed")
+
+        # Exactly once each, in order -- not dropped, not double-processed.
+        assert seen == list(range(1, 21))
+
+
+@pytest.mark.asyncio
 async def test_repeated_downloads_each_flush():
     """A second download is flushed too, i.e. the loop keeps waking up."""
     seen: list[int] = []
