@@ -1617,10 +1617,15 @@ class AppSession(Session):
 
         The flush is scheduled rather than awaited, for three reasons:
 
-        * A streaming download's handler runs inside an async generator, which
-          is not allowed to suspend while it is being closed. Awaiting a flush
-          there would break the (very ordinary) case of a client that cancels a
-          download mid-stream.
+        * A streaming download's handler runs inside an async generator, and an
+          async generator has no contextvars context of its own -- it runs in
+          whichever task resumes it. When a cancelled download is torn down from
+          a different task than the one that streamed it, unwinding the
+          handler's `session_context` raises `ValueError: <Token ...> was
+          created in a different Context`. Only a call that neither awaits nor
+          sits inside that context still runs in that case. (Awaiting in the
+          `finally` is legal Python and works when the same task closes the
+          generator; it is the cross-task teardown that breaks it.)
         * The flush is global -- it invokes every live session's flush callbacks
           -- so an error raised by an unrelated session would otherwise
           propagate out of *this* session's HTTP request, turning a download
