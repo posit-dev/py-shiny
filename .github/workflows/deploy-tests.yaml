@@ -111,6 +111,11 @@ jobs:
           command: |
             make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv --numprocesses 12"
 
+      - name: Show Playwright server logs on failure
+        if: failure()
+        run: |
+          docker logs playwright || true
+
       # - uses: actions/upload-artifact@v4
       #   if: failure()
       #   with:

@@ -125,7 +125,10 @@ def page(browser: BrowserContext, _session_page_holder: list[Page]) -> Page:
         ):
             logging.warning("Shared page is unusable; replacing it with a new page")
             if not session_page.is_closed():
-                session_page.close()
+                try:
+                    session_page.close()
+                except Exception:
+                    pass
             session_page = None
         else:
             try:
@@ -134,7 +137,10 @@ def page(browser: BrowserContext, _session_page_holder: list[Page]) -> Page:
                 logging.warning(
                     "Shared page failed to reset to about:blank; replacing it with a new page"
                 )
-                session_page.close()
+                try:
+                    session_page.close()
+                except Exception:
+                    pass
                 session_page = None
     if session_page is None:
         _session_page_holder.clear()
