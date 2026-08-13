@@ -140,7 +140,6 @@ def page(browser: BrowserContext, _session_page_holder: list[Page]) -> Page:
         _session_page_holder.clear()
         session_page = _new_session_page(browser)
         _session_page_holder.append(session_page)
-        session_page.goto("about:blank")
     # Reset screen size to 1080p
     session_page.set_viewport_size({"width": 1920, "height": 1080})
     return session_page

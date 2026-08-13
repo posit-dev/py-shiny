@@ -48,6 +48,14 @@ class ExpressStubSession(Session):
 
         self.bookmark = BookmarkExpressStub(self)
 
+    @property
+    def user(self) -> str | None:
+        return None
+
+    @property
+    def groups(self) -> list[str] | None:
+        return None
+
     def is_stub_session(self) -> Literal[True]:
         return True
 

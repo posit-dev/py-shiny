@@ -15,11 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+* The README and the `shiny skills` CLI help now explain that [`library-skills`](https://library-skills.io) must be run from your own project directory, since it installs the bundled Agent Skills of the packages that project has installed. The previous wording left that precondition implicit, so running the command from an empty directory or from a clone of py-shiny silently installed nothing. (#2447)
+
 * Navsets created with an `id` (e.g. `ui.navset_tab(id="tabs")`) now use that `id` as their `data-tabsetid`, so their tab panes get stable `tab-tabs-0` style DOM ids instead of ones built from a random integer. This makes the rendered markup reproducible across renders and easier to target from custom CSS and JavaScript. Navsets without an `id`, and `ui.nav_menu()` dropdowns, keep the random ID. (Thanks, @pevolution-ahmed!) (#2410)
 
 ### Bug fixes
 
-* `playwright.controller.InputSelectize` no longer clicks the page body to close the selectize dropdown. `expect_choices()` has to open the dropdown to make selectize render its choices, and the click used to close it again landed on app content, firing the app's own click handlers. The controller now closes the dropdown through selectize's own API instead. (#2426)
+* A dynamically-rendered output (e.g. `@render.ui`) inside a `ui.popover()` or `ui.tooltip()` without a `title=` no longer gets stuck showing "recalculating". The container collapsed to 0 width, so the output's `ResizeObserver` never fired; vendored bslib CSS now gives it a non-zero minimum width. (#2446)
+
+* `playwright.controller.InputSelectize` no longer clicks the page body to close the selectize dropdown. `expect_choices()`, `expect_choice_labels()`, and `expect_choice_groups()` open the dropdown, because selectize renders its choices into the DOM only after the first open. The click that closed the dropdown again landed on app content and fired the app's own click handlers, so a test could record an interaction that it never made. The controller now calls `close()` on the selectize instance instead, which touches no app content. (#2426)
 
 * Closing a session no longer destroys the reactive values and calcs created in it, so async work that outlives the connection does not error. Since v1.6.1, refreshing the page while an `@reactive.extended_task` (or any `asyncio` task) was in flight could raise `DestroyedReactiveError: Reactive value '<name>' has been destroyed.` once it settled, leaving the task in neither `"success"` nor `"error"`. Values and calcs are now left readable at their last value on close and reclaimed by garbage collection, while an explicit `session.destroy(id)` on a live session still tears them down. Effects are still destroyed on close. (#2428)
 
@@ -119,6 +123,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed a path-traversal vulnerability in bookmark restore (CWE-22). Introduced in 1.4.0. Reported by @0xRenSec.
 
 * When bookmarked state cannot be restored, the notification shown in the client is now a generic message. The reason is logged server-side as a warning on the `shiny.bookmark._restore_state` logger, so app authors can still see it. (ab10e069)
+
+### Bug fixes
+
+* Fixed `session.user` and `session.groups` raising `AttributeError` in module sessions (`SessionProxy`) and Express apps (`ExpressStubSession`). Both now correctly return the authenticated user's identity from the root session. As part of this fix, `user` and `groups` are now read-only properties on the `Session` ABC — app code can no longer accidentally overwrite credentials that are derived from immutable HTTP headers. (#2276)
 
 ## [1.6.3] - 2026-06-01
 

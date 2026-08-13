@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Protocol, Sequence, cast
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
@@ -918,7 +919,17 @@ class OutputDataFrame(UiWithContainer):
             else:
                 # Last row index is higher than `row`
                 break
-        cell.scroll_into_view_if_needed(timeout=timeout)
+        try:
+            cell.scroll_into_view_if_needed(timeout=timeout)
+        except PlaywrightError as err:
+            if "Element is not attached to the DOM" not in str(err):
+                raise
+            # A reactive data update can replace the row after the locator is
+            # resolved but before Playwright finishes waiting for it to settle.
+            # Resolve the cell again so the action targets the current DOM node.
+            self.cell_locator(row=row, col=col).scroll_into_view_if_needed(
+                timeout=timeout
+            )
 
     def _multi_select_modifier(self) -> Literal["Control", "Meta"]:
         platform = self.page.evaluate(

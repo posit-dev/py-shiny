@@ -1,4 +1,8 @@
 ensure_base_packages <- function() {
+  if (identical(getOption("repos")[["CRAN"]], "@CRAN@")) {
+    options(repos = c(CRAN = "https://cloud.r-project.org"))
+  }
+
   for (pkg in c("cli", "pak")) {
     if (!requireNamespace(pkg, quietly = TRUE)) {
       message("Installing base package: ", pkg)
