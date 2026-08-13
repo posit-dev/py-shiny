@@ -1304,7 +1304,9 @@ class InputSelectize(
                 # Be sure to close the dropdown
                 # (While this is not necessary on a sucessful `set()`, it is cleaner
                 # than a catch all except)
-                self._loc_events.press("Escape", timeout=timeout)
+                self.loc.evaluate(
+                    "el => { if (el.selectize) { el.selectize.close(); el.selectize.blur(); } }"
+                )
 
         else:
             # Multiple element selectize
@@ -1360,7 +1362,7 @@ class InputSelectize(
                     selected_data_value = selected[i]
 
                     # If the item is not the next `selected` value, remove it
-                    # Transition: A,B,[Z],C,D,E -> A,B,[C],D,E
+                    # Transition: A,B,[Z],C,D,E -> A,B,C,[D],E
                     if item_data_value != selected_data_value:
                         delete_item(item_loc)
                         continue
@@ -1380,7 +1382,9 @@ class InputSelectize(
 
             finally:
                 # Be sure to close the dropdown
-                self._loc_events.press("Escape", timeout=timeout)
+                self.loc.evaluate(
+                    "el => { if (el.selectize) { el.selectize.close(); el.selectize.blur(); } }"
+                )
         return
 
     def expect_choices(
@@ -1453,7 +1457,10 @@ class InputSelectize(
         _expect_style_to_have_value(
             self._loc_dropdown, "display", "block", timeout=timeout
         )
-        self._loc_events.press("Escape", timeout=timeout)
+        self.page.wait_for_timeout(50)
+        self.loc.evaluate(
+            "el => { if (el.selectize) { el.selectize.close(); el.selectize.blur(); } }"
+        )
         _expect_style_to_have_value(
             self._loc_dropdown, "display", "none", timeout=timeout
         )
