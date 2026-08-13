@@ -30,8 +30,16 @@ class MockConnection(Connection):
     def __init__(self):
         # This currently hard-codes some basic values for scope. In the future, we could
         # make those more configurable if we need to customize the HTTPConnection (like
-        # "scheme", "path", and "query_string").
-        self._http_conn = HTTPConnection(scope={"type": "websocket", "headers": {}})
+        # "scheme", "path", and "query_string"). "path" and "query_string" are required
+        # for `HTTPConnection.url` to be constructible.
+        self._http_conn = HTTPConnection(
+            scope={
+                "type": "websocket",
+                "headers": {},
+                "path": "/",
+                "query_string": b"",
+            }
+        )
         self._queue: asyncio.Queue[str] = asyncio.Queue()
 
     async def send(self, message: str) -> None:

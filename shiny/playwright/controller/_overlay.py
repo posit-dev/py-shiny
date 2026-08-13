@@ -61,14 +61,19 @@ class _OverlayBase(UiBase):
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
 
-    def _get_overlay_id(self, *, timeout: Timeout = None) -> str | None:
+    def _get_overlay_id(self, *, timeout: Timeout = None) -> str:
         """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
         loc_el = self.loc.locator(
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
         loc_el.wait_for(state="visible", timeout=timeout)
         loc_el.scroll_into_view_if_needed(timeout=timeout)
-        return loc_el.get_attribute("aria-describedby")
+        playwright_expect(loc_el).to_have_attribute(
+            "aria-describedby", re.compile(r".+"), timeout=timeout
+        )
+        overlay_id = loc_el.get_attribute("aria-describedby")
+        assert overlay_id is not None
+        return overlay_id
 
     # @property
     # def loc_overlay_body(self) -> Locator:
@@ -98,6 +103,12 @@ class _OverlayBase(UiBase):
         """
         return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
 
+    def _is_active(self, *, timeout: Timeout = None) -> bool:
+        return (
+            self.loc_trigger.get_attribute("aria-describedby", timeout=timeout)
+            is not None
+        )
+
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
         Expects the overlay body to have the specified text.
@@ -125,11 +136,21 @@ class _OverlayBase(UiBase):
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         attr_value = re.compile(r".*") if value else None
-        return _expect_attribute_to_have_value(
+        _expect_attribute_to_have_value(
             loc=self.loc_trigger,
             timeout=timeout,
             name="aria-describedby",
             value=attr_value,
+        )
+        self.page.wait_for_function(
+            """
+            ([id, expected]) => {
+                const overlay = document.getElementById(id);
+                return overlay !== null && overlay.visible === expected;
+            }
+            """,
+            arg=[self.id, value],
+            timeout=timeout,
         )
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
@@ -197,8 +218,9 @@ class Popover(_OverlayBase):
         timeout
             The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
-        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
+        if open != self._is_active(timeout=timeout):
             self._toggle(timeout=timeout)
+        self.expect_active(open, timeout=timeout)
 
     def _toggle(self, timeout: Timeout = None) -> None:
         """
@@ -283,10 +305,12 @@ class Tooltip(_OverlayBase):
         timeout
             The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
         """
-        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
+        is_active = self._is_active(timeout=timeout)
+        if open and not is_active:
             self._toggle(timeout=timeout)
-        if not open:
+        elif not open and is_active:
             self.get_loc_overlay_body(timeout=timeout).click()
+        self.expect_active(open, timeout=timeout)
 
     def _toggle(self, timeout: Timeout = None) -> None:
         """

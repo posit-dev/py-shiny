@@ -55,17 +55,18 @@ def _find_skill(name: str) -> Path:
 
     Agent Skills are reference docs that teach coding agents how to use shiny's
     public APIs (debugging, testing, etc.). They ship inside the package under
-    `shiny/.agents/skills/`.
+    `shiny/.agents/skills/`, so installing shiny installs them too.
 
-    To make these skills available to your coding agent, install them with
-    `library-skills` (https://library-skills.io), which symlinks the packaged
-    skill into your project so it stays in sync when you upgrade shiny:
+    To make them available to your coding agent, run `library-skills`
+    (https://library-skills.io) from your project directory. It reads your
+    project's dependencies and symlinks the skills bundled with the packages you
+    have installed, so they keep tracking your version of shiny as you upgrade:
 
     \b
         uvx library-skills --claude   # Claude Code (installs into .claude/skills)
-        uvx library-skills            # standard .agents/skills location
+        uvx library-skills            # any other agent (.agents/skills)
 
-    (add `--copy` on Windows).
+    (add `--copy` on Windows if symlinks are unavailable).
     """,
 )
 def skills() -> None:
@@ -82,9 +83,10 @@ def skills_list() -> None:
     for skill_dir in skill_dirs:
         print(f"{skill_dir.name:<{width}}  {_skill_description(skill_dir)}")
     print(
-        "\nInstall these into your coding agent with `library-skills`:\n"
+        "\nThese ship with the shiny package. To install them into your coding\n"
+        "agent, run `library-skills` from your project directory:\n"
         "    uvx library-skills --claude   # Claude Code (.claude/skills)\n"
-        "    uvx library-skills            # standard .agents/skills location\n"
+        "    uvx library-skills            # any other agent (.agents/skills)\n"
         "See https://library-skills.io for details."
     )
 
