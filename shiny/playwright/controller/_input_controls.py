@@ -1227,14 +1227,9 @@ class InputSelectize(
 ):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
-    _CLOSE_DROPDOWN_JS = """async (el) => {
+    _CLOSE_DROPDOWN_JS = """(el) => {
         el.selectize.close();
         el.selectize.blur();
-        // The click that opened the dropdown can leave selectize with queued work
-        // that re-opens it. That work runs on the next tick, so close once more
-        // after the tick. A second close on a closed dropdown does nothing.
-        await new Promise((resolve) => setTimeout(resolve, 0));
-        el.selectize.close();
     }"""
 
     def __init__(self, page: Page, id: str) -> None:
@@ -1479,6 +1474,11 @@ class InputSelectize(
         _expect_style_to_have_value(
             self._loc_dropdown, "display", "block", timeout=timeout
         )
+        # Selectize answers the opening click across several tasks: it queues a
+        # focus, and that focus opens the dropdown again. The dropdown reports
+        # `display: block` before that work finishes, and a close that runs first
+        # gets undone by it. Let the work settle before the close.
+        self.page.wait_for_timeout(50)
         self._close_dropdown(timeout=timeout)
         _expect_style_to_have_value(
             self._loc_dropdown, "display", "none", timeout=timeout
