@@ -60,8 +60,10 @@ from shinywidgets import output_widget, render_plotly
 
 map_card = ui.card(
     ui.card_header("Customer locations"),
-    output_widget("customer_map", height="520px"),
+    output_widget("customer_map"),
     full_screen=True,
+    min_height="400px",
+    max_height="1000px",
 )
 
 @render_plotly
@@ -143,8 +145,9 @@ state; do not reach through undocumented renderer attributes to mutate a widget.
 
 ## Presentation and accessibility
 
-- Put the map in a titled, full-screen card with an explicit height of roughly
-  420-560 px.
+- Put the map in a titled, full-screen card with an explicit `min_height` (e.g.,
+  `min_height="400px"`, and optional `max_height="1000px"`) so the map can grow when
+  space allows or when expanded full-screen.
 - Use a subdued light basemap unless the data requires another style.
 - Provide a table or textual summary for users who cannot interpret or operate the
   map.
