@@ -243,6 +243,7 @@ jobs:
       - name: Show Playwright server logs on failure
         if: failure()
         run: |
+          docker inspect --format '{{json .State}}' playwright || true
           docker logs playwright || true
 
   playwright-examples:
@@ -314,6 +315,7 @@ jobs:
       - name: Show Playwright server logs on failure
         if: failure()
         run: |
+          docker inspect --format '{{json .State}}' playwright || true
           docker logs playwright || true
 
   playwright-ai:
@@ -366,6 +368,7 @@ jobs:
       - name: Show Playwright server logs on failure
         if: failure()
         run: |
+          docker inspect --format '{{json .State}}' playwright || true
           docker logs playwright || true
 
   playwright-deploys-precheck:
@@ -409,6 +412,7 @@ jobs:
       - name: Show Playwright server logs on failure
         if: failure()
         run: |
+          docker inspect --format '{{json .State}}' playwright || true
           docker logs playwright || true
 
   test-narwhals-integration:

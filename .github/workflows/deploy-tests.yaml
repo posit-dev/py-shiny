@@ -114,6 +114,7 @@ jobs:
       - name: Show Playwright server logs on failure
         if: failure()
         run: |
+          docker inspect --format '{{json .State}}' playwright || true
           docker logs playwright || true
 
       # - uses: actions/upload-artifact@v4
