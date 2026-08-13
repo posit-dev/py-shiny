@@ -89,11 +89,12 @@ bytes instead so Shiny does not leave the temp file behind. The handler may be
 sync or async.
 
 The handler runs isolated, so reading a reactive value or input does not create a
-dependency. Writing works: a `reactive.Value` the handler sets takes effect
-shortly after the handler finishes, so downstream effects and outputs update
-(e.g. a "downloads so far" counter). The update is not synchronous with the
-request — it lands on a later event loop tick — so do not assume it has already
-happened at the moment the client receives the file.
+dependency: the handler runs when the user clicks the control, not when the
+values it reads change. Writing works, though — a `reactive.Value` the handler
+sets takes effect once the handler finishes, so downstream effects and outputs
+update (e.g. a "downloads so far" counter). That update arrives a moment after
+the download, so in a test wait for it with an `.expect_*()` method rather than
+asserting immediately after the click.
 
 In Express mode, `@render.download_button` renders its own button (and
 `@render.download_link` its own link) — pass `label=` and skip the separate
