@@ -144,14 +144,10 @@ class ReactiveEnvironment:
         will be invoked from later; when that happens, acquire() will succeed if there's
         no contention, but throw a "hey you're on the wrong loop" error if there is.
 
-        For the same reason the lock is recreated whenever the running loop changes.
-        An `asyncio.Lock` binds itself to a loop the first time it is *contended*, and
-        this environment is a process-wide singleton that outlives any one loop -- so a
-        lock carried over from a previous loop would raise "bound to a different event
-        loop" on the next contended acquire. A process only ever has one loop in
-        production, so this is really about test suites, where every test gets a fresh
-        one; without it, the first test to contend the lock breaks every later test
-        that does.
+        For the same reason the lock is recreated whenever the running loop changes:
+        this environment is a process-wide singleton, so it outlives any one loop. That
+        only matters for test suites, where each test gets a fresh loop -- without it,
+        the first test to contend the lock breaks every later test that does.
         """
         loop = asyncio.get_running_loop()
         if self._lock is None or self._lock_loop is not loop:
