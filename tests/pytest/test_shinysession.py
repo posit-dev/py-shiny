@@ -8,7 +8,6 @@ import pytest
 from shiny import App, Inputs, Outputs, Session, module, ui
 from shiny._connection import MockConnection
 from shiny.reactive import effect, flush, isolate
-from shiny.session import Inputs
 from shiny.types import SilentException
 
 
