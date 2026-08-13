@@ -33,6 +33,6 @@ def test_shiny_client_console_error(page: Page, app_url: str) -> None:
             page.get_by_role("button", name="Copy error to clipboard")
         ).to_have_count(1)
 
-    # for deployed apps to shinyapps.io or connect hide the client error message
+    # Hide the client error message for apps deployed to Connect.
     else:
         expect(shiny_error_message).to_have_count(0)

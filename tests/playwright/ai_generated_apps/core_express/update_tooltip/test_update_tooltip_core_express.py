@@ -50,3 +50,43 @@ def test_tooltip_demo(page: Page, app: ShinyAppProc) -> None:
     update_btn.click()
     tooltip.expect_active(True)
     tooltip.expect_body("Tooltip updated 2 times!")
+
+
+def test_tooltip_waits_for_delayed_overlay_id(page: Page) -> None:
+    # Bootstrap can create the overlay before it publishes the overlay id on the
+    # trigger. Verify that the controller waits for that id instead of freezing
+    # ``None`` into its selector.
+    page.set_content("""
+        <bslib-tooltip id="tooltip_id">
+            <button data-bs-toggle="tooltip">Trigger</button>
+        </bslib-tooltip>
+        <div id="delayed-tooltip" class="tooltip">
+            <div class="tooltip-inner">Delayed tooltip</div>
+        </div>
+        <script>
+            window.setTimeout(() => {
+                document.querySelector("[data-bs-toggle='tooltip']")
+                    .setAttribute("aria-describedby", "delayed-tooltip");
+            }, 100);
+        </script>
+    """)
+
+    controller.Tooltip(page, "tooltip_id").expect_body("Delayed tooltip")
+
+
+def test_tooltip_waits_for_hidden_component_state(page: Page) -> None:
+    page.set_content("""
+        <bslib-tooltip id="tooltip_id">
+            <button data-bs-toggle="tooltip">Trigger</button>
+        </bslib-tooltip>
+        <script>
+            const tooltip = document.getElementById("tooltip_id");
+            tooltip.visible = true;
+            window.setTimeout(() => tooltip.visible = false, 100);
+        </script>
+    """)
+
+    tooltip = controller.Tooltip(page, "tooltip_id")
+    tooltip.expect_active(False)
+
+    assert tooltip.loc.evaluate("element => element.visible") is False
