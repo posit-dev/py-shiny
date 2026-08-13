@@ -85,9 +85,9 @@ def card(
     class_
         Additional CSS classes for the returned Tag.
     id
-        Provide a unique identifier for the :func:`~shiny.ui.card` or to report its
-        full screen state to Shiny. For example, using `id="my_card"`, you can observe
-        the card's full screen state with `input.my_card_full_screen()`.
+        A unique identifier for the card. If provided, the card's full screen
+        state is reported to Shiny at `input.<id>_full_screen()` (e.g.,
+        `input.my_card_full_screen()` for `id="my_card"`).
     **kwargs
         HTML attributes on the returned Tag.
 
@@ -148,19 +148,24 @@ def _card_impl(
     if full_screen and id is None:
         id = private_random_id("bslib_card")
 
+    card_attrs: TagAttrs = {
+        "id": id,
+        "class": "card bslib-card bslib-mb-spacing",
+        "style": css(
+            height=as_css_unit(height),
+            max_height=as_css_unit(max_height),
+            min_height=as_css_unit(min_height),
+        ),
+        "data-bslib-card-init": True,
+        "data-full-screen": "false" if full_screen else None,
+    }
+    input_attrs: TagAttrs | None = (
+        {"class": "bslib-card-input"} if is_shiny_input else None
+    )
+
     tag = div(
-        {
-            "id": id,
-            "class": "card bslib-card bslib-mb-spacing",
-            "style": css(
-                height=as_css_unit(height),
-                max_height=as_css_unit(max_height),
-                min_height=as_css_unit(min_height),
-            ),
-            "data-bslib-card-init": True,
-            "data-full-screen": "false" if full_screen else None,
-        },
-        {"class": "bslib-card-input"} if is_shiny_input else None,
+        card_attrs,
+        input_attrs,
         *children,
         attrs,
         _full_screen_toggle(id) if full_screen else None,
@@ -175,21 +180,23 @@ def _card_impl(
 
 
 def _card_js_init() -> Tag:
+    init_attrs: TagAttrs = {"data-bslib-card-init": True}
     return tags.script(
-        {"data-bslib-card-init": True},
+        init_attrs,
         "window.bslib.Card.initializeAllCards();",
     )
 
 
 def _full_screen_toggle(id_controls: TagAttrValue) -> Tag:
+    toggle_attrs: TagAttrs = {
+        "class": "bslib-full-screen-enter badge rounded-pill",
+        "aria-expanded": "false",
+        "aria-controls": id_controls,
+        "aria-label": "Expand card",
+    }
     return tooltip(
         tags.button(
-            {
-                "class": "bslib-full-screen-enter badge rounded-pill",
-                "aria-expanded": "false",
-                "aria-controls": id_controls,
-                "aria-label": "Expand card",
-            },
+            toggle_attrs,
             _full_screen_toggle_icon(),
         ),
         "Expand",
@@ -368,12 +375,15 @@ def card_body(
         "gap": as_css_unit(gap),
         "height": as_css_unit(height),
     }
+    body_attrs: TagAttrs = {
+        "class": "card-body",
+        "style": css(**div_style_args),
+    }
+    gap_attrs: TagAttrs | None = {"class": "bslib-gap-spacing"} if fillable else None
+
     tag = tags.div(
-        {
-            "class": "card-body",
-            "style": css(**div_style_args),
-        },
-        {"class": "bslib-gap-spacing"} if fillable else None,
+        body_attrs,
+        gap_attrs,
         *args,
         class_=class_,
         **kwargs,
@@ -478,8 +488,9 @@ def card_header(
     * :func:`~shiny.ui.card` for creating a card component.
     * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
+    header_attrs: TagAttrs = {"class": "card-header"}
     return CardItem(
-        container({"class": "card-header"}, *args, **kwargs),
+        container(header_attrs, *args, **kwargs),
     )
 
 
@@ -514,6 +525,7 @@ def card_footer(
     * :func:`~shiny.ui.card` for creating a card component.
     * :func:`~shiny.ui.card_footer` for creating a footer within the card.
     """
+    footer_attrs: TagAttrs = {"class": "card-footer"}
     return CardItem(
-        tags.div({"class": "card-footer"}, *args, **kwargs),
+        tags.div(footer_attrs, *args, **kwargs),
     )

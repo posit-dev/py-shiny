@@ -150,9 +150,14 @@ def apply_frame_patches(
     # This allows for a single column to be updated in a single operation (rather than multiple updates to the same column)
     #
     # In; patches: List[Dict[row_index: int, column_index: int, value: Any]]
-    # Out; cell_patches_by_column: Dict[column_name: str, List[Dict[row_index: int, value: Any]]]
+    # Out; cell_patches_by_column: Dict[column_name: Any, List[Dict[row_index: int, value: Any]]]
     #
-    cell_patches_by_column: dict[str, ScatterValues] = {}
+    # Narwhals types `get_column(name)`'s `name` as `str`, but its docs note that pandas
+    # does allow non-string column names and that they work when passed to it, as there
+    # is no ambiguity:
+    # https://narwhals-dev.github.io/narwhals/api-reference/dataframe/#narwhals.dataframe.DataFrame.get_column
+    # This dict is not exported, so its key type is relaxed to match.
+    cell_patches_by_column: dict[Any, ScatterValues] = {}
     for cell_patch in patches:
         column_name = nw_data.columns[cell_patch["column_index"]]
         if column_name not in cell_patches_by_column:
@@ -169,7 +174,7 @@ def apply_frame_patches(
 
     # Upgrade the Scatter info to new column Series objects
     scatter_columns = [
-        nw_data[column_name].scatter(
+        nw_data.get_column(column_name).scatter(
             scatter_values["row_indexes"], scatter_values["values"]
         )
         for column_name, scatter_values in cell_patches_by_column.items()
@@ -237,7 +242,9 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     data = as_data_frame(into_data)
 
-    type_hints = [serialize_dtype(data[col_name]) for col_name in data.columns]
+    type_hints = [
+        serialize_dtype(data.get_column(col_name)) for col_name in data.columns
+    ]
 
     # TODO-future-barret; Swich serialization to "by column", rather than "by row"
     # * This would allow for a single column to be serialized in a single operation
@@ -314,24 +321,33 @@ def subset_frame(
 
     # The nested if-else structure is used to navigate around narwhals' typing system and lack of `:` operator outside of `[`, `]`.
 
+    # Note: pyright resolves `DataFrame.__getitem__` to the overload returning `Self`
+    # (i.e. `DataFrameT`), but pyrefly resolves `Self` to the type variable's bound
+    # (`DataFrame[Any]`), hence the pyrefly ignores on the subsetted returns.
     if cols is None:
         if rows is None:
             return data
         else:
-            return data[rows, :]
+            return data[rows, :]  # pyrefly: ignore[bad-return]
     else:
         # `cols` is not None
-        col_names = [data.columns[col] if isinstance(col, int) else col for col in cols]
+        # Resolve each column to its position rather than its name. Narwhals reads a
+        # list of ints in the column slot as positions, so a non-string column name
+        # (e.g. pandas' integer labels) would be taken as a position instead: selecting
+        # the wrong columns, or raising `IndexError` when it is out of bounds.
+        col_indexes = [
+            col if isinstance(col, int) else data.columns.index(col) for col in cols
+        ]
 
         # Return a DataFrame with no rows or columns
         # If there are no columns, there are no Series objects to support any rows
-        if len(col_names) == 0:
-            return data[[], []]
+        if len(col_indexes) == 0:
+            return data[[], []]  # pyrefly: ignore[bad-return]
 
         if rows is None:
-            return data[:, col_names]
+            return data[:, col_indexes]  # pyrefly: ignore[bad-return]
         else:
-            return data[rows, col_names]
+            return data[rows, col_indexes]  # pyrefly: ignore[bad-return]
 
 
 class ScatterValues(TypedDict):

@@ -13,7 +13,7 @@ import copy
 from json import dumps
 from typing import Any, Mapping, Optional, Union, cast
 
-from htmltools import Tag, TagChild, TagList, css, div, tags
+from htmltools import Tag, TagAttrs, TagChild, TagList, css, div, tags
 
 from .._docstring import add_example
 from ..bookmark import restore_input
@@ -88,7 +88,8 @@ def input_selectize(
         remove button to multiple selections, but not single selections.
     options
         A dictionary of options. See the documentation of selectize.js for possible options.
-        If you want to pass a JavaScript function, wrap the string in `ui.JS`.
+        If you want to pass a JavaScript function, wrap the string in
+        :func:`~shiny.ui.js_eval`.
 
     Returns
     -------
@@ -266,12 +267,14 @@ def _input_select_impl(
 
     choices_tags = _render_choices(choices_, selected)
 
+    select_attrs: TagAttrs = {"class": "shiny-input-select"}
+
     return div(
         shiny_input_label(resolved_id, label),
         div(
             tags.select(
                 *choices_tags,
-                {"class": "shiny-input-select"},
+                select_attrs,
                 class_=None if selectize else "form-select",
                 id=resolved_id,
                 multiple=multiple,

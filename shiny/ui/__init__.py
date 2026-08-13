@@ -161,6 +161,13 @@ from ._page import (
     page_sidebar,
 )
 from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
+from ._offcanvas import (
+    Offcanvas,
+    hide_offcanvas,
+    offcanvas,
+    show_offcanvas,
+    toggle_offcanvas,
+)
 from ._popover import popover
 from ._progress import Progress
 from ._sidebar import (
@@ -332,6 +339,12 @@ __all__ = (
     # _notification
     "notification_show",
     "notification_remove",
+    # _offcanvas
+    "Offcanvas",
+    "hide_offcanvas",
+    "offcanvas",
+    "show_offcanvas",
+    "toggle_offcanvas",
     # _toast
     "toast",
     "toast_header",

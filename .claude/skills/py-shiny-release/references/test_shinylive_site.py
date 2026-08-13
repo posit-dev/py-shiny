@@ -17,18 +17,25 @@ import time
 from playwright.async_api import async_playwright
 
 CACHE_BUSTER = str(int(time.time()))
-MIN_EXAMPLES = 50
+MIN_EXAMPLES = 25
 
 
 def fetch_examples() -> list[str]:
-    """Dynamically fetch the list of Python examples from the shinylive repo."""
+    """Dynamically fetch the list of Python examples from the shinylive repo.
+
+    `examples/index.json` is the source of truth: it drives which apps get built
+    into `examples.json`, and that is the only example content the site serves.
+    Listing `examples/python/` instead over-counts, because unindexed app
+    directories can linger on disk without ever being built or served.
+    """
     result = subprocess.run(
         [
             "gh",
             "api",
-            "repos/posit-dev/shinylive/contents/examples/python",
+            "repos/posit-dev/shinylive/contents/examples/index.json",
             "--jq",
-            ".[].name",
+            '.content | @base64d | fromjson | .[] | select(.engine == "python")'
+            " | .examples[].apps[]",
         ],
         capture_output=True,
         text=True,

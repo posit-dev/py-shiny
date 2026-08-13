@@ -46,14 +46,12 @@ def test_input_file_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     file2 = controller.InputFile(page, "file2")
     file2.set([file_info, file_info2])
     expect(file2.loc_file_display).to_have_value("2 files")
-    controller.OutputTextVerbatim(page, "file2_info").expect_value(
-        """File name: mtcars.csv
+    controller.OutputCode(page, "file2_info").expect_value("""File name: mtcars.csv
 File type: text/csv
 File size: 129 bytes
 ---
 File name: mtcars2.csv
 File type: text/csv
 File size: 129 bytes
-"""
-    )
+""")
     # file2.expect_files([file_info, file_info])

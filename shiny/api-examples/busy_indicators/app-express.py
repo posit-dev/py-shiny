@@ -17,7 +17,7 @@ with ui.sidebar():
         selected=["spinners", "pulse"],
     )
 
-    @render.download
+    @render.download_button
     def download():
         time.sleep(3)
         path = os.path.join(os.path.dirname(__file__), "app-express.py")

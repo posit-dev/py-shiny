@@ -124,6 +124,7 @@ docs/source/reference/
 _dev/
 tests/playwright/deploys/**/requirements.txt
 test-results/
+type-checker-results/
 shiny_bookmarks/
 .posit/
 
@@ -140,5 +141,6 @@ tests/inspect-ai/scripts/test_metadata.json
 # Claude
 /.claude/*.local.*
 /.claude/scheduled_tasks.lock
+/.claude/plans/
 docs/plans/
 docs/superpowers/

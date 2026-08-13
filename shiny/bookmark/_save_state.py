@@ -17,12 +17,33 @@ if TYPE_CHECKING:
 
 
 class BookmarkState:
+    """
+    The state being written while a bookmark is saved.
+
+    Shiny creates a `BookmarkState` instance each time a bookmark is taken and passes the instance to every
+    `session.bookmark.on_bookmark()` callback. The registered callbacks may add entries to
+    the state's `values` or write files into `dir` (if available) before the state is persisted.
+
+    App authors do not construct this class directly.
+    """
+
     # session: ?
     # * Would get us access to inputs, possibly app dir, registered on save / load classes (?), exclude
     #
     input: Inputs
+    """The session's inputs. Every value except those named in `exclude` is saved."""
+
     values: dict[str, Any]
+    """
+    Arbitrary extra values to save alongside the inputs.
+
+    Starts empty. Add to it from an `on_bookmark()` callback to store state that is
+    not held in an input, and read it back from
+    `RestoreState.values` when restoring.
+    """
+
     exclude: list[str]
+    """Scoped input names to leave out of the bookmark."""
 
     _on_save: (
         Callable[["BookmarkState"], Awaitable[None]] | None
@@ -31,6 +52,14 @@ class BookmarkState:
     # These are set not in initialize(), but by external functions that modify
     # the ShinySaveState object.
     dir: Path | None
+    """
+    Directory to write bookmark files into, or `None`.
+
+    Only set when the bookmark is saved server-side (`store="server"`), in which case
+    Shiny creates the directory and sets this before invoking `on_bookmark()`. It stays
+    `None` for `store="url"`, which encodes the state into a query string and never
+    touches disk.
+    """
 
     def __init__(
         self,

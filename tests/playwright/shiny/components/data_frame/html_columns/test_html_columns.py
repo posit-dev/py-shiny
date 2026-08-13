@@ -19,7 +19,7 @@ def test_validate_html_columns(
     data_frame = controller.OutputDataFrame(page, f"{df_type}_df")
 
     tab = controller.NavsetCardUnderline(page, "tab")
-    output_txt = controller.OutputTextVerbatim(page, f"{df_type}_test_cell_text")
+    output_txt = controller.OutputCode(page, f"{df_type}_test_cell_text")
     test_button = controller.InputActionButton(page, f"{df_type}_test_cell_button")
 
     tab.set(df_type)
@@ -78,8 +78,8 @@ def test_validate_html_columns(
     # Sorting should not work for columns that are HTML columns
     # Verify that the sorting is reset
     with pytest.raises(AssertionError) as e:
-        data_frame.set_sort(3, timeout=0)
-        assert "header-html" in str(e)
+        data_frame.set_sort(3)
+    assert "header-html" in str(e.value)
     data_frame.expect_cell("1", row=0, col=1)
 
     # filter by Individual IDs

@@ -64,10 +64,11 @@ def row(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     --------
     * :func:`~shiny.ui.column`
     """
-    return div({"class": "row"}, *args, **kwargs)
+    row_attrs: TagAttrs = {"class": "row"}
+    return div(row_attrs, *args, **kwargs)
 
 
-@add_example(ex_dir="../api-examples/row")
+@add_example(example_name="row")
 def column(
     width: int, *args: TagChild | TagAttrs, offset: int = 0, **kwargs: TagAttrValue
 ) -> Tag:
@@ -106,7 +107,8 @@ def column(
         # https://github.com/twbs/bootstrap/blob/74b8fe7/docs/4.3/migration/index.html#L659
         off = str(offset)
         cls += f" offset-md-{off} col-sm-offset-{off}"
-    return div({"class": cls}, *args, **kwargs)
+    column_attrs: TagAttrs = {"class": cls}
+    return div(column_attrs, *args, **kwargs)
 
 
 @no_example()
@@ -115,7 +117,8 @@ def panel_well(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
     Deprecated. Use :func:`~shiny.ui.card` instead.
     """
     warn_deprecated("panel_well() is deprecated. Use shiny.ui.card() instead.")
-    return div({"class": "well"}, *args, **kwargs)
+    well_attrs: TagAttrs = {"class": "well"}
+    return div(well_attrs, *args, **kwargs)
 
 
 # TODO: replace `flowLayout()`/`splitLayout()` with a flexbox wrapper?
@@ -157,10 +160,8 @@ def panel_conditional(
     (Be sure not to modify the input/output objects, as this may cause unpredictable
     behavior.)
 
-    You are not recommended to use special JavaScript characters such as a period . in
-    the input id's, but if you do use them anyway, for example, `id = "foo.bar"`, you
-    will have to use `input["foo.bar"]` instead of ``input.foo.bar`` to read the input
-    value.
+    Within a module, refer to inputs by their unprefixed, module-local IDs (for example,
+    ``input.foo``). Shiny applies the module namespace prefix automatically.
 
     Tip
     ---
@@ -178,9 +179,11 @@ def panel_conditional(
     if ns_prefix != "":
         ns_prefix += "-"
 
+    conditional_attrs: TagAttrs = {"class": "shiny-panel-conditional"}
+
     return div(
         *args,
-        {"class": "shiny-panel-conditional"},
+        conditional_attrs,
         data_display_if=condition,
         data_ns_prefix=ns_prefix,
         **kwargs,
@@ -393,4 +396,5 @@ def help_text(*args: TagChild | TagAttrs, **kwargs: TagAttrValue) -> Tag:
         A UI element
     """
 
-    return span({"class": "help-block"}, *args, **kwargs)
+    help_attrs: TagAttrs = {"class": "help-block"}
+    return span(help_attrs, *args, **kwargs)

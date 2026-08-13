@@ -48,7 +48,8 @@ class RepeaterClient:
         assert isinstance(state, dict)
         assert "messages" in state
         assert isinstance(state["messages"], list)
-        self.messages = state["messages"]
+        assert all(isinstance(message, str) for message in state["messages"])
+        self.messages = cast(list[str], state["messages"])
 
 
 chat_client = RepeaterClient(messages=init_messages)
@@ -59,7 +60,6 @@ chat.enable_bookmarking(chat_client, bookmark_store="url")
 # Define a callback to run when the user submits a message
 @chat.on_user_submit
 async def handle_user_input(user_input: str):
-
     msg = chat_client.append_message(user_input)
     # Append a response to the chat
     await chat.append_message(msg)

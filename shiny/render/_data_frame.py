@@ -432,7 +432,7 @@ class data_frame(
         """
         return self._subset_data_view(selected=True)
 
-    @add_example(ex_dir="../api-examples/data_frame_data_view")
+    @add_example(example_name="data_frame_data_view")
     def data_view(self, *, selected: bool = False) -> IntoDataFrameT:
         """
         Reactive function that retrieves the data how it is viewed within the browser.
@@ -600,7 +600,7 @@ class data_frame(
             )
         return self._session
 
-    @add_example(ex_dir="../api-examples/data_frame_data_view")
+    @add_example(example_name="data_frame_data_view")
     def set_patch_fn(self, fn: PatchFn | PatchFnSync) -> None:
         """
         Decorator to set the function that updates a single cell in the data frame.
@@ -622,7 +622,7 @@ class data_frame(
         # from .._typing_extensions import Self
         # return self
 
-    @add_example(ex_dir="../api-examples/data_frame_set_patches")
+    @add_example(example_name="data_frame_set_patches")
     def set_patches_fn(self, fn: PatchesFn | PatchesFnSync) -> None:
         """
         Decorator to set the function that updates a batch of cells in the data frame.
@@ -1103,7 +1103,7 @@ class data_frame(
             {"cellSelection": cell_selection},
         )
 
-    @add_example(ex_dir="../api-examples/data_frame_update_sort")
+    @add_example(example_name="data_frame_update_sort")
     async def update_sort(
         self,
         sort: ListOrTuple[ColumnSort | int] | int | ColumnSort | None,
@@ -1155,7 +1155,7 @@ class data_frame(
             {"sort": vals},
         )
 
-    @add_example(ex_dir="../api-examples/data_frame_update_filter")
+    @add_example(example_name="data_frame_update_filter")
     async def update_filter(
         self,
         filter: ListOrTuple[ColumnFilter] | None,
@@ -1177,31 +1177,7 @@ class data_frame(
             with reactive.isolate():
                 ncol = self._nw_data().shape[1]
 
-            for column_filter, i in zip(filter, range(len(filter))):
-                assert isinstance(column_filter, dict)
-                assert isinstance(column_filter["col"], int)
-                assert 0 <= column_filter["col"] < ncol
-                if isinstance(column_filter["value"], str):
-                    ...
-                elif isinstance(column_filter["value"], (list, tuple)):
-                    assert len(column_filter["value"]) == 2
-                    if (
-                        column_filter["value"][0] is None
-                        and column_filter["value"][1] is None
-                    ):
-                        raise TypeError(
-                            "Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
-                        )
-                    assert isinstance(
-                        column_filter["value"][0], (int, float, type(None))
-                    )
-                    assert isinstance(
-                        column_filter["value"][1], (int, float, type(None))
-                    )
-                else:
-                    raise TypeError(
-                        f"Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `{type(column_filter['value'])}`"
-                    )
+            assert_column_filters(filter, ncol)
 
         await self._send_message_to_browser(
             "updateColumnFilter",
@@ -1226,6 +1202,27 @@ class data_frame(
             return None
 
         return self.cell_selection()
+
+
+def assert_column_filters(filters: ListOrTuple[ColumnFilter], ncol: int) -> None:
+    for column_filter, i in zip(filters, range(len(filters))):
+        assert isinstance(column_filter, dict)
+        assert isinstance(column_filter["col"], int)
+        assert 0 <= column_filter["col"] < ncol
+        if isinstance(column_filter["value"], str):
+            ...
+        elif isinstance(column_filter["value"], (list, tuple)):
+            assert len(column_filter["value"]) == 2
+            if column_filter["value"][0] is None and column_filter["value"][1] is None:
+                raise TypeError(
+                    "Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
+                )
+            assert isinstance(column_filter["value"][0], (int, float, type(None)))
+            assert isinstance(column_filter["value"][1], (int, float, type(None)))
+        else:
+            raise TypeError(
+                f"Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `{type(column_filter['value'])}`"
+            )
 
 
 # TODO-barret; Make request to GT: Add class for gt location

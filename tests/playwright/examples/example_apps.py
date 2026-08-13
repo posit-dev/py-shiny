@@ -3,8 +3,9 @@ import sys
 import typing
 from pathlib import PurePath
 from typing import Literal
+from urllib.parse import urlparse
 
-from playwright.sync_api import ConsoleMessage, Page, expect
+from playwright.sync_api import ConsoleMessage, Page, Request, Response, expect
 
 from shiny.run import ShinyAppProc, run_shiny_app
 
@@ -14,6 +15,9 @@ pyshiny_root = here_tests_e2e_examples.parent.parent.parent
 is_interactive = hasattr(sys, "ps1")
 reruns = 1 if is_interactive else 3
 reruns_delay = 0
+
+_RESOURCE_LOAD_ERROR_PREFIX = "Failed to load resource:"
+_IGNORED_EXTERNAL_RESOURCE_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
 
 def get_apps(path: str) -> typing.List[str]:
@@ -167,24 +171,54 @@ def wait_for_idle_app(
 
 def validate_example(page: Page, ex_app_path: str) -> None:
     sa: ShinyAppProc = run_shiny_app(pyshiny_root / ex_app_path, wait_for_start=True)
+    app_name = os.path.basename(os.path.dirname(ex_app_path))
+    short_app_path = (
+        f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
+    )
 
     console_errors: typing.List[str] = []
+    # Console messages like "Failed to load resource: ... 404" do not name the
+    # resource, so record the requests themselves to make failures actionable.
+    failed_requests: typing.List[str] = []
+    ignored_failed_requests: typing.List[str] = []
+
+    def is_favicon(url: str) -> bool:
+        return url.endswith("favicon.ico")
 
     def on_console_msg(msg: ConsoleMessage) -> None:
         if msg.type == "error":
             # Do not report missing favicon errors
-            if msg.location["url"].endswith("favicon.ico"):
+            if is_favicon(msg.location["url"]):
                 return
             console_errors.append(msg.text)
 
+    def on_response(response: Response) -> None:
+        if response.status >= 400 and not is_favicon(response.url):
+            request_obj = getattr(response, "request", None)
+            method = getattr(request_obj, "method", "GET")
+            request_error = f"HTTP {response.status} - {method} {response.url}"
+            if urlparse(response.url).hostname in _IGNORED_EXTERNAL_RESOURCE_HOSTS:
+                ignored_failed_requests.append(request_error)
+            else:
+                failed_requests.append(request_error)
+
+    def on_request_failed(request: Request) -> None:
+        if is_favicon(request.url):
+            return
+        request_error = (
+            f"{request.failure or 'request failed'} - {request.method} {request.url}"
+        )
+        if urlparse(request.url).hostname in _IGNORED_EXTERNAL_RESOURCE_HOSTS:
+            ignored_failed_requests.append(request_error)
+        else:
+            failed_requests.append(request_error)
+
     page.on("console", on_console_msg)
+    page.on("response", on_response)
+    page.on("requestfailed", on_request_failed)
 
-    # Makes sure the app is closed when exiting the code block
-    with sa:
-        page.goto(sa.url)
-
-        app_name = os.path.basename(os.path.dirname(ex_app_path))
-        short_app_path = f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
+    def load_app() -> None:
+        page.goto(sa.url, wait_until="domcontentloaded")
 
         if short_app_path in app_hard_wait.keys():
             # Apps are constantly invalidating and will not stabilize
@@ -198,6 +232,18 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 timeout=app_idle_wait["timeout"],
             )
 
+    with sa:
+        load_app()
+
+        # A static resource can briefly race the app server during startup. A
+        # clean reload is cheaper and more targeted than rerunning the entire
+        # parametrized test, and persistent errors still fail below with URLs.
+        if console_errors and failed_requests:
+            console_errors.clear()
+            failed_requests.clear()
+            ignored_failed_requests.clear()
+            load_app()
+
         # Check for py-shiny errors
         error_lines = str(sa.stderr).splitlines()
 
@@ -209,6 +255,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         ]
 
         # Remove any app specific errors that are allowed
+        app_allowable_errors: typing.Union[Literal[True], str, typing.List[str]]
         if short_app_path in app_allow_shiny_errors:
             app_allowable_errors = app_allow_shiny_errors[short_app_path]
         else:
@@ -243,6 +290,19 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             assert len(error_lines) == 0
 
         # Check for JavaScript errors
+        ignored_resource_error_count = len(ignored_failed_requests)
+        remaining_console_errors: typing.List[str] = []
+        for error in console_errors:
+            if any(host in error for host in _IGNORED_EXTERNAL_RESOURCE_HOSTS):
+                continue
+            if ignored_resource_error_count and error.startswith(
+                _RESOURCE_LOAD_ERROR_PREFIX
+            ):
+                ignored_resource_error_count -= 1
+                continue
+            remaining_console_errors.append(error)
+        console_errors = remaining_console_errors
+
         if short_app_path in app_allow_js_errors:
             # Remove any errors that are allowed
             console_errors = [
@@ -259,7 +319,13 @@ def validate_example(page: Page, ex_app_path: str) -> None:
             "In app "
             + ex_app_path
             + " had JavaScript console errors!\n"
-            + "* ".join(console_errors)
+            + "\n".join(f"* {error}" for error in console_errors)
+            + (
+                "\nFailed network requests:\n"
+                + "\n".join(f"* {request}" for request in failed_requests)
+                if failed_requests
+                else "\nNo failed network requests were recorded."
+            )
         )
 
         if ex_app_path not in app_allow_output_error:

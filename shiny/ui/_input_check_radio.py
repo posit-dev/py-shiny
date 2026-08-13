@@ -8,7 +8,7 @@ __all__ = (
 
 from typing import Mapping, Optional, Union
 
-from htmltools import Tag, TagChild, css, div, span, tags
+from htmltools import Tag, TagAttrs, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from ..bookmark import restore_input
@@ -145,9 +145,10 @@ def _bslib_input_checkbox(
 ) -> Tag:
     resolved_id = resolve_id(id)
     value = restore_input(resolved_id, value)
+    form_check_attrs: TagAttrs = {"class": "form-check"}
     return div(
         div(
-            {"class": "form-check"},
+            form_check_attrs,
             tags.input(
                 id=resolved_id,
                 class_="form-check-input",

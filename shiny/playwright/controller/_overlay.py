@@ -9,6 +9,7 @@ from .._types import PatternOrStr, Timeout
 from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
 )
+from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
 from ._base import InitLocator, UiBase
 
 
@@ -60,14 +61,19 @@ class _OverlayBase(UiBase):
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
 
-    def _get_overlay_id(self, *, timeout: Timeout = None) -> str | None:
+    def _get_overlay_id(self, *, timeout: Timeout = None) -> str:
         """Note. This requires 2 steps. Will not work if the overlay element is rapidly created during locator fetch"""
         loc_el = self.loc.locator(
             f" > :last-child[data-bs-toggle='{self._overlay_name}']"
         )
         loc_el.wait_for(state="visible", timeout=timeout)
         loc_el.scroll_into_view_if_needed(timeout=timeout)
-        return loc_el.get_attribute("aria-describedby")
+        playwright_expect(loc_el).to_have_attribute(
+            "aria-describedby", re.compile(r".+"), timeout=timeout
+        )
+        overlay_id = loc_el.get_attribute("aria-describedby")
+        assert overlay_id is not None
+        return overlay_id
 
     # @property
     # def loc_overlay_body(self) -> Locator:
@@ -97,6 +103,12 @@ class _OverlayBase(UiBase):
         """
         return self.page.locator(f"#{self._get_overlay_id(timeout=timeout)}")
 
+    def _is_active(self, *, timeout: Timeout = None) -> bool:
+        return (
+            self.loc_trigger.get_attribute("aria-describedby", timeout=timeout)
+            is not None
+        )
+
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
         Expects the overlay body to have the specified text.
@@ -124,11 +136,21 @@ class _OverlayBase(UiBase):
             The maximum time to wait for the expectation to pass. Defaults to `None`.
         """
         attr_value = re.compile(r".*") if value else None
-        return _expect_attribute_to_have_value(
+        _expect_attribute_to_have_value(
             loc=self.loc_trigger,
             timeout=timeout,
             name="aria-describedby",
             value=attr_value,
+        )
+        self.page.wait_for_function(
+            """
+            ([id, expected]) => {
+                const overlay = document.getElementById(id);
+                return overlay !== null && overlay.visible === expected;
+            }
+            """,
+            arg=[self.id, value],
+            timeout=timeout,
         )
 
     def expect_placement(self, value: str, *, timeout: Timeout = None) -> None:
@@ -196,8 +218,9 @@ class Popover(_OverlayBase):
         timeout
             The maximum time to wait for the popover to be visible and interactable. Defaults to `None`.
         """
-        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
+        if open != self._is_active(timeout=timeout):
             self._toggle(timeout=timeout)
+        self.expect_active(open, timeout=timeout)
 
     def _toggle(self, timeout: Timeout = None) -> None:
         """
@@ -282,10 +305,12 @@ class Tooltip(_OverlayBase):
         timeout
             The maximum time to wait for the tooltip to be visible and interactable. Defaults to `None`.
         """
-        if open ^ self.get_loc_overlay_body(timeout=timeout).count() > 0:
+        is_active = self._is_active(timeout=timeout)
+        if open and not is_active:
             self._toggle(timeout=timeout)
-        if not open:
+        elif not open and is_active:
             self.get_loc_overlay_body(timeout=timeout).click()
+        self.expect_active(open, timeout=timeout)
 
     def _toggle(self, timeout: Timeout = None) -> None:
         """
@@ -299,3 +324,105 @@ class Tooltip(_OverlayBase):
         self.loc_trigger.wait_for(state="visible", timeout=timeout)
         self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
         self.loc_trigger.hover(timeout=timeout)
+
+
+class Offcanvas(UiBase):
+    """Controller for :func:`shiny.ui.offcanvas`."""
+
+    loc: Locator
+    """
+    Playwright `Locator` for the offcanvas root element (`bslib-offcanvas#{id}`).
+    """
+    loc_close: Locator
+    """
+    Playwright `Locator` for the close button inside the offcanvas header.
+    """
+    loc_body: Locator
+    """
+    Playwright `Locator` for the offcanvas body.
+    """
+
+    def __init__(self, page: Page, id: str) -> None:
+        """
+        Initializes a new instance of the `Offcanvas` class.
+
+        Parameters
+        ----------
+        page
+            Playwright `Page` of the Shiny app.
+        id
+            The ID of the offcanvas.
+        """
+        super().__init__(page, id=id, loc=f"bslib-offcanvas#{id}")
+        self.loc_close = self.loc.locator(
+            "header.offcanvas-header button.btn-close[data-bs-dismiss='offcanvas']"
+        )
+        self.loc_body = self.loc.locator("div.offcanvas-body")
+
+    def close(self, *, timeout: Timeout = None) -> None:
+        """
+        Closes the offcanvas panel.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the offcanvas to close. Defaults to `None`.
+        """
+        self.set(open=False, timeout=timeout)
+
+    def set(self, open: bool, *, timeout: Timeout = None) -> None:
+        """
+        Sets the offcanvas panel to open or closed.
+
+        Opening an offcanvas panel requires an external trigger element in the app
+        (e.g. an action button wired to ``toggle_offcanvas()``). Only closing
+        (``open=False``) is supported programmatically by this controller.
+
+        Parameters
+        ----------
+        open
+            ``False`` to close the offcanvas. ``True`` is accepted but has no effect
+            since the panel can only be opened via an app-level trigger.
+        timeout
+            The maximum time to wait for the offcanvas to change state. Defaults to `None`.
+        """
+        is_open = "show" in (self.loc.get_attribute("class") or "")
+        if not open and is_open:
+            self._close(timeout=timeout)
+
+    def _close(self, *, timeout: Timeout = None) -> None:
+        """Closes the panel by clicking the close button."""
+        self.loc_close.wait_for(state="visible", timeout=timeout)
+        self.loc_close.scroll_into_view_if_needed(timeout=timeout)
+        self.loc_close.click(timeout=timeout)
+
+    def expect_open(self, value: bool, *, timeout: Timeout = None) -> None:
+        """
+        Expects the offcanvas panel to be open or closed.
+
+        Parameters
+        ----------
+        value
+            `True` if the offcanvas should be open, `False` if it should be closed.
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        _expect_class_to_have_value(
+            self.loc,
+            "show",
+            has_class=value,
+            timeout=timeout,
+        )
+
+    def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the offcanvas body to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the offcanvas body to appear. Defaults to `None`.
+        """
+        playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)

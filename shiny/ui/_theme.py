@@ -5,7 +5,7 @@ import pathlib
 import re
 import tempfile
 import textwrap
-from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeVar
 
 if TYPE_CHECKING:
     from brand_yml import Brand
@@ -41,7 +41,9 @@ class SassCompileArgs(TypedDict):
 theme_temporary_directories: set[tempfile.TemporaryDirectory[str]] = set()
 
 
-@add_example()
+# The example directory is lowercase `theme`, which only resolves from `Theme` on
+# case-insensitive filesystems; name it explicitly so Linux docs builds find it.
+@add_example(example_name="theme")
 class Theme:
     """
     Create a custom Shiny theme.
@@ -529,13 +531,12 @@ class Theme:
             **args,
         }
 
-        self._css = cast(
-            str,
-            sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-                string=self.to_sass(),
-                **args,
-            ),
+        css = sass.compile(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            string=self.to_sass(),
+            **args,
         )
+        assert isinstance(css, str)
+        self._css = css
 
         return self._css
 
@@ -565,6 +566,9 @@ class Theme:
             name=make_valid_path_str(self._dep_name()),
             version=self._version,
             source={"subdir": str(css_path.parent)},
+            # The extra `data-shiny-theme` key is intentional (rendered onto the
+            # <link> tag) but is not part of htmltools' `StylesheetItem` TypedDict.
+            # pyrefly: ignore[bad-argument-type]
             stylesheet={
                 "href": css_path.name,
                 "data-shiny-theme": self.name or self._preset,  # type: ignore
@@ -729,7 +733,7 @@ def check_theme_pkg_installed(pkg: str, spec: str | None = None) -> None:
     if importlib.util.find_spec(spec or pkg) is None:
         raise ImportError(
             f"The '{pkg}' package is required to compile custom themes. "
-            'Please install it with `pip install {pkg}` or `pip install "shiny[theme]"`.',
+            f'Please install it with `pip install {pkg}` or `pip install "shiny[theme]"`.',
         )
 
 

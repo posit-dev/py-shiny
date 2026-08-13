@@ -1,3 +1,21 @@
+# The Playwright image is mirrored to GHCR (ghcr.io/<owner>/<repo>/playwright)
+# as a lazy pull-through cache. GHCR is co-located with the runners, so a hit
+# is a fast pull with no Azure/MCR round-trip; a miss falls back to MCR and
+# pushes the image to GHCR for the next run. No separate mirror workflow.
+#
+# The MCR image ships browsers but strips the playwright npm package and the
+# npm cache from its final layer, so `npx -y playwright run-server` downloads
+# the package from registry.npmjs.org on every container start — silently, and
+# intermittently slower than any startup deadline. To keep the npm registry
+# out of the hot path, we bake `npm install playwright` into a derived
+# `-server` image (built once per version, cached in GHCR) and start the
+# server with `npx --no` so it can never fall back to a network install.
+#
+# The container runs `playwright run-server`; pytest-playwright on the host
+# connects via $PW_TEST_CONNECT_WS_ENDPOINT, so test code is unchanged.
+#
+# Requires the calling job to grant `permissions: packages: write` so the
+# GITHUB_TOKEN can push to GHCR.
 name: "Setup remote Playwright"
 description: "Start a Playwright server in Docker and configure pytest-playwright to connect to it"
 inputs:
@@ -6,7 +24,7 @@ inputs:
     required: false
     default: ""
   browser:
-    description: "Browser to use when verifying the remote Playwright server is ready"
+    description: "Deprecated compatibility input; server readiness is browser-independent"
     required: false
     default: "chromium"
   port:
@@ -38,149 +56,136 @@ runs:
 
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-    - name: Compute Playwright image cache key
-      id: image-cache-key
+    - name: Log in to GHCR
+      shell: bash
+      run: |
+        echo "${{ github.token }}" | docker login ghcr.io \
+          -u "${{ github.actor }}" --password-stdin
+
+    - name: Ensure Playwright server image (GHCR pull-through cache)
+      id: server-image
       shell: bash
       run: |
         VERSION="${{ steps.resolve-version.outputs.version }}"
-        IMAGE="mcr.microsoft.com/playwright:v${VERSION}-noble"
-        # Slugify the image reference for safe filesystem use.
-        SLUG=$(echo "$IMAGE" | tr '/:' '__')
-        CACHE_DIR="${RUNNER_TEMP:-/tmp}/playwright-image-cache"
-        CACHE_FILE="${CACHE_DIR}/${SLUG}.tar"
-        mkdir -p "$CACHE_DIR"
-        echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-        echo "cache-dir=$CACHE_DIR" >> "$GITHUB_OUTPUT"
-        echo "cache-file=$CACHE_FILE" >> "$GITHUB_OUTPUT"
-        echo "cache-key=playwright-docker-image-${{ runner.os }}-${{ runner.arch }}-v${VERSION}-noble" >> "$GITHUB_OUTPUT"
+        MCR_REF="mcr.microsoft.com/playwright:v${VERSION}-noble"
 
-    - name: Restore cached Playwright image
-      id: restore-image-cache
-      uses: actions/cache/restore@v5
-      with:
-        path: ${{ steps.image-cache-key.outputs.cache-dir }}
-        key: ${{ steps.image-cache-key.outputs.cache-key }}
+        # GHCR package names must be lowercase.
+        OWNER_REPO="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+        GHCR_REF="ghcr.io/${OWNER_REPO}/playwright:v${VERSION}-noble"
+        # MCR image plus the playwright npm package baked in, so `run-server`
+        # starts without touching the npm registry.
+        SERVER_REF="ghcr.io/${OWNER_REPO}/playwright:v${VERSION}-noble-server"
 
-    - name: Load cached Playwright image
-      id: load-image-cache
-      if: steps.restore-image-cache.outputs.cache-hit == 'true'
-      shell: bash
-      run: |
-        CACHE_FILE="${{ steps.image-cache-key.outputs.cache-file }}"
-        LOADED=false
-        if [ -f "$CACHE_FILE" ]; then
-          echo "Loading cached image from $CACHE_FILE"
-          if docker load -i "$CACHE_FILE"; then
-            LOADED=true
-          else
-            echo "Cached image tar at $CACHE_FILE is invalid or corrupted; deleting it and pulling instead." >&2
-            rm -f "$CACHE_FILE"
-          fi
-        else
-          echo "Cache hit reported but $CACHE_FILE is missing; will pull instead." >&2
-        fi
-        echo "loaded=$LOADED" >> "$GITHUB_OUTPUT"
+        echo "image-ref=$SERVER_REF" >> "$GITHUB_OUTPUT"
 
-    - name: Pull Playwright image
-      id: pull-image
-      shell: bash
-      run: |
-        IMAGE="${{ steps.image-cache-key.outputs.image }}"
-        # If the cached image was loaded successfully, skip the pull entirely.
-        if docker image inspect "$IMAGE" >/dev/null 2>&1; then
-          echo "Image $IMAGE already present locally; skipping pull."
-          echo "pulled=false" >> "$GITHUB_OUTPUT"
+        # Fast path: derived server image already in GHCR (co-located with
+        # the runner, no MCR or npm round-trip).
+        if docker pull "$SERVER_REF"; then
+          echo "Pulled $SERVER_REF from GHCR."
           exit 0
         fi
 
-        # MCR (Azure Front Door) intermittently returns "The request is blocked"
-        # for GitHub Actions runners. Retry a few times before giving up.
-        attempt=1
-        max_attempts=5
-        until docker pull "$IMAGE"; do
-          if [ "$attempt" -ge "$max_attempts" ]; then
-            echo "Failed to pull $IMAGE after $attempt attempts" >&2
-            exit 1
+        echo "GHCR miss for $SERVER_REF; building it from the base image."
+
+        # Base image: prefer the GHCR mirror, fall back to MCR.
+        if docker pull "$GHCR_REF"; then
+          echo "Pulled $GHCR_REF from GHCR."
+          docker tag "$GHCR_REF" "$MCR_REF"
+        else
+          echo "GHCR miss for $GHCR_REF; falling back to MCR."
+
+          # MCR (Azure Front Door) intermittently returns "The request is blocked"
+          # for GitHub Actions runners. Retry a few times before giving up.
+          attempt=1
+          max_attempts=5
+          until docker pull "$MCR_REF"; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Failed to pull $MCR_REF after $attempt attempts" >&2
+              exit 1
+            fi
+            sleep_seconds=$((attempt * 10))
+            echo "docker pull failed (attempt $attempt/$max_attempts); retrying in ${sleep_seconds}s..." >&2
+            sleep "$sleep_seconds"
+            attempt=$((attempt + 1))
+          done
+
+          # Populate the GHCR mirror for the next run. Idempotent: concurrent
+          # first-runs on a fresh version push the same digest. A failed push
+          # must not fail the job — we already have the image locally.
+          docker tag "$MCR_REF" "$GHCR_REF"
+          if docker push "$GHCR_REF"; then
+            echo "Mirrored $MCR_REF -> $GHCR_REF."
+          else
+            echo "Failed to push $GHCR_REF; continuing with local image." >&2
           fi
-          sleep_seconds=$((attempt * 10))
-          echo "docker pull failed (attempt $attempt/$max_attempts); retrying in ${sleep_seconds}s..." >&2
-          sleep "$sleep_seconds"
-          attempt=$((attempt + 1))
-        done
-        echo "pulled=true" >> "$GITHUB_OUTPUT"
+        fi
 
-    - name: Save Playwright image to cache
-      if: steps.pull-image.outputs.pulled == 'true'
-      shell: bash
-      run: |
-        IMAGE="${{ steps.image-cache-key.outputs.image }}"
-        CACHE_FILE="${{ steps.image-cache-key.outputs.cache-file }}"
-        echo "Saving $IMAGE to $CACHE_FILE"
-        docker save "$IMAGE" -o "$CACHE_FILE"
+        # Bake the playwright npm package into the server image. The npm
+        # registry is only reachable here, once per version — never at
+        # container start.
+        docker build -t "$SERVER_REF" - <<DOCKERFILE
+        FROM $MCR_REF
+        USER pwuser
+        WORKDIR /home/pwuser
+        RUN npm install playwright@${VERSION}
+        DOCKERFILE
 
-    - name: Persist Playwright image cache
-      if: steps.pull-image.outputs.pulled == 'true'
-      uses: actions/cache/save@v5
-      with:
-        path: ${{ steps.image-cache-key.outputs.cache-dir }}
-        key: ${{ steps.image-cache-key.outputs.cache-key }}
+        # Populate GHCR for the next run; a failed push must not fail the job.
+        if docker push "$SERVER_REF"; then
+          echo "Pushed $SERVER_REF."
+        else
+          echo "Failed to push $SERVER_REF; continuing with local image." >&2
+        fi
 
     - name: Start Playwright server
       shell: bash
       run: |
         docker rm -f "${{ inputs.container-name }}" >/dev/null 2>&1 || true
 
+        # No --rm: if the server crashes, the container must survive so the
+        # logs-on-failure step below can read it. `docker rm -f` above cleans
+        # up any leftover container from a previous attempt.
+        # Playwright exits run-server when stdin closes. Keep stdin open in
+        # detached mode, as required by Playwright's documented Docker setup.
         docker run -d \
+          --interactive \
           --name "${{ inputs.container-name }}" \
           --ipc=host \
           -p "127.0.0.1:${{ inputs.port }}:${{ inputs.port }}" \
-          --rm \
           --init \
           --workdir /home/pwuser \
           --user pwuser \
-          "mcr.microsoft.com/playwright:v${{ steps.resolve-version.outputs.version }}-noble" \
-          /bin/sh -c "npx -y playwright@${{ steps.resolve-version.outputs.version }} run-server --port ${{ inputs.port }} --host 0.0.0.0"
+          "${{ steps.server-image.outputs.image-ref }}" \
+          /bin/sh -c "npx --no -- playwright run-server --port ${{ inputs.port }} --host 0.0.0.0"
 
     - name: Wait for Playwright server
       shell: bash
       run: |
         python3 - <<'PY'
-        from playwright.sync_api import Error, sync_playwright
-        import socket
+        import json
         import time
+        from urllib.request import urlopen
 
         host = "127.0.0.1"
         port = int("${{ inputs.port }}")
-        browser_name = "${{ inputs.browser }}"
-        ws_endpoint = f"ws://{host}:{port}/"
+        metadata_url = f"http://{host}:{port}/json"
         deadline = time.time() + 60
         last_error = None
 
         while time.time() < deadline:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.settimeout(1)
-                try:
-                    sock.connect((host, port))
-                except OSError:
-                    time.sleep(1)
-                    continue
             try:
-                with sync_playwright() as playwright:
-                    browser_type = getattr(playwright, browser_name)
-                    browser = browser_type.connect(
-                        ws_endpoint,
-                        expose_network="*",
-                        timeout=10000,
-                    )
-                    browser.close()
-                    break
-            except Error as err:
+                with urlopen(metadata_url, timeout=1) as response:
+                    metadata = json.load(response)
+                if metadata.get("wsEndpointPath") != "/":
+                    raise RuntimeError(f"Unexpected Playwright metadata: {metadata}")
+            except (OSError, ValueError, RuntimeError) as err:
                 last_error = err
                 time.sleep(1)
+                continue
+            break
         else:
             raise SystemExit(
-                f"Timed out waiting for Playwright {browser_name} server "
-                f"on {ws_endpoint}: {last_error}"
+                f"Timed out waiting for Playwright server at {metadata_url}: {last_error}"
             )
         PY
 

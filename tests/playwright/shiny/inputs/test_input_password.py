@@ -26,4 +26,4 @@ def test_input_password_kitchen(page: Page, app: ShinyAppProc) -> None:
 
     controller.InputActionButton(page, "go").click()
     password.expect_value(password_value)
-    controller.OutputTextVerbatim(page, "value").expect.to_have_text(password_value)
+    controller.OutputCode(page, "value").expect.to_have_text(password_value)

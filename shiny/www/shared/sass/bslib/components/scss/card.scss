@@ -133,6 +133,14 @@
   display: none !important;
 }
 
+// A nested bslib-offcanvas is visually a page-level overlay, but it remains a DOM
+// descendant of the card it's wired from, so hovering it while open triggers the
+// card's :hover state above. Suppress the enter button in that case, since it would
+// otherwise render on top of the open offcanvas (its z-index is higher).
+.card:has(bslib-offcanvas.show, bslib-offcanvas.showing) .bslib-full-screen-enter {
+  display: none !important;
+}
+
 .bslib-full-screen-exit {
   position: relative;
   top: 1.35rem;

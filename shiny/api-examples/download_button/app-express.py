@@ -5,7 +5,7 @@ from datetime import date
 from shiny.express import render
 
 
-@render.download(
+@render.download_button(
     filename=lambda: f"新型-{date.today().isoformat()}-{random.randint(100, 999)}.csv"
 )
 async def downloadData():

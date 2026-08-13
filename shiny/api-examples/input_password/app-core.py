@@ -3,12 +3,12 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 app_ui = ui.page_fluid(
     ui.input_password("password", "Password:"),
     ui.input_action_button("go", "Go"),
-    ui.output_text_verbatim("value"),
+    ui.output_code("value"),
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     @reactive.event(input.go)
     def value():
         return input.password()

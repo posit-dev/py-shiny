@@ -25,7 +25,7 @@ def slider_row(
         ),
         ui.column(
             6,
-            ui.output_text_verbatim(f"txt{id_num}", placeholder=True),
+            ui.output_code(f"txt{id_num}", placeholder=True),
         ),
     )
 
@@ -103,7 +103,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         name = f"txt{id_num}"
 
         @output(id=name)
-        @render.text
+        @render.code
         def _():
             return input[f"s{id_num}"]()
 

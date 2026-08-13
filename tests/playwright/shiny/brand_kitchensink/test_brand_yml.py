@@ -11,7 +11,9 @@ app = create_example_fixture("brand")
 
 
 def test_brand_yml_kitchensink(page: Page, app: ShinyAppProc) -> None:
-    page.goto(app.url)
+    # Remote font loads can keep WebKit/Firefox CI waiting for the full load event.
+    # The assertions below only need the DOM and computed CSS.
+    page.goto(app.url, wait_until="domcontentloaded")
 
     expected_styles = {
         "value_box_primary": {

@@ -333,7 +333,11 @@ def within_brush(
     var: Literal["x", "y"] = "x",
 ) -> pd.Series[bool]:
     vals = to_float(vals)
-    return (vals >= brush[var + "min"]) & (vals <= brush[var + "max"])
+    if var == "x":
+        brush_min, brush_max = brush["xmin"], brush["xmax"]
+    else:
+        brush_min, brush_max = brush["ymin"], brush["ymax"]
+    return (vals >= brush_min) & (vals <= brush_max)
 
 
 def to_float(x: DataFrameColumn) -> pd.Series[float]:

@@ -17,6 +17,7 @@
     "tests/inspect-ai/scripts/evaluation.py"
   ],
   "typeCheckingMode": "strict",
+  "pythonPlatform": "All",
   "reportImportCycles": "none",
   "reportUnusedFunction": "none",
   "reportPrivateUsage": "none",

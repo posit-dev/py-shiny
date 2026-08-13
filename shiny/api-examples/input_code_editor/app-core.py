@@ -14,7 +14,7 @@ app_ui = ui.page_fillable(
         ),
         ui.card(
             ui.card_header("Editor Value"),
-            ui.output_text_verbatim("value", placeholder=True),
+            ui.output_code("value", placeholder=True),
         ),
         col_widths=[6, 6],
     )
@@ -22,7 +22,7 @@ app_ui = ui.page_fillable(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @render.text
+    @render.code
     def value():
         return input.code()
 

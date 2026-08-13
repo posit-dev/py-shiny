@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Set
 
 import pytest
-import yaml
+
+from ._quartodoc_utils import load_quartodoc_sections, section_contents
 
 root = Path(__file__).parent.parent.parent
 
@@ -26,15 +27,10 @@ def get_controller_classes() -> Set[str]:
 
 
 def get_documented_controllers() -> Set[str]:
-    try:
-        config = yaml.safe_load(DOCS_CONFIG.read_text(encoding="utf-8"))
-    except Exception as e:
-        pytest.fail(f"Failed to load or parse {DOCS_CONFIG}: {e}")
-
     return {
         content.split(".")[-1]
-        for section in config.get("quartodoc", {}).get("sections", [])
-        for content in section.get("contents", [])
+        for section in load_quartodoc_sections(DOCS_CONFIG)
+        for content in section_contents(section)
         if isinstance(content, str) and content.startswith("playwright.controller.")
     }
 

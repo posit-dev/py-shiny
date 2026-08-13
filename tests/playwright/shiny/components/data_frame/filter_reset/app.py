@@ -1,3 +1,4 @@
+from htmltools import TagAttrs
 from palmerpenguins import load_penguins
 
 from shiny import reactive
@@ -8,7 +9,8 @@ penguins = load_penguins()
 ui.input_action_button("update_filters", "Update filters")
 ui.input_action_button("reset_filters", "Reset filters")
 
-ui.h5("Current filters: ", {"class": "pt-2"})
+h5_attrs: TagAttrs = {"class": "pt-2"}
+ui.h5("Current filters: ", h5_attrs)
 
 
 @render.code

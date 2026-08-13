@@ -13,15 +13,15 @@ __all__ = (
 
 Chat = add_example(
     app_file="app-core.py",
-    ex_dir="../shiny/api-examples/Chat",
+    example_name="Chat",
 )(Chat)
 
 ChatExpress = add_example(
     app_file="app-express.py",
-    ex_dir="../shiny/api-examples/Chat",
+    example_name="Chat",
 )(ChatExpress)
 
 chat_ui = add_example(
     app_file="app-core.py",
-    ex_dir="../shiny/api-examples/Chat",
+    example_name="Chat",
 )(chat_ui)

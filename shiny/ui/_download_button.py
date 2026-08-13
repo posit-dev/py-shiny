@@ -2,7 +2,7 @@ __all__ = ("download_button", "download_link")
 
 from typing import Optional
 
-from htmltools import Tag, TagAttrValue, TagChild, css, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._shinyenv import is_pyodide
@@ -39,19 +39,33 @@ def download_button(
     :
         A UI element
 
+    Note
+    ----
+    A download button is an *output*, not an input, so it can't be updated with
+    :func:`~shiny.ui.update_action_button`. It is rendered in a disabled state and is
+    enabled by Shiny once the server has supplied the download URL (this prevents the
+    browser from downloading the app's own HTML if the button is clicked before the
+    session is ready). To only offer the download once some condition is met, render
+    the button conditionally with :class:`~shiny.render.ui`, swapping in a disabled
+    :func:`~shiny.ui.input_action_button` as a placeholder until the download is
+    available. :func:`~shiny.ui.panel_conditional` also works, but only for conditions
+    that the browser can evaluate: its condition sees client-side input values, and some
+    inputs (notably :func:`~shiny.ui.input_file`) have no client-side value at all.
+
     See Also
     --------
-    * :class:`~shiny.render.download`
+    * :class:`~shiny.render.download_button`
     * :func:`~shiny.ui.download_link`
     """
 
+    button_attrs: TagAttrs = {
+        "class": "btn btn-default shiny-download-link disabled",
+        "style": css(width=width),
+    }
     return tags.a(
         icon,
         label,
-        {
-            "class": "btn btn-default shiny-download-link disabled",
-            "style": css(width=width),
-        },
+        button_attrs,
         id=resolve_id(id),
         href="",
         target="_blank",
@@ -95,16 +109,32 @@ def download_link(
     :
         A UI element
 
+    Note
+    ----
+    A download link is an *output*, not an input, so it can't be updated with
+    :func:`~shiny.ui.update_action_link`. It is rendered in a disabled state and is
+    enabled by Shiny once the server has supplied the download URL (this prevents the
+    browser from downloading the app's own HTML if the link is clicked before the
+    session is ready). To only offer the download once some condition is met, render
+    the link conditionally with :class:`~shiny.render.ui`.
+    :func:`~shiny.ui.panel_conditional` also works, but only for conditions that the
+    browser can evaluate: its condition sees client-side input values, and some inputs
+    (notably :func:`~shiny.ui.input_file`) have no client-side value at all.
+
     See Also
     --------
-    * :class:`~shiny.render.download`
+    * :class:`~shiny.render.download_link`
     * :func:`~shiny.ui.download_button`
     """
 
+    link_attrs: TagAttrs = {
+        "class": "shiny-download-link disabled",
+        "style": css(width=width),
+    }
     return tags.a(
         icon,
         label,
-        {"class": "shiny-download-link disabled", "style": css(width=width)},
+        link_attrs,
         id=resolve_id(id),
         href="",
         target="_blank",

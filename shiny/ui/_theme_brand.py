@@ -140,7 +140,7 @@ class BrandBootstrapConfig:
         if not brand.defaults:
             return cls()
 
-        shiny_args = {}
+        shiny_args: dict[str, Any] = {}
         if "shiny" in brand.defaults and "theme" in brand.defaults["shiny"]:
             shiny_args = brand.defaults["shiny"]["theme"]
 
@@ -149,7 +149,7 @@ class BrandBootstrapConfig:
             **shiny_args,
         )
 
-        bs_args = {}
+        bs_args: dict[str, Any] = {}
         if "bootstrap" in brand.defaults:
             bs_args = brand.defaults["bootstrap"]
 

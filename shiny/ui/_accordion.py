@@ -110,18 +110,22 @@ class AccordionPanel:
             btn_attrs["class"] = "collapsed"
             btn_attrs["aria-expanded"] = "false"
 
+        btn_toggle_attrs: TagAttrs = {
+            "class": "accordion-button",
+            "type": "button",
+            "data-bs-toggle": "collapse",
+            "data-bs-target": f"#{self._id}",
+            "aria-controls": self._id,
+        }
+        icon_attrs: TagAttrs = {"class": "accordion-icon"}
+        title_attrs: TagAttrs = {"class": "accordion-title"}
+
         btn = tags.button(
-            {
-                "class": "accordion-button",
-                "type": "button",
-                "data-bs-toggle": "collapse",
-                "data-bs-target": f"#{self._id}",
-                "aria-controls": self._id,
-            },
+            btn_toggle_attrs,
             btn_attrs,
             # Always include an .accordion-icon container to simplify update_accordion_panel() logic
-            tags.div({"class": "accordion-icon"}, self._icon),
-            tags.div({"class": "accordion-title"}, self._title),
+            tags.div(icon_attrs, self._icon),
+            tags.div(title_attrs, self._title),
         )
 
         attrs, children = consolidate_attrs(*self._args, **self._kwargs)
@@ -131,30 +135,37 @@ class AccordionPanel:
                 "Internal error: _accordion_id not set. Did you add your AccordionPanel an `accordion()`?"
             )
 
+        item_attrs: TagAttrs = {
+            "class": "accordion-item",
+            "data-value": self._data_value,
+        }
+        header_attrs: TagAttrs = {"class": "accordion-header h2"}
+        collapse_attrs: TagAttrs = {
+            "id": self._id,
+            "class": "accordion-collapse collapse",
+        }
+        show_attrs: TagAttrs | None = {"class": "show"} if self._is_open else None
+        parent_attrs: TagAttrs | None = (
+            {"data-bs-parent": f"#{self._accordion_id}"}
+            if not self._is_multiple
+            else None
+        )
+        body_attrs: TagAttrs = {"class": "accordion-body"}
+
         return tags.div(
-            {
-                "class": "accordion-item",
-                "data-value": self._data_value,
-            },
+            item_attrs,
             # Use a <span.h2> instead of <h2> so that it doesn't get included in rmd/pkgdown/qmd TOC
             # TODO-bslib: can we provide a way to put more stuff in the header? Like maybe some right-aligned controls?
             tags.span(
-                {"class": "accordion-header h2"},
+                header_attrs,
                 btn,
             ),
             tags.div(
-                {
-                    "id": self._id,
-                    "class": "accordion-collapse collapse",
-                },
-                {"class": "show"} if self._is_open else None,
-                (
-                    {"data-bs-parent": f"#{self._accordion_id}"}
-                    if not self._is_multiple
-                    else None
-                ),
+                collapse_attrs,
+                show_attrs,
+                parent_attrs,
                 tags.div(
-                    {"class": "accordion-body"},
+                    body_attrs,
                     attrs,
                     children,
                 ),
@@ -286,14 +297,17 @@ def accordion(
 
     panel_tags = [panel.resolve() for panel in panels]
 
+    accordion_attrs: TagAttrs = {
+        "id": accordion_id,
+        "class": "accordion",
+        "style": css(width=as_css_unit(width), height=as_css_unit(height)),
+    }
+    # just for ease of identifying autoclosing client-side
+    autoclose_attrs: TagAttrs | None = {"class": "autoclose"} if not multiple else None
+
     tag = tags.div(
-        {
-            "id": accordion_id,
-            "class": "accordion",
-            "style": css(width=as_css_unit(width), height=as_css_unit(height)),
-        },
-        # just for ease of identifying autoclosing client-side
-        {"class": "autoclose"} if not multiple else None,
+        accordion_attrs,
+        autoclose_attrs,
         binding_class_value,
         components_dependencies(),
         attrs,
@@ -438,6 +452,7 @@ def update_accordion(
     * :func:`~shiny.ui.remove_accordion_panel`
     * :func:`~shiny.ui.update_accordion_panel`
     """
+    show_val: bool | str | ListOrTuple[str]
     if show is False:
         show_val = []
     else:

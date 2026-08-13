@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol, Sequence, cast
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
 
-from ...render._data_frame import ColumnFilter, ColumnSort
+from ..._deprecated import warn_deprecated
+from ...render._data_frame import ColumnFilter, ColumnSort, assert_column_filters
+from ...types import ListOrTuple
 from .._types import AttrValue, ListPatternOrStr, PatternOrStr, StyleValue, Timeout
 from ..expect import expect_not_to_have_class, expect_to_have_class
 from ..expect._internal import (
@@ -215,7 +218,15 @@ class OutputCode(_OutputTextValue):
 
 
 class OutputTextVerbatim(_OutputTextValue):
-    """Controller for :func:`shiny.ui.output_text_verbatim`."""
+    """
+    Deprecated. Use :class:`~shiny.playwright.controller.OutputCode` instead.
+
+    Controller for :func:`shiny.ui.output_text_verbatim`.
+
+    See Also
+    --------
+    * :class:`~shiny.playwright.controller.OutputCode`
+    """
 
     loc: Locator
     """
@@ -233,6 +244,10 @@ class OutputTextVerbatim(_OutputTextValue):
         id
             The ID of the verbatim text output.
         """
+        warn_deprecated(
+            "`controller.OutputTextVerbatim` is deprecated, along with "
+            "`ui.output_text_verbatim()`. Please use `controller.OutputCode` instead."
+        )
         super().__init__(page, id=id, loc=f"pre#{id}.shiny-text-output")
 
     def expect_has_placeholder(
@@ -696,16 +711,8 @@ class OutputDataFrame(UiWithContainer):
         return (
             # Find the direct row
             self.loc_body.locator(f"> tr[data-index='{row}']")
-            # Find all direct td's and th's (these are independent sets)
-            .locator("> td, > th")
-            # Remove all results that contain the `row-number` class
-            .locator(
-                # self
-                "xpath=.",
-                has=self.page.locator(
-                    "xpath=self::*[not(contains(@class, 'row-number'))]"
-                ),
-            )
+            # Find all direct non-row-number td's and th's
+            .locator("> td:not(.row-number), > th:not(.row-number)")
             # Return the first result
             .nth(col)
         )
@@ -912,7 +919,17 @@ class OutputDataFrame(UiWithContainer):
             else:
                 # Last row index is higher than `row`
                 break
-        cell.scroll_into_view_if_needed(timeout=timeout)
+        try:
+            cell.scroll_into_view_if_needed(timeout=timeout)
+        except PlaywrightError as err:
+            if "Element is not attached to the DOM" not in str(err):
+                raise
+            # A reactive data update can replace the row after the locator is
+            # resolved but before Playwright finishes waiting for it to settle.
+            # Resolve the cell again so the action targets the current DOM node.
+            self.cell_locator(row=row, col=col).scroll_into_view_if_needed(
+                timeout=timeout
+            )
 
     def _multi_select_modifier(self) -> Literal["Control", "Meta"]:
         platform = self.page.evaluate(
@@ -1152,14 +1169,21 @@ class OutputDataFrame(UiWithContainer):
                 timeout=timeout,
                 modifiers=clickModifier,
             )
-            # Wait for arrows to react a little bit
-            # This could possible be changed to a `wait_for_change`, but 150ms should be fine
-            self.page.wait_for_timeout(150)
+
+        def click_sort_arrow(loc: Locator) -> None:
+            arrow_el = loc.element_handle(timeout=timeout)
+            old_class = arrow_el.get_attribute("class")
+            click_loc(loc)
+            self.page.wait_for_function(
+                "([el, oldClass]) => !el.isConnected || el.getAttribute('class') !== oldClass",
+                arg=[arrow_el, old_class],
+                timeout=timeout,
+            )
 
         # Reset arrow sorting by clicking on the arrows until none are found
         sortingArrows = self.loc_column_label.locator("svg.sort-arrow")
         while sortingArrows.count() > 0:
-            click_loc(sortingArrows.first)
+            click_sort_arrow(sortingArrows.first)
 
         # Quit early if no sorting is needed
         if sort is None:
@@ -1213,11 +1237,9 @@ class OutputDataFrame(UiWithContainer):
                         break
                 click_loc(sort_col, shift=shift)
 
-    # TODO-karan-test: Add support for a list of columns ? If so, all other columns should be reset
     def set_filter(
         self,
-        # TODO-barret support array of filters
-        filter: ColumnFilter | list[ColumnFilter] | None,
+        filter: ColumnFilter | ListOrTuple[ColumnFilter] | None,
         *,
         timeout: Timeout = None,
     ):
@@ -1232,53 +1254,68 @@ class OutputDataFrame(UiWithContainer):
                 * `None`: Resets all filters.
                 * `ColumnFilterStr`: A dictionary specifying a string filter with 'col' and 'value' keys.
                 * `ColumnFilterNumber`: A dictionary specifying a numeric range filter with 'col' and 'value' keys.
+                * A sequence of `ColumnFilterStr` or `ColumnFilterNumber` dictionaries, for multiple filters.
         timeout
             The maximum time to wait for the action to complete. Defaults to `None`.
         """
+
+        def fill_if_needed(input_el: Locator, value: str) -> None:
+            if input_el.input_value(timeout=timeout) != value:
+                input_el.fill(value, timeout=timeout)
+
         # reset all filters
         all_input_locs = self.loc_column_filter.locator("> input, > div > input")
         for i in range(all_input_locs.count()):
             input_el = all_input_locs.nth(i)
-            input_el.fill("", timeout=timeout)
+            fill_if_needed(input_el, "")
 
         if filter is None:
             return
 
+        filter_items: ListOrTuple[ColumnFilter]
         if isinstance(filter, dict):
-            filter = [filter]
-
-        if not isinstance(filter, list):
+            filter_items = [filter]
+        elif isinstance(filter, (list, tuple)):
+            filter_items = filter
+        else:
             raise ValueError(
-                "Invalid filter value. Must be a ColumnFilter, list[ColumnFilter], or None."
+                "Invalid filter value. Must be a ColumnFilter, "
+                "list[ColumnFilter], or None."
             )
 
-        for filterInfo in filter:
-            if "col" not in filterInfo:
-                raise ValueError("Column index (`col`) is required for filtering.")
+        playwright_expect(self.loc_column_label.first).to_be_visible(timeout=timeout)
+        assert_column_filters(filter_items, self.loc_column_label.count())
 
-            if "value" not in filterInfo:
-                raise ValueError("Filter value (`value`) is required for filtering.")
+        for filter_item in filter_items:
+            col_idx = filter_item["col"]
+            value = filter_item.get("value", None)
 
-            filterColumn = self.loc_column_filter.nth(filterInfo["col"])
+            filterColumn = self.loc_column_filter.nth(col_idx)
 
-            if isinstance(filterInfo["value"], str):
-                filterColumn.locator("> input").fill(filterInfo["value"])
-            elif isinstance(filterInfo["value"], (tuple, list)):
+            if isinstance(value, (str, int, float)):
+                fill_if_needed(filterColumn.locator("> input"), str(value))
+                continue
+
+            if isinstance(value, (list, tuple)):
+                range_values = cast(Sequence[Any], value)
+                if len(range_values) != 2:
+                    raise ValueError(
+                        "Numeric range filters must provide exactly two "
+                        "values (min, max)."
+                    )
+
                 header_inputs = filterColumn.locator("> div > input")
-                if filterInfo["value"][0] is not None:
-                    header_inputs.nth(0).fill(
-                        str(filterInfo["value"][0]),
-                        timeout=timeout,
-                    )
-                if filterInfo["value"][1] is not None:
-                    header_inputs.nth(1).fill(
-                        str(filterInfo["value"][1]),
-                        timeout=timeout,
-                    )
-            else:
-                raise ValueError(
-                    "Invalid filter value. Must be a string or a tuple/list of two numbers."
+                lower = range_values[0]
+                upper = range_values[1]
+                fill_if_needed(
+                    header_inputs.nth(0), "" if lower is None else str(lower)
                 )
+                fill_if_needed(
+                    header_inputs.nth(1), "" if upper is None else str(upper)
+                )
+                continue
+
+            raise ValueError("Invalid filter value.")
 
     def set_cell(
         self,

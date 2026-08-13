@@ -2,10 +2,11 @@ from __future__ import annotations
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from PIL import Image
 from plotnine import aes, element_rect, geom_point, theme, theme_minimal
@@ -14,7 +15,13 @@ from plotnine.ggplot import ggplot
 
 from shiny import App, Inputs, Outputs, Session, module, render, req, ui
 
-tips = sns.load_dataset("tips")
+# Mock tips dataset to avoid network loading from seaborn
+tips = pd.DataFrame(
+    {
+        "total_bill": [16.99, 10.34, 21.01, 23.68, 24.59],
+        "tip": [1.01, 1.66, 3.50, 3.31, 3.61],
+    }
+)
 dpi = 150
 
 
@@ -111,7 +118,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return fig
 
     def plot_with_sns(fig_size: tuple[float, float] | None) -> object:
-        kwargs = dict()
+        kwargs: dict[str, Any] = {}
         if fig_size:
             kwargs["height"] = fig_size[1] / dpi
             kwargs["aspect"] = fig_size[0] / fig_size[1]

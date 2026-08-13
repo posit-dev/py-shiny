@@ -58,17 +58,17 @@ def render_test_text(
 
 app_ui = ui.page_fluid(
     ui.code("t1:"),
-    ui.output_text_verbatim("t1"),
+    ui.output_code("t1"),
     ui.code("t2:"),
-    ui.output_text_verbatim("t2"),
+    ui.output_code("t2"),
     ui.code("t3:"),
-    ui.output_text_verbatim("t3"),
+    ui.output_code("t3"),
     ui.code("t4:"),
-    ui.output_text_verbatim("t4"),
+    ui.output_code("t4"),
     ui.code("t5:"),
-    ui.output_text_verbatim("t5"),
+    ui.output_code("t5"),
     ui.code("t6:"),
-    ui.output_text_verbatim("t6"),
+    ui.output_code("t6"),
 )
 
 

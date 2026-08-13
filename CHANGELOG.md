@@ -5,7 +5,118 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [Unreleased]
+
+### Deprecations
+
+* `ui.output_text_verbatim()` is deprecated and now emits a `ShinyDeprecationWarning`. Please use `ui.output_code()` / `@render.code` to create an output container for code (monospaced text), or `ui.output_text()` / `@render.text` to create an output container for plain text. (#2097)
+
+* `playwright.controller.OutputTextVerbatim` is deprecated alongside `ui.output_text_verbatim()` and now emits a `ShinyDeprecationWarning` when constructed. Please use `playwright.controller.OutputCode` instead. (#2097)
+
+### Improvements
+
+* Navsets created with an `id` (e.g. `ui.navset_tab(id="tabs")`) now use that `id` as their `data-tabsetid`, so their tab panes get stable `tab-tabs-0` style DOM ids instead of ones built from a random integer. This makes the rendered markup reproducible across renders and easier to target from custom CSS and JavaScript. Navsets without an `id`, and `ui.nav_menu()` dropdowns, keep the random ID. (Thanks, @pevolution-ahmed!) (#2410)
+
+### Bug fixes
+
+* Closing a session no longer destroys the reactive values and calcs created in it, so async work that outlives the connection does not error. Since v1.6.1, refreshing the page while an `@reactive.extended_task` (or any `asyncio` task) was in flight could raise `DestroyedReactiveError: Reactive value '<name>' has been destroyed.` once it settled, leaving the task in neither `"success"` nor `"error"`. Values and calcs are now left readable at their last value on close and reclaimed by garbage collection, while an explicit `session.destroy(id)` on a live session still tears them down. Effects are still destroyed on close. (#2428)
+
+* The `ui.Theme` API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`. The example directory now declares `libsass` in a `requirements.txt`. (#2387)
+
+* Fixed the error message raised when a package required for theme compilation is missing: it interpolated the package name into the first sentence but printed a literal `pip install {pkg}` in the second. (#2387)
+
+* Download renderers (`@render.download_button`, `@render.download_link`, and the deprecated `@render.download`) now honor `@output(id=)`. The download handler was registered under the decorated function's name, but the URL rendered by the control used the `@output(id=)` value, so clicking the control returned a 404. (#2415)
+
+* `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
+
+* `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
+
+* `ui.input_bookmark_button()` was added to the Express API reference. (#2418)
+
+* `shiny run --app-dir <dir> <app>` now honors `--app-dir` for Shiny Express apps. Express detection looked for the app file relative to `--app-dir`, but the entrypoint that gets handed to uvicorn was then built by resolving the app path against the current working directory instead, so running an Express app from outside its directory failed with a `FileNotFoundError` for a path that never existed. (#2419)
+
+* `@expressify` and `@render.express` no longer fail with `RuntimeError: Failed to find function '...' in AST` when another decorator has changed the function's `__name__`. The AST lookup matched on `__name__`, which a decorator can rewrite; it now matches on the function's code object name, which always reflects the name at the `def` site. This pattern is commonly used to give each `@render.express` function in a loop a unique output id. (#2016)
+
+* When `@expressify` cannot locate a function's definition, the error now names the function as it appears in the source (rather than a `__name__` a decorator may have rewritten), points at the file and line it looked at, and lists the likely causes — an `async def`, a decorator below `expressify()` that returns a wrapper instead of the original function, or a source file modified after import. (#2016)
+
+## [1.7.0] - 2026-07-28
+
+### New features
+
+* Added test mode, enabled via the `SHINY_TESTMODE=1` environment variable or the `App(test_mode=)` argument (which defaults to that env var). The pytest app-launch fixtures (`local_app`, `create_app_fixture`) now run apps in test mode. (#2269)
+
+* When test mode is enabled, each session serves a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.testmode.export_test_values()`. The endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys); unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
+
+* `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) and `my_output.snapshot_preprocess(fn)` preprocess test-mode snapshot values before they are written, e.g. to scrub timestamps or temp paths. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
+
+* `shiny.playwright.controller.AppTestValues` reads a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests. Its expect methods accept predicates: pass any callable (e.g. `app_values.expect_input("n", is_integer)`) in place of an expected value, and the expectation retries until the predicate returns a truthy value. (#2269, #2357)
+
+* `offcanvas()` creates sliding Bootstrap Offcanvas panels that appear from a viewport edge. Panels can be triggered by a UI element, revealed programmatically with `show_offcanvas()`, or controlled by id with `hide_offcanvas()` and `toggle_offcanvas()`. (#2279)
+
+* `@render.download_button` and `@render.download_link` pair 1:1 with `ui.download_button()` and `ui.download_link()`. (#2364)
+
+* The shiny package now ships bundled [Agent Skills](https://agentskills.io) under `shiny/.agents/skills/` (the [library-skills](https://library-skills.io) convention): a single `shiny-for-python` skill whose `SKILL.md` is a grouped index that routes coding agents to a per-topic reference file for each of shiny's public APIs. (#2339, #2344, #2345, #2356, #2365, #2366)
+  * Foundations: `reactivity` (the reactive graph — `reactive.value`/`calc`/`effect`/`event`, `req`, `isolate`, `poll`), `express` (Express mode), `modules-core` / `modules-express` (reusable namespaced components), and `session-lifecycle` (`on_ended`/`on_flush`, request info, dynamic routes).
+  * Layout and navigation: `layouts` (pages, cards, sidebars, columns, value boxes), `navigation` (navsets and `page_navbar`), `dynamic-ui` (`@render.ui`, `update_*`, `insert_ui`, `panel_conditional`), and `theming` (`ui.Theme`, presets, dark mode).
+  * Outputs and rendering: `plots` (`render.plot`/`render.image` and interactions), `data-frames` (`render.data_frame`), and `files` (upload/download).
+  * Feedback and interactivity: `feedback` (notifications, modals, progress, busy indicators), `extended-tasks` (non-blocking long-running work), and `bookmarking` (save/restore app state with `bookmark_store=` and `session.bookmark` hooks).
+  * Generative AI: `chat` (`ui.Chat`) and `markdown-streaming` (`ui.MarkdownStream`).
+  * Extending shiny: `custom-renderers` (authoring a `Renderer` subclass) and `custom-components` (custom JavaScript input/output bindings).
+  * Testing and observability: `testing` (end-to-end tests with pytest and Playwright), `debugging` (inspect running apps via test mode), and `otel` (OpenTelemetry observability).
+
+* `shiny skills list` shows each bundled skill's name and description, and `shiny skills path <name>` prints the skill's directory, so its `SKILL.md` and supporting files (`references/`, `scripts/`) can be read from the installed package. To install the skills into a coding agent, the README and the `shiny skills` CLI help now point at [`library-skills`](https://library-skills.io) (`uvx library-skills --claude`). (#2340, #2367)
+
+### Improvements
+
+* The `shiny[otel]` optional dependency group now includes `opentelemetry-distro[otlp]`, so OpenTelemetry zero-code auto-instrumentation works out of the box: `opentelemetry-instrument shiny run app.py`. This is now the documented standard way to enable OpenTelemetry — the docs and the `examples/open-telemetry/` example no longer configure providers inside the app (in-code `set_tracer_provider()` setup is silently ignored when a provider is already installed, e.g. under `opentelemetry-instrument`). The OTLP exporters are also included, making it easy to switch between gRPC and HTTP export via standard `OTEL_*` environment variables. Note that `opentelemetry-distro` pins `opentelemetry-sdk` to a matching minor version, so if you combine `shiny[otel]` with other packages that pin the OpenTelemetry SDK (e.g. `logfire`), the resolver may need matching versions. (#2349)
+
+* The Playwright controllers `DownloadButton` and `DownloadLink` now share a common base class and gain `expect_label()`, and `DownloadLink` gains the width expectations previously available only on `DownloadButton`. (#2093)
+
+* `OutputDataFrame.set_filter()` now supports multi-column filters. (#2093)
+
+### Deprecations
+
+* `@render.download` is deprecated; use `@render.download_button` (or `@render.download_link`) instead. (#2364)
+
+### Bug fixes
+
+* Fixed rare tabset ID collisions in pages with many navsets. Randomly generated `data-tabsetid` values were drawn from a pool of ~1 million, so a page with dozens of tabsets could occasionally produce two navsets with the same ID (a birthday collision), resulting in duplicate DOM ids and broken tab switching. IDs are now drawn from a pool of 9 trillion. (#2296)
+
+* `shiny run --launch-browser` now opens the browser even when Uvicorn's INFO-level startup logs are unavailable, e.g. when logs are disabled or `--log-level=warning` is used. (#569)
+
+* `InputSlider.set()` and `InputSliderRange.set()` now compute the target value's position from the slider's step configuration and drag the handle directly to it, verifying the landing position against the widget's state (finishing with arrow-key presses when the slider has more steps than the track has pixels). Previously the handle was swept one pixel at a time while polling the label, which was slow and could intermittently miss the target when the browser coalesced or dropped mouse-move events (a recurring webkit CI flake). `InputSliderRange.set()` orders the two handle moves so neither is clamped by its sibling, instead of parking both handles at their extremes first. Setting a value the slider cannot produce now raises an error listing the slider's actual values. (#2311, #2326)
+
+* `ui.output_data_frame()` now consistently orders the filtered columns in ascending column order (#2093), and resetting a numeric range filter resets both values (#2093).
+
+* `@render.data_frame` now renders (and patches edits into) data frames whose column names are not strings, e.g. the integer labels pandas assigns by default. Previously a numeric column name was interpreted as a positional row lookup, and rendering failed with `AttributeError: 'DataFrame' object has no attribute 'dtype'`. (Thanks, @eeshsaxena!) (#2115)
+
+* `render.CellValue` now includes the non-string JSON scalars (`int`, `float`, `bool`, `None`) in addition to HTML-like content. A `@<data_frame>.set_patch_fn` that coerces the browser's string to its column's type — as the `data_frame_data_view` example does with `int()` and `float()` — was correct at runtime but reported as a type error. (Thanks, @eeshsaxena!) (#2115)
+
+* `value_box()`'s `id` docstring now documents `input.<id>_full_screen()` for observing the value box's full screen state, matching `card()`. It previously documented the wrong reactive-value syntax, `input.<id>()["full_screen"]`. (#2324)
+
+### Other changes
+
+* CI now runs the unit tests on Ubuntu with the oldest supported Python (3.10) and every runtime dependency resolved to its declared minimum version (via `uv pip compile --resolution lowest-direct`), so stale lower bounds in `pyproject.toml` are caught. As part of this, `starlette` and `prompt-toolkit` gained explicit lower bounds (`>=0.17.1` and `>=3.0.0`), and the `opentelemetry-api`/`opentelemetry-sdk` minimums were raised from 1.20.0 to 1.24.0 — older versions could leak unsanitized error messages in span exception stack traces. Shiny's OpenTelemetry log emission (which relied on the `Logger.emit()` keyword form added in opentelemetry 1.38.0 and was silently dropped on older versions) now falls back to constructing the `LogRecord` manually, so it works across the whole supported range. (#2335)
+
+* Optimized the test suite by avoiding network-based dataset downloads and heavy library imports during Playwright test app startup, reducing setup time significantly. (#2314)
+
+* Packaging metadata now uses a PEP 639 SPDX license expression instead of the deprecated `license` table and license classifier, and stale `MANIFEST.in` rules were removed. Building the package (e.g. with `uv build`) no longer emits setuptools deprecation or manifest warnings. Wheel and sdist contents are unchanged. (#2304)
+
+* Raised the minimum supported uvicorn version from 0.16.0 to 0.23.0 (July 2023). The old floor no longer worked in practice: running on Posit Workbench passes uvicorn the `ws_per_message_deflate` option, which requires uvicorn >= 0.17. (#2317)
+
+* `@add_example()` gained an `example_name=` parameter that looks up the example in the nearest `api-examples/` directory, and all `ex_dir=` call sites that pointed inside an `api-examples/` tree were migrated to it; `ex_dir=` remains only for examples outside the nearest `api-examples/` tree. This also fixed nine call sites that passed the example name positionally, where it was silently treated as `app_file=` and the example was missing from the generated docs (#2328). Docs builds now fail when an `@add_example()` API reference is missing its example app, instead of emitting a warning and silently omitting the example; several APIs whose examples had gone missing this way were fixed, and missing Shiny Express examples were added. (Thanks, @EltonChang1!) (#2278)
+
+* Added api-examples for `shiny.testmode.export_test_values()`, `shiny.testmode.snapshot_preprocess_input()`, and `Renderer.snapshot_preprocess()`, demonstrating how to surface reactive values in the test-mode snapshot and how to scrub sensitive or nondeterministic input/output values from it (#2284), and for `ui.output_code()` (#2093).
+
+* `shiny.run.run_shiny_app()` (and therefore `shiny.pytest.create_app_fixture()`) now picks random app ports from a disjoint per-worker port range when running under pytest-xdist, instead of the full 1024-49151 range shared by all workers. This prevents parallel test workers from racing to bind the same port and from reusing each other's recycled ports. When not running under pytest-xdist, the behavior is unchanged: ports are picked from `random_port()`'s full default range (1024-49151). (#2297)
+
+## [1.6.4] - 2026-07-28
+
+### Bug fixes
+
+* Fixed a path-traversal vulnerability in bookmark restore (CWE-22). Introduced in 1.4.0. Reported by @0xRenSec.
+
+* When bookmarked state cannot be restored, the notification shown in the client is now a generic message. The reason is logged server-side as a warning on the `shiny.bookmark._restore_state` logger, so app authors can still see it. (ab10e069)
 
 ### Bug fixes
 

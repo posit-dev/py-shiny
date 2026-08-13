@@ -18,6 +18,7 @@ quartodoc:
         - playwright.controller.Accordion
         - playwright.controller.AccordionPanel
         - playwright.controller.Card
+        - playwright.controller.Offcanvas
         - playwright.controller.Popover
         - playwright.controller.Sidebar
         - playwright.controller.Toast
@@ -85,8 +86,11 @@ quartodoc:
         - playwright.controller.OutputPlot
         - playwright.controller.OutputTable
         - playwright.controller.OutputText
-        - playwright.controller.OutputTextVerbatim
         - playwright.controller.OutputUi
+    - title: App test values
+      desc: Read a session's test-mode snapshot of input, output, and export values.
+      contents:
+        - playwright.controller.AppTestValues
     - title: "Playwright Expect"
       desc: "Methods for testing the state of a locator within a Shiny app."
       contents:
@@ -106,3 +110,7 @@ quartodoc:
       contents:
         - run.run_shiny_app
         - run.ShinyAppProc
+    - title: Deprecated
+      desc: ""
+      contents:
+        - playwright.controller.OutputTextVerbatim

@@ -20,10 +20,8 @@ on:
 jobs:
   build-docs:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.13"]
-      fail-fast: false
+    env:
+      PYTHON_VERSION: "3.13"
 
     steps:
       - uses: actions/checkout@v6
@@ -33,7 +31,7 @@ jobs:
       - name: Setup py-shiny
         uses: ./.github/py-shiny/setup
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PYTHON_VERSION }}
 
       # =====================================================
       # API docs

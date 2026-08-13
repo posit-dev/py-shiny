@@ -129,8 +129,10 @@ def page_sidebar(
 
     attrs, children = consolidate_attrs(*args, **kwargs)
 
+    page_attrs: TagAttrs = {"class": "bslib-page-sidebar"}
+
     return page_fillable(
-        {"class": "bslib-page-sidebar"},
+        page_attrs,
         navbar_title,
         layout_sidebar(
             sidebar,
@@ -150,7 +152,8 @@ def page_sidebar(
 
 
 def page_main_container(*args: TagChild, fillable: bool = True) -> Tag:
-    main = tags.main({"class": "bslib-page-main bslib-gap-spacing"}, *args)
+    main_attrs: TagAttrs = {"class": "bslib-page-main bslib-gap-spacing"}
+    main = tags.main(main_attrs, *args)
     if not fillable:
         return main
     return as_fillable_container(as_fill_item(main))
@@ -425,10 +428,18 @@ def page_fillable(
 
     style = css(padding=as_css_padding(padding), gap=as_css_unit(gap))
 
+    page_fill_attrs: TagAttrs = {
+        "class": "bslib-page-fill bslib-gap-spacing",
+        "style": style,
+    }
+    flow_mobile_attrs: TagAttrs | None = (
+        {"class": "bslib-flow-mobile"} if not fillable_mobile else None
+    )
+
     page = page_bootstrap(
         head_content(tags.style("html { height: 100%; }")),
-        {"class": "bslib-page-fill bslib-gap-spacing", "style": style},
-        {"class": "bslib-flow-mobile"} if not fillable_mobile else None,
+        page_fill_attrs,
+        flow_mobile_attrs,
         attrs,
         *children,
         components_dependencies(),
@@ -495,8 +506,10 @@ def page_fluid(
     * :func:`~shiny.ui.page_navbar`
     """
 
+    container_fluid_attrs: TagAttrs = {"class": "container-fluid"}
+
     return page_bootstrap(
-        div({"class": "container-fluid"}, *args, **kwargs),
+        div(container_fluid_attrs, *args, **kwargs),
         title=title,
         lang=lang,
         theme=theme,
@@ -551,8 +564,10 @@ def page_fixed(
     * :func:`~shiny.ui.page_navbar`
     """
 
+    container_attrs: TagAttrs = {"class": "container"}
+
     return page_bootstrap(
-        div({"class": "container"}, *args, **kwargs),
+        div(container_attrs, *args, **kwargs),
         title=title,
         lang=lang,
         theme=theme,
@@ -751,8 +766,10 @@ def page_auto(
                     "Multiple top-level sidebars not allowed in combination with top-level navs."
                 )
 
-    # If we got here, _page_fn is not None, but the type checker needs a little help.
-    return page_fn(*args, **kwargs)
+    # If we got here, page_fn is not None, but the type checker needs a little help to
+    # avoid narrowing `page_fn` to a union of the concrete page function signatures.
+    resolved_page_fn: Callable[..., Tag] = page_fn
+    return resolved_page_fn(*args, **kwargs)
 
 
 # For `page_fillable`, `page_fluid`, and `page_fixed`, the `title` arg sets the window

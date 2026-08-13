@@ -114,12 +114,12 @@ app_ui = ui.page_fluid(
     ui.h1("Capitalization renderer"),
     ui.input_text("caption", "Caption:", "Data summary"),
     "Renderer called with out parentheses:",
-    ui.output_text_verbatim("no_output", placeholder=True),
-    ui.output_text_verbatim("no_parens", placeholder=True),
+    ui.output_code("no_output", placeholder=True),
+    ui.output_code("no_parens", placeholder=True),
     "To upper:",
-    ui.output_text_verbatim("to_upper", placeholder=True),
+    ui.output_code("to_upper", placeholder=True),
     "To lower:",
-    ui.output_text_verbatim("to_lower", placeholder=True),
+    ui.output_code("to_lower", placeholder=True),
 )
 
 

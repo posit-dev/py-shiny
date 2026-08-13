@@ -5,7 +5,7 @@ __all__ = ("input_task_button",)
 from functools import partial
 from typing import Callable, Optional, TypeVar, cast, overload
 
-from htmltools import HTML, Tag, TagAttrValue, TagChild, css, tags
+from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, css, tags
 
 from .._docstring import add_example
 from .._typing_extensions import ParamSpec
@@ -25,7 +25,7 @@ spinner_icon = """<svg class="py-shiny-spin" viewBox="0 0 512 512" preserveAspec
 </svg>"""
 
 
-@add_example(ex_dir="../api-examples/extended_task")
+@add_example(example_name="extended_task")
 def input_task_button(
     id: str,
     label: TagChild,
@@ -125,10 +125,17 @@ def input_task_button(
     if icon_busy is MISSING:
         icon_busy = HTML(spinner_icon)
 
-    css_class = "bslib-task-button" + f" btn btn-{type}" if type is not None else ""
+    css_class = "bslib-task-button"
+    if type is not None:
+        css_class += f" btn btn-{type}"
 
+    button_attrs: TagAttrs = {
+        "class": css_class,
+        "style": css(width=width),
+        "data-auto-reset": auto_reset,
+    }
     return tags.button(
-        {"class": css_class, "style": css(width=width), "data-auto-reset": auto_reset},
+        button_attrs,
         Tag(
             "bslib-switch-inline",
             tags.span(

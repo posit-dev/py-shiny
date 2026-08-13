@@ -8,7 +8,7 @@ def test_sidebar_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     page.goto(local_app.url)
 
     left_sidebar = controller.Sidebar(page, "sidebar_left")
-    output_txt_left = controller.OutputTextVerbatim(page, "state_left")
+    output_txt_left = controller.OutputCode(page, "state_left")
     left_sidebar.set(True)
     left_sidebar.expect_padding("10px")
     left_sidebar.expect_padding(["10px"])

@@ -8,6 +8,9 @@ import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
+from shiny.otel import _core
+from shiny.otel._constants import TRACER_NAME
+
 from .otel_helpers import otel_tracer_provider_impl
 
 
@@ -35,7 +38,7 @@ def _otel_tracer_provider_session() -> (
 @pytest.fixture
 def otel_tracer_provider(
     _otel_tracer_provider_session: Tuple[TracerProvider, InMemorySpanExporter],
-) -> Tuple[TracerProvider, InMemorySpanExporter]:
+) -> Iterator[Tuple[TracerProvider, InMemorySpanExporter]]:
     """
     Function-scoped pytest fixture for OpenTelemetry TracerProvider.
 
@@ -52,6 +55,16 @@ def otel_tracer_provider(
 
     This two-fixture pattern separates the one-time global setup (session)
     from the per-test cleanup (function), working correctly with pytest-xdist.
+
+    Why force `_core._tracer`?
+    --------------------------
+    `trace.set_tracer_provider()` is silently rejected when a provider was
+    already installed in this worker process (e.g. by `test_otel_logfire.py`
+    configuring logfire). In that case the session fixture's provider is not
+    the global one, spans go somewhere else, and the in-memory exporter stays
+    empty. Pointing Shiny's cached tracer at the test provider makes span
+    assertions independent of which tests happen to share the worker. This
+    mirrors what `test_otel_value_logging.py` does for `_core._logger`.
 
     Yields
     ------
@@ -80,4 +93,10 @@ def otel_tracer_provider(
     provider, exporter = _otel_tracer_provider_session
     # Clear spans from previous tests to ensure isolation
     exporter.clear()
-    return provider, exporter
+    # Force Shiny's cached tracer to come from the test provider, even if
+    # `trace.set_tracer_provider()` was rejected because another test already
+    # owned the global provider.
+    _core._tracer = provider.get_tracer(TRACER_NAME)
+    yield provider, exporter
+    # Reset so subsequent callers re-fetch from the global provider
+    _core._tracer = None

@@ -1,19 +1,28 @@
 import pandas as pd
 import polars as pl
-import seaborn as sns
 from narwhals.stable.v1.typing import IntoDataFrame
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 
-df = pd.DataFrame(
-    sns.load_dataset(  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-        "iris"
-    )  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+# Mock Iris dataset subset for testing to avoid importing seaborn and downloading from GitHub
+distinct_df = pd.DataFrame(
+    {
+        "sepal_length": [5.1, 4.9, 7.0, 6.4, 6.3, 5.8],
+        "sepal_width": [3.5, 3.0, 3.2, 3.2, 3.3, 2.7],
+        "petal_length": [1.4, 1.4, 4.7, 4.5, 6.0, 5.1],
+        "petal_width": [0.2, 0.2, 1.4, 1.5, 2.5, 1.9],
+        "species": [
+            "setosa",
+            "setosa",
+            "versicolor",
+            "versicolor",
+            "virginica",
+            "virginica",
+        ],
+    },
+    index=[0, 1, 50, 51, 100, 101],
 )
-
-distinct_df = df.drop_duplicates(subset=["species"])
-idxs = [0, 1, 50, 51, 100, 101]
-distinct_df = df.iloc[idxs]
+idxs = distinct_df.index.tolist()
 
 
 @module.ui
@@ -29,15 +38,15 @@ def mod_ui():
         ui.br(),
         ui.output_data_frame("iris_df"),
         ui.h2("Data view indices"),
-        ui.output_text_verbatim("data_view_rows"),
+        ui.output_code("data_view_rows"),
         ui.h2("Indices when view_selected=True"),
-        ui.output_text_verbatim("data_view_selected_true"),
+        ui.output_code("data_view_selected_true"),
         ui.h2("Indices when view_selected=False"),
-        ui.output_text_verbatim("data_view_selected_false"),
+        ui.output_code("data_view_selected_false"),
         ui.h2("Show selected cell"),
-        ui.output_text_verbatim("cell_selection"),
+        ui.output_code("cell_selection"),
         ui.h2("Type:"),
-        ui.output_text_verbatim("df_type"),
+        ui.output_code("df_type"),
     )
 
 

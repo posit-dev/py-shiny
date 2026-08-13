@@ -154,11 +154,12 @@ def layout_column_wrap(
         "max-height": as_css_unit(max_height),
     }
 
+    grid_attrs: TagAttrs = {
+        "class": "bslib-grid bslib-mb-spacing",
+        "style": css(**tag_style_css),
+    }
     tag = div(
-        {
-            "class": "bslib-grid bslib-mb-spacing",
-            "style": css(**tag_style_css),
-        },
+        grid_attrs,
         attrs,
         *wrap_all_in_gap_spaced_container(children, fillable),
         components_dependencies(),
@@ -189,7 +190,9 @@ def wrap_all_in_gap_spaced_container(
     # Use a new list so that we don't mutate the original `children`
     wrapped_children: list[TagChild] = []
     for child_value in children:
-        child = div({"class": item_class}, child_value)
+        # `class_=` (rather than a positional `{"class": ...}` dict) keeps each
+        # wrapper's attributes independent and needs no `TagAttrs` annotation.
+        child = div(child_value, class_=item_class)
         if fillable:
             child = as_fillable_container(child)
         wrapped_children.append(child)

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from ..session import Session
 
 
-@add_example(ex_dir="../api-examples/modal")
+@add_example(example_name="modal")
 def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue) -> Tag:
     """
     Creates a button that will dismiss a :func:`~shiny.ui.modal`.
@@ -48,10 +48,11 @@ def modal_button(label: TagChild, icon: TagChild = None, **kwargs: TagAttrValue)
     * :func:`~shiny.ui.modal_show`
     * :func:`~shiny.ui.modal_remove`
     """
+    button_attrs: TagAttrs = {"class": "btn btn-default"}
     return tags.button(
         icon,
         label,
-        {"class": "btn btn-default"},
+        button_attrs,
         type="button",
         data_dismiss="modal",
         data_bs_dismiss="modal",
@@ -119,10 +120,11 @@ def modal(
     if footer is not None:
         footer = div(footer, class_="modal-footer")
 
+    body_attrs: TagAttrs = {"class": "modal-body"}
     dialog = div(
         div(
             title_div,
-            div({"class": "modal-body"}, *args, **kwargs),
+            div(body_attrs, *args, **kwargs),
             footer,
             class_="modal-content",
         ),
@@ -158,7 +160,7 @@ def modal(
     )
 
 
-@add_example(ex_dir="../api-examples/modal")
+@add_example(example_name="modal")
 def modal_show(modal: Tag, session: Optional[Session] = None) -> None:
     """
     Show a modal dialog.

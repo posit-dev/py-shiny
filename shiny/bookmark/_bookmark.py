@@ -30,6 +30,21 @@ else:
 
 
 class Bookmark(ABC):
+    """
+    A session's bookmarking interface.
+
+    Every session exposes one of these as `session.bookmark`. It controls whether
+    bookmarking is enabled (`store`), which inputs are left out of a bookmark
+    (`exclude`), and when state is saved and restored (the `on_bookmark`,
+    `on_bookmarked`, `on_restore` and `on_restored` callback registrations).
+
+    Calling the object (`await session.bookmark()`) is equivalent to
+    `await session.bookmark.do_bookmark()`: it saves the current state and, depending on `store`, updates
+    the query string or shows a modal containing the bookmark URL.
+
+    App authors do not construct this class directly. Shiny creates the appropriate
+    subclass for the session.
+    """
 
     _on_get_exclude: list[Callable[[], list[str]]]
     """Callbacks that BookmarkProxy classes utilize to help determine the list of inputs to exclude from bookmarking."""
@@ -42,7 +57,7 @@ class Bookmark(ABC):
     _on_restore_callbacks: AsyncCallbacks
     _on_restored_callbacks: AsyncCallbacks
 
-    @add_example("input_bookmark_button")
+    @add_example(example_name="input_bookmark_button")
     async def __call__(self) -> None:
         await self.do_bookmark()
 
@@ -70,7 +85,7 @@ class Bookmark(ABC):
         Possible values:
         * `"url"`: Save / reload the bookmark state in the URL.
         * `"server"`: Save / reload the bookmark state on the server.
-        * `"disable"` (default): Bookmarking is diabled.
+        * `"disable"` (default): Bookmarking is disabled.
         """
         ...
 
@@ -96,7 +111,7 @@ class Bookmark(ABC):
 
     #     await session.insert_ui(modal_with_url(url))
 
-    @add_example("bookmark_callbacks")
+    @add_example(example_name="bookmark_callbacks")
     def on_bookmark(
         self,
         callback: (
@@ -114,11 +129,11 @@ class Bookmark(ABC):
         callback
             The callback function to call when the session is bookmarked.
             This method should accept a single argument, which is a
-            :class:`~shiny.bookmark._bookmark.ShinySaveState` object.
+            :class:`~shiny.bookmark.BookmarkState` object.
         """
         return self._on_bookmark_callbacks.register(wrap_async(callback))
 
-    @add_example("bookmark_callbacks")
+    @add_example(example_name="bookmark_callbacks")
     def on_bookmarked(
         self,
         callback: Callable[[str], None] | Callable[[str], Awaitable[None]],
@@ -386,8 +401,11 @@ class BookmarkApp(Bookmark):
             @otel_suppress
             def init_error_message():
                 if self._restore_context and self._restore_context._init_error_msg:
+                    # Keep the detail server-side (it is logged by
+                    # `RestoreContext.from_query_string`): the message can echo
+                    # client-supplied input and resolved server paths.
                     notification_show(
-                        f"Error in RestoreContext initialization: {self._restore_context._init_error_msg}",
+                        "Error restoring bookmarked state.",
                         duration=None,
                         type="error",
                         session=root_session,
@@ -478,7 +496,6 @@ class BookmarkApp(Bookmark):
         if self.store == "disable":
             return None
 
-        from ..bookmark._bookmark import BookmarkState
         from ..session import session_context
 
         async def root_state_on_save(state: BookmarkState) -> None:
@@ -602,8 +619,6 @@ class BookmarkProxy(Bookmark):
     # The goal of this method is to save the scope's values. All namespaced inputs
     # will already exist within the `root_state`.
     async def _scoped_on_bookmark(self, root_state: BookmarkState) -> None:
-        from ..bookmark._bookmark import BookmarkState
-
         scoped_state = BookmarkState(
             input=self._proxy_session.input,
             exclude=self.exclude,

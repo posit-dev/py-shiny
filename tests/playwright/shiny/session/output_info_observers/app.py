@@ -5,7 +5,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 def dynamic_probe_ui():
     return (
-        ui.output_text_verbatim("dynamic_probe")
+        ui.output_code("dynamic_probe")
         .add_class("shiny-report-size")
         .add_style("width: 220px; height: 110px;")
     )
@@ -49,24 +49,24 @@ app_ui = ui.page_fluid(
           border: 0;
         }
         """),
-    ui.output_text_verbatim("probe")
+    ui.output_code("probe")
     .add_class("shiny-report-size shiny-report-theme theme-warm")
     .add_style(
         "box-sizing: border-box; width: 240px; height: 120px; "
         "margin: 0; padding: 0; border: 0;"
     ),
-    ui.output_text_verbatim("size_info"),
-    ui.output_text_verbatim("hidden_info"),
-    ui.output_text_verbatim("theme_info"),
+    ui.output_code("size_info"),
+    ui.output_code("hidden_info"),
+    ui.output_code("theme_info"),
     ui.navset_tab(
-        ui.nav_panel("Observed", ui.output_text_verbatim("nav_probe")),
+        ui.nav_panel("Observed", ui.output_code("nav_probe")),
         ui.nav_panel("Other", "Other tab content"),
         id="probe_tabs",
     ),
-    ui.output_text_verbatim("nav_hidden_info"),
+    ui.output_code("nav_hidden_info"),
     ui.div(dynamic_probe_ui(), id="dynamic_slot"),
     ui.tags.template(dynamic_probe_ui(), id="dynamic_probe_template"),
-    ui.output_text_verbatim("dynamic_info"),
+    ui.output_code("dynamic_info"),
     ui.tags.script("""
         (() => {
           const toggleSize = document.getElementById("toggle_size");
@@ -154,11 +154,11 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     def _toggle_dynamic_mount() -> None:
         dynamic_mounted.set(not dynamic_mounted())
 
-    @render.text
+    @render.code
     def probe():
         return "probe"
 
-    @render.text
+    @render.code
     def size_info():
         return json.dumps(
             {
@@ -167,7 +167,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             }
         )
 
-    @render.text
+    @render.code
     def hidden_info():
         return json.dumps(
             {
@@ -175,7 +175,7 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             }
         )
 
-    @render.text
+    @render.code
     def theme_info():
         return json.dumps(
             {
@@ -186,11 +186,11 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             }
         )
 
-    @render.text
+    @render.code
     def nav_probe():
         return "nav probe"
 
-    @render.text
+    @render.code
     def nav_hidden_info():
         return json.dumps(
             {
@@ -198,11 +198,11 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             }
         )
 
-    @render.text
+    @render.code
     def dynamic_probe():
         return "dynamic probe"
 
-    @render.text
+    @render.code
     def dynamic_info():
         return json.dumps(
             {

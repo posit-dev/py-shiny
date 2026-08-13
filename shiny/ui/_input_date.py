@@ -4,7 +4,7 @@ import json
 from datetime import date
 from typing import Optional
 
-from htmltools import Tag, TagAttrValue, TagChild, css, div, span, tags
+from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from .._namespaces import resolve_id
@@ -284,9 +284,10 @@ def _date_input_tag(
     autoclose: bool,
     **kwargs: TagAttrValue,
 ):
+    input_attrs: TagAttrs = {"class": "form-control"}
     return tags.input(
         datepicker_deps(),
-        {"class": "form-control"},
+        input_attrs,
         type="text",
         # `aria-labelledby` attribute is required for accessibility to avoid doubled labels (#2951).
         aria_labelledby=id + "-label",

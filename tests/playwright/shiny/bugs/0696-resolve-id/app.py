@@ -31,7 +31,7 @@ pandas_df = pd.DataFrame(
 img_path = pathlib.Path(__file__).parent / "imgs"
 penguin_imgs = [str(img_path / img) for img in os.listdir(img_path)]
 assert len(penguin_imgs) > 0
-letters = [letter for letter in "abcdefghijklmnopqrstuvwxyz"][: len(penguin_imgs)]
+letters: list[str] = list("abcdefghijklmnopqrstuvwxyz"[: len(penguin_imgs)])
 
 input_keys = (
     "input_action_button",
@@ -97,11 +97,11 @@ def mod_x_ui(label: str) -> ui.TagChild:
             """),
         ui.layout_column_wrap(
             *[
-                ui.output_text_verbatim(f"status_x_{x_input_key}", placeholder=True)
+                ui.output_code(f"status_x_{x_input_key}", placeholder=True)
                 for x_input_key in x_input_keys
             ],
             *[
-                ui.output_text_verbatim(f"status_{input_key}", placeholder=True)
+                ui.output_code(f"status_{input_key}", placeholder=True)
                 for input_key in input_keys
             ],
             width=1 / 2,
@@ -198,7 +198,7 @@ def mod_x_ui(label: str) -> ui.TagChild:
                     "Image (Changes w/ `input.radio_buttons()`)",
                     ui.output_image("out_image", height="180px"),
                 ),
-                ("Text Verbatim", ui.output_text_verbatim("out_text_verbatim")),
+                ("Code", ui.output_code("out_code")),
                 ("Text", ui.output_text("out_text")),
                 ("UI", ui.output_ui("out_ui")),
             )
@@ -242,9 +242,9 @@ def mod_x_server(
     def out_text():
         return f"Output text content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
 
-    @render.text
-    def out_text_verbatim():
-        return f"Output text verbatim content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
+    @render.code
+    def out_code():
+        return f"Output Code content. `input.radio_buttons()`: `{input.input_radio_buttons()}`"
 
     @render.ui
     def out_ui():
@@ -256,7 +256,7 @@ def mod_x_server(
 
     download_button_count = 0
 
-    @render.download(filename=lambda: f"download_button-{session.ns}.csv")
+    @render.download_button(filename=lambda: f"download_button-{session.ns}.csv")
     async def download_button():
         nonlocal download_button_count
         download_button_count += 1
@@ -265,7 +265,7 @@ def mod_x_server(
 
     download_link_count = 0
 
-    @render.download(filename=lambda: f"download_link-{session.ns}.csv")
+    @render.download_button(filename=lambda: f"download_link-{session.ns}.csv")
     async def download_link():
         nonlocal download_link_count
         download_link_count += 1
@@ -363,7 +363,7 @@ app_ui = ui.page_fluid(
         width=1 / 3,
     ),
     # ui.h3("Inputs that are not in a module:"),
-    # ui.output_text_verbatim("not_modules", placeholder=True),
+    # ui.output_code("not_modules", placeholder=True),
 )
 
 

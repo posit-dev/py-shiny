@@ -6,11 +6,10 @@ from shiny.bookmark import BookmarkState
 from shiny.bookmark._restore_state import RestoreState
 from shiny.express import app_opts, module, session, ui
 
-SHINY_BOOKMARK_STORE: Literal["url", "server"] = os.getenv(
-    "SHINY_BOOKMARK_STORE", "url"
-)  # pyright: ignore[reportAssignmentType]
-if SHINY_BOOKMARK_STORE not in ["url", "server"]:
+_bookmark_store_env = os.getenv("SHINY_BOOKMARK_STORE", "url")
+if _bookmark_store_env not in ("url", "server"):
     raise ValueError("SHINY_BOOKMARK_STORE must be either 'url' or 'server'")
+SHINY_BOOKMARK_STORE: Literal["url", "server"] = _bookmark_store_env
 
 app_opts(bookmark_store=SHINY_BOOKMARK_STORE)
 
@@ -27,7 +26,6 @@ def bookmark_store():
 
 @module
 def ex_mod(input: Inputs, output: Outputs, session: Session, recurse: int = 3):
-
     ui.h3(f"Module {recurse}")
     with ui.layout_column_wrap(width="200px"):
         ui.TagList(
@@ -79,11 +77,9 @@ def ex_mod(input: Inputs, output: Outputs, session: Session, recurse: int = 3):
         # print("app-Restore state:", restore_state.values)
 
         if "btn2" in restore_state.values:
-
             ui.update_radio_buttons("btn2", selected=restore_state.values["btn2"])
 
         if "dyn2" in restore_state.values:
-
             ui.update_radio_buttons("dyn2", selected=restore_state.values["dyn2"])
 
 

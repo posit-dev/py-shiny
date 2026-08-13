@@ -58,15 +58,31 @@ from ._core import Context, Dependents, ReactiveWarning, isolate
 from ._utils import is_user_code_frame
 
 
-def _weak_callback(method: Callable[[], None]) -> Callable[[], None]:
+def _weak_destroy_callback(
+    method: Callable[[], None],
+    session: Session,
+) -> Callable[[], None]:
     """
-    Wrap a bound method in a ``weakref.WeakMethod`` so the callback does not
-    prevent the owning object from being garbage collected. If the object has
-    been collected, the wrapper silently no-ops.
+    Build the ``on_destroy`` callback that a reactive registers with its session.
+
+    The bound method is wrapped in a ``weakref.WeakMethod`` so the callback does
+    not prevent the owning reactive from being garbage collected. If the reactive
+    has already been collected, the wrapper silently no-ops.
+
+    The wrapper also no-ops when the session is closed. A whole-session close is
+    not a destroy: every consumer in the session is already gone (effects are
+    destroyed via ``on_ended``, and the session can no longer flush), so the
+    reactive is left intact and reclaimed by ordinary garbage collection.
+    Tearing it down here would instead poison async work that outlives the
+    connection -- an :class:`~shiny.reactive.ExtendedTask` settling after a page
+    refresh, an ``asyncio`` task, a ``loop.call_later()`` callback -- with an
+    unavoidable, racy :class:`DestroyedReactiveError`.
     """
     ref = weakref.WeakMethod(method)
 
     def wrapper() -> None:
+        if session._is_closed():
+            return
         fn = ref()
         if fn is not None:
             fn()
@@ -181,6 +197,7 @@ class Value(Generic[T]):
         # Optional name for OpenTelemetry logging and debugging
         # Priority during initialization: 1) explicit name parameter, 2) inferred from assignment, 3) None
         # Can be overwritten later by Inputs class when value is added/accessed
+        self._name: str | None
         if name is not None:
             self._name = name
         else:
@@ -207,8 +224,9 @@ class Value(Generic[T]):
 
         if session is not None:
             # Unset the value on session/module destroy so dependents are
-            # invalidated and the stored value is freed.
-            session.on_destroy(_weak_callback(self.destroy))
+            # invalidated and the stored value is freed. (Not on session close --
+            # see `_weak_destroy_callback`.)
+            session.on_destroy(_weak_destroy_callback(self.destroy, session))
 
     def _try_infer_name(self) -> str | None:
         """
@@ -701,8 +719,11 @@ class Calc_(Generic[T]):
 
         if self._session is not None:
             # Invalidate context and dependents on session/module destroy so
-            # the calc is permanently destroyed and references are freed.
-            self._session.on_destroy(_weak_callback(self.destroy))
+            # the calc is permanently destroyed and references are freed. (Not on
+            # session close -- see `_weak_destroy_callback`.)
+            self._session.on_destroy(
+                _weak_destroy_callback(self.destroy, self._session)
+            )
 
     def destroy(self) -> None:
         """
@@ -999,11 +1020,15 @@ class Effect_:
         self._session = session
 
         if self._session is not None:
-            # TODO-future: Investigate using _weak_callback for on_ended too.
+            # TODO-future: Investigate using a weak reference for on_ended too.
             # Currently kept as a strong reference to preserve existing behavior
-            # where effects are guaranteed to be destroyed at session end.
+            # where effects are guaranteed to be destroyed at session end. That
+            # `on_ended` registration is also what destroys effects on session
+            # close, since the `on_destroy` one no-ops there.
             self._session.on_ended(self.destroy)
-            self._session.on_destroy(_weak_callback(self.destroy))
+            self._session.on_destroy(
+                _weak_destroy_callback(self.destroy, self._session)
+            )
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs: dict[str, Any] = {

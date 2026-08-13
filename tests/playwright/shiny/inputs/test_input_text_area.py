@@ -56,7 +56,7 @@ def test_input_text_app(page: Page, app: ShinyAppProc) -> None:
     caption = controller.InputTextArea(page, "caption_regular")
     caption.expect.to_have_value(default_txt)
 
-    value = controller.OutputTextVerbatim(page, "value_regular")
+    value = controller.OutputCode(page, "value_regular")
     value.expect_value(default_txt)
 
     caption.set("test value")
@@ -79,14 +79,14 @@ def test_autoresize(page: Page, app: ShinyAppProc) -> None:
     page.goto(app.url)
 
     input_area = controller.InputTextArea(page, "caption_autoresize")
-    output_txt_verbatim = controller.OutputTextVerbatim(page, "value_autoresize")
+    output_code = controller.OutputCode(page, "value_autoresize")
     input_area.set("test value")
     # use bounding box approach since height is dynamic
     initial_height = get_box_height(input_area.loc)
-    output_txt_verbatim.expect_value("test value")
+    output_code.expect_value("test value")
     for _ in range(resize_number):
         input_area.loc.press("Enter")
     input_area.loc.type("end value")
     return_txt = "\n" * resize_number
-    output_txt_verbatim.expect_value(f"test value{return_txt}end value")
+    output_code.expect_value(f"test value{return_txt}end value")
     assert get_box_height(input_area.loc) > initial_height

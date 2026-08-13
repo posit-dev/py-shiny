@@ -370,9 +370,9 @@ def value_box(
         and `text-*` classes (e.g, `"bg-danger"` and `"text-light"`) to customize the
         background/foreground colors.
     id
-        Provide a unique identifier for the :func:`~shiny.ui.value_box()` to report its
-        state to Shiny. For example, using `id="my_value_box"`, you can observe the
-        value box's full screen state with `input.my_value_box()["full_screen"]`.
+        A unique identifier for the value box. If provided, the value box's full
+        screen state is reported to Shiny at `input.<id>_full_screen()` (e.g.,
+        `input.my_value_box_full_screen()` for `id="my_value_box"`).
     **kwargs
         Additional attributes to pass to :func:`~shiny.ui.card`.
 
@@ -418,12 +418,13 @@ def value_box(
         value = wrap_in_carrier_tag_with_class("value-box-value", value)
 
     # ---- Contents ----
-    contents: Tagifiable = wrap_in_carrier_tag_with_class(
+    contents_tag: Tag = wrap_in_carrier_tag_with_class(
         "value-box-area",
         title,
         value,
         *children,
     )
+    contents: Tagifiable = contents_tag
 
     # ---- Showcase ----
     if showcase is not None:
@@ -431,7 +432,7 @@ def value_box(
         contents = render_showcase_layout(
             showcase_layout=showcase_layout,
             showcase=showcase,
-            contents=contents,
+            contents=contents_tag,
         )
 
     if not isinstance(theme, ValueBoxTheme):
@@ -439,26 +440,31 @@ def value_box(
 
     # ---- Layout ----
 
-    return card(
-        {
-            "class": "bslib-value-box",
-            "style": css_no_sub(
-                **{
-                    "color": theme.fg,
-                    "background-color": theme.bg,
-                    # These variables are used by the full screen card button
-                    "--bslib-color-fg": theme.fg,
-                    "--bslib-color-bg": theme.bg,
-                },
-            ),
-        },
-        {"class": theme.class_} if theme.class_ else None,
-        {"class": class_} if class_ else None,
-        (
-            {"class": showcase_layout.class_}
-            if showcase and isinstance(showcase_layout, ShowcaseLayout)
-            else None
+    value_box_attrs: TagAttrs = {
+        "class": "bslib-value-box",
+        "style": css_no_sub(
+            **{
+                "color": theme.fg,
+                "background-color": theme.bg,
+                # These variables are used by the full screen card button
+                "--bslib-color-fg": theme.fg,
+                "--bslib-color-bg": theme.bg,
+            },
         ),
+    }
+    theme_attrs: TagAttrs | None = {"class": theme.class_} if theme.class_ else None
+    class_attrs: TagAttrs | None = {"class": class_} if class_ else None
+    showcase_attrs: TagAttrs | None = (
+        {"class": showcase_layout.class_}
+        if showcase and isinstance(showcase_layout, ShowcaseLayout)
+        else None
+    )
+
+    return card(
+        value_box_attrs,
+        theme_attrs,
+        class_attrs,
+        showcase_attrs,
         attrs,
         contents,
         full_screen=full_screen,
@@ -516,7 +522,8 @@ def wrap_in_carrier_tag_with_class(
     fill: bool = True,
     **kwargs: TagAttrValue,
 ) -> Tag:
-    ret = tag({"class": class_}, *args, **kwargs)
+    carrier_attrs: TagAttrs = {"class": class_}
+    ret = tag(carrier_attrs, *args, **kwargs)
     if fill:
         ret = as_fill_item(ret)
     if fillable:

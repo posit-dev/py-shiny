@@ -5,17 +5,17 @@ app_ui = ui.page_fluid(
     ui.h3("Integer value (42)"),
     ui.tags.button("Send 42 (default)", id="btn_int_default"),
     ui.tags.button("Send 42 (event priority)", id="btn_int_event"),
-    ui.output_text_verbatim("int_default_count"),
-    ui.output_text_verbatim("int_event_count"),
+    ui.output_code("int_default_count"),
+    ui.output_code("int_event_count"),
     ui.h3("String values (event priority) - regression test for #1600"),
     ui.tags.button("Send '' (event priority)", id="btn_str_empty"),
     ui.tags.button("Send 'x=1' (event priority)", id="btn_str_nonempty"),
-    ui.output_text_verbatim("str_event_count"),
+    ui.output_code("str_event_count"),
     ui.h3("List value ([1, 2, 3])"),
     ui.tags.button("Send [1,2,3] (default)", id="btn_list_default"),
     ui.tags.button("Send [1,2,3] (event priority)", id="btn_list_event"),
-    ui.output_text_verbatim("list_default_count"),
-    ui.output_text_verbatim("list_event_count"),
+    ui.output_code("list_default_count"),
+    ui.output_code("list_event_count"),
     ui.tags.script("""
         document.getElementById('btn_int_default').addEventListener('click', function() {
             Shiny.setInputValue('int_default_input', 42);
@@ -71,23 +71,23 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _count_list_event():
         list_event_counter.set(list_event_counter() + 1)
 
-    @render.text
+    @render.code
     def int_default_count():
         return str(int_default_counter())
 
-    @render.text
+    @render.code
     def int_event_count():
         return str(int_event_counter())
 
-    @render.text
+    @render.code
     def str_event_count():
         return str(str_event_counter())
 
-    @render.text
+    @render.code
     def list_default_count():
         return str(list_default_counter())
 
-    @render.text
+    @render.code
     def list_event_count():
         return str(list_event_counter())
 
