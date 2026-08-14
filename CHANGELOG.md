@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Reactive work started outside the WebSocket message cycle is now flushed promptly. A `reactive.Value` set by a `@render.download_button()` / `@render.download_link()` or `session.dynamic_route()` handler, and a message queued by `session.send_input_message()`, used to sit unapplied (leaving the session stuck in its "busy" state) until an unrelated client message arrived, because only client messages flushed the reactive graph. `Session._request_flush()` now wakes the session's message loop, which is what Shiny for R's `requestFlush()` does. (#2449)
+
 * A dynamically-rendered output (e.g. `@render.ui`) inside a `ui.popover()` or `ui.tooltip()` without a `title=` no longer gets stuck showing "recalculating". The container collapsed to 0 width, so the output's `ResizeObserver` never fired; vendored bslib CSS now gives it a non-zero minimum width. (#2446)
 
 * `playwright.controller.InputSelectize` no longer clicks the page body to close the selectize dropdown. `expect_choices()`, `expect_choice_labels()`, and `expect_choice_groups()` open the dropdown, because selectize renders its choices into the DOM only after the first open. The click that closed the dropdown again landed on app content and fired the app's own click handlers, so a test could record an interaction that it never made. The controller now calls `close()` on the selectize instance instead, which touches no app content. (#2426)

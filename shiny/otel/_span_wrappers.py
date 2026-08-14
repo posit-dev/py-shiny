@@ -281,5 +281,17 @@ async def shiny_otel_span_stream(
         required_level=required_level,
         collection_level=collection_level,
     ):
-        async for chunk in inner:
-            yield chunk
+        try:
+            async for chunk in inner:
+                yield chunk
+        finally:
+            # Closing this wrapper must close what it wraps. Without this, a
+            # consumer that stops early (Starlette closing the body iterator
+            # when a client cancels a download) abandons `inner` mid-yield, and
+            # its cleanup runs whenever the garbage collector gets round to
+            # finalizing it -- which on Python 3.10 is not before the request is
+            # over. Any `finally` in the wrapped generator is then arbitrarily
+            # delayed rather than running at close.
+            aclose = getattr(inner, "aclose", None)
+            if aclose is not None:
+                await aclose()

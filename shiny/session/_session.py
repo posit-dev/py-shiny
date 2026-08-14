@@ -793,6 +793,27 @@ class Session(ABC):
     def _decrement_busy_count(self) -> None: ...
 
 
+def _discard_task(task: Optional["asyncio.Task[Any]"]) -> None:
+    """
+    Discard a task the message loop no longer needs.
+
+    Used to tear down an in-flight `receive()` when the loop exits, so it does
+    not outlive the session as a pending task. A task that already finished is
+    not cancelled but *is* read, because the loop can exit without ever
+    consuming a receive that failed (say the connection broke while the loop was
+    off servicing a flush, and the flush then raised). Leaving that exception
+    unretrieved makes asyncio log it whenever the task is garbage-collected,
+    long after the session is gone.
+    """
+    if task is None:
+        return
+    if task.done():
+        if not task.cancelled():
+            task.exception()
+        return
+    task.cancel()
+
+
 def _print_exception(e: Exception) -> None:
     traceback.print_exception(type(e), e, e.__traceback__)
 
@@ -887,6 +908,8 @@ class AppSession(Session):
         self._conn: Connection = conn
         self._debug: bool = debug
         self._busy_count: int = 0
+        self._flush_requested: asyncio.Event = asyncio.Event()
+        """Set by `_request_flush()`; the message loop waits on it and clears it."""
         self._message_handlers: dict[
             str,
             tuple[Callable[..., Awaitable[Jsonifiable]], Session],
@@ -1029,8 +1052,41 @@ class AppSession(Session):
                     }
                 )
 
+                # The receive is a task rather than a bare await because the loop
+                # now has two things to wake up for. When a flush request wins
+                # the race the receive is still in flight, so it is carried over
+                # to the next iteration rather than recreated -- recreating it
+                # would drop whatever message the old one had already consumed.
+                pending_receive: Optional[asyncio.Task[str]] = None
+                stack.callback(lambda: _discard_task(pending_receive))
+
                 while True:
-                    message: str = await self._conn.receive()
+                    if pending_receive is None:
+                        pending_receive = asyncio.create_task(self._conn.receive())
+
+                    # Wake for a client message, or for a flush requested from
+                    # outside the message cycle (a download, a dynamic route,
+                    # `send_input_message()`), whichever happens first.
+                    flush_requested = asyncio.create_task(self._flush_requested.wait())
+                    try:
+                        done, _ = await asyncio.wait(
+                            (pending_receive, flush_requested),
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                    finally:
+                        flush_requested.cancel()
+
+                    if pending_receive not in done:
+                        # Only a flush was asked for. Unlike the message path
+                        # below, nothing here holds the reactive lock yet.
+                        async with lock():
+                            await self._flush_reactives()
+                        continue
+
+                    # If both fired, handle the message and leave the request
+                    # set; the flush at the end of this iteration services it.
+                    receive_task, pending_receive = pending_receive, None
+                    message: str = receive_task.result()
                     if self._debug:
                         print("RECV: " + message, flush=True)
 
@@ -1125,11 +1181,7 @@ class AppSession(Session):
                         # https://github.com/posit-dev/py-shiny/issues/1381
                         await asyncio.sleep(0)
 
-                        # Keep session context active for reactive flush so
-                        # reactive_update spans can consistently include session.id.
-                        with session_context(self):
-                            self._request_flush()
-                            await reactive_flush()
+                        await self._flush_reactives()
 
             except ConnectionClosed:
                 ...
@@ -1282,11 +1334,29 @@ class AppSession(Session):
     async def _handle_request(
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
+        response: Optional[ASGIApp] = None
         self._increment_busy_count()
         try:
-            return await self._handle_request_impl(request, action, subpath)
+            response = await self._handle_request_impl(request, action, subpath)
+            return response
         finally:
             self._decrement_busy_count()
+            # These two actions invoke app-author code, which may have set a
+            # reactive value. The others ("upload", "dataobj") only run Shiny's
+            # own plumbing, and uploads arrive one request per chunk, so asking
+            # for a flush there would be pure overhead.
+            #
+            # A streaming response is skipped because the handler body has not
+            # run yet -- it runs when the ASGI server iterates the body, after
+            # this returns. Asking now would flush *during* the stream, pushing
+            # half-generated state to the client; the content-wrapping
+            # generators ask for themselves once the stream ends. (A
+            # `dynamic_route` handler that returns a `StreamingResponse` is
+            # therefore not covered, since Shiny does not wrap its iterator.)
+            if action in ("download", "dynamic_route") and not isinstance(
+                response, StreamingResponse
+            ):
+                self._request_out_of_band_flush()
 
     async def _handle_request_impl(
         self, request: Request, action: str, subpath: Optional[str]
@@ -1392,26 +1462,45 @@ class AppSession(Session):
                             # implementation of handle_request(), but the iterators
                             # aren't invoked until after handle_request() returns.
                             async def wrap_content_async() -> AsyncIterable[bytes]:
-                                with session_context(self):
-                                    with isolate():
-                                        async for chunk in contents:
-                                            if isinstance(chunk, str):
-                                                yield chunk.encode(download.encoding)
-                                            else:
-                                                yield chunk
+                                try:
+                                    with session_context(self):
+                                        with isolate():
+                                            async for chunk in contents:
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
+                                finally:
+                                    # `finally`, and outside the `with`s above:
+                                    # the handler may raise, and the client may
+                                    # hang up mid-stream (which throws
+                                    # GeneratorExit in at the `yield`, skipping
+                                    # the rest of the body). Both must still ask
+                                    # for a flush, or the values the handler did
+                                    # set never reach the client and the session
+                                    # stays "busy".
+                                    self._request_out_of_band_flush()
 
                             wrapped_contents = wrap_content_async()
 
                         else:  # isinstance(contents, Iterable):
 
                             async def wrap_content_sync() -> AsyncIterable[bytes]:
-                                with session_context(self):
-                                    with isolate():
-                                        for chunk in contents:
-                                            if isinstance(chunk, str):
-                                                yield chunk.encode(download.encoding)
-                                            else:
-                                                yield chunk
+                                try:
+                                    with session_context(self):
+                                        with isolate():
+                                            for chunk in contents:
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
+                                finally:
+                                    # See `wrap_content_async` above.
+                                    self._request_out_of_band_flush()
 
                             wrapped_contents = wrap_content_sync()
 
@@ -1613,6 +1702,49 @@ class AppSession(Session):
 
     def _request_flush(self) -> None:
         self.app._request_flush(self)
+
+    def _request_out_of_band_flush(self) -> None:
+        """
+        Ask this session's message loop to flush the reactive graph.
+
+        A download or dynamic-route handler runs on the ASGI request task, which
+        is outside the WebSocket message cycle, so nothing would otherwise flush
+        what it set: the invalidations sit in the pending-flush queue -- with the
+        session stuck "busy", because the busy-count increments from the
+        invalidated effects are never balanced -- until an unrelated client
+        message happens to arrive.
+        (https://github.com/posit-dev/py-shiny/issues/1785)
+
+        This is Shiny for R's `requestFlush()`: it only marks, and the session's
+        own loop does the flushing on a later tick, the way `serviceApp()` does.
+        Marking rather than flushing in place is what keeps the flush on the
+        session's task, so it is ordered against client messages, runs under the
+        reactive lock the loop already takes, and reports failures through the
+        loop's existing error handling.
+
+        Deliberately *not* wired to `_request_flush()`, which
+        `send_input_message()` calls and which is still the no-op stub it has
+        always been. A `session.on_flush` callback that queues a client message
+        -- which is exactly how every `ui.update_*()` delivers itself -- would
+        re-arm the loop from inside the flush it was already part of, costing an
+        extra empty flush per interaction and spinning without bound when such a
+        callback is registered with `once=False`. Making `_request_flush()` live
+        up to its name needs a way to distinguish "deliver the outbound queue"
+        from "flush the reactive graph"; see the PR discussion.
+        """
+        self._flush_requested.set()
+
+    async def _flush_reactives(self) -> None:
+        """
+        Service a flush, whether requested or part of handling a client message.
+
+        The caller must already hold the reactive lock. The session context is
+        kept active so that `reactive_update` spans consistently include
+        `session.id`.
+        """
+        self._flush_requested.clear()
+        with session_context(self):
+            await reactive_flush()
 
     async def _flush(self) -> None:
         with session_context(self):
