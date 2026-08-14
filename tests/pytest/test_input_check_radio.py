@@ -10,7 +10,7 @@ constructors do, so that `choices={0: "a"}, selected=[0]` behaves identically to
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from htmltools import TagChild, TagList
@@ -47,12 +47,13 @@ def session() -> _MessageCapturingSession:
     return _MessageCapturingSession()
 
 
-def _send(session: Session, fn: Any, **kwargs: Any) -> dict[str, object]:
-    with session_context(session):
+def _send(
+    session: _MessageCapturingSession, fn: Any, **kwargs: Any
+) -> dict[str, object]:
+    with session_context(cast(Session, session)):
         fn("x", **kwargs)
-    messages = session.messages  # pyright: ignore[reportAttributeAccessIssue]
-    assert len(messages) == 1
-    return messages.pop()
+    assert len(session.messages) == 1
+    return session.messages.pop()
 
 
 def _checked_count(html: str) -> int:

@@ -363,11 +363,7 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
     # the caller passed, which `_render_choices()` handles key by key.
     normalized = normalize_choices_mapping(x)
     result: dict[str, Any] = {
-        key: (
-            normalize_choices_mapping(cast("Mapping[Any, str]", value))
-            if isinstance(value, Mapping)
-            else value
-        )
+        key: (normalize_choices_mapping(value) if isinstance(value, Mapping) else value)
         for key, value in normalized.items()
     }
     return cast(_SelectChoices, result)
@@ -388,7 +384,7 @@ def _choice_value_index(x: SelectChoicesArg) -> dict[str, Any]:
     index: dict[str, Any] = {}
     for key, value in x.items():
         if isinstance(value, Mapping):
-            index.update(normalize_choices_indexed(cast("Mapping[Any, str]", value))[1])
+            index.update(normalize_choices_indexed(value)[1])
         else:
             index[str(key)] = key
     return index

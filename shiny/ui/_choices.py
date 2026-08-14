@@ -13,7 +13,7 @@ See https://github.com/posit-dev/py-shiny/issues/2272.
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, TypeVar
+from typing import Any, Iterable, Mapping, TypeVar, cast
 
 # A choice value.
 #
@@ -93,7 +93,7 @@ def resolve_selected_values(selected: Any, choice_values: Mapping[str, Any]) -> 
 
     if isinstance(selected, (str, bytes)) or not isinstance(selected, Iterable):
         return resolve_one(selected)
-    return [resolve_one(value) for value in selected]
+    return [resolve_one(value) for value in cast("Iterable[Any]", selected)]
 
 
 def _as_raw_list(x: Any) -> list[Any]:
@@ -111,7 +111,7 @@ def _as_raw_list(x: Any) -> list[Any]:
     elif isinstance(x, (str, bytes)) or not isinstance(x, Iterable):
         return [x]
     else:
-        return list(x)
+        return list(cast("Iterable[Any]", x))
 
 
 def normalize_selected(x: Any) -> str | list[str] | None:
@@ -130,7 +130,7 @@ def normalize_selected(x: Any) -> str | list[str] | None:
     elif isinstance(x, bytes) or not isinstance(x, Iterable):
         return str(x)
     else:
-        return [str(v) for v in x]
+        return [str(v) for v in cast("Iterable[Any]", x)]
 
 
 def normalize_selected_list(x: Any) -> list[str] | None:
