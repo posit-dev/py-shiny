@@ -132,6 +132,7 @@ class ReactiveEnvironment:
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self._lock: Optional[asyncio.Lock] = None
+        self._lock_loop: Optional[asyncio.AbstractEventLoop] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
 
     @property
@@ -142,11 +143,16 @@ class ReactiveEnvironment:
         yet. This causes the asyncio.Lock to be created with a different loop than it
         will be invoked from later; when that happens, acquire() will succeed if there's
         no contention, but throw a "hey you're on the wrong loop" error if there is.
+
+        For the same reason the lock is recreated whenever the running loop changes:
+        this environment is a process-wide singleton, so it outlives any one loop. That
+        only matters for test suites, where each test gets a fresh loop -- without it,
+        the first test to contend the lock breaks every later test that does.
         """
-        if self._lock is None:
-            # Ensure we have a loop; get_running_loop() throws an error if we don't
-            asyncio.get_running_loop()
+        loop = asyncio.get_running_loop()
+        if self._lock is None or self._lock_loop is not loop:
             self._lock = asyncio.Lock()
+            self._lock_loop = loop
         return self._lock
 
     def next_id(self) -> int:
