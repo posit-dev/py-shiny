@@ -65,7 +65,12 @@ make test-update-snapshots
 # Debug Playwright tests (headed, chromium only)
 make playwright-debug TEST_FILE="tests/playwright/shiny/inputs/test_foo.py"
 
-# Show trace of failed Playwright tests
+# Record a Playwright trace per test, into test-results/<test>/trace.zip
+# (use --tracing retain-on-failure to keep traces only for failing tests).
+# Tracing does not require --headed; it works in the default headless runs.
+make playwright-shiny SUB_FILE="inputs/test_foo.py" PYTEST_EXTRA_ARGS="--tracing on"
+
+# Open a recorded trace: the newest one, or TRACE="path/to/trace.zip"
 make playwright-show-trace
 
 # Run specific test suites

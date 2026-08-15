@@ -142,6 +142,24 @@ Modules enable namespaced, reusable components:
 - Run with `make playwright` (all browsers) or `make playwright-debug`
   (chromium, headed)
 - Prefer `.expect_*()` controller methods, which auto-wait, over manual sleeps
+- Pass one-off pytest options with `PYTEST_EXTRA_ARGS="..."`
+
+**Playwright traces**:
+
+Record a trace per test with `PYTEST_EXTRA_ARGS="--tracing on"` (or
+`--tracing retain-on-failure` to keep only failures). Each test writes
+`test-results/<test>/trace.zip`; open one with `make playwright-show-trace`,
+which picks the newest unless you pass `TRACE="path/to/trace.zip"`. Tracing
+needs no `--headed`: screenshots and DOM snapshots are captured from the
+renderer, which headless still rasterizes.
+
+`--video` and `--screenshot` behave differently here because
+`tests/playwright/conftest.py` shares one page (and one context) across the
+whole session: video records one continuous file per session rather than per
+test, and `--screenshot` does nothing at all. Tracing avoids that limitation by
+slicing the session-long trace with `tracing.start_chunk()` / `stop_chunk()`
+per test. The NOTE in `tests/playwright/playwright-pytest.ini` records the same
+caveats next to the options themselves.
 
 **Playwright controller pattern**:
 
