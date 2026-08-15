@@ -260,14 +260,26 @@ def test_update_radio_buttons_int_selected_without_choices(
     assert msg == {"value": "2"}
 
 
-@pytest.mark.parametrize("selected", [["a"], ("a",), ["a", "b"]])
-def test_update_radio_buttons_sequence_selected_collapses_to_scalar(
+@pytest.mark.parametrize("selected", [["a"], ("a",)])
+def test_update_radio_buttons_one_element_selected_unwraps(
     session: _MessageCapturingSession, selected: Any
 ):
     # The radio binding's `setValue()` hands a non-empty array to `$escape()`, which
-    # calls `.replace()` on it and throws -- so a sequence has to collapse here.
+    # calls `.replace()` on it and throws, so the value has to reach it as a scalar.
+    # Shiny for R arrives at the same place: `as.character()` on a length-1 vector
+    # reaches the client as a JSON scalar.
     msg = _send(session, ui.update_radio_buttons, selected=selected)
     assert msg == {"value": "a"}
+
+
+def test_update_radio_buttons_rejects_multiple_selected(
+    session: _MessageCapturingSession,
+):
+    # A radio group can only show one of them. Quietly keeping the first would discard
+    # the rest, which is the same silent data loss the duplicate-choice check exists to
+    # prevent.
+    with pytest.raises(ValueError, match="must name a single choice"):
+        _send(session, ui.update_radio_buttons, selected=["a", "b"])
 
 
 def test_update_radio_buttons_empty_choices_clears_the_group(

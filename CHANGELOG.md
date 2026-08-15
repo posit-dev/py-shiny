@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The choice inputs (`ui.input_checkbox_group()`, `ui.input_radio_buttons()`, `ui.input_select()`, `ui.input_selectize()`, `ui.toolbar_input_select()`) and their `update_*()` counterparts now accept non-string choice values and `selected` values, such as the `int` keys of a `dict[int, str]` passed as `choices`. The `update_*()` functions previously left the input unchanged or cleared it entirely, and any label sent in the same call was lost. (#2420)
 
-* `ui.update_radio_buttons(selected=)` now accepts a list or tuple and applies its first value. Previously the radio group was left unchanged. Passing `selected=[]` still clears the selection. (#2420)
+* `ui.update_radio_buttons(selected=)` now accepts a one-element list or tuple, which previously left the radio group unchanged. Passing more than one value raises a `ValueError`, since a radio group can only show one. Passing `selected=[]` still clears the selection. (#2420)
 
 * `ui.update_radio_buttons(choices=[])` now clears the set of choices. This was the
 documented behavior, but didn't actually work and raised an `IndexError` instead.

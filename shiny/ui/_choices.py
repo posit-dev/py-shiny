@@ -160,19 +160,34 @@ def normalize_selected_radio(x: Any) -> str | list[str] | None:
 
     Sending it a non-empty array is not merely ignored -- ``setValue()`` passes the array
     to ``$escape()``, which calls ``.replace()`` on it and throws, aborting the rest of
-    the message handler (so a bundled label update is lost too). A sequence therefore
-    collapses to its first element.
+    the message handler (so a bundled label update is lost too).
 
-    An *empty* sequence is the exception and is preserved as ``[]``: that is the one
-    array shape ``setValue()`` special-cases, and it clears the selection. Collapsing it
-    to ``None`` would drop ``value`` from the message entirely and leave the previous
-    selection in place.
+    A one-element sequence unwraps to that element. This matches Shiny for R, where
+    ``updateInputOptions()`` applies ``as.character()`` and the length-1 vector then
+    reaches the client as a JSON scalar. It also covers the common case of feeding one
+    input's value, which may be a tuple, into a radio update.
+
+    An *empty* sequence is preserved as ``[]``: that is the one array shape
+    ``setValue()`` special-cases, and it clears the selection. Returning ``None`` would
+    drop ``value`` from the message and leave the previous selection in place.
+
+    Raises
+    ------
+    ValueError
+        If the sequence holds more than one value. A radio group can only show one of
+        them, and picking one silently would discard the rest.
     """
     if x is None:
         return None
     values = _as_raw_list(x)
     if not values:
         return []
+    if len(values) > 1:
+        raise ValueError(
+            f"`selected` must name a single choice for a radio button group, but "
+            f"{len(values)} were given: {values!r}. Pass one value, or `[]` to clear "
+            "the selection."
+        )
     return str(values[0])
 
 
