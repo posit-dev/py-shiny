@@ -468,6 +468,15 @@ def _update_choice_input(
         with session_context(session):
             resolved_id = resolve_id(id)
 
+        # `choices=[]` is the documented way to clear the set of choices, and an empty
+        # radio group has no first option to fall back on. Say "nothing is selected"
+        # explicitly so `_generate_options()` renders an empty group instead of
+        # rejecting the call. The constructors keep rejecting it, because there an
+        # empty `choices` with no `selected` is a mistake rather than a request.
+        options_selected: str | list[str] | None = selected_values
+        if type == "radio" and not choices and options_selected is None:
+            options_selected = []
+
         opts = _generate_options(
             id=resolved_id,
             type=type,
@@ -477,7 +486,7 @@ def _update_choice_input(
             # built above -- resolution maps a string that is already a choice value to
             # itself, and `str()` is idempotent -- which is what lets the options markup
             # and the message's `value` below come from one normalization.
-            selected=selected_values,
+            selected=options_selected,
             inline=inline,
         )
         options = session._process_ui(opts)["html"]

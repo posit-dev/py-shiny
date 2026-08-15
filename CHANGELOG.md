@@ -55,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Choice values whose string forms collide (e.g. `choices={0: "zero", "0": "oh"}`) now raise a `ValueError` instead of silently dropping one of the options, and `ui.input_radio_buttons(choices=[])` raises a `ValueError` naming `choices` rather than an `IndexError` from an internal helper. (#2420)
 
+* `ui.update_radio_buttons(choices=[])` now clears the set of choices, as its documentation has said since the function was written. It raised `IndexError: list index out of range` instead, because an empty group has no first option to fall back on when `selected` is omitted. `ui.update_checkbox_group()` and `ui.update_select()` already honored `choices=[]`. (#2420)
+
 * `None` and `bool` choice values now render as `value="None"`/`"False"`/`"True"`. Previously htmltools dropped the attribute entirely (or emitted `value=""` for `True`), which made the browser report the default `"on"` for such an option. Note this changes what these inputs report; apps relying on the old `""`/`"on"` values, including saved bookmarks, will read the new strings. (#2420)
 
 ## [1.7.0] - 2026-07-28

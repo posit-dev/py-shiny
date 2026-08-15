@@ -270,6 +270,27 @@ def test_update_radio_buttons_sequence_selected_collapses_to_scalar(
     assert msg == {"value": "a"}
 
 
+def test_update_radio_buttons_empty_choices_clears_the_group(
+    session: _MessageCapturingSession,
+):
+    # The shared `_note` on the `update_*` functions documents `choices=[]` as the way
+    # to clear the set of choices. For radio buttons that raised instead, because an
+    # empty group has no first option to fall back on. The payload must now match what
+    # `update_checkbox_group()` sends for the same call.
+    radio = _send(session, ui.update_radio_buttons, choices=[])
+    checkbox = _send(session, ui.update_checkbox_group, choices=[])
+
+    assert radio == checkbox
+    assert radio == {"options": '<div class="shiny-options-group"></div>'}
+
+
+def test_update_radio_buttons_empty_choices_keeps_an_explicit_selected(
+    session: _MessageCapturingSession,
+):
+    msg = _send(session, ui.update_radio_buttons, choices=[], selected="a")
+    assert msg["value"] == "a"
+
+
 def test_update_radio_buttons_empty_selected_stays_a_list(
     session: _MessageCapturingSession,
 ):
