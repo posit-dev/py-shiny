@@ -33,6 +33,10 @@ here_root = here.parent.parent
 # process crashed). The `page` fixture replaces a page marked this way.
 _NAVIGATION_WEDGED_ATTR = "_shiny_navigation_wedged"
 
+# Attribute set on a test item when its call phase failed, so `_trace_chunk`
+# can honor `--tracing retain-on-failure`.
+_TEST_FAILED_ATTR = "_shiny_test_failed"
+
 
 def _mark_navigation_wedged(crashed_page: Page) -> None:
     setattr(crashed_page, _NAVIGATION_WEDGED_ATTR, True)
@@ -124,6 +128,20 @@ def _session_context(
     context.close()
 
 
+def _request_item(request: pytest.FixtureRequest) -> pytest.Item:
+    """
+    Return the test item a fixture request belongs to.
+
+    `FixtureRequest.node` carries no return annotation in pytest, so its type
+    (and the type of everything read off it) is unknown to the type checker.
+    Reading it through an explicitly-typed `Any` confines that to this one
+    function instead of leaking a suppression comment to each use site. For a
+    function-scoped fixture the node is always the test item.
+    """
+    untyped_request: typing.Any = request
+    return typing.cast(pytest.Item, untyped_request.node)
+
+
 @pytest.fixture(scope="function", autouse=True)
 def _trace_chunk(
     request: pytest.FixtureRequest,
@@ -142,16 +160,18 @@ def _trace_chunk(
         yield
         return
 
-    _session_context.tracing.start_chunk(title=request.node.nodeid)
+    item = _request_item(request)
+    _session_context.tracing.start_chunk(title=item.nodeid)
     yield
 
-    failed = getattr(request.node, "_shiny_test_failed", False)
+    failed: bool = getattr(item, _TEST_FAILED_ATTR, False)
     if tracing_mode == "on" or (tracing_mode == "retain-on-failure" and failed):
         # `<output>/<slug>/trace.zip` matches pytest-playwright's own artifact
         # layout, and is what `make playwright-show-trace` globs for
         # (`test-results/*/trace.zip`).
-        slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", request.node.nodeid).strip("-")
-        trace_dir = Path(pytestconfig.getoption("--output")) / slug
+        slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", item.nodeid).strip("-")
+        output_dir = typing.cast(str, pytestconfig.getoption("--output"))
+        trace_dir = Path(output_dir) / slug
         trace_dir.mkdir(parents=True, exist_ok=True)
         _session_context.tracing.stop_chunk(path=str(trace_dir / "trace.zip"))
     else:
@@ -161,12 +181,15 @@ def _trace_chunk(
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(
     item: pytest.Item, call: pytest.CallInfo[None]
-) -> typing.Generator[None, None, None]:
+) -> typing.Generator[None, typing.Any, None]:
     """Record the outcome so `_trace_chunk` can honor `retain-on-failure`."""
+    # A `hookwrapper=True` generator is sent pluggy's `Result` object, which is
+    # why the generator's send type is `Any`: pluggy is not a direct dependency
+    # here, so `Result` cannot be named. The report it wraps is annotated below.
     outcome = yield
-    report = outcome.get_result()  # pyright: ignore[reportAttributeAccessIssue]
+    report: pytest.TestReport = outcome.get_result()
     if report.when == "call" and report.failed:
-        item._shiny_test_failed = True  # pyright: ignore[reportAttributeAccessIssue]
+        setattr(item, _TEST_FAILED_ATTR, True)
 
 
 @pytest.fixture(scope="session")
