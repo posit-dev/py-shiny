@@ -1138,6 +1138,8 @@ class data_frame(
 
             for val in sort:
                 val_dict: ColumnSort
+                # Each entry is either a full `ColumnSort` dict or a bare
+                # column index to be upgraded per the docstring default.
                 if isinstance(val, dict):
                     val_dict = val
                 else:

@@ -107,10 +107,8 @@ const COLUMN_ID_PREFIX = "col-";
  * column definition has no explicit `id`, TanStack Table derives one from the
  * (string) `header` and requires it to be a non-empty string, so a column named
  * `""` makes TanStack throw while creating the column, taking down the whole
- * data frame render (#1844). Names are unusable as ids more generally: pandas
- * and friends allow non-string column names, which arrive here as raw JSON
- * values rather than strings, and two distinct names can share one string form
- * (e.g. the integer `0` and the string `"0"`).
+ * data frame render (#1844). Names are generally unsafe to use as ids, and
+ * positional ids are guaranteed to be safe.
  *
  * Sorting and filtering state is keyed by column id while the server exchanges
  * column *indices*, so a positional id also makes that translation exact.
