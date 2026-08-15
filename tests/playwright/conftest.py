@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import typing
 from inspect import signature
-from pathlib import PurePath
+from pathlib import Path, PurePath
 
 import pytest
-from playwright.sync_api import BrowserContext, BrowserType
+from playwright.sync_api import Browser, BrowserContext, BrowserType
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page, Response
 
@@ -92,6 +93,83 @@ def _new_session_page(browser: BrowserContext) -> Page:
 
 
 @pytest.fixture(scope="session")
+def _session_context(
+    browser: Browser,
+    browser_context_args: dict[str, typing.Any],
+    pytestconfig: pytest.Config,
+) -> typing.Generator[BrowserContext, None, None]:
+    """
+    Session-scoped context that owns the shared page.
+
+    The shared page must come from a context we control, not from
+    `browser.new_page()`. `new_page()` creates an implicit context with default
+    options, which is why pytest-playwright's `--tracing`, `--video`, and
+    `--screenshot` flags used to have no effect on this suite: those artifacts
+    are only recorded by the plugin's own (function-scoped) `context` fixture,
+    which this suite never uses.
+    """
+    context_args = dict(browser_context_args)
+    if pytestconfig.getoption("--video") in ("on", "retain-on-failure"):
+        # Video is a context-level option, and this context lives for the whole
+        # session, so this records one continuous video rather than one per
+        # test. There is no video equivalent of `tracing.start_chunk()`.
+        context_args["record_video_dir"] = pytestconfig.getoption("--output")
+
+    context = browser.new_context(**context_args)
+
+    if pytestconfig.getoption("--tracing") in ("on", "retain-on-failure"):
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+    yield context
+    context.close()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _trace_chunk(
+    request: pytest.FixtureRequest,
+    _session_context: BrowserContext,
+    pytestconfig: pytest.Config,
+) -> typing.Generator[None, None, None]:
+    """
+    Record one trace file per test from the session-scoped context.
+
+    `start_chunk()` / `stop_chunk()` slice a single long-lived trace into
+    per-test files, so a shared page still yields a trace per test rather than
+    one trace for the whole session.
+    """
+    tracing_mode = pytestconfig.getoption("--tracing")
+    if tracing_mode == "off":
+        yield
+        return
+
+    _session_context.tracing.start_chunk(title=request.node.nodeid)
+    yield
+
+    failed = getattr(request.node, "_shiny_test_failed", False)
+    if tracing_mode == "on" or (tracing_mode == "retain-on-failure" and failed):
+        # `<output>/<slug>/trace.zip` matches pytest-playwright's own artifact
+        # layout, and is what `make playwright-show-trace` globs for
+        # (`test-results/*/trace.zip`).
+        slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", request.node.nodeid).strip("-")
+        trace_dir = Path(pytestconfig.getoption("--output")) / slug
+        trace_dir.mkdir(parents=True, exist_ok=True)
+        _session_context.tracing.stop_chunk(path=str(trace_dir / "trace.zip"))
+    else:
+        _session_context.tracing.stop_chunk()
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(
+    item: pytest.Item, call: pytest.CallInfo[None]
+) -> typing.Generator[None, None, None]:
+    """Record the outcome so `_trace_chunk` can honor `retain-on-failure`."""
+    outcome = yield
+    report = outcome.get_result()  # pyright: ignore[reportAttributeAccessIssue]
+    if report.when == "call" and report.failed:
+        item._shiny_test_failed = True  # pyright: ignore[reportAttributeAccessIssue]
+
+
+@pytest.fixture(scope="session")
 def _session_page_holder() -> list[Page]:
     """
     Session-scoped holder for the shared page.
@@ -107,7 +185,7 @@ def _session_page_holder() -> list[Page]:
 # By going to `about:blank`, we _reset_ the page to a known state before each test.
 # It is not perfect, but it is faster than making a new page for each test.
 # This must be done before each test
-def page(browser: BrowserContext, _session_page_holder: list[Page]) -> Page:
+def page(_session_context: BrowserContext, _session_page_holder: list[Page]) -> Page:
     """
     Reset the shared page to a known state before each test.
     The page is maintained over the full session and reset by visiting
@@ -115,7 +193,7 @@ def page(browser: BrowserContext, _session_page_holder: list[Page]) -> Page:
     wedged so navigations no longer commit), it is replaced with a new page.
     The default viewport size is set to 1920 x 1080 (1080p) for each test function.
     Parameters:
-        browser (BrowserContext): The browser context used to create replacement pages.
+        _session_context (BrowserContext): The browser context used to create replacement pages.
         _session_page_holder (list[Page]): Holder for the shared page.
     """
     session_page = _session_page_holder[0] if _session_page_holder else None
@@ -138,7 +216,7 @@ def page(browser: BrowserContext, _session_page_holder: list[Page]) -> Page:
                 session_page = None
     if session_page is None:
         _session_page_holder.clear()
-        session_page = _new_session_page(browser)
+        session_page = _new_session_page(_session_context)
         _session_page_holder.append(session_page)
     # Reset screen size to 1080p
     session_page.set_viewport_size({"width": 1920, "height": 1080})
