@@ -10,8 +10,9 @@ df_first = pd.DataFrame({"": ["c", "a", "b"], "num": [3, 1, 2]})
 df_mid = pd.DataFrame({"chr": ["x", "y", "z"], "": ["c", "a", "b"], "num": [3, 1, 2]})
 
 # pandas allows non-string column names, and they reach the client as raw JSON
-# numbers. Column ids must not be derived from them either.
-df_int_names = pd.DataFrame({0: ["c", "a", "b"], 1: [3, 1, 2]})
+# numbers. Column ids must not be derived from them either. `0` is the value
+# that a falsy check mistakes for "no name", and `1.5` is a non-integer name.
+df_num_names = pd.DataFrame({0: ["c", "a", "b"], 1: [3, 1, 2], 1.5: [0.5, 1.5, 2.5]})
 
 app_ui = ui.page_fluid(
     ui.input_action_button("update_sort", "Update sort"),
@@ -42,7 +43,7 @@ def server(input: Inputs):
 
     @render.data_frame
     def df3():
-        return render.DataGrid(df_int_names)
+        return render.DataGrid(df_num_names)
 
     @render.code
     def sort_value():

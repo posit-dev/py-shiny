@@ -139,9 +139,9 @@ def test_datagrid_non_string_column_names(page: Page, local_app: ShinyAppProc) -
     sort_value = controller.OutputCode(page, "sort_value3")
     data_view_rows = controller.OutputCode(page, "data_view_rows3")
 
-    df.expect_ncol(2)
+    df.expect_ncol(3)
     df.expect_nrow(3)
-    df.expect_column_labels(["0", "1"])
+    df.expect_column_labels(["0", "1", "1.5"])
     df.expect_cell("c", row=0, col=0)
     data_view_rows.expect_value("rows: (0, 1, 2)")
 
