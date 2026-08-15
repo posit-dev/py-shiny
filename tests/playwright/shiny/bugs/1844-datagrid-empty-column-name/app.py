@@ -11,8 +11,13 @@ df_mid = pd.DataFrame({"chr": ["x", "y", "z"], "": ["c", "a", "b"], "num": [3, 1
 
 # pandas allows non-string column names, and they reach the client as raw JSON
 # numbers. Column ids must not be derived from them either. `0` is the value
-# that a falsy check mistakes for "no name", and `1.5` is a non-integer name.
-df_num_names = pd.DataFrame({0: ["c", "a", "b"], 1: [3, 1, 2], 1.5: [0.5, 1.5, 2.5]})
+# that a falsy check mistakes for "no name".
+#
+# NOTE: pandas unifies the column index dtype, so adding `1.5` to this frame
+# would silently retype `0` and `1` as `0.0` and `1.0` and stop covering
+# integer names at all. The non-integer name needs its own frame.
+df_int_names = pd.DataFrame({0: ["c", "a", "b"], 1: [3, 1, 2]})
+df_float_names = pd.DataFrame({1.5: ["c", "a", "b"], 2.5: [3, 1, 2]})
 
 app_ui = ui.page_fluid(
     ui.input_action_button("update_sort", "Update sort"),
@@ -29,6 +34,8 @@ app_ui = ui.page_fluid(
     ui.output_data_frame("df3"),
     ui.output_code("sort_value3", placeholder=True),
     ui.output_code("data_view_rows3", placeholder=True),
+    ui.output_data_frame("df4"),
+    ui.output_code("sort_value4", placeholder=True),
 )
 
 
@@ -43,7 +50,11 @@ def server(input: Inputs):
 
     @render.data_frame
     def df3():
-        return render.DataGrid(df_num_names)
+        return render.DataGrid(df_int_names)
+
+    @render.data_frame
+    def df4():
+        return render.DataGrid(df_float_names)
 
     @render.code
     def sort_value():
@@ -76,6 +87,10 @@ def server(input: Inputs):
     @render.code
     def data_view_rows3():
         return f"rows: {df3.data_view_rows()}"
+
+    @render.code
+    def sort_value4():
+        return f"sort: {df4.sort()}"
 
     @reactive.effect
     @reactive.event(input.update_sort)

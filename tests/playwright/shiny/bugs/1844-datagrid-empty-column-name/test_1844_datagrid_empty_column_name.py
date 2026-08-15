@@ -139,13 +139,32 @@ def test_datagrid_non_string_column_names(page: Page, local_app: ShinyAppProc) -
     sort_value = controller.OutputCode(page, "sort_value3")
     data_view_rows = controller.OutputCode(page, "data_view_rows3")
 
-    df.expect_ncol(3)
+    df.expect_ncol(2)
     df.expect_nrow(3)
-    df.expect_column_labels(["0", "1", "1.5"])
+    df.expect_column_labels(["0", "1"])
     df.expect_cell("c", row=0, col=0)
     data_view_rows.expect_value("rows: (0, 1, 2)")
 
     df.set_sort(0)
     sort_value.expect_value("sort: ({'col': 0, 'desc': False},)")
     data_view_rows.expect_value("rows: (1, 2, 0)")
+    df.expect_cell("a", row=0, col=0)
+
+
+def test_datagrid_non_integer_column_names(page: Page, local_app: ShinyAppProc) -> None:
+    # A column name that is a number but not an integer. This needs its own
+    # frame: pandas unifies the column index dtype, so putting `1.5` beside `0`
+    # would retype `0` as `0.0` and quietly drop integer-name coverage.
+    page.goto(local_app.url)
+
+    df = controller.OutputDataFrame(page, "df4")
+    sort_value = controller.OutputCode(page, "sort_value4")
+
+    df.expect_ncol(2)
+    df.expect_nrow(3)
+    df.expect_column_labels(["1.5", "2.5"])
+    df.expect_cell("c", row=0, col=0)
+
+    df.set_sort(0)
+    sort_value.expect_value("sort: ({'col': 0, 'desc': False},)")
     df.expect_cell("a", row=0, col=0)
