@@ -53,12 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.update_radio_buttons(selected=)` now accepts a one-element list or tuple, which previously left the radio group unchanged. Passing more than one value raises a `ValueError`, since a radio group can only show one. Passing `selected=[]` still clears the selection. (#2420)
 
-* `ui.update_radio_buttons(choices=[])` now clears the set of choices. This was the
-documented behavior, but didn't actually work and raised an `IndexError` instead.
-`ui.input_radio_buttons(choices=[])` still raises, but now with a more helpful
-`ValueError` that names `choices`. (#2420)
+* `ui.update_radio_buttons(choices=[])` now clears the set of choices. This was the documented behavior, but didn't actually work and raised an `IndexError` instead. `ui.input_radio_buttons(choices=[])` still raises, but now with a more helpful `ValueError` that names `choices`. (#2420)
 
-* Choice values whose string forms collide, such as `choices={0: "zero", "0": "oh"}`, now raise a `ValueError`. Previously both options rendered with the same underlying value, so the input could not report which one the user chose. (#2420)
+* Choice values whose string forms collide, such as `choices=[0, "0"]`, now raise a `ValueError`. Previously both options rendered with the same underlying value, so the input could not report which one the user chose. (#2420)
 
 * `None` and `bool` choice values now render as `value="None"`, `value="False"`, and `value="True"`. Previously the browser reported `"on"` or `""` for these options, so `None` and `False` were indistinguishable and neither could be updated. Apps and saved bookmarks that hold the old `""`/`"on"` values will read the new strings. (#2420)
 
