@@ -1,26 +1,27 @@
 """
-Shared normalization for the choice-based inputs (checkbox group, radio buttons,
-select, selectize, toolbar select).
+Shared normalization utilities for the choice-based inputs (checkbox group,
+radio buttons, select, selectize, toolbar select).
 
 Choice values become HTML ``value`` attributes, so the client only ever sees their
-string form. Everything here exists to make the server agree with that: choice values
+string form. Everything here exists to make the server and client agree: choice values
 are coerced to ``str`` once, and ``selected`` is coerced the same way so that the
 regenerated options markup and the ``value`` sent in an ``update_*()`` message match
 by construction.
 
-See https://github.com/posit-dev/py-shiny/issues/2272.
+See https://github.com/posit-dev/py-shiny/issues/2272 and
+https://github.com/posit-dev/py-shiny/pull/2420 for details.
 """
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, TypeVar, cast
+from collections.abc import Iterable, Mapping
+from typing import Any, TypeVar, cast
 
 # A choice value.
 #
 # Deliberately `Any` rather than a union of the scalar types we expect. `Mapping`'s key
 # type is invariant, so a narrower annotation makes `Mapping[<narrow>, TagChild]` reject
-# `dict[int, str]` -- and, surprisingly, `dict[str, str]` as well. `Any` is also honest
-# about the runtime contract: any object is accepted and coerced with `str()`.
+# `dict[int, str]` or `dict[str, str]`.
 ChoiceValue = Any
 
 _V = TypeVar("_V")
@@ -72,11 +73,6 @@ def resolve_selected_values(selected: Any, choice_values: Mapping[str, Any]) -> 
     when an entry compares equal to a choice value without stringifying identically:
     ``selected=[1.0]`` against ``choices={1: "a"}`` resolves to ``[1]``, so it both
     renders as and transmits ``"1"`` -- the value the option actually carries.
-
-    Without this step, matching on the string form alone would stop honoring a
-    numerically equal ``selected``, which used to mark the option checked. Matching on
-    raw equality *instead* is not an option either: that is what left the server marking
-    an option checked while sending the client a ``"1.0"`` it could never match.
     """
     if selected is None or not choice_values:
         return selected
@@ -101,8 +97,8 @@ def _as_raw_list(x: Any) -> list[Any]:
     Coerce ``selected`` to a list of raw (un-stringified) choice values.
 
     ``str`` and ``bytes`` are iterable but represent a single choice, so they are
-    treated as scalars. Any other iterable -- including the ``dict_keys``, ``set``, and
-    generator shapes that a caller may build a selection from -- is consumed as a
+    treated as scalars. Any other iterable, including the ``dict_keys``, ``set``, and
+    generator shapes that a caller may build a selection from, is consumed as a
     sequence. Handling them here keeps them from falling into the scalar branch, where
     they would be stringified to their unusable ``repr``.
     """
@@ -121,7 +117,7 @@ def normalize_selected(x: Any) -> str | list[str] | None:
     Shape matters on the wire: the checkbox group's client-side ``setValue()`` expects
     an array while the radio group's expects a scalar, so a scalar ``selected`` must not
     grow into a list on its way out. Tuples become lists purely for payload consistency
-    -- ``json.dumps()`` already serializes a tuple as a JSON array.
+    (``json.dumps()`` already serializes a tuple as a JSON array).
     """
     if x is None:
         return None
@@ -156,26 +152,17 @@ def normalize_selected_scalar(x: Any) -> str | None:
 
 def normalize_selected_radio(x: Any) -> str | list[str] | None:
     """
-    Coerce ``selected`` for the radio-button binding, which expects a scalar.
+    Coerce ``selected`` for the radio-button binding, which expects a scalar and
+    throws on a non-empty array.
 
-    Sending it a non-empty array is not merely ignored -- ``setValue()`` passes the array
-    to ``$escape()``, which calls ``.replace()`` on it and throws, aborting the rest of
-    the message handler (so a bundled label update is lost too).
-
-    A one-element sequence unwraps to that element. This matches Shiny for R, where
-    ``updateInputOptions()`` applies ``as.character()`` and the length-1 vector then
-    reaches the client as a JSON scalar. It also covers the common case of feeding one
-    input's value, which may be a tuple, into a radio update.
-
-    An *empty* sequence is preserved as ``[]``: that is the one array shape
-    ``setValue()`` special-cases, and it clears the selection. Returning ``None`` would
-    drop ``value`` from the message and leave the previous selection in place.
+    A one-element sequence unwraps to that element. An empty sequence stays ``[]``,
+    which clears the selection (returning ``None`` instead would drop ``value``
+    from the message and leave the previous selection in place).
 
     Raises
     ------
     ValueError
-        If the sequence holds more than one value. A radio group can only show one of
-        them, and picking one silently would discard the rest.
+        If the sequence holds more than one value.
     """
     if x is None:
         return None
@@ -197,9 +184,7 @@ class ChoiceSelection:
 
     Comparison is on the string form, since that is the only thing the client can match
     against. Entries that refer to a choice value without stringifying identically are
-    handled by :func:`resolve_selected_values` before they get here, not by loosening the
-    comparison -- a set lookup keeps this O(1) per choice rather than scanning the
-    selection for every option in the group.
+    handled by :func:`resolve_selected_values` before they get here.
     """
 
     def __init__(self, selected: Any) -> None:

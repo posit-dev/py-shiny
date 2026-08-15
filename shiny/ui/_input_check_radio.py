@@ -333,7 +333,7 @@ def _generate_options(
     id: str,
     type: str,
     choices: ChoicesArg,
-    selected: SelectedArg | None,
+    selected: Optional[SelectedArg],
     inline: bool,
 ) -> Tag:
     choicez, choice_values = _normalize_choices_indexed(choices)
@@ -406,16 +406,10 @@ def _choice_value_index(x: ChoicesArg) -> dict[str, Any]:
 
 
 def _normalize_choices_indexed(x: ChoicesArg) -> tuple[_Choices, dict[str, Any]]:
-    # Coerce choice values to `str` so that the server-side comparison against
-    # `selected` -- and the `value` we send in `update_*()` messages -- use the same
-    # string form the client matches on.
-    #
-    # This is *not* always a no-op for the rendered HTML, despite choice values landing
-    # in an HTML `value` attribute either way: htmltools omits an attribute whose value
-    # is `None` or `False` and renders `True` as `value=""`, so `None`/`bool` choice
-    # values now render as `value="None"`/`"False"`/`"True"` rather than being dropped.
-    # That is the intended behavior -- a dropped `value` makes the browser report the
-    # default `"on"` -- but it does change what such an input reports.
+    """
+    Normalize choices, coercing choice values to `str` so they match the
+    string form the client reports.
+    """
     if isinstance(x, (list, tuple)):
         return normalize_choices_indexed({k: k for k in x})
     else:

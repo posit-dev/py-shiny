@@ -441,22 +441,13 @@ def _update_choice_input(
 ) -> None:
     session = require_active_session(session)
 
-    # The client matches `value` against the HTML `value` attributes of the options,
-    # which are always strings. Normalize the same way `input_checkbox_group()` /
-    # `input_radio_buttons()` do so that, e.g., the `int` keys of a `dict[int, str]`
-    # work here too. https://github.com/posit-dev/py-shiny/issues/2272
-    #
-    # When `choices` is given, resolve against it first, so that a `selected` entry which
-    # merely compares equal to a choice value (`1.0` vs. `1`) is sent as the string that
-    # choice actually renders. Normalizing once here and reusing the result for both the
-    # options markup and the message keeps the two in agreement by construction.
+    # The client matches `value` against the options' HTML `value` attributes, which are
+    # always strings. Resolves `selected` against the choices (see issue 2272)
     if choices is not None:
         selected = resolve_selected_values(selected, _choice_value_index(choices))
 
-    # Shape matters as much as type. A radio group's client-side `setValue()` passes a
-    # non-empty array straight to `$escape()`, which calls `.replace()` on it and throws
-    # -- aborting the handler before it applies the label update or fires `change`. So a
-    # sequence has to collapse to a scalar here, while a checkbox group keeps its array.
+    # A radio group's client-side `setValue()` throws on a non-empty array, so collapse
+    # to a scalar; a checkbox group keeps its array.
     if type == "radio":
         selected_values = normalize_selected_radio(selected)
     else:
@@ -468,11 +459,9 @@ def _update_choice_input(
         with session_context(session):
             resolved_id = resolve_id(id)
 
-        # `choices=[]` is the documented way to clear the set of choices, and an empty
-        # radio group has no first option to fall back on. Say "nothing is selected"
-        # explicitly so `_generate_options()` renders an empty group instead of
-        # rejecting the call. The constructors keep rejecting it, because there an
-        # empty `choices` with no `selected` is a mistake rather than a request.
+        # `choices=[]` is the documented way to clear the choices. Pass "nothing
+        # selected" explicitly so `_generate_options()` renders an empty radio group
+        # instead of raising
         options_selected: str | list[str] | None = selected_values
         if type == "radio" and not choices and options_selected is None:
             options_selected = []
@@ -481,11 +470,8 @@ def _update_choice_input(
             id=resolved_id,
             type=type,
             choices=choices,
-            # `_generate_options()` normalizes again, because the `input_*()`
-            # constructors call it with a raw `selected`. That is a no-op on the value
-            # built above -- resolution maps a string that is already a choice value to
-            # itself, and `str()` is idempotent -- which is what lets the options markup
-            # and the message's `value` below come from one normalization.
+            # `_generate_options()` re-normalizes `selected` (the `input_*()`
+            # constructors pass it raw), which is a no-op on the value resolved above.
             selected=options_selected,
             inline=inline,
         )
@@ -746,10 +732,8 @@ def update_select(
 
     session = require_active_session(session)
 
-    # `<select>`'s `setValue()` does `$(el).val(value)`, and jQuery matches option values
-    # with a strict `===`, so a non-string `selected` silently deselects everything.
-    # Normalize to strings, matching the option `value` attributes `_render_choices()`
-    # emits. https://github.com/posit-dev/py-shiny/issues/2272
+    # jQuery matches option values with strict `===`, so a non-string `selected`
+    # silently deselects everything. Resolve to the string form the options render.
     if choices is not None:
         selected = resolve_selected_values(
             selected, _select_choice_value_index(choices)

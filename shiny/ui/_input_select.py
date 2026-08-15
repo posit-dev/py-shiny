@@ -349,18 +349,22 @@ def _update_options(
 
 
 def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
-    # Coerce choice values to `str` so that the option `value` attributes we render and
-    # the `value` we send in `update_*()` messages agree. Optgroup labels and the choice
-    # values nested inside them get the same treatment.
-    # https://github.com/posit-dev/py-shiny/issues/2272
+    """
+    Normalize choices, coercing choice values to `str` so the rendered option
+    `value` attributes and the `value` sent in `update_*()` messages agree.
+    Optgroup labels and nested choice values get the same treatment.
+
+    See https://github.com/posit-dev/py-shiny/issues/2272.
+    """
     if x is None:
         raise TypeError("`choices` must be a list, tuple, or dict.")
     elif isinstance(x, (list, tuple)):
         return normalize_choices_mapping({k: k for k in x})
 
-    # `_SelectChoices` is "all flat" or "all optgroup", with no arm for a per-key mix, so
-    # the comprehension's element type does not fit either. The runtime shape is whatever
-    # the caller passed, which `_render_choices()` handles key by key.
+    # The result may mix flat options and optgroups at the top level (e.g.
+    # `{"a": "A", "Group B": {...}}`). That matches neither arm of the
+    # `_SelectChoices` union, hence the `cast`, but `_render_choices()`
+    # checks each value with `isinstance`, so the mix is fine at runtime.
     normalized = normalize_choices_mapping(x)
     result: dict[str, Any] = {
         key: (normalize_choices_mapping(value) if isinstance(value, Mapping) else value)
@@ -374,7 +378,7 @@ def _choice_value_index(x: SelectChoicesArg) -> dict[str, Any]:
     Map each choice value's string form back to the value as the caller wrote it.
 
     Optgroup labels are not choice values, so only the options nested inside a group are
-    indexed -- never the group key itself.
+    indexed (never the group key itself).
     """
     if x is None:
         return {}
