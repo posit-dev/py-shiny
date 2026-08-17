@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shiny for Python: MCP Server Interactive Showcase & Setup Guide</title>
-  <meta name="description" content="Interactive findings, setup guide with copy-to-clipboard configs, and architectural breakdown of the Shiny MCP Server." />
+  <title>Shiny for Python: Developer CLI & MCP Tooling Suite</title>
+  <meta name="description" content="Interactive guide, live reactive simulator, and documentation for Shiny for Python developer CLI tools (validate, simulate, inspect, docs, scaffold) and MCP server." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <!-- Font Awesome 6 -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
     :root {
-      --bg: #0f141c;
-      --bg-surface: #18202c;
-      --bg-surface-elevated: #222d3d;
-      --bg-input: #121822;
-      --border: #2e3c50;
+      --bg: #0b0f17;
+      --bg-surface: #131b26;
+      --bg-surface-elevated: #1a2434;
+      --bg-input: #0f1622;
+      --border: #243144;
       --border-focus: #3b82f6;
-      --text: #f1f5f9;
+      --text: #f8fafc;
       --text-muted: #94a3b8;
       --text-subtle: #64748b;
       --accent: #3b82f6;
+      --accent-hover: #2563eb;
       --accent-glow: rgba(59, 130, 246, 0.15);
       --success: #10b981;
       --success-glow: rgba(16, 185, 129, 0.15);
@@ -33,25 +33,85 @@
       --purple-glow: rgba(168, 85, 247, 0.15);
       --radius-sm: 8px;
       --radius-md: 12px;
-      --radius-lg: 18px;
+      --radius-lg: 20px;
       --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html { scroll-behavior: smooth; }
+
     body {
       background-color: var(--bg);
       color: var(--text);
       font-family: var(--font-sans);
       line-height: 1.6;
-      padding: 0 1rem 4rem 1rem;
+      padding: 0;
       -webkit-font-smoothing: antialiased;
     }
 
-    .container { max-width: 1200px; margin: 0 auto; }
+    /* Top Nav */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 15, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.5rem;
+    }
 
-    header { padding: 3.5rem 0 2rem 0; text-align: center; }
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    .brand-logo i { color: #38bdf8; font-size: 1.25rem; }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover { color: #ffffff; }
+
+    .nav-badge {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: #93c5fd;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
+
+    header { padding: 4rem 0 2.5rem 0; text-align: center; }
 
     .badge-bar {
       display: flex;
@@ -80,10 +140,10 @@
     .badge.purple { background: var(--purple-glow); border-color: var(--purple); color: #d8b4fe; }
 
     h1 {
-      font-size: clamp(2rem, 4vw, 3.25rem);
+      font-size: clamp(2.2rem, 4.5vw, 3.5rem);
       font-weight: 800;
       line-height: 1.15;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.025em;
       margin-bottom: 1rem;
       color: #ffffff;
     }
@@ -91,7 +151,7 @@
     .lead {
       font-size: clamp(1.05rem, 1.8vw, 1.25rem);
       color: var(--text-muted);
-      max-width: 800px;
+      max-width: 860px;
       margin: 0 auto 2.5rem auto;
     }
 
@@ -100,7 +160,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 1.25rem;
-      margin-bottom: 3.5rem;
+      margin-bottom: 4rem;
     }
 
     .kpi-card {
@@ -121,8 +181,8 @@
       display: flex;
       align-items: center;
       gap: 0.45rem;
-      font-size: 0.875rem;
-      font-weight: 600;
+      font-size: 0.85rem;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-subtle);
@@ -130,13 +190,13 @@
 
     .kpi-card .metric-desc { font-size: 0.9rem; color: var(--text-muted); }
 
-    section { margin-bottom: 4rem; }
+    section { margin-bottom: 4.5rem; }
 
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.75rem;
       border-bottom: 1px solid var(--border);
       padding-bottom: 1rem;
       flex-wrap: wrap;
@@ -144,106 +204,131 @@
     }
 
     .section-header h2 {
-      font-size: 1.6rem;
-      font-weight: 700;
+      font-size: 1.75rem;
+      font-weight: 800;
       color: #f8fafc;
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.65rem;
+      letter-spacing: -0.015em;
     }
+
     .section-header p { color: var(--text-muted); font-size: 0.95rem; }
 
-    /* Quickstart / Setup Guide */
-    .setup-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-    }
-    @media (max-width: 860px) {
-      .setup-grid { grid-template-columns: 1fr; }
-    }
-
-    .setup-card {
+    /* Interactive CLI Explorer */
+    .cli-explorer-container {
       background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+    }
+
+    @media (max-width: 900px) {
+      .cli-explorer-container { grid-template-columns: 1fr; }
+    }
+
+    .cli-nav-list {
+      background: var(--bg-input);
+      border-right: 1px solid var(--border);
+      padding: 1rem;
       display: flex;
       flex-direction: column;
+      gap: 0.5rem;
     }
 
-    .setup-step-num {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: var(--accent-glow);
-      color: #60a5fa;
-      font-weight: 700;
-      font-size: 0.85rem;
-      border: 1px solid var(--accent);
-      margin-right: 0.5rem;
+    @media (max-width: 900px) {
+      .cli-nav-list { border-right: none; border-bottom: 1px solid var(--border); }
     }
 
-    .setup-card h3 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-    }
-
-    .setup-card p {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      margin-bottom: 1rem;
-    }
-
-    .setup-tabs {
-      display: flex;
-      gap: 0.4rem;
-      margin-bottom: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .setup-tab-btn {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 0.35rem 0.8rem;
-      font-size: 0.8rem;
-      font-weight: 600;
+    .cli-nav-item {
+      padding: 0.85rem 1rem;
       border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      text-align: left;
       cursor: pointer;
       display: flex;
-      align-items: center;
-      gap: 0.35rem;
+      flex-direction: column;
+      gap: 0.25rem;
       transition: all 0.2s ease;
     }
 
-    .setup-tab-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
+    .cli-nav-item:hover { background: var(--bg-surface); color: var(--text); }
+
+    .cli-nav-item.active {
+      background: var(--bg-surface-elevated);
+      border-color: var(--border-focus);
       color: #ffffff;
     }
 
+    .cli-nav-item .cmd-name {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cli-nav-item.active .cmd-name { color: #38bdf8; }
+
+    .cli-nav-item .cmd-sub { font-size: 0.775rem; color: var(--text-subtle); }
+
+    .cli-detail-view {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .cli-detail-header h3 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .cli-detail-header p { font-size: 0.95rem; color: var(--text-muted); }
+
+    .cli-flags-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .cli-flag-pill {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .cli-flag-pill code { color: #38bdf8; font-family: var(--font-mono); font-weight: 600; }
+    .cli-flag-pill span { color: var(--text-subtle); display: block; font-size: 0.75rem; margin-top: 0.15rem; }
+
+    /* Code & Terminal Blocks */
     .code-block-wrapper {
       position: relative;
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       overflow: hidden;
-      margin-top: auto;
     }
 
     .code-block-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.4rem 0.75rem;
+      padding: 0.5rem 0.85rem;
       background: var(--bg-surface-elevated);
       border-bottom: 1px solid var(--border);
       font-size: 0.75rem;
@@ -252,11 +337,11 @@
     }
 
     .code-block-content {
-      padding: 0.85rem;
+      padding: 1rem;
       font-family: var(--font-mono);
-      font-size: 0.8rem;
+      font-size: 0.825rem;
       color: #cbd5e1;
-      line-height: 1.5;
+      line-height: 1.55;
       overflow-x: auto;
       white-space: pre;
     }
@@ -267,7 +352,7 @@
       color: var(--text-muted);
       font-size: 0.75rem;
       font-weight: 600;
-      padding: 0.25rem 0.6rem;
+      padding: 0.3rem 0.7rem;
       border-radius: 4px;
       cursor: pointer;
       display: inline-flex;
@@ -288,12 +373,12 @@
       color: #ffffff;
     }
 
-    /* Interactive Live Simulation Playground */
+    /* Live Interactive Playground */
     .playground-container {
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 1.75rem;
+      padding: 2rem;
       display: grid;
       grid-template-columns: 340px 1fr;
       gap: 2rem;
@@ -307,7 +392,7 @@
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      padding: 1.25rem;
+      padding: 1.5rem;
     }
 
     .control-group { margin-bottom: 1.25rem; }
@@ -343,11 +428,11 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.75rem;
+      padding: 0.85rem;
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      margin-top: 1rem;
+      margin-top: 1.25rem;
     }
     .toggle-row label {
       font-size: 0.85rem;
@@ -376,7 +461,7 @@
       background: var(--bg-surface-elevated);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 1rem;
+      padding: 1.25rem;
       text-align: center;
     }
     .sim-card .title {
@@ -385,22 +470,23 @@
       justify-content: center;
       gap: 0.4rem;
       font-size: 0.75rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.05em;
       color: var(--text-subtle);
     }
-    .sim-card .val { font-size: 1.6rem; font-weight: 700; font-family: var(--font-mono); color: #38bdf8; margin: 0.25rem 0; }
+    .sim-card .val { font-size: 1.8rem; font-weight: 800; font-family: var(--font-mono); color: #38bdf8; margin: 0.25rem 0; }
     .sim-card.error { border-color: var(--danger); background: var(--danger-glow); }
     .sim-card.error .val { color: #f87171; font-size: 1rem; font-family: var(--font-mono); }
 
     .status-banner {
-      padding: 0.75rem 1rem;
+      padding: 0.85rem 1.25rem;
       border-radius: var(--radius-sm);
       font-size: 0.875rem;
-      font-weight: 500;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.65rem;
     }
     .status-banner.success { background: var(--success-glow); border: 1px solid var(--success); color: #34d399; }
     .status-banner.danger { background: var(--danger-glow); border: 1px solid var(--danger); color: #f87171; }
@@ -409,14 +495,142 @@
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 1rem;
-      min-height: 220px;
+      padding: 1.25rem;
+      min-height: 200px;
     }
     .dag-box-header {
-      font-size: 0.8rem; font-weight: 600; color: var(--text-subtle); text-transform: uppercase;
-      margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; font-weight: 700; color: var(--text-subtle); text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;
     }
-    .dag-svg { width: 100%; height: 180px; }
+    .dag-svg { width: 100%; height: 160px; }
+
+    .live-cli-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .live-cli-cmd {
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: #93c5fd;
+      overflow-x: auto;
+    }
+
+    /* Component Catalog Explorer */
+    .catalog-search-bar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .catalog-input {
+      flex-grow: 1;
+      min-width: 260px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius-sm);
+      outline: none;
+    }
+
+    .catalog-input:focus { border-color: var(--accent); }
+
+    .catalog-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .catalog-tab-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.4rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .catalog-tab-btn.active { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .catalog-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .catalog-card:hover { transform: translateY(-2px); border-color: #475569; }
+
+    .catalog-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .catalog-card-name {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #60a5fa;
+    }
+
+    .catalog-cat-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background: var(--bg-surface-elevated);
+      color: var(--text-subtle);
+    }
+
+    .catalog-card-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      line-height: 1.45;
+    }
+
+    .catalog-snippet-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+
+    .catalog-snippet-btn:hover { background: var(--bg-surface-elevated); color: #ffffff; border-color: var(--accent); }
 
     /* Benchmark Explorer */
     .benchmark-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
@@ -486,10 +700,10 @@
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      padding: 1.5rem;
+      padding: 1.75rem;
     }
     .roi-box h3 {
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       font-weight: 700;
       margin-bottom: 0.75rem;
       color: #ffffff;
@@ -513,51 +727,13 @@
       font-size: 0.7rem;
       position: absolute;
       left: 0;
-      top: 2px;
+      top: 3px;
       color: var(--accent);
     }
 
-    /* The 3 Pivotal Functions */
-    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
-    .feature-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 1.75rem;
-      display: flex;
-      flex-direction: column;
-    }
-    .feature-icon {
-      width: 44px; height: 44px; border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.25rem; margin-bottom: 1rem;
-    }
-    .feature-card.f1 .feature-icon { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-    .feature-card.f2 .feature-icon { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .feature-card.f3 .feature-icon { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-
-    .feature-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; font-family: var(--font-mono); color: #ffffff; }
-    .feature-card p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem; flex-grow: 1; }
-
-    .code-preview {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.85rem;
-      font-family: var(--font-mono);
-      font-size: 0.775rem;
-      color: #94a3b8;
-      overflow-x: auto;
-      line-height: 1.5;
-    }
-    .code-preview .keyword { color: #f472b6; }
-    .code-preview .fn { color: #60a5fa; }
-    .code-preview .str { color: #34d399; }
-    .code-preview .warn { color: #fbbf24; }
-
     footer {
       border-top: 1px solid var(--border);
-      padding-top: 2rem;
+      padding: 3rem 0;
       text-align: center;
       color: var(--text-subtle);
       font-size: 0.875rem;
@@ -566,100 +742,104 @@
 </head>
 <body>
 
+  <!-- Navigation Bar -->
+  <nav class="top-nav">
+    <div class="nav-container">
+      <a href="#" class="brand-logo">
+        <i class="fa-solid fa-sparkles"></i>
+        <span>Shiny Developer Tools</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#cli-explorer">CLI Subcommands</a></li>
+        <li><a href="#playground">Live Simulator</a></li>
+        <li><a href="#catalog">Component Docs</a></li>
+        <li><a href="#benchmarks">A/B Benchmarks</a></li>
+        <li><span class="nav-badge">v1.7.0+</span></li>
+      </ul>
+    </div>
+  </nav>
+
   <div class="container">
+    <!-- Header -->
     <header>
       <div class="badge-bar">
-        <span class="badge highlight"><i class="fa-solid fa-cube"></i> Zero External Dependencies</span>
-        <span class="badge success"><i class="fa-solid fa-bolt"></i> 25ms Reactive Execution</span>
-        <span class="badge purple"><i class="fa-solid fa-coins"></i> ~80% LLM Cost Reduction</span>
-        <span class="badge"><i class="fa-solid fa-network-wired"></i> MCP Specification 2024-11-05</span>
+        <span class="badge highlight"><i class="fa-solid fa-terminal"></i> 5 Built-in CLI Subcommands</span>
+        <span class="badge success"><i class="fa-solid fa-bolt"></i> ~25ms In-Memory Simulation</span>
+        <span class="badge purple"><i class="fa-solid fa-network-wired"></i> Optional MCP Server</span>
+        <span class="badge"><i class="fa-solid fa-cube"></i> Zero External Dependencies</span>
       </div>
-      <h1>Shiny for Python: MCP Server</h1>
+      <h1>Shiny for Python: Developer CLI & MCP Suite</h1>
+      <p class="lead">
+        Deterministic AST static analysis, headless reactive simulation, DAG inspection, runtime reflection, and starter scaffolding — available directly in your terminal, CI/CD pipelines, and AI coding assistants.
+      </p>
     </header>
 
     <!-- KPI Summary Row -->
     <div class="kpi-grid">
       <div class="kpi-card blue">
-        <div class="metric-label"><i class="fa-solid fa-gauge-high"></i> Resolution Speedup</div>
-        <div class="metric-val">2.1x Faster</div>
-        <div class="metric-desc">Autonomous fix latency dropped from ~45s to ~21s across both small and frontier models.</div>
+        <div class="metric-label"><i class="fa-solid fa-terminal"></i> Developer Usability</div>
+        <div class="metric-val">5 CLI Tools</div>
+        <div class="metric-desc"><code>validate</code>, <code>simulate</code>, <code>inspect</code>, <code>docs</code>, and <code>scaffold</code> work standalone without server overhead.</div>
       </div>
       <div class="kpi-card green">
-        <div class="metric-label"><i class="fa-solid fa-microchip"></i> Headless Verification</div>
+        <div class="metric-label"><i class="fa-solid fa-microchip"></i> Headless Simulation</div>
         <div class="metric-val">~25 ms</div>
-        <div class="metric-desc">Deterministic in-memory reactive flush with AppSession bypassing browser and server overhead.</div>
+        <div class="metric-desc">In-memory reactive flush with AppSession bypassing browser startup and Playwright latency.</div>
       </div>
       <div class="kpi-card purple">
-        <div class="metric-label"><i class="fa-solid fa-chart-pie"></i> Cost Optimization</div>
+        <div class="metric-label"><i class="fa-solid fa-chart-pie"></i> Inference Cost Drop</div>
         <div class="metric-val">70% – 85%</div>
-        <div class="metric-desc">Cheaper models with MCP match or beat raw frontier model accuracy at a fraction of the token cost.</div>
+        <div class="metric-desc">Cheaper coding models with deterministic verification achieve 100% bug fix accuracy.</div>
       </div>
     </div>
 
-    <!-- Quickstart & How to Use -->
-    <section id="quickstart">
+    <!-- Section 1: Interactive CLI Subcommands Explorer -->
+    <section id="cli-explorer">
       <div class="section-header">
         <div>
-          <h2><i class="fa-solid fa-terminal"></i> How to Use in Your Local Shiny App</h2>
-          <p>Two simple steps to enable the MCP server for your AI coding assistant.</p>
+          <h2><i class="fa-solid fa-terminal"></i> Interactive CLI Subcommands Explorer</h2>
+          <p>Click through the 5 built-in subcommands to explore syntax, available flags, and real output formats.</p>
         </div>
       </div>
 
-      <div class="setup-grid">
-        <!-- Step 1 -->
-        <div class="setup-card">
-          <h3><span class="setup-step-num">1</span> Install Shiny in Your Environment</h3>
-          <p>Because the MCP server is built directly into <code>shiny</code> with zero extra dependencies, installing Shiny provides the server automatically.</p>
-
-          <div class="setup-tabs">
-            <button class="setup-tab-btn active" onclick="switchInstallTab(this, 'pip')"><i class="fa-brands fa-python"></i> pip</button>
-            <button class="setup-tab-btn" onclick="switchInstallTab(this, 'uv')"><i class="fa-solid fa-bolt"></i> uv</button>
-          </div>
-
-          <div class="code-block-wrapper">
-            <div class="code-block-header">
-              <span>Terminal Command</span>
-              <button class="copy-btn" onclick="copyCode(this, 'install-code')"><i class="fa-regular fa-copy"></i> Copy</button>
-            </div>
-            <div class="code-block-content" id="install-code">pip install shiny</div>
-          </div>
+      <div class="cli-explorer-container">
+        <!-- Subcommand Nav Menu -->
+        <div class="cli-nav-list">
+          <button class="cli-nav-item active" onclick="selectCliCommand('validate')">
+            <span class="cmd-name">shiny validate <i class="fa-solid fa-chevron-right"></i></span>
+            <span class="cmd-sub">AST Reactivity & Idiom Linter</span>
+          </button>
+          <button class="cli-nav-item" onclick="selectCliCommand('simulate')">
+            <span class="cmd-name">shiny simulate <i class="fa-solid fa-chevron-right"></i></span>
+            <span class="cmd-sub">Headless Reactive Runner</span>
+          </button>
+          <button class="cli-nav-item" onclick="selectCliCommand('inspect')">
+            <span class="cmd-name">shiny inspect <i class="fa-solid fa-chevron-right"></i></span>
+            <span class="cmd-sub">Topological DAG & Mermaid</span>
+          </button>
+          <button class="cli-nav-item" onclick="selectCliCommand('docs')">
+            <span class="cmd-name">shiny docs <i class="fa-solid fa-chevron-right"></i></span>
+            <span class="cmd-sub">Signatures & Docstring Reflection</span>
+          </button>
+          <button class="cli-nav-item" onclick="selectCliCommand('scaffold')">
+            <span class="cmd-name">shiny scaffold <i class="fa-solid fa-chevron-right"></i></span>
+            <span class="cmd-sub">Starter Template Generator</span>
+          </button>
         </div>
 
-        <!-- Step 2 -->
-        <div class="setup-card">
-          <h3><span class="setup-step-num">2</span> Configure Your AI Coding Assistant</h3>
-          <p>Add the configuration below to your project root (where your <code>app.py</code> lives) so your AI assistant uses the server.</p>
-
-          <div class="setup-tabs">
-            <button class="setup-tab-btn active" onclick="switchConfigTab(this, 'claude-cursor')"><i class="fa-solid fa-terminal"></i> Claude / Cursor</button>
-            <button class="setup-tab-btn" onclick="switchConfigTab(this, 'opencode')"><i class="fa-solid fa-code"></i> OpenCode</button>
-            <button class="setup-tab-btn" onclick="switchConfigTab(this, 'uvx')"><i class="fa-solid fa-cloud"></i> Zero-Install (uvx)</button>
-          </div>
-
-          <div class="code-block-wrapper">
-            <div class="code-block-header">
-              <span id="config-filename">.mcp.json</span>
-              <button class="copy-btn" onclick="copyCode(this, 'config-code')"><i class="fa-regular fa-copy"></i> Copy</button>
-            </div>
-            <div class="code-block-content" id="config-code">{
-  "mcpServers": {
-    "shiny": {
-      "command": "shiny",
-      "args": ["mcp"]
-    }
-  }
-}</div>
-          </div>
+        <!-- Subcommand Detail Display -->
+        <div class="cli-detail-view" id="cli-detail-panel">
+          <!-- Dynamic Content Injected by JS -->
         </div>
       </div>
     </section>
 
-    <!-- Interactive Live Simulation Playground -->
-    <section>
+    <!-- Section 2: Interactive Live Reactive Playground -->
+    <section id="playground">
       <div class="section-header">
         <div>
-          <h2><i class="fa-solid fa-flask"></i> Interactive Reactive Simulation Engine</h2>
-          <p>Test the exact Healthcare Logistics Dashboard model simulated headlessly by the MCP server.</p>
+          <h2><i class="fa-solid fa-flask"></i> Live In-Memory Simulation Playground</h2>
+          <p>Test the Healthcare Logistics Dashboard model simulated headlessly by <code>shiny simulate</code>.</p>
         </div>
       </div>
 
@@ -687,7 +867,7 @@
           </div>
 
           <div class="toggle-row">
-            <label for="toggle-bug"><i class="fa-solid fa-bug"></i> Simulate Reactive Bug State</label>
+            <label for="toggle-bug"><i class="fa-solid fa-bug"></i> Inject Reactive Bug State</label>
             <label class="switch">
               <input type="checkbox" id="toggle-bug" />
               <span class="slider-toggle"></span>
@@ -695,10 +875,10 @@
           </div>
         </div>
 
-        <!-- Live Output Display & Reactive Graph -->
+        <!-- Output Viewport -->
         <div class="output-viewport">
           <div id="status-box" class="status-banner success">
-            <i class="fa-solid fa-circle-check"></i> <span><strong>AppSession in-memory execution</strong>: Flushed cleanly in 24.2ms. All reactives healthy.</span>
+            <i class="fa-solid fa-circle-check"></i> <span><strong>AppSession in-memory execution</strong>: Flushed in 24.2ms. All reactives healthy.</span>
           </div>
 
           <div class="sim-cards">
@@ -758,23 +938,58 @@
               <text x="350" y="116" id="text-cost" fill="#6ee7b7" font-size="11" font-family="monospace" text-anchor="middle">render: cost_kpi</text>
             </svg>
           </div>
+
+          <!-- Dynamic CLI Reproduction Bar -->
+          <div class="live-cli-box">
+            <div>
+              <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-subtle); display: block; font-weight: 700;">Reproduce in Terminal:</span>
+              <span class="live-cli-cmd" id="live-cli-text">shiny simulate app.py -i bed_capacity=200 -i patient_vol=150 -i staff_ratio=0.25 -i surge=1.2</span>
+            </div>
+            <button class="copy-btn" onclick="copyCode(this, 'live-cli-text')"><i class="fa-regular fa-copy"></i> Copy Command</button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Multi-Model Benchmark Explorer -->
-    <section>
+    <!-- Section 3: Component Catalog & Docs Explorer -->
+    <section id="catalog">
+      <div class="section-header">
+        <div>
+          <h2><i class="fa-solid fa-book-bookmark"></i> Interactive Component Catalog & Docs</h2>
+          <p>Explore built-in Shiny components, inspect signatures, and copy verified snippets (mirroring <code>shiny docs</code>).</p>
+        </div>
+      </div>
+
+      <div class="catalog-search-bar">
+        <input type="text" id="catalog-search" class="catalog-input" placeholder="Search components (e.g. sidebar, plot, data_frame, slider)..." oninput="filterComponents()" />
+        <div class="catalog-tabs">
+          <button class="catalog-tab-btn active" onclick="setCatalogCategory(this, 'all')">All</button>
+          <button class="catalog-tab-btn" onclick="setCatalogCategory(this, 'layout')">Layout</button>
+          <button class="catalog-tab-btn" onclick="setCatalogCategory(this, 'cards')">Cards</button>
+          <button class="catalog-tab-btn" onclick="setCatalogCategory(this, 'inputs')">Inputs</button>
+          <button class="catalog-tab-btn" onclick="setCatalogCategory(this, 'outputs')">Outputs</button>
+          <button class="catalog-tab-btn" onclick="setCatalogCategory(this, 'renderers')">Renderers</button>
+        </div>
+      </div>
+
+      <div class="catalog-grid" id="catalog-grid">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- Section 4: Multi-Model Benchmark Explorer -->
+    <section id="benchmarks">
       <div class="section-header">
         <div>
           <h2><i class="fa-solid fa-ranking-star"></i> Multi-Model A/B Benchmark & Cost Matrix</h2>
-          <p>Comparison of Control (Skills Only) vs Treatment (With Shiny MCP Server) across 8 AI models.</p>
+          <p>Comparison of Control (Skills Only) vs Treatment (With Shiny CLI/MCP Tools) across 8 AI models.</p>
         </div>
       </div>
 
       <div class="benchmark-tabs">
-        <button class="tab-btn active" onclick="filterTable('all')"><i class="fa-solid fa-list"></i> All Models (8)</button>
-        <button class="tab-btn" onclick="filterTable('claude')"><i class="fa-solid fa-terminal"></i> Claude Code Models (3)</button>
-        <button class="tab-btn" onclick="filterTable('opencode')"><i class="fa-solid fa-code"></i> OpenCode Go Models (5)</button>
+        <button class="tab-btn active" onclick="filterTable(this, 'all')"><i class="fa-solid fa-list"></i> All Models (8)</button>
+        <button class="tab-btn" onclick="filterTable(this, 'claude')"><i class="fa-solid fa-terminal"></i> Claude Code Models (3)</button>
+        <button class="tab-btn" onclick="filterTable(this, 'opencode')"><i class="fa-solid fa-code"></i> OpenCode Go Models (5)</button>
       </div>
 
       <div class="bench-table-container">
@@ -868,101 +1083,278 @@
       </div>
     </section>
 
-    <!-- Economic ROI & Strategic Conclusion -->
+    <!-- Section 5: Strategic ROI Conclusions -->
     <section>
       <div class="section-header">
         <div>
-          <h2><i class="fa-solid fa-coins"></i> Economic Analysis & Strategic Conclusions</h2>
-          <p>Why MCP transforms LLM economics and democratizes frontier capabilities to cheaper models.</p>
+          <h2><i class="fa-solid fa-coins"></i> Developer Tooling Economics & ROI</h2>
+          <p>Why first-class developer tooling democratizes frontier capabilities and lowers iteration cost.</p>
         </div>
       </div>
 
       <div class="roi-grid">
         <div class="roi-box">
-          <h3><i class="fa-solid fa-scale-balanced" style="color: #60a5fa;"></i> 1. The "MCP Equalizer" Effect</h3>
-          <p>Without MCP, developers are forced to use expensive frontier models (Opus / Sonnet at $0.35–$0.90/task) because smaller models miss subtle reactivity bugs. With MCP:</p>
+          <h3><i class="fa-solid fa-scale-balanced" style="color: #60a5fa;"></i> 1. The "Tooling Equalizer" Effect</h3>
+          <p>Without deterministic verification tools, developers and coding agents guess reactively, causing multi-turn hallucination loops:</p>
           <ul>
-            <li><strong>Cheaper models ($0.02 – $0.05/task)</strong> achieve the exact same 100% bug fix accuracy and verification confidence as Opus.</li>
-            <li>Eliminates the "intelligence tax" for reactive frameworks by providing deterministic AST and execution feedback.</li>
+            <li><strong>Cheaper models ($0.02 – $0.05/task)</strong> achieve the exact same 100% bug fix accuracy and verification confidence as frontier models.</li>
+            <li>Eliminates runtime guessing for reactive frameworks through instant AST linting and headless simulation.</li>
             <li>Enables engineering teams to reduce AI coding inference spend by <strong>70% – 85%</strong>.</li>
           </ul>
         </div>
 
         <div class="roi-box">
-          <h3><i class="fa-solid fa-arrow-trend-up" style="color: #34d399;"></i> 2. Frontier Model Efficiency Gains</h3>
-          <p>Even for expensive models (Claude Sonnet 5 & Opus 5), the MCP server provides clear financial and engineering ROI:</p>
+          <h3><i class="fa-solid fa-arrow-trend-up" style="color: #34d399;"></i> 2. Direct CLI & CI Integration</h3>
+          <p>Making tools available as standard CLI subcommands removes configuration overhead:</p>
           <ul>
-            <li><strong>12% – 15% Reduction in Token Cost</strong>: Eliminates exploratory reasoning loops and failed multi-turn guessing cycles.</li>
-            <li><strong>Provable Correctness</strong>: Raw LLM reasoning can only guess if arithmetic is correct; MCP provides sub-second proof of computed values.</li>
-            <li><strong>Zero Setup Friction</strong>: Universal protocol compatible across Claude Code, OpenCode, Cursor, and VS Code.</li>
+            <li><strong>Universal CLI Interface</strong>: Usable directly in bash, zsh, terminal scripts, pre-commit hooks, and CI/CD pipelines.</li>
+            <li><strong>JSON Diagnostics</strong>: Every command supports <code>--json</code> for programmatic integration into editors and extensions.</li>
+            <li><strong>Backwards-Compatible MCP</strong>: Existing MCP configurations continue to operate via <code>shiny mcp</code>.</li>
           </ul>
         </div>
       </div>
     </section>
 
-    <!-- The 3 Pivotal Functions -->
-    <section>
-      <div class="section-header">
-        <div>
-          <h2><i class="fa-solid fa-wrench"></i> The 3 Pivotal MCP Functions</h2>
-          <p>The specialized execution and diagnostic engines that eliminate AI hallucinations.</p>
-        </div>
-      </div>
-
-      <div class="feature-grid">
-        <div class="feature-card f1">
-          <div class="feature-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
-          <h3>shiny_validate_code</h3>
-          <p>
-            Deterministic AST visitor inspecting the abstract syntax tree for Shiny-specific antipatterns before code execution. Catches uncalled reactive inputs and duplicate widget IDs across nested layouts.
-          </p>
-          <div class="code-preview">
-<span class="warn">Line 32: [DUPLICATE_ID]</span>
-Duplicate input ID 'facility_type' detected.
-
-<span class="warn">Line 70: [UNCALLED_INPUT]</span>
-Input 'input.surge_multiplier' accessed
-without parentheses '()'.
-          </div>
-        </div>
-
-        <div class="feature-card f2">
-          <div class="feature-icon"><i class="fa-solid fa-bolt-lightning"></i></div>
-          <h3>shiny_simulate_app</h3>
-          <p>
-            Boots an in-memory <code>AppSession</code> backed by a <code>MockConnection</code> with <code>SHINY_TESTMODE=1</code>. Simulates client events, unhides observers, flushes reactivity, and returns calculated output values in 25ms.
-          </p>
-          <div class="code-preview">
-<span class="keyword">await</span> <span class="fn">simulate_shiny_app</span>(
-  file_path=<span class="str">"app.py"</span>,
-  inputs={<span class="str">"beds"</span>: 200, <span class="str">"vol"</span>: 150}
-)
-<span class="comment">// Returns {success: true, outputs: {...}}</span>
-          </div>
-        </div>
-
-        <div class="feature-card f3">
-          <div class="feature-icon"><i class="fa-solid fa-network-wired"></i></div>
-          <h3>shiny_inspect_reactive_graph</h3>
-          <p>
-            Parses applications into a topological Directed Acyclic Graph (DAG), mapping dependencies from input sources through <code>@reactive.calc</code> conductors to <code>@render.*</code> endpoints to detect broken reactive links.
-          </p>
-          <div class="code-preview">
-{
-  <span class="str">"inputs"</span>: [<span class="str">"beds"</span>, <span class="str">"volume"</span>, <span class="str">"ratio"</span>],
-  <span class="str">"calcs"</span>: [<span class="str">"base_metrics"</span>],
-  <span class="str">"outputs"</span>: [<span class="str">"occupancy_kpi"</span>, <span class="str">"cost_kpi"</span>]
-}
-          </div>
-        </div>
-      </div>
-    </section>
+    <!-- Footer -->
+    <footer>
+      <p>Built for the Posit <code>py-shiny</code> ecosystem • Developer CLI & Model Context Protocol Suite</p>
+    </footer>
   </div>
 
   <script>
+    // Component Catalog Data
+    const CATALOG = [
+      { name: "ui.page_sidebar", cat: "layout", desc: "Dashboard layout with collapsible sidebar and main area.", snippet: "ui.page_sidebar(ui.sidebar(ui.input_slider('n', 'N', 1, 100, 50)), ui.card(ui.output_text('res')))" },
+      { name: "ui.page_fluid", cat: "layout", desc: "Fluid container page layout dynamically scaling to viewport.", snippet: "ui.page_fluid(ui.h2('Header'), ui.input_text('txt', 'Enter text:'))" },
+      { name: "ui.page_opts", cat: "layout", desc: "Express-mode page configuration options (title, fillable).", snippet: "ui.page_opts(title='My Dashboard', fillable=True)" },
+      { name: "ui.layout_columns", cat: "layout", desc: "Responsive 12-column CSS grid multi-column layout.", snippet: "ui.layout_columns(ui.card('Col 1'), ui.card('Col 2'), col_widths=(6, 6))" },
+      { name: "ui.card", cat: "cards", desc: "Bootstrap card container for grouping UI elements.", snippet: "ui.card(ui.card_header('Summary'), ui.output_text('summary_text'))" },
+      { name: "ui.card_header", cat: "cards", desc: "Card header container for titles, badges, and controls.", snippet: "ui.card_header('Card Title')" },
+      { name: "ui.value_box", cat: "cards", desc: "Prominent KPI metric card with title, value, and icon showcase.", snippet: "ui.value_box('Total Users', '1,240', showcase=ui.span('📈'))" },
+      { name: "ui.accordion", cat: "cards", desc: "Collapsible accordion panels for progressive disclosure.", snippet: "ui.accordion(ui.accordion_panel('Section 1', 'Content 1'))" },
+      { name: "ui.input_slider", cat: "inputs", desc: "Slider control for numeric values or ranges.", snippet: "ui.input_slider('num', 'Select Value:', min=0, max=100, value=25)" },
+      { name: "ui.input_select", cat: "inputs", desc: "Dropdown select menu for choosing from a list of options.", snippet: "ui.input_select('var', 'Variable:', choices=['A', 'B', 'C'])" },
+      { name: "ui.input_text", cat: "inputs", desc: "Single-line text input field.", snippet: "ui.input_text('name', 'Enter name:', placeholder='John Doe')" },
+      { name: "ui.input_numeric", cat: "inputs", desc: "Numeric input field with increment/decrement steppers.", snippet: "ui.input_numeric('count', 'Count:', value=10, min=1, max=100)" },
+      { name: "ui.input_checkbox", cat: "inputs", desc: "Single boolean checkbox input.", snippet: "ui.input_checkbox('show_all', 'Show all records', value=False)" },
+      { name: "ui.input_action_button", cat: "inputs", desc: "Action button triggering reactive effects or events.", snippet: "ui.input_action_button('btn', 'Submit', class_='btn-primary')" },
+      { name: "ui.input_task_button", cat: "inputs", desc: "Action button with built-in loading spinner during tasks.", snippet: "ui.input_task_button('calc_btn', 'Run Calculation')" },
+      { name: "ui.input_dark_mode", cat: "inputs", desc: "Light/dark mode toggle button with automatic theme switching.", snippet: "ui.input_dark_mode(mode='light')" },
+      { name: "ui.output_text", cat: "outputs", desc: "Text output container rendering plain text strings.", snippet: "ui.output_text('greeting')" },
+      { name: "ui.output_data_frame", cat: "outputs", desc: "Interactive data table with sorting, filtering, selection.", snippet: "ui.output_data_frame('grid')" },
+      { name: "ui.output_plot", cat: "outputs", desc: "Static plot container rendering matplotlib or seaborn figures.", snippet: "ui.output_plot('plot')" },
+      { name: "ui.output_ui", cat: "outputs", desc: "Dynamic UI output container rendering arbitrary HTML tags.", snippet: "ui.output_ui('dynamic_controls')" },
+      { name: "render.text", cat: "renderers", desc: "Renderer decorator for text outputs.", snippet: "@render.text\ndef greeting():\n    return f'Hello, {input.name()}!'" },
+      { name: "render.data_frame", cat: "renderers", desc: "Renderer decorator for interactive data frames (DataGrid/DataTable).", snippet: "@render.data_frame\ndef grid():\n    return render.DataGrid(df, selection_mode='rows')" },
+      { name: "render.plot", cat: "renderers", desc: "Renderer decorator for matplotlib/seaborn figures.", snippet: "@render.plot\ndef plot():\n    fig, ax = plt.subplots()\n    return fig" },
+      { name: "render.ui", cat: "renderers", desc: "Renderer decorator for dynamic HTML tags and nested UI components.", snippet: "@render.ui\ndef dynamic_controls():\n    return ui.TagList(ui.input_text('dyn', 'Dynamic'))" }
+    ];
+
+    // CLI Subcommands Data
+    const CLI_DATA = {
+      validate: {
+        title: "shiny validate",
+        badge: "AST Static Analysis",
+        desc: "Performs static AST analysis on Shiny source code without executing it. Detects direct input mutations, uncalled reactive inputs (e.g. input.x vs input.x()), duplicate widget IDs, and R Shiny idioms.",
+        flags: [
+          { flag: "[PATH]", desc: "Path to app.py or project directory (default: app.py)" },
+          { flag: "--code TEXT", desc: "Inline Python source code string to validate" },
+          { flag: "--json", desc: "Output machine-readable JSON diagnostic report" }
+        ],
+        command: "shiny validate app.py",
+        output: `Validating app.py (Mode: express)
+
+✓ All validation checks passed successfully!
+
+Detected Reactive Structure:
+  Inputs (2): region, threshold
+  Outputs (3): revenue, customers, summary
+
+Suggestions:
+  ℹ Code structure matches Python Shiny best practices.`
+      },
+      simulate: {
+        title: "shiny simulate",
+        badge: "In-Memory Headless Runner",
+        desc: "Headlessly simulates a Shiny app in-memory using AppSession. Injects initial input values, flushes reactivity across the dependency graph, and captures rendered output values or runtime errors in ~25ms.",
+        flags: [
+          { flag: "[PATH]", desc: "Path to app file (default: app.py)" },
+          { flag: "-i KEY=VALUE", desc: "Set initial input value (can specify multiple times)" },
+          { flag: "--inputs JSON", desc: "JSON string dictionary of input values" },
+          { flag: "--timeout FLOAT", desc: "Simulation timeout in seconds (default: 3.0)" },
+          { flag: "--json", desc: "Output simulation results and metrics as JSON" }
+        ],
+        command: "shiny simulate app.py -i threshold=100 -i region=North",
+        output: `Simulating app.py (24.8ms)
+
+Simulated Inputs:
+  \`threshold\` = 100
+  \`region\` = 'North'
+
+✓ Simulation completed successfully!
+
+Rendered Outputs:
+  revenue: $1,250k
+  customers: 400
+  summary: Selected Region: North | Minimum Threshold: $100k`
+      },
+      inspect: {
+        title: "shiny inspect",
+        badge: "Reactive Graph (DAG)",
+        desc: "Statically parses inputs, reactive calculations, effects, and renderers, resolving their dependency topology. Outputs formatted ASCII trees, Markdown-ready Mermaid diagrams, or Graphviz DOT.",
+        flags: [
+          { flag: "[PATH]", desc: "Path to app file" },
+          { flag: "--format [text|json|mermaid|dot]", desc: "Output format specification (default: text)" },
+          { flag: "--mermaid", desc: "Shorthand for --format mermaid" },
+          { flag: "--json", desc: "Shorthand for --format json" }
+        ],
+        command: "shiny inspect app.py --mermaid",
+        output: `graph TD
+    threshold["📥 input.threshold"]:::inputClass
+    region["📥 input.region"]:::inputClass
+    revenue["📊 output:revenue"]:::outputClass
+    customers["📊 output:customers"]:::outputClass
+    summary["📊 output:summary"]:::outputClass
+    threshold --> revenue
+    threshold --> customers
+    region --> summary
+    threshold --> summary
+    classDef inputClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;
+    classDef outputClass fill:#dcfce7,stroke:#16a34a,stroke-width:2px;`
+      },
+      docs: {
+        title: "shiny docs",
+        badge: "Component Reflection",
+        desc: "Inspects runtime component metadata, signatures, category groupings, docstring excerpts, and ready-to-copy code snippets directly from the terminal.",
+        flags: [
+          { flag: "[COMPONENT]", desc: "Component or renderer name (e.g. ui.page_sidebar, render.plot)" },
+          { flag: "-c, --category [CAT]", desc: "Filter list by category (layout, cards, inputs, outputs, renderers)" },
+          { flag: "--json", desc: "Output component details as JSON" }
+        ],
+        command: "shiny docs ui.page_sidebar",
+        output: `ui.page_sidebar  (layout)
+
+A dashboard page layout with a collapsible sidebar and main content area.
+
+Signature:
+  ui.page_sidebar(sidebar: 'Sidebar', *args: 'TagChild | TagAttrs', title: 'Optional[str | Tag | TagList]' = None, fillable: 'bool' = False) -> 'Tag'
+
+Example Snippet:
+  ui.page_sidebar(ui.sidebar(ui.input_slider('n', 'N', 1, 100, 50)), ui.card(ui.output_text('res')))`
+      },
+      scaffold: {
+        title: "shiny scaffold",
+        badge: "Template Scaffolding",
+        desc: "Generates production-ready starter templates (express_dashboard, core_dashboard, ai_chat) directly to stdout or writes them to a designated app file.",
+        flags: [
+          { flag: "[TEMPLATE]", desc: "Template name (express_dashboard, core_dashboard, ai_chat)" },
+          { flag: "-o, --out PATH", desc: "Write template directly to file path" },
+          { flag: "-l, --list", desc: "List all available starter templates" },
+          { flag: "--json", desc: "Output template code/metadata in JSON format" }
+        ],
+        command: "shiny scaffold express_dashboard -o app.py",
+        output: `✓ Scaffolded 'express_dashboard' template to app.py
+
+Next steps:
+  1. Validate:  shiny validate app.py
+  2. Simulate:  shiny simulate app.py -i threshold=50
+  3. Run:       shiny run app.py`
+      }
+    };
+
+    // Render CLI Subcommand Details
+    function selectCliCommand(cmdKey) {
+      document.querySelectorAll('.cli-nav-item').forEach(b => b.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      const data = CLI_DATA[cmdKey];
+      if (!data) return;
+
+      const panel = document.getElementById('cli-detail-panel');
+      panel.innerHTML = `
+        <div class="cli-detail-header">
+          <h3>${data.title} <span class="badge highlight" style="font-size: 0.75rem;">${data.badge}</span></h3>
+          <p>${data.desc}</p>
+        </div>
+
+        <div class="cli-flags-grid">
+          ${data.flags.map(f => `
+            <div class="cli-flag-pill">
+              <code>${f.flag}</code>
+              <span>${f.desc}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="code-block-wrapper">
+          <div class="code-block-header">
+            <span>Terminal Execution & Output</span>
+            <button class="copy-btn" onclick="copyCode(this, 'cli-live-output')"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <div class="code-block-content" id="cli-live-output">$ ${data.command}\n\n${data.output}</div>
+        </div>
+      `;
+    }
+
+    // Render Component Catalog Grid
+    let currentCategory = 'all';
+    function renderCatalog() {
+      const query = document.getElementById('catalog-search').value.toLowerCase();
+      const grid = document.getElementById('catalog-grid');
+      grid.innerHTML = '';
+
+      const filtered = CATALOG.filter(item => {
+        const matchesCat = currentCategory === 'all' || item.cat === currentCategory;
+        const matchesQuery = item.name.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query);
+        return matchesCat && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">No matching components found.</div>';
+        return;
+      }
+
+      filtered.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'catalog-card';
+        card.innerHTML = `
+          <div>
+            <div class="catalog-card-header">
+              <span class="catalog-card-name">${item.name}</span>
+              <span class="catalog-cat-badge">${item.cat}</span>
+            </div>
+            <div class="catalog-card-desc">${item.desc}</div>
+          </div>
+          <button class="catalog-snippet-btn" onclick="copySnippet(this, ${JSON.stringify(item.snippet)})">
+            <span>${item.snippet.length > 28 ? item.snippet.slice(0, 26) + '...' : item.snippet}</span>
+            <i class="fa-regular fa-copy"></i>
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function filterComponents() { renderCatalog(); }
+
+    function setCatalogCategory(btn, cat) {
+      document.querySelectorAll('.catalog-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCategory = cat;
+      renderCatalog();
+    }
+
+    function copySnippet(btn, snippet) {
+      navigator.clipboard.writeText(snippet).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span>Copied!</span> <i class="fa-solid fa-check" style="color: #34d399;"></i>';
+        setTimeout(() => { btn.innerHTML = orig; }, 1800);
+      });
+    }
+
     // Copy to Clipboard logic
     function copyCode(btn, elementId) {
-      const code = document.getElementById(elementId).innerText;
+      const el = document.getElementById(elementId);
+      const code = el ? el.innerText : '';
       navigator.clipboard.writeText(code).then(() => {
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
@@ -974,42 +1366,7 @@ without parentheses '()'.
       });
     }
 
-    // Install Tab Switcher
-    function switchInstallTab(btn, type) {
-      const parent = btn.parentElement;
-      parent.querySelectorAll('.setup-tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const codeEl = document.getElementById('install-code');
-      if (type === 'pip') {
-        codeEl.innerText = 'pip install shiny';
-      } else if (type === 'uv') {
-        codeEl.innerText = 'uv add shiny';
-      }
-    }
-
-    // Config Tab Switcher
-    function switchConfigTab(btn, type) {
-      const parent = btn.parentElement;
-      parent.querySelectorAll('.setup-tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const filenameEl = document.getElementById('config-filename');
-      const codeEl = document.getElementById('config-code');
-
-      if (type === 'claude-cursor') {
-        filenameEl.innerText = '.mcp.json';
-        codeEl.innerText = `{\n  "mcpServers": {\n    "shiny": {\n      "command": "shiny",\n      "args": ["mcp"]\n    }\n  }\n}`;
-      } else if (type === 'opencode') {
-        filenameEl.innerText = 'opencode.json';
-        codeEl.innerText = `{\n  "$schema": "https://opencode.ai/config.json",\n  "mcp": {\n    "shiny": {\n      "type": "local",\n      "command": ["shiny", "mcp"],\n      "enabled": true\n    }\n  }\n}`;
-      } else if (type === 'uvx') {
-        filenameEl.innerText = 'claude_desktop_config.json (or .mcp.json)';
-        codeEl.innerText = `{\n  "mcpServers": {\n    "shiny": {\n      "command": "uvx",\n      "args": ["shiny", "mcp"]\n    }\n  }\n}`;
-      }
-    }
-
-    // Live Reactive Simulation Logic
+    // Live Simulation Logic
     const inputBeds = document.getElementById('input-beds');
     const inputPatients = document.getElementById('input-patients');
     const inputStaff = document.getElementById('input-staff');
@@ -1030,6 +1387,7 @@ without parentheses '()'.
     const nodeCost = document.getElementById('node-cost');
     const textCost = document.getElementById('text-cost');
     const dagStatus = document.getElementById('dag-status');
+    const liveCliText = document.getElementById('live-cli-text');
 
     function updateSimulation() {
       const beds = parseFloat(inputBeds.value);
@@ -1050,6 +1408,8 @@ without parentheses '()'.
       const slots = beds * 0.4;
       const coverage = (slots / neededNurses) * 100;
       outStaffing.textContent = `${coverage.toFixed(0)}%`;
+
+      liveCliText.textContent = `shiny simulate app.py -i bed_capacity=${beds} -i patient_vol=${patients} -i staff_ratio=${staff.toFixed(2)} -i surge=${surge.toFixed(1)}`;
 
       if (hasBug) {
         cardCost.classList.add('error');
@@ -1079,9 +1439,9 @@ without parentheses '()'.
       el.addEventListener('input', updateSimulation);
     });
 
-    function filterTable(category) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+    function filterTable(btn, category) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
 
       const rows = document.querySelectorAll('#bench-tbody tr');
       rows.forEach(row => {
@@ -1093,6 +1453,9 @@ without parentheses '()'.
       });
     }
 
+    // Initialize on page load
+    selectCliCommand('validate');
+    renderCatalog();
     updateSimulation();
   </script>
 </body>
