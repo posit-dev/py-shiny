@@ -43,7 +43,9 @@ def _parse_input_value(val_str: str) -> Any:
     """,
 )
 @click.argument("path", required=False, type=click.Path(exists=False))
-@click.option("--code", type=str, default=None, help="Inline Python source code to simulate.")
+@click.option(
+    "--code", type=str, default=None, help="Inline Python source code to simulate."
+)
 @click.option(
     "-i",
     "--input",
@@ -90,7 +92,11 @@ def simulate(
                 sim_inputs.update(typed_dict)
         except Exception as e:
             if json_output:
-                click.echo(json.dumps({"success": False, "error": f"Invalid JSON in --inputs: {e}"}))
+                click.echo(
+                    json.dumps(
+                        {"success": False, "error": f"Invalid JSON in --inputs: {e}"}
+                    )
+                )
             else:
                 click.echo(cli_danger(f"Invalid JSON in --inputs: {e}"))
             sys.exit(1)
@@ -112,7 +118,11 @@ def simulate(
                     p = candidate
             if not p.is_file():
                 if json_output:
-                    click.echo(json.dumps({"success": False, "error": f"File not found: {path}"}))
+                    click.echo(
+                        json.dumps(
+                            {"success": False, "error": f"File not found: {path}"}
+                        )
+                    )
                 else:
                     click.echo(cli_danger(f"File not found: {path}"))
                 sys.exit(1)
@@ -123,9 +133,20 @@ def simulate(
                 app_path = str(default_app)
             else:
                 if json_output:
-                    click.echo(json.dumps({"success": False, "error": "No app file specified and app.py not found in current directory."}))
+                    click.echo(
+                        json.dumps(
+                            {
+                                "success": False,
+                                "error": "No app file specified and app.py not found in current directory.",
+                            }
+                        )
+                    )
                 else:
-                    click.echo(cli_danger("No app file specified and app.py not found in current directory."))
+                    click.echo(
+                        cli_danger(
+                            "No app file specified and app.py not found in current directory."
+                        )
+                    )
                 sys.exit(1)
 
     start_t = time.perf_counter()

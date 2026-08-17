@@ -29,7 +29,9 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info
 @click.option(
     "-c",
     "--category",
-    type=click.Choice(["layout", "cards", "inputs", "outputs", "renderers"], case_sensitive=False),
+    type=click.Choice(
+        ["layout", "cards", "inputs", "outputs", "renderers"], case_sensitive=False
+    ),
     default=None,
     help="Filter component list by category.",
 )
@@ -61,18 +63,30 @@ def docs(component: Optional[str], category: Optional[str], json_output: bool) -
         for cat_name, items in sorted(cats.items()):
             click.echo(cli_bold(f"[{cat_name.upper()}]:"))
             for it in items:
-                click.echo(f"  {cli_code(str(it['name'])):<32} {it.get('description', '')}")
+                click.echo(
+                    f"  {cli_code(str(it['name'])):<32} {it.get('description', '')}"
+                )
             click.echo("")
 
-        click.echo(cli_info("Run 'shiny docs <component_name>' for full signature and code snippets."))
+        click.echo(
+            cli_info(
+                "Run 'shiny docs <component_name>' for full signature and code snippets."
+            )
+        )
         sys.exit(0)
 
     doc = get_component_doc(component)
     if doc is None:
         if json_output:
-            click.echo(json.dumps({"error": f"Component '{component}' not found."}, indent=2))
+            click.echo(
+                json.dumps({"error": f"Component '{component}' not found."}, indent=2)
+            )
         else:
-            click.echo(cli_danger(f"Component '{component}' not found in Shiny component catalog."))
+            click.echo(
+                cli_danger(
+                    f"Component '{component}' not found in Shiny component catalog."
+                )
+            )
             click.echo(cli_info("Run 'shiny docs' to see all available components."))
         sys.exit(1)
 

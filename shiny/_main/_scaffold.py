@@ -26,10 +26,32 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success
     """,
 )
 @click.argument("template", required=False, type=str)
-@click.option("-o", "--out", "out_path", type=click.Path(), default=None, help="Write generated template directly to this file path.")
-@click.option("-l", "--list", "list_flag", is_flag=True, default=False, help="List all available starter templates.")
-@click.option("--json", "json_output", is_flag=True, default=False, help="Output template data in JSON format.")
-def scaffold(template: Optional[str], out_path: Optional[str], list_flag: bool, json_output: bool) -> None:
+@click.option(
+    "-o",
+    "--out",
+    "out_path",
+    type=click.Path(),
+    default=None,
+    help="Write generated template directly to this file path.",
+)
+@click.option(
+    "-l",
+    "--list",
+    "list_flag",
+    is_flag=True,
+    default=False,
+    help="List all available starter templates.",
+)
+@click.option(
+    "--json",
+    "json_output",
+    is_flag=True,
+    default=False,
+    help="Output template data in JSON format.",
+)
+def scaffold(
+    template: Optional[str], out_path: Optional[str], list_flag: bool, json_output: bool
+) -> None:
     if list_flag or template is None:
         templates = list(TEMPLATE_CATALOG.values())
         if json_output:
@@ -39,16 +61,24 @@ def scaffold(template: Optional[str], out_path: Optional[str], list_flag: bool, 
         click.echo(cli_bold("Available Shiny Starter Templates:\n"))
         for t in templates:
             click.echo(f"  {cli_code(t['name']):<24} {t.get('description', '')}")
-        click.echo(cli_info("\nRun 'shiny scaffold <template_name> [-o app.py]' to generate a template."))
+        click.echo(
+            cli_info(
+                "\nRun 'shiny scaffold <template_name> [-o app.py]' to generate a template."
+            )
+        )
         sys.exit(0)
 
     tmpl = get_template(template)
     if tmpl is None:
         if json_output:
-            click.echo(json.dumps({"error": f"Template '{template}' not found."}, indent=2))
+            click.echo(
+                json.dumps({"error": f"Template '{template}' not found."}, indent=2)
+            )
         else:
             click.echo(cli_danger(f"Template '{template}' not found."))
-            click.echo(cli_info("Run 'shiny scaffold --list' to view available templates."))
+            click.echo(
+                cli_info("Run 'shiny scaffold --list' to view available templates.")
+            )
         sys.exit(1)
 
     if json_output:

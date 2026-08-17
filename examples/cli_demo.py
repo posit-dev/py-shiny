@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+
 from shiny._components import get_component_doc, get_template, list_components
 from shiny._inspect import format_graph_mermaid, inspect_reactive_graph
 from shiny._simulator import simulate_shiny_app

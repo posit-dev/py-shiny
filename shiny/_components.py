@@ -156,7 +156,7 @@ TEMPLATE_CATALOG: Dict[str, Dict[str, Any]] = {
     "express_dashboard": {
         "name": "express_dashboard",
         "description": "Modern responsive KPI dashboard using Shiny Express mode.",
-        "code": '''from shiny.express import input, render, ui
+        "code": """from shiny.express import input, render, ui
 
 ui.page_opts(title="Sales Performance Dashboard", fillable=True)
 
@@ -180,12 +180,12 @@ with ui.card():
     @render.text
     def summary():
         return f"Selected Region: {input.region()} | Minimum Threshold: ${input.threshold()}k"
-''',
+""",
     },
     "core_dashboard": {
         "name": "core_dashboard",
         "description": "Classic Shiny Core dashboard structure with app_ui and server function.",
-        "code": '''from shiny import App, render, ui
+        "code": """from shiny import App, render, ui
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
@@ -207,12 +207,12 @@ def server(input, output, session):
         return f"Dataset: {input.dataset()} | Samples: {input.sample_size()}"
 
 app = App(app_ui, server)
-''',
+""",
     },
     "ai_chat": {
         "name": "ai_chat",
         "description": "Interactive AI Chat assistant template using shinychat.",
-        "code": '''from shiny.express import ui
+        "code": """from shiny.express import ui
 from shinychat import chat_ui, Chat
 
 ui.page_opts(title="AI Assistant", fillable=True)
@@ -224,7 +224,7 @@ chat_ui("chat")
 async def handle_user_input(user_input: str):
     response = f"Echo: {user_input}"
     await chat.append_message_stream(response)
-''',
+""",
     },
 }
 

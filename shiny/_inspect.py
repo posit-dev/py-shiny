@@ -60,21 +60,15 @@ class GraphVisitor(ast.NodeVisitor):
             return f"{d.value.id}.{d.attr}"
         return ""
 
-    def _handle_func_def(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> None:
+    def _handle_func_def(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         decorators: List[str] = [
-            name
-            for d in node.decorator_list
-            if (name := self._get_decorator_name(d))
+            name for d in node.decorator_list if (name := self._get_decorator_name(d))
         ]
 
         is_render = any(
             d.startswith("render.") or d.startswith("render_") for d in decorators
         )
-        is_calc = any(
-            "calc" in d or "event" in d or "effect" in d for d in decorators
-        )
+        is_calc = any("calc" in d or "event" in d or "effect" in d for d in decorators)
 
         prev_out = self.current_output
         prev_calc = self.current_calc
@@ -127,29 +121,35 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
 
     nodes: List[Dict[str, Any]] = []
     for inp, line in sorted(visitor.inputs.items()):
-        nodes.append({
-            "id": inp,
-            "type": "input",
-            "role": "source",
-            "label": f"input.{inp}",
-            "line": line,
-        })
+        nodes.append(
+            {
+                "id": inp,
+                "type": "input",
+                "role": "source",
+                "label": f"input.{inp}",
+                "line": line,
+            }
+        )
     for c, meta in sorted(visitor.calcs.items()):
-        nodes.append({
-            "id": c,
-            "type": "calc",
-            "role": "conductor",
-            "label": f"calc:{c}",
-            "line": meta["line"],
-        })
+        nodes.append(
+            {
+                "id": c,
+                "type": "calc",
+                "role": "conductor",
+                "label": f"calc:{c}",
+                "line": meta["line"],
+            }
+        )
     for out, meta in sorted(visitor.outputs.items()):
-        nodes.append({
-            "id": out,
-            "type": "output",
-            "role": "observer",
-            "label": f"output:{out}",
-            "line": meta["line"],
-        })
+        nodes.append(
+            {
+                "id": out,
+                "type": "output",
+                "role": "observer",
+                "label": f"output:{out}",
+                "line": meta["line"],
+            }
+        )
 
     edges: List[Dict[str, str]] = []
     for out_name, meta in visitor.outputs.items():
@@ -187,30 +187,34 @@ def generate_reactlog(
     step = 0
     time_offset = 0.0
 
-    events.append({
-        "step": step,
-        "time_ms": round(time_offset, 1),
-        "event": "sessionInit",
-        "node_id": None,
-        "node_label": "session",
-        "node_type": "session",
-        "status": "active",
-        "details": "Initialized reactive session context",
-    })
+    events.append(
+        {
+            "step": step,
+            "time_ms": round(time_offset, 1),
+            "event": "sessionInit",
+            "node_id": None,
+            "node_label": "session",
+            "node_type": "session",
+            "status": "active",
+            "details": "Initialized reactive session context",
+        }
+    )
     step += 1
     time_offset += 1.2
 
     for node in nodes:
-        events.append({
-            "step": step,
-            "time_ms": round(time_offset, 1),
-            "event": "define",
-            "node_id": node["id"],
-            "node_label": node["label"],
-            "node_type": node["role"],
-            "status": "ready" if node["role"] == "source" else "idle",
-            "details": f"Registered {node['role']} node at line {node.get('line', '?')}",
-        })
+        events.append(
+            {
+                "step": step,
+                "time_ms": round(time_offset, 1),
+                "event": "define",
+                "node_id": node["id"],
+                "node_label": node["label"],
+                "node_type": node["role"],
+                "status": "ready" if node["role"] == "source" else "idle",
+                "details": f"Registered {node['role']} node at line {node.get('line', '?')}",
+            }
+        )
         step += 1
         time_offset += 0.8
 
@@ -228,57 +232,74 @@ def generate_reactlog(
             sim_inputs[n["id"]] = 10
 
     invalidated_nodes: Set[str] = set()
+
+    def cascade_invalidate(nid: str, cur_step: int, cur_time: float) -> int:
+        for down in adj_downstream.get(nid, []):
+            if down not in invalidated_nodes:
+                invalidated_nodes.add(down)
+                events.append(
+                    {
+                        "step": cur_step,
+                        "time_ms": round(cur_time, 1),
+                        "event": "invalidate",
+                        "node_id": down,
+                        "node_label": next(
+                            (n["label"] for n in nodes if n["id"] == down), down
+                        ),
+                        "node_type": next(
+                            (n["role"] for n in nodes if n["id"] == down), "conductor"
+                        ),
+                        "status": "dirty",
+                        "details": f"Invalidated by upstream dependency '{nid}'",
+                    }
+                )
+                cur_step += 1
+                cur_time += 0.5
+                cur_step = cascade_invalidate(down, cur_step, cur_time)
+        return cur_step
+
     for input_id, val in sim_inputs.items():
-        events.append({
-            "step": step,
-            "time_ms": round(time_offset, 1),
-            "event": "valueChange",
-            "node_id": input_id,
-            "node_label": f"input.{input_id}",
-            "node_type": "source",
-            "status": "ready",
-            "value": str(val),
-            "details": f"Input value set to {val!r}",
-        })
+        events.append(
+            {
+                "step": step,
+                "time_ms": round(time_offset, 1),
+                "event": "valueChange",
+                "node_id": input_id,
+                "node_label": f"input.{input_id}",
+                "node_type": "source",
+                "status": "ready",
+                "value": str(val),
+                "details": f"Input value set to {val!r}",
+            }
+        )
         step += 1
         time_offset += 1.5
 
-        def cascade_invalidate(nid: str) -> None:
-            for down in adj_downstream.get(nid, []):
-                if down not in invalidated_nodes:
-                    invalidated_nodes.add(down)
-                    events.append({
-                        "step": step,
-                        "time_ms": round(time_offset, 1),
-                        "event": "invalidate",
-                        "node_id": down,
-                        "node_label": next((n["label"] for n in nodes if n["id"] == down), down),
-                        "node_type": next((n["role"] for n in nodes if n["id"] == down), "conductor"),
-                        "status": "dirty",
-                        "details": f"Invalidated by upstream dependency '{nid}'",
-                    })
-                    cascade_invalidate(down)
-
-        cascade_invalidate(input_id)
-        step = len(events)
+        step = cascade_invalidate(input_id, step, time_offset)
         time_offset += 2.0
 
-    events.append({
-        "step": step,
-        "time_ms": round(time_offset, 1),
-        "event": "flushStart",
-        "node_id": None,
-        "node_label": "reactiveEnvironment",
-        "node_type": "engine",
-        "status": "flushing",
-        "details": f"Starting reactive flush ({len(invalidated_nodes)} dirty nodes)",
-    })
+    events.append(
+        {
+            "step": step,
+            "time_ms": round(time_offset, 1),
+            "event": "flushStart",
+            "node_id": None,
+            "node_label": "reactiveEnvironment",
+            "node_type": "engine",
+            "status": "flushing",
+            "details": f"Starting reactive flush ({len(invalidated_nodes)} dirty nodes)",
+        }
+    )
     step += 1
     time_offset += 1.0
 
     eval_order: List[Dict[str, Any]] = []
-    conductor_nodes = [n for n in nodes if n["role"] == "conductor" and n["id"] in invalidated_nodes]
-    observer_nodes = [n for n in nodes if n["role"] == "observer" and n["id"] in invalidated_nodes]
+    conductor_nodes = [
+        n for n in nodes if n["role"] == "conductor" and n["id"] in invalidated_nodes
+    ]
+    observer_nodes = [
+        n for n in nodes if n["role"] == "observer" and n["id"] in invalidated_nodes
+    ]
     eval_order.extend(conductor_nodes)
     eval_order.extend(observer_nodes)
 
@@ -287,56 +308,64 @@ def generate_reactlog(
         tlabel = target["label"]
         trole = target["role"]
 
-        events.append({
-            "step": step,
-            "time_ms": round(time_offset, 1),
-            "event": "calculate",
-            "node_id": tid,
-            "node_label": tlabel,
-            "node_type": trole,
-            "status": "calculating",
-            "details": f"Executing reactive computation for '{tid}'",
-        })
-        step += 1
-        time_offset += 3.5
-
-        for dep in adj_upstream.get(tid, []):
-            events.append({
+        events.append(
+            {
                 "step": step,
                 "time_ms": round(time_offset, 1),
-                "event": "dependsOn",
+                "event": "calculate",
                 "node_id": tid,
                 "node_label": tlabel,
                 "node_type": trole,
                 "status": "calculating",
-                "details": f"Read value from dependency '{dep}'",
-            })
+                "details": f"Executing reactive computation for '{tid}'",
+            }
+        )
+        step += 1
+        time_offset += 3.5
+
+        for dep in adj_upstream.get(tid, []):
+            events.append(
+                {
+                    "step": step,
+                    "time_ms": round(time_offset, 1),
+                    "event": "dependsOn",
+                    "node_id": tid,
+                    "node_label": tlabel,
+                    "node_type": trole,
+                    "status": "calculating",
+                    "details": f"Read value from dependency '{dep}'",
+                }
+            )
             step += 1
             time_offset += 0.5
 
-        events.append({
-            "step": step,
-            "time_ms": round(time_offset, 1),
-            "event": "ready",
-            "node_id": tid,
-            "node_label": tlabel,
-            "node_type": trole,
-            "status": "ready",
-            "details": "Computation completed; cached updated value",
-        })
+        events.append(
+            {
+                "step": step,
+                "time_ms": round(time_offset, 1),
+                "event": "ready",
+                "node_id": tid,
+                "node_label": tlabel,
+                "node_type": trole,
+                "status": "ready",
+                "details": "Computation completed; cached updated value",
+            }
+        )
         step += 1
         time_offset += 2.0
 
-    events.append({
-        "step": step,
-        "time_ms": round(time_offset, 1),
-        "event": "flushComplete",
-        "node_id": None,
-        "node_label": "reactiveEnvironment",
-        "node_type": "engine",
-        "status": "idle",
-        "details": f"Reactive flush finished in {round(time_offset, 1)}ms",
-    })
+    events.append(
+        {
+            "step": step,
+            "time_ms": round(time_offset, 1),
+            "event": "flushComplete",
+            "node_id": None,
+            "node_label": "reactiveEnvironment",
+            "node_type": "engine",
+            "status": "idle",
+            "details": f"Reactive flush finished in {round(time_offset, 1)}ms",
+        }
+    )
 
     return {
         "success": True,
@@ -367,19 +396,31 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
         t = edge["to"].replace("-", "_").replace(".", "_")
         lines.append(f"    {f} --> {t}")
 
-    lines.append("    classDef inputClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;")
+    lines.append(
+        "    classDef inputClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;"
+    )
     lines.append("    classDef calcClass fill:#fef3c7,stroke:#d97706,stroke-width:2px;")
-    lines.append("    classDef outputClass fill:#dcfce7,stroke:#16a34a,stroke-width:2px;")
+    lines.append(
+        "    classDef outputClass fill:#dcfce7,stroke:#16a34a,stroke-width:2px;"
+    )
     return "\n".join(lines)
 
 
 def format_graph_dot(graph: Dict[str, Any]) -> str:
-    lines = ["digraph ReactiveGraph {", "    rankdir=LR;", "    node [shape=box, style=rounded];"]
+    lines = [
+        "digraph ReactiveGraph {",
+        "    rankdir=LR;",
+        "    node [shape=box, style=rounded];",
+    ]
     for node in graph.get("nodes", []):
         nid = node["id"].replace("-", "_").replace(".", "_")
         label = node.get("label", node["id"])
         ntype = node.get("type", "")
-        color = "#0284c7" if ntype == "input" else ("#d97706" if ntype == "calc" else "#16a34a")
+        color = (
+            "#0284c7"
+            if ntype == "input"
+            else ("#d97706" if ntype == "calc" else "#16a34a")
+        )
         lines.append(f'    "{nid}" [label="{label}", color="{color}"];')
 
     for edge in graph.get("edges", []):
@@ -391,7 +432,9 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def format_reactlog_html(reactlog: Dict[str, Any], title: str = "Shiny Reactlog") -> str:
+def format_reactlog_html(
+    reactlog: Dict[str, Any], title: str = "Shiny Reactlog"
+) -> str:
     data_json = json.dumps(reactlog, indent=2)
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -506,9 +549,14 @@ def format_reactlog_html(reactlog: Dict[str, Any], title: str = "Shiny Reactlog"
       const edges = LOG_DATA.edges || [];
       const activeEvent = LOG_DATA.events[currentStep] || {{}};
 
-      const sources = nodes.filter(n => n.role === 'source');
-      const conductors = nodes.filter(n => n.role === 'conductor');
-      const observers = nodes.filter(n => n.role === 'observer');
+      const sources = [];
+      const conductors = [];
+      const observers = [];
+      for (const n of nodes) {{
+        if (n.role === 'source') sources.push(n);
+        else if (n.role === 'conductor') conductors.push(n);
+        else if (n.role === 'observer') observers.push(n);
+      }}
 
       const pos = {{}};
       sources.forEach((n, i) => {{ pos[n.id] = {{ x: 80, y: 70 + (i * 70) }}; }});

@@ -48,18 +48,46 @@ def _parse_input_value(val_str: str) -> Any:
     """,
 )
 @click.argument("path", required=False, type=click.Path(exists=False))
-@click.option("--code", type=str, default=None, help="Inline Python source code to inspect.")
+@click.option(
+    "--code", type=str, default=None, help="Inline Python source code to inspect."
+)
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["text", "json", "mermaid", "dot", "reactlog", "html"], case_sensitive=False),
+    type=click.Choice(
+        ["text", "json", "mermaid", "dot", "reactlog", "html"], case_sensitive=False
+    ),
     default="text",
     help="Output format (default: text).",
 )
-@click.option("--reactlog", "reactlog_flag", is_flag=True, default=False, help="Trace chronological Reactlog lifecycle events.")
-@click.option("--html", "html_out", type=click.Path(), default=None, help="Export interactive HTML Reactlog visualizer to file.")
-@click.option("--json", "json_flag", is_flag=True, default=False, help="Shorthand for --format json.")
-@click.option("--mermaid", "mermaid_flag", is_flag=True, default=False, help="Shorthand for --format mermaid.")
+@click.option(
+    "--reactlog",
+    "reactlog_flag",
+    is_flag=True,
+    default=False,
+    help="Trace chronological Reactlog lifecycle events.",
+)
+@click.option(
+    "--html",
+    "html_out",
+    type=click.Path(),
+    default=None,
+    help="Export interactive HTML Reactlog visualizer to file.",
+)
+@click.option(
+    "--json",
+    "json_flag",
+    is_flag=True,
+    default=False,
+    help="Shorthand for --format json.",
+)
+@click.option(
+    "--mermaid",
+    "mermaid_flag",
+    is_flag=True,
+    default=False,
+    help="Shorthand for --format mermaid.",
+)
 @click.option(
     "-i",
     "--input",
@@ -103,7 +131,11 @@ def inspect(
                 sim_inputs.update(typed_dict)
         except Exception as e:
             if output_format == "json":
-                click.echo(json.dumps({"success": False, "error": f"Invalid JSON in --inputs: {e}"}))
+                click.echo(
+                    json.dumps(
+                        {"success": False, "error": f"Invalid JSON in --inputs: {e}"}
+                    )
+                )
             else:
                 click.echo(cli_danger(f"Invalid JSON in --inputs: {e}"))
             sys.exit(1)
@@ -136,13 +168,24 @@ def inspect(
                     p = py_files[0]
                 else:
                     if output_format == "json":
-                        click.echo(json.dumps({"success": False, "error": f"No Python files in directory: {path}"}))
+                        click.echo(
+                            json.dumps(
+                                {
+                                    "success": False,
+                                    "error": f"No Python files in directory: {path}",
+                                }
+                            )
+                        )
                     else:
-                        click.echo(cli_danger(f"No Python files found in directory: {path}"))
+                        click.echo(
+                            cli_danger(f"No Python files found in directory: {path}")
+                        )
                     sys.exit(1)
         if not p.is_file():
             if output_format == "json":
-                click.echo(json.dumps({"success": False, "error": f"File not found: {path}"}))
+                click.echo(
+                    json.dumps({"success": False, "error": f"File not found: {path}"})
+                )
             else:
                 click.echo(cli_danger(f"File not found: {path}"))
             sys.exit(1)
@@ -155,25 +198,46 @@ def inspect(
             target_desc = "app.py"
         else:
             if output_format == "json":
-                click.echo(json.dumps({"success": False, "error": "No file specified and app.py not found in current directory."}))
+                click.echo(
+                    json.dumps(
+                        {
+                            "success": False,
+                            "error": "No file specified and app.py not found in current directory.",
+                        }
+                    )
+                )
             else:
-                click.echo(cli_danger("No file specified and app.py not found in current directory."))
+                click.echo(
+                    cli_danger(
+                        "No file specified and app.py not found in current directory."
+                    )
+                )
             sys.exit(1)
 
-    reactlog_data = generate_reactlog(source_code, inputs=sim_inputs if sim_inputs else None)
+    reactlog_data = generate_reactlog(
+        source_code, inputs=sim_inputs if sim_inputs else None
+    )
 
     if not reactlog_data.get("success"):
         if output_format == "json":
             click.echo(json.dumps(reactlog_data, indent=2))
         else:
-            click.echo(cli_danger(f"Failed to inspect reactive graph: {reactlog_data.get('error')}"))
+            click.echo(
+                cli_danger(
+                    f"Failed to inspect reactive graph: {reactlog_data.get('error')}"
+                )
+            )
         sys.exit(1)
 
     if output_format == "html":
         out_file_path = html_out if html_out is not None else "reactlog.html"
-        html_content = format_reactlog_html(reactlog_data, title=f"Reactlog: {target_desc}")
+        html_content = format_reactlog_html(
+            reactlog_data, title=f"Reactlog: {target_desc}"
+        )
         Path(out_file_path).write_text(html_content, encoding="utf-8")
-        click.echo(cli_success(f"Interactive Reactlog HTML exported to {out_file_path}"))
+        click.echo(
+            cli_success(f"Interactive Reactlog HTML exported to {out_file_path}")
+        )
         sys.exit(0)
 
     elif output_format == "json":
@@ -195,16 +259,18 @@ def inspect(
         click.echo(cli_info(str(reactlog_data["summary"])) + "\n")
 
         events = reactlog_data.get("events", [])
-        click.echo(f"  {'Step':<6} {'Time':<9} {'Event':<14} {'Node':<24} {'Status':<12} {'Details'}")
+        click.echo(
+            f"  {'Step':<6} {'Time':<9} {'Event':<14} {'Node':<24} {'Status':<12} {'Details'}"
+        )
         click.echo("  " + "-" * 85)
 
         for ev in events:
             step_str = f"#{ev['step']}"
             time_str = f"+{ev['time_ms']}ms"
-            ev_name = ev['event']
-            node_lbl = ev['node_label'] or "-"
-            status = ev['status']
-            details = ev.get('details', '')
+            ev_name = ev["event"]
+            node_lbl = ev["node_label"] or "-"
+            status = ev["status"]
+            details = ev.get("details", "")
 
             status_styled = status
             if status == "ready":
@@ -216,14 +282,20 @@ def inspect(
             elif status == "error":
                 status_styled = click.style(status, fg="red")
 
-            click.echo(f"  {step_str:<6} {time_str:<9} {ev_name:<14} {node_lbl:<24} {status_styled:<21} {details}")
+            click.echo(
+                f"  {step_str:<6} {time_str:<9} {ev_name:<14} {node_lbl:<24} {status_styled:<21} {details}"
+            )
         sys.exit(0)
 
     else:
         click.echo(cli_bold(f"Reactive Dependency Graph for {target_desc}"))
         click.echo(cli_info(str(reactlog_data["summary"])) + "\n")
 
-        nodes_by_type: Dict[str, List[str]] = {"source": [], "conductor": [], "observer": []}
+        nodes_by_type: Dict[str, List[str]] = {
+            "source": [],
+            "conductor": [],
+            "observer": [],
+        }
         for n in reactlog_data.get("nodes", []):
             role: str = str(n.get("role", "conductor"))
             nodes_by_type.setdefault(role, []).append(str(n["id"]))
@@ -250,9 +322,15 @@ def inspect(
         if edges:
             click.echo(cli_bold("Dependency Flow:"))
             for e in edges:
-                click.echo(f"  {cli_code(str(e['from']))}  \u27f6  {cli_bold(str(e['to']))}")
+                click.echo(
+                    f"  {cli_code(str(e['from']))}  \u27f6  {cli_bold(str(e['to']))}"
+                )
         else:
             click.echo(cli_info("No direct reactive dependencies detected."))
 
-        click.echo(cli_info("\nTip: Run 'shiny inspect --reactlog' or 'shiny inspect --html' to see full time-travel execution."))
+        click.echo(
+            cli_info(
+                "\nTip: Run 'shiny inspect --reactlog' or 'shiny inspect --html' to see full time-travel execution."
+            )
+        )
         sys.exit(0)
