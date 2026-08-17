@@ -33,8 +33,8 @@ here_root = here.parent.parent
 # process crashed). The `page` fixture replaces a page marked this way.
 _NAVIGATION_WEDGED_ATTR = "_shiny_navigation_wedged"
 
-# Attribute set on a test item when its call phase failed, so `_trace_chunk`
-# can honor `--tracing retain-on-failure`.
+# Attribute set on a test item when its setup or call phase failed, so
+# `_trace_chunk` can honor `--tracing retain-on-failure`.
 _TEST_FAILED_ATTR = "_shiny_test_failed"
 
 
@@ -188,7 +188,14 @@ def pytest_runtest_makereport(
     # here, so `Result` cannot be named. The report it wraps is annotated below.
     outcome = yield
     report: pytest.TestReport = outcome.get_result()
-    if report.when == "call" and report.failed:
+    # A setup failure counts: `_trace_chunk` is autouse, so its chunk is already
+    # recording while the fixtures a test asks for (the app fixtures, `page`)
+    # set up, and that chunk is what shows why one of them failed. pytest
+    # reports the setup phase before running finalizers, so the attribute is set
+    # in time for `_trace_chunk` to see it. Teardown is not included: its report
+    # is only produced once every finalizer has run, by which point
+    # `_trace_chunk` has already saved or discarded the chunk.
+    if report.failed and report.when in ("setup", "call"):
         setattr(item, _TEST_FAILED_ATTR, True)
 
 
