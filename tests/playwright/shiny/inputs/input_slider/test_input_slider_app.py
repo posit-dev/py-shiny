@@ -12,7 +12,9 @@ from shiny.types import MISSING
 
 def convert_to_utc_date(date_str: str) -> str:
     date_obj = datetime.datetime.strptime(date_str, "%m/%d/%y")
-    epoch_time_milliseconds = date_obj.timestamp() * 1000
+    epoch_time_milliseconds = (
+        date_obj.replace(tzinfo=datetime.timezone.utc).timestamp() * 1000
+    )
     return str(epoch_time_milliseconds)
 
 
