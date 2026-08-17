@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "shiny": {
+      "command": "uv",
+      "args": ["run", "shiny", "mcp"]
+    }
+  }
+}

@@ -6,9 +6,9 @@ from typing import Any, Callable
 
 import pytest
 from conftest import create_example_fixture
-from examples.example_apps import reruns, reruns_delay
 from playwright.sync_api import Locator, Page, expect
 
+from examples.example_apps import reruns, reruns_delay
 from shiny.playwright import controller
 from shiny.playwright.expect import expect_to_change
 from shiny.run import ShinyAppProc

@@ -1,7 +1,7 @@
 import pytest
-from examples.example_apps import reruns, reruns_delay
 from playwright.sync_api import Page
 
+from examples.example_apps import reruns, reruns_delay
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
 

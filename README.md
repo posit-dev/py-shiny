@@ -56,6 +56,25 @@ Run this from your own project rather than a clone of this repository: [`library
 
 To see what's bundled without installing anything, run `shiny skills list`.
 
+### MCP Server
+
+Shiny includes a built-in Model Context Protocol (MCP) server that provides AI coding assistants (Claude Code, Cursor, OpenCode, VS Code) with AST code validation, component reflection, and headless in-memory simulation without a browser.
+
+To use it with your agent, add it to your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "shiny": {
+      "command": "uv",
+      "args": ["run", "shiny", "mcp"]
+    }
+  }
+}
+```
+
+To see available tools and resources, run `shiny mcp info`.
+
 ## Development
 
 * Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/
