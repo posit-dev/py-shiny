@@ -62,11 +62,9 @@ Shiny includes built-in developer tools accessible directly from the terminal or
 
 - `shiny validate app.py`: Static AST analysis to detect reactivity errors, duplicate IDs, and mode mismatches.
 - `shiny simulate app.py -i n=25`: Headless in-memory reactive simulation without a browser.
-- `shiny inspect app.py --mermaid`: Reactive dependency graph (DAG) inspection and visualization.
+- `shiny inspect app.py --reactlog`: Reactive dependency graph (DAG) and Reactlog lifecycle tracing with interactive HTML export (`--html`).
 - `shiny docs ui.page_sidebar`: Component docstrings, signatures, and code snippets.
 - `shiny scaffold express_dashboard`: Starter templates for rapid app prototyping.
-
-An optional MCP server is also available via `shiny mcp`.
 
 ## Development
 
