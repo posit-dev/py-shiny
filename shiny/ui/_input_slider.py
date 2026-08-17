@@ -248,6 +248,12 @@ def _as_numeric(x: SliderStepArg | datetime | date) -> float:
     if isinstance(x, timedelta):
         return x.total_seconds() * 1000
     if isinstance(x, datetime):
+        # A naive `datetime` carries no offset of its own, and the client decodes the
+        # value it sends back as UTC. Anchor it to UTC rather than letting
+        # `.timestamp()` assume the server's local timezone, which would shift the
+        # value by that offset on the round trip. Aware values are already absolute.
+        if x.tzinfo is None:
+            x = x.replace(tzinfo=timezone.utc)
         return x.timestamp() * 1000
     if isinstance(x, date):
         # Encode UTC midnight: the client formats and reads slider dates back in UTC
