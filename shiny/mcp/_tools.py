@@ -280,13 +280,23 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
 
             self.generic_visit(node)
 
-        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-            decorators = []
-            for d in node.decorator_list:
-                if isinstance(d, ast.Name):
-                    decorators.append(d.id)
-                elif isinstance(d, ast.Attribute) and isinstance(d.value, ast.Name):
-                    decorators.append(f"{d.value.id}.{d.attr}")
+        def _get_decorator_name(self, d: ast.AST) -> str:
+            if isinstance(d, ast.Call):
+                d = d.func
+            if isinstance(d, ast.Name):
+                return d.id
+            elif isinstance(d, ast.Attribute) and isinstance(d.value, ast.Name):
+                return f"{d.value.id}.{d.attr}"
+            return ""
+
+        def _handle_func_def(
+            self, node: ast.FunctionDef | ast.AsyncFunctionDef
+        ) -> None:
+            decorators: List[str] = [
+                name
+                for d in node.decorator_list
+                if (name := self._get_decorator_name(d))
+            ]
 
             is_render = any(
                 d.startswith("render.") or d.startswith("render_") for d in decorators
@@ -309,6 +319,12 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
 
             self.current_output = prev_out
             self.current_calc = prev_calc
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            self._handle_func_def(node)
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            self._handle_func_def(node)
 
     visitor = GraphVisitor()
     visitor.visit(tree)
@@ -457,7 +473,7 @@ async def dispatch_mcp_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, A
 
     elif name == "shiny_list_components":
         category = arguments.get("category")
-        results = []
+        results: List[Dict[str, Any]] = []
         for item in COMPONENT_CATALOG.values():
             if not category or item.get("category") == category:
                 results.append(item)

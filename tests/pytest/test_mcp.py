@@ -308,6 +308,7 @@ async def test_mcp_server_protocol():
             "method": "tools/list",
         }
     )
+    assert tools_res is not None
     assert len(tools_res["result"]["tools"]) >= 6
 
     # tools/call (validation)
@@ -335,6 +336,7 @@ async def test_mcp_server_protocol():
             "method": "resources/list",
         }
     )
+    assert res_list is not None
     assert len(res_list["result"]["resources"]) > 0
 
     # resources/read
@@ -346,6 +348,7 @@ async def test_mcp_server_protocol():
             "params": {"uri": "shiny://components/catalog"},
         }
     )
+    assert res_read is not None
     assert "contents" in res_read["result"]
 
     # prompts/list
@@ -356,6 +359,7 @@ async def test_mcp_server_protocol():
             "method": "prompts/list",
         }
     )
+    assert p_list is not None
     assert len(p_list["result"]["prompts"]) >= 3
 
     # unknown method
@@ -366,6 +370,7 @@ async def test_mcp_server_protocol():
             "method": "unknown/method",
         }
     )
+    assert unknown_res is not None
     assert "error" in unknown_res
     assert unknown_res["error"]["code"] == -32601
 

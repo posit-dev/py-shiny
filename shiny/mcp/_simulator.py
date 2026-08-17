@@ -7,7 +7,7 @@ import sys
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from .._app import App
 from .._connection import MockConnection
@@ -25,14 +25,14 @@ async def simulate_shiny_app(
     old_testmode = os.environ.get("SHINY_TESTMODE")
     os.environ["SHINY_TESTMODE"] = "1"
 
-    temp_file: Optional[Path] = None
+    temp_dir: Optional[tempfile.TemporaryDirectory[str]] = None
     try:
         if code is not None:
-            with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
+            temp_dir = tempfile.TemporaryDirectory()
+            temp_path = Path(temp_dir.name) / "app.py"
+            with open(temp_path, "w", encoding="utf-8") as f:
                 f.write(code)
-                temp_path = Path(f.name)
-                temp_file = temp_path
-                target_path = temp_path
+            target_path = temp_path
         elif file_path is not None:
             target_path = Path(file_path).resolve()
             if not target_path.exists():
@@ -151,20 +151,23 @@ async def simulate_shiny_app(
 
         outputs = dict(session._outbound_message_queues.test_values)
         errors = dict(session._outbound_message_queues.test_errors)
-        exports = {}
-        if hasattr(session, "_test_values"):
-            for k, fn in session._test_values.items():
+        exports: Dict[str, Any] = {}
+        test_values_dict: Any = getattr(session, "_test_values", None)
+        if isinstance(test_values_dict, dict):
+            typed_values: Dict[str, Any] = cast(Dict[str, Any], test_values_dict)
+            for k, fn in typed_values.items():
                 try:
-                    exports[k] = fn()
+                    exports[k] = fn() if callable(fn) else fn
                 except Exception as e:
                     exports[k] = f"<Error evaluating export {k}: {e}>"
 
-        rendered_ui = None
-        try:
-            if hasattr(app_obj, "_rendered_ui"):
-                rendered_ui = str(app_obj._rendered_ui)
-        except Exception:
-            pass
+        rendered_ui: Optional[str] = None
+        rendered_attr = getattr(app_obj, "_rendered_ui", None)
+        if rendered_attr is not None:
+            try:
+                rendered_ui = str(rendered_attr)
+            except Exception:
+                pass
 
         return {
             "success": len(errors) == 0,
@@ -186,8 +189,8 @@ async def simulate_shiny_app(
         else:
             os.environ["SHINY_TESTMODE"] = old_testmode
 
-        if temp_file and temp_file.exists():
+        if temp_dir is not None:
             try:
-                temp_file.unlink()
+                temp_dir.cleanup()
             except Exception:
                 pass

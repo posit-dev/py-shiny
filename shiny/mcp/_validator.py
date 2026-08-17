@@ -60,7 +60,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 )
         self.generic_visit(node)
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+    def _check_func_def(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         decorators = [self._get_decorator_name(d) for d in node.decorator_list]
         prev_in_server = self._in_server_func
         prev_in_reactive = self._in_reactive_context
@@ -113,18 +113,11 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self._in_reactive_context = prev_in_reactive
         self._current_func_decorators = prev_decorators
 
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._check_func_def(node)
+
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        fn_node = ast.FunctionDef(
-            name=node.name,
-            args=node.args,
-            body=node.body,
-            decorator_list=node.decorator_list,
-            returns=node.returns,
-            type_comment=node.type_comment,
-            lineno=node.lineno,
-            col_offset=node.col_offset,
-        )
-        self.visit_FunctionDef(fn_node)
+        self._check_func_def(node)
 
     def visit_Call(self, node: ast.Call) -> None:
         call_name = self._get_call_name(node.func)
