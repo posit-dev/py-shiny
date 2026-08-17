@@ -10,7 +10,16 @@ import pytest
 
 from shiny.ui._input_slider import _as_numeric
 
-TIMEZONES = ["UTC", "Europe/Amsterdam", "Asia/Tokyo", "America/New_York"]
+TIMEZONES = [
+    "UTC",
+    "Europe/Amsterdam",  # +01:00 / +02:00 -- from the bug report (#2398)
+    "Asia/Tokyo",  # +09:00
+    "Asia/Kathmandu",  # +05:45 -- not a whole-hour offset
+    "Pacific/Chatham",  # +12:45 / +13:45 -- not a whole-hour offset, and DST
+    "Pacific/Kiritimati",  # +14:00 -- the furthest-forward offset on Earth
+    "America/New_York",  # -05:00 / -04:00
+    "Etc/GMT+12",  # -12:00 -- the furthest-behind offset
+]
 
 DATES = [date(2025, 1, 1), date(2026, 1, 1), date(2025, 7, 1)]
 
