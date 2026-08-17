@@ -3,15 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shiny for Python: MCP Server Interactive Showcase & ROI Analysis</title>
-  <meta name="description" content="Interactive findings, benchmark comparisons, cost ROI analysis, and architectural breakdown of the Shiny MCP Server." />
+  <title>Shiny for Python: MCP Server Interactive Showcase & Setup Guide</title>
+  <meta name="description" content="Interactive findings, setup guide with copy-to-clipboard configs, and architectural breakdown of the Shiny MCP Server." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <!-- Font Awesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     :root {
       --bg: #0f141c;
@@ -76,11 +74,7 @@
       color: var(--text-muted);
     }
 
-    .badge i, .badge svg {
-      width: 14px;
-      height: 14px;
-    }
-
+    .badge i { font-size: 0.85rem; }
     .badge.highlight { background: var(--accent-glow); border-color: var(--accent); color: #93c5fd; }
     .badge.success { background: var(--success-glow); border-color: var(--success); color: #6ee7b7; }
     .badge.purple { background: var(--purple-glow); border-color: var(--purple); color: #d8b4fe; }
@@ -158,6 +152,141 @@
       gap: 0.6rem;
     }
     .section-header p { color: var(--text-muted); font-size: 0.95rem; }
+
+    /* Quickstart / Setup Guide */
+    .setup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 860px) {
+      .setup-grid { grid-template-columns: 1fr; }
+    }
+
+    .setup-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .setup-step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      color: #60a5fa;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border: 1px solid var(--accent);
+      margin-right: 0.5rem;
+    }
+
+    .setup-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .setup-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .setup-tabs {
+      display: flex;
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .setup-tab-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.35rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s ease;
+    }
+
+    .setup-tab-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .code-block-wrapper {
+      position: relative;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-top: auto;
+    }
+
+    .code-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.4rem 0.75rem;
+      background: var(--bg-surface-elevated);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-subtle);
+    }
+
+    .code-block-content {
+      padding: 0.85rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .copy-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      background: var(--success);
+      border-color: var(--success);
+      color: #ffffff;
+    }
 
     /* Interactive Live Simulation Playground */
     .playground-container {
@@ -343,44 +472,6 @@
     .pill.blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
     .pill.purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
 
-    /* The 3 Pivotal Functions */
-    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
-    .feature-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 1.75rem;
-      display: flex;
-      flex-direction: column;
-    }
-    .feature-icon {
-      width: 44px; height: 44px; border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.25rem; margin-bottom: 1rem;
-    }
-    .feature-card.f1 .feature-icon { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-    .feature-card.f2 .feature-icon { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .feature-card.f3 .feature-icon { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-
-    .feature-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; font-family: var(--font-mono); color: #ffffff; }
-    .feature-card p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem; flex-grow: 1; }
-
-    .code-preview {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.85rem;
-      font-family: var(--font-mono);
-      font-size: 0.775rem;
-      color: #94a3b8;
-      overflow-x: auto;
-      line-height: 1.5;
-    }
-    .code-preview .keyword { color: #f472b6; }
-    .code-preview .fn { color: #60a5fa; }
-    .code-preview .str { color: #34d399; }
-    .code-preview .warn { color: #fbbf24; }
-
     /* Economic Conclusion Section */
     .roi-grid {
       display: grid;
@@ -426,6 +517,44 @@
       color: var(--accent);
     }
 
+    /* The 3 Pivotal Functions */
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; margin-bottom: 1rem;
+    }
+    .feature-card.f1 .feature-icon { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .feature-card.f2 .feature-icon { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .feature-card.f3 .feature-icon { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+    .feature-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; font-family: var(--font-mono); color: #ffffff; }
+    .feature-card p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem; flex-grow: 1; }
+
+    .code-preview {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      font-family: var(--font-mono);
+      font-size: 0.775rem;
+      color: #94a3b8;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+    .code-preview .keyword { color: #f472b6; }
+    .code-preview .fn { color: #60a5fa; }
+    .code-preview .str { color: #34d399; }
+    .code-preview .warn { color: #fbbf24; }
+
     footer {
       border-top: 1px solid var(--border);
       padding-top: 2rem;
@@ -447,7 +576,7 @@
       </div>
       <h1>Shiny for Python: MCP Server</h1>
       <p class="lead">
-        Comprehensive benchmark, economic ROI analysis, and architectural showcase across Claude Code and OpenCode models.
+        Turn AI assistants into verified Shiny developers with AST static analysis and in-memory headless reactive simulation.
       </p>
     </header>
 
@@ -469,6 +598,64 @@
         <div class="metric-desc">Cheaper models with MCP match or beat raw frontier model accuracy at a fraction of the token cost.</div>
       </div>
     </div>
+
+    <!-- Quickstart & How to Use -->
+    <section id="quickstart">
+      <div class="section-header">
+        <div>
+          <h2><i class="fa-solid fa-terminal"></i> How to Use in Your Local Shiny App</h2>
+          <p>Two simple steps to enable the MCP server for your AI coding assistant.</p>
+        </div>
+      </div>
+
+      <div class="setup-grid">
+        <!-- Step 1 -->
+        <div class="setup-card">
+          <h3><span class="setup-step-num">1</span> Install Shiny in Your Environment</h3>
+          <p>Because the MCP server is built directly into <code>shiny</code> with zero extra dependencies, installing Shiny provides the server automatically.</p>
+          
+          <div class="setup-tabs">
+            <button class="setup-tab-btn active" onclick="switchInstallTab(this, 'pip')"><i class="fa-brands fa-python"></i> pip</button>
+            <button class="setup-tab-btn" onclick="switchInstallTab(this, 'uv')"><i class="fa-solid fa-bolt"></i> uv</button>
+          </div>
+
+          <div class="code-block-wrapper">
+            <div class="code-block-header">
+              <span>Terminal Command</span>
+              <button class="copy-btn" onclick="copyCode(this, 'install-code')"><i class="fa-regular fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-block-content" id="install-code">pip install shiny</div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="setup-card">
+          <h3><span class="setup-step-num">2</span> Configure Your AI Coding Assistant</h3>
+          <p>Add the configuration below to your project root (where your <code>app.py</code> lives) so your AI assistant uses the server.</p>
+
+          <div class="setup-tabs">
+            <button class="setup-tab-btn active" onclick="switchConfigTab(this, 'claude-cursor')"><i class="fa-solid fa-terminal"></i> Claude / Cursor</button>
+            <button class="setup-tab-btn" onclick="switchConfigTab(this, 'opencode')"><i class="fa-solid fa-code"></i> OpenCode</button>
+            <button class="setup-tab-btn" onclick="switchConfigTab(this, 'uvx')"><i class="fa-solid fa-cloud"></i> Zero-Install (uvx)</button>
+          </div>
+
+          <div class="code-block-wrapper">
+            <div class="code-block-header">
+              <span id="config-filename">.mcp.json</span>
+              <button class="copy-btn" onclick="copyCode(this, 'config-code')"><i class="fa-regular fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-block-content" id="config-code">{
+  "mcpServers": {
+    "shiny": {
+      "command": "shiny",
+      "args": ["mcp"]
+    }
+  }
+}</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Interactive Live Simulation Playground -->
     <section>
@@ -780,6 +967,56 @@ without parentheses '()'.
   </div>
 
   <script>
+    // Copy to Clipboard logic
+    function copyCode(btn, elementId) {
+      const code = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = originalHtml;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // Install Tab Switcher
+    function switchInstallTab(btn, type) {
+      const parent = btn.parentElement;
+      parent.querySelectorAll('.setup-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const codeEl = document.getElementById('install-code');
+      if (type === 'pip') {
+        codeEl.innerText = 'pip install shiny';
+      } else if (type === 'uv') {
+        codeEl.innerText = 'uv add shiny';
+      }
+    }
+
+    // Config Tab Switcher
+    function switchConfigTab(btn, type) {
+      const parent = btn.parentElement;
+      parent.querySelectorAll('.setup-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const filenameEl = document.getElementById('config-filename');
+      const codeEl = document.getElementById('config-code');
+
+      if (type === 'claude-cursor') {
+        filenameEl.innerText = '.mcp.json';
+        codeEl.innerText = `{\n  "mcpServers": {\n    "shiny": {\n      "command": "shiny",\n      "args": ["mcp"]\n    }\n  }\n}`;
+      } else if (type === 'opencode') {
+        filenameEl.innerText = 'opencode.json';
+        codeEl.innerText = `{\n  "$schema": "https://opencode.ai/config.json",\n  "mcp": {\n    "shiny": {\n      "type": "local",\n      "command": ["shiny", "mcp"],\n      "enabled": true\n    }\n  }\n}`;
+      } else if (type === 'uvx') {
+        filenameEl.innerText = 'claude_desktop_config.json (or .mcp.json)';
+        codeEl.innerText = `{\n  "mcpServers": {\n    "shiny": {\n      "command": "uvx",\n      "args": ["shiny", "mcp"]\n    }\n  }\n}`;
+      }
+    }
+
+    // Live Reactive Simulation Logic
     const inputBeds = document.getElementById('input-beds');
     const inputPatients = document.getElementById('input-patients');
     const inputStaff = document.getElementById('input-staff');
