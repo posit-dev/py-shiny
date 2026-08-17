@@ -56,24 +56,17 @@ Run this from your own project rather than a clone of this repository: [`library
 
 To see what's bundled without installing anything, run `shiny skills list`.
 
-### MCP Server
+### Developer CLI Tools
 
-Shiny includes a built-in Model Context Protocol (MCP) server that provides AI coding assistants (Claude Code, Cursor, OpenCode, VS Code) with AST code validation, component reflection, and headless in-memory simulation without a browser.
+Shiny includes built-in developer tools accessible directly from the terminal or coding agents:
 
-To use it with your agent, add it to your project's `.mcp.json`:
+- `shiny validate app.py`: Static AST analysis to detect reactivity errors, duplicate IDs, and mode mismatches.
+- `shiny simulate app.py -i n=25`: Headless in-memory reactive simulation without a browser.
+- `shiny inspect app.py --mermaid`: Reactive dependency graph (DAG) inspection and visualization.
+- `shiny docs ui.page_sidebar`: Component docstrings, signatures, and code snippets.
+- `shiny scaffold express_dashboard`: Starter templates for rapid app prototyping.
 
-```json
-{
-  "mcpServers": {
-    "shiny": {
-      "command": "uv",
-      "args": ["run", "shiny", "mcp"]
-    }
-  }
-}
-```
-
-To see available tools and resources, run `shiny mcp info`.
+An optional MCP server is also available via `shiny mcp`.
 
 ## Development
 

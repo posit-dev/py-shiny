@@ -47,7 +47,7 @@ def list_mcp_resources() -> List[Dict[str, Any]]:
 
 def read_mcp_resource(uri: str) -> Optional[Dict[str, Any]]:
     if uri == "shiny://components/catalog":
-        from ._tools import COMPONENT_CATALOG
+        from .._components import COMPONENT_CATALOG
 
         return {
             "uri": uri,
@@ -56,7 +56,7 @@ def read_mcp_resource(uri: str) -> Optional[Dict[str, Any]]:
         }
 
     if uri == "shiny://templates/list":
-        from ._tools import TEMPLATE_CATALOG
+        from .._components import TEMPLATE_CATALOG
 
         return {
             "uri": uri,

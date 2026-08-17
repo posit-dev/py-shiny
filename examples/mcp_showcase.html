@@ -575,9 +575,6 @@
         <span class="badge"><i class="fa-solid fa-network-wired"></i> MCP Specification 2024-11-05</span>
       </div>
       <h1>Shiny for Python: MCP Server</h1>
-      <p class="lead">
-        Turn AI assistants into verified Shiny developers with AST static analysis and in-memory headless reactive simulation.
-      </p>
     </header>
 
     <!-- KPI Summary Row -->
@@ -613,7 +610,7 @@
         <div class="setup-card">
           <h3><span class="setup-step-num">1</span> Install Shiny in Your Environment</h3>
           <p>Because the MCP server is built directly into <code>shiny</code> with zero extra dependencies, installing Shiny provides the server automatically.</p>
-          
+
           <div class="setup-tabs">
             <button class="setup-tab-btn active" onclick="switchInstallTab(this, 'pip')"><i class="fa-brands fa-python"></i> pip</button>
             <button class="setup-tab-btn" onclick="switchInstallTab(this, 'uv')"><i class="fa-solid fa-bolt"></i> uv</button>
@@ -960,10 +957,6 @@ without parentheses '()'.
         </div>
       </div>
     </section>
-
-    <footer>
-      <p>Built for the Posit <code>py-shiny</code> ecosystem • Model Context Protocol Specification 2024-11-05</p>
-    </footer>
   </div>
 
   <script>
@@ -1063,7 +1056,7 @@ without parentheses '()'.
         outCost.textContent = 'TypeError: unsupported operand for *: Value';
         statusBox.className = 'status-banner danger';
         statusBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <span><strong>Reactive Crash in cost_kpi</strong>: TypeError: unsupported operand type(s) for *: \'float\' and \'Value\'</span>';
-        
+
         nodeCost.setAttribute('stroke', '#ef4444');
         textCost.setAttribute('fill', '#f87171');
         dagStatus.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Broken Reactive Link (cost_kpi)';
@@ -1074,7 +1067,7 @@ without parentheses '()'.
         outCost.textContent = `$${Math.round(cost).toLocaleString()}`;
         statusBox.className = 'status-banner success';
         statusBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span><strong>AppSession in-memory execution</strong>: Flushed in 24.2ms. All reactives healthy.</span>';
-        
+
         nodeCost.setAttribute('stroke', '#10b981');
         textCost.setAttribute('fill', '#6ee7b7');
         dagStatus.innerHTML = '<i class="fa-solid fa-circle-dot"></i> Active (Topological Order)';
