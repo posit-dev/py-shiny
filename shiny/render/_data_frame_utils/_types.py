@@ -6,6 +6,7 @@ from typing import (
     Literal,
     Optional,
     Protocol,
+    SupportsIndex,
     Tuple,
     Union,
     cast,
@@ -168,9 +169,13 @@ class FrameJson(TypedDict):
 
 RowsList = Optional[ListOrTuple[int]]
 
-ColsList = Optional[ListOrTuple[Union[str, int]]]
+ColsList = Optional[ListOrTuple[Union[str, SupportsIndex]]]
 """
 Columns as a caller may supply them: either column names or column positions.
+
+A position is anything integer-like (`SupportsIndex`), not only `int`, so that a
+`numpy` integer -- what `np.where()` and `Index.get_indexer()` hand back -- is read as a
+position rather than falling through to the name lookup.
 
 Resolve to :data:`ColIndexes` with `as_col_indexes()` before doing any work, as column
 names are not dependable identifiers (they may be empty, and pandas allows names that

@@ -8,6 +8,7 @@ from typing import Any, Union, cast
 
 import htmltools
 import narwhals.stable.v1 as nw
+import numpy as np
 import pandas as pd
 import polars as pl
 import polars.testing as pl_testing
@@ -464,11 +465,49 @@ def test_as_col_indexes_unknown_name_raises():
 
 def test_as_col_indexes_int_is_always_a_position():
     # An `int` cannot be told apart from a pandas integer label, so it is documented and
-    # tested as a position. Here position 0 is the column labelled `5`.
+    # tested as a position. The only input that tells the two readings apart is an int
+    # that is also a label: on this frame `5` is the label of position 0, so reading it
+    # as a label would give `[0]` while reading it as a position is out of range.
     df = as_data_frame(pd.DataFrame([["a", 1]], columns=[5, 3]))
 
-    assert as_col_indexes(df, [0]) == [0]
-    assert subset_frame(df, cols=[0]).columns == [5]
+    with pytest.raises(ValueError, match="Column position 5 is out of range"):
+        as_col_indexes(df, [5])
+
+    # Position 1 is the column labelled `3`, not the label `1` (which does not exist)
+    assert as_col_indexes(df, [1]) == [1]
+    assert subset_frame(df, cols=[1]).columns == [3]
+
+
+def test_as_col_indexes_numpy_int_is_a_position():
+    # `np.int64` is not an `int`, but it is what `np.where()` and friends hand back, so
+    # it has to follow the same rule rather than falling through to the name lookup: on
+    # this frame the label `5` would resolve to position 0 by equality.
+    df = as_data_frame(pd.DataFrame([["a", 1]], columns=[5, 3]))
+
+    assert as_col_indexes(df, [np.int64(1)]) == [1]
+    with pytest.raises(ValueError, match="Column position 5 is out of range"):
+        as_col_indexes(df, [np.int64(5)])
+
+
+def test_as_col_indexes_out_of_range_position_raises():
+    df = as_data_frame(pd.DataFrame({"chr": ["a"], "num": [1]}))
+
+    # Negative positions are rejected rather than wrapping around to the last column
+    with pytest.raises(ValueError, match="Column position -1 must be greater than"):
+        as_col_indexes(df, [-1])
+
+    # Out of range is rejected here rather than escaping as a narwhals `IndexError`
+    with pytest.raises(ValueError, match="Column position 99 is out of range"):
+        as_col_indexes(df, [99])
+
+
+def test_as_col_indexes_bool_raises():
+    # `bool` is a subclass of `int`, so `[True, False]` would otherwise read as
+    # positions `[1, 0]`. `StyleInfo`'s `cols` accepts a bool mask; this does not.
+    df = as_data_frame(pd.DataFrame({"chr": ["a"], "num": [1]}))
+
+    with pytest.raises(TypeError, match="not a `bool`"):
+        as_col_indexes(df, [True, False])
 
 
 def test_subset_frame_rows_single(small_df_f: IntoDataFrame):

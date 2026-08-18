@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, TypedDict, cast
+import operator
+from typing import TYPE_CHECKING, Any, List, SupportsIndex, TypedDict, cast
 
 import narwhals.stable.v1 as nw
 import orjson
 
+from ..._typing_extensions import TypeIs
 from ...session import Session, require_active_session
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
 from ._html import as_cell_html, ui_must_be_processed
@@ -307,35 +309,74 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
 
 # as_col_indexes -----------------------------------------------------------------------
-def as_col_indexes(data: DataFrame[Any], cols: ListOrTuple[str | int]) -> ColIndexes:
+def _is_col_position(col: str | SupportsIndex) -> TypeIs[SupportsIndex]:
+    """Whether `col` should be read as a column position rather than a column name.
+
+    Anything integer-like counts, not only `int`: `numpy` integers (what `np.where()`,
+    `np.arange()`, and `Index.get_indexer()` hand back) are the most likely source of a
+    position, and `isinstance(np.int64(0), int)` is `False`.
+
+    `bool` is integer-like in Python but is never a position here; the caller is
+    rejected instead, so that `[True, False]` cannot silently mean `[1, 0]`.
+    """
+    if isinstance(col, (str, bool)):
+        return False
+    return hasattr(col, "__index__")
+
+
+def as_col_indexes(
+    data: DataFrame[Any], cols: ListOrTuple[str | SupportsIndex]
+) -> ColIndexes:
     """Resolve caller-supplied columns to column positions.
 
-    This is the single place where a column name is turned into a column position.
-    Everything downstream addresses columns by position only (:data:`ColIndexes`),
-    because names are not dependable identifiers: they may be empty, and pandas allows
-    names that are not strings.
+    This is the single place where `subset_frame()` turns a column name into a column
+    position; everything downstream of it addresses columns by position only
+    (:data:`ColIndexes`), because names are not dependable identifiers: they may be
+    empty, and pandas allows names that are not strings. (Other name lookups still exist
+    elsewhere in the data frame code, e.g. `update_cell_value()` and `style_info_cols()`.)
 
     Parameters
     ----------
     data
         The data frame the columns belong to.
     cols
-        Column names (`str`) or column positions (`int`).
+        Column names (`str`) or column positions (any integer-like value, e.g. `int` or
+        `numpy.int64`).
 
-        An `int` is **always** read as a position, never as a label. The two cannot be
+        An integer is **always** read as a position, never as a label. The two cannot be
         told apart otherwise, and narwhals reads a list of ints in the column slot
         positionally, so a pandas frame whose labels are ints (e.g. `{5: ..., 3: ...}`)
         must be addressed by position.
 
     Raises
     ------
+    TypeError
+        If a column is a `bool`. `bool` is a subclass of `int`, so accepting it would
+        read `[True, False]` as positions `[1, 0]` rather than as a mask.
     ValueError
-        If a name is not a column of `data`.
+        If a name is not a column of `data`, or if a position is negative or beyond the
+        last column.
     """
+    ncol = len(data.columns)
     col_indexes: list[int] = []
     for col in cols:
-        if isinstance(col, int):
-            col_indexes.append(col)
+        if isinstance(col, bool):
+            raise TypeError(
+                f"Column {col!r} must be a column name (`str`) or a column position "
+                "(`int`), not a `bool`."
+            )
+        if _is_col_position(col):
+            col_index = operator.index(col)
+            if col_index < 0:
+                raise ValueError(
+                    f"Column position {col_index} must be greater than or equal to 0."
+                )
+            if col_index >= ncol:
+                raise ValueError(
+                    f"Column position {col_index} is out of range. "
+                    f"The data frame has {ncol} columns."
+                )
+            col_indexes.append(col_index)
             continue
         try:
             col_indexes.append(data.columns.index(col))
@@ -358,8 +399,12 @@ def subset_frame(
 
     Note that when None is passed, all rows or columns get included.
 
-    Known narwhals behavior: on polars, selecting columns positionally renames a column
-    whose name is `""` to `"column_0"`. Selecting rows only is unaffected.
+    Known narwhals behavior: on polars, any selection that names columns positionally
+    renames a column whose name is `""` to `"column_<position in the result>"` -- both
+    the columns-only and the rows-and-columns branches below, e.g. selecting all of
+    `["a", "", "c"]` yields `["a", "column_1", "c"]` and selecting `[2, 1]` of it yields
+    `["c", "column_1"]`. Only the rows-only branch is unaffected. (polars 1.43.2,
+    narwhals 2.24.0)
     """
     # The nested if-else structure is used to navigate around narwhals' typing system and lack of `:` operator outside of `[`, `]`.
 
