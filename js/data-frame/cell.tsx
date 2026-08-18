@@ -15,7 +15,7 @@ import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 import { SelectionSet } from "./selection";
 import { CellStyle } from "./style-info";
-import type { ColumnNames, DataFrameColumnDef, PatchInfo } from "./types";
+import type { DataFrameColumnDef, PatchInfo } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type HtmlDep = any;
@@ -73,7 +73,6 @@ interface TableBodyCellProps {
   containerRef: React.RefObject<HTMLDivElement>;
   cell: Cell<unknown[], unknown>;
   patchInfo: PatchInfo;
-  columns: ColumnNames;
   coldefs: readonly DataFrameColumnDef[];
   rowIndex: number;
   columnIndex: number;
@@ -92,7 +91,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
   rowId,
   cell,
   patchInfo,
-  columns,
   coldefs,
   rowIndex,
   columnIndex,
@@ -291,7 +289,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
         // // Do not reset edit value here so that users can "restore" their prior edit value
         // resetEditing({ resetEditValue: true });
       },
-      columns,
       setData,
       setCellEditMapAtLoc,
     });
@@ -303,7 +300,6 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
     editValue,
     resetEditing,
     patchInfo,
-    columns,
     setData,
     cellState,
   ]);

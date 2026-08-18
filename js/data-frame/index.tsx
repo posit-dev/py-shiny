@@ -644,7 +644,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleAddPatches as EventListener
       );
     };
-  }, [columns, id, setCellEditMapAtLoc, setSorting, setTableData]);
+  }, [id, setCellEditMapAtLoc, setTableData]);
 
   useEffect(() => {
     const handleUpdateData = (
@@ -672,7 +672,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
         handleUpdateData as EventListener
       );
     };
-  }, [columns, id, resetCellEditMap, setTableData, updateData]);
+  }, [id, updateData]);
 
   useEffect(() => {
     const handleColumnSort = (
@@ -1082,7 +1082,6 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
                           cell={cell}
                           patchInfo={patchInfo}
                           editCellsIsAllowed={editCellsIsAllowed}
-                          columns={columns}
                           coldefs={coldefs}
                           rowIndex={rowIndex}
                           columnIndex={columnIndex}
