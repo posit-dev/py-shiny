@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* `ui.input_slider()` and `ui.update_slider()` no longer shift `datetime.date` values by a day when the server runs in a timezone ahead of UTC. Dates were encoded as local midnight, but the client formats and reads slider dates back in UTC, so on e.g. `Europe/Amsterdam` an update to `2025-01-01` landed on `2024-12-31`. Dates are now encoded as UTC midnight, matching Shiny for R. (#2398)
+
+* `ui.input_slider()` and `ui.update_slider()` no longer shift naive (timezone-less) `datetime.datetime` values by the server's UTC offset. Such a value was encoded as if it named a local time, but the client sends it back to be decoded as UTC, so a slider set to `12:00` reported `11:00` on a server in `Europe/Amsterdam`. Naive datetimes are now anchored to UTC, so they round-trip unchanged; timezone-aware datetimes name an absolute instant and are unaffected. (#2398)
+
+* `ui.show_offcanvas()` now accepts the `id` (a string) of an `ui.offcanvas()` panel already in the UI and reveals it, matching its sibling functions `ui.hide_offcanvas()` / `ui.toggle_offcanvas()`. Previously, passing a string raised an unhandled `AttributeError` from deep inside the implementation. `show_offcanvas()` also now accepts bare tag content (wrapping it into a new anonymous panel), in addition to an `ui.offcanvas()` object; a string that looks like body text instead of an id (empty, or containing whitespace) raises an actionable `ValueError`. (#2445)
+
 * A dynamically-rendered output (e.g. `@render.ui`) inside a `ui.popover()` or `ui.tooltip()` without a `title=` no longer gets stuck showing "recalculating". The container collapsed to 0 width, so the output's `ResizeObserver` never fired; vendored bslib CSS now gives it a non-zero minimum width. (#2446)
 
 * `playwright.controller.InputSelectize` no longer clicks the page body to close the selectize dropdown. `expect_choices()`, `expect_choice_labels()`, and `expect_choice_groups()` open the dropdown, because selectize renders its choices into the DOM only after the first open. The click that closed the dropdown again landed on app content and fired the app's own click handlers, so a test could record an interaction that it never made. The controller now calls `close()` on the selectize instance instead, which touches no app content. (#2426)

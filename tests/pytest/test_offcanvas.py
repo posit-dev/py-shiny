@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import warnings
+from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
-from htmltools import TagList, tags
+from htmltools import HTML, TagList, tags
 
 from shiny import ui
 from shiny.ui._offcanvas import Offcanvas
@@ -254,6 +256,105 @@ def test_offcanvas_with_trigger_returns_taglist():
     html = str(result)
     assert "bslib-offcanvas" in html
     assert "Open" in html
+
+
+# ============================================================================
+# show_offcanvas() dispatch tests
+# ============================================================================
+
+
+def _mock_session() -> MagicMock:
+    def _ns(id: str) -> str:
+        return id
+
+    def _send_message_sync(msg: dict[str, Any]) -> None:
+        messages_sent.append(msg)
+
+    def _send_input_message(id: str, msg: dict[str, Any]) -> None:
+        input_messages_sent.append((id, msg))
+
+    def _on_flush(cb: Any, once: bool = True) -> None:
+        cb()
+
+    mock_session = MagicMock()
+    mock_session.ns = MagicMock(side_effect=_ns)
+    mock_session._process_ui = MagicMock(
+        return_value={"html": "<div>test</div>", "deps": []}
+    )
+    messages_sent: list[dict[str, Any]] = []
+    mock_session._send_message_sync = MagicMock(side_effect=_send_message_sync)
+    mock_session._messages_sent = messages_sent
+    input_messages_sent: list[tuple[str, dict[str, Any]]] = []
+    mock_session.send_input_message = MagicMock(side_effect=_send_input_message)
+    mock_session._input_messages_sent = input_messages_sent
+    mock_session.on_flush = MagicMock(side_effect=_on_flush)
+    return mock_session
+
+
+def test_show_offcanvas_with_str_id_reveals_existing_panel():
+    """show_offcanvas() with a bare string reveals an existing panel by id"""
+    mock_session = _mock_session()
+
+    result_id = ui.show_offcanvas("existing-panel", session=mock_session)
+
+    assert result_id == "existing-panel"
+    assert mock_session._input_messages_sent == [
+        ("existing-panel", {"method": "toggle", "value": "show"})
+    ]
+    mock_session._send_message_sync.assert_not_called()
+
+
+@pytest.mark.parametrize("bad_id", ["", "   ", "has space", "\ttab"])
+def test_show_offcanvas_bad_string_raises(bad_id: str):
+    """show_offcanvas() raises when the string looks like body text, not an id"""
+    mock_session = _mock_session()
+
+    with pytest.raises(ValueError, match="looks like body text"):
+        ui.show_offcanvas(bad_id, session=mock_session)
+
+
+def test_show_offcanvas_with_html_wraps_new_panel():
+    """show_offcanvas() treats htmltools.HTML() as content, not an id"""
+    mock_session = _mock_session()
+
+    result_id = ui.show_offcanvas(
+        HTML("<p>Rendered content.</p>"), session=mock_session
+    )
+
+    assert isinstance(result_id, str) and result_id != ""
+    assert mock_session._send_message_sync.call_count == 1
+    message = mock_session._messages_sent[0]
+    payload = message["custom"]["bslib.show-offcanvas"]
+    assert payload["temporary"] is True
+    assert payload["id"] == result_id
+
+
+def test_show_offcanvas_with_tag_wraps_new_panel():
+    """show_offcanvas() wraps a bare Tag into a new anonymous offcanvas"""
+    mock_session = _mock_session()
+
+    result_id = ui.show_offcanvas(tags.p("Body content"), session=mock_session)
+
+    assert mock_session._send_message_sync.call_count == 1
+    message = mock_session._messages_sent[0]
+    payload = message["custom"]["bslib.show-offcanvas"]
+    assert payload["temporary"] is True
+    assert payload["id"] == result_id
+
+
+def test_show_offcanvas_with_offcanvas_object_unchanged():
+    """show_offcanvas() with an Offcanvas object renders + shows it (existing behavior)"""
+    mock_session = _mock_session()
+
+    oc = ui.offcanvas("Body", title="T", id="my_panel")
+    result_id = ui.show_offcanvas(oc, session=mock_session)
+
+    assert result_id == "my_panel"
+    assert mock_session._send_message_sync.call_count == 1
+    message = mock_session._messages_sent[0]
+    payload = message["custom"]["bslib.show-offcanvas"]
+    assert payload["temporary"] is False
+    assert payload["id"] == "my_panel"
 
 
 def test_offcanvas_without_trigger_returns_tag():
