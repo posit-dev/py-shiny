@@ -11,7 +11,8 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self.warnings: List[Dict[str, Any]] = []
         self.suggestions: List[str] = []
         self.input_ids: Set[str] = set()
-        self.output_ids: Set[str] = set()
+        self.ui_output_ids: Set[str] = set()
+        self.renderer_ids: Set[str] = set()
         self.reactive_vals: Set[str] = set()
         self.reactive_calcs: Set[str] = set()
         self.duplicate_ids: List[str] = []
@@ -89,7 +90,16 @@ class ShinyCodeValidator(ast.NodeVisitor):
         )
 
         if is_renderer:
-            self.output_ids.add(node.name)
+            if node.name in self.renderer_ids:
+                self.duplicate_ids.append(node.name)
+                self.warnings.append(
+                    {
+                        "line": node.lineno,
+                        "message": f"Duplicate renderer function name detected: '{node.name}'.",
+                        "code": "DUPLICATE_ID",
+                    }
+                )
+            self.renderer_ids.add(node.name)
             self._in_reactive_context = True
         elif is_calc:
             self.reactive_calcs.add(node.name)
@@ -148,7 +158,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 elif call_name.startswith("ui.output_") or call_name.startswith(
                     "shinywidgets.output_widget"
                 ):
-                    if widget_id in self.output_ids:
+                    if widget_id in self.ui_output_ids:
                         self.duplicate_ids.append(widget_id)
                         self.warnings.append(
                             {
@@ -157,7 +167,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
                                 "code": "DUPLICATE_ID",
                             }
                         )
-                    self.output_ids.add(widget_id)
+                    self.ui_output_ids.add(widget_id)
 
         self.generic_visit(node)
 
@@ -271,7 +281,9 @@ def validate_shiny_code(code: str) -> Dict[str, Any]:
         "warnings": validator.warnings,
         "suggestions": suggestions,
         "detected_inputs": sorted(list(validator.input_ids)),
-        "detected_outputs": sorted(list(validator.output_ids)),
+        "detected_outputs": sorted(
+            list(validator.ui_output_ids | validator.renderer_ids)
+        ),
         "detected_reactives": sorted(
             list(validator.reactive_vals | validator.reactive_calcs)
         ),

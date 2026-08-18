@@ -805,23 +805,23 @@
       <div class="cli-explorer-container">
         <!-- Subcommand Nav Menu -->
         <div class="cli-nav-list">
-          <button class="cli-nav-item active" onclick="selectCliCommand('validate')">
+          <button class="cli-nav-item active" data-cmd="validate" onclick="selectCliCommand('validate', this)">
             <span class="cmd-name">shiny validate <i class="fa-solid fa-chevron-right"></i></span>
             <span class="cmd-sub">AST Reactivity & Idiom Linter</span>
           </button>
-          <button class="cli-nav-item" onclick="selectCliCommand('simulate')">
+          <button class="cli-nav-item" data-cmd="simulate" onclick="selectCliCommand('simulate', this)">
             <span class="cmd-name">shiny simulate <i class="fa-solid fa-chevron-right"></i></span>
             <span class="cmd-sub">Headless Reactive Runner</span>
           </button>
-          <button class="cli-nav-item" onclick="selectCliCommand('inspect')">
+          <button class="cli-nav-item" data-cmd="inspect" onclick="selectCliCommand('inspect', this)">
             <span class="cmd-name">shiny inspect <i class="fa-solid fa-chevron-right"></i></span>
-            <span class="cmd-sub">Topological DAG & Mermaid</span>
+            <span class="cmd-sub">Topological DAG & Reactlog</span>
           </button>
-          <button class="cli-nav-item" onclick="selectCliCommand('docs')">
+          <button class="cli-nav-item" data-cmd="docs" onclick="selectCliCommand('docs', this)">
             <span class="cmd-name">shiny docs <i class="fa-solid fa-chevron-right"></i></span>
             <span class="cmd-sub">Signatures & Docstring Reflection</span>
           </button>
-          <button class="cli-nav-item" onclick="selectCliCommand('scaffold')">
+          <button class="cli-nav-item" data-cmd="scaffold" onclick="selectCliCommand('scaffold', this)">
             <span class="cmd-name">shiny scaffold <i class="fa-solid fa-chevron-right"></i></span>
             <span class="cmd-sub">Starter Template Generator</span>
           </button>
@@ -1263,9 +1263,10 @@ Next steps:
     };
 
     // Render CLI Subcommand Details
-    function selectCliCommand(cmdKey) {
+    function selectCliCommand(cmdKey, btnElement) {
       document.querySelectorAll('.cli-nav-item').forEach(b => b.classList.remove('active'));
-      event.currentTarget.classList.add('active');
+      const activeBtn = btnElement || document.querySelector(`.cli-nav-item[data-cmd="${cmdKey}"]`) || document.querySelector('.cli-nav-item');
+      if (activeBtn) activeBtn.classList.add('active');
 
       const data = CLI_DATA[cmdKey];
       if (!data) return;

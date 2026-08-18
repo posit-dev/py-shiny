@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+from collections import deque
 from typing import Any, Dict, List, Optional, Set
 
 
@@ -10,8 +11,10 @@ class GraphVisitor(ast.NodeVisitor):
         self.inputs: Dict[str, int] = {}
         self.calcs: Dict[str, Dict[str, Any]] = {}
         self.outputs: Dict[str, Dict[str, Any]] = {}
+        self.effects: Dict[str, Dict[str, Any]] = {}
         self.current_calc: Optional[str] = None
         self.current_output: Optional[str] = None
+        self.current_effect: Optional[str] = None
 
     def visit_Call(self, node: ast.Call) -> None:
         func_name = ""
@@ -39,6 +42,8 @@ class GraphVisitor(ast.NodeVisitor):
             target_input = node.func.attr
             if self.current_output and self.current_output in self.outputs:
                 self.outputs[self.current_output]["deps"].add(target_input)
+            elif self.current_effect and self.current_effect in self.effects:
+                self.effects[self.current_effect]["deps"].add(target_input)
             elif self.current_calc and self.current_calc in self.calcs:
                 self.calcs[self.current_calc]["deps"].add(target_input)
 
@@ -46,6 +51,8 @@ class GraphVisitor(ast.NodeVisitor):
             called_name = node.func.id
             if self.current_output and self.current_output in self.outputs:
                 self.outputs[self.current_output]["calc_deps"].add(called_name)
+            elif self.current_effect and self.current_effect in self.effects:
+                self.effects[self.current_effect]["calc_deps"].add(called_name)
             elif self.current_calc and self.current_calc in self.calcs:
                 self.calcs[self.current_calc]["calc_deps"].add(called_name)
 
@@ -65,17 +72,30 @@ class GraphVisitor(ast.NodeVisitor):
             name for d in node.decorator_list if (name := self._get_decorator_name(d))
         ]
 
+        is_effect = any("effect" in d or "Effect" in d for d in decorators)
         is_render = any(
             d.startswith("render.") or d.startswith("render_") for d in decorators
         )
-        is_calc = any("calc" in d or "event" in d or "effect" in d for d in decorators)
+        is_calc = any(
+            ("calc" in d or "Calc" in d or "event" in d) and not is_effect
+            for d in decorators
+        )
 
         prev_out = self.current_output
+        prev_effect = self.current_effect
         prev_calc = self.current_calc
 
         if is_render:
             self.current_output = node.name
             self.outputs[node.name] = {
+                "line": node.lineno,
+                "deps": set(),
+                "calc_deps": set(),
+                "is_async": isinstance(node, ast.AsyncFunctionDef),
+            }
+        elif is_effect:
+            self.current_effect = node.name
+            self.effects[node.name] = {
                 "line": node.lineno,
                 "deps": set(),
                 "calc_deps": set(),
@@ -93,6 +113,7 @@ class GraphVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
         self.current_output = prev_out
+        self.current_effect = prev_effect
         self.current_calc = prev_calc
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
@@ -140,6 +161,16 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
                 "line": meta["line"],
             }
         )
+    for eff, meta in sorted(visitor.effects.items()):
+        nodes.append(
+            {
+                "id": eff,
+                "type": "effect",
+                "role": "observer",
+                "label": f"effect:{eff}",
+                "line": meta["line"],
+            }
+        )
     for out, meta in sorted(visitor.outputs.items()):
         nodes.append(
             {
@@ -159,6 +190,13 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
             if cdep in known_calcs:
                 edges.append({"from": cdep, "to": out_name})
 
+    for eff_name, meta in visitor.effects.items():
+        for dep in sorted(meta["deps"]):
+            edges.append({"from": dep, "to": eff_name})
+        for cdep in sorted(meta["calc_deps"]):
+            if cdep in known_calcs:
+                edges.append({"from": cdep, "to": eff_name})
+
     for calc_name, meta in visitor.calcs.items():
         for dep in sorted(meta["deps"]):
             edges.append({"from": dep, "to": calc_name})
@@ -166,11 +204,12 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
             if cdep in known_calcs and cdep != calc_name:
                 edges.append({"from": cdep, "to": calc_name})
 
+    total_observers = len(visitor.outputs) + len(visitor.effects)
     return {
         "success": True,
         "nodes": nodes,
         "edges": edges,
-        "summary": f"{len(visitor.inputs)} inputs (sources), {len(visitor.calcs)} reactives (conductors), {len(visitor.outputs)} outputs (observers)",
+        "summary": f"{len(visitor.inputs)} inputs (sources), {len(visitor.calcs)} reactives (conductors), {total_observers} outputs & effects (observers)",
     }
 
 
@@ -185,12 +224,10 @@ def generate_reactlog(
     edges = graph.get("edges", [])
     events: List[Dict[str, Any]] = []
     step = 0
-    time_offset = 0.0
 
     events.append(
         {
             "step": step,
-            "time_ms": round(time_offset, 1),
             "event": "sessionInit",
             "node_id": None,
             "node_label": "session",
@@ -200,13 +237,11 @@ def generate_reactlog(
         }
     )
     step += 1
-    time_offset += 1.2
 
     for node in nodes:
         events.append(
             {
                 "step": step,
-                "time_ms": round(time_offset, 1),
                 "event": "define",
                 "node_id": node["id"],
                 "node_label": node["label"],
@@ -216,7 +251,6 @@ def generate_reactlog(
             }
         )
         step += 1
-        time_offset += 0.8
 
     adj_downstream: Dict[str, List[str]] = {}
     adj_upstream: Dict[str, List[str]] = {}
@@ -233,14 +267,13 @@ def generate_reactlog(
 
     invalidated_nodes: Set[str] = set()
 
-    def cascade_invalidate(nid: str, cur_step: int, cur_time: float) -> int:
+    def cascade_invalidate(nid: str, cur_step: int) -> int:
         for down in adj_downstream.get(nid, []):
             if down not in invalidated_nodes:
                 invalidated_nodes.add(down)
                 events.append(
                     {
                         "step": cur_step,
-                        "time_ms": round(cur_time, 1),
                         "event": "invalidate",
                         "node_id": down,
                         "node_label": next(
@@ -254,15 +287,13 @@ def generate_reactlog(
                     }
                 )
                 cur_step += 1
-                cur_time += 0.5
-                cur_step = cascade_invalidate(down, cur_step, cur_time)
+                cur_step = cascade_invalidate(down, cur_step)
         return cur_step
 
     for input_id, val in sim_inputs.items():
         events.append(
             {
                 "step": step,
-                "time_ms": round(time_offset, 1),
                 "event": "valueChange",
                 "node_id": input_id,
                 "node_label": f"input.{input_id}",
@@ -273,15 +304,11 @@ def generate_reactlog(
             }
         )
         step += 1
-        time_offset += 1.5
-
-        step = cascade_invalidate(input_id, step, time_offset)
-        time_offset += 2.0
+        step = cascade_invalidate(input_id, step)
 
     events.append(
         {
             "step": step,
-            "time_ms": round(time_offset, 1),
             "event": "flushStart",
             "node_id": None,
             "node_label": "reactiveEnvironment",
@@ -291,17 +318,41 @@ def generate_reactlog(
         }
     )
     step += 1
-    time_offset += 1.0
 
-    eval_order: List[Dict[str, Any]] = []
-    conductor_nodes = [
-        n for n in nodes if n["role"] == "conductor" and n["id"] in invalidated_nodes
-    ]
+    conductor_ids = {
+        n["id"]
+        for n in nodes
+        if n["role"] == "conductor" and n["id"] in invalidated_nodes
+    }
+    conductor_in_degree: Dict[str, int] = {cid: 0 for cid in conductor_ids}
+    for cid in conductor_ids:
+        for up in adj_upstream.get(cid, []):
+            if up in conductor_ids:
+                conductor_in_degree[cid] += 1
+
+    queue = deque([cid for cid, deg in sorted(conductor_in_degree.items()) if deg == 0])
+    sorted_conductors: List[str] = []
+    while queue:
+        curr = queue.popleft()
+        sorted_conductors.append(curr)
+        for down in adj_downstream.get(curr, []):
+            if down in conductor_in_degree:
+                conductor_in_degree[down] -= 1
+                if conductor_in_degree[down] == 0:
+                    queue.append(down)
+
+    for cid in sorted(conductor_ids):
+        if cid not in sorted_conductors:
+            sorted_conductors.append(cid)
+
     observer_nodes = [
         n for n in nodes if n["role"] == "observer" and n["id"] in invalidated_nodes
     ]
-    eval_order.extend(conductor_nodes)
-    eval_order.extend(observer_nodes)
+
+    nodes_by_id = {n["id"]: n for n in nodes}
+    eval_order: List[Dict[str, Any]] = [
+        nodes_by_id[cid] for cid in sorted_conductors if cid in nodes_by_id
+    ] + observer_nodes
 
     for target in eval_order:
         tid = target["id"]
@@ -311,7 +362,6 @@ def generate_reactlog(
         events.append(
             {
                 "step": step,
-                "time_ms": round(time_offset, 1),
                 "event": "calculate",
                 "node_id": tid,
                 "node_label": tlabel,
@@ -321,13 +371,11 @@ def generate_reactlog(
             }
         )
         step += 1
-        time_offset += 3.5
 
         for dep in adj_upstream.get(tid, []):
             events.append(
                 {
                     "step": step,
-                    "time_ms": round(time_offset, 1),
                     "event": "dependsOn",
                     "node_id": tid,
                     "node_label": tlabel,
@@ -337,12 +385,10 @@ def generate_reactlog(
                 }
             )
             step += 1
-            time_offset += 0.5
 
         events.append(
             {
                 "step": step,
-                "time_ms": round(time_offset, 1),
                 "event": "ready",
                 "node_id": tid,
                 "node_label": tlabel,
@@ -352,18 +398,16 @@ def generate_reactlog(
             }
         )
         step += 1
-        time_offset += 2.0
 
     events.append(
         {
             "step": step,
-            "time_ms": round(time_offset, 1),
             "event": "flushComplete",
             "node_id": None,
             "node_label": "reactiveEnvironment",
             "node_type": "engine",
             "status": "idle",
-            "details": f"Reactive flush finished in {round(time_offset, 1)}ms",
+            "details": f"Reactive flush finished across {len(eval_order)} evaluated nodes",
         }
     )
 
@@ -373,8 +417,7 @@ def generate_reactlog(
         "edges": edges,
         "events": events,
         "steps_total": len(events),
-        "total_time_ms": round(time_offset, 1),
-        "summary": f"Reactlog recorded {len(events)} steps across {len(nodes)} nodes in {round(time_offset, 1)}ms",
+        "summary": f"Simulated reactive trace: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes)} invalidated)",
     }
 
 
@@ -388,6 +431,8 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
             lines.append(f'    {nid}["📥 {label}"]:::inputClass')
         elif ntype == "calc":
             lines.append(f'    {nid}["⚡ {label}"]:::calcClass')
+        elif ntype == "effect":
+            lines.append(f'    {nid}["🔔 {label}"]:::effectClass')
         else:
             lines.append(f'    {nid}["📊 {label}"]:::outputClass')
 
@@ -400,6 +445,9 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
         "    classDef inputClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;"
     )
     lines.append("    classDef calcClass fill:#fef3c7,stroke:#d97706,stroke-width:2px;")
+    lines.append(
+        "    classDef effectClass fill:#f3e8ff,stroke:#9333ea,stroke-width:2px;"
+    )
     lines.append(
         "    classDef outputClass fill:#dcfce7,stroke:#16a34a,stroke-width:2px;"
     )
@@ -416,11 +464,14 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
         nid = node["id"].replace("-", "_").replace(".", "_")
         label = node.get("label", node["id"])
         ntype = node.get("type", "")
-        color = (
-            "#0284c7"
-            if ntype == "input"
-            else ("#d97706" if ntype == "calc" else "#16a34a")
-        )
+        if ntype == "input":
+            color = "#0284c7"
+        elif ntype == "calc":
+            color = "#d97706"
+        elif ntype == "effect":
+            color = "#9333ea"
+        else:
+            color = "#16a34a"
         lines.append(f'    "{nid}" [label="{label}", color="{color}"];')
 
     for edge in graph.get("edges", []):
@@ -433,9 +484,14 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
 
 
 def format_reactlog_html(
-    reactlog: Dict[str, Any], title: str = "Shiny Reactlog"
+    reactlog: Dict[str, Any], title: str = "Shiny Reactive Trace"
 ) -> str:
-    data_json = json.dumps(reactlog, indent=2)
+    escaped_json = (
+        json.dumps(reactlog, indent=2)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -489,7 +545,7 @@ def format_reactlog_html(
 </head>
 <body>
   <header>
-    <div class="brand"><i class="fa-solid fa-clock-rotate-left"></i> <span>Shiny Reactlog Visualizer</span></div>
+    <div class="brand"><i class="fa-solid fa-diagram-project"></i> <span>Shiny Reactive Trace</span></div>
     <div style="font-size: 0.8rem; color: var(--text-muted);" id="summary-text"></div>
   </header>
   <div class="playback-bar">
@@ -513,7 +569,7 @@ def format_reactlog_html(
     </div>
   </div>
   <script>
-    const LOG_DATA = {data_json};
+    const LOG_DATA = {escaped_json};
     let currentStep = 0;
     let isPlaying = false;
     let playTimer = null;
@@ -529,14 +585,38 @@ def format_reactlog_html(
         const li = document.createElement('li');
         li.className = 'event-item' + (idx === currentStep ? ' active' : '');
         li.onclick = () => setStep(idx);
-        li.innerHTML = `
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
-            <span class="badge ${{ev.event}}">${{ev.event}}</span>
-            <span style="color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">+${{ev.time_ms}}ms</span>
-          </div>
-          <div style="font-weight: 600; color: #ffffff;">${{ev.node_label}}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">${{ev.details}}</div>
-        `;
+
+        const headerDiv = document.createElement('div');
+        headerDiv.style.display = 'flex';
+        headerDiv.style.justifyContent = 'space-between';
+        headerDiv.style.marginBottom = '0.2rem';
+
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (ev.event || '');
+        badge.textContent = ev.event || '';
+
+        const stepNum = document.createElement('span');
+        stepNum.style.color = 'var(--text-muted)';
+        stepNum.style.fontFamily = "'JetBrains Mono', monospace";
+        stepNum.style.fontSize = '0.75rem';
+        stepNum.textContent = '#' + (ev.step != null ? ev.step : idx);
+
+        headerDiv.appendChild(badge);
+        headerDiv.appendChild(stepNum);
+
+        const titleDiv = document.createElement('div');
+        titleDiv.style.fontWeight = '600';
+        titleDiv.style.color = '#ffffff';
+        titleDiv.textContent = ev.node_label || '';
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.style.fontSize = '0.75rem';
+        detailsDiv.style.color = 'var(--text-muted)';
+        detailsDiv.textContent = ev.details || '';
+
+        li.appendChild(headerDiv);
+        li.appendChild(titleDiv);
+        li.appendChild(detailsDiv);
         list.appendChild(li);
       }});
     }}

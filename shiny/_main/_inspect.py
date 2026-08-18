@@ -255,18 +255,17 @@ def inspect(
         sys.exit(0)
 
     elif output_format == "reactlog":
-        click.echo(cli_bold(f"Reactlog Execution Trace for {target_desc}"))
+        click.echo(cli_bold(f"Simulated Reactive Trace for {target_desc}"))
         click.echo(cli_info(str(reactlog_data["summary"])) + "\n")
 
         events = reactlog_data.get("events", [])
         click.echo(
-            f"  {'Step':<6} {'Time':<9} {'Event':<14} {'Node':<24} {'Status':<12} {'Details'}"
+            f"  {'Step':<6} {'Event':<16} {'Node':<26} {'Status':<14} {'Details'}"
         )
         click.echo("  " + "-" * 85)
 
         for ev in events:
             step_str = f"#{ev['step']}"
-            time_str = f"+{ev['time_ms']}ms"
             ev_name = ev["event"]
             node_lbl = ev["node_label"] or "-"
             status = ev["status"]
@@ -283,7 +282,7 @@ def inspect(
                 status_styled = click.style(status, fg="red")
 
             click.echo(
-                f"  {step_str:<6} {time_str:<9} {ev_name:<14} {node_lbl:<24} {status_styled:<21} {details}"
+                f"  {step_str:<6} {ev_name:<16} {node_lbl:<26} {status_styled:<23} {details}"
             )
         sys.exit(0)
 
