@@ -81,7 +81,7 @@ def resolve_selected_values(selected: Any, choice_values: Mapping[str, Any]) -> 
 
     def resolve_one(value: Any) -> Any:
         if str(value) in choice_values:
-            return value
+            return choice_values[str(value)]
         for original in originals:
             if original == value:
                 return original
