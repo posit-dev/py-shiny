@@ -1016,67 +1016,148 @@
 
     function renderGraph() {
       const svg = document.getElementById('reactlog-svg');
-      svg.innerHTML = '<defs><marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#30363d"/></marker><marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/></marker></defs>';
+      svg.innerHTML = '<defs>' +
+        '<marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#484f58"/></marker>' +
+        '<marker id="arrow-active" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#58a6ff"/></marker>' +
+        '<marker id="arrow-invalidate" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#d29922"/></marker>' +
+        '</defs>';
 
       const nodes = LOG_DATA.nodes || [];
       const edges = LOG_DATA.edges || [];
       const activeEvent = LOG_DATA.events[currentStep] || {};
 
-      const sources = [];
-      const conductors = [];
-      const observers = [];
-      for (const n of nodes) {
-        if (n.role === 'source') sources.push(n);
-        else if (n.role === 'conductor') conductors.push(n);
-        else if (n.role === 'observer') observers.push(n);
+      const inEdges = {};
+      const outEdges = {};
+      nodes.forEach(n => { inEdges[n.id] = []; outEdges[n.id] = []; });
+      edges.forEach(e => {
+        if (outEdges[e.from]) outEdges[e.from].push(e.to);
+        if (inEdges[e.to]) inEdges[e.to].push(e.from);
+      });
+
+      const ranks = {};
+      nodes.forEach(n => {
+        if (n.role === 'source' || inEdges[n.id].length === 0) {
+          ranks[n.id] = 0;
+        }
+      });
+
+      let changed = true;
+      let iterations = 0;
+      while (changed && iterations < 30) {
+        changed = false;
+        iterations++;
+        edges.forEach(e => {
+          const rFrom = ranks[e.from] ?? 0;
+          const curTo = ranks[e.to] ?? 0;
+          if (rFrom + 1 > curTo) {
+            ranks[e.to] = rFrom + 1;
+            changed = true;
+          }
+        });
       }
 
-      const maxRows = Math.max(sources.length, conductors.length, observers.length, 3);
-      const rowHeight = 65;
-      const svgHeight = Math.max(460, maxRows * rowHeight + 80);
-      const svgWidth = 860;
+      const maxRank = Math.max(0, ...Object.values(ranks));
+      const columns = Array.from({ length: maxRank + 1 }, () => []);
+      nodes.forEach(n => {
+        const r = ranks[n.id] || 0;
+        columns[r].push(n);
+      });
+
+      const colWidth = 240;
+      const rowHeight = 72;
+      const nodeWidth = 190;
+      const nodeHeight = 36;
+      const maxInCol = Math.max(1, ...columns.map(c => c.length));
+      const svgHeight = Math.max(480, maxInCol * rowHeight + 110);
+      const svgWidth = Math.max(880, (maxRank + 1) * colWidth + 60);
+
       svg.setAttribute('width', '100%');
       svg.setAttribute('height', svgHeight);
       svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
 
-      const calcY = (idx, count) => {
-        const totalHeight = (count - 1) * rowHeight;
-        const startY = (svgHeight - totalHeight) / 2;
-        return startY + idx * rowHeight;
-      };
-
       const pos = {};
-      sources.forEach((n, i) => { pos[n.id] = { x: 120, y: calcY(i, sources.length) }; });
-      conductors.forEach((n, i) => { pos[n.id] = { x: 430, y: calcY(i, conductors.length) }; });
-      observers.forEach((n, i) => { pos[n.id] = { x: 740, y: calcY(i, observers.length) }; });
+      columns.forEach((colNodes, colIdx) => {
+        const colX = 130 + colIdx * colWidth;
+        const totalH = (colNodes.length - 1) * rowHeight;
+        const startY = 70 + (svgHeight - 70 - totalH) / 2;
+
+        const stageHeader = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        stageHeader.setAttribute('x', colX);
+        stageHeader.setAttribute('y', 35);
+        stageHeader.setAttribute('fill', '#8b949e');
+        stageHeader.setAttribute('font-size', '11');
+        stageHeader.setAttribute('font-weight', '700');
+        stageHeader.setAttribute('font-family', 'JetBrains Mono, monospace');
+        stageHeader.setAttribute('text-anchor', 'middle');
+        stageHeader.setAttribute('letter-spacing', '0.5px');
+        stageHeader.textContent = colIdx === 0 ? 'STAGE 0: SOURCES' : (colIdx === maxRank ? `STAGE ${colIdx}: SINKS` : `STAGE ${colIdx}: TIER ${colIdx}`);
+        svg.appendChild(stageHeader);
+
+        colNodes.forEach((n, rowIdx) => {
+          pos[n.id] = {
+            x: colX,
+            y: startY + rowIdx * rowHeight,
+            rank: colIdx
+          };
+        });
+      });
 
       edges.forEach(e => {
         const p1 = pos[e.from];
         const p2 = pos[e.to];
         if (p1 && p2) {
-          const isEdgeActive = activeEvent.node_id === e.to && activeEvent.event === 'dependsOn' && activeEvent.details && activeEvent.details.includes(e.from);
-          const cpX = p1.x + 85 + (p2.x - 85 - (p1.x + 85)) / 2;
+          const x1 = p1.x + (nodeWidth / 2);
+          const y1 = p1.y;
+          const x2 = p2.x - (nodeWidth / 2);
+          const y2 = p2.y;
+          const dx = Math.max(30, (x2 - x1) * 0.5);
+
+          const isEdgeActive = activeEvent.node_id === e.to &&
+            activeEvent.event === 'dependsOn' &&
+            activeEvent.details &&
+            activeEvent.details.includes(e.from);
+
+          const isInvalidateEdge = activeEvent.event === 'invalidate' &&
+            activeEvent.node_id === e.to &&
+            activeEvent.details &&
+            activeEvent.details.includes(e.from);
+
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', `M ${p1.x + 85} ${p1.y} C ${cpX} ${p1.y}, ${cpX} ${p2.y}, ${p2.x - 85} ${p2.y}`);
-          path.setAttribute('stroke', isEdgeActive ? '#58a6ff' : '#30363d');
-          path.setAttribute('stroke-width', isEdgeActive ? '2.5' : '1.5');
+          path.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
           path.setAttribute('fill', 'none');
-          path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : 'url(#arrow)');
+          path.setAttribute('data-from', e.from);
+          path.setAttribute('data-to', e.to);
+          path.className.baseVal = 'graph-edge';
+
+          if (isEdgeActive) {
+            path.setAttribute('stroke', '#58a6ff');
+            path.setAttribute('stroke-width', '2.5');
+            path.setAttribute('marker-end', 'url(#arrow-active)');
+          } else if (isInvalidateEdge) {
+            path.setAttribute('stroke', '#d29922');
+            path.setAttribute('stroke-width', '2.5');
+            path.setAttribute('marker-end', 'url(#arrow-invalidate)');
+          } else {
+            path.setAttribute('stroke', '#484f58');
+            path.setAttribute('stroke-width', '1.5');
+            path.setAttribute('marker-end', 'url(#arrow)');
+          }
+
           svg.appendChild(path);
         }
       });
 
       nodes.forEach(n => {
-        const p = pos[n.id] || { x: 430, y: 200 };
+        const p = pos[n.id] || { x: 200, y: 200 };
         const isActive = activeEvent.node_id === n.id;
         let strokeColor = '#30363d';
         let fillColor = '#161b22';
-        let textColor = '#8b949e';
+        let textColor = '#c9d1d9';
 
-        if (n.role === 'source') strokeColor = '#1f6feb';
-        else if (n.role === 'conductor') strokeColor = '#d29922';
-        else if (n.type === 'effect') strokeColor = '#9333ea';
-        else strokeColor = '#238636';
+        if (n.role === 'source') strokeColor = '#38bdf8';
+        else if (n.role === 'conductor') strokeColor = '#f59e0b';
+        else if (n.type === 'effect') strokeColor = '#c084fc';
+        else strokeColor = '#4ade80';
 
         if (isActive) {
           fillColor = '#21262d';
@@ -1088,21 +1169,26 @@
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.className = 'graph-node';
+        g.setAttribute('data-id', n.id);
         g.style.cursor = 'pointer';
+
         g.onclick = () => {
           const matchIdx = (LOG_DATA.events || []).findIndex(ev => ev.node_id === n.id);
           if (matchIdx !== -1) setStep(matchIdx);
         };
 
+        g.onmouseenter = () => highlightDependencies(n.id);
+        g.onmouseleave = () => resetHighlight();
+
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', p.x - 85);
-        rect.setAttribute('y', p.y - 17);
-        rect.setAttribute('width', 170);
-        rect.setAttribute('height', 34);
-        rect.setAttribute('rx', '6');
+        rect.setAttribute('x', p.x - (nodeWidth / 2));
+        rect.setAttribute('y', p.y - (nodeHeight / 2));
+        rect.setAttribute('width', nodeWidth);
+        rect.setAttribute('height', nodeHeight);
+        rect.setAttribute('rx', '8');
         rect.setAttribute('fill', fillColor);
         rect.setAttribute('stroke', strokeColor);
-        rect.setAttribute('stroke-width', isActive ? '2.5' : '1.2');
+        rect.setAttribute('stroke-width', isActive ? '2.5' : '1.5');
         g.appendChild(rect);
 
         const icon = n.role === 'source' ? '📥 ' : (n.role === 'conductor' ? '⚡ ' : (n.type === 'effect' ? '🔔 ' : '📊 '));
@@ -1111,12 +1197,66 @@
         text.setAttribute('y', p.y + 4);
         text.setAttribute('fill', textColor);
         text.setAttribute('font-size', '11');
+        text.setAttribute('font-weight', '600');
         text.setAttribute('font-family', 'JetBrains Mono, monospace');
         text.setAttribute('text-anchor', 'middle');
         text.textContent = icon + (n.label || n.id);
         g.appendChild(text);
 
         svg.appendChild(g);
+      });
+    }
+
+    function highlightDependencies(nodeId) {
+      const upstream = new Set();
+      const downstream = new Set();
+
+      const findUp = (id) => {
+        (LOG_DATA.edges || []).forEach(e => {
+          if (e.to === id && !upstream.has(e.from)) {
+            upstream.add(e.from);
+            findUp(e.from);
+          }
+        });
+      };
+      const findDown = (id) => {
+        (LOG_DATA.edges || []).forEach(e => {
+          if (e.from === id && !downstream.has(e.to)) {
+            downstream.add(e.to);
+            findDown(e.to);
+          }
+        });
+      };
+
+      findUp(nodeId);
+      findDown(nodeId);
+
+      document.querySelectorAll('.graph-node').forEach(el => {
+        const id = el.getAttribute('data-id');
+        if (id === nodeId || upstream.has(id) || downstream.has(id)) {
+          el.style.opacity = '1';
+        } else {
+          el.style.opacity = '0.25';
+        }
+      });
+
+      document.querySelectorAll('.graph-edge').forEach(el => {
+        const f = el.getAttribute('data-from');
+        const t = el.getAttribute('data-to');
+        if ((f === nodeId || upstream.has(f)) && (t === nodeId || downstream.has(t) || t === nodeId)) {
+          el.style.opacity = '1';
+          el.setAttribute('stroke-width', '2.5');
+        } else {
+          el.style.opacity = '0.15';
+        }
+      });
+    }
+
+    function resetHighlight() {
+      document.querySelectorAll('.graph-node').forEach(el => el.style.opacity = '1');
+      document.querySelectorAll('.graph-edge').forEach(el => {
+        el.style.opacity = '1';
+        el.setAttribute('stroke-width', '1.5');
       });
     }
 
