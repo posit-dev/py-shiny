@@ -411,8 +411,12 @@ jobs:
           python-version: "3.12"
       # Pinned to an exact release; astral-sh/setup-uv has no floating `v10` tag
       - uses: astral-sh/setup-uv@v10.0.1
-              with:
-                prune-cache: true
+        with:
+          # setup-uv v9 flipped this default to false. We keep pruning
+          # because we store a separate cache entry per Python version, and
+          # unpruned entries risk hitting the repo cache limit and evicting
+          # each other.
+          prune-cache: true
 
       - name: Narwhals integration setup
         uses: ./.github/py-shiny/narwhals-setup
