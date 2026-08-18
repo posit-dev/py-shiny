@@ -411,6 +411,8 @@ jobs:
           python-version: "3.12"
       # Pinned to an exact release; astral-sh/setup-uv has no floating `v10` tag
       - uses: astral-sh/setup-uv@v10.0.1
+              with:
+                prune-cache: true
 
       - name: Narwhals integration setup
         uses: ./.github/py-shiny/narwhals-setup
