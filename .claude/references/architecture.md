@@ -156,7 +156,8 @@ renderer, which headless still rasterizes.
 `--video` and `--screenshot` behave differently here because
 `tests/playwright/conftest.py` shares one page (and one context) across the
 whole session: video records one continuous file per session rather than per
-test, and `--screenshot` does nothing at all. Tracing avoids that limitation by
+test (`--video retain-on-failure` keeps or deletes that one file based on
+whether any test failed), and `--screenshot` does nothing at all. Tracing avoids that limitation by
 slicing the session-long trace with `tracing.start_chunk()` / `stop_chunk()`
 per test. The NOTE in `tests/playwright/playwright-pytest.ini` records the same
 caveats next to the options themselves.

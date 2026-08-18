@@ -12,7 +12,7 @@ from pathlib import Path, PurePath
 import pytest
 from playwright.sync_api import Browser, BrowserContext, BrowserType
 from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import Page, Response
+from playwright.sync_api import Page, Response, Video
 
 from shiny.pytest import ScopeName as ScopeName
 from shiny.pytest import create_app_fixture
@@ -36,6 +36,10 @@ _NAVIGATION_WEDGED_ATTR = "_shiny_navigation_wedged"
 # Attribute set on a test item when its setup or call phase failed, so
 # `_trace_chunk` can honor `--tracing retain-on-failure`.
 _TEST_FAILED_ATTR = "_shiny_test_failed"
+
+# Attribute set on the pytest session when any test failed, so
+# `_session_context` can honor `--video retain-on-failure`.
+_SESSION_FAILED_ATTR = "_shiny_session_failed"
 
 
 def _mark_navigation_wedged(crashed_page: Page) -> None:
@@ -101,6 +105,7 @@ def _session_context(
     browser: Browser,
     browser_context_args: dict[str, typing.Any],
     pytestconfig: pytest.Config,
+    request: pytest.FixtureRequest,
 ) -> typing.Generator[BrowserContext, None, None]:
     """
     Session-scoped context that owns the shared page.
@@ -112,8 +117,9 @@ def _session_context(
     are only recorded by the plugin's own (function-scoped) `context` fixture,
     which this suite never uses.
     """
+    video_mode = typing.cast(str, pytestconfig.getoption("--video"))
     context_args = dict(browser_context_args)
-    if pytestconfig.getoption("--video") in ("on", "retain-on-failure"):
+    if video_mode in ("on", "retain-on-failure"):
         # Video is a context-level option, and this context lives for the whole
         # session, so this records one continuous video rather than one per
         # test. There is no video equivalent of `tracing.start_chunk()`.
@@ -121,11 +127,37 @@ def _session_context(
 
     context = browser.new_context(**context_args)
 
+    # pytest-playwright implements `--video retain-on-failure` by recording into
+    # a temporary directory and copying out only the videos of failed tests.
+    # That bookkeeping lives in its function-scoped fixtures, which this suite
+    # replaces, so the mode has to be honored here or it would be identical to
+    # `--video on`. Collect the video handles as pages are created, and discard
+    # the recording once the session ends if nothing failed.
+    videos: list[Video] = []
+    if video_mode == "retain-on-failure":
+
+        def remember_video(page: Page) -> None:
+            if page.video is not None:
+                videos.append(page.video)
+
+        context.on("page", remember_video)
+
     if pytestconfig.getoption("--tracing") in ("on", "retain-on-failure"):
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
     yield context
+    # Videos are only written out when the context closes, so they cannot be
+    # deleted before then.
     context.close()
+
+    session_failed = getattr(request.session, _SESSION_FAILED_ATTR, False)
+    if video_mode == "retain-on-failure" and not session_failed:
+        for video in videos:
+            try:
+                video.delete()
+            except PlaywrightError:
+                # A page that recorded nothing has no file to delete.
+                pass
 
 
 def _request_item(request: pytest.FixtureRequest) -> pytest.Item:
@@ -182,7 +214,11 @@ def _trace_chunk(
 def pytest_runtest_makereport(
     item: pytest.Item, call: pytest.CallInfo[None]
 ) -> typing.Generator[None, typing.Any, None]:
-    """Record the outcome so `_trace_chunk` can honor `retain-on-failure`."""
+    """Record outcomes for the two `retain-on-failure` modes.
+
+    `_trace_chunk` needs the per-test outcome; `_session_context` needs to know
+    whether the session had any failure at all.
+    """
     # A `hookwrapper=True` generator is sent pluggy's `Result` object, which is
     # why the generator's send type is `Any`: pluggy is not a direct dependency
     # here, so `Result` cannot be named. The report it wraps is annotated below.
@@ -197,6 +233,11 @@ def pytest_runtest_makereport(
     # `_trace_chunk` has already saved or discarded the chunk.
     if report.failed and report.when in ("setup", "call"):
         setattr(item, _TEST_FAILED_ATTR, True)
+    if report.failed:
+        # The session-long video is kept or dropped after every test has
+        # finished, so unlike the per-test trace chunk it can also account for
+        # failures reported during teardown.
+        setattr(item.session, _SESSION_FAILED_ATTR, True)
 
 
 @pytest.fixture(scope="session")
