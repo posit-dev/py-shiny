@@ -76,3 +76,41 @@ def test_update_data(page: Page, local_app: ShinyAppProc) -> None:
         ]
     )
     df.expect_selected_rows([1])
+
+
+def test_update_data_keeps_sort_and_filter_on_named_column(
+    page: Page, local_app: ShinyAppProc
+) -> None:
+    page.goto(local_app.url)
+
+    df = controller.OutputDataFrame(page, "df")
+    sort_value = controller.OutputCode(page, "sort_value")
+    filter_value = controller.OutputCode(page, "filter_value")
+    reorder_btn = controller.InputActionButton(page, "reorder_btn")
+    different_btn = controller.InputActionButton(page, "different_btn")
+
+    df.expect_column_labels(["studyName", "Sample Number"])
+
+    # Sort and filter the first column, "studyName"
+    df.set_sort(0)
+    sort_value.expect_value("sort: ({'col': 0, 'desc': False},)")
+    df.set_filter({"col": 0, "value": "PAL0708"})
+    filter_value.expect_value("filter: ({'col': 0, 'value': 'PAL0708'},)")
+    df.expect_nrow(110)
+
+    # `update_data()` with the same columns in the opposite order: the sort and
+    # the filter stay on "studyName", which is now at index 1
+    reorder_btn.click()
+    df.expect_column_labels(["Sample Number", "studyName"])
+    sort_value.expect_value("sort: ({'col': 1, 'desc': False},)")
+    filter_value.expect_value("filter: ({'col': 1, 'value': 'PAL0708'},)")
+    df.expect_nrow(110)
+    df.expect_cell("PAL0708", row=0, col=1)
+
+    # `update_data()` with columns that share no name with the old ones: the
+    # sort and the filter are dropped rather than applied to another column
+    different_btn.click()
+    df.expect_column_labels(["Letter", "Negative index"])
+    sort_value.expect_value("sort: ()")
+    filter_value.expect_value("filter: ()")
+    df.expect_nrow(26)

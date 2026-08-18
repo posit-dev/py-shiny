@@ -1,4 +1,4 @@
-import { ColumnDef, RowModel, flexRender } from "@tanstack/react-table";
+import { RowModel, flexRender } from "@tanstack/react-table";
 import { Cell } from "@tanstack/table-core";
 import React, {
   FC,
@@ -15,7 +15,7 @@ import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 import { SelectionSet } from "./selection";
 import { CellStyle } from "./style-info";
-import type { PatchInfo } from "./types";
+import type { ColumnNames, DataFrameColumnDef, PatchInfo } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type HtmlDep = any;
@@ -73,8 +73,8 @@ interface TableBodyCellProps {
   containerRef: React.RefObject<HTMLDivElement>;
   cell: Cell<unknown[], unknown>;
   patchInfo: PatchInfo;
-  columns: readonly string[];
-  coldefs: readonly ColumnDef<unknown[], unknown>[];
+  columns: ColumnNames;
+  coldefs: readonly DataFrameColumnDef[];
   rowIndex: number;
   columnIndex: number;
   editCellsIsAllowed: boolean;
@@ -200,7 +200,7 @@ export const TableBodyCell: FC<TableBodyCellProps> = ({
 
       nextColumnIndex = newColumnIndex;
       // Repeat until the loop if the next column is not an HTML column
-      if (coldefs[newColumnIndex]!.meta!.isHtmlColumn !== true) {
+      if (coldefs[newColumnIndex]!.meta.isHtmlColumn !== true) {
         break;
       }
     }

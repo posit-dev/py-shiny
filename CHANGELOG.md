@@ -43,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Download renderers (`@render.download_button`, `@render.download_link`, and the deprecated `@render.download`) now honor `@output(id=)`. The download handler was registered under the decorated function's name, but the URL rendered by the control used the `@output(id=)` value, so clicking the control returned a 404. (#2415)
 
+* `@render.data_frame` is now able to render data frames whose column names are empty (`""`) or are not strings. Column ids are now positional and are never derived from the column name. A column named `0` also no longer renders a blank header. (#2421)
+
+* `@render.data_frame`'s `.update_sort()` now honors its documented default for bare column indices: `desc` follows the column dtype, so number-like columns sort descending and everything else sorts ascending. (#2421)
+
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
 * `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
