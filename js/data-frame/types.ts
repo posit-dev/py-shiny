@@ -41,8 +41,17 @@ export interface DataGridOptions {
   editable?: boolean;
 }
 
+/**
+ * The column names of the data, as serialized by the server.
+ *
+ * Not necessarily strings: pandas allows non-string column names (e.g. an
+ * integer `0`), and they reach the client as the raw JSON value, so anything
+ * that renders a column name has to coerce it first.
+ */
+export type ColumnNames = ReadonlyArray<string | number>;
+
 export interface PandasData<TIndex> {
-  columns: ReadonlyArray<string>;
+  columns: ColumnNames;
   // index: ReadonlyArray<TIndex>;
   data: unknown[][];
   options: DataGridOptions;

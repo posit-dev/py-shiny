@@ -44,7 +44,13 @@ import { StyleInfo, getCellStyle, useStyleInfoMap } from "./style-info";
 import css from "./styles.scss";
 import { useTabindexGroup } from "./tabindex-group";
 import { useSummary } from "./table-summary";
-import { DataFrameColumnDef, PandasData, PatchInfo, TypeHint } from "./types";
+import {
+  ColumnNames,
+  DataFrameColumnDef,
+  PandasData,
+  PatchInfo,
+  TypeHint,
+} from "./types";
 
 // TODO-barret-future set selected cell as input! (Might be a followup?)
 
@@ -121,9 +127,11 @@ function columnIndexToId(colIndex: number): string {
  * The column index for a TanStack Table column id, or `null` if the id does not
  * refer to a column of the current data.
  *
- * Sorting and filtering state can outlive the columns it refers to (an
- * `updateData` message may arrive with fewer columns), and a stale id must not
- * be reported to the server as if it were a real column index.
+ * `updateData` already remaps or drops sorting and filtering state whenever the
+ * columns change, so callers should not see a stale id in practice. Returning
+ * `null` is the defensive path: never report an index the server cannot
+ * resolve, since a wrong-but-valid index (e.g. the `-1` that the previous name
+ * lookup produced on a miss) reaches user code as a real column.
  */
 function columnIdToIndex(columnId: string, ncol: number): number | null {
   if (!columnId.startsWith(COLUMN_ID_PREFIX)) return null;
@@ -346,14 +354,14 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
   const updateData = useCallback(
     ({
       data,
-      columns,
+      columns: newColumns,
       typeHints,
     }: {
       data: PandasData<unknown>["data"];
-      columns: readonly string[];
+      columns: ColumnNames;
       typeHints: readonly TypeHint[] | undefined;
     }) => {
-      setColumns(columns);
+      setColumns(newColumns);
       setTableData(data);
       setTypeHints(typeHints);
       resetCellEditMap();
@@ -364,28 +372,59 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
       typeHints?.forEach((hint, i) => {
         newTypeHintMap.set(columnIndexToId(i), hint);
       });
-      // Filter out sorting and column filters that are no longer valid
-      const newSort = sorting.filter((sort) => newTypeHintMap.has(sort.id));
-      const newColumnFilter = columnFilters.filter((filter) => {
-        const typeHint = newTypeHintMap.get(filter.id);
-        if (!typeHint) return false;
+
+      /**
+       * The id that sorting or filtering state keyed by `columnId` should carry
+       * over to, or `null` if the column it refers to is gone.
+       *
+       * Ids are positional (see `columnIndexToId`), but a user sorted a column
+       * with a *name*, so the state has to follow that name: the incoming data
+       * may hold the same column at a different position. Column names are
+       * unique (narwhals rejects duplicates), so the old name identifies at most
+       * one new column. Names are compared as-is rather than stringified, since
+       * a column named `0` and one named `"0"` are different columns.
+       */
+      const newColumnId = (columnId: string): string | null => {
+        const oldIndex = columnIdToIndex(columnId, columns.length);
+        if (oldIndex === null) return null;
+        const newIndex = newColumns.indexOf(columns[oldIndex]!);
+        if (newIndex === -1) return null;
+        return columnIndexToId(newIndex);
+      };
+
+      // Carry over the sorting and column filters whose column is still there,
+      // dropping any state that no longer applies
+      const newSort = sorting.flatMap((sort) => {
+        const id = newColumnId(sort.id);
+        if (id === null) return [];
+        return [{ ...sort, id }];
+      });
+      const newColumnFilter = columnFilters.flatMap((filter) => {
+        const id = newColumnId(filter.id);
+        if (id === null) return [];
+        const typeHint = newTypeHintMap.get(id);
+        if (!typeHint) return [];
         // Maintain the filter if it's a numeric filter
         // Drop if it's a string filter
         if (typeHint.type === "numeric") {
-          return (
+          if (
             filter.value === null ||
             (Array.isArray(filter.value) &&
               filter.value.every((v) => v !== null))
-          );
+          ) {
+            return [{ ...filter, id }];
+          }
+          return [];
         }
         // Maintain string filters
-        return typeof filter.value === "string";
+        return typeof filter.value === "string" ? [{ ...filter, id }] : [];
       });
 
       setColumnFilters(newColumnFilter);
       setSorting(newSort);
     },
     [
+      columns,
       columnFilters,
       resetCellEditMap,
       setColumnFilters,
@@ -754,8 +793,9 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     const shinySort: { col: number; desc: boolean }[] = [];
     sorting.forEach((sortObj) => {
       const columnNum = columnIdToIndex(sortObj.id, columns.length);
-      // Skip state left over from columns that no longer exist, rather than
-      // reporting a column index the server cannot resolve.
+      // Defensive: `updateData` has already remapped or dropped sorting state
+      // for the current columns, but never report an index the server cannot
+      // resolve.
       if (columnNum === null) return;
 
       shinySort.push({
@@ -776,8 +816,7 @@ const ShinyDataGrid: FC<ShinyDataGridProps<unknown>> = ({
     }[] = [];
     columnFilters.forEach((filterObj) => {
       const columnNum = columnIdToIndex(filterObj.id, columns.length);
-      // Skip state left over from columns that no longer exist, rather than
-      // reporting a column index the server cannot resolve.
+      // Defensive, as in the sorting effect above.
       if (columnNum === null) return;
 
       shinyFilter.push({

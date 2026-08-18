@@ -2,7 +2,7 @@ import { ResponseValue, makeRequestPromise } from "./request";
 
 import { CellStateEnum } from "./cell";
 import { SetCellEditMapAtLoc } from "./cell-edit-map";
-import type { PatchInfo } from "./types";
+import type { ColumnNames, PatchInfo } from "./types";
 
 export type CellPatch = {
   rowIndex: number;
@@ -86,7 +86,7 @@ export function updateCellsData({
   patches: CellPatch[];
   onSuccess: (values: CellPatch[]) => void;
   onError: (err: string) => void;
-  columns: readonly string[];
+  columns: ColumnNames;
   setData: SetDataFn;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
 }) {

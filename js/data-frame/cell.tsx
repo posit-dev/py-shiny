@@ -15,7 +15,7 @@ import { CellEdit, SetCellEditMapAtLoc } from "./cell-edit-map";
 import { updateCellsData } from "./data-update";
 import { SelectionSet } from "./selection";
 import { CellStyle } from "./style-info";
-import type { DataFrameColumnDef, PatchInfo } from "./types";
+import type { ColumnNames, DataFrameColumnDef, PatchInfo } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type HtmlDep = any;
@@ -73,7 +73,7 @@ interface TableBodyCellProps {
   containerRef: React.RefObject<HTMLDivElement>;
   cell: Cell<unknown[], unknown>;
   patchInfo: PatchInfo;
-  columns: readonly string[];
+  columns: ColumnNames;
   coldefs: readonly DataFrameColumnDef[];
   rowIndex: number;
   columnIndex: number;
