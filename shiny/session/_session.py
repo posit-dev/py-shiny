@@ -70,6 +70,7 @@ from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
 from ..reactive import Effect_, Value, effect
 from ..reactive import flush as reactive_flush
 from ..reactive import isolate
+from ..reactive._core import flush_out_of_band as reactive_flush_out_of_band
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
 from ..render.renderer import Renderer, RendererT
@@ -887,6 +888,8 @@ class AppSession(Session):
         self._conn: Connection = conn
         self._debug: bool = debug
         self._busy_count: int = 0
+        self._pending_out_of_band_flushes: set[asyncio.Task[None]] = set()
+        """Strong references to in-flight `_schedule_out_of_band_flush()` tasks."""
         self._message_handlers: dict[
             str,
             tuple[Callable[..., Awaitable[Jsonifiable]], Session],
@@ -1287,6 +1290,15 @@ class AppSession(Session):
             return await self._handle_request_impl(request, action, subpath)
         finally:
             self._decrement_busy_count()
+            # These two actions invoke app-author code outside the WebSocket
+            # message cycle, so nothing else will publish what it set. The other
+            # actions ("upload", "dataobj") only run Shiny's own plumbing, and
+            # uploads arrive one request per chunk -- flushing for those would
+            # be pure overhead. A streaming download flushes again when its
+            # generator finishes, which is when the handler body has actually
+            # run; this one covers the file-path form, which has already run.
+            if action in ("download", "dynamic_route"):
+                self._schedule_out_of_band_flush()
 
     async def _handle_request_impl(
         self, request: Request, action: str, subpath: Optional[str]
@@ -1381,6 +1393,14 @@ class AppSession(Session):
                                     headers=headers,
                                     media_type=content_type,
                                 )
+                            # The handler has produced everything it is going to
+                            # produce, so `_handle_request` can flush once this
+                            # returns. Unlike the streaming branches below, that
+                            # may happen while Starlette is still transferring
+                            # the file -- there is no hook for "after the last
+                            # byte" that also fires when the client hangs up.
+                            # Handlers must therefore not hand back a file that
+                            # their own reactive updates go on to delete.
                             return file_response
 
                         wrapped_contents: AsyncIterable[bytes]
@@ -1392,26 +1412,43 @@ class AppSession(Session):
                             # implementation of handle_request(), but the iterators
                             # aren't invoked until after handle_request() returns.
                             async def wrap_content_async() -> AsyncIterable[bytes]:
-                                with session_context(self):
-                                    with isolate():
-                                        async for chunk in contents:
-                                            if isinstance(chunk, str):
-                                                yield chunk.encode(download.encoding)
-                                            else:
-                                                yield chunk
+                                try:
+                                    with session_context(self):
+                                        with isolate():
+                                            async for chunk in contents:
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
+                                finally:
+                                    # `finally`, not a trailing statement: the
+                                    # handler may raise, and the client may hang
+                                    # up mid-stream (which throws GeneratorExit
+                                    # in at the `yield`). Both leave reactive
+                                    # values set by the handler unpublished and
+                                    # the session stuck "busy" if we skip this.
+                                    self._schedule_out_of_band_flush()
 
                             wrapped_contents = wrap_content_async()
 
                         else:  # isinstance(contents, Iterable):
 
                             async def wrap_content_sync() -> AsyncIterable[bytes]:
-                                with session_context(self):
-                                    with isolate():
-                                        for chunk in contents:
-                                            if isinstance(chunk, str):
-                                                yield chunk.encode(download.encoding)
-                                            else:
-                                                yield chunk
+                                try:
+                                    with session_context(self):
+                                        with isolate():
+                                            for chunk in contents:
+                                                if isinstance(chunk, str):
+                                                    yield chunk.encode(
+                                                        download.encoding
+                                                    )
+                                                else:
+                                                    yield chunk
+                                finally:
+                                    # See `wrap_content_async` above.
+                                    self._schedule_out_of_band_flush()
 
                             wrapped_contents = wrap_content_sync()
 
@@ -1613,6 +1650,63 @@ class AppSession(Session):
 
     def _request_flush(self) -> None:
         self.app._request_flush(self)
+
+    def _schedule_out_of_band_flush(self) -> None:
+        """
+        Arrange for the reactive graph to be flushed on a later event loop tick.
+
+        Downloads and dynamic routes are served over plain HTTP requests,
+        outside of the WebSocket message cycle that is otherwise the only thing
+        that flushes the reactive graph. Without this, any
+        :class:`~shiny.reactive.Value` that such a handler sets stays
+        invalidated-but-unflushed -- and the session stays "busy", because the
+        busy-count increments from the invalidated effects are never balanced --
+        until some unrelated client message happens to arrive.
+        (https://github.com/posit-dev/py-shiny/issues/1785)
+
+        Shiny for R does the equivalent: it brackets the download's `content`
+        function with `incrementBusyCount()`/`decrementBusyCount()`, and
+        `decrementBusyCount()` calls `requestFlush()`; R's event loop then calls
+        `flushReact()` on the next tick.
+
+        Two separate properties matter here, and they are easy to conflate.
+
+        *Where* this is called from is what makes it reliable: a `finally`, and
+        one placed outside the handler's `session_context`. A handler can raise
+        part-way through streaming, and a client can cancel a download
+        mid-stream, and neither path may skip the flush. Being outside the
+        session context matters too, because a cancelled download can be torn
+        down from a different task than the one that streamed it, and unwinding
+        that context then raises `ValueError: <Token ...> was created in a
+        different Context` (an async generator has no contextvars context of its
+        own, so it runs in whichever task resumes it). A `finally` outside the
+        context still runs when that happens.
+
+        *Scheduling* rather than awaiting buys something narrower: the download's
+        response is not held open, and the reactive lock is not held, for the
+        duration of a full reactive update -- which, since the flush is global,
+        means every pending effect and output render across every live session.
+        Awaiting here would also be correct; it is legal Python even while the
+        generator is being closed. Errors are contained by the guard in
+        `_out_of_band_flush`, not by the scheduling.
+        """
+        if self._is_closed():
+            return
+
+        task = asyncio.create_task(self._out_of_band_flush())
+        # asyncio only keeps a weak reference to a running task, so without this
+        # the flush can be garbage-collected before it gets to run.
+        self._pending_out_of_band_flushes.add(task)
+        task.add_done_callback(self._pending_out_of_band_flushes.discard)
+
+    async def _out_of_band_flush(self) -> None:
+        try:
+            await reactive_flush_out_of_band()
+        except Exception:
+            # Nothing awaits this task, so an uncaught exception would surface
+            # only as asyncio's "Task exception was never retrieved", whenever
+            # the task happens to be garbage-collected.
+            traceback.print_exc()
 
     async def _flush(self) -> None:
         with session_context(self):

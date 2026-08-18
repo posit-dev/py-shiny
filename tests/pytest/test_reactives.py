@@ -8,7 +8,7 @@ import pytest
 from shiny import App, render, req, ui
 from shiny._connection import MockConnection
 from shiny.reactive import Value, calc, effect, event, flush, invalidate_later, isolate
-from shiny.reactive._core import ReactiveWarning
+from shiny.reactive._core import ReactiveWarning, lock
 from shiny.types import ActionButtonValue, SilentException
 
 from .mocktime import MockTime
@@ -1568,3 +1568,29 @@ def test_event_effect_stacked_warns_only_once():
 
     assert len(w) == 1
     assert w[0].filename == __file__
+
+
+def test_reactive_lock_is_reusable_across_event_loops():
+    """
+    The reactive lock must not stay bound to an event loop that has closed.
+
+    `_reactive_environment` is a process-wide singleton, so its `asyncio.Lock`
+    outlives any one event loop. `Lock.acquire()` only consults the running loop
+    on its *contended* path, and caches it the first time it does -- so a lock
+    that has ever been contended raises "bound to a different event loop" for
+    every later contended acquire from a different loop. That is invisible until
+    something actually contends the lock (two concurrent flushes, say), and then
+    it silently breaks whatever test happens to run next in the same process.
+    """
+
+    async def contend() -> None:
+        async def take() -> None:
+            async with lock():
+                await asyncio.sleep(0)
+
+        # Two waiters, so the acquire takes the slow path that binds the loop.
+        await asyncio.gather(take(), take())
+
+    asyncio.run(contend())
+    # A second, unrelated event loop -- e.g. the next test in this process.
+    asyncio.run(contend())

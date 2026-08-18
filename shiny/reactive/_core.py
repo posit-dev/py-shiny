@@ -132,6 +132,7 @@ class ReactiveEnvironment:
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self._lock: Optional[asyncio.Lock] = None
+        self._lock_loop: Optional[asyncio.AbstractEventLoop] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
 
     @property
@@ -142,11 +143,16 @@ class ReactiveEnvironment:
         yet. This causes the asyncio.Lock to be created with a different loop than it
         will be invoked from later; when that happens, acquire() will succeed if there's
         no contention, but throw a "hey you're on the wrong loop" error if there is.
+
+        For the same reason the lock is recreated whenever the running loop changes:
+        this environment is a process-wide singleton, so it outlives any one loop. That
+        only matters for test suites, where each test gets a fresh loop -- without it,
+        the first test to contend the lock breaks every later test that does.
         """
-        if self._lock is None:
-            # Ensure we have a loop; get_running_loop() throws an error if we don't
-            asyncio.get_running_loop()
+        loop = asyncio.get_running_loop()
+        if self._lock is None or self._lock_loop is not loop:
             self._lock = asyncio.Lock()
+            self._lock_loop = loop
         return self._lock
 
     def next_id(self) -> int:
@@ -268,6 +274,27 @@ async def flush() -> None:
     useful for testing and running reactive code interactively in the console.
     """
     await _reactive_environment.flush()
+
+
+async def flush_out_of_band() -> None:
+    """
+    Flush the reactive environment from outside the session's message cycle.
+
+    Work that originates somewhere other than a client message -- a plain HTTP
+    request, a timer, a background task -- has to flush the reactive graph
+    itself, because nothing else will. Two things have to be true of such a
+    flush, and they are easy to forget one at a time:
+
+    * It takes the reactive lock, because it runs on a different asyncio task
+      than the session's message loop, which may be flushing concurrently.
+    * It detaches from the ambient OpenTelemetry span, so the resulting
+      ``reactive_update`` span is a root span rather than a child of whatever
+      request happened to trigger it. Otherwise that request's recorded
+      duration swallows the entire reactive update.
+    """
+    async with lock():
+        with detached_otel_context():
+            await flush()
 
 
 @no_example()

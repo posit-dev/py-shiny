@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Download renderers (`@render.download_button`, `@render.download_link`, and the deprecated `@render.download`) now honor `@output(id=)`. The download handler was registered under the decorated function's name, but the URL rendered by the control used the `@output(id=)` value, so clicking the control returned a 404. (#2415)
 
+* A `reactive.Value` set by a `@render.download_button()` / `@render.download_link()` or `session.dynamic_route()` handler now takes effect when the handler finishes. These are served over plain HTTP requests, but the reactive graph was only flushed in response to WebSocket messages, so the handler's invalidations sat in the pending-flush queue (leaving the session stuck in its "busy" state) until an unrelated client message arrived. (#2422)
+
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
 * `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
