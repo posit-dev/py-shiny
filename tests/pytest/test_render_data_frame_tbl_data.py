@@ -18,6 +18,7 @@ from shiny.module import ResolvedId
 from shiny.render._data_frame_utils._html import maybe_as_cell_html
 from shiny.render._data_frame_utils._tbl_data import (
     apply_frame_patches,
+    as_col_indexes,
     as_data_frame,
     serialize_dtype,
     serialize_frame,
@@ -351,6 +352,23 @@ def test_apply_frame_patches_numeric_column_names():
     assert df.rows(named=False) == [("a", "x"), ("b", "y"), ("c", "z")]
 
 
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+def test_apply_frame_patches_empty_column_name(constructor: Any):
+    # Patches are keyed by column index all the way through, so a column whose name is
+    # `""` is patched like any other. https://github.com/posit-dev/py-shiny/issues/1844
+    df = as_data_frame(constructor({"": ["a", "b"], "num": [1, 2]}))
+
+    patches: list[CellPatch] = [
+        {"row_index": 1, "column_index": 0, "value": "B"},
+        {"row_index": 0, "column_index": 1, "value": 10},
+    ]
+
+    res = apply_frame_patches(df, patches)
+
+    assert res.columns == ["", "num"]
+    assert res.rows(named=False) == [("a", 10), ("B", 2)]
+
+
 def test_apply_frame_patches_non_string_values():
     # `CellValue` allows non-string scalars so that `@<data_frame>.set_patch_fn` can
     # coerce the browser's string to the column's type. Writing a `str` into these
@@ -423,6 +441,34 @@ def test_subset_frame_numeric_column_names():
 
     assert res.columns == [20]
     assert res.rows(named=False) == [(2,)]
+
+
+def test_as_col_indexes_resolves_names_and_positions():
+    df = as_data_frame(pd.DataFrame({"chr": ["a"], "": ["b"], "num": [1]}))
+
+    # Names resolve to positions, including the empty name
+    assert as_col_indexes(df, ["chr", "", "num"]) == [0, 1, 2]
+    # Ints are already positions and pass straight through
+    assert as_col_indexes(df, [2, 0]) == [2, 0]
+    # Mixed input is fine
+    assert as_col_indexes(df, ["num", 0]) == [2, 0]
+    assert as_col_indexes(df, []) == []
+
+
+def test_as_col_indexes_unknown_name_raises():
+    df = as_data_frame(pd.DataFrame({"chr": ["a"], "num": [1]}))
+
+    with pytest.raises(ValueError, match="Column name 'nope' not found"):
+        as_col_indexes(df, ["nope"])
+
+
+def test_as_col_indexes_int_is_always_a_position():
+    # An `int` cannot be told apart from a pandas integer label, so it is documented and
+    # tested as a position. Here position 0 is the column labelled `5`.
+    df = as_data_frame(pd.DataFrame([["a", 1]], columns=[5, 3]))
+
+    assert as_col_indexes(df, [0]) == [0]
+    assert subset_frame(df, cols=[0]).columns == [5]
 
 
 def test_subset_frame_rows_single(small_df_f: IntoDataFrame):

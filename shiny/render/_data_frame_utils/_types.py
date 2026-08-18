@@ -50,6 +50,7 @@ __all__ = (
     "FrameJson",
     "RowsList",
     "ColsList",
+    "ColIndexes",
     "FrameDtypeSubset",
     "FrameDtypeCategories",
     "FrameDtype",
@@ -166,7 +167,20 @@ class FrameJson(TypedDict):
 
 
 RowsList = Optional[ListOrTuple[int]]
+
 ColsList = Optional[ListOrTuple[Union[str, int]]]
+"""
+Columns as a caller may supply them: either column names or column positions.
+
+Resolve to :data:`ColIndexes` with `as_col_indexes()` before doing any work, as column
+names are not dependable identifiers (they may be empty, and pandas allows names that
+are not strings).
+"""
+
+ColIndexes = ListOrTuple[int]
+"""
+Columns as the internals address them: positions only, never names.
+"""
 
 
 # ---------------------------------------------------------------------
