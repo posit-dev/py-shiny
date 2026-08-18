@@ -1144,6 +1144,10 @@ class data_frame(
                     val_dict = val
                 else:
                     assert isinstance(val, int)
+                    # Checked again below for every entry, but a negative index
+                    # must be rejected before it reaches `nw_data[:, val]`,
+                    # where it would silently wrap around and compute `desc`
+                    # from the wrong column.
                     assert 0 <= val < ncol
                     # Bare column indices sort descending for number-like
                     # columns and ascending for everything else.
