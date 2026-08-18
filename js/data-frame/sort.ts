@@ -5,14 +5,15 @@ import {
 } from "@tanstack/react-table";
 import React, { useState } from "react";
 
-import type { ColumnDef, ColumnSort, Updater } from "@tanstack/react-table";
+import type { ColumnSort, Updater } from "@tanstack/react-table";
+import type { DataFrameColumnDef } from "./types";
 
 export type { ColumnSort, SortingState };
 
 export function useSort<TData>({
   getColDefs,
 }: {
-  getColDefs: () => ColumnDef<unknown[], unknown>[];
+  getColDefs: () => DataFrameColumnDef[];
 }): {
   sorting: SortingState;
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>;
@@ -33,10 +34,10 @@ export function useSort<TData>({
             ? sortUpdater(sorting)
             : sortUpdater;
         const coldefs = getColDefs();
+        // Sorting state is keyed by column id, which is positional rather than
+        // the column name.
         const htmlColumnsSet = new Set(
-          coldefs
-            .filter((col) => col.meta!.isHtmlColumn)
-            .map((col) => col.header!)
+          coldefs.filter((col) => col.meta.isHtmlColumn).map((col) => col.id)
         );
 
         const filteredSort =

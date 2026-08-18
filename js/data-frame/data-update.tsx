@@ -78,7 +78,6 @@ export function updateCellsData({
   patches,
   onSuccess,
   onError,
-  columns,
   setData,
   setCellEditMapAtLoc,
 }: {
@@ -86,7 +85,6 @@ export function updateCellsData({
   patches: CellPatch[];
   onSuccess: (values: CellPatch[]) => void;
   onError: (err: string) => void;
-  columns: readonly string[];
   setData: SetDataFn;
   setCellEditMapAtLoc: SetCellEditMapAtLoc;
 }) {
