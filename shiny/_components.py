@@ -152,82 +152,6 @@ COMPONENT_CATALOG: Dict[str, Dict[str, Any]] = {
     },
 }
 
-TEMPLATE_CATALOG: Dict[str, Dict[str, Any]] = {
-    "express_dashboard": {
-        "name": "express_dashboard",
-        "description": "Modern responsive KPI dashboard using Shiny Express mode.",
-        "code": """from shiny.express import input, render, ui
-
-ui.page_opts(title="Sales Performance Dashboard", fillable=True)
-
-with ui.sidebar(title="Filters"):
-    ui.input_select("region", "Region:", choices=["North", "South", "East", "West"])
-    ui.input_slider("threshold", "Sales Threshold ($k):", min=10, max=500, value=100)
-
-with ui.layout_columns():
-    with ui.value_box("Total Revenue", showcase=ui.span("💰")):
-        @render.text
-        def revenue():
-            return f"${input.threshold() * 12.5:,.0f}k"
-
-    with ui.value_box("Active Customers", showcase=ui.span("👥")):
-        @render.text
-        def customers():
-            return f"{input.threshold() * 4:,}"
-
-with ui.card():
-    ui.card_header("Region Summary")
-    @render.text
-    def summary():
-        return f"Selected Region: {input.region()} | Minimum Threshold: ${input.threshold()}k"
-""",
-    },
-    "core_dashboard": {
-        "name": "core_dashboard",
-        "description": "Classic Shiny Core dashboard structure with app_ui and server function.",
-        "code": """from shiny import App, render, ui
-
-app_ui = ui.page_sidebar(
-    ui.sidebar(
-        ui.input_select("dataset", "Dataset:", choices=["iris", "penguins", "mtcars"]),
-        ui.input_slider("sample_size", "Sample Size:", min=10, max=200, value=50),
-    ),
-    ui.card(
-        ui.card_header("Summary Statistics"),
-        ui.output_text("summary"),
-    ),
-    title="Data Explorer (Core Mode)",
-    fillable=True,
-)
-
-def server(input, output, session):
-    @output
-    @render.text
-    def summary():
-        return f"Dataset: {input.dataset()} | Samples: {input.sample_size()}"
-
-app = App(app_ui, server)
-""",
-    },
-    "ai_chat": {
-        "name": "ai_chat",
-        "description": "Interactive AI Chat assistant template using shinychat.",
-        "code": """from shiny.express import ui
-from shinychat import chat_ui, Chat
-
-ui.page_opts(title="AI Assistant", fillable=True)
-
-chat = Chat("chat")
-chat_ui("chat")
-
-@chat.on_user_submit
-async def handle_user_input(user_input: str):
-    response = f"Echo: {user_input}"
-    await chat.append_message_stream(response)
-""",
-    },
-}
-
 
 def list_components(category: Optional[str] = None) -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
@@ -266,7 +190,3 @@ def get_component_doc(name: str) -> Optional[Dict[str, Any]]:
             doc_item["docstring"] = obj.__doc__
 
     return doc_item
-
-
-def get_template(name: str) -> Optional[Dict[str, Any]]:
-    return TEMPLATE_CATALOG.get(name)

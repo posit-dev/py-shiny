@@ -778,8 +778,8 @@
     <div class="kpi-grid">
       <div class="kpi-card blue">
         <div class="metric-label"><i class="fa-solid fa-terminal"></i> Developer Usability</div>
-        <div class="metric-val">5 CLI Tools</div>
-        <div class="metric-desc"><code>validate</code>, <code>simulate</code>, <code>inspect</code>, <code>docs</code>, and <code>scaffold</code> work standalone without server overhead.</div>
+        <div class="metric-val">4 CLI Tools</div>
+        <div class="metric-desc"><code>validate</code>, <code>simulate</code>, <code>inspect</code>, and <code>docs</code> work standalone without server overhead.</div>
       </div>
       <div class="kpi-card green">
         <div class="metric-label"><i class="fa-solid fa-microchip"></i> Headless Simulation</div>
@@ -798,7 +798,7 @@
       <div class="section-header">
         <div>
           <h2><i class="fa-solid fa-terminal"></i> Interactive CLI Subcommands Explorer</h2>
-          <p>Click through the 5 built-in subcommands to explore syntax, available flags, and real output formats.</p>
+          <p>Click through the 4 built-in subcommands to explore syntax, available flags, and real output formats.</p>
         </div>
       </div>
 
@@ -820,10 +820,6 @@
           <button class="cli-nav-item" data-cmd="docs" onclick="selectCliCommand('docs', this)">
             <span class="cmd-name">shiny docs <i class="fa-solid fa-chevron-right"></i></span>
             <span class="cmd-sub">Signatures & Docstring Reflection</span>
-          </button>
-          <button class="cli-nav-item" data-cmd="scaffold" onclick="selectCliCommand('scaffold', this)">
-            <span class="cmd-name">shiny scaffold <i class="fa-solid fa-chevron-right"></i></span>
-            <span class="cmd-sub">Starter Template Generator</span>
           </button>
         </div>
 
@@ -1241,24 +1237,6 @@ Signature:
 
 Example Snippet:
   ui.page_sidebar(ui.sidebar(ui.input_slider('n', 'N', 1, 100, 50)), ui.card(ui.output_text('res')))`
-      },
-      scaffold: {
-        title: "shiny scaffold",
-        badge: "Template Scaffolding",
-        desc: "Generates production-ready starter templates (express_dashboard, core_dashboard, ai_chat) directly to stdout or writes them to a designated app file.",
-        flags: [
-          { flag: "[TEMPLATE]", desc: "Template name (express_dashboard, core_dashboard, ai_chat)" },
-          { flag: "-o, --out PATH", desc: "Write template directly to file path" },
-          { flag: "-l, --list", desc: "List all available starter templates" },
-          { flag: "--json", desc: "Output template code/metadata in JSON format" }
-        ],
-        command: "shiny scaffold express_dashboard -o app.py",
-        output: `✓ Scaffolded 'express_dashboard' template to app.py
-
-Next steps:
-  1. Validate:  shiny validate app.py
-  2. Simulate:  shiny simulate app.py -i threshold=50
-  3. Run:       shiny run app.py`
       }
     };
 

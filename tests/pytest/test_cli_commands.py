@@ -192,34 +192,3 @@ def test_cli_docs_json():
     data = json.loads(res.output)
     assert data["name"] == "render.plot"
     assert data["category"] == "renderers"
-
-
-def test_cli_scaffold_list():
-    runner = CliRunner()
-    res = runner.invoke(main, ["scaffold", "--list"])
-    assert res.exit_code == 0
-    assert "express_dashboard" in res.output
-    assert "core_dashboard" in res.output
-    assert "ai_chat" in res.output
-
-
-def test_cli_scaffold_stdout():
-    runner = CliRunner()
-    res = runner.invoke(main, ["scaffold", "express_dashboard"])
-    assert res.exit_code == 0
-    assert "from shiny.express import" in res.output
-    assert "ui.page_opts" in res.output
-
-
-def test_cli_scaffold_to_file(tmp_path: Path):
-    runner = CliRunner()
-    target_file = tmp_path / "subdir" / "my_app.py"
-    res = runner.invoke(
-        main,
-        ["scaffold", "core_dashboard", "-o", str(target_file)],
-    )
-    assert res.exit_code == 0
-    assert target_file.is_file()
-    content = target_file.read_text(encoding="utf-8")
-    assert "app_ui = ui.page_sidebar" in content
-    assert "app = App(app_ui, server)" in content
