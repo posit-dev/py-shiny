@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reactlog: examples/complex_analytics_dashboard.py</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-elevated: #21262d;
+      --border: #30363d;
+      --text: #f0f6fc;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 800; font-size: 1.1rem; color: #ffffff; }
+    .brand i { color: #58a6ff; }
+    .playback-bar { background: var(--surface-elevated); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 0.85rem; font-weight: 600; padding: 0.4rem 0.85rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.15s ease; }
+    .btn:hover { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+    .scrubber { flex-grow: 1; min-width: 200px; }
+    .scrubber input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .step-display { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; color: #58a6ff; min-width: 140px; text-align: right; }
+    .main-view { display: grid; grid-template-columns: 1fr 380px; flex-grow: 1; overflow: hidden; }
+    .graph-container { padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at center, #161b22 0%, #0d1117 100%); overflow: auto; position: relative; }
+    .sidebar { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+    .event-list { flex-grow: 1; overflow-y: auto; padding: 0.5rem; list-style: none; }
+    .event-item { padding: 0.6rem 0.75rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.35rem; border: 1px solid transparent; cursor: pointer; transition: all 0.15s ease; }
+    .event-item:hover { background: var(--surface-elevated); }
+    .event-item.active { background: rgba(88, 166, 255, 0.15); border-color: var(--accent); color: #ffffff; }
+    .event-item .badge { font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
+    .badge.define { background: #21262d; color: var(--text-muted); }
+    .badge.valueChange { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+    .badge.invalidate { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+    .badge.calculate { background: rgba(88, 166, 255, 0.25); color: #79c0ff; }
+    .badge.ready { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
+    .graph-node { transition: all 0.25s ease; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><i class="fa-solid fa-diagram-project"></i> <span>Shiny Reactive Trace</span></div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);" id="summary-text"></div>
+  </header>
+  <div class="playback-bar">
+    <button class="btn" onclick="firstStep()"><i class="fa-solid fa-backward-step"></i> First</button>
+    <button class="btn" onclick="prevStep()"><i class="fa-solid fa-backward"></i> Prev</button>
+    <button class="btn" id="play-btn" onclick="togglePlay()"><i class="fa-solid fa-play"></i> Play</button>
+    <button class="btn" onclick="nextStep()">Next <i class="fa-solid fa-forward"></i></button>
+    <button class="btn" onclick="lastStep()">Last <i class="fa-solid fa-forward-step"></i></button>
+    <div class="scrubber">
+      <input type="range" id="scrubber-range" min="0" value="0" oninput="setStep(parseInt(this.value))" />
+    </div>
+    <div class="step-display" id="step-counter">Step 0 / 0</div>
+  </div>
+  <div class="main-view">
+    <div class="graph-container" id="graph-viewport">
+      <svg id="reactlog-svg" width="600" height="380" viewBox="0 0 600 380"></svg>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-header"><i class="fa-solid fa-list-timeline"></i> Event Stream</div>
+      <ul class="event-list" id="event-list"></ul>
+    </div>
+  </div>
+  <script>
+    const LOG_DATA = {
+  "success": true,
+  "nodes": [
+    {
+      "id": "base_customers",
+      "type": "input",
+      "role": "source",
+      "label": "input.base_customers",
+      "line": 17
+    },
+    {
+      "id": "discount_rate",
+      "type": "input",
+      "role": "source",
+      "label": "input.discount_rate",
+      "line": 15
+    },
+    {
+      "id": "enable_surge",
+      "type": "input",
+      "role": "source",
+      "label": "input.enable_surge",
+      "line": 18
+    },
+    {
+      "id": "marketing_spend",
+      "type": "input",
+      "role": "source",
+      "label": "input.marketing_spend",
+      "line": 16
+    },
+    {
+      "id": "region",
+      "type": "input",
+      "role": "source",
+      "label": "input.region",
+      "line": 9
+    },
+    {
+      "id": "effective_conversion",
+      "type": "calc",
+      "role": "conductor",
+      "label": "calc:effective_conversion",
+      "line": 41
+    },
+    {
+      "id": "gross_revenue",
+      "type": "calc",
+      "role": "conductor",
+      "label": "calc:gross_revenue",
+      "line": 49
+    },
+    {
+      "id": "inventory_risk",
+      "type": "calc",
+      "role": "conductor",
+      "label": "calc:inventory_risk",
+      "line": 66
+    },
+    {
+      "id": "net_profit",
+      "type": "calc",
+      "role": "conductor",
+      "label": "calc:net_profit",
+      "line": 57
+    },
+    {
+      "id": "raw_demand",
+      "type": "calc",
+      "role": "conductor",
+      "label": "calc:raw_demand",
+      "line": 34
+    },
+    {
+      "id": "regional_factor",
+      "type": "calc",
+      "role": "conductor",
+      "label": "calc:regional_factor",
+      "line": 22
+    },
+    {
+      "id": "alert_logger",
+      "type": "effect",
+      "role": "observer",
+      "label": "effect:alert_logger",
+      "line": 77
+    },
+    {
+      "id": "forecast_summary",
+      "type": "output",
+      "role": "observer",
+      "label": "output:forecast_summary",
+      "line": 110
+    },
+    {
+      "id": "kpi_profit",
+      "type": "output",
+      "role": "observer",
+      "label": "output:kpi_profit",
+      "line": 95
+    },
+    {
+      "id": "kpi_revenue",
+      "type": "output",
+      "role": "observer",
+      "label": "output:kpi_revenue",
+      "line": 88
+    },
+    {
+      "id": "kpi_risk",
+      "type": "output",
+      "role": "observer",
+      "label": "output:kpi_risk",
+      "line": 102
+    }
+  ],
+  "edges": [
+    {
+      "from": "gross_revenue",
+      "to": "kpi_revenue"
+    },
+    {
+      "from": "net_profit",
+      "to": "kpi_profit"
+    },
+    {
+      "from": "inventory_risk",
+      "to": "kpi_risk"
+    },
+    {
+      "from": "effective_conversion",
+      "to": "forecast_summary"
+    },
+    {
+      "from": "net_profit",
+      "to": "forecast_summary"
+    },
+    {
+      "from": "regional_factor",
+      "to": "forecast_summary"
+    },
+    {
+      "from": "inventory_risk",
+      "to": "alert_logger"
+    },
+    {
+      "from": "region",
+      "to": "regional_factor"
+    },
+    {
+      "from": "base_customers",
+      "to": "raw_demand"
+    },
+    {
+      "from": "marketing_spend",
+      "to": "raw_demand"
+    },
+    {
+      "from": "discount_rate",
+      "to": "effective_conversion"
+    },
+    {
+      "from": "raw_demand",
+      "to": "effective_conversion"
+    },
+    {
+      "from": "effective_conversion",
+      "to": "gross_revenue"
+    },
+    {
+      "from": "regional_factor",
+      "to": "gross_revenue"
+    },
+    {
+      "from": "enable_surge",
+      "to": "net_profit"
+    },
+    {
+      "from": "marketing_spend",
+      "to": "net_profit"
+    },
+    {
+      "from": "gross_revenue",
+      "to": "net_profit"
+    },
+    {
+      "from": "enable_surge",
+      "to": "inventory_risk"
+    },
+    {
+      "from": "effective_conversion",
+      "to": "inventory_risk"
+    }
+  ],
+  "events": [
+    {
+      "step": 0,
+      "event": "sessionInit",
+      "node_id": null,
+      "node_label": "session",
+      "node_type": "session",
+      "status": "active",
+      "details": "Initialized reactive session context"
+    },
+    {
+      "step": 1,
+      "event": "define",
+      "node_id": "base_customers",
+      "node_label": "input.base_customers",
+      "node_type": "source",
+      "status": "ready",
+      "details": "Registered source node at line 17"
+    },
+    {
+      "step": 2,
+      "event": "define",
+      "node_id": "discount_rate",
+      "node_label": "input.discount_rate",
+      "node_type": "source",
+      "status": "ready",
+      "details": "Registered source node at line 15"
+    },
+    {
+      "step": 3,
+      "event": "define",
+      "node_id": "enable_surge",
+      "node_label": "input.enable_surge",
+      "node_type": "source",
+      "status": "ready",
+      "details": "Registered source node at line 18"
+    },
+    {
+      "step": 4,
+      "event": "define",
+      "node_id": "marketing_spend",
+      "node_label": "input.marketing_spend",
+      "node_type": "source",
+      "status": "ready",
+      "details": "Registered source node at line 16"
+    },
+    {
+      "step": 5,
+      "event": "define",
+      "node_id": "region",
+      "node_label": "input.region",
+      "node_type": "source",
+      "status": "ready",
+      "details": "Registered source node at line 9"
+    },
+    {
+      "step": 6,
+      "event": "define",
+      "node_id": "effective_conversion",
+      "node_label": "calc:effective_conversion",
+      "node_type": "conductor",
+      "status": "idle",
+      "details": "Registered conductor node at line 41"
+    },
+    {
+      "step": 7,
+      "event": "define",
+      "node_id": "gross_revenue",
+      "node_label": "calc:gross_revenue",
+      "node_type": "conductor",
+      "status": "idle",
+      "details": "Registered conductor node at line 49"
+    },
+    {
+      "step": 8,
+      "event": "define",
+      "node_id": "inventory_risk",
+      "node_label": "calc:inventory_risk",
+      "node_type": "conductor",
+      "status": "idle",
+      "details": "Registered conductor node at line 66"
+    },
+    {
+      "step": 9,
+      "event": "define",
+      "node_id": "net_profit",
+      "node_label": "calc:net_profit",
+      "node_type": "conductor",
+      "status": "idle",
+      "details": "Registered conductor node at line 57"
+    },
+    {
+      "step": 10,
+      "event": "define",
+      "node_id": "raw_demand",
+      "node_label": "calc:raw_demand",
+      "node_type": "conductor",
+      "status": "idle",
+      "details": "Registered conductor node at line 34"
+    },
+    {
+      "step": 11,
+      "event": "define",
+      "node_id": "regional_factor",
+      "node_label": "calc:regional_factor",
+      "node_type": "conductor",
+      "status": "idle",
+      "details": "Registered conductor node at line 22"
+    },
+    {
+      "step": 12,
+      "event": "define",
+      "node_id": "alert_logger",
+      "node_label": "effect:alert_logger",
+      "node_type": "observer",
+      "status": "idle",
+      "details": "Registered observer node at line 77"
+    },
+    {
+      "step": 13,
+      "event": "define",
+      "node_id": "forecast_summary",
+      "node_label": "output:forecast_summary",
+      "node_type": "observer",
+      "status": "idle",
+      "details": "Registered observer node at line 110"
+    },
+    {
+      "step": 14,
+      "event": "define",
+      "node_id": "kpi_profit",
+      "node_label": "output:kpi_profit",
+      "node_type": "observer",
+      "status": "idle",
+      "details": "Registered observer node at line 95"
+    },
+    {
+      "step": 15,
+      "event": "define",
+      "node_id": "kpi_revenue",
+      "node_label": "output:kpi_revenue",
+      "node_type": "observer",
+      "status": "idle",
+      "details": "Registered observer node at line 88"
+    },
+    {
+      "step": 16,
+      "event": "define",
+      "node_id": "kpi_risk",
+      "node_label": "output:kpi_risk",
+      "node_type": "observer",
+      "status": "idle",
+      "details": "Registered observer node at line 102"
+    },
+    {
+      "step": 17,
+      "event": "valueChange",
+      "node_id": "base_customers",
+      "node_label": "input.base_customers",
+      "node_type": "source",
+      "status": "ready",
+      "value": "10",
+      "details": "Input value set to 10"
+    },
+    {
+      "step": 18,
+      "event": "invalidate",
+      "node_id": "raw_demand",
+      "node_label": "calc:raw_demand",
+      "node_type": "conductor",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'base_customers'"
+    },
+    {
+      "step": 19,
+      "event": "invalidate",
+      "node_id": "effective_conversion",
+      "node_label": "calc:effective_conversion",
+      "node_type": "conductor",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'raw_demand'"
+    },
+    {
+      "step": 20,
+      "event": "invalidate",
+      "node_id": "forecast_summary",
+      "node_label": "output:forecast_summary",
+      "node_type": "observer",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'effective_conversion'"
+    },
+    {
+      "step": 21,
+      "event": "invalidate",
+      "node_id": "gross_revenue",
+      "node_label": "calc:gross_revenue",
+      "node_type": "conductor",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'effective_conversion'"
+    },
+    {
+      "step": 22,
+      "event": "invalidate",
+      "node_id": "kpi_revenue",
+      "node_label": "output:kpi_revenue",
+      "node_type": "observer",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'gross_revenue'"
+    },
+    {
+      "step": 23,
+      "event": "invalidate",
+      "node_id": "net_profit",
+      "node_label": "calc:net_profit",
+      "node_type": "conductor",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'gross_revenue'"
+    },
+    {
+      "step": 24,
+      "event": "invalidate",
+      "node_id": "kpi_profit",
+      "node_label": "output:kpi_profit",
+      "node_type": "observer",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'net_profit'"
+    },
+    {
+      "step": 25,
+      "event": "invalidate",
+      "node_id": "inventory_risk",
+      "node_label": "calc:inventory_risk",
+      "node_type": "conductor",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'effective_conversion'"
+    },
+    {
+      "step": 26,
+      "event": "invalidate",
+      "node_id": "kpi_risk",
+      "node_label": "output:kpi_risk",
+      "node_type": "observer",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'inventory_risk'"
+    },
+    {
+      "step": 27,
+      "event": "invalidate",
+      "node_id": "alert_logger",
+      "node_label": "effect:alert_logger",
+      "node_type": "observer",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'inventory_risk'"
+    },
+    {
+      "step": 28,
+      "event": "valueChange",
+      "node_id": "discount_rate",
+      "node_label": "input.discount_rate",
+      "node_type": "source",
+      "status": "ready",
+      "value": "10",
+      "details": "Input value set to 10"
+    },
+    {
+      "step": 29,
+      "event": "valueChange",
+      "node_id": "enable_surge",
+      "node_label": "input.enable_surge",
+      "node_type": "source",
+      "status": "ready",
+      "value": "10",
+      "details": "Input value set to 10"
+    },
+    {
+      "step": 30,
+      "event": "valueChange",
+      "node_id": "marketing_spend",
+      "node_label": "input.marketing_spend",
+      "node_type": "source",
+      "status": "ready",
+      "value": "10",
+      "details": "Input value set to 10"
+    },
+    {
+      "step": 31,
+      "event": "valueChange",
+      "node_id": "region",
+      "node_label": "input.region",
+      "node_type": "source",
+      "status": "ready",
+      "value": "10",
+      "details": "Input value set to 10"
+    },
+    {
+      "step": 32,
+      "event": "invalidate",
+      "node_id": "regional_factor",
+      "node_label": "calc:regional_factor",
+      "node_type": "conductor",
+      "status": "dirty",
+      "details": "Invalidated by upstream dependency 'region'"
+    },
+    {
+      "step": 33,
+      "event": "flushStart",
+      "node_id": null,
+      "node_label": "reactiveEnvironment",
+      "node_type": "engine",
+      "status": "flushing",
+      "details": "Starting reactive flush (11 dirty nodes)"
+    },
+    {
+      "step": 34,
+      "event": "calculate",
+      "node_id": "raw_demand",
+      "node_label": "calc:raw_demand",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'raw_demand'"
+    },
+    {
+      "step": 35,
+      "event": "dependsOn",
+      "node_id": "raw_demand",
+      "node_label": "calc:raw_demand",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'base_customers'"
+    },
+    {
+      "step": 36,
+      "event": "dependsOn",
+      "node_id": "raw_demand",
+      "node_label": "calc:raw_demand",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'marketing_spend'"
+    },
+    {
+      "step": 37,
+      "event": "ready",
+      "node_id": "raw_demand",
+      "node_label": "calc:raw_demand",
+      "node_type": "conductor",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 38,
+      "event": "calculate",
+      "node_id": "regional_factor",
+      "node_label": "calc:regional_factor",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'regional_factor'"
+    },
+    {
+      "step": 39,
+      "event": "dependsOn",
+      "node_id": "regional_factor",
+      "node_label": "calc:regional_factor",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'region'"
+    },
+    {
+      "step": 40,
+      "event": "ready",
+      "node_id": "regional_factor",
+      "node_label": "calc:regional_factor",
+      "node_type": "conductor",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 41,
+      "event": "calculate",
+      "node_id": "effective_conversion",
+      "node_label": "calc:effective_conversion",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'effective_conversion'"
+    },
+    {
+      "step": 42,
+      "event": "dependsOn",
+      "node_id": "effective_conversion",
+      "node_label": "calc:effective_conversion",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'discount_rate'"
+    },
+    {
+      "step": 43,
+      "event": "dependsOn",
+      "node_id": "effective_conversion",
+      "node_label": "calc:effective_conversion",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'raw_demand'"
+    },
+    {
+      "step": 44,
+      "event": "ready",
+      "node_id": "effective_conversion",
+      "node_label": "calc:effective_conversion",
+      "node_type": "conductor",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 45,
+      "event": "calculate",
+      "node_id": "gross_revenue",
+      "node_label": "calc:gross_revenue",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'gross_revenue'"
+    },
+    {
+      "step": 46,
+      "event": "dependsOn",
+      "node_id": "gross_revenue",
+      "node_label": "calc:gross_revenue",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'effective_conversion'"
+    },
+    {
+      "step": 47,
+      "event": "dependsOn",
+      "node_id": "gross_revenue",
+      "node_label": "calc:gross_revenue",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'regional_factor'"
+    },
+    {
+      "step": 48,
+      "event": "ready",
+      "node_id": "gross_revenue",
+      "node_label": "calc:gross_revenue",
+      "node_type": "conductor",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 49,
+      "event": "calculate",
+      "node_id": "inventory_risk",
+      "node_label": "calc:inventory_risk",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'inventory_risk'"
+    },
+    {
+      "step": 50,
+      "event": "dependsOn",
+      "node_id": "inventory_risk",
+      "node_label": "calc:inventory_risk",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'enable_surge'"
+    },
+    {
+      "step": 51,
+      "event": "dependsOn",
+      "node_id": "inventory_risk",
+      "node_label": "calc:inventory_risk",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'effective_conversion'"
+    },
+    {
+      "step": 52,
+      "event": "ready",
+      "node_id": "inventory_risk",
+      "node_label": "calc:inventory_risk",
+      "node_type": "conductor",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 53,
+      "event": "calculate",
+      "node_id": "net_profit",
+      "node_label": "calc:net_profit",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'net_profit'"
+    },
+    {
+      "step": 54,
+      "event": "dependsOn",
+      "node_id": "net_profit",
+      "node_label": "calc:net_profit",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'enable_surge'"
+    },
+    {
+      "step": 55,
+      "event": "dependsOn",
+      "node_id": "net_profit",
+      "node_label": "calc:net_profit",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'marketing_spend'"
+    },
+    {
+      "step": 56,
+      "event": "dependsOn",
+      "node_id": "net_profit",
+      "node_label": "calc:net_profit",
+      "node_type": "conductor",
+      "status": "calculating",
+      "details": "Read value from dependency 'gross_revenue'"
+    },
+    {
+      "step": 57,
+      "event": "ready",
+      "node_id": "net_profit",
+      "node_label": "calc:net_profit",
+      "node_type": "conductor",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 58,
+      "event": "calculate",
+      "node_id": "alert_logger",
+      "node_label": "effect:alert_logger",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'alert_logger'"
+    },
+    {
+      "step": 59,
+      "event": "dependsOn",
+      "node_id": "alert_logger",
+      "node_label": "effect:alert_logger",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Read value from dependency 'inventory_risk'"
+    },
+    {
+      "step": 60,
+      "event": "ready",
+      "node_id": "alert_logger",
+      "node_label": "effect:alert_logger",
+      "node_type": "observer",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 61,
+      "event": "calculate",
+      "node_id": "forecast_summary",
+      "node_label": "output:forecast_summary",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'forecast_summary'"
+    },
+    {
+      "step": 62,
+      "event": "dependsOn",
+      "node_id": "forecast_summary",
+      "node_label": "output:forecast_summary",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Read value from dependency 'effective_conversion'"
+    },
+    {
+      "step": 63,
+      "event": "dependsOn",
+      "node_id": "forecast_summary",
+      "node_label": "output:forecast_summary",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Read value from dependency 'net_profit'"
+    },
+    {
+      "step": 64,
+      "event": "dependsOn",
+      "node_id": "forecast_summary",
+      "node_label": "output:forecast_summary",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Read value from dependency 'regional_factor'"
+    },
+    {
+      "step": 65,
+      "event": "ready",
+      "node_id": "forecast_summary",
+      "node_label": "output:forecast_summary",
+      "node_type": "observer",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 66,
+      "event": "calculate",
+      "node_id": "kpi_profit",
+      "node_label": "output:kpi_profit",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'kpi_profit'"
+    },
+    {
+      "step": 67,
+      "event": "dependsOn",
+      "node_id": "kpi_profit",
+      "node_label": "output:kpi_profit",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Read value from dependency 'net_profit'"
+    },
+    {
+      "step": 68,
+      "event": "ready",
+      "node_id": "kpi_profit",
+      "node_label": "output:kpi_profit",
+      "node_type": "observer",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 69,
+      "event": "calculate",
+      "node_id": "kpi_revenue",
+      "node_label": "output:kpi_revenue",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'kpi_revenue'"
+    },
+    {
+      "step": 70,
+      "event": "dependsOn",
+      "node_id": "kpi_revenue",
+      "node_label": "output:kpi_revenue",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Read value from dependency 'gross_revenue'"
+    },
+    {
+      "step": 71,
+      "event": "ready",
+      "node_id": "kpi_revenue",
+      "node_label": "output:kpi_revenue",
+      "node_type": "observer",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 72,
+      "event": "calculate",
+      "node_id": "kpi_risk",
+      "node_label": "output:kpi_risk",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Executing reactive computation for 'kpi_risk'"
+    },
+    {
+      "step": 73,
+      "event": "dependsOn",
+      "node_id": "kpi_risk",
+      "node_label": "output:kpi_risk",
+      "node_type": "observer",
+      "status": "calculating",
+      "details": "Read value from dependency 'inventory_risk'"
+    },
+    {
+      "step": 74,
+      "event": "ready",
+      "node_id": "kpi_risk",
+      "node_label": "output:kpi_risk",
+      "node_type": "observer",
+      "status": "ready",
+      "details": "Computation completed; cached updated value"
+    },
+    {
+      "step": 75,
+      "event": "flushComplete",
+      "node_id": null,
+      "node_label": "reactiveEnvironment",
+      "node_type": "engine",
+      "status": "idle",
+      "details": "Reactive flush finished across 11 evaluated nodes"
+    }
+  ],
+  "steps_total": 76,
+  "summary": "Simulated reactive trace: 76 steps across 16 nodes (11 invalidated)"
+};
+    let currentStep = 0;
+    let isPlaying = false;
+    let playTimer = null;
+
+    const totalSteps = (LOG_DATA.events || []).length;
+    document.getElementById('scrubber-range').max = Math.max(0, totalSteps - 1);
+    document.getElementById('summary-text').textContent = LOG_DATA.summary || '';
+
+    function renderEventsList() {
+      const list = document.getElementById('event-list');
+      list.innerHTML = '';
+      (LOG_DATA.events || []).forEach((ev, idx) => {
+        const li = document.createElement('li');
+        li.className = 'event-item' + (idx === currentStep ? ' active' : '');
+        li.onclick = () => setStep(idx);
+
+        const headerDiv = document.createElement('div');
+        headerDiv.style.display = 'flex';
+        headerDiv.style.justifyContent = 'space-between';
+        headerDiv.style.marginBottom = '0.2rem';
+
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (ev.event || '');
+        badge.textContent = ev.event || '';
+
+        const stepNum = document.createElement('span');
+        stepNum.style.color = 'var(--text-muted)';
+        stepNum.style.fontFamily = "'JetBrains Mono', monospace";
+        stepNum.style.fontSize = '0.75rem';
+        stepNum.textContent = '#' + (ev.step != null ? ev.step : idx);
+
+        headerDiv.appendChild(badge);
+        headerDiv.appendChild(stepNum);
+
+        const titleDiv = document.createElement('div');
+        titleDiv.style.fontWeight = '600';
+        titleDiv.style.color = '#ffffff';
+        titleDiv.textContent = ev.node_label || '';
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.style.fontSize = '0.75rem';
+        detailsDiv.style.color = 'var(--text-muted)';
+        detailsDiv.textContent = ev.details || '';
+
+        li.appendChild(headerDiv);
+        li.appendChild(titleDiv);
+        li.appendChild(detailsDiv);
+        list.appendChild(li);
+      });
+    }
+
+    function renderGraph() {
+      const svg = document.getElementById('reactlog-svg');
+      svg.innerHTML = '<defs><marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#30363d"/></marker><marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/></marker></defs>';
+
+      const nodes = LOG_DATA.nodes || [];
+      const edges = LOG_DATA.edges || [];
+      const activeEvent = LOG_DATA.events[currentStep] || {};
+
+      const sources = [];
+      const conductors = [];
+      const observers = [];
+      for (const n of nodes) {
+        if (n.role === 'source') sources.push(n);
+        else if (n.role === 'conductor') conductors.push(n);
+        else if (n.role === 'observer') observers.push(n);
+      }
+
+      const maxRows = Math.max(sources.length, conductors.length, observers.length, 3);
+      const rowHeight = 65;
+      const svgHeight = Math.max(460, maxRows * rowHeight + 80);
+      const svgWidth = 860;
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', svgHeight);
+      svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+
+      const calcY = (idx, count) => {
+        const totalHeight = (count - 1) * rowHeight;
+        const startY = (svgHeight - totalHeight) / 2;
+        return startY + idx * rowHeight;
+      };
+
+      const pos = {};
+      sources.forEach((n, i) => { pos[n.id] = { x: 120, y: calcY(i, sources.length) }; });
+      conductors.forEach((n, i) => { pos[n.id] = { x: 430, y: calcY(i, conductors.length) }; });
+      observers.forEach((n, i) => { pos[n.id] = { x: 740, y: calcY(i, observers.length) }; });
+
+      edges.forEach(e => {
+        const p1 = pos[e.from];
+        const p2 = pos[e.to];
+        if (p1 && p2) {
+          const isEdgeActive = activeEvent.node_id === e.to && activeEvent.event === 'dependsOn' && activeEvent.details && activeEvent.details.includes(e.from);
+          const cpX = p1.x + 85 + (p2.x - 85 - (p1.x + 85)) / 2;
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', `M ${p1.x + 85} ${p1.y} C ${cpX} ${p1.y}, ${cpX} ${p2.y}, ${p2.x - 85} ${p2.y}`);
+          path.setAttribute('stroke', isEdgeActive ? '#58a6ff' : '#30363d');
+          path.setAttribute('stroke-width', isEdgeActive ? '2.5' : '1.5');
+          path.setAttribute('fill', 'none');
+          path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : 'url(#arrow)');
+          svg.appendChild(path);
+        }
+      });
+
+      nodes.forEach(n => {
+        const p = pos[n.id] || { x: 430, y: 200 };
+        const isActive = activeEvent.node_id === n.id;
+        let strokeColor = '#30363d';
+        let fillColor = '#161b22';
+        let textColor = '#8b949e';
+
+        if (n.role === 'source') strokeColor = '#1f6feb';
+        else if (n.role === 'conductor') strokeColor = '#d29922';
+        else if (n.type === 'effect') strokeColor = '#9333ea';
+        else strokeColor = '#238636';
+
+        if (isActive) {
+          fillColor = '#21262d';
+          textColor = '#ffffff';
+          if (activeEvent.status === 'dirty') strokeColor = '#d29922';
+          else if (activeEvent.status === 'calculating') strokeColor = '#58a6ff';
+          else if (activeEvent.status === 'ready') strokeColor = '#3fb950';
+        }
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.className = 'graph-node';
+        g.style.cursor = 'pointer';
+        g.onclick = () => {
+          const matchIdx = (LOG_DATA.events || []).findIndex(ev => ev.node_id === n.id);
+          if (matchIdx !== -1) setStep(matchIdx);
+        };
+
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', p.x - 85);
+        rect.setAttribute('y', p.y - 17);
+        rect.setAttribute('width', 170);
+        rect.setAttribute('height', 34);
+        rect.setAttribute('rx', '6');
+        rect.setAttribute('fill', fillColor);
+        rect.setAttribute('stroke', strokeColor);
+        rect.setAttribute('stroke-width', isActive ? '2.5' : '1.2');
+        g.appendChild(rect);
+
+        const icon = n.role === 'source' ? '📥 ' : (n.role === 'conductor' ? '⚡ ' : (n.type === 'effect' ? '🔔 ' : '📊 '));
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', p.x);
+        text.setAttribute('y', p.y + 4);
+        text.setAttribute('fill', textColor);
+        text.setAttribute('font-size', '11');
+        text.setAttribute('font-family', 'JetBrains Mono, monospace');
+        text.setAttribute('text-anchor', 'middle');
+        text.textContent = icon + (n.label || n.id);
+        g.appendChild(text);
+
+        svg.appendChild(g);
+      });
+    }
+
+    function setStep(idx) {
+      currentStep = Math.max(0, Math.min(idx, totalSteps - 1));
+      document.getElementById('scrubber-range').value = currentStep;
+      document.getElementById('step-counter').textContent = `Step ${currentStep + 1} / ${totalSteps}`;
+      renderEventsList();
+      renderGraph();
+      const activeEl = document.querySelectorAll('.event-item')[currentStep];
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function firstStep() { setStep(0); }
+    function prevStep() { setStep(currentStep - 1); }
+    function nextStep() {
+      if (currentStep < totalSteps - 1) {
+        setStep(currentStep + 1);
+      } else if (isPlaying) {
+        togglePlay();
+      }
+    }
+    function lastStep() { setStep(totalSteps - 1); }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      const btn = document.getElementById('play-btn');
+      if (isPlaying) {
+        btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+        playTimer = setInterval(nextStep, 700);
+      } else {
+        btn.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+        clearInterval(playTimer);
+      }
+    }
+
+    setStep(0);
+  </script>
+</body>
+</html>

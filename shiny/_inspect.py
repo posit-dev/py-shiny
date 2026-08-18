@@ -623,7 +623,7 @@ def format_reactlog_html(
 
     function renderGraph() {{
       const svg = document.getElementById('reactlog-svg');
-      svg.innerHTML = '<defs><marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#30363d"/></marker></defs>';
+      svg.innerHTML = '<defs><marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#30363d"/></marker><marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/></marker></defs>';
 
       const nodes = LOG_DATA.nodes || [];
       const edges = LOG_DATA.edges || [];
@@ -638,26 +638,43 @@ def format_reactlog_html(
         else if (n.role === 'observer') observers.push(n);
       }}
 
+      const maxRows = Math.max(sources.length, conductors.length, observers.length, 3);
+      const rowHeight = 65;
+      const svgHeight = Math.max(460, maxRows * rowHeight + 80);
+      const svgWidth = 860;
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', svgHeight);
+      svg.setAttribute('viewBox', `0 0 ${{svgWidth}} ${{svgHeight}}`);
+
+      const calcY = (idx, count) => {{
+        const totalHeight = (count - 1) * rowHeight;
+        const startY = (svgHeight - totalHeight) / 2;
+        return startY + idx * rowHeight;
+      }};
+
       const pos = {{}};
-      sources.forEach((n, i) => {{ pos[n.id] = {{ x: 80, y: 70 + (i * 70) }}; }});
-      conductors.forEach((n, i) => {{ pos[n.id] = {{ x: 280, y: 90 + (i * 80) }}; }});
-      observers.forEach((n, i) => {{ pos[n.id] = {{ x: 480, y: 70 + (i * 70) }}; }});
+      sources.forEach((n, i) => {{ pos[n.id] = {{ x: 120, y: calcY(i, sources.length) }}; }});
+      conductors.forEach((n, i) => {{ pos[n.id] = {{ x: 430, y: calcY(i, conductors.length) }}; }});
+      observers.forEach((n, i) => {{ pos[n.id] = {{ x: 740, y: calcY(i, observers.length) }}; }});
 
       edges.forEach(e => {{
         const p1 = pos[e.from];
         const p2 = pos[e.to];
         if (p1 && p2) {{
+          const isEdgeActive = activeEvent.node_id === e.to && activeEvent.event === 'dependsOn' && activeEvent.details && activeEvent.details.includes(e.from);
+          const cpX = p1.x + 85 + (p2.x - 85 - (p1.x + 85)) / 2;
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', `M ${{p1.x + 50}} ${{p1.y + 15}} L ${{p2.x - 50}} ${{p2.y + 15}}`);
-          path.setAttribute('stroke', '#30363d');
-          path.setAttribute('stroke-width', '2');
-          path.setAttribute('marker-end', 'url(#arrow)');
+          path.setAttribute('d', `M ${{p1.x + 85}} ${{p1.y}} C ${{cpX}} ${{p1.y}}, ${{cpX}} ${{p2.y}}, ${{p2.x - 85}} ${{p2.y}}`);
+          path.setAttribute('stroke', isEdgeActive ? '#58a6ff' : '#30363d');
+          path.setAttribute('stroke-width', isEdgeActive ? '2.5' : '1.5');
+          path.setAttribute('fill', 'none');
+          path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : 'url(#arrow)');
           svg.appendChild(path);
         }}
       }});
 
       nodes.forEach(n => {{
-        const p = pos[n.id] || {{ x: 200, y: 200 }};
+        const p = pos[n.id] || {{ x: 430, y: 200 }};
         const isActive = activeEvent.node_id === n.id;
         let strokeColor = '#30363d';
         let fillColor = '#161b22';
@@ -665,6 +682,7 @@ def format_reactlog_html(
 
         if (n.role === 'source') strokeColor = '#1f6feb';
         else if (n.role === 'conductor') strokeColor = '#d29922';
+        else if (n.type === 'effect') strokeColor = '#9333ea';
         else strokeColor = '#238636';
 
         if (isActive) {{
@@ -677,26 +695,32 @@ def format_reactlog_html(
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.className = 'graph-node';
+        g.style.cursor = 'pointer';
+        g.onclick = () => {{
+          const matchIdx = (LOG_DATA.events || []).findIndex(ev => ev.node_id === n.id);
+          if (matchIdx !== -1) setStep(matchIdx);
+        }};
 
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', p.x - 55);
-        rect.setAttribute('y', p.y);
-        rect.setAttribute('width', 110);
-        rect.setAttribute('height', 32);
+        rect.setAttribute('x', p.x - 85);
+        rect.setAttribute('y', p.y - 17);
+        rect.setAttribute('width', 170);
+        rect.setAttribute('height', 34);
         rect.setAttribute('rx', '6');
         rect.setAttribute('fill', fillColor);
         rect.setAttribute('stroke', strokeColor);
-        rect.setAttribute('stroke-width', isActive ? '3' : '1.5');
+        rect.setAttribute('stroke-width', isActive ? '2.5' : '1.2');
         g.appendChild(rect);
 
+        const icon = n.role === 'source' ? '📥 ' : (n.role === 'conductor' ? '⚡ ' : (n.type === 'effect' ? '🔔 ' : '📊 '));
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', p.x);
-        text.setAttribute('y', p.y + 20);
+        text.setAttribute('y', p.y + 4);
         text.setAttribute('fill', textColor);
         text.setAttribute('font-size', '11');
         text.setAttribute('font-family', 'JetBrains Mono, monospace');
         text.setAttribute('text-anchor', 'middle');
-        text.textContent = n.label;
+        text.textContent = icon + (n.label || n.id);
         g.appendChild(text);
 
         svg.appendChild(g);
