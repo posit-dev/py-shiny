@@ -11,7 +11,7 @@ __all__ = (
 )
 import copy
 from json import dumps
-from typing import Any, Mapping, Optional, Union, cast
+from typing import Any, Iterable, Mapping, Optional, Sequence, Union, cast
 
 from htmltools import Tag, TagAttrs, TagChild, TagList, css, div, tags
 
@@ -19,11 +19,11 @@ from .._docstring import add_example
 from ..bookmark import restore_input
 from ..module import resolve_id
 from ._choices import (
+    ChoiceKey,
     ChoiceSelection,
     ChoiceValue,
-    normalize_choices_indexed,
     normalize_choices_mapping,
-    resolve_selected_values,
+    resolve_selected,
 )
 from ._html_deps_external import selectize_deps
 from ._utils import JSEval, extract_js_keys, shiny_input_label
@@ -38,21 +38,18 @@ _SelectChoices = Union[_Choices, _OptGrpChoices]
 # Formats available to the user. Choice values are coerced with `str()`, so e.g. the
 # `int` keys of a `dict[int, str]` are supported.
 SelectChoicesArg = Union[
-    # [0, 1, 2] or ["a", "b", "c"]
-    "list[ChoiceValue]",
-    # (0, 1, 2) or ("a", "b", "c")
-    "tuple[ChoiceValue, ...]",
+    # [0, 1, 2] or ("a", "b", "c")
+    Sequence[ChoiceValue],
     # {"a": "Choice A", 0: "Choice B"}
-    Mapping[ChoiceValue, str],
+    Mapping[ChoiceKey, str],
     # optgroup {"Group A": {"a1": "Choice A1", "a2": "Choice A2"}, "Group B": {}}
-    Mapping[ChoiceValue, Mapping[ChoiceValue, str]],
+    Mapping[ChoiceKey, Mapping[ChoiceKey, str]],
 ]
 
 # A single choice value, or several.
 SelectSelectedArg = Union[
     ChoiceValue,
-    "list[ChoiceValue]",
-    "tuple[ChoiceValue, ...]",
+    Sequence[ChoiceValue],
 ]
 
 
@@ -276,7 +273,7 @@ def _input_select_impl(
     if selected is None and not multiple:
         selected = _find_first_option(choices_)
     else:
-        selected = resolve_selected_values(selected, _choice_value_index(choices))
+        selected = resolve_selected(selected, _choice_value_strings(choices_))
 
     if options is None:
         options = {}
@@ -356,16 +353,23 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
 
     See https://github.com/posit-dev/py-shiny/issues/2272.
     """
-    if x is None:
+    if isinstance(x, Iterable) and not isinstance(x, (str, bytes, Mapping)):
+        # A sequence's entries are both the choice value and the label, so the label is
+        # the value's string form.
+        return normalize_choices_mapping({k: str(k) for k in x})
+    elif not isinstance(x, Mapping):
+        # A bare `str` satisfies `Sequence[ChoiceValue]` statically, but iterating it
+        # would turn each character into its own choice.
         raise TypeError("`choices` must be a list, tuple, or dict.")
-    elif isinstance(x, (list, tuple)):
-        return normalize_choices_mapping({k: k for k in x})
+
+    # The top-level mapping holds optgroup labels alongside choice values, so a
+    # collision there is reported as either one.
+    normalized = normalize_choices_mapping(x, keys_are="choice value or optgroup label")
 
     # The result may mix flat options and optgroups at the top level (e.g.
     # `{"a": "A", "Group B": {...}}`). That matches neither arm of the
     # `_SelectChoices` union, hence the `cast`, but `_render_choices()`
     # checks each value with `isinstance`, so the mix is fine at runtime.
-    normalized = normalize_choices_mapping(x)
     result: dict[str, Any] = {
         key: (normalize_choices_mapping(value) if isinstance(value, Mapping) else value)
         for key, value in normalized.items()
@@ -373,38 +377,22 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
     return cast(_SelectChoices, result)
 
 
-def _choice_value_index(x: SelectChoicesArg) -> dict[str, Any]:
+def _choice_value_strings(x: _SelectChoices) -> set[str]:
     """
-    Map each choice value's string form back to the value as the caller wrote it.
+    Collect the choice values of already-normalized choices, for `resolve_selected()`.
 
     Optgroup labels are not choice values, so only the options nested inside a group are
-    indexed (never the group key itself).
+    collected (never the group key itself). Two groups may hold the same choice value:
+    duplicates are legal HTML, and the browser reports only the value, so the options are
+    indistinguishable either way.
     """
-    if x is None:
-        return {}
-    elif isinstance(x, (list, tuple)):
-        return normalize_choices_indexed({k: k for k in x})[1]
-
-    index: dict[str, Any] = {}
+    values: set[str] = set()
     for key, value in x.items():
         if isinstance(value, Mapping):
-            index.update(normalize_choices_indexed(value)[1])
+            values.update(value.keys())
         else:
-            index[str(key)] = key
-    return index
-
-
-def _contains_html(x: _SelectChoices) -> bool:
-    for v in x.values():
-        if isinstance(v, Mapping):
-            # Check the `_Choices` values of `_OptGrpChoices`
-            for vv in v.values():
-                if not isinstance(vv, str):
-                    return True
-        else:
-            if not isinstance(v, str):
-                return True
-    return False
+            values.add(key)
+    return values
 
 
 def _render_choices(

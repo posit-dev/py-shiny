@@ -6,7 +6,7 @@ __all__ = (
     "input_radio_buttons",
 )
 
-from typing import Any, Mapping, Optional, Union
+from typing import Iterable, Mapping, Optional, Sequence, Union
 
 from htmltools import Tag, TagAttrs, TagChild, css, div, span, tags
 
@@ -14,34 +14,29 @@ from .._docstring import add_example
 from ..bookmark import restore_input
 from ..module import resolve_id
 from ._choices import (
+    ChoiceKey,
     ChoiceSelection,
     ChoiceValue,
-    normalize_choices_indexed,
-    resolve_selected_values,
+    normalize_choices_mapping,
+    resolve_selected,
 )
 from ._html_deps_shinyverse import components_dependencies
 from ._utils import shiny_input_label
 
-# Canonical format for representing select options. Choice values are strings here:
-# `_normalize_choices()` has already coerced them.
-_Choices = Mapping[str, TagChild]
-
-# Formats available to the user
+# Formats available to the user. Choice values are coerced with `str()`, so e.g. the
+# `int` keys of a `dict[int, str]` are supported.
 ChoicesArg = Union[
-    # [0, 1, 2] or ["a", "b", "c"]
-    "list[ChoiceValue]",
-    # (0, 1, 2) or ("a", "b", "c")
-    "tuple[ChoiceValue, ...]",
+    # [0, 1, 2] or ("a", "b", "c")
+    Sequence[ChoiceValue],
     # {"a": "Choice A", 0: tags.i("Choice B")}
-    Mapping[ChoiceValue, TagChild],
+    Mapping[ChoiceKey, TagChild],
 ]
 
 # A single choice value, or several. Coerced with `str()`, so e.g. the `int` keys of a
 # `dict[int, str]` passed as `choices` work here too.
 SelectedArg = Union[
     ChoiceValue,
-    "list[ChoiceValue]",
-    "tuple[ChoiceValue, ...]",
+    Sequence[ChoiceValue],
 ]
 
 
@@ -264,7 +259,7 @@ def input_radio_buttons(
     label: TagChild,
     choices: ChoicesArg,
     *,
-    selected: Optional[ChoiceValue] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -336,7 +331,7 @@ def _generate_options(
     selected: Optional[SelectedArg],
     inline: bool,
 ) -> Tag:
-    choicez, choice_values = _normalize_choices_indexed(choices)
+    choicez = _normalize_choices(choices)
 
     # A radio group must always have something checked, so an omitted `selected` falls
     # back to the first choice. Note the check is against `None` specifically: an empty
@@ -349,7 +344,7 @@ def _generate_options(
             )
         selected = next(iter(choicez))
 
-    selection = ChoiceSelection(resolve_selected_values(selected, choice_values))
+    selection = ChoiceSelection(resolve_selected(selected, choicez.keys()))
 
     return div(
         [
@@ -396,21 +391,16 @@ def _generate_option(
         )
 
 
-def _normalize_choices(x: ChoicesArg) -> _Choices:
-    return _normalize_choices_indexed(x)[0]
-
-
-def _choice_value_index(x: ChoicesArg) -> dict[str, Any]:
-    """Map each choice value's string form back to the value as the caller wrote it."""
-    return _normalize_choices_indexed(x)[1]
-
-
-def _normalize_choices_indexed(x: ChoicesArg) -> tuple[_Choices, dict[str, Any]]:
+def _normalize_choices(x: ChoicesArg) -> dict[str, TagChild]:
     """
     Normalize choices, coercing choice values to `str` so they match the
     string form the client reports.
     """
-    if isinstance(x, (list, tuple)):
-        return normalize_choices_indexed({k: k for k in x})
+    if isinstance(x, Mapping):
+        return normalize_choices_mapping(x)
+    elif isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+        return normalize_choices_mapping({k: k for k in x})
     else:
-        return normalize_choices_indexed(x)
+        # A bare `str` satisfies `Sequence[ChoiceValue]` statically, but iterating it
+        # would turn each character into its own choice.
+        raise TypeError("`choices` must be a list, tuple, or dict.")

@@ -105,13 +105,36 @@ def test_input_checkbox_group_mixed_value_types(
 
 
 def test_input_checkbox_group_numerically_equal_selected():
-    # `1.0` is not `str(1)`, but it *is* `== 1`, so it resolves to the choice value `1`
-    # and renders as the `"1"` the client will match on.
+    # `str(1.0)` is `"1.0"`, so an integral float is matched against the integer it
+    # names as well, and renders as the `"1"` the client will match on. R Shiny gets
+    # this case for free, since `as.character(1.0)` is `"1"`.
     html = ui.input_checkbox_group(
         "x", label="L", choices={1: "a", 2: "b"}, selected=[1.0]
     ).get_html_string()
     assert _checked_count(html) == 1
     assert 'value="1" checked="checked"' in html
+
+
+def test_bool_selected_does_not_name_an_int_choice(
+    session: _MessageCapturingSession,
+):
+    # Matching is on the string form, so `True` does not name the choice value `1` even
+    # though `True == 1`. This matches R Shiny, where `"TRUE"` and `"1"` differ.
+    html = ui.input_radio_buttons(
+        "x", label="L", choices={1: "one"}, selected=True
+    ).get_html_string()
+    assert _checked_count(html) == 0
+
+    msg = _send(session, ui.update_radio_buttons, choices={1: "one"}, selected=True)
+    assert msg["value"] == "True"
+
+
+def test_choices_must_not_be_a_bare_string():
+    # A `str` is a `Sequence[str]`, so it satisfies the `choices` annotation; iterating
+    # it would silently turn each character into its own choice.
+    for input_fn in (ui.input_checkbox_group, ui.input_radio_buttons, ui.input_select):
+        with pytest.raises(TypeError, match="must be a list, tuple, or dict"):
+            input_fn("x", label="L", choices=cast(Any, "abc"))
 
 
 def test_choice_values_are_rendered_for_falsy_types():
@@ -367,3 +390,22 @@ def test_input_select_optgroup_int_values():
     ).get_html_string()
     assert '<optgroup label="Group">' in html
     assert 'value="1" selected' in html
+
+
+def test_input_select_optgroup_label_colliding_with_a_choice_value_raises():
+    # An optgroup label and a flat choice value share the top-level mapping, so one of
+    # the two entries would otherwise disappear. The error says which.
+    with pytest.raises(ValueError, match="Duplicate choice value or optgroup label"):
+        # A top level that mixes an optgroup with a flat option is supported at
+        # runtime, but no arm of `SelectChoicesArg` describes it.
+        ui.input_select("x", label="L", choices=cast(Any, {0: {1: "one"}, "0": "flat"}))
+
+
+def test_input_select_duplicate_values_across_optgroups_are_allowed():
+    # Two groups may hold the same choice value. Duplicate `value` attributes are legal
+    # HTML and R Shiny permits them; the browser reports only the value, so the options
+    # are indistinguishable however the server renders them.
+    html = ui.input_select(
+        "x", label="L", choices={"A": {0: "zero"}, "B": {"0": "oh"}}, selected=0
+    ).get_html_string()
+    assert html.count('value="0" selected') == 2

@@ -14,85 +14,101 @@ https://github.com/posit-dev/py-shiny/pull/2420 for details.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
-from typing import Any, TypeVar, cast
+from collections.abc import Collection, Iterable, Mapping
+from typing import Any, Literal, TypeVar, Union, cast
 
-# A choice value.
-#
-# Deliberately `Any` rather than a union of the scalar types we expect. `Mapping`'s key
-# type is invariant, so a narrower annotation makes `Mapping[<narrow>, TagChild]` reject
-# `dict[int, str]` or `dict[str, str]`.
-ChoiceValue = Any
+# A choice value. The client only ever sees ``str(value)``, so these are the types with
+# an unambiguous string form -- the ones the choice inputs document and test.
+ChoiceValue = Union[str, int, float, bool, None]
 
-_V = TypeVar("_V")
+# A choice value in a `Mapping` key position, which has to stay `Any`: `Mapping`'s key
+# type is invariant, so `Mapping[ChoiceValue, TagChild]` rejects `dict[int, str]` -- and
+# even `dict[str, str]`. The runtime contract is the same as `ChoiceValue`.
+ChoiceKey = Any
+
+# What a normalized mapping's keys hold. A select input's `choices` maps optgroup labels
+# alongside choice values, so its top level holds both.
+ChoiceKeyKind = Literal["choice value", "choice value or optgroup label"]
+
+_DUPLICATE_KEY_REASONS: dict[ChoiceKeyKind, str] = {
+    "choice value": (
+        "Choice values become HTML `value` attributes, so they must be unique as "
+        "strings."
+    ),
+    "choice value or optgroup label": (
+        "A select input's `choices` holds choice values and optgroup labels in one "
+        "mapping, so both must be unique as strings."
+    ),
+}
+
+V = TypeVar("V")
 
 
-def normalize_choices_indexed(
-    x: Mapping[Any, _V],
-) -> tuple[dict[str, _V], dict[str, Any]]:
+def normalize_choices_mapping(
+    x: Mapping[Any, V], *, keys_are: ChoiceKeyKind = "choice value"
+) -> dict[str, V]:
     """
     Coerce choice values (the mapping's keys) to ``str``, preserving order.
-
-    Returns both the stringified mapping and an index from each string form back to the
-    original choice value, which :func:`resolve_selected_values` needs.
 
     Raises
     ------
     ValueError
-        If two choice values collide once stringified. Silently dropping one of them
-        would make an option disappear from the rendered group with no diagnostic.
+        If two keys collide once stringified. The normalized form is a ``dict`` keyed by
+        the string form, so one of the two entries would otherwise disappear from the
+        rendered input with no diagnostic.
     """
-    labels: dict[str, _V] = {}
+    normalized: dict[str, V] = {}
     originals: dict[str, Any] = {}
 
     for key, label in x.items():
         str_key = str(key)
-        if str_key in labels:
+        if str_key in normalized:
             raise ValueError(
-                f"Duplicate choice value {str_key!r}: {originals[str_key]!r} and {key!r} "
-                "are distinct choices but are identical once converted to a string. "
-                "Choice values become HTML `value` attributes, so they must be unique "
-                "as strings."
+                f"Duplicate {keys_are} {str_key!r}: {originals[str_key]!r} and {key!r} "
+                f"are distinct but are identical once converted to a string. "
+                + _DUPLICATE_KEY_REASONS[keys_are]
             )
-        labels[str_key] = label
+        normalized[str_key] = label
         originals[str_key] = key
 
-    return labels, originals
+    return normalized
 
 
-def normalize_choices_mapping(x: Mapping[Any, _V]) -> dict[str, _V]:
-    """Coerce choice values (the mapping's keys) to ``str``, preserving order."""
-    return normalize_choices_indexed(x)[0]
-
-
-def resolve_selected_values(selected: Any, choice_values: Mapping[str, Any]) -> Any:
+def resolve_selected(selected: Any, choice_values: Collection[str]) -> Any:
     """
-    Replace each ``selected`` entry with the choice value it refers to.
+    Replace each ``selected`` entry with the string form of the choice value it names.
 
-    Usually a no-op, since ``selected`` entries normally *are* choice values. It matters
-    when an entry compares equal to a choice value without stringifying identically:
-    ``selected=[1.0]`` against ``choices={1: "a"}`` resolves to ``[1]``, so it both
-    renders as and transmits ``"1"`` -- the value the option actually carries.
+    Matching is on the string form, since that is the only thing the client can match
+    against, so a ``selected`` of ``True`` does not name the choice value ``1``. An
+    integral ``float`` is the one exception: it also matches the integer it equals, so
+    ``selected=[1.0]`` against ``choices={1: "a"}`` resolves to ``"1"``, the value the
+    option actually carries. (R Shiny gets that case for free, since
+    ``as.character(1.0)`` is ``"1"``.)
+
+    An entry that names no choice passes through as its own string form, so an
+    ``update_*()`` message still carries what the caller asked for.
     """
-    if selected is None or not choice_values:
-        return selected
+    if selected is None:
+        return None
 
-    originals = list(choice_values.values())
-
-    def resolve_one(value: Any) -> Any:
-        if str(value) in choice_values:
-            return choice_values[str(value)]
-        for original in originals:
-            if original == value:
-                return original
-        return value
+    def resolve_one(value: Any) -> str:
+        as_str = str(value)
+        if as_str in choice_values:
+            return as_str
+        # `str(1.0)` is `"1.0"`, so an integral float misses the `1` it names. `bool` is
+        # a subclass of `int` rather than `float`, so `True` stays `"True"` here.
+        if isinstance(value, float) and value.is_integer():
+            as_int = str(int(value))
+            if as_int in choice_values:
+                return as_int
+        return as_str
 
     if isinstance(selected, (str, bytes)) or not isinstance(selected, Iterable):
         return resolve_one(selected)
     return [resolve_one(value) for value in cast("Iterable[Any]", selected)]
 
 
-def _as_raw_list(x: Any) -> list[Any]:
+def as_raw_list(x: Any) -> list[Any]:
     """
     Coerce ``selected`` to a list of raw (un-stringified) choice values.
 
@@ -133,7 +149,7 @@ def normalize_selected_list(x: Any) -> list[str] | None:
     """Coerce ``selected`` to a list of strings, for clients that expect an array."""
     if x is None:
         return None
-    return [str(v) for v in _as_raw_list(x)]
+    return [str(v) for v in as_raw_list(x)]
 
 
 def normalize_selected_scalar(x: Any) -> str | None:
@@ -144,7 +160,7 @@ def normalize_selected_scalar(x: Any) -> str | None:
     """
     if x is None:
         return None
-    values = _as_raw_list(x)
+    values = as_raw_list(x)
     if not values:
         return None
     return str(values[0])
@@ -166,7 +182,7 @@ def normalize_selected_radio(x: Any) -> str | list[str] | None:
     """
     if x is None:
         return None
-    values = _as_raw_list(x)
+    values = as_raw_list(x)
     if not values:
         return []
     if len(values) > 1:
@@ -183,12 +199,12 @@ class ChoiceSelection:
     Tests whether a choice value is selected: ``choice_value in selection``.
 
     Comparison is on the string form, since that is the only thing the client can match
-    against. Entries that refer to a choice value without stringifying identically are
-    handled by :func:`resolve_selected_values` before they get here.
+    against. Entries that name a choice value without stringifying identically are
+    handled by :func:`resolve_selected` before they get here.
     """
 
     def __init__(self, selected: Any) -> None:
-        self._strings = {str(v) for v in _as_raw_list(selected)}
+        self._strings = {str(v) for v in as_raw_list(selected)}
 
     def __contains__(self, choice: Any) -> bool:
         return str(choice) in self._strings

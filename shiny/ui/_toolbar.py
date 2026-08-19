@@ -24,12 +24,12 @@ from ..types import MISSING, MISSING_TYPE
 from ._choices import (
     ChoiceValue,
     normalize_selected_scalar,
-    resolve_selected_values,
+    resolve_selected,
 )
 from ._html_deps_shinyverse import components_dependencies
 from ._input_select import (
     SelectChoicesArg,
-    _choice_value_index,
+    _choice_value_strings,
     _find_first_option,
     _normalize_choices,
     _render_choices,
@@ -540,7 +540,7 @@ def toolbar_input_select(
     if selected is None:
         selected = _find_first_option(choices_normalized)
     else:
-        selected = resolve_selected_values(selected, _choice_value_index(choices))
+        selected = resolve_selected(selected, _choice_value_strings(choices_normalized))
 
     # Select element gets its own ID for label association
     select_id = f"{resolved_id}-select"
@@ -677,8 +677,8 @@ def update_toolbar_input_select(
 
     options_processed = None
     if choices is not None:
-        selected = resolve_selected_values(selected, _choice_value_index(choices))
         choices_normalized = _normalize_choices(choices)
+        selected = resolve_selected(selected, _choice_value_strings(choices_normalized))
         options_html = _render_choices(choices_normalized, selected)
         options_processed = str(options_html)
 

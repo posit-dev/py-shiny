@@ -40,20 +40,20 @@ from ._choices import (
     normalize_selected,
     normalize_selected_list,
     normalize_selected_radio,
-    resolve_selected_values,
+    resolve_selected,
 )
 from ._input_check_radio import (
     ChoicesArg,
     SelectedArg,
-    _choice_value_index,
     _generate_options,
 )
+from ._input_check_radio import _normalize_choices as _check_radio_normalize_choices
 from ._input_date import _as_date_attr
 from ._input_select import (
     SelectChoicesArg,
     SelectSelectedArg,
 )
-from ._input_select import _choice_value_index as _select_choice_value_index
+from ._input_select import _choice_value_strings as _select_choice_value_strings
 from ._input_select import (
     _normalize_choices,
     _render_choices,
@@ -444,7 +444,9 @@ def _update_choice_input(
     # The client matches `value` against the options' HTML `value` attributes, which are
     # always strings. Resolves `selected` against the choices (see issue 2272)
     if choices is not None:
-        selected = resolve_selected_values(selected, _choice_value_index(choices))
+        selected = resolve_selected(
+            selected, _check_radio_normalize_choices(choices).keys()
+        )
 
     # A radio group's client-side `setValue()` throws on a non-empty array, so collapse
     # to a scalar; a checkbox group keeps its array.
@@ -732,20 +734,17 @@ def update_select(
 
     session = require_active_session(session)
 
-    # jQuery matches option values with strict `===`, so a non-string `selected`
-    # silently deselects everything. Resolve to the string form the options render.
-    if choices is not None:
-        selected = resolve_selected_values(
-            selected, _select_choice_value_index(choices)
-        )
-
-    selected_values = normalize_selected_list(selected)
-
     if choices is None:
         options = None
     else:
-        option_tags = _render_choices(_normalize_choices(choices), selected)
+        # jQuery matches option values with strict `===`, so a non-string `selected`
+        # silently deselects everything. Resolve to the string form the options render.
+        choices_ = _normalize_choices(choices)
+        selected = resolve_selected(selected, _select_choice_value_strings(choices_))
+        option_tags = _render_choices(choices_, selected)
         options = session._process_ui(option_tags)["html"]
+
+    selected_values = normalize_selected_list(selected)
 
     msg = {
         "label": session._process_ui(label) if label is not None else None,
@@ -828,7 +827,8 @@ def update_selectize(
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
     flat_choices: list[FlatSelectChoice] = []
     if choices is not None:
-        for k, v in _normalize_choices(choices).items():
+        choices_ = _normalize_choices(choices)
+        for k, v in choices_.items():
             if not isinstance(v, Mapping):
                 flat_choices.append(FlatSelectChoice(value=k, label=v))
             else:  # The optgroup case
@@ -839,10 +839,7 @@ def update_selectize(
                     ]
                 )
 
-    if choices is not None:
-        selected = resolve_selected_values(
-            selected, _select_choice_value_index(choices)
-        )
+        selected = resolve_selected(selected, _select_choice_value_strings(choices_))
 
     selected_values = normalize_selected_list(selected)
 
