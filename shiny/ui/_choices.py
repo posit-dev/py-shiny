@@ -15,7 +15,7 @@ https://github.com/posit-dev/py-shiny/pull/2420 for details.
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable, Mapping
-from typing import Any, Literal, TypeVar, Union, cast
+from typing import Any, TypeVar, Union, cast
 
 # A choice value. The client only ever sees ``str(value)``, so these are the types with
 # an unambiguous string form -- the ones the choice inputs document and test.
@@ -26,29 +26,38 @@ ChoiceValue = Union[str, int, float, bool, None]
 # even `dict[str, str]`. The runtime contract is the same as `ChoiceValue`.
 ChoiceKey = Any
 
-# What a normalized mapping's keys hold. A select input's `choices` maps optgroup labels
-# alongside choice values, so its top level holds both.
-ChoiceKeyKind = Literal["choice value", "choice value or optgroup label"]
-
-_DUPLICATE_KEY_REASONS: dict[ChoiceKeyKind, str] = {
-    "choice value": (
-        "Choice values become HTML `value` attributes, so they must be unique as "
-        "strings."
-    ),
-    "choice value or optgroup label": (
-        "A select input's `choices` holds choice values and optgroup labels in one "
-        "mapping, so both must be unique as strings."
-    ),
-}
-
 V = TypeVar("V")
 
 
+def duplicate_key_error(
+    key: str, first: Any, second: Any, *, keys_can_be_optgroup_labels: bool
+) -> ValueError:
+    if keys_can_be_optgroup_labels:
+        what = "choice value or optgroup label"
+        reason = (
+            "A select input's `choices` (values and optgroup labels) must be unique "
+            "when converted to strings."
+        )
+    else:
+        what = "choice value"
+        reason = (
+            "Choice values must be unique when converted to strings strings."
+        )
+
+    return ValueError(
+        f"Duplicate {what} {key!r}: {first!r} and {second!r} are distinct but are "
+        f"identical as strings. {reason}"
+    )
+
+
 def normalize_choices_mapping(
-    x: Mapping[Any, V], *, keys_are: ChoiceKeyKind = "choice value"
+    x: Mapping[Any, V], *, keys_can_be_optgroup_labels: bool = False
 ) -> dict[str, V]:
     """
     Coerce choice values (the mapping's keys) to ``str``, preserving order.
+
+    A select input's ``choices`` maps optgroup labels alongside choice values, so its
+    top level sets ``keys_can_be_optgroup_labels``, which only affects the error below.
 
     Raises
     ------
@@ -63,10 +72,11 @@ def normalize_choices_mapping(
     for key, label in x.items():
         str_key = str(key)
         if str_key in normalized:
-            raise ValueError(
-                f"Duplicate {keys_are} {str_key!r}: {originals[str_key]!r} and {key!r} "
-                f"are distinct but are identical once converted to a string. "
-                + _DUPLICATE_KEY_REASONS[keys_are]
+            raise duplicate_key_error(
+                str_key,
+                originals[str_key],
+                key,
+                keys_can_be_optgroup_labels=keys_can_be_optgroup_labels,
             )
         normalized[str_key] = label
         originals[str_key] = key
