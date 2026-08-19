@@ -395,7 +395,7 @@ def test_input_select_optgroup_int_values():
 def test_input_select_optgroup_label_colliding_with_a_choice_value_raises():
     # An optgroup label and a flat choice value share the top-level mapping, so one of
     # the two entries would otherwise disappear. The error says which.
-    with pytest.raises(ValueError, match="Duplicate choice value or optgroup label"):
+    with pytest.raises(ValueError, match="the optgroup label 0 and the choice value"):
         # A top level that mixes an optgroup with a flat option is supported at
         # runtime, but no arm of `SelectChoicesArg` describes it.
         ui.input_select("x", label="L", choices=cast(Any, {0: {1: "one"}, "0": "flat"}))

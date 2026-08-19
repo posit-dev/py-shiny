@@ -30,34 +30,40 @@ V = TypeVar("V")
 
 
 def duplicate_key_error(
-    key: str, first: Any, second: Any, *, keys_can_be_optgroup_labels: bool
+    key: str, *, first: tuple[Any, Any], second: tuple[Any, Any]
 ) -> ValueError:
-    if keys_can_be_optgroup_labels:
-        what = "choice value or optgroup label"
-        reason = (
-            "A select input's `choices` (values and optgroup labels) must be unique "
-            "when converted to strings."
-        )
-    else:
-        what = "choice value"
-        reason = (
-            "Choice values must be unique when converted to strings strings."
+    """
+    Build the error for two keys whose string forms collide.
+
+    ``first`` and ``second`` are the colliding ``(key, label)`` pairs. A key whose label
+    is a ``Mapping`` heads an optgroup, so it names a group rather than a choice. Only a
+    select input's top-level ``choices`` can hold one, so the wording follows from the
+    labels rather than from the calling input.
+    """
+    (first_key, first_label), (second_key, second_label) = first, second
+    kinds = tuple(
+        "optgroup label" if isinstance(label, Mapping) else "choice value"
+        for label in (first_label, second_label)
+    )
+
+    if kinds == ("choice value", "choice value"):
+        return ValueError(
+            f"Duplicate choice value {key!r}: {first_key!r} and {second_key!r} are "
+            "distinct but are identical as strings. Choice values must be unique when "
+            "converted to strings."
         )
 
     return ValueError(
-        f"Duplicate {what} {key!r}: {first!r} and {second!r} are distinct but are "
-        f"identical as strings. {reason}"
+        f"Duplicate key {key!r} in `choices`: the {kinds[0]} {first_key!r} and the "
+        f"{kinds[1]} {second_key!r} are distinct but are identical as strings. A select "
+        "input's `choices` (values and optgroup labels) must be unique when converted "
+        "to strings."
     )
 
 
-def normalize_choices_mapping(
-    x: Mapping[Any, V], *, keys_can_be_optgroup_labels: bool = False
-) -> dict[str, V]:
+def normalize_choices_mapping(x: Mapping[Any, V]) -> dict[str, V]:
     """
     Coerce choice values (the mapping's keys) to ``str``, preserving order.
-
-    A select input's ``choices`` maps optgroup labels alongside choice values, so its
-    top level sets ``keys_can_be_optgroup_labels``, which only affects the error below.
 
     Raises
     ------
@@ -74,9 +80,8 @@ def normalize_choices_mapping(
         if str_key in normalized:
             raise duplicate_key_error(
                 str_key,
-                originals[str_key],
-                key,
-                keys_can_be_optgroup_labels=keys_can_be_optgroup_labels,
+                first=(originals[str_key], normalized[str_key]),
+                second=(key, label),
             )
         normalized[str_key] = label
         originals[str_key] = key

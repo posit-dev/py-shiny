@@ -364,7 +364,7 @@ def _normalize_choices(x: SelectChoicesArg) -> _SelectChoices:
 
     # The top-level mapping holds optgroup labels alongside choice values, so a
     # collision there is reported as either one.
-    normalized = normalize_choices_mapping(x, keys_can_be_optgroup_labels=True)
+    normalized = normalize_choices_mapping(x)
 
     # The result may mix flat options and optgroups at the top level (e.g.
     # `{"a": "A", "Group B": {...}}`). That matches neither arm of the
