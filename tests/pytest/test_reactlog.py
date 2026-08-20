@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import Any
 
 from click.testing import CliRunner
 
@@ -148,7 +149,7 @@ def greeting():
 
 
 def test_format_reactlog_html_is_self_contained_and_accessible():
-    reactlog = {
+    reactlog: dict[str, Any] = {
         "success": True,
         "summary": "One dependency",
         "nodes": [
