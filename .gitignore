@@ -144,8 +144,3 @@ tests/inspect-ai/scripts/test_metadata.json
 /.claude/plans/
 docs/plans/
 docs/superpowers/
-/.codex-claude-mcp-demo
-/.codex-mcp-demo
-/examples/ab_experiment_workspace/
-
-/examples/ab_experiment_workspace

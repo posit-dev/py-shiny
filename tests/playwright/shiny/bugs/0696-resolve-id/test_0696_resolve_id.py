@@ -6,10 +6,10 @@ import os
 from pathlib import Path
 
 import pytest
+from examples.example_apps import reruns, reruns_delay
 from mod_state import expect_default_mod_state, expect_mod_state
 from playwright.sync_api import Download, Page
 
-from examples.example_apps import reruns, reruns_delay
 from shiny._utils import guess_mime_type
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
