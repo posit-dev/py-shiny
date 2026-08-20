@@ -719,8 +719,8 @@ def format_reactlog_html(
       const selectedNode = (LOG_DATA.nodes || []).find(node => node.id === selectedNodeId);
       if (selectedNode) {{
         const kind = nodeKind(selectedNode);
-        const incoming = (LOG_DATA.edges || []).filter(edge => edge.to === selectedNode.id).length;
-        const outgoing = (LOG_DATA.edges || []).filter(edge => edge.from === selectedNode.id).length;
+        const incoming = (LOG_DATA.edges || []).reduce((count, edge) => count + (edge.to === selectedNode.id ? 1 : 0), 0);
+        const outgoing = (LOG_DATA.edges || []).reduce((count, edge) => count + (edge.from === selectedNode.id ? 1 : 0), 0);
         inspector.innerHTML = '<div class="inspector-eyebrow"><span class="badge"></span><span class="event-step"></span></div><div class="inspector-node"></div><div class="inspector-detail"></div>';
         inspector.querySelector('.badge').textContent = kind.label;
         inspector.querySelector('.event-step').textContent = `line ${{selectedNode.line || '—'}}`;
@@ -831,7 +831,12 @@ def format_reactlog_html(
         columns.slice(0, colIdx).flat().forEach((node, idx) => previousOrder.set(node.id, idx));
         columns[colIdx].sort((a, b) => {{
           const barycenter = node => {{
-            const parents = edges.filter(edge => edge.to === node.id).map(edge => previousOrder.get(edge.from)).filter(value => value != null);
+            const parents = [];
+            edges.forEach(edge => {{
+              if (edge.to !== node.id) return;
+              const value = previousOrder.get(edge.from);
+              if (value != null) parents.push(value);
+            }});
             return parents.length ? parents.reduce((sum, value) => sum + value, 0) / parents.length : Number.MAX_SAFE_INTEGER;
           }};
           return barycenter(a) - barycenter(b) || String(a.id).localeCompare(String(b.id));

@@ -56,11 +56,11 @@ def other():
 
     page.locator(".event-item").nth(dependency_step).click()
     page.wait_for_function(
-        "Array.from(document.querySelectorAll('.graph-edge')).filter(edge => edge.style.opacity !== '0').length === 2"
+        "Array.from(document.querySelectorAll('.graph-edge')).reduce((count, edge) => count + (edge.style.opacity !== '0' ? 1 : 0), 0) === 2"
     )
     assert (
         edges.evaluate_all(
-            "elements => elements.filter(edge => edge.dataset.active === 'true').length"
+            "elements => elements.reduce((count, edge) => count + (edge.dataset.active === 'true' ? 1 : 0), 0)"
         )
         == 1
     )
