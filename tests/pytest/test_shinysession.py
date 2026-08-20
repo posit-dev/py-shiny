@@ -1,11 +1,56 @@
 """Tests for `shiny.Session`."""
 
+import asyncio
+import json
+
 import pytest
 
-from shiny import ui
+from shiny import App, Inputs, Outputs, Session, module, ui
+from shiny._connection import MockConnection
+from shiny.express._stub_session import ExpressStubSession
 from shiny.reactive import effect, flush, isolate
-from shiny.session import Inputs
 from shiny.types import SilentException
+
+
+def test_stub_session_user_groups():
+    from shiny.express._stub_session import ExpressStubSession
+
+    stub = ExpressStubSession()
+    assert stub.user is None
+    assert stub.groups is None
+
+
+@pytest.mark.asyncio
+async def test_module_session_user_groups():
+    """SessionProxy (module session) should delegate user/groups to the root session."""
+    captured: dict[str, object] = {}
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session):
+        captured["mod_user"] = session.user
+        captured["mod_groups"] = session.groups
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        mod("m")
+        captured["root_user"] = session.user
+        captured["root_groups"] = session.groups
+
+    creds = json.dumps({"user": "alice", "groups": ["admin", "dev"]}).encode()
+    headers = [(b"shiny-server-credentials", creds)]
+    conn = MockConnection()
+    conn._http_conn.scope["headers"] = headers
+    sess = App(ui.TagList(), server)._create_session(conn)
+
+    async def mock_client():
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
+
+    assert captured["root_user"] == "alice"
+    assert captured["root_groups"] == ["admin", "dev"]
+    assert captured["mod_user"] == "alice"
+    assert captured["mod_groups"] == ["admin", "dev"]
 
 
 def test_require_active_session_error_messages():
@@ -15,6 +60,32 @@ def test_require_active_session_error_messages():
 
     with pytest.raises(RuntimeError, match=r"notification.remove\(\) must be called.*"):
         ui.notification_remove("abc")
+
+
+def test_allow_reconnect():
+    sent: list[dict[str, object]] = []
+
+    def record(message: dict[str, object]) -> None:
+        sent.append(message)
+
+    session = ExpressStubSession()
+    session._send_message_sync = record
+
+    session.allow_reconnect(True)
+    session.allow_reconnect(False)
+    session.allow_reconnect("force")
+    assert sent == [
+        {"allowReconnect": True},
+        {"allowReconnect": False},
+        {"allowReconnect": "force"},
+    ]
+
+    for value in ("TRUE", 1, None):
+        with pytest.raises(ValueError, match="must be"):
+            session.allow_reconnect(value)  # pyright: ignore[reportArgumentType]
+
+    # Invalid values shouldn't have sent anything more.
+    assert len(sent) == 3
 
 
 def test_input_readonly():

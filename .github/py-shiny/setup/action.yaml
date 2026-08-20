@@ -23,10 +23,15 @@ runs:
       # cache instead of copying files onto the slow `C:` drive where
       # setup-python's interpreter lives.
       - name: Install `uv`
-        # Pinned to an exact release; astral-sh/setup-uv has no floating `v8` tag
-        uses: astral-sh/setup-uv@v8.2.0
+        # Pinned to an exact release; astral-sh/setup-uv has no floating `v10` tag
+        uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
+          # setup-uv v9 flipped this default to false. We keep pruning
+          # because we store a separate cache entry per Python version, and
+          # unpruned entries risk hitting the repo cache limit and evicting
+          # each other.
+          prune-cache: true
           cache-dependency-glob: "pyproject.toml"
           cache-suffix: py${{ inputs.python-version }}
           activate-environment: true

@@ -230,8 +230,14 @@ class Session(ABC):
     # iterate over all modules and check the `.bookmark_exclude` list of each proxy
     # session.
     bookmark: Bookmark
-    user: str | None
-    groups: list[str] | None
+
+    @property
+    @abstractmethod
+    def user(self) -> str | None: ...
+
+    @property
+    @abstractmethod
+    def groups(self) -> list[str] | None: ...
 
     # TODO: not sure these should be directly exposed
     _outbound_message_queues: OutBoundMessageQueues
@@ -253,6 +259,46 @@ class Session(ABC):
         """
         Close the session.
         """
+
+    @add_example(example_name="session_allow_reconnect")
+    def allow_reconnect(self, value: bool | Literal["force"]) -> None:
+        """
+        Allow the client to reconnect to a session after a disconnect.
+
+        By default, when the websocket connection between the browser and the server
+        drops, Shiny displays the "Disconnected from server" overlay and the client
+        gives up. Calling this method with ``True`` tells the client to instead show a
+        countdown dialog and attempt to reconnect to its session.
+
+        On a successful reconnect, the browser sends all of its current input values to
+        the session on the server, and the server recalculates any outputs and sends
+        them back to the client.
+
+        Parameters
+        ----------
+        value
+            One of the following:
+
+            * ``True``: allow the client to reconnect after a disconnect, but only when
+              running in a hosting environment (such as Posit Connect or Shiny Server)
+              that has reconnections enabled.
+            * ``False``: do not allow the client to reconnect. This is the default.
+            * ``"force"``: always attempt to reconnect, regardless of what the hosting
+              environment reports.
+
+        Note
+        ----
+        Reconnecting requires the server to keep the session alive after the client
+        disconnects, which is a feature of the hosting environment rather than of Shiny
+        itself. ``"force"`` exists for testing on a local connection: the client will
+        try to reconnect anywhere, but on a plain ``shiny run`` server the attempt
+        starts a brand new session rather than resuming the old one.
+        """
+        if value is not True and value is not False and value != "force":
+            raise ValueError(
+                f'`value` must be `True`, `False`, or `"force"`, not {value!r}.'
+            )
+        self._send_message_sync({"allowReconnect": value})
 
     @abstractmethod
     def _is_closed(self) -> bool:
@@ -865,8 +911,8 @@ class AppSession(Session):
 
         self.bookmark: Bookmark = BookmarkApp(self)
 
-        self.user: str | None = None
-        self.groups: list[str] | None = None
+        self._user: str | None = None
+        self._groups: list[str] | None = None
 
         credentials_json: str = ""
         if "shiny-server-credentials" in self.http_conn.headers:
@@ -880,8 +926,8 @@ class AppSession(Session):
         if credentials_json:
             try:
                 creds = json.loads(credentials_json)
-                self.user = creds["user"]
-                self.groups = creds["groups"]
+                self._user = creds["user"]
+                self._groups = creds["groups"]
             except Exception as e:
                 print("Error parsing credentials header: " + str(e), file=sys.stderr)
 
@@ -947,6 +993,14 @@ class AppSession(Session):
 
     def is_stub_session(self) -> Literal[False]:
         return False
+
+    @property
+    def user(self) -> str | None:
+        return self._user
+
+    @property
+    def groups(self) -> list[str] | None:
+        return self._groups
 
     async def close(self, code: int = 1001) -> None:
         await self._conn.close(code, None)
@@ -1766,6 +1820,14 @@ class SessionProxy(Session):
         self._downloads = root_session._downloads
 
         self.bookmark = BookmarkProxy(self)
+
+    @property
+    def user(self) -> str | None:
+        return self._root_session.user
+
+    @property
+    def groups(self) -> list[str] | None:
+        return self._root_session.groups
 
     def _is_closed(self) -> bool:
         return self._root_session._is_closed()

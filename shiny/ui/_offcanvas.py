@@ -11,7 +11,7 @@ __all__ = (
 import warnings
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
-from htmltools import Tag, TagAttrs, TagAttrValue, TagChild, TagList, tags
+from htmltools import HTML, Tag, TagAttrs, TagAttrValue, TagChild, TagList, tags
 
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
@@ -357,22 +357,34 @@ def offcanvas(
     )
 
 
+_make_offcanvas = offcanvas
+
+
 @add_example()
 def show_offcanvas(
-    offcanvas: Offcanvas,
+    offcanvas: Union[str, TagChild, Offcanvas],
     *,
     session: Optional[Session] = None,
 ) -> str:
     """
     Show an offcanvas panel.
 
-    Programmatically displays an :func:`~shiny.ui.offcanvas` panel in the
-    user's session by inserting its HTML into the page.
+    Programmatically displays an offcanvas panel in the user's session.
+    ``offcanvas`` can be:
+
+    * a string ``id`` of an :func:`~shiny.ui.offcanvas` panel already in the
+      UI, which is revealed; or
+    * arbitrary tag content (e.g. an :class:`~htmltools.HTML` string, a
+      :class:`~htmltools.Tag`, or a :class:`~htmltools.TagList`), which is
+      wrapped into a new anonymous offcanvas panel with default settings; or
+    * an :class:`~shiny.ui.Offcanvas` object created by :func:`~shiny.ui.offcanvas`,
+      which is rendered into the page (if needed) and shown.
 
     Parameters
     ----------
     offcanvas
-        An :class:`~shiny.ui.Offcanvas` object created by :func:`~shiny.ui.offcanvas`.
+        The panel's ``id``, tag content for a new panel, or an
+        :class:`~shiny.ui.Offcanvas` object.
     session
         The :class:`~shiny.Session` to show the panel in. If not provided,
         the session is inferred via :func:`~shiny.session.get_current_session`.
@@ -389,12 +401,31 @@ def show_offcanvas(
     To update an id'd panel's content, update the reactive outputs it contains
     rather than calling ``show_offcanvas()`` again.
 
+    A plain string is always treated as an ``id`` lookup, and raises a
+    ``ValueError`` if it looks like body text instead (it is empty or
+    contains whitespace). To show new string content, wrap it in
+    :func:`~htmltools.HTML` or pass a :func:`~shiny.ui.offcanvas` object.
+
     See Also
     --------
     * :func:`~shiny.ui.offcanvas`
     * :func:`~shiny.ui.hide_offcanvas`
     * :func:`~shiny.ui.toggle_offcanvas`
     """
+    if isinstance(offcanvas, str) and not isinstance(offcanvas, HTML):
+        if not offcanvas or any(c.isspace() for c in offcanvas):
+            raise ValueError(
+                "`offcanvas` looks like body text, not an offcanvas id "
+                "(ids can't be empty or contain whitespace). To show new "
+                "content, wrap it in `htmltools.HTML()` or pass an "
+                "`offcanvas()` object. To reveal an existing panel, pass its id."
+            )
+        toggle_offcanvas(offcanvas, show=True, session=session)
+        return offcanvas
+
+    if not isinstance(offcanvas, Offcanvas):
+        offcanvas = _make_offcanvas(offcanvas)
+
     the_session = require_active_session(session)
 
     local_id = offcanvas.id if offcanvas.id is not None else rand_hex(8)

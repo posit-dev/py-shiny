@@ -6,8 +6,9 @@ specification](https://agentskills.io/specification). Its `SKILL.md` is a
 grouped router: a short index of topics, each pointing at a
 `references/<topic>.md` file with the actual instructions. It is **package
 data**: it ships in the wheel and is discovered by installers such as
-[library-skills](https://library-skills.io) (which symlinks it into a
-project's `.agents/skills/` or `.claude/skills/`). The `shiny skills
+[library-skills](https://library-skills.io), which a user runs from *their*
+project (not from a clone of this repo) to symlink the skills of their
+installed dependencies into `.agents/skills/` or `.claude/skills/`. The `shiny skills
 list|path` CLI subcommands (implemented in `shiny/_main/_skills.py`) are a
 zero-dependency way to inspect it: `list` shows each bundled skill's name and
 description, and `path <name>` prints the skill's directory so its `SKILL.md`

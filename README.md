@@ -40,17 +40,21 @@ You can create and run your first application with `shiny create`, the CLI will 
 
 ### Agent Skills
 
-The `shiny` package ships bundled [Agent Skills](https://agentskills.io) — reference docs that teach coding agents (Claude Code, Cursor, and others) how to build, style, test, and debug Shiny for Python apps using shiny's public APIs. They are installed with the package, so once `shiny` is a dependency of your project you can make the skills available to your agent with [`library-skills`](https://library-skills.io):
+Coding agents write better Shiny apps when they can read Shiny's own documentation. The `shiny` package ships bundled [Agent Skills](https://agentskills.io) for exactly that: reference material that teaches agents (Claude Code, Cursor, and others) how to build, style, test, and debug Shiny for Python apps using shiny's public APIs.
+
+The skills ship inside the package, so installing `shiny` installs them too — you only need to point your agent at them. Run one of these from your project directory:
 
 ```sh
-# Claude Code (installs into .claude/skills):
+# Claude Code (installs into .claude/skills/):
 uvx library-skills --claude
 
-# Standard .agents/skills location (add --copy on Windows):
+# Any other agent (standard .agents/skills/ location):
 uvx library-skills
 ```
 
-`library-skills` symlinks the packaged skill into your project, so it stays in sync when you upgrade `shiny`. See `shiny skills --help` for more details.
+Run this from your own project rather than a clone of this repository: [`library-skills`](https://library-skills.io) reads your project's dependencies and installs the skills bundled with the packages you actually have installed. It symlinks rather than copies, so the skills keep tracking your version of `shiny` as you upgrade. On Windows, add `--copy` if symlinks are unavailable.
+
+To see what's bundled without installing anything, run `shiny skills list`.
 
 ## Development
 

@@ -11,7 +11,7 @@ runs:
       shell: bash
       run: |
         if ! command -v uv &> /dev/null; then
-          echo "::error::uv is required but not installed. Please add 'astral-sh/setup-uv@v7' before this action."
+          echo "::error::uv is required but not installed. Please add 'astral-sh/setup-uv@v10.0.1' before this action."
           exit 1
         fi
 

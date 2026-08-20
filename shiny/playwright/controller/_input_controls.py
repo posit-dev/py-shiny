@@ -1227,6 +1227,11 @@ class InputSelectize(
 ):
     """Controller for :func:`shiny.ui.input_selectize`."""
 
+    _CLOSE_DROPDOWN_JS = """(el) => {
+        el.selectize.close();
+        el.selectize.blur();
+    }"""
+
     def __init__(self, page: Page, id: str) -> None:
         super().__init__(page, id=id, loc=f"#{id} + .selectize-control")
         self._loc_dropdown = self.loc.locator("> .selectize-dropdown")
@@ -1243,6 +1248,18 @@ class InputSelectize(
         self.loc_choices = self._loc_selectize.locator("[data-value]")
         self.loc_selected = self.loc_container.locator(f"select#{id} > option")
 
+    def _close_dropdown(self, *, timeout: Timeout = None) -> None:
+        """
+        Close the dropdown through selectize's own API.
+
+        Clicking elsewhere on the page also closes the dropdown, but the click lands
+        on app content and fires the app's own click handlers. Pressing `"Escape"`
+        avoids that, but only closes the dropdown when the control holds focus and
+        the keydown reaches selectize's handler, which is not true in every
+        environment. Calling `close()` does not depend on either.
+        """
+        self.loc.evaluate(self._CLOSE_DROPDOWN_JS, timeout=timeout)
+
     def set(
         self,
         selected: str | list[str],
@@ -1256,7 +1273,7 @@ class InputSelectize(
         1. Click on the selectize input to open the dropdown.
         2. Starting from the first selected item, each position in the currently selected list should match `selected`. If the item is not a match, remove it and try again.
         3. Add any remaining items in `selected` that are not currently selected by clicking on them in the dropdown.
-        4. Press the `"Escape"` key to close the dropdown.
+        4. Close the dropdown.
 
         Parameters
         ----------
@@ -1304,7 +1321,7 @@ class InputSelectize(
                 # Be sure to close the dropdown
                 # (While this is not necessary on a sucessful `set()`, it is cleaner
                 # than a catch all except)
-                self._loc_events.press("Escape", timeout=timeout)
+                self._close_dropdown(timeout=timeout)
 
         else:
             # Multiple element selectize
@@ -1380,7 +1397,7 @@ class InputSelectize(
 
             finally:
                 # Be sure to close the dropdown
-                self._loc_events.press("Escape", timeout=timeout)
+                self._close_dropdown(timeout=timeout)
         return
 
     def expect_choices(
@@ -1447,13 +1464,22 @@ class InputSelectize(
 
     def _populate_dom(self, timeout: Timeout = None) -> None:
         """
-        The click and Escape keypress is used to load the DOM elements
+        Open and close the dropdown so that selectize renders its options.
+
+        Selectize builds the dropdown's contents lazily, so the choices are absent
+        from the DOM until the dropdown has been opened at least once. The dropdown
+        is then closed again to leave the widget as it was found.
         """
         self._loc_events.click(timeout=timeout)
         _expect_style_to_have_value(
             self._loc_dropdown, "display", "block", timeout=timeout
         )
-        self.page.locator("body").click(timeout=timeout)
+        # Selectize answers the opening click across several tasks: it queues a
+        # focus, and that focus opens the dropdown again. The dropdown reports
+        # `display: block` before that work finishes, and a close that runs first
+        # gets undone by it. Let the work settle before the close.
+        self.page.wait_for_timeout(50)
+        self._close_dropdown(timeout=timeout)
         _expect_style_to_have_value(
             self._loc_dropdown, "display", "none", timeout=timeout
         )
