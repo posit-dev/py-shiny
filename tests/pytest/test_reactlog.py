@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from html.parser import HTMLParser
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -12,6 +13,22 @@ from shiny._inspect import (
 )
 from shiny._main import main
 from shiny._validate import validate_shiny_code
+
+
+class _TagCollector(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.tags: list[tuple[str, dict[str, str | None]]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.tags.append((tag, dict(attrs)))
+
+    def has_tag(self, tag: str, **attrs: str) -> bool:
+        return any(
+            candidate == tag
+            and all(candidate_attrs.get(key) == value for key, value in attrs.items())
+            for candidate, candidate_attrs in self.tags
+        )
 
 
 def test_inspect_graph_roles():
@@ -130,6 +147,52 @@ def greeting():
     assert "textContent" in html
 
 
+def test_format_reactlog_html_is_self_contained_and_accessible():
+    reactlog = {
+        "success": True,
+        "summary": "One dependency",
+        "nodes": [
+            {
+                "id": "value",
+                "label": "input.value",
+                "type": "input",
+                "role": "source",
+                "line": 3,
+            },
+            {
+                "id": "result",
+                "label": "output:result",
+                "type": "output",
+                "role": "observer",
+                "line": 8,
+            },
+        ],
+        "edges": [{"from": "value", "to": "result"}],
+        "events": [],
+    }
+
+    html = format_reactlog_html(reactlog, title='Trace <img src=x onerror="alert(1)">')
+    document = _TagCollector()
+    document.feed(html)
+
+    assert not document.has_tag("img")
+    assert not any(
+        value and value.startswith("https://")
+        for _, attrs in document.tags
+        for key, value in attrs.items()
+        if key in ("src", "href")
+    )
+    assert document.has_tag("main")
+    assert document.has_tag("aside")
+    assert document.has_tag(
+        "input", type="search", **{"aria-label": "Search graph nodes"}
+    )
+    assert document.has_tag("button", **{"aria-label": "Fit graph to view"})
+    assert document.has_tag("button", **{"aria-label": "Zoom in"})
+    assert document.has_tag("button", **{"aria-label": "Zoom out"})
+    assert document.has_tag("button", **{"aria-pressed": "true"})
+
+
 def test_core_shiny_output_id_order_independent():
     server_first_code = """from shiny import App, render, ui
 
@@ -218,7 +281,7 @@ def out():
     assert res.exit_code == 0
     assert out_html.is_file()
     content = out_html.read_text(encoding="utf-8")
-    assert "Static Shiny Dependency Simulation" in content
+    assert "Reactive dependency explorer" in content
 
 
 def test_cli_inspect_inputs_cascade():

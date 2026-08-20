@@ -4,76 +4,173 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Static dependency simulation: examples/complex_analytics_dashboard.py</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --surface-elevated: #21262d;
-      --border: #30363d;
-      --text: #f0f6fc;
-      --text-muted: #8b949e;
-      --accent: #58a6ff;
-      --success: #3fb950;
-      --warning: #d29922;
-      --danger: #f85149;
+      color-scheme: dark;
+      --bg: #090d12;
+      --surface: #111821;
+      --surface-2: #17212d;
+      --surface-3: #1d2a38;
+      --border: #293747;
+      --border-strong: #3a4b5f;
+      --text: #edf4fb;
+      --text-muted: #91a1b3;
+      --accent: #63b3ff;
+      --source: #38bdf8;
+      --calc: #fbbf24;
+      --effect: #c084fc;
+      --output: #4ade80;
+      --warning: #fb923c;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-    .brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 800; font-size: 1.1rem; color: #ffffff; }
-    .brand i { color: #58a6ff; }
-    .playback-bar { background: var(--surface-elevated); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 0.85rem; font-weight: 600; padding: 0.4rem 0.85rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.15s ease; }
-    .btn:hover { background: var(--accent); border-color: var(--accent); color: #ffffff; }
-    .scrubber { flex-grow: 1; min-width: 200px; }
-    .scrubber input[type="range"] { width: 100%; accent-color: var(--accent); }
-    .step-display { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; color: #58a6ff; min-width: 140px; text-align: right; }
-    .main-view { display: grid; grid-template-columns: 1fr 380px; flex-grow: 1; overflow: hidden; }
-    .graph-container { padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at center, #161b22 0%, #0d1117 100%); overflow: auto; position: relative; }
-    .sidebar { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-    .sidebar-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
-    .event-list { flex-grow: 1; overflow-y: auto; padding: 0.5rem; list-style: none; }
-    .event-item { padding: 0.6rem 0.75rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.35rem; border: 1px solid transparent; cursor: pointer; transition: all 0.15s ease; }
-    .event-item:hover { background: var(--surface-elevated); }
-    .event-item.active { background: rgba(88, 166, 255, 0.15); border-color: var(--accent); color: #ffffff; }
-    .event-item .badge { font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
-    .badge.define { background: #21262d; color: var(--text-muted); }
-    .badge.assumeValue { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
-    .badge.propagate { background: rgba(210, 153, 34, 0.2); color: #d29922; }
-    .badge.wouldEvaluate { background: rgba(88, 166, 255, 0.25); color: #79c0ff; }
-    .badge.ordered { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
-    .graph-node { transition: all 0.25s ease; }
+    button, input { font: inherit; }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .app-header { min-height: 64px; background: rgba(17, 24, 33, 0.96); border-bottom: 1px solid var(--border); padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+    .brand-mark { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #07111c; background: linear-gradient(145deg, #82c9ff, #3b9ced); font-family: var(--mono); font-weight: 900; box-shadow: 0 7px 20px rgba(58, 158, 239, 0.22); }
+    .brand-copy { min-width: 0; }
+    .brand-title { font-weight: 760; font-size: 0.98rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-subtitle { color: var(--text-muted); font-size: 0.74rem; margin-top: 0.15rem; }
+    .stats { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; justify-content: flex-end; }
+    .stat { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; color: var(--text-muted); padding: 0.28rem 0.58rem; font: 600 0.7rem var(--mono); }
+    .toolbar { min-height: 58px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.65rem 1rem; display: flex; align-items: center; gap: 0.65rem; }
+    .toolbar-group { display: flex; align-items: center; gap: 0.35rem; }
+    .toolbar-divider { width: 1px; height: 28px; background: var(--border); margin: 0 0.2rem; }
+    .btn { min-height: 34px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.42rem 0.66rem; border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.38rem; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; font-size: 0.76rem; font-weight: 700; }
+    .btn:hover { background: var(--surface-3); border-color: var(--border-strong); }
+    .btn:active { transform: translateY(1px); }
+    .btn.icon { width: 34px; padding: 0; font-family: var(--mono); }
+    .btn.primary { background: #1f69a3; border-color: #2d86c8; }
+    .search-wrap { position: relative; flex: 0 1 240px; min-width: 150px; }
+    .search-wrap::before { content: "⌕"; position: absolute; left: 0.7rem; top: 50%; transform: translateY(-53%); color: var(--text-muted); font: 700 1rem var(--mono); pointer-events: none; }
+    .search-input { width: 100%; height: 34px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 0 0.7rem 0 2rem; font-size: 0.76rem; }
+    .search-input::placeholder { color: #6f8194; }
+    .filter-btn[aria-pressed="true"] { color: var(--text); background: var(--surface-3); }
+    .filter-btn[data-role="source"][aria-pressed="true"] { border-color: var(--source); }
+    .filter-btn[data-role="conductor"][aria-pressed="true"] { border-color: var(--calc); }
+    .filter-btn[data-role="observer"][aria-pressed="true"] { border-color: var(--output); }
+    .scrubber { flex: 1; min-width: 130px; display: flex; align-items: center; gap: 0.6rem; }
+    .scrubber input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .step-display { font: 700 0.72rem var(--mono); color: var(--accent); min-width: 72px; text-align: right; }
+    .main-view { display: grid; grid-template-columns: minmax(0, 1fr) 360px; flex: 1; min-height: 0; overflow: hidden; transition: grid-template-columns 180ms ease; }
+    .main-view.sidebar-hidden { grid-template-columns: minmax(0, 1fr) 0; }
+    .graph-container { min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(rgba(105, 128, 151, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(105, 128, 151, 0.055) 1px, transparent 1px); background-size: 24px 24px; }
+    .graph-topbar { position: absolute; z-index: 3; top: 0.8rem; left: 0.8rem; right: 0.8rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; pointer-events: none; }
+    .legend { display: flex; gap: 0.4rem; flex-wrap: wrap; padding: 0.4rem; border: 1px solid var(--border); border-radius: 9px; background: rgba(17, 24, 33, 0.9); backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,0.18); pointer-events: auto; }
+    .legend-item { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.66rem var(--mono); padding: 0.18rem 0.32rem; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--role-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--role-color) 18%, transparent); }
+    .zoom-controls { display: flex; gap: 0.3rem; pointer-events: auto; }
+    #reactlog-svg { width: 100%; height: 100%; min-height: 430px; display: block; }
+    .graph-node, .graph-edge { transition: opacity 140ms ease, filter 140ms ease; }
+    .graph-node { cursor: pointer; }
+    .graph-node:hover .node-card { filter: brightness(1.14); }
+    .graph-node.is-selected .node-card { filter: drop-shadow(0 0 9px rgba(99,179,255,0.36)); }
+    .stage-label { font: 700 10px var(--mono); fill: #718297; letter-spacing: 0.08em; }
+    .sidebar { min-width: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-header { min-height: 46px; padding: 0.7rem 0.8rem 0.65rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+    .sidebar-title { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+    .inspector { margin: 0.75rem; padding: 0.85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; }
+    .inspector-eyebrow { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; }
+    .inspector-node { font: 700 0.88rem var(--mono); color: var(--text); overflow-wrap: anywhere; }
+    .inspector-detail { color: var(--text-muted); font-size: 0.75rem; line-height: 1.45; margin-top: 0.35rem; }
+    .event-list { flex: 1; overflow-y: auto; padding: 0 0.5rem 0.75rem; list-style: none; }
+    .event-item { padding: 0.58rem 0.65rem; border-radius: 7px; font-size: 0.76rem; margin-bottom: 0.22rem; border: 1px solid transparent; cursor: pointer; transition: background 120ms ease, border-color 120ms ease; }
+    .event-item:hover { background: var(--surface-2); }
+    .event-item.active { background: rgba(99, 179, 255, 0.1); border-color: rgba(99, 179, 255, 0.62); }
+    .event-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .event-node { color: var(--text); font: 650 0.73rem var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-step { color: #708195; font: 600 0.65rem var(--mono); }
+    .badge { display: inline-flex; align-items: center; max-width: 100%; font: 750 0.6rem var(--mono); padding: 0.16rem 0.35rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.025em; background: var(--surface-3); color: var(--text-muted); }
+    .badge.assumeValue { background: rgba(56,189,248,0.13); color: #7dd3fc; }
+    .badge.propagate { background: rgba(251,146,60,0.13); color: #fdba74; }
+    .badge.wouldEvaluate, .badge.dependsOn { background: rgba(99,179,255,0.13); color: #93c5fd; }
+    .badge.ordered { background: rgba(74,222,128,0.13); color: #86efac; }
+    .sidebar-hidden .sidebar { visibility: hidden; }
+    @media (max-width: 980px) {
+      .app-header { align-items: flex-start; }
+      .stats .stat.summary { display: none; }
+      .toolbar { flex-wrap: wrap; }
+      .toolbar .scrubber { order: 3; flex-basis: 100%; }
+      .main-view { grid-template-columns: minmax(0, 1fr) 310px; }
+    }
+    @media (max-width: 720px) {
+      body { overflow: auto; min-height: 100vh; }
+      .app-header { position: static; }
+      .brand-subtitle, .stats { display: none; }
+      .toolbar-divider, .filter-btn { display: none; }
+      .search-wrap { flex: 1; }
+      .main-view, .main-view.sidebar-hidden { display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(460px, 60vh) 320px; overflow: visible; }
+      .graph-container { overflow: auto; }
+      #reactlog-svg { width: 1400px; max-width: none; }
+      .sidebar { border-left: 0; border-top: 1px solid var(--border); visibility: visible !important; }
+      .sidebar-toggle { display: none; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand"><i class="fa-solid fa-diagram-project"></i> <span>Static Shiny Dependency Simulation</span></div>
-    <div style="font-size: 0.8rem; color: var(--text-muted);" id="summary-text"></div>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">S</div>
+      <div class="brand-copy">
+        <div class="brand-title">Reactive dependency explorer</div>
+        <div class="brand-subtitle">Static simulation · app code is not executed</div>
+      </div>
+    </div>
+    <div class="stats" id="graph-stats" aria-label="Graph summary"></div>
   </header>
-  <div class="playback-bar">
-    <button class="btn" onclick="firstStep()"><i class="fa-solid fa-backward-step"></i> First</button>
-    <button class="btn" onclick="prevStep()"><i class="fa-solid fa-backward"></i> Prev</button>
-    <button class="btn" id="play-btn" onclick="togglePlay()"><i class="fa-solid fa-play"></i> Play</button>
-    <button class="btn" onclick="nextStep()">Next <i class="fa-solid fa-forward"></i></button>
-    <button class="btn" onclick="lastStep()">Last <i class="fa-solid fa-forward-step"></i></button>
+  <nav class="toolbar" aria-label="Graph controls">
+    <div class="toolbar-group" aria-label="Timeline playback">
+      <button class="btn icon" onclick="firstStep()" aria-label="First event" title="First event">|‹</button>
+      <button class="btn icon" onclick="prevStep()" aria-label="Previous event" title="Previous event">‹</button>
+      <button class="btn primary" id="play-btn" onclick="togglePlay()" aria-label="Play timeline"><span aria-hidden="true">▶</span> Play</button>
+      <button class="btn icon" onclick="nextStep()" aria-label="Next event" title="Next event">›</button>
+      <button class="btn icon" onclick="lastStep()" aria-label="Last event" title="Last event">›|</button>
+    </div>
+    <div class="toolbar-divider" aria-hidden="true"></div>
+    <label class="search-wrap">
+      <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Search graph nodes</span>
+      <input id="node-search" class="search-input" type="search" aria-label="Search graph nodes" placeholder="Find a reactive…" oninput="applyGraphFilters()" />
+    </label>
+    <div class="toolbar-group" aria-label="Node type filters">
+      <button class="btn filter-btn" data-role="source" aria-pressed="true" onclick="toggleRole(this)">Inputs</button>
+      <button class="btn filter-btn" data-role="conductor" aria-pressed="true" onclick="toggleRole(this)">Calcs</button>
+      <button class="btn filter-btn" data-role="observer" aria-pressed="true" onclick="toggleRole(this)">Observers</button>
+    </div>
+    <div class="toolbar-divider" aria-hidden="true"></div>
     <div class="scrubber">
-      <input type="range" id="scrubber-range" min="0" value="0" oninput="setStep(parseInt(this.value))" />
+      <input type="range" id="scrubber-range" min="0" value="0" aria-label="Timeline event" oninput="setStep(parseInt(this.value))" />
+      <div class="step-display" id="step-counter" role="status" aria-live="polite">0 / 0</div>
     </div>
-    <div class="step-display" id="step-counter">Step 0 / 0</div>
-  </div>
-  <div class="main-view">
-    <div class="graph-container" id="graph-viewport">
-      <svg id="reactlog-svg" width="600" height="380" viewBox="0 0 600 380"></svg>
-    </div>
-    <div class="sidebar">
-      <div class="sidebar-header"><i class="fa-solid fa-list-timeline"></i> Event Stream</div>
+  </nav>
+  <main class="main-view" id="main-view">
+    <section class="graph-container" id="graph-viewport" aria-label="Reactive dependency graph">
+      <div class="graph-topbar">
+        <div class="legend" aria-label="Node type legend">
+          <span class="legend-item" style="--role-color:var(--source)"><span class="legend-dot"></span>Input</span>
+          <span class="legend-item" style="--role-color:var(--calc)"><span class="legend-dot"></span>Calculation</span>
+          <span class="legend-item" style="--role-color:var(--effect)"><span class="legend-dot"></span>Effect</span>
+          <span class="legend-item" style="--role-color:var(--output)"><span class="legend-dot"></span>Output</span>
+        </div>
+        <div class="zoom-controls" aria-label="Graph zoom">
+          <button class="btn icon" onclick="zoomGraph(1.2)" aria-label="Zoom in" title="Zoom in">+</button>
+          <button class="btn icon" onclick="zoomGraph(0.8)" aria-label="Zoom out" title="Zoom out">−</button>
+          <button class="btn" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit graph to view">Fit</button>
+          <button class="btn sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" aria-label="Hide timeline" title="Show or hide timeline">Timeline ›</button>
+        </div>
+      </div>
+      <svg id="reactlog-svg" role="img" aria-label="Layered reactive dependency graph"></svg>
+    </section>
+    <aside class="sidebar" aria-label="Dependency details and event timeline">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Timeline</span>
+      </div>
+      <div class="inspector" id="active-inspector" aria-live="polite"></div>
       <ul class="event-list" id="event-list"></ul>
-    </div>
-  </div>
+    </aside>
+  </main>
   <script>
     const LOG_DATA = {
   "success": true,
@@ -967,10 +1064,65 @@
     let currentStep = 0;
     let isPlaying = false;
     let playTimer = null;
+    let zoomLevel = 1;
+    let graphBounds = { width: 900, height: 560 };
+    let selectedNodeId = null;
 
     const totalSteps = (LOG_DATA.events || []).length;
     document.getElementById('scrubber-range').max = Math.max(0, totalSteps - 1);
-    document.getElementById('summary-text').textContent = LOG_DATA.summary || '';
+    const nodeCounts = (LOG_DATA.nodes || []).reduce((counts, node) => {
+      counts[node.type] = (counts[node.type] || 0) + 1;
+      return counts;
+    }, {});
+    document.getElementById('graph-stats').innerHTML = [
+      `<span class="stat">${(LOG_DATA.nodes || []).length} nodes</span>`,
+      `<span class="stat">${(LOG_DATA.edges || []).length} dependencies</span>`,
+      `<span class="stat summary">static trace</span>`
+    ].join('');
+
+    function eventName(name) {
+      return String(name || 'event').replace(/([a-z])([A-Z])/g, '$1 $2');
+    }
+
+    function nodeKind(node) {
+      if (node.type === 'input') return { label: 'INPUT', color: '#38bdf8', glyph: 'I' };
+      if (node.type === 'effect') return { label: 'EFFECT', color: '#c084fc', glyph: 'E' };
+      if (node.type === 'output') return { label: 'OUTPUT', color: '#4ade80', glyph: 'O' };
+      return { label: 'CALC', color: '#fbbf24', glyph: 'C' };
+    }
+
+    function truncate(value, maxLength) {
+      const text = String(value || '');
+      return text.length > maxLength ? text.slice(0, maxLength - 1) + '…' : text;
+    }
+
+    function renderInspector() {
+      const inspector = document.getElementById('active-inspector');
+      const event = (LOG_DATA.events || [])[currentStep];
+      const selectedNode = (LOG_DATA.nodes || []).find(node => node.id === selectedNodeId);
+      if (selectedNode) {
+        const kind = nodeKind(selectedNode);
+        const incoming = (LOG_DATA.edges || []).filter(edge => edge.to === selectedNode.id).length;
+        const outgoing = (LOG_DATA.edges || []).filter(edge => edge.from === selectedNode.id).length;
+        inspector.innerHTML = '<div class="inspector-eyebrow"><span class="badge"></span><span class="event-step"></span></div><div class="inspector-node"></div><div class="inspector-detail"></div>';
+        inspector.querySelector('.badge').textContent = kind.label;
+        inspector.querySelector('.event-step').textContent = `line ${selectedNode.line || '—'}`;
+        inspector.querySelector('.inspector-node').textContent = selectedNode.id;
+        inspector.querySelector('.inspector-detail').textContent = `${incoming} upstream · ${outgoing} downstream. Select an event below to return to timeline details.`;
+        return;
+      }
+      if (!event) {
+        inspector.innerHTML = '<div class="inspector-node">No simulated events</div><div class="inspector-detail">The dependency graph is still available to explore.</div>';
+        return;
+      }
+      inspector.innerHTML = '<div class="inspector-eyebrow"><span class="badge"></span><span class="event-step"></span></div><div class="inspector-node"></div><div class="inspector-detail"></div>';
+      const badge = inspector.querySelector('.badge');
+      badge.textContent = eventName(event.event);
+      if (/^[A-Za-z][A-Za-z0-9_-]*$/.test(event.event || '')) badge.classList.add(event.event);
+      inspector.querySelector('.event-step').textContent = `#${event.step ?? currentStep}`;
+      inspector.querySelector('.inspector-node').textContent = event.node_label || 'Reactive environment';
+      inspector.querySelector('.inspector-detail').textContent = event.details || '';
+    }
 
     function renderEventsList() {
       const list = document.getElementById('event-list');
@@ -978,39 +1130,28 @@
       (LOG_DATA.events || []).forEach((ev, idx) => {
         const li = document.createElement('li');
         li.className = 'event-item' + (idx === currentStep ? ' active' : '');
-        li.onclick = () => setStep(idx);
+        li.onclick = () => { selectedNodeId = null; setStep(idx); };
 
         const headerDiv = document.createElement('div');
-        headerDiv.style.display = 'flex';
-        headerDiv.style.justifyContent = 'space-between';
-        headerDiv.style.marginBottom = '0.2rem';
+        headerDiv.className = 'event-row';
 
         const badge = document.createElement('span');
         badge.className = 'badge ' + (ev.event || '');
-        badge.textContent = ev.event || '';
+        badge.textContent = eventName(ev.event);
 
         const stepNum = document.createElement('span');
-        stepNum.style.color = 'var(--text-muted)';
-        stepNum.style.fontFamily = "'JetBrains Mono', monospace";
-        stepNum.style.fontSize = '0.75rem';
+        stepNum.className = 'event-step';
         stepNum.textContent = '#' + (ev.step != null ? ev.step : idx);
 
         headerDiv.appendChild(badge);
         headerDiv.appendChild(stepNum);
 
         const titleDiv = document.createElement('div');
-        titleDiv.style.fontWeight = '600';
-        titleDiv.style.color = '#ffffff';
-        titleDiv.textContent = ev.node_label || '';
-
-        const detailsDiv = document.createElement('div');
-        detailsDiv.style.fontSize = '0.75rem';
-        detailsDiv.style.color = 'var(--text-muted)';
-        detailsDiv.textContent = ev.details || '';
+        titleDiv.className = 'event-node';
+        titleDiv.textContent = ev.node_label || 'Reactive environment';
 
         li.appendChild(headerDiv);
         li.appendChild(titleDiv);
-        li.appendChild(detailsDiv);
         list.appendChild(li);
       });
     }
@@ -1018,9 +1159,10 @@
     function renderGraph() {
       const svg = document.getElementById('reactlog-svg');
       svg.innerHTML = '<defs>' +
-        '<marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#484f58"/></marker>' +
-        '<marker id="arrow-active" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#58a6ff"/></marker>' +
-        '<marker id="arrow-invalidate" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#d29922"/></marker>' +
+        '<filter id="card-shadow" x="-20%" y="-30%" width="140%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000000" flood-opacity="0.28"/></filter>' +
+        '<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#536579"/></marker>' +
+        '<marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#63b3ff"/></marker>' +
+        '<marker id="arrow-invalidate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#fb923c"/></marker>' +
         '</defs>';
 
       const nodes = LOG_DATA.nodes || [];
@@ -1064,34 +1206,56 @@
         columns[r].push(n);
       });
 
-      const colWidth = 240;
-      const rowHeight = 72;
-      const nodeWidth = 190;
-      const nodeHeight = 36;
+      columns.forEach(column => column.sort((a, b) => String(a.id).localeCompare(String(b.id))));
+      for (let colIdx = 1; colIdx < columns.length; colIdx++) {
+        const previousOrder = new Map();
+        columns.slice(0, colIdx).flat().forEach((node, idx) => previousOrder.set(node.id, idx));
+        columns[colIdx].sort((a, b) => {
+          const barycenter = node => {
+            const parents = edges.filter(edge => edge.to === node.id).map(edge => previousOrder.get(edge.from)).filter(value => value != null);
+            return parents.length ? parents.reduce((sum, value) => sum + value, 0) / parents.length : Number.MAX_SAFE_INTEGER;
+          };
+          return barycenter(a) - barycenter(b) || String(a.id).localeCompare(String(b.id));
+        });
+      }
+
+      const colWidth = 292;
+      const rowHeight = 92;
+      const nodeWidth = 224;
+      const nodeHeight = 62;
       const maxInCol = Math.max(1, ...columns.map(c => c.length));
-      const svgHeight = Math.max(480, maxInCol * rowHeight + 110);
-      const svgWidth = Math.max(880, (maxRank + 1) * colWidth + 60);
+      const svgHeight = Math.max(560, maxInCol * rowHeight + 150);
+      const svgWidth = Math.max(920, (maxRank + 1) * colWidth + 100);
+      graphBounds = { width: svgWidth, height: svgHeight };
 
       svg.setAttribute('width', '100%');
-      svg.setAttribute('height', svgHeight);
-      svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+      svg.setAttribute('height', '100%');
+      applyZoom();
 
       const pos = {};
       columns.forEach((colNodes, colIdx) => {
-        const colX = 130 + colIdx * colWidth;
+        const colX = 162 + colIdx * colWidth;
         const totalH = (colNodes.length - 1) * rowHeight;
-        const startY = 70 + (svgHeight - 70 - totalH) / 2;
+        const startY = 116 + (svgHeight - 150 - totalH) / 2;
+
+        const stageBand = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        stageBand.setAttribute('x', colX - (colWidth / 2) + 14);
+        stageBand.setAttribute('y', '72');
+        stageBand.setAttribute('width', colWidth - 28);
+        stageBand.setAttribute('height', svgHeight - 100);
+        stageBand.setAttribute('rx', '14');
+        stageBand.setAttribute('fill', colIdx % 2 === 0 ? '#0d141c' : '#0b1118');
+        stageBand.setAttribute('stroke', '#1c2936');
+        stageBand.setAttribute('stroke-width', '1');
+        stageBand.setAttribute('pointer-events', 'none');
+        svg.appendChild(stageBand);
 
         const stageHeader = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         stageHeader.setAttribute('x', colX);
-        stageHeader.setAttribute('y', 35);
-        stageHeader.setAttribute('fill', '#8b949e');
-        stageHeader.setAttribute('font-size', '11');
-        stageHeader.setAttribute('font-weight', '700');
-        stageHeader.setAttribute('font-family', 'JetBrains Mono, monospace');
+        stageHeader.setAttribute('y', 54);
+        stageHeader.setAttribute('class', 'stage-label');
         stageHeader.setAttribute('text-anchor', 'middle');
-        stageHeader.setAttribute('letter-spacing', '0.5px');
-        stageHeader.textContent = colIdx === 0 ? 'STAGE 0: SOURCES' : (colIdx === maxRank ? `STAGE ${colIdx}: SINKS` : `STAGE ${colIdx}: TIER ${colIdx}`);
+        stageHeader.textContent = colIdx === 0 ? 'INPUTS' : (colIdx === maxRank ? 'FINAL OBSERVERS' : `REACTIVE STAGE ${colIdx}`);
         svg.appendChild(stageHeader);
 
         colNodes.forEach((n, rowIdx) => {
@@ -1111,7 +1275,7 @@
           const y1 = p1.y;
           const x2 = p2.x - (nodeWidth / 2);
           const y2 = p2.y;
-          const dx = Math.max(30, (x2 - x1) * 0.5);
+          const midX = x1 + Math.max(42, (x2 - x1) * 0.5);
 
           const isEdgeActive = activeEvent.node_id === e.to &&
             activeEvent.event === 'dependsOn' &&
@@ -1124,23 +1288,28 @@
             activeEvent.details.includes(e.from);
 
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
+          path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`);
           path.setAttribute('fill', 'none');
+          path.setAttribute('stroke-linecap', 'round');
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
-          path.className.baseVal = 'graph-edge';
+          path.setAttribute('data-active', isEdgeActive || isInvalidateEdge ? 'true' : 'false');
+          path.setAttribute('class', 'graph-edge');
 
           if (isEdgeActive) {
             path.setAttribute('stroke', '#58a6ff');
-            path.setAttribute('stroke-width', '2.5');
+            path.setAttribute('stroke-width', '3');
+            path.setAttribute('opacity', '1');
             path.setAttribute('marker-end', 'url(#arrow-active)');
           } else if (isInvalidateEdge) {
-            path.setAttribute('stroke', '#d29922');
-            path.setAttribute('stroke-width', '2.5');
+            path.setAttribute('stroke', '#fb923c');
+            path.setAttribute('stroke-width', '3');
+            path.setAttribute('opacity', '1');
             path.setAttribute('marker-end', 'url(#arrow-invalidate)');
           } else {
-            path.setAttribute('stroke', '#484f58');
-            path.setAttribute('stroke-width', '1.5');
+            path.setAttribute('stroke', '#536579');
+            path.setAttribute('stroke-width', '1.35');
+            path.setAttribute('opacity', '0.58');
             path.setAttribute('marker-end', 'url(#arrow)');
           }
 
@@ -1151,61 +1320,115 @@
       nodes.forEach(n => {
         const p = pos[n.id] || { x: 200, y: 200 };
         const isActive = activeEvent.node_id === n.id;
-        let strokeColor = '#30363d';
-        let fillColor = '#161b22';
-        let textColor = '#c9d1d9';
-
-        if (n.role === 'source') strokeColor = '#38bdf8';
-        else if (n.role === 'conductor') strokeColor = '#f59e0b';
-        else if (n.type === 'effect') strokeColor = '#c084fc';
-        else strokeColor = '#4ade80';
+        const isSelected = selectedNodeId === n.id;
+        const kind = nodeKind(n);
+        let strokeColor = isSelected ? '#63b3ff' : '#35475a';
+        let fillColor = '#121b25';
 
         if (isActive) {
-          fillColor = '#21262d';
-          textColor = '#ffffff';
+          fillColor = '#192737';
           if (activeEvent.status === 'affected') strokeColor = '#d29922';
           else if (activeEvent.status === 'scheduled') strokeColor = '#58a6ff';
           else if (activeEvent.status === 'assumed') strokeColor = '#3fb950';
         }
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.className = 'graph-node';
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : ''));
         g.setAttribute('data-id', n.id);
-        g.style.cursor = 'pointer';
+        g.setAttribute('data-role', n.role);
+        g.setAttribute('tabindex', '0');
+        g.setAttribute('role', 'button');
+        g.setAttribute('aria-label', `${kind.label.toLowerCase()} ${n.id}, line ${n.line || 'unknown'}`);
 
         g.onclick = () => {
-          const matchIdx = (LOG_DATA.events || []).findIndex(ev => ev.node_id === n.id);
-          if (matchIdx !== -1) setStep(matchIdx);
+          selectedNodeId = n.id;
+          renderInspector();
+          renderGraph();
+        };
+        g.onkeydown = event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            g.onclick();
+          }
         };
 
         g.onmouseenter = () => highlightDependencies(n.id);
         g.onmouseleave = () => resetHighlight();
+        g.onfocus = () => highlightDependencies(n.id);
+        g.onblur = () => resetHighlight();
+
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `${n.label || n.id} · ${kind.label.toLowerCase()} · line ${n.line || 'unknown'}`;
+        g.appendChild(title);
 
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('x', p.x - (nodeWidth / 2));
         rect.setAttribute('y', p.y - (nodeHeight / 2));
         rect.setAttribute('width', nodeWidth);
         rect.setAttribute('height', nodeHeight);
-        rect.setAttribute('rx', '8');
+        rect.setAttribute('rx', '10');
         rect.setAttribute('fill', fillColor);
         rect.setAttribute('stroke', strokeColor);
-        rect.setAttribute('stroke-width', isActive ? '2.5' : '1.5');
+        rect.setAttribute('stroke-width', isActive || isSelected ? '2' : '1');
+        rect.setAttribute('filter', 'url(#card-shadow)');
+        rect.setAttribute('class', 'node-card');
         g.appendChild(rect);
 
-        const icon = n.role === 'source' ? '📥 ' : (n.role === 'conductor' ? '⚡ ' : (n.type === 'effect' ? '🔔 ' : '📊 '));
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', p.x);
-        text.setAttribute('y', p.y + 4);
-        text.setAttribute('fill', textColor);
-        text.setAttribute('font-size', '11');
-        text.setAttribute('font-weight', '600');
-        text.setAttribute('font-family', 'JetBrains Mono, monospace');
-        text.setAttribute('text-anchor', 'middle');
-        text.textContent = icon + (n.label || n.id);
-        g.appendChild(text);
+        const accent = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        accent.setAttribute('x', p.x - (nodeWidth / 2));
+        accent.setAttribute('y', p.y - (nodeHeight / 2) + 8);
+        accent.setAttribute('width', '4');
+        accent.setAttribute('height', nodeHeight - 16);
+        accent.setAttribute('rx', '2');
+        accent.setAttribute('fill', kind.color);
+        g.appendChild(accent);
+
+        const glyphBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        glyphBg.setAttribute('cx', p.x - 82);
+        glyphBg.setAttribute('cy', p.y);
+        glyphBg.setAttribute('r', '15');
+        glyphBg.setAttribute('fill', kind.color);
+        glyphBg.setAttribute('fill-opacity', '0.14');
+        glyphBg.setAttribute('stroke', kind.color);
+        glyphBg.setAttribute('stroke-opacity', '0.42');
+        g.appendChild(glyphBg);
+
+        const glyph = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        glyph.setAttribute('x', p.x - 82);
+        glyph.setAttribute('y', p.y + 4);
+        glyph.setAttribute('fill', kind.color);
+        glyph.setAttribute('font-size', '11');
+        glyph.setAttribute('font-weight', '800');
+        glyph.setAttribute('font-family', 'ui-monospace, monospace');
+        glyph.setAttribute('text-anchor', 'middle');
+        glyph.textContent = kind.glyph;
+        g.appendChild(glyph);
+
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', p.x - 58);
+        label.setAttribute('y', p.y - 5);
+        label.setAttribute('fill', '#edf4fb');
+        label.setAttribute('font-size', '12');
+        label.setAttribute('font-weight', '700');
+        label.setAttribute('font-family', 'ui-monospace, monospace');
+        label.textContent = truncate(n.id, 22);
+        g.appendChild(label);
+
+        const incoming = inEdges[n.id].length;
+        const outgoing = outEdges[n.id].length;
+        const meta = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        meta.setAttribute('x', p.x - 58);
+        meta.setAttribute('y', p.y + 14);
+        meta.setAttribute('fill', '#8293a7');
+        meta.setAttribute('font-size', '9.5');
+        meta.setAttribute('font-weight', '600');
+        meta.setAttribute('font-family', 'ui-monospace, monospace');
+        meta.textContent = `${kind.label} · line ${n.line || '—'} · ${incoming}↑ ${outgoing}↓`;
+        g.appendChild(meta);
 
         svg.appendChild(g);
       });
+      applyGraphFilters();
     }
 
     function highlightDependencies(nodeId) {
@@ -1231,44 +1454,104 @@
 
       findUp(nodeId);
       findDown(nodeId);
+      const related = new Set([nodeId, ...upstream, ...downstream]);
 
       document.querySelectorAll('.graph-node').forEach(el => {
         const id = el.getAttribute('data-id');
-        if (id === nodeId || upstream.has(id) || downstream.has(id)) {
+        if (related.has(id)) {
           el.style.opacity = '1';
         } else {
-          el.style.opacity = '0.25';
+          el.style.opacity = '0.14';
         }
       });
 
       document.querySelectorAll('.graph-edge').forEach(el => {
         const f = el.getAttribute('data-from');
         const t = el.getAttribute('data-to');
-        if ((f === nodeId || upstream.has(f)) && (t === nodeId || downstream.has(t) || t === nodeId)) {
+        if (related.has(f) && related.has(t)) {
           el.style.opacity = '1';
-          el.setAttribute('stroke-width', '2.5');
+          el.setAttribute('stroke-width', '2.4');
         } else {
-          el.style.opacity = '0.15';
+          el.style.opacity = '0.07';
         }
       });
     }
 
     function resetHighlight() {
-      document.querySelectorAll('.graph-node').forEach(el => el.style.opacity = '1');
-      document.querySelectorAll('.graph-edge').forEach(el => {
-        el.style.opacity = '1';
-        el.setAttribute('stroke-width', '1.5');
+      applyGraphFilters();
+    }
+
+    function toggleRole(button) {
+      button.setAttribute('aria-pressed', button.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+      applyGraphFilters();
+    }
+
+    function applyGraphFilters() {
+      const query = (document.getElementById('node-search')?.value || '').trim().toLowerCase();
+      const enabledRoles = new Set(
+        Array.from(document.querySelectorAll('.filter-btn[aria-pressed="true"]')).map(button => button.dataset.role)
+      );
+      const visibleNodes = new Set();
+      document.querySelectorAll('.graph-node').forEach(element => {
+        const id = element.getAttribute('data-id') || '';
+        const role = element.getAttribute('data-role');
+        const visible = enabledRoles.has(role) && (!query || id.toLowerCase().includes(query));
+        element.style.opacity = visible ? '1' : '0.1';
+        element.style.pointerEvents = visible ? 'auto' : 'none';
+        if (visible) visibleNodes.add(id);
+      });
+      document.querySelectorAll('.graph-edge').forEach(element => {
+        const visible = visibleNodes.has(element.getAttribute('data-from')) && visibleNodes.has(element.getAttribute('data-to'));
+        element.style.opacity = visible ? (element.getAttribute('data-active') === 'true' ? '1' : '0.58') : '0.04';
+        element.setAttribute('stroke-width', element.getAttribute('data-active') === 'true' ? '3' : '1.35');
       });
     }
 
+    function applyZoom() {
+      const svg = document.getElementById('reactlog-svg');
+      const width = graphBounds.width / zoomLevel;
+      const height = graphBounds.height / zoomLevel;
+      const x = (graphBounds.width - width) / 2;
+      const y = (graphBounds.height - height) / 2;
+      svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`);
+    }
+
+    function zoomGraph(factor) {
+      zoomLevel = Math.max(0.65, Math.min(2.4, zoomLevel * factor));
+      applyZoom();
+    }
+
+    function fitGraph() {
+      zoomLevel = 1;
+      applyZoom();
+    }
+
+    function toggleSidebar() {
+      const main = document.getElementById('main-view');
+      const hidden = main.classList.toggle('sidebar-hidden');
+      const button = document.getElementById('sidebar-toggle');
+      button.textContent = hidden ? 'Timeline ‹' : 'Timeline ›';
+      button.setAttribute('aria-label', hidden ? 'Show timeline' : 'Hide timeline');
+    }
+
     function setStep(idx) {
-      currentStep = Math.max(0, Math.min(idx, totalSteps - 1));
+      selectedNodeId = null;
+      currentStep = totalSteps ? Math.max(0, Math.min(idx, totalSteps - 1)) : 0;
       document.getElementById('scrubber-range').value = currentStep;
-      document.getElementById('step-counter').textContent = `Step ${currentStep + 1} / ${totalSteps}`;
+      document.getElementById('step-counter').textContent = totalSteps ? `${currentStep + 1} / ${totalSteps}` : '0 / 0';
+      renderInspector();
       renderEventsList();
       renderGraph();
       const activeEl = document.querySelectorAll('.event-item')[currentStep];
-      if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (activeEl) {
+        const eventList = document.getElementById('event-list');
+        const itemTop = activeEl.offsetTop - eventList.offsetTop;
+        const itemBottom = itemTop + activeEl.offsetHeight;
+        if (itemTop < eventList.scrollTop) eventList.scrollTop = itemTop;
+        if (itemBottom > eventList.scrollTop + eventList.clientHeight) {
+          eventList.scrollTop = itemBottom - eventList.clientHeight;
+        }
+      }
     }
 
     function firstStep() { setStep(0); }
@@ -1286,13 +1569,22 @@
       isPlaying = !isPlaying;
       const btn = document.getElementById('play-btn');
       if (isPlaying) {
-        btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+        btn.innerHTML = '<span aria-hidden="true">Ⅱ</span> Pause';
+        btn.setAttribute('aria-label', 'Pause timeline');
         playTimer = setInterval(nextStep, 700);
       } else {
-        btn.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+        btn.innerHTML = '<span aria-hidden="true">▶</span> Play';
+        btn.setAttribute('aria-label', 'Play timeline');
         clearInterval(playTimer);
       }
     }
+
+    document.addEventListener('keydown', event => {
+      if (event.target instanceof HTMLInputElement) return;
+      if (event.key === 'ArrowLeft') prevStep();
+      if (event.key === 'ArrowRight') nextStep();
+      if (event.key === 'Escape') { selectedNodeId = null; renderInspector(); renderGraph(); }
+    });
 
     setStep(0);
   </script>
