@@ -60,9 +60,9 @@ To see what's bundled without installing anything, run `shiny skills list`.
 
 Shiny includes built-in developer tools accessible directly from the terminal:
 
-- `shiny validate app.py`: Static AST analysis to detect reactivity errors, duplicate IDs, and mode mismatches.
+- `shiny validate app.py`: Static AST analysis to detect reactivity errors and duplicate IDs.
 - `shiny simulate app.py -i n=25`: Headless in-memory reactive simulation without a browser.
-- `shiny inspect app.py --reactlog`: Reactive dependency graph (DAG) and Reactlog lifecycle tracing with interactive HTML export (`--html`).
+- `shiny inspect app.py --reactlog`: Static reactive dependency graph (DAG) with simulated invalidation ordering and interactive HTML export (`--html`). It does not execute app code.
 - `shiny docs ui.page_sidebar`: Component docstrings, signatures, and code snippets.
 
 ## Development

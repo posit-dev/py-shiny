@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reactlog: examples/complex_analytics_dashboard.py</title>
+  <title>Static dependency simulation: examples/complex_analytics_dashboard.py</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -42,16 +42,16 @@
     .event-item.active { background: rgba(88, 166, 255, 0.15); border-color: var(--accent); color: #ffffff; }
     .event-item .badge { font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
     .badge.define { background: #21262d; color: var(--text-muted); }
-    .badge.valueChange { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
-    .badge.invalidate { background: rgba(210, 153, 34, 0.2); color: #d29922; }
-    .badge.calculate { background: rgba(88, 166, 255, 0.25); color: #79c0ff; }
-    .badge.ready { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
+    .badge.assumeValue { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+    .badge.propagate { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+    .badge.wouldEvaluate { background: rgba(88, 166, 255, 0.25); color: #79c0ff; }
+    .badge.ordered { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
     .graph-node { transition: all 0.25s ease; }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand"><i class="fa-solid fa-diagram-project"></i> <span>Shiny Reactive Trace</span></div>
+    <div class="brand"><i class="fa-solid fa-diagram-project"></i> <span>Static Shiny Dependency Simulation</span></div>
     <div style="font-size: 0.8rem; color: var(--text-muted);" id="summary-text"></div>
   </header>
   <div class="playback-bar">
@@ -77,6 +77,7 @@
   <script>
     const LOG_DATA = {
   "success": true,
+  "trace_kind": "static_dependency_simulation",
   "nodes": [
     {
       "id": "base_customers",
@@ -272,12 +273,12 @@
   "events": [
     {
       "step": 0,
-      "event": "sessionInit",
+      "event": "analysisInit",
       "node_id": null,
       "node_label": "session",
       "node_type": "session",
       "status": "active",
-      "details": "Initialized reactive session context"
+      "details": "Started static AST dependency analysis; app code was not executed"
     },
     {
       "step": 1,
@@ -285,8 +286,8 @@
       "node_id": "base_customers",
       "node_label": "input.base_customers",
       "node_type": "source",
-      "status": "ready",
-      "details": "Registered source node at line 17"
+      "status": "discovered",
+      "details": "Found source node at line 17"
     },
     {
       "step": 2,
@@ -294,8 +295,8 @@
       "node_id": "discount_rate",
       "node_label": "input.discount_rate",
       "node_type": "source",
-      "status": "ready",
-      "details": "Registered source node at line 15"
+      "status": "discovered",
+      "details": "Found source node at line 15"
     },
     {
       "step": 3,
@@ -303,8 +304,8 @@
       "node_id": "enable_surge",
       "node_label": "input.enable_surge",
       "node_type": "source",
-      "status": "ready",
-      "details": "Registered source node at line 18"
+      "status": "discovered",
+      "details": "Found source node at line 18"
     },
     {
       "step": 4,
@@ -312,8 +313,8 @@
       "node_id": "marketing_spend",
       "node_label": "input.marketing_spend",
       "node_type": "source",
-      "status": "ready",
-      "details": "Registered source node at line 16"
+      "status": "discovered",
+      "details": "Found source node at line 16"
     },
     {
       "step": 5,
@@ -321,8 +322,8 @@
       "node_id": "region",
       "node_label": "input.region",
       "node_type": "source",
-      "status": "ready",
-      "details": "Registered source node at line 9"
+      "status": "discovered",
+      "details": "Found source node at line 9"
     },
     {
       "step": 6,
@@ -330,8 +331,8 @@
       "node_id": "effective_conversion",
       "node_label": "calc:effective_conversion",
       "node_type": "conductor",
-      "status": "idle",
-      "details": "Registered conductor node at line 41"
+      "status": "discovered",
+      "details": "Found conductor node at line 41"
     },
     {
       "step": 7,
@@ -339,8 +340,8 @@
       "node_id": "gross_revenue",
       "node_label": "calc:gross_revenue",
       "node_type": "conductor",
-      "status": "idle",
-      "details": "Registered conductor node at line 49"
+      "status": "discovered",
+      "details": "Found conductor node at line 49"
     },
     {
       "step": 8,
@@ -348,8 +349,8 @@
       "node_id": "inventory_risk",
       "node_label": "calc:inventory_risk",
       "node_type": "conductor",
-      "status": "idle",
-      "details": "Registered conductor node at line 66"
+      "status": "discovered",
+      "details": "Found conductor node at line 66"
     },
     {
       "step": 9,
@@ -357,8 +358,8 @@
       "node_id": "net_profit",
       "node_label": "calc:net_profit",
       "node_type": "conductor",
-      "status": "idle",
-      "details": "Registered conductor node at line 57"
+      "status": "discovered",
+      "details": "Found conductor node at line 57"
     },
     {
       "step": 10,
@@ -366,8 +367,8 @@
       "node_id": "raw_demand",
       "node_label": "calc:raw_demand",
       "node_type": "conductor",
-      "status": "idle",
-      "details": "Registered conductor node at line 34"
+      "status": "discovered",
+      "details": "Found conductor node at line 34"
     },
     {
       "step": 11,
@@ -375,8 +376,8 @@
       "node_id": "regional_factor",
       "node_label": "calc:regional_factor",
       "node_type": "conductor",
-      "status": "idle",
-      "details": "Registered conductor node at line 22"
+      "status": "discovered",
+      "details": "Found conductor node at line 22"
     },
     {
       "step": 12,
@@ -384,8 +385,8 @@
       "node_id": "alert_logger",
       "node_label": "effect:alert_logger",
       "node_type": "observer",
-      "status": "idle",
-      "details": "Registered observer node at line 77"
+      "status": "discovered",
+      "details": "Found observer node at line 77"
     },
     {
       "step": 13,
@@ -393,8 +394,8 @@
       "node_id": "forecast_summary",
       "node_label": "output:forecast_summary",
       "node_type": "observer",
-      "status": "idle",
-      "details": "Registered observer node at line 110"
+      "status": "discovered",
+      "details": "Found observer node at line 110"
     },
     {
       "step": 14,
@@ -402,8 +403,8 @@
       "node_id": "kpi_profit",
       "node_label": "output:kpi_profit",
       "node_type": "observer",
-      "status": "idle",
-      "details": "Registered observer node at line 95"
+      "status": "discovered",
+      "details": "Found observer node at line 95"
     },
     {
       "step": 15,
@@ -411,8 +412,8 @@
       "node_id": "kpi_revenue",
       "node_label": "output:kpi_revenue",
       "node_type": "observer",
-      "status": "idle",
-      "details": "Registered observer node at line 88"
+      "status": "discovered",
+      "details": "Found observer node at line 88"
     },
     {
       "step": 16,
@@ -420,175 +421,175 @@
       "node_id": "kpi_risk",
       "node_label": "output:kpi_risk",
       "node_type": "observer",
-      "status": "idle",
-      "details": "Registered observer node at line 102"
+      "status": "discovered",
+      "details": "Found observer node at line 102"
     },
     {
       "step": 17,
-      "event": "valueChange",
+      "event": "assumeValue",
       "node_id": "base_customers",
       "node_label": "input.base_customers",
       "node_type": "source",
-      "status": "ready",
+      "status": "assumed",
       "value": "10",
-      "details": "Input value set to 10"
+      "details": "Assumed input value 10 for dependency analysis"
     },
     {
       "step": 18,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "raw_demand",
       "node_label": "calc:raw_demand",
       "node_type": "conductor",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'base_customers'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'base_customers'"
     },
     {
       "step": 19,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "effective_conversion",
       "node_label": "calc:effective_conversion",
       "node_type": "conductor",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'raw_demand'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'raw_demand'"
     },
     {
       "step": 20,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "forecast_summary",
       "node_label": "output:forecast_summary",
       "node_type": "observer",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'effective_conversion'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'effective_conversion'"
     },
     {
       "step": 21,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "gross_revenue",
       "node_label": "calc:gross_revenue",
       "node_type": "conductor",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'effective_conversion'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'effective_conversion'"
     },
     {
       "step": 22,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "kpi_revenue",
       "node_label": "output:kpi_revenue",
       "node_type": "observer",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'gross_revenue'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'gross_revenue'"
     },
     {
       "step": 23,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "net_profit",
       "node_label": "calc:net_profit",
       "node_type": "conductor",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'gross_revenue'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'gross_revenue'"
     },
     {
       "step": 24,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "kpi_profit",
       "node_label": "output:kpi_profit",
       "node_type": "observer",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'net_profit'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'net_profit'"
     },
     {
       "step": 25,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "inventory_risk",
       "node_label": "calc:inventory_risk",
       "node_type": "conductor",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'effective_conversion'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'effective_conversion'"
     },
     {
       "step": 26,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "kpi_risk",
       "node_label": "output:kpi_risk",
       "node_type": "observer",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'inventory_risk'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'inventory_risk'"
     },
     {
       "step": 27,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "alert_logger",
       "node_label": "effect:alert_logger",
       "node_type": "observer",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'inventory_risk'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'inventory_risk'"
     },
     {
       "step": 28,
-      "event": "valueChange",
+      "event": "assumeValue",
       "node_id": "discount_rate",
       "node_label": "input.discount_rate",
       "node_type": "source",
-      "status": "ready",
+      "status": "assumed",
       "value": "10",
-      "details": "Input value set to 10"
+      "details": "Assumed input value 10 for dependency analysis"
     },
     {
       "step": 29,
-      "event": "valueChange",
+      "event": "assumeValue",
       "node_id": "enable_surge",
       "node_label": "input.enable_surge",
       "node_type": "source",
-      "status": "ready",
+      "status": "assumed",
       "value": "10",
-      "details": "Input value set to 10"
+      "details": "Assumed input value 10 for dependency analysis"
     },
     {
       "step": 30,
-      "event": "valueChange",
+      "event": "assumeValue",
       "node_id": "marketing_spend",
       "node_label": "input.marketing_spend",
       "node_type": "source",
-      "status": "ready",
+      "status": "assumed",
       "value": "10",
-      "details": "Input value set to 10"
+      "details": "Assumed input value 10 for dependency analysis"
     },
     {
       "step": 31,
-      "event": "valueChange",
+      "event": "assumeValue",
       "node_id": "region",
       "node_label": "input.region",
       "node_type": "source",
-      "status": "ready",
+      "status": "assumed",
       "value": "10",
-      "details": "Input value set to 10"
+      "details": "Assumed input value 10 for dependency analysis"
     },
     {
       "step": 32,
-      "event": "invalidate",
+      "event": "propagate",
       "node_id": "regional_factor",
       "node_label": "calc:regional_factor",
       "node_type": "conductor",
-      "status": "dirty",
-      "details": "Invalidated by upstream dependency 'region'"
+      "status": "affected",
+      "details": "Static dependency path propagates from 'region'"
     },
     {
       "step": 33,
-      "event": "flushStart",
+      "event": "orderingStart",
       "node_id": null,
       "node_label": "reactiveEnvironment",
       "node_type": "engine",
-      "status": "flushing",
-      "details": "Starting reactive flush (11 dirty nodes)"
+      "status": "ordering",
+      "details": "Computing a possible topological order for 11 affected nodes"
     },
     {
       "step": 34,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "raw_demand",
       "node_label": "calc:raw_demand",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'raw_demand'"
+      "status": "scheduled",
+      "details": "Static ordering places 'raw_demand' at this position; it was not executed"
     },
     {
       "step": 35,
@@ -596,8 +597,8 @@
       "node_id": "raw_demand",
       "node_label": "calc:raw_demand",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'base_customers'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'base_customers'"
     },
     {
       "step": 36,
@@ -605,26 +606,26 @@
       "node_id": "raw_demand",
       "node_label": "calc:raw_demand",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'marketing_spend'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'marketing_spend'"
     },
     {
       "step": 37,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "raw_demand",
       "node_label": "calc:raw_demand",
       "node_type": "conductor",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 38,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "regional_factor",
       "node_label": "calc:regional_factor",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'regional_factor'"
+      "status": "scheduled",
+      "details": "Static ordering places 'regional_factor' at this position; it was not executed"
     },
     {
       "step": 39,
@@ -632,26 +633,26 @@
       "node_id": "regional_factor",
       "node_label": "calc:regional_factor",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'region'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'region'"
     },
     {
       "step": 40,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "regional_factor",
       "node_label": "calc:regional_factor",
       "node_type": "conductor",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 41,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "effective_conversion",
       "node_label": "calc:effective_conversion",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'effective_conversion'"
+      "status": "scheduled",
+      "details": "Static ordering places 'effective_conversion' at this position; it was not executed"
     },
     {
       "step": 42,
@@ -659,8 +660,8 @@
       "node_id": "effective_conversion",
       "node_label": "calc:effective_conversion",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'discount_rate'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'discount_rate'"
     },
     {
       "step": 43,
@@ -668,26 +669,26 @@
       "node_id": "effective_conversion",
       "node_label": "calc:effective_conversion",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'raw_demand'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'raw_demand'"
     },
     {
       "step": 44,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "effective_conversion",
       "node_label": "calc:effective_conversion",
       "node_type": "conductor",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 45,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "gross_revenue",
       "node_label": "calc:gross_revenue",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'gross_revenue'"
+      "status": "scheduled",
+      "details": "Static ordering places 'gross_revenue' at this position; it was not executed"
     },
     {
       "step": 46,
@@ -695,8 +696,8 @@
       "node_id": "gross_revenue",
       "node_label": "calc:gross_revenue",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'effective_conversion'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'effective_conversion'"
     },
     {
       "step": 47,
@@ -704,26 +705,26 @@
       "node_id": "gross_revenue",
       "node_label": "calc:gross_revenue",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'regional_factor'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'regional_factor'"
     },
     {
       "step": 48,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "gross_revenue",
       "node_label": "calc:gross_revenue",
       "node_type": "conductor",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 49,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "inventory_risk",
       "node_label": "calc:inventory_risk",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'inventory_risk'"
+      "status": "scheduled",
+      "details": "Static ordering places 'inventory_risk' at this position; it was not executed"
     },
     {
       "step": 50,
@@ -731,8 +732,8 @@
       "node_id": "inventory_risk",
       "node_label": "calc:inventory_risk",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'enable_surge'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'enable_surge'"
     },
     {
       "step": 51,
@@ -740,26 +741,26 @@
       "node_id": "inventory_risk",
       "node_label": "calc:inventory_risk",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'effective_conversion'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'effective_conversion'"
     },
     {
       "step": 52,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "inventory_risk",
       "node_label": "calc:inventory_risk",
       "node_type": "conductor",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 53,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "net_profit",
       "node_label": "calc:net_profit",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'net_profit'"
+      "status": "scheduled",
+      "details": "Static ordering places 'net_profit' at this position; it was not executed"
     },
     {
       "step": 54,
@@ -767,8 +768,8 @@
       "node_id": "net_profit",
       "node_label": "calc:net_profit",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'enable_surge'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'enable_surge'"
     },
     {
       "step": 55,
@@ -776,8 +777,8 @@
       "node_id": "net_profit",
       "node_label": "calc:net_profit",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'marketing_spend'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'marketing_spend'"
     },
     {
       "step": 56,
@@ -785,26 +786,26 @@
       "node_id": "net_profit",
       "node_label": "calc:net_profit",
       "node_type": "conductor",
-      "status": "calculating",
-      "details": "Read value from dependency 'gross_revenue'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'gross_revenue'"
     },
     {
       "step": 57,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "net_profit",
       "node_label": "calc:net_profit",
       "node_type": "conductor",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 58,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "alert_logger",
       "node_label": "effect:alert_logger",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'alert_logger'"
+      "status": "scheduled",
+      "details": "Static ordering places 'alert_logger' at this position; it was not executed"
     },
     {
       "step": 59,
@@ -812,26 +813,26 @@
       "node_id": "alert_logger",
       "node_label": "effect:alert_logger",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Read value from dependency 'inventory_risk'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'inventory_risk'"
     },
     {
       "step": 60,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "alert_logger",
       "node_label": "effect:alert_logger",
       "node_type": "observer",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 61,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "forecast_summary",
       "node_label": "output:forecast_summary",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'forecast_summary'"
+      "status": "scheduled",
+      "details": "Static ordering places 'forecast_summary' at this position; it was not executed"
     },
     {
       "step": 62,
@@ -839,8 +840,8 @@
       "node_id": "forecast_summary",
       "node_label": "output:forecast_summary",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Read value from dependency 'effective_conversion'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'effective_conversion'"
     },
     {
       "step": 63,
@@ -848,8 +849,8 @@
       "node_id": "forecast_summary",
       "node_label": "output:forecast_summary",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Read value from dependency 'net_profit'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'net_profit'"
     },
     {
       "step": 64,
@@ -857,26 +858,26 @@
       "node_id": "forecast_summary",
       "node_label": "output:forecast_summary",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Read value from dependency 'regional_factor'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'regional_factor'"
     },
     {
       "step": 65,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "forecast_summary",
       "node_label": "output:forecast_summary",
       "node_type": "observer",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 66,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "kpi_profit",
       "node_label": "output:kpi_profit",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'kpi_profit'"
+      "status": "scheduled",
+      "details": "Static ordering places 'kpi_profit' at this position; it was not executed"
     },
     {
       "step": 67,
@@ -884,26 +885,26 @@
       "node_id": "kpi_profit",
       "node_label": "output:kpi_profit",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Read value from dependency 'net_profit'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'net_profit'"
     },
     {
       "step": 68,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "kpi_profit",
       "node_label": "output:kpi_profit",
       "node_type": "observer",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 69,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "kpi_revenue",
       "node_label": "output:kpi_revenue",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'kpi_revenue'"
+      "status": "scheduled",
+      "details": "Static ordering places 'kpi_revenue' at this position; it was not executed"
     },
     {
       "step": 70,
@@ -911,26 +912,26 @@
       "node_id": "kpi_revenue",
       "node_label": "output:kpi_revenue",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Read value from dependency 'gross_revenue'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'gross_revenue'"
     },
     {
       "step": 71,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "kpi_revenue",
       "node_label": "output:kpi_revenue",
       "node_type": "observer",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 72,
-      "event": "calculate",
+      "event": "wouldEvaluate",
       "node_id": "kpi_risk",
       "node_label": "output:kpi_risk",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Executing reactive computation for 'kpi_risk'"
+      "status": "scheduled",
+      "details": "Static ordering places 'kpi_risk' at this position; it was not executed"
     },
     {
       "step": 73,
@@ -938,30 +939,30 @@
       "node_id": "kpi_risk",
       "node_label": "output:kpi_risk",
       "node_type": "observer",
-      "status": "calculating",
-      "details": "Read value from dependency 'inventory_risk'"
+      "status": "scheduled",
+      "details": "AST inspection found dependency edge from 'inventory_risk'"
     },
     {
       "step": 74,
-      "event": "ready",
+      "event": "ordered",
       "node_id": "kpi_risk",
       "node_label": "output:kpi_risk",
       "node_type": "observer",
-      "status": "ready",
-      "details": "Computation completed; cached updated value"
+      "status": "scheduled",
+      "details": "Node placed in the simulated static order; no runtime result is known"
     },
     {
       "step": 75,
-      "event": "flushComplete",
+      "event": "orderingComplete",
       "node_id": null,
       "node_label": "reactiveEnvironment",
       "node_type": "engine",
       "status": "idle",
-      "details": "Reactive flush finished across 11 evaluated nodes"
+      "details": "Static ordering contains 11 nodes; no reactive flush occurred"
     }
   ],
   "steps_total": 76,
-  "summary": "Simulated reactive trace: 76 steps across 16 nodes (11 invalidated)"
+  "summary": "Static dependency simulation: 76 steps across 16 nodes (11 affected); app code was not executed"
 };
     let currentStep = 0;
     let isPlaying = false;
@@ -1117,7 +1118,7 @@
             activeEvent.details &&
             activeEvent.details.includes(e.from);
 
-          const isInvalidateEdge = activeEvent.event === 'invalidate' &&
+          const isInvalidateEdge = activeEvent.event === 'propagate' &&
             activeEvent.node_id === e.to &&
             activeEvent.details &&
             activeEvent.details.includes(e.from);
@@ -1162,9 +1163,9 @@
         if (isActive) {
           fillColor = '#21262d';
           textColor = '#ffffff';
-          if (activeEvent.status === 'dirty') strokeColor = '#d29922';
-          else if (activeEvent.status === 'calculating') strokeColor = '#58a6ff';
-          else if (activeEvent.status === 'ready') strokeColor = '#3fb950';
+          if (activeEvent.status === 'affected') strokeColor = '#d29922';
+          else if (activeEvent.status === 'scheduled') strokeColor = '#58a6ff';
+          else if (activeEvent.status === 'assumed') strokeColor = '#3fb950';
         }
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');

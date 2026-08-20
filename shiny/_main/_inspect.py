@@ -33,10 +33,10 @@ def _parse_input_value(val_str: str) -> Any:
 
 @click.command(
     "inspect",
-    help="""Inspect and map the reactive dependency graph (DAG) or Reactlog lifecycle of a Shiny app.
+    help="""Statically inspect and map the reactive dependency graph (DAG) of a Shiny app.
 
     Statically parses UI inputs, reactive calculations, effects, and outputs,
-    and displays their dependency relationships or chronological Reactlog event trace.
+    and displays their dependency relationships or a simulated invalidation order.
 
     Examples:
 
@@ -65,14 +65,14 @@ def _parse_input_value(val_str: str) -> Any:
     "reactlog_flag",
     is_flag=True,
     default=False,
-    help="Trace chronological Reactlog lifecycle events.",
+    help="Show a static simulation of dependency invalidation and evaluation order.",
 )
 @click.option(
     "--html",
     "html_out",
     type=click.Path(),
     default=None,
-    help="Export interactive HTML Reactlog visualizer to file.",
+    help="Export the static dependency simulation as interactive HTML.",
 )
 @click.option(
     "--json",
@@ -100,7 +100,7 @@ def _parse_input_value(val_str: str) -> Any:
     "inputs_json",
     type=str,
     default=None,
-    help="JSON dictionary string of input values for Reactlog simulation.",
+    help="JSON dictionary string of assumed values for dependency simulation.",
 )
 def inspect(
     path: Optional[str],
@@ -163,24 +163,18 @@ def inspect(
             if candidate.is_file():
                 p = candidate
             else:
-                py_files = list(p.glob("*.py"))
-                if py_files:
-                    p = py_files[0]
+                if output_format == "json":
+                    click.echo(
+                        json.dumps(
+                            {
+                                "success": False,
+                                "error": f"Directory does not contain app.py: {path}",
+                            }
+                        )
+                    )
                 else:
-                    if output_format == "json":
-                        click.echo(
-                            json.dumps(
-                                {
-                                    "success": False,
-                                    "error": f"No Python files in directory: {path}",
-                                }
-                            )
-                        )
-                    else:
-                        click.echo(
-                            cli_danger(f"No Python files found in directory: {path}")
-                        )
-                    sys.exit(1)
+                    click.echo(cli_danger(f"Directory does not contain app.py: {path}"))
+                sys.exit(1)
         if not p.is_file():
             if output_format == "json":
                 click.echo(
@@ -232,11 +226,13 @@ def inspect(
     if output_format == "html":
         out_file_path = html_out if html_out is not None else "reactlog.html"
         html_content = format_reactlog_html(
-            reactlog_data, title=f"Reactlog: {target_desc}"
+            reactlog_data, title=f"Static dependency simulation: {target_desc}"
         )
         Path(out_file_path).write_text(html_content, encoding="utf-8")
         click.echo(
-            cli_success(f"Interactive Reactlog HTML exported to {out_file_path}")
+            cli_success(
+                f"Interactive static dependency simulation exported to {out_file_path}"
+            )
         )
         sys.exit(0)
 
@@ -255,7 +251,7 @@ def inspect(
         sys.exit(0)
 
     elif output_format == "reactlog":
-        click.echo(cli_bold(f"Simulated Reactive Trace for {target_desc}"))
+        click.echo(cli_bold(f"Static Dependency Simulation for {target_desc}"))
         click.echo(cli_info(str(reactlog_data["summary"])) + "\n")
 
         events = reactlog_data.get("events", [])
@@ -272,11 +268,11 @@ def inspect(
             details = ev.get("details", "")
 
             status_styled = status
-            if status == "ready":
+            if status in ("assumed", "discovered"):
                 status_styled = click.style(status, fg="green")
-            elif status == "dirty":
+            elif status == "affected":
                 status_styled = click.style(status, fg="yellow")
-            elif status == "calculating":
+            elif status in ("ordering", "scheduled"):
                 status_styled = click.style(status, fg="cyan")
             elif status == "error":
                 status_styled = click.style(status, fg="red")
@@ -329,7 +325,7 @@ def inspect(
 
         click.echo(
             cli_info(
-                "\nTip: Run 'shiny inspect --reactlog' or 'shiny inspect --html' to see full time-travel execution."
+                "\nTip: Run 'shiny inspect --reactlog' or 'shiny inspect --html' to explore the static dependency simulation."
             )
         )
         sys.exit(0)

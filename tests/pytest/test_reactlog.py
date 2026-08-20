@@ -63,7 +63,7 @@ def out():
     assert reactlog["success"] is True
 
     calc_events = [
-        e["node_id"] for e in reactlog["events"] if e["event"] == "calculate"
+        e["node_id"] for e in reactlog["events"] if e["event"] == "wouldEvaluate"
     ]
     assert "z_base" in calc_events
     assert "a_derived" in calc_events
@@ -92,17 +92,25 @@ def display():
     reactlog = generate_reactlog(code, inputs={"count": 50})
     assert reactlog["success"] is True
     assert len(reactlog["events"]) > 5
+    assert reactlog["trace_kind"] == "static_dependency_simulation"
 
     events = [e["event"] for e in reactlog["events"]]
-    assert "sessionInit" in events
+    assert "analysisInit" in events
     assert "define" in events
-    assert "valueChange" in events
-    assert "invalidate" in events
-    assert "flushStart" in events
-    assert "calculate" in events
+    assert "assumeValue" in events
+    assert "propagate" in events
+    assert "orderingStart" in events
+    assert "wouldEvaluate" in events
     assert "dependsOn" in events
-    assert "ready" in events
-    assert "flushComplete" in events
+    assert "ordered" in events
+    assert "orderingComplete" in events
+    assert "calculate" not in events
+    assert "ready" not in events
+    assert all(
+        "executing" not in event["details"].lower()
+        and "completed" not in event["details"].lower()
+        for event in reactlog["events"]
+    )
 
 
 def test_format_reactlog_html_escaping():
@@ -188,8 +196,8 @@ def result():
 """
     res = runner.invoke(main, ["inspect", "--code", code, "--reactlog"])
     assert res.exit_code == 0
-    assert "Simulated Reactive Trace" in res.output
-    assert "sessionInit" in res.output
+    assert "Static Dependency Simulation" in res.output
+    assert "analysisInit" in res.output
     assert "squared" in res.output
     assert "result" in res.output
 
@@ -210,7 +218,7 @@ def out():
     assert res.exit_code == 0
     assert out_html.is_file()
     content = out_html.read_text(encoding="utf-8")
-    assert "Shiny Reactive Trace" in content
+    assert "Static Shiny Dependency Simulation" in content
 
 
 def test_cli_inspect_inputs_cascade():
@@ -228,6 +236,6 @@ def show():
     assert res.exit_code == 0
     data = json.loads(res.output)
     assert data["success"] is True
-    val_events = [e for e in data["events"] if e["event"] == "valueChange"]
+    val_events = [e for e in data["events"] if e["event"] == "assumeValue"]
     assert len(val_events) == 1
     assert val_events[0]["value"] == "100"

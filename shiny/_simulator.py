@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import multiprocessing
 import os
 import sys
 import tempfile
 import traceback
+from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Any, Dict, Optional, cast
 
@@ -16,16 +18,28 @@ from .express._run import wrap_express_app
 from .session._session import AppSession
 
 
-async def simulate_shiny_app(
+def _simulation_error(message: str, traceback_text: str = "") -> Dict[str, Any]:
+    return {
+        "success": False,
+        "error": message,
+        "traceback": traceback_text,
+        "outputs": {},
+        "errors": {},
+        "exports": {},
+        "rendered_ui": None,
+    }
+
+
+async def _simulate_shiny_app_in_process(
     code: Optional[str] = None,
     file_path: Optional[str] = None,
     inputs: Optional[Dict[str, Any]] = None,
-    timeout_secs: float = 3.0,
 ) -> Dict[str, Any]:
     old_testmode = os.environ.get("SHINY_TESTMODE")
     os.environ["SHINY_TESTMODE"] = "1"
 
     temp_dir: Optional[tempfile.TemporaryDirectory[str]] = None
+    app_dir: Optional[str] = None
     try:
         if code is not None:
             temp_dir = tempfile.TemporaryDirectory()
@@ -36,27 +50,13 @@ async def simulate_shiny_app(
         elif file_path is not None:
             target_path = Path(file_path).resolve()
             if not target_path.exists():
-                return {
-                    "success": False,
-                    "error": f"File not found: {file_path}",
-                    "traceback": "",
-                    "outputs": {},
-                    "errors": {},
-                    "exports": {},
-                    "rendered_ui": None,
-                }
+                return _simulation_error(f"File not found: {file_path}")
         else:
-            return {
-                "success": False,
-                "error": "Either 'code' or 'file_path' must be provided.",
-                "traceback": "",
-                "outputs": {},
-                "errors": {},
-                "exports": {},
-                "rendered_ui": None,
-            }
+            return _simulation_error("Either 'code' or 'file_path' must be provided.")
 
         app_obj: Optional[App] = None
+        app_dir = str(target_path.parent)
+        sys.path.insert(0, app_dir)
         try:
             if is_express_app(str(target_path), app_dir=None):
                 app_obj = wrap_express_app(target_path)
@@ -82,25 +82,14 @@ async def simulate_shiny_app(
                             break
 
                 if app_obj is None:
-                    return {
-                        "success": False,
-                        "error": "No Shiny 'App' instance found in module (expected 'app' or 'app_ui' + 'server').",
-                        "traceback": "",
-                        "outputs": {},
-                        "errors": {},
-                        "exports": {},
-                        "rendered_ui": None,
-                    }
+                    return _simulation_error(
+                        "No Shiny 'App' instance found in module (expected 'app' or 'app_ui' + 'server')."
+                    )
         except Exception as e:
-            return {
-                "success": False,
-                "error": f"Failed during app load: {type(e).__name__}: {e}",
-                "traceback": traceback.format_exc(),
-                "outputs": {},
-                "errors": {},
-                "exports": {},
-                "rendered_ui": None,
-            }
+            return _simulation_error(
+                f"Failed during app load: {type(e).__name__}: {e}",
+                traceback.format_exc(),
+            )
 
         conn = MockConnection()
         session: AppSession = app_obj._create_session(conn)
@@ -124,30 +113,12 @@ async def simulate_shiny_app(
             conn.cause_disconnect()
 
         try:
-            await asyncio.wait_for(
-                asyncio.gather(driver(), session._run()),
-                timeout=timeout_secs,
-            )
-        except asyncio.TimeoutError:
-            return {
-                "success": False,
-                "error": f"Simulation timed out after {timeout_secs}s. The app may have blocking operations or an infinite loop.",
-                "traceback": "",
-                "outputs": {},
-                "errors": {},
-                "exports": {},
-                "rendered_ui": None,
-            }
+            await asyncio.gather(driver(), session._run())
         except Exception as e:
-            return {
-                "success": False,
-                "error": f"Runtime error during session execution: {type(e).__name__}: {e}",
-                "traceback": traceback.format_exc(),
-                "outputs": {},
-                "errors": {},
-                "exports": {},
-                "rendered_ui": None,
-            }
+            return _simulation_error(
+                f"Runtime error during session execution: {type(e).__name__}: {e}",
+                traceback.format_exc(),
+            )
 
         outputs = dict(session._outbound_message_queues.test_values)
         errors = dict(session._outbound_message_queues.test_errors)
@@ -184,6 +155,12 @@ async def simulate_shiny_app(
         }
 
     finally:
+        if app_dir is not None:
+            try:
+                sys.path.remove(app_dir)
+            except ValueError:
+                pass
+
         if old_testmode is None:
             os.environ.pop("SHINY_TESTMODE", None)
         else:
@@ -194,3 +171,75 @@ async def simulate_shiny_app(
                 temp_dir.cleanup()
             except Exception:
                 pass
+
+
+def _simulation_worker(
+    connection: Connection,
+    code: Optional[str],
+    file_path: Optional[str],
+    inputs: Optional[Dict[str, Any]],
+) -> None:
+    try:
+        result = asyncio.run(
+            _simulate_shiny_app_in_process(
+                code=code,
+                file_path=file_path,
+                inputs=inputs,
+            )
+        )
+        connection.send(result)
+    except Exception as e:
+        connection.send(
+            _simulation_error(
+                f"Simulation worker failed: {type(e).__name__}: {e}",
+                traceback.format_exc(),
+            )
+        )
+    finally:
+        connection.close()
+
+
+async def simulate_shiny_app(
+    code: Optional[str] = None,
+    file_path: Optional[str] = None,
+    inputs: Optional[Dict[str, Any]] = None,
+    timeout_secs: float = 3.0,
+) -> Dict[str, Any]:
+    """Run a simulation in a child process that can be stopped on timeout."""
+    context = multiprocessing.get_context("spawn")
+    receive_connection, send_connection = context.Pipe(duplex=False)
+    process = context.Process(
+        target=_simulation_worker,
+        args=(send_connection, code, file_path, inputs),
+    )
+    process.start()
+    send_connection.close()
+
+    try:
+        has_result = await asyncio.to_thread(receive_connection.poll, timeout_secs)
+        if not has_result:
+            process.terminate()
+            await asyncio.to_thread(process.join, 1.0)
+            if process.is_alive():
+                process.kill()
+                await asyncio.to_thread(process.join)
+            return _simulation_error(
+                f"Simulation timed out after {timeout_secs}s; the worker process was terminated."
+            )
+
+        try:
+            result = cast(Dict[str, Any], receive_connection.recv())
+        except EOFError:
+            await asyncio.to_thread(process.join)
+            return _simulation_error(
+                f"Simulation worker exited with code {process.exitcode} without returning a result."
+            )
+
+        await asyncio.to_thread(process.join)
+        return result
+    finally:
+        receive_connection.close()
+        if process.is_alive():
+            process.terminate()
+            await asyncio.to_thread(process.join)
+        process.close()

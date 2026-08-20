@@ -228,12 +228,12 @@ def generate_reactlog(
     events.append(
         {
             "step": step,
-            "event": "sessionInit",
+            "event": "analysisInit",
             "node_id": None,
             "node_label": "session",
             "node_type": "session",
             "status": "active",
-            "details": "Initialized reactive session context",
+            "details": "Started static AST dependency analysis; app code was not executed",
         }
     )
     step += 1
@@ -246,8 +246,8 @@ def generate_reactlog(
                 "node_id": node["id"],
                 "node_label": node["label"],
                 "node_type": node["role"],
-                "status": "ready" if node["role"] == "source" else "idle",
-                "details": f"Registered {node['role']} node at line {node.get('line', '?')}",
+                "status": "discovered",
+                "details": f"Found {node['role']} node at line {node.get('line', '?')}",
             }
         )
         step += 1
@@ -274,7 +274,7 @@ def generate_reactlog(
                 events.append(
                     {
                         "step": cur_step,
-                        "event": "invalidate",
+                        "event": "propagate",
                         "node_id": down,
                         "node_label": next(
                             (n["label"] for n in nodes if n["id"] == down), down
@@ -282,8 +282,8 @@ def generate_reactlog(
                         "node_type": next(
                             (n["role"] for n in nodes if n["id"] == down), "conductor"
                         ),
-                        "status": "dirty",
-                        "details": f"Invalidated by upstream dependency '{nid}'",
+                        "status": "affected",
+                        "details": f"Static dependency path propagates from '{nid}'",
                     }
                 )
                 cur_step += 1
@@ -294,13 +294,13 @@ def generate_reactlog(
         events.append(
             {
                 "step": step,
-                "event": "valueChange",
+                "event": "assumeValue",
                 "node_id": input_id,
                 "node_label": f"input.{input_id}",
                 "node_type": "source",
-                "status": "ready",
+                "status": "assumed",
                 "value": str(val),
-                "details": f"Input value set to {val!r}",
+                "details": f"Assumed input value {val!r} for dependency analysis",
             }
         )
         step += 1
@@ -309,12 +309,12 @@ def generate_reactlog(
     events.append(
         {
             "step": step,
-            "event": "flushStart",
+            "event": "orderingStart",
             "node_id": None,
             "node_label": "reactiveEnvironment",
             "node_type": "engine",
-            "status": "flushing",
-            "details": f"Starting reactive flush ({len(invalidated_nodes)} dirty nodes)",
+            "status": "ordering",
+            "details": f"Computing a possible topological order for {len(invalidated_nodes)} affected nodes",
         }
     )
     step += 1
@@ -362,12 +362,12 @@ def generate_reactlog(
         events.append(
             {
                 "step": step,
-                "event": "calculate",
+                "event": "wouldEvaluate",
                 "node_id": tid,
                 "node_label": tlabel,
                 "node_type": trole,
-                "status": "calculating",
-                "details": f"Executing reactive computation for '{tid}'",
+                "status": "scheduled",
+                "details": f"Static ordering places '{tid}' at this position; it was not executed",
             }
         )
         step += 1
@@ -380,8 +380,8 @@ def generate_reactlog(
                     "node_id": tid,
                     "node_label": tlabel,
                     "node_type": trole,
-                    "status": "calculating",
-                    "details": f"Read value from dependency '{dep}'",
+                    "status": "scheduled",
+                    "details": f"AST inspection found dependency edge from '{dep}'",
                 }
             )
             step += 1
@@ -389,12 +389,12 @@ def generate_reactlog(
         events.append(
             {
                 "step": step,
-                "event": "ready",
+                "event": "ordered",
                 "node_id": tid,
                 "node_label": tlabel,
                 "node_type": trole,
-                "status": "ready",
-                "details": "Computation completed; cached updated value",
+                "status": "scheduled",
+                "details": "Node placed in the simulated static order; no runtime result is known",
             }
         )
         step += 1
@@ -402,22 +402,23 @@ def generate_reactlog(
     events.append(
         {
             "step": step,
-            "event": "flushComplete",
+            "event": "orderingComplete",
             "node_id": None,
             "node_label": "reactiveEnvironment",
             "node_type": "engine",
             "status": "idle",
-            "details": f"Reactive flush finished across {len(eval_order)} evaluated nodes",
+            "details": f"Static ordering contains {len(eval_order)} nodes; no reactive flush occurred",
         }
     )
 
     return {
         "success": True,
+        "trace_kind": "static_dependency_simulation",
         "nodes": nodes,
         "edges": edges,
         "events": events,
         "steps_total": len(events),
-        "summary": f"Simulated reactive trace: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes)} invalidated)",
+        "summary": f"Static dependency simulation: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes)} affected); app code was not executed",
     }
 
 
@@ -484,7 +485,7 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
 
 
 def format_reactlog_html(
-    reactlog: Dict[str, Any], title: str = "Shiny Reactive Trace"
+    reactlog: Dict[str, Any], title: str = "Static Shiny Dependency Simulation"
 ) -> str:
     escaped_json = (
         json.dumps(reactlog, indent=2)
@@ -536,16 +537,16 @@ def format_reactlog_html(
     .event-item.active {{ background: rgba(88, 166, 255, 0.15); border-color: var(--accent); color: #ffffff; }}
     .event-item .badge {{ font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }}
     .badge.define {{ background: #21262d; color: var(--text-muted); }}
-    .badge.valueChange {{ background: rgba(88, 166, 255, 0.2); color: #58a6ff; }}
-    .badge.invalidate {{ background: rgba(210, 153, 34, 0.2); color: #d29922; }}
-    .badge.calculate {{ background: rgba(88, 166, 255, 0.25); color: #79c0ff; }}
-    .badge.ready {{ background: rgba(63, 185, 80, 0.2); color: #3fb950; }}
+    .badge.assumeValue {{ background: rgba(88, 166, 255, 0.2); color: #58a6ff; }}
+    .badge.propagate {{ background: rgba(210, 153, 34, 0.2); color: #d29922; }}
+    .badge.wouldEvaluate {{ background: rgba(88, 166, 255, 0.25); color: #79c0ff; }}
+    .badge.ordered {{ background: rgba(63, 185, 80, 0.2); color: #3fb950; }}
     .graph-node {{ transition: all 0.25s ease; }}
   </style>
 </head>
 <body>
   <header>
-    <div class="brand"><i class="fa-solid fa-diagram-project"></i> <span>Shiny Reactive Trace</span></div>
+    <div class="brand"><i class="fa-solid fa-diagram-project"></i> <span>Static Shiny Dependency Simulation</span></div>
     <div style="font-size: 0.8rem; color: var(--text-muted);" id="summary-text"></div>
   </header>
   <div class="playback-bar">
@@ -724,7 +725,7 @@ def format_reactlog_html(
             activeEvent.details &&
             activeEvent.details.includes(e.from);
 
-          const isInvalidateEdge = activeEvent.event === 'invalidate' &&
+          const isInvalidateEdge = activeEvent.event === 'propagate' &&
             activeEvent.node_id === e.to &&
             activeEvent.details &&
             activeEvent.details.includes(e.from);
@@ -769,9 +770,9 @@ def format_reactlog_html(
         if (isActive) {{
           fillColor = '#21262d';
           textColor = '#ffffff';
-          if (activeEvent.status === 'dirty') strokeColor = '#d29922';
-          else if (activeEvent.status === 'calculating') strokeColor = '#58a6ff';
-          else if (activeEvent.status === 'ready') strokeColor = '#3fb950';
+          if (activeEvent.status === 'affected') strokeColor = '#d29922';
+          else if (activeEvent.status === 'scheduled') strokeColor = '#58a6ff';
+          else if (activeEvent.status === 'assumed') strokeColor = '#3fb950';
         }}
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');

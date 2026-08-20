@@ -16,7 +16,7 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
     help="""Perform static AST analysis and validation on Shiny for Python code.
 
     Validates Shiny apps against common reactivity errors, duplicate widget IDs,
-    missing reactive call parentheses, R Shiny idioms, and mode mismatches.
+    missing reactive call parentheses, and R Shiny idioms.
 
     Examples:
 
@@ -53,24 +53,18 @@ def validate(path: Optional[str], code: Optional[str], json_output: bool) -> Non
             if app_file.is_file():
                 p = app_file
             else:
-                py_files = list(p.glob("*.py"))
-                if py_files:
-                    p = py_files[0]
+                if json_output:
+                    click.echo(
+                        json.dumps(
+                            {
+                                "valid": False,
+                                "error": f"Directory does not contain app.py: {path}",
+                            }
+                        )
+                    )
                 else:
-                    if json_output:
-                        click.echo(
-                            json.dumps(
-                                {
-                                    "valid": False,
-                                    "error": f"No Python files found in directory {path}",
-                                }
-                            )
-                        )
-                    else:
-                        click.echo(
-                            cli_danger(f"No Python files found in directory: {path}")
-                        )
-                    sys.exit(1)
+                    click.echo(cli_danger(f"Directory does not contain app.py: {path}"))
+                sys.exit(1)
         if not p.is_file():
             if json_output:
                 click.echo(

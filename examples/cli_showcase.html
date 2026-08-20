@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shiny for Python: Developer CLI Suite</title>
-  <meta name="description" content="Interactive guide, live reactive simulator, Reactlog debugger, and documentation for Shiny for Python developer CLI tools (validate, simulate, inspect, docs, scaffold)." />
+  <meta name="description" content="Interactive guide, live reactive simulator, static dependency debugger, and documentation for Shiny for Python developer CLI tools (validate, simulate, inspect, docs)." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -765,12 +765,12 @@
       <div class="badge-bar">
         <span class="badge highlight"><i class="fa-solid fa-terminal"></i> 5 Built-in CLI Subcommands</span>
         <span class="badge success"><i class="fa-solid fa-bolt"></i> ~25ms In-Memory Simulation</span>
-        <span class="badge purple"><i class="fa-solid fa-diagram-project"></i> Reactlog Tracing</span>
+        <span class="badge purple"><i class="fa-solid fa-diagram-project"></i> Static Dependency Tracing</span>
         <span class="badge"><i class="fa-solid fa-cube"></i> Zero External Dependencies</span>
       </div>
       <h1>Shiny for Python: Developer CLI Suite</h1>
       <p class="lead">
-        Deterministic AST static analysis, headless reactive simulation, Reactlog DAG inspection, runtime reflection, and starter scaffolding — available directly in your terminal and CI/CD pipelines.
+        Deterministic AST static analysis, headless reactive simulation, static DAG inspection, and runtime reflection — available directly in your terminal and CI/CD pipelines.
       </p>
     </header>
 
@@ -815,7 +815,7 @@
           </button>
           <button class="cli-nav-item" data-cmd="inspect" onclick="selectCliCommand('inspect', this)">
             <span class="cmd-name">shiny inspect <i class="fa-solid fa-chevron-right"></i></span>
-            <span class="cmd-sub">Topological DAG & Reactlog</span>
+            <span class="cmd-sub">Topological DAG & Static Trace</span>
           </button>
           <button class="cli-nav-item" data-cmd="docs" onclick="selectCliCommand('docs', this)">
             <span class="cmd-name">shiny docs <i class="fa-solid fa-chevron-right"></i></span>
@@ -1105,7 +1105,7 @@
           <ul>
             <li><strong>Universal CLI Interface</strong>: Usable directly in bash, zsh, terminal scripts, pre-commit hooks, and CI/CD pipelines.</li>
             <li><strong>JSON Diagnostics</strong>: Every command supports <code>--json</code> for programmatic integration into editors and extensions.</li>
-            <li><strong>Reactlog HTML Export</strong>: Generate standalone interactive visualizers via <code>shiny inspect --html</code>.</li>
+            <li><strong>Static Dependency HTML Export</strong>: Generate standalone interactive visualizers via <code>shiny inspect --html</code>. App code is not executed.</li>
           </ul>
         </div>
       </div>
