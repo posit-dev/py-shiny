@@ -14,9 +14,11 @@ with socket.socket() as sock:
     print(sock.getsockname()[1])
 PY
   )
+  # An empty host port tells Docker to select an available port.
   published_port="127.0.0.1::${container_port}"
 fi
 
+# TCP and UDP port numbers are unsigned 16-bit integers.
 if ! [[ "$container_port" =~ ^[0-9]+$ ]] || [ "$container_port" -lt 1 ] || [ "$container_port" -gt 65535 ]; then
   echo "Invalid Playwright server port: $container_port" >&2
   exit 1
