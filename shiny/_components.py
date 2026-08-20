@@ -65,6 +65,10 @@ def _component_entry(
     return entry
 
 
+def _component_sort_key(item: Dict[str, Any]) -> tuple[str, str]:
+    return item["category"], item["name"]
+
+
 def _discover_components() -> List[Dict[str, Any]]:
     components: List[Dict[str, Any]] = []
     for namespace, module in (("ui", ui), ("render", render)):
@@ -72,7 +76,7 @@ def _discover_components() -> List[Dict[str, Any]]:
             entry = _component_entry(namespace, module, name)
             if entry is not None:
                 components.append(entry)
-    return sorted(components, key=lambda item: (item["category"], item["name"]))
+    return sorted(components, key=_component_sort_key)
 
 
 def list_components(category: Optional[str] = None) -> List[Dict[str, Any]]:
