@@ -182,6 +182,7 @@ runs:
       if: failure()
       shell: bash
       run: |
+        docker inspect --format '{{json .State}}' "${{ inputs.container-name }}" || true
         docker logs "${{ inputs.container-name }}" || true
 
     - name: Export Playwright connection env vars

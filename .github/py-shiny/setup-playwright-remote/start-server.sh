@@ -32,6 +32,7 @@ docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
 # mode, as required by Playwright's documented Docker setup.
 docker run -d \
   --interactive \
+  --tty \
   --name "$CONTAINER_NAME" \
   --ipc=host \
   -p "$published_port" \
