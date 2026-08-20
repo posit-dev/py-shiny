@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
+import pytest
 from click.testing import CliRunner
 
 from shiny._inspect import (
@@ -141,11 +142,20 @@ def greeting():
     reactlog = generate_reactlog(
         code, inputs={"name": "</script><script>alert('xss')</script>"}
     )
-    html = format_reactlog_html(reactlog, title="Test Reactlog")
+    html = format_reactlog_html(reactlog, source_code=code, title="Test Reactlog")
     assert "<!DOCTYPE html>" in html
     assert "</script><script>alert('xss')</script>" not in html
     assert "\\u003c/script\\u003e\\u003cscript\\u003e" in html
     assert "textContent" in html
+
+
+def test_format_reactlog_html_requires_source_code():
+    reactlog = generate_reactlog(
+        "from shiny.express import ui\nui.input_text('name', 'Name')\n"
+    )
+
+    with pytest.raises(TypeError, match="source_code"):
+        cast(Any, format_reactlog_html)(reactlog)
 
 
 def test_format_reactlog_html_is_self_contained_and_accessible():
@@ -172,7 +182,11 @@ def test_format_reactlog_html_is_self_contained_and_accessible():
         "events": [],
     }
 
-    html = format_reactlog_html(reactlog, title='Trace <img src=x onerror="alert(1)">')
+    html = format_reactlog_html(
+        reactlog,
+        source_code='ui.input_text("value", "Value")',
+        title='Trace <img src=x onerror="alert(1)">',
+    )
     document = _TagCollector()
     document.feed(html)
 

@@ -226,7 +226,9 @@ def inspect(
     if output_format == "html":
         out_file_path = html_out if html_out is not None else "reactlog.html"
         html_content = format_reactlog_html(
-            reactlog_data, title=f"Static dependency simulation: {target_desc}"
+            reactlog_data,
+            title=f"Static dependency simulation: {target_desc}",
+            source_code=source_code,
         )
         Path(out_file_path).write_text(html_content, encoding="utf-8")
         click.echo(

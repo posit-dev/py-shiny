@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from shiny._inspect import format_reactlog_html, generate_reactlog
 
@@ -32,7 +32,10 @@ def other():
         and event["node_id"] == "doubled"
         and "'x'" in event["details"]
     )
-    page.set_content(format_reactlog_html(reactlog), wait_until="domcontentloaded")
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
 
     edges = page.locator(".graph-edge")
     assert edges.count() == 3
@@ -64,3 +67,53 @@ def other():
         )
         == 1
     )
+
+
+def test_app_code_tab_reveals_embedded_source(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_text("name", "Name")
+@render.text
+def greeting():
+    return f"Hello, {input.name()}"
+"""
+    reactlog = generate_reactlog(code, inputs={"name": "Ada"})
+    input_step = next(
+        index
+        for index, event in enumerate(reactlog["events"])
+        if event["event"] == "define" and event["node_id"] == "name"
+    )
+    output_step = next(
+        index
+        for index, event in enumerate(reactlog["events"])
+        if event["event"] == "define" and event["node_id"] == "greeting"
+    )
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    source_panel = page.get_by_role("tabpanel", name="App code")
+    expect(source_panel).to_be_hidden()
+
+    page.get_by_role("tab", name="App code").click()
+
+    expect(source_panel).to_be_visible()
+    expect(source_panel).to_have_text(code)
+    assert source_panel.locator(".syntax-keyword").all_text_contents() == [
+        "from",
+        "import",
+        "def",
+        "return",
+    ]
+    assert source_panel.locator(".syntax-string").count() >= 2
+    expect(page.get_by_role("tabpanel", name="Timeline")).to_be_hidden()
+
+    source_highlight = page.locator("#source-line-highlight")
+    expect(source_highlight).to_be_hidden()
+
+    page.locator("#scrubber-range").fill(str(input_step))
+    expect(source_highlight).to_be_visible()
+    expect(source_highlight).to_have_attribute("data-line", "2")
+
+    page.locator("#scrubber-range").fill(str(output_step))
+    expect(source_highlight).to_have_attribute("data-line", "4")

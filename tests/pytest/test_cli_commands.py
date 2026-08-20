@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html as html_lib
 import json
 import time
 from pathlib import Path
@@ -220,6 +221,29 @@ def display():
     assert data["success"] is True
     assert len(data["nodes"]) >= 2
     assert len(data["edges"]) >= 1
+
+
+def test_cli_inspect_html_includes_escaped_source_code(tmp_path: Path):
+    runner = CliRunner()
+    code = """from shiny.express import input, render, ui
+ui.input_text("name", "Name")
+# <unsafe-demo-marker>
+@render.text
+def greeting():
+    return f"Hello, {input.name()}"
+"""
+    app_file = tmp_path / "app.py"
+    html_file = tmp_path / "reactlog.html"
+    app_file.write_text(code, encoding="utf-8")
+
+    res = runner.invoke(main, ["inspect", str(app_file), "--html", str(html_file)])
+
+    assert res.exit_code == 0
+    html = html_file.read_text(encoding="utf-8")
+    assert 'role="tab"' in html
+    assert "App code" in html
+    assert html_lib.escape("<unsafe-demo-marker>") in html
+    assert "<unsafe-demo-marker>" not in html
 
 
 def test_cli_inspect_directory_requires_app_py(tmp_path: Path):

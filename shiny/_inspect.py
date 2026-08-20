@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import ast
 import html as html_lib
+import io
 import json
+import keyword
+import tokenize
 from collections import deque
 from typing import Any, Dict, List, Optional, Set
 
@@ -485,10 +488,75 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _format_python_source_html(source: str) -> str:
+    lines = source.splitlines(keepends=True)
+    line_offsets: List[int] = []
+    offset = 0
+    for line in lines:
+        line_offsets.append(offset)
+        offset += len(line)
+
+    def absolute_offset(position: tuple[int, int]) -> int:
+        row, column = position
+        if row < 1 or row > len(line_offsets):
+            return len(source)
+        return line_offsets[row - 1] + column
+
+    token_classes = {
+        tokenize.COMMENT: "syntax-comment",
+        tokenize.NUMBER: "syntax-number",
+        tokenize.OP: "syntax-operator",
+        tokenize.STRING: "syntax-string",
+    }
+    fragments: List[str] = []
+    cursor = 0
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
+        for token_info in tokens:
+            if token_info.type == tokenize.ENDMARKER:
+                break
+            start = max(cursor, absolute_offset(token_info.start))
+            end = max(start, absolute_offset(token_info.end))
+            if end <= cursor:
+                continue
+            fragments.append(html_lib.escape(source[cursor:start]))
+            token_source = source[start:end]
+            css_class = token_classes.get(token_info.type)
+            if token_info.type == tokenize.NAME and keyword.iskeyword(
+                token_info.string
+            ):
+                css_class = "syntax-keyword"
+            escaped_token = html_lib.escape(token_source)
+            if css_class:
+                fragments.append(f'<span class="{css_class}">{escaped_token}</span>')
+            else:
+                fragments.append(escaped_token)
+            cursor = end
+    except (IndentationError, tokenize.TokenError):
+        return html_lib.escape(source)
+
+    fragments.append(html_lib.escape(source[cursor:]))
+    return "".join(fragments)
+
+
 def format_reactlog_html(
-    reactlog: Dict[str, Any], title: str = "Static Shiny Dependency Simulation"
+    reactlog: Dict[str, Any],
+    source_code: str,
+    title: str = "Static Shiny Dependency Simulation",
 ) -> str:
     escaped_title = html_lib.escape(title)
+    formatted_source = _format_python_source_html(source_code)
+    source_tab = (
+        '<button class="sidebar-tab" id="source-tab" role="tab" '
+        'aria-selected="false" aria-controls="source-panel" '
+        "onclick=\"showSidebarPanel('source')\">App code</button>"
+    )
+    source_panel = (
+        '<pre class="source-panel sidebar-panel" id="source-panel" role="tabpanel" '
+        'aria-labelledby="source-tab" hidden><mark class="source-line-highlight" '
+        'id="source-line-highlight" aria-hidden="true" hidden></mark><code>'
+        f"{formatted_source}</code></pre>"
+    )
     escaped_json = (
         json.dumps(reactlog, indent=2)
         .replace("<", "\\u003c")
@@ -553,6 +621,7 @@ def format_reactlog_html(
     .scrubber input[type="range"] {{ width: 100%; accent-color: var(--accent); cursor: pointer; }}
     .step-display {{ font: 700 0.72rem var(--mono); color: var(--accent); min-width: 72px; text-align: right; }}
     .main-view {{ display: grid; grid-template-columns: minmax(0, 1fr) 360px; flex: 1; min-height: 0; overflow: hidden; transition: grid-template-columns 180ms ease; }}
+    .main-view.source-visible {{ grid-template-columns: minmax(0, 1fr) min(54vw, 680px); }}
     .main-view.sidebar-hidden {{ grid-template-columns: minmax(0, 1fr) 0; }}
     .graph-container {{ min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(rgba(105, 128, 151, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(105, 128, 151, 0.055) 1px, transparent 1px); background-size: 24px 24px; }}
     .graph-topbar {{ position: absolute; z-index: 3; top: 0.8rem; left: 0.8rem; right: 0.8rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; pointer-events: none; }}
@@ -575,7 +644,22 @@ def format_reactlog_html(
     .stage-label {{ font: 700 10px var(--mono); fill: #718297; letter-spacing: 0.08em; }}
     .sidebar {{ min-width: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }}
     .sidebar-header {{ min-height: 46px; padding: 0.7rem 0.8rem 0.65rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }}
-    .sidebar-title {{ font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }}
+    .sidebar-tabs {{ display: flex; align-items: center; gap: 0.25rem; }}
+    .sidebar-tab {{ color: var(--text-muted); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 0.36rem 0.55rem; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }}
+    .sidebar-tab:hover {{ color: var(--text); background: var(--surface-2); }}
+    .sidebar-tab[aria-selected="true"] {{ color: var(--text); background: var(--surface-3); border-color: var(--border); }}
+    .sidebar-panel {{ min-height: 0; flex: 1; }}
+    .sidebar-panel[hidden] {{ display: none; }}
+    .timeline-panel {{ display: flex; flex-direction: column; }}
+    .source-panel {{ position: relative; overflow: auto; padding: 1rem; background: #0c1219; color: #d9e7f5; font: 500 0.76rem/1.62 var(--mono); white-space: pre; tab-size: 4; }}
+    .source-panel code {{ position: relative; z-index: 1; font: inherit; }}
+    .source-line-highlight {{ position: absolute; z-index: 0; left: 0; right: 0; margin: 0; padding: 0; border: 0; border-left: 3px solid var(--source-highlight-color, var(--accent)); border-radius: 0; background: color-mix(in srgb, var(--source-highlight-color, var(--accent)) 16%, transparent); box-shadow: inset 0 1px color-mix(in srgb, var(--source-highlight-color, var(--accent)) 12%, transparent), inset 0 -1px color-mix(in srgb, var(--source-highlight-color, var(--accent)) 12%, transparent); pointer-events: none; transition: top 150ms ease, background 150ms ease; }}
+    .source-line-highlight[hidden] {{ display: none; }}
+    .syntax-keyword {{ color: #c792ea; font-weight: 700; }}
+    .syntax-string {{ color: #a8d279; }}
+    .syntax-number {{ color: #f6c177; }}
+    .syntax-comment {{ color: #718096; font-style: italic; }}
+    .syntax-operator {{ color: #89ddff; }}
     .inspector {{ margin: 0.75rem; padding: 0.85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; }}
     .inspector-eyebrow {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; }}
     .inspector-node {{ font: 700 0.88rem var(--mono); color: var(--text); overflow-wrap: anywhere; }}
@@ -606,7 +690,7 @@ def format_reactlog_html(
       .brand-subtitle, .stats {{ display: none; }}
       .toolbar-divider, .filter-btn {{ display: none; }}
       .search-wrap {{ flex: 1; }}
-      .main-view, .main-view.sidebar-hidden {{ display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(460px, 60vh) 320px; overflow: visible; }}
+      .main-view, .main-view.sidebar-hidden, .main-view.source-visible {{ display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(460px, 60vh) 320px; overflow: visible; }}
       .graph-container {{ overflow: auto; }}
       #reactlog-svg {{ width: 1400px; max-width: none; }}
       .sidebar {{ border-left: 0; border-top: 1px solid var(--border); visibility: visible !important; }}
@@ -670,10 +754,16 @@ def format_reactlog_html(
     </section>
     <aside class="sidebar" aria-label="Dependency details and event timeline">
       <div class="sidebar-header">
-        <span class="sidebar-title">Timeline</span>
+        <div class="sidebar-tabs" role="tablist" aria-label="Reactlog details">
+          <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Timeline</button>
+          {source_tab}
+        </div>
       </div>
-      <div class="inspector" id="active-inspector" aria-live="polite"></div>
-      <ul class="event-list" id="event-list"></ul>
+      <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-labelledby="timeline-tab">
+        <div class="inspector" id="active-inspector" aria-live="polite"></div>
+        <ul class="event-list" id="event-list"></ul>
+      </div>
+      {source_panel}
     </aside>
   </main>
   <script>
@@ -1169,6 +1259,63 @@ def format_reactlog_html(
       button.setAttribute('aria-label', hidden ? 'Show timeline' : 'Hide timeline');
     }}
 
+    function showSidebarPanel(panelName) {{
+      const showSource = panelName === 'source';
+      const main = document.getElementById('main-view');
+      const timelinePanel = document.getElementById('timeline-panel');
+      const sourcePanel = document.getElementById('source-panel');
+      const timelineTab = document.getElementById('timeline-tab');
+      const sourceTab = document.getElementById('source-tab');
+      main.classList.remove('sidebar-hidden');
+      main.classList.toggle('source-visible', showSource);
+      timelinePanel.hidden = showSource;
+      timelineTab.setAttribute('aria-selected', showSource ? 'false' : 'true');
+      if (sourcePanel && sourceTab) {{
+        sourcePanel.hidden = !showSource;
+        sourceTab.setAttribute('aria-selected', showSource ? 'true' : 'false');
+      }}
+      const sidebarButton = document.getElementById('sidebar-toggle');
+      sidebarButton.textContent = 'Timeline ›';
+      sidebarButton.setAttribute('aria-label', 'Hide timeline');
+      if (showSource) updateSourceHighlight(true);
+    }}
+
+    function updateSourceHighlight(shouldScroll = false) {{
+      const sourcePanel = document.getElementById('source-panel');
+      const highlight = document.getElementById('source-line-highlight');
+      if (!sourcePanel || !highlight) return;
+      const event = (LOG_DATA.events || [])[currentStep];
+      const node = event && (LOG_DATA.nodes || []).find(candidate => candidate.id === event.node_id);
+      const line = Number(node && node.line);
+      if (!Number.isInteger(line) || line < 1) {{
+        highlight.hidden = true;
+        highlight.removeAttribute('data-line');
+        return;
+      }}
+
+      const panelStyle = getComputedStyle(sourcePanel);
+      const lineHeight = parseFloat(panelStyle.lineHeight);
+      const paddingTop = parseFloat(panelStyle.paddingTop);
+      const highlightTop = paddingTop + (line - 1) * lineHeight;
+      highlight.hidden = false;
+      highlight.dataset.line = String(line);
+      highlight.style.top = `${{highlightTop}}px`;
+      highlight.style.height = `${{lineHeight}}px`;
+      highlight.style.setProperty('--source-highlight-color', nodeKind(node).color);
+
+      if (shouldScroll && !sourcePanel.hidden) {{
+        const margin = lineHeight * 3;
+        const belowViewport = highlightTop + lineHeight > sourcePanel.scrollTop + sourcePanel.clientHeight - margin;
+        const aboveViewport = highlightTop < sourcePanel.scrollTop + margin;
+        if (aboveViewport || belowViewport) {{
+          sourcePanel.scrollTo({{
+            top: Math.max(0, highlightTop - sourcePanel.clientHeight / 2),
+            behavior: isPlaying ? 'auto' : 'smooth'
+          }});
+        }}
+      }}
+    }}
+
     function setStep(idx) {{
       selectedNodeId = null;
       currentStep = totalSteps ? Math.max(0, Math.min(idx, totalSteps - 1)) : 0;
@@ -1177,6 +1324,7 @@ def format_reactlog_html(
       renderInspector();
       renderEventsList();
       renderGraph();
+      updateSourceHighlight(true);
       const activeEl = document.querySelectorAll('.event-item')[currentStep];
       if (activeEl) {{
         const eventList = document.getElementById('event-list');
