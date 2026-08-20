@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import os
+import re
+import subprocess
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
@@ -18,6 +21,7 @@ PLAYWRIGHT_REMOTE_ACTION = (
     / "setup-playwright-remote"
     / "action.yaml"
 )
+PLAYWRIGHT_REMOTE_START_SERVER = PLAYWRIGHT_REMOTE_ACTION.parent / "start-server.sh"
 
 
 def _load_module(name: str, path: Path) -> ModuleType:
@@ -30,7 +34,7 @@ def _load_module(name: str, path: Path) -> ModuleType:
 
 
 def test_remote_playwright_server_keeps_stdin_open() -> None:
-    action = PLAYWRIGHT_REMOTE_ACTION.read_text()
+    action = PLAYWRIGHT_REMOTE_START_SERVER.read_text()
 
     assert "--interactive" in action
 
@@ -41,6 +45,51 @@ def test_remote_playwright_readiness_uses_server_metadata() -> None:
     assert "/json" in action
     assert "wsEndpointPath" in action
     assert "socket.socket" not in action
+
+
+def test_remote_playwright_server_uses_dynamic_default_ports(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    docker_calls = tmp_path / "docker-calls"
+    github_output = tmp_path / "github-output"
+    fake_docker = fake_bin / "docker"
+    fake_docker.write_text("""#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$DOCKER_CALLS"
+if [ "$1" = "run" ]; then
+  echo "container-id"
+elif [ "$1" = "port" ]; then
+  echo "127.0.0.1:51234"
+fi
+""")
+    fake_docker.chmod(0o755)
+
+    monkeypatch.setenv("CONTAINER_NAME", "playwright-test")
+    monkeypatch.setenv("DOCKER_CALLS", str(docker_calls))
+    monkeypatch.setenv("GITHUB_OUTPUT", str(github_output))
+    monkeypatch.setenv("IMAGE_REF", "playwright:test")
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("PLAYWRIGHT_PORT", "")
+
+    subprocess.run(
+        ["bash", str(PLAYWRIGHT_REMOTE_START_SERVER)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    calls = docker_calls.read_text().splitlines()
+    run_call = next(call for call in calls if call.startswith("run "))
+    port_call = next(call for call in calls if call.startswith("port "))
+    published_port = re.search(r"-p 127\.0\.0\.1::(\d+)", run_call)
+    server_port = re.search(r"run-server --port (\d+)", run_call)
+    assert published_port is not None
+    assert server_port is not None
+    assert published_port.group(1) == server_port.group(1)
+    assert port_call == f"port playwright-test {server_port.group(1)}/tcp"
+    assert github_output.read_text() == "host-port=51234\n"
 
 
 def test_new_shared_page_does_not_repeat_initial_blank_navigation(
