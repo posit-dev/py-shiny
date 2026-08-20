@@ -10,7 +10,7 @@ __all__ = (
 )
 
 import math
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Iterable, Optional, TypeVar, Union, cast
 
 from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
@@ -248,9 +248,18 @@ def _as_numeric(x: SliderStepArg | datetime | date) -> float:
     if isinstance(x, timedelta):
         return x.total_seconds() * 1000
     if isinstance(x, datetime):
+        # A naive `datetime` carries no offset of its own, and the client decodes the
+        # value it sends back as UTC. Anchor it to UTC rather than letting
+        # `.timestamp()` assume the server's local timezone, which would shift the
+        # value by that offset on the round trip. Aware values are already absolute.
+        if x.tzinfo is None:
+            x = x.replace(tzinfo=timezone.utc)
         return x.timestamp() * 1000
     if isinstance(x, date):
-        return datetime(x.year, x.month, x.day).timestamp() * 1000
+        # Encode UTC midnight: the client formats and reads slider dates back in UTC
+        # (`formatDateUTC()` / `strftime.utc()`), so local midnight would shift the
+        # date by a day for any positive UTC offset.
+        return datetime(x.year, x.month, x.day, tzinfo=timezone.utc).timestamp() * 1000
     return x
 
 

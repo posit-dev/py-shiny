@@ -1138,12 +1138,23 @@ class data_frame(
 
             for val in sort:
                 val_dict: ColumnSort
-                if isinstance(val, int):
-                    desc = nw_data[:, val].dtype.is_numeric()
-                    val_dict = {"col": val, "desc": desc}
-                val_dict: ColumnSort = (
-                    val if isinstance(val, dict) else {"col": val, "desc": True}
-                )
+                # Each entry is either a full `ColumnSort` dict or a bare
+                # column index to be upgraded per the docstring default.
+                if isinstance(val, dict):
+                    val_dict = val
+                else:
+                    assert isinstance(val, int)
+                    # Checked again below for every entry, but a negative index
+                    # must be rejected before it reaches `nw_data[:, val]`,
+                    # where it would silently wrap around and compute `desc`
+                    # from the wrong column.
+                    assert 0 <= val < ncol
+                    # Bare column indices sort descending for number-like
+                    # columns and ascending for everything else.
+                    val_dict = {
+                        "col": val,
+                        "desc": nw_data[:, val].dtype.is_numeric(),
+                    }
                 assert isinstance(val_dict, dict)
                 assert isinstance(val_dict["col"], int)
                 assert 0 <= val_dict["col"] < ncol

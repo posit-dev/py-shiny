@@ -15,6 +15,7 @@ with ui.card():
 
     ui.input_action_button("shift_btn", "Shift data")
     ui.input_action_button("different_btn", "Change data set")
+    ui.input_action_button("reorder_btn", "Reorder columns")
 
     ui.h4("Data")
 
@@ -26,6 +27,16 @@ with ui.card():
             filters=True,
             editable=True,
         )
+
+    # Sort and filter state as the server sees it, so a test can check which
+    # column index the client reports across an `update_data()`.
+    @render.code
+    def sort_value():
+        return f"sort: {df.sort()}"
+
+    @render.code
+    def filter_value():
+        return f"filter: {df.filter()}"
 
     ui.h4("Selected data")
 
@@ -49,6 +60,15 @@ async def shift_data():
     shift = (k * input.shift_btn()) % full_data().shape[0]
     subsetted_data = full_data().iloc[(0 + shift) : (k + shift), 0:2]
     await df.update_data(subsetted_data)
+    return
+
+
+@reactive.effect
+@reactive.event(input.reorder_btn)
+async def reorder_columns():
+    # The same two columns in the opposite order. Sort and filter state should
+    # follow the column it was applied to, not the position it sat at.
+    await df.update_data(full_data().iloc[:, [1, 0]])
     return
 
 

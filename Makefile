@@ -213,6 +213,12 @@ PLAYWRIGHT_VERBOSE:= -v
 else
 PLAYWRIGHT_VERBOSE:=
 endif
+# Extra pytest options for one-off local runs, e.g.
+# `make playwright-shiny PYTEST_EXTRA_ARGS="--tracing on"` to record a
+# Playwright trace per test. See `playwright-show-trace` to open one.
+PYTEST_EXTRA_ARGS:=
+# A specific trace for `playwright-show-trace`; defaults to the newest one.
+TRACE:=
 
 
 # Full test path to playwright tests
@@ -243,13 +249,25 @@ install-rsconnect: FORCE
 # Stale snapshots can still be cleaned up with an all-browser, unsharded run
 # using `--snapshot-update`.
 playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
-	pytest $(PLAYWRIGHT_VERBOSE) --snapshot-warn-unused --timeout=$(PLAYWRIGHT_TEST_TIMEOUT) --timeout-method=$(PLAYWRIGHT_TEST_TIMEOUT_METHOD) -o faulthandler_timeout=$(PLAYWRIGHT_FAULTHANDLER_TIMEOUT) $(TEST_FILE) $(PYTEST_BROWSERS)
+	pytest $(PLAYWRIGHT_VERBOSE) --snapshot-warn-unused --timeout=$(PLAYWRIGHT_TEST_TIMEOUT) --timeout-method=$(PLAYWRIGHT_TEST_TIMEOUT_METHOD) -o faulthandler_timeout=$(PLAYWRIGHT_FAULTHANDLER_TIMEOUT) $(TEST_FILE) $(PYTEST_BROWSERS) $(PYTEST_EXTRA_ARGS)
 
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (TEST_FILE="" from root of repo)
-	pytest -c tests/playwright/playwright-pytest.ini $(TEST_FILE)
+	pytest -c tests/playwright/playwright-pytest.ini $(TEST_FILE) $(PYTEST_EXTRA_ARGS)
 
-playwright-show-trace: ## Show trace of failed tests
-	npx playwright show-trace test-results/*/trace.zip
+# `show-trace` takes exactly one trace, and `--tracing on` writes one per test,
+# so default to the most recently written trace rather than globbing them all.
+playwright-show-trace: ## Show a Playwright trace: the newest under test-results/, or TRACE="path/to/trace.zip"
+	@trace="$(TRACE)"; \
+	if [ -z "$$trace" ]; then \
+		trace=$$(ls -t test-results/*/trace.zip 2>/dev/null | head -1); \
+	fi; \
+	if [ -z "$$trace" ]; then \
+		echo "No trace found under test-results/. Record one with:"; \
+		echo "  make playwright-shiny SUB_FILE=\"inputs/test_foo.py\" PYTEST_EXTRA_ARGS=\"--tracing on\""; \
+		exit 1; \
+	fi; \
+	echo "npx playwright show-trace $$trace"; \
+	npx playwright show-trace "$$trace"
 
 # end-to-end tests with playwright; (SUB_FILE="" within tests/playwright/shiny/)
 playwright-shiny: FORCE

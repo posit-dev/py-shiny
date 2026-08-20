@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* `ui.input_slider()` and `ui.update_slider()` no longer shift `datetime.date` values by a day when the server runs in a timezone ahead of UTC. Dates were encoded as local midnight, but the client formats and reads slider dates back in UTC, so on e.g. `Europe/Amsterdam` an update to `2025-01-01` landed on `2024-12-31`. Dates are now encoded as UTC midnight, matching Shiny for R. (#2398)
+
+* `ui.input_slider()` and `ui.update_slider()` no longer shift naive (timezone-less) `datetime.datetime` values by the server's UTC offset. Such a value was encoded as if it named a local time, but the client sends it back to be decoded as UTC, so a slider set to `12:00` reported `11:00` on a server in `Europe/Amsterdam`. Naive datetimes are now anchored to UTC, so they round-trip unchanged; timezone-aware datetimes name an absolute instant and are unaffected. (#2398)
+
+* `ui.show_offcanvas()` now accepts the `id` (a string) of an `ui.offcanvas()` panel already in the UI and reveals it, matching its sibling functions `ui.hide_offcanvas()` / `ui.toggle_offcanvas()`. Previously, passing a string raised an unhandled `AttributeError` from deep inside the implementation. `show_offcanvas()` also now accepts bare tag content (wrapping it into a new anonymous panel), in addition to an `ui.offcanvas()` object; a string that looks like body text instead of an id (empty, or containing whitespace) raises an actionable `ValueError`. (#2445)
+
 * A dynamically-rendered output (e.g. `@render.ui`) inside a `ui.popover()` or `ui.tooltip()` without a `title=` no longer gets stuck showing "recalculating". The container collapsed to 0 width, so the output's `ResizeObserver` never fired; vendored bslib CSS now gives it a non-zero minimum width. (#2446)
 
 * `playwright.controller.InputSelectize` no longer clicks the page body to close the selectize dropdown. `expect_choices()`, `expect_choice_labels()`, and `expect_choice_groups()` open the dropdown, because selectize renders its choices into the DOM only after the first open. The click that closed the dropdown again landed on app content and fired the app's own click handlers, so a test could record an interaction that it never made. The controller now calls `close()` on the selectize instance instead, which touches no app content. (#2426)
@@ -36,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed the error message raised when a package required for theme compilation is missing: it interpolated the package name into the first sentence but printed a literal `pip install {pkg}` in the second. (#2387)
 
 * Download renderers (`@render.download_button`, `@render.download_link`, and the deprecated `@render.download`) now honor `@output(id=)`. The download handler was registered under the decorated function's name, but the URL rendered by the control used the `@output(id=)` value, so clicking the control returned a 404. (#2415)
+
+* `@render.data_frame` is now able to render data frames whose column names are empty (`""`) or are not strings. Column ids are now positional and are never derived from the column name. A column named `0` also no longer renders a blank header. (#2421)
+
+* `@render.data_frame`'s `.update_sort()` now honors its documented default for bare column indices: `desc` follows the column dtype, so number-like columns sort descending and everything else sorts ascending. (#2421)
 
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
