@@ -64,7 +64,14 @@
     .legend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--role-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--role-color) 18%, transparent); }
     .zoom-controls { display: flex; gap: 0.3rem; pointer-events: auto; }
     #reactlog-svg { width: 100%; height: 100%; min-height: 430px; display: block; }
-    .graph-node, .graph-edge { transition: opacity 140ms ease, filter 140ms ease; }
+    .graph-node, .graph-edge { transition: opacity 160ms ease, filter 160ms ease, stroke 160ms ease, stroke-width 160ms ease; }
+    .graph-edge { opacity: 0; pointer-events: none; }
+    .graph-edge[data-active="true"] { stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }
+    @keyframes edge-flow { to { stroke-dashoffset: -30; } }
+    @media (prefers-reduced-motion: reduce) {
+      .graph-node, .graph-edge { transition: none; }
+      .graph-edge[data-active="true"] { animation: none; }
+    }
     .graph-node { cursor: pointer; }
     .graph-node:hover .node-card { filter: brightness(1.14); }
     .graph-node.is-selected .node-card { filter: drop-shadow(0 0 9px rgba(99,179,255,0.36)); }
@@ -153,6 +160,7 @@
           <span class="legend-item" style="--role-color:var(--calc)"><span class="legend-dot"></span>Calculation</span>
           <span class="legend-item" style="--role-color:var(--effect)"><span class="legend-dot"></span>Effect</span>
           <span class="legend-item" style="--role-color:var(--output)"><span class="legend-dot"></span>Output</span>
+          <span class="legend-item" title="Hover or keyboard-focus a node to reveal its dependency path">⇢ Hover to trace</span>
         </div>
         <div class="zoom-controls" aria-label="Graph zoom">
           <button class="btn icon" onclick="zoomGraph(1.2)" aria-label="Zoom in" title="Zoom in">+</button>
@@ -1160,9 +1168,11 @@
       const svg = document.getElementById('reactlog-svg');
       svg.innerHTML = '<defs>' +
         '<filter id="card-shadow" x="-20%" y="-30%" width="140%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000000" flood-opacity="0.28"/></filter>' +
-        '<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#536579"/></marker>' +
-        '<marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#63b3ff"/></marker>' +
-        '<marker id="arrow-invalidate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#fb923c"/></marker>' +
+        '<filter id="edge-glow" x="-30%" y="-50%" width="160%" height="200%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
+        '<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 1 1.5 L 8 5 L 1 8.5" fill="none" stroke="#6685a3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
+        '<marker id="arrow-hover" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 1 1.5 L 8 5 L 1 8.5" fill="none" stroke="#9bd3ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
+        '<marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 1 1.5 L 8 5 L 1 8.5" fill="none" stroke="#63b3ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
+        '<marker id="arrow-invalidate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 1 1.5 L 8 5 L 1 8.5" fill="none" stroke="#fb923c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
         '</defs>';
 
       const nodes = LOG_DATA.nodes || [];
@@ -1280,12 +1290,15 @@
           const isEdgeActive = activeEvent.node_id === e.to &&
             activeEvent.event === 'dependsOn' &&
             activeEvent.details &&
-            activeEvent.details.includes(e.from);
+            activeEvent.details.includes(`'${e.from}'`);
 
           const isInvalidateEdge = activeEvent.event === 'propagate' &&
             activeEvent.node_id === e.to &&
             activeEvent.details &&
-            activeEvent.details.includes(e.from);
+            activeEvent.details.includes(`'${e.from}'`);
+
+          const isStepContext = Boolean(activeEvent.node_id) &&
+            (activeEvent.node_id === e.from || activeEvent.node_id === e.to);
 
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`);
@@ -1294,22 +1307,21 @@
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive || isInvalidateEdge ? 'true' : 'false');
+          path.setAttribute('data-context', isStepContext ? 'true' : 'false');
+          path.setAttribute('data-tone', isInvalidateEdge ? 'warning' : 'accent');
           path.setAttribute('class', 'graph-edge');
 
           if (isEdgeActive) {
-            path.setAttribute('stroke', '#58a6ff');
+            path.setAttribute('stroke', '#63b3ff');
             path.setAttribute('stroke-width', '3');
-            path.setAttribute('opacity', '1');
             path.setAttribute('marker-end', 'url(#arrow-active)');
           } else if (isInvalidateEdge) {
             path.setAttribute('stroke', '#fb923c');
             path.setAttribute('stroke-width', '3');
-            path.setAttribute('opacity', '1');
             path.setAttribute('marker-end', 'url(#arrow-invalidate)');
           } else {
-            path.setAttribute('stroke', '#536579');
-            path.setAttribute('stroke-width', '1.35');
-            path.setAttribute('opacity', '0.58');
+            path.setAttribute('stroke', '#6685a3');
+            path.setAttribute('stroke-width', '1.7');
             path.setAttribute('marker-end', 'url(#arrow)');
           }
 
@@ -1470,9 +1482,12 @@
         const t = el.getAttribute('data-to');
         if (related.has(f) && related.has(t)) {
           el.style.opacity = '1';
-          el.setAttribute('stroke-width', '2.4');
+          el.setAttribute('stroke', '#9bd3ff');
+          el.setAttribute('stroke-width', '2.2');
+          el.setAttribute('marker-end', 'url(#arrow-hover)');
+          el.style.filter = 'none';
         } else {
-          el.style.opacity = '0.07';
+          el.style.opacity = '0';
         }
       });
     }
@@ -1502,8 +1517,14 @@
       });
       document.querySelectorAll('.graph-edge').forEach(element => {
         const visible = visibleNodes.has(element.getAttribute('data-from')) && visibleNodes.has(element.getAttribute('data-to'));
-        element.style.opacity = visible ? (element.getAttribute('data-active') === 'true' ? '1' : '0.58') : '0.04';
-        element.setAttribute('stroke-width', element.getAttribute('data-active') === 'true' ? '3' : '1.35');
+        const active = element.getAttribute('data-active') === 'true';
+        const contextual = element.getAttribute('data-context') === 'true';
+        const warning = element.getAttribute('data-tone') === 'warning';
+        element.style.opacity = visible && (active || contextual) ? (active ? '1' : '0.62') : '0';
+        element.style.filter = active ? 'url(#edge-glow)' : 'none';
+        element.setAttribute('stroke', warning ? '#fb923c' : (active ? '#63b3ff' : '#6685a3'));
+        element.setAttribute('stroke-width', active ? '3' : '1.7');
+        element.setAttribute('marker-end', warning ? 'url(#arrow-invalidate)' : (active ? 'url(#arrow-active)' : 'url(#arrow)'));
       });
     }
 
