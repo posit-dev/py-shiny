@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from playwright.sync_api import Page
 
 from shiny._inspect import format_reactlog_html, generate_reactlog
 
 
-def test_connections_only_appear_for_hover_and_timeline_context(
-    page: Page, tmp_path: Path
-) -> None:
+def test_connections_only_appear_for_hover_and_timeline_context(page: Page) -> None:
     code = """from shiny.express import input, render, ui
 from shiny import reactive
 
@@ -36,10 +32,7 @@ def other():
         and event["node_id"] == "doubled"
         and "'x'" in event["details"]
     )
-    html_file = tmp_path / "reactlog.html"
-    html_file.write_text(format_reactlog_html(reactlog), encoding="utf-8")
-
-    page.goto(html_file.as_uri(), wait_until="domcontentloaded")
+    page.set_content(format_reactlog_html(reactlog), wait_until="domcontentloaded")
 
     edges = page.locator(".graph-edge")
     assert edges.count() == 3
