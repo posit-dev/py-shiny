@@ -6,16 +6,16 @@ from typing import Any, Dict, List, Optional
 
 import click
 
-from .._components import get_component_doc, list_components
+from .._components import COMPONENT_CATEGORIES, get_component_doc, list_components
 from ._utils import cli_bold, cli_code, cli_danger, cli_info
 
 
 @click.command(
     "docs",
-    help="""Browse Shiny for Python components, signatures, docstrings, and snippets.
+    help="""Browse Shiny for Python components, signatures, and docstrings.
 
-    List all components or view detailed documentation and usage snippets for a
-    specific component or renderer.
+    List all components or view detailed documentation for a specific component
+    or renderer. Components are discovered from the package's public exports.
 
     Examples:
 
@@ -29,9 +29,7 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info
 @click.option(
     "-c",
     "--category",
-    type=click.Choice(
-        ["layout", "cards", "inputs", "outputs", "renderers"], case_sensitive=False
-    ),
+    type=click.Choice(COMPONENT_CATEGORIES, case_sensitive=False),
     default=None,
     help="Filter component list by category.",
 )
@@ -70,7 +68,7 @@ def docs(component: Optional[str], category: Optional[str], json_output: bool) -
 
         click.echo(
             cli_info(
-                "Run 'shiny docs <component_name>' for full signature and code snippets."
+                "Run 'shiny docs <component_name>' for its full signature and documentation."
             )
         )
         sys.exit(0)
@@ -101,13 +99,6 @@ def docs(component: Optional[str], category: Optional[str], json_output: bool) -
     if sig:
         click.echo(cli_bold("Signature:"))
         click.echo(f"  {doc['name']}{sig}\n")
-
-    snippet = doc.get("snippet")
-    if snippet:
-        click.echo(cli_bold("Example Snippet:"))
-        for line in snippet.splitlines():
-            click.echo(f"  {line}")
-        click.echo("")
 
     docstring = doc.get("docstring")
     if docstring:

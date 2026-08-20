@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import html as html_lib
+import inspect
 import json
 import time
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
+from shiny import ui
+from shiny._components import get_component_doc, list_components
 from shiny._main import main
 
 
@@ -282,7 +286,31 @@ def test_cli_docs_component():
     assert res.exit_code == 0
     assert "ui.page_sidebar" in res.output
     assert "Signature:" in res.output
-    assert "Example Snippet:" in res.output
+    assert "Documentation:" in res.output
+
+
+def test_component_catalog_discovers_new_public_ui_exports(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def input_runtime_component(id: str, label: str = "Runtime") -> None:
+        """Create a component exported at runtime."""
+
+    monkeypatch.setattr(
+        ui,
+        "input_runtime_component",
+        input_runtime_component,
+        raising=False,
+    )
+    monkeypatch.setattr(ui, "__all__", (*ui.__all__, "input_runtime_component"))
+
+    components = list_components("inputs")
+    discovered = next(
+        item for item in components if item["name"] == "ui.input_runtime_component"
+    )
+
+    assert discovered["description"] == "Create a component exported at runtime."
+    assert discovered["signature"] == str(inspect.signature(input_runtime_component))
+    assert get_component_doc("input_runtime_component") == discovered
 
 
 def test_cli_docs_json():
