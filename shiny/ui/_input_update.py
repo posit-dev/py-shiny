@@ -36,9 +36,28 @@ from ..input_handler import input_handlers
 from ..module import ResolvedId, resolve_id
 from ..session import require_active_session, session_context
 from ..types import ActionButtonValue
-from ._input_check_radio import ChoicesArg, _generate_options
+from ._choices import (
+    normalize_selected,
+    normalize_selected_list,
+    normalize_selected_radio,
+    resolve_selected,
+)
+from ._input_check_radio import (
+    ChoicesArg,
+    SelectedArg,
+    _generate_options,
+)
+from ._input_check_radio import _normalize_choices as _check_radio_normalize_choices
 from ._input_date import _as_date_attr
-from ._input_select import SelectChoicesArg, _normalize_choices, _render_choices
+from ._input_select import (
+    SelectChoicesArg,
+    SelectSelectedArg,
+)
+from ._input_select import _choice_value_strings as _select_choice_value_strings
+from ._input_select import (
+    _normalize_choices,
+    _render_choices,
+)
 from ._input_slider import SliderStepArg, SliderValueArg, _as_numeric, _slider_type
 from ._utils import JSEval, _session_on_flush_send_msg, extract_js_keys
 
@@ -313,7 +332,7 @@ def update_checkbox_group(
     *,
     label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str | list[str] | tuple[str, ...]] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -365,7 +384,7 @@ def update_radio_buttons(
     *,
     label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
@@ -416,29 +435,53 @@ def _update_choice_input(
     type: Literal["checkbox", "radio"],
     label: Optional[TagChild] = None,
     choices: Optional[ChoicesArg] = None,
-    selected: Optional[str | list[str] | tuple[str, ...]] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     session: Optional[Session] = None,
 ) -> None:
     session = require_active_session(session)
+
+    # The client matches `value` against the options' HTML `value` attributes, which are
+    # always strings. Resolves `selected` against the choices (see issue 2272)
+    if choices is not None:
+        selected = resolve_selected(
+            selected, _check_radio_normalize_choices(choices).keys()
+        )
+
+    # A radio group's client-side `setValue()` throws on a non-empty array, so collapse
+    # to a scalar; a checkbox group keeps its array.
+    if type == "radio":
+        selected_values = normalize_selected_radio(selected)
+    else:
+        selected_values = normalize_selected(selected)
+
     options = None
     if choices is not None:
         # https://github.com/posit-dev/py-shiny/issues/708#issuecomment-1696352934
         with session_context(session):
             resolved_id = resolve_id(id)
 
+        # `choices=[]` is the documented way to clear the choices. Pass "nothing
+        # selected" explicitly so `_generate_options()` renders an empty radio group
+        # instead of raising
+        options_selected: str | list[str] | None = selected_values
+        if type == "radio" and not choices and options_selected is None:
+            options_selected = []
+
         opts = _generate_options(
             id=resolved_id,
             type=type,
             choices=choices,
-            selected=selected,
+            # `_generate_options()` re-normalizes `selected` (the `input_*()`
+            # constructors pass it raw), which is a no-op on the value resolved above.
+            selected=options_selected,
             inline=inline,
         )
         options = session._process_ui(opts)["html"]
     msg = {
         "label": session._process_ui(label) if label is not None else None,
         "options": options,
-        "value": selected,
+        "value": selected_values,
     }
     session.send_input_message(id, drop_none(msg))
 
@@ -656,7 +699,7 @@ def update_select(
     *,
     label: Optional[TagChild] = None,
     choices: Optional[SelectChoicesArg] = None,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectSelectedArg] = None,
     session: Optional[Session] = None,
 ) -> None:
     """
@@ -691,15 +734,17 @@ def update_select(
 
     session = require_active_session(session)
 
-    selected_values = selected
-    if isinstance(selected, str):
-        selected_values = [selected]
-
     if choices is None:
         options = None
     else:
-        option_tags = _render_choices(_normalize_choices(choices), selected)
+        # jQuery matches option values with strict `===`, so a non-string `selected`
+        # silently deselects everything. Resolve to the string form the options render.
+        choices_ = _normalize_choices(choices)
+        selected = resolve_selected(selected, _select_choice_value_strings(choices_))
+        option_tags = _render_choices(choices_, selected)
         options = session._process_ui(option_tags)["html"]
+
+    selected_values = normalize_selected_list(selected)
 
     msg = {
         "label": session._process_ui(label) if label is not None else None,
@@ -722,7 +767,7 @@ def update_selectize(
     *,
     label: Optional[TagChild] = None,
     choices: Optional[SelectChoicesArg] = None,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectSelectedArg] = None,
     options: Optional[dict[str, str | float | JSEval]] = None,
     server: bool = False,
     session: Optional[Session] = None,
@@ -782,7 +827,8 @@ def update_selectize(
     # [{"label": "Foo", "value": "foo", "optgroup": "foo"}, ...]
     flat_choices: list[FlatSelectChoice] = []
     if choices is not None:
-        for k, v in _normalize_choices(choices).items():
+        choices_ = _normalize_choices(choices)
+        for k, v in choices_.items():
             if not isinstance(v, Mapping):
                 flat_choices.append(FlatSelectChoice(value=k, label=v))
             else:  # The optgroup case
@@ -793,9 +839,9 @@ def update_selectize(
                     ]
                 )
 
-    selected_values = selected
-    if isinstance(selected, str):
-        selected_values = [selected]
+        selected = resolve_selected(selected, _select_choice_value_strings(choices_))
+
+    selected_values = normalize_selected_list(selected)
 
     # Find any selected choices now so we have them ready to send to the client
     if selected_values is None:

@@ -59,6 +59,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * When `@expressify` cannot locate a function's definition, the error now names the function as it appears in the source (rather than a `__name__` a decorator may have rewritten), points at the file and line it looked at, and lists the likely causes — an `async def`, a decorator below `expressify()` that returns a wrapper instead of the original function, or a source file modified after import. (#2016)
 
+* The choice inputs (`ui.input_checkbox_group()`, `ui.input_radio_buttons()`, `ui.input_select()`, `ui.input_selectize()`, `ui.toolbar_input_select()`) and their `update_*()` counterparts now accept non-string choice values and `selected` values, such as the `int` keys of a `dict[int, str]` passed as `choices`. The `update_*()` functions previously left the input unchanged or cleared it entirely, and any label sent in the same call was lost. (#2420)
+
+* `ui.update_radio_buttons(selected=)` now accepts a one-element list or tuple, which previously left the radio group unchanged. Passing more than one value raises a `ValueError`, since a radio group can only show one. Passing `selected=[]` still clears the selection. (#2420)
+
+* `ui.update_radio_buttons(choices=[])` now clears the set of choices. This was the documented behavior, but didn't actually work and raised an `IndexError` instead. `ui.input_radio_buttons(choices=[])` still raises, but now with a more helpful `ValueError` that names `choices`. (#2420)
+
+* Choice values whose string forms collide, such as `choices=[0, "0"]`, now raise a `ValueError`. Previously both options rendered with the same underlying value, so the input could not report which one the user chose. In a select input's `choices`, optgroup labels share the top-level mapping with choice values, so a label and a value must not collide either. Two separate optgroups may still hold the same choice value. (#2420)
+
+* A `selected` value now names a choice by its string form. The input constructors previously compared raw Python values, so `ui.input_radio_buttons(choices={1: "one"}, selected=True)` checked the `1` option; it no longer does, which matches R Shiny. An integral `float` still names the integer it equals, so `selected=1.0` continues to match a choice value of `1`. (#2420)
+
+* `None` and `bool` choice values now render as `value="None"`, `value="False"`, and `value="True"`. Previously the browser reported `"on"` or `""` for these options, so `None` and `False` were indistinguishable and neither could be updated. Apps and saved bookmarks that hold the old `""`/`"on"` values will read the new strings. (#2420)
+
 ## [1.7.0] - 2026-07-28
 
 ### New features
