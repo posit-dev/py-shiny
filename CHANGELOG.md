@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added a suite of built-in developer CLI tools: `shiny validate` statically checks apps for common reactivity errors and duplicate IDs; `shiny simulate` runs an app's reactive graph in memory with supplied input values; and `shiny inspect` maps reactive dependencies and exports them as text, JSON, Mermaid, Graphviz DOT, or an interactive HTML visualization.
+
 * Added `session.allow_reconnect()`, the Python counterpart to Shiny for R's `session$allowReconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
 
 ### Improvements
