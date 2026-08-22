@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import functools
 import importlib
 import inspect
 import json
@@ -8,45 +9,103 @@ import textwrap
 from typing import Any
 
 import click
+from click.shell_completion import CompletionItem
 
 
 def _resolve_symbol(name: str) -> tuple[Any, str]:
-    parts = name.split(".")
-    for i in range(len(parts), 0, -1):
-        mod_name = ".".join(parts[:i])
-        attr_parts = parts[i:]
-        try:
-            mod = importlib.import_module(mod_name)
-            curr: Any = mod
-            for attr in attr_parts:
-                curr = getattr(curr, attr)
-            return curr, name
-        except (ImportError, AttributeError):
-            pass
+    def _try_resolve(target_name: str) -> Any | None:
+        parts = target_name.split(".")
+        for i in range(len(parts), 0, -1):
+            mod_name = ".".join(parts[:i])
+            attr_parts = parts[i:]
+            try:
+                mod = importlib.import_module(mod_name)
+                curr: Any = mod
+                for attr in attr_parts:
+                    curr = getattr(curr, attr)
+                return curr
+            except (ImportError, AttributeError):
+                pass
+        return None
+
+    obj = _try_resolve(name)
+    if obj is not None:
+        return obj, name
 
     if not name.startswith("shiny."):
-        try:
-            return _resolve_symbol("shiny." + name)
-        except Exception:
-            pass
+        obj = _try_resolve(f"shiny.{name}")
+        if obj is not None:
+            return obj, f"shiny.{name}"
 
-    for prefix in [
+    prefixes = [
         "shiny.ui",
         "shiny.express.ui",
         "shiny.playwright.controller",
+        "shiny.playwright",
         "shiny.reactive",
         "shiny.render",
         "shiny.session",
         "shiny.types",
-    ]:
-        try:
-            mod = importlib.import_module(prefix)
-            if hasattr(mod, name):
-                return getattr(mod, name), f"{prefix}.{name}"
-        except Exception:
-            pass
+    ]
+    for prefix in prefixes:
+        candidate = f"{prefix}.{name}"
+        obj = _try_resolve(candidate)
+        if obj is not None:
+            return obj, candidate
 
     raise click.ClickException(f"Could not find documentation for '{name}'.")
+
+
+@functools.lru_cache(maxsize=1)
+def _get_all_documentable_symbols() -> list[str]:
+    symbols: set[str] = set()
+    modules_to_scan = [
+        ("shiny.ui", "ui"),
+        ("shiny.express.ui", "express.ui"),
+        ("shiny.render", "render"),
+        ("shiny.reactive", "reactive"),
+        ("shiny.playwright.controller", "controller"),
+        ("shiny.session", "session"),
+        ("shiny.types", "types"),
+    ]
+    for full_mod, short_mod in modules_to_scan:
+        try:
+            mod = importlib.import_module(full_mod)
+        except Exception:
+            continue
+        for attr in dir(mod):
+            if attr.startswith("_"):
+                continue
+            obj = getattr(mod, attr, None)
+            if obj is None:
+                continue
+            if inspect.isroutine(obj) or inspect.isclass(obj):
+                symbols.add(f"{full_mod}.{attr}")
+                symbols.add(f"{short_mod}.{attr}")
+                symbols.add(attr)
+                if inspect.isclass(obj):
+                    for m_name in dir(obj):
+                        if not m_name.startswith("_"):
+                            try:
+                                m_obj = getattr(obj, m_name, None)
+                                if callable(m_obj):
+                                    symbols.add(f"{full_mod}.{attr}.{m_name}")
+                                    symbols.add(f"{short_mod}.{attr}.{m_name}")
+                                    symbols.add(f"{attr}.{m_name}")
+                            except Exception:
+                                pass
+    return sorted(symbols)
+
+
+def _complete_symbol_names(
+    ctx: click.Context, param: click.Parameter, incomplete: str
+) -> list[CompletionItem]:
+    symbols = _get_all_documentable_symbols()
+    return [
+        CompletionItem(s)
+        for s in symbols
+        if s.startswith(incomplete) or (incomplete in s)
+    ]
 
 
 def _extract_function_signature(
@@ -268,15 +327,48 @@ def _format_text_doc(info: dict[str, Any]) -> str:
     "docs",
     help="Look up documentation and signatures for Shiny functions and controllers.",
 )
-@click.argument("names", nargs=-1, required=True)
+@click.argument(
+    "names",
+    nargs=-1,
+    required=False,
+    shell_complete=_complete_symbol_names,
+)
+@click.option(
+    "--complete",
+    "complete_prefix",
+    type=str,
+    default=None,
+    help="Return autocomplete symbol matches for a prefix.",
+)
 @click.option(
     "--json",
     "as_json",
     is_flag=True,
     default=False,
-    help="Output documentation in JSON format.",
+    help="Output documentation or completions in JSON format.",
 )
-def docs(names: tuple[str, ...], as_json: bool) -> None:
+def docs(
+    names: tuple[str, ...],
+    complete_prefix: str | None,
+    as_json: bool,
+) -> None:
+    if complete_prefix is not None:
+        all_syms = _get_all_documentable_symbols()
+        matches = [
+            s
+            for s in all_syms
+            if s.startswith(complete_prefix) or (complete_prefix in s)
+        ]
+        if as_json:
+            click.echo(json.dumps(matches, indent=2))
+        else:
+            for m in matches:
+                click.echo(m)
+        return
+
+    if not names:
+        raise click.UsageError("Missing argument 'NAMES...'.")
+
     results: list[dict[str, Any]] = []
     for name in names:
         obj, full_name = _resolve_symbol(name)

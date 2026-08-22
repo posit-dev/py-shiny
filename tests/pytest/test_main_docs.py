@@ -133,6 +133,39 @@ def test_docs_short_aliases() -> None:
     assert "def calc(" in res_calc.output
 
 
+def test_docs_method_short_aliases() -> None:
+    runner = CliRunner()
+
+    res_short = runner.invoke(main, ["docs", "Accordion.expect_height"])
+    assert res_short.exit_code == 0
+    assert "def expect_height(" in res_short.output
+    assert "Expects the accordion to have the specified height." in res_short.output
+
+    res_module = runner.invoke(main, ["docs", "controller.Accordion.expect_height"])
+    assert res_module.exit_code == 0
+    assert "def expect_height(" in res_module.output
+
+
+def test_docs_autocomplete_flag() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "--complete", "Accordion.expect"])
+
+    assert result.exit_code == 0
+    assert "Accordion.expect_height" in result.output
+    assert "Accordion.expect_class" in result.output
+
+
+def test_docs_autocomplete_json() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "--complete", "Accordion.expect", "--json"])
+
+    assert result.exit_code == 0
+    items = json.loads(result.output)
+    assert isinstance(items, list)
+    assert "Accordion.expect_height" in items
+    assert "Accordion.expect_class" in items
+
+
 def test_docs_unknown_symbol() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["docs", "non_existent_symbol_xyz"])
