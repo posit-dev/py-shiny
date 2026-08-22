@@ -317,6 +317,7 @@ def run_app(
                 app_path = Path(app_no_suffix).resolve()
             else:
                 app_path = (Path(app_dir) / app_no_suffix).resolve()
+            _validate_app_file(app_path)
             # If the file is "/path/to/app.py", our entrypoint with the escaped filename
             # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
             app = "shiny.express.app:" + escape_to_var_name(str(app_path))
@@ -479,8 +480,28 @@ def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
         dirname, filename = os.path.split(module_path)
         module = filename[:-3] if filename.endswith(".py") else filename
         app_dir = dirname
+        _validate_app_file(module_path)
 
     return f"{module}:{attr}", app_dir
+
+
+def _validate_app_file(app_file: Path | str) -> None:
+    from .._validate import validate_shiny_file
+
+    try:
+        report = validate_shiny_file(app_file)
+        if report.get("errors"):
+            for err in report["errors"]:
+                line = err.get("line", "?")
+                msg = err.get("message", "")
+                print(f"Error ({app_file}:{line}): {msg}", file=sys.stderr)
+        if report.get("warnings"):
+            for warn in report["warnings"]:
+                line = warn.get("line", "?")
+                msg = warn.get("message", "")
+                print(f"Warning ({app_file}:{line}): {msg}", file=sys.stderr)
+    except Exception:
+        pass
 
 
 def try_import_module(module: str) -> Optional[types.ModuleType]:
