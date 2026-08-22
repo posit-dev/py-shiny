@@ -56,7 +56,28 @@ Run this from your own project rather than a clone of this repository: [`library
 
 To see what's bundled without installing anything, run `shiny skills list`.
 
+### CLI Documentation Tool
+
+Inspect signatures and docstrings directly from the terminal with `shiny docs`:
+
+```sh
+# Inspect a function
+shiny docs shiny.ui.value_box
+
+# Inspect a Playwright controller or method
+shiny docs shiny.playwright.controller.Accordion.expect_height
+# or via short alias:
+shiny docs Accordion.expect_height
+
+# Multiple lookups in one call
+shiny docs shiny.ui.value_box Accordion
+
+# Autocomplete lookup prefix
+shiny docs --complete Accordion.expect
+```
+
 ## Development
+
 
 * Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/
 * API documentation for the `main` branch:
