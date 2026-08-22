@@ -33,3 +33,4 @@ main.add_command(static)
 main.add_command(static_assets)
 main.add_command(cells_to_app)
 main.add_command(get_shiny_deps)
+

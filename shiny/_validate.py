@@ -1,26 +1,27 @@
 from __future__ import annotations
 
 import ast
-from typing import Any, Dict, List, Set
+from pathlib import Path
+from typing import Any
 
 
 class ShinyCodeValidator(ast.NodeVisitor):
     def __init__(self) -> None:
         self.mode = "unknown"
-        self.errors: List[Dict[str, Any]] = []
-        self.warnings: List[Dict[str, Any]] = []
-        self.suggestions: List[str] = []
-        self.input_ids: Set[str] = set()
-        self.ui_output_ids: Set[str] = set()
-        self.renderer_ids: Set[str] = set()
-        self.reactive_vals: Set[str] = set()
-        self.reactive_calcs: Set[str] = set()
-        self.duplicate_ids: List[str] = []
+        self.errors: list[dict[str, Any]] = []
+        self.warnings: list[dict[str, Any]] = []
+        self.suggestions: list[str] = []
+        self.input_ids: set[str] = set()
+        self.ui_output_ids: set[str] = set()
+        self.renderer_ids: set[str] = set()
+        self.reactive_vals: set[str] = set()
+        self.reactive_calcs: set[str] = set()
+        self.duplicate_ids: list[str] = []
 
         self._in_server_func = False
         self._in_reactive_context = False
-        self._current_func_decorators: List[str] = []
-        self._parent_map: Dict[ast.AST, ast.AST] = {}
+        self._current_func_decorators: list[str] = []
+        self._parent_map: dict[ast.AST, ast.AST] = {}
 
     def generic_visit(self, node: ast.AST) -> None:
         for child in ast.iter_child_nodes(node):
@@ -232,7 +233,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
         return ""
 
 
-def validate_shiny_code(code: str) -> Dict[str, Any]:
+def validate_shiny_code(code: str) -> dict[str, Any]:
     try:
         tree = ast.parse(code)
     except SyntaxError as e:
@@ -266,7 +267,7 @@ def validate_shiny_code(code: str) -> Dict[str, Any]:
         ):
             validator.mode = "core"
 
-    suggestions: List[str] = []
+    suggestions: list[str] = []
     if validator.mode == "express" and validator.duplicate_ids:
         suggestions.append(
             "Ensure each UI component in Express mode has a unique string ID."
@@ -288,3 +289,26 @@ def validate_shiny_code(code: str) -> Dict[str, Any]:
             list(validator.reactive_vals | validator.reactive_calcs)
         ),
     }
+
+
+def validate_shiny_file(path: str | Path) -> dict[str, Any]:
+    p = Path(path)
+    if not p.is_file():
+        return {
+            "valid": False,
+            "mode": "unknown",
+            "errors": [
+                {
+                    "line": 1,
+                    "message": f"File not found: {path}",
+                    "code": "FILE_NOT_FOUND",
+                }
+            ],
+            "warnings": [],
+            "suggestions": [],
+            "detected_inputs": [],
+            "detected_outputs": [],
+            "detected_reactives": [],
+        }
+    code = p.read_text(encoding="utf-8")
+    return validate_shiny_code(code)
