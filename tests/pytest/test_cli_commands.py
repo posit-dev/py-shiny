@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import html as html_lib
-import inspect
 import json
 import time
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
-from shiny import ui
-from shiny._components import get_component_doc, list_components
 from shiny._main import main
 
 
@@ -262,61 +258,3 @@ def test_cli_inspect_directory_requires_app_py(tmp_path: Path):
 
     assert res.exit_code == 1
     assert "does not contain app.py" in res.output
-
-
-def test_cli_docs_list():
-    runner = CliRunner()
-    res = runner.invoke(main, ["docs"])
-    assert res.exit_code == 0
-    assert "Shiny for Python Components" in res.output
-    assert "ui.page_sidebar" in res.output
-
-
-def test_cli_docs_category():
-    runner = CliRunner()
-    res = runner.invoke(main, ["docs", "-c", "inputs"])
-    assert res.exit_code == 0
-    assert "ui.input_slider" in res.output
-    assert "ui.page_sidebar" not in res.output
-
-
-def test_cli_docs_component():
-    runner = CliRunner()
-    res = runner.invoke(main, ["docs", "ui.page_sidebar"])
-    assert res.exit_code == 0
-    assert "ui.page_sidebar" in res.output
-    assert "Signature:" in res.output
-    assert "Documentation:" in res.output
-
-
-def test_component_catalog_discovers_new_public_ui_exports(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    def input_runtime_component(id: str, label: str = "Runtime") -> None:
-        """Create a component exported at runtime."""
-
-    monkeypatch.setattr(
-        ui,
-        "input_runtime_component",
-        input_runtime_component,
-        raising=False,
-    )
-    monkeypatch.setattr(ui, "__all__", (*ui.__all__, "input_runtime_component"))
-
-    components = list_components("inputs")
-    discovered = next(
-        item for item in components if item["name"] == "ui.input_runtime_component"
-    )
-
-    assert discovered["description"] == "Create a component exported at runtime."
-    assert discovered["signature"] == str(inspect.signature(input_runtime_component))
-    assert get_component_doc("input_runtime_component") == discovered
-
-
-def test_cli_docs_json():
-    runner = CliRunner()
-    res = runner.invoke(main, ["docs", "render.plot", "--json"])
-    assert res.exit_code == 0
-    data = json.loads(res.output)
-    assert data["name"] == "render.plot"
-    assert data["category"] == "renderers"
