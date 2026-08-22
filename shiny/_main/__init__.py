@@ -4,7 +4,6 @@ import click
 
 from .. import __version__
 from ._create import create
-from ._docs import docs
 from ._generate_test import add
 from ._inspect import inspect
 from ._run import run
@@ -27,8 +26,8 @@ main.add_command(create)
 main.add_command(validate)
 main.add_command(simulate)
 main.add_command(inspect)
-main.add_command(docs)
 main.add_command(skills)
+
 main.add_command(static)
 main.add_command(static_assets)
 main.add_command(cells_to_app)
