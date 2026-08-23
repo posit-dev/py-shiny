@@ -101,11 +101,8 @@ def _complete_symbol_names(
     ctx: click.Context, param: click.Parameter, incomplete: str
 ) -> list[CompletionItem]:
     symbols = _get_all_documentable_symbols()
-    return [
-        CompletionItem(s)
-        for s in symbols
-        if s.startswith(incomplete) or (incomplete in s)
-    ]
+    inc = incomplete.lower()
+    return [CompletionItem(s) for s in symbols if s.lower().startswith(inc)]
 
 
 def _extract_function_signature(
@@ -354,11 +351,12 @@ def docs(
 ) -> None:
     if complete_prefix is not None:
         all_syms = _get_all_documentable_symbols()
-        matches = [
-            s
-            for s in all_syms
-            if s.startswith(complete_prefix) or (complete_prefix in s)
+        inc = complete_prefix.lower()
+        prefix_matches = [s for s in all_syms if s.lower().startswith(inc)]
+        other_matches = [
+            s for s in all_syms if inc in s.lower() and not s.lower().startswith(inc)
         ]
+        matches = prefix_matches + other_matches
         if as_json:
             click.echo(json.dumps(matches, indent=2))
         else:

@@ -166,6 +166,21 @@ def test_docs_autocomplete_json() -> None:
     assert "Accordion.expect_class" in items
 
 
+def test_shell_complete_symbol_names() -> None:
+    from click import Argument, Context
+
+    from shiny._main._docs import _complete_symbol_names
+
+    ctx = Context(main)
+    param = Argument(["names"])
+    items = _complete_symbol_names(ctx, param, "Accordion.exp")
+    values = [item.value for item in items]
+    assert "Accordion.expect_height" in values
+    assert "Accordion.expect_class" in values
+    # Must only match prefix, not other prefixes
+    assert "controller.Accordion.expect_height" not in values
+
+
 def test_docs_unknown_symbol() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["docs", "non_existent_symbol_xyz"])
