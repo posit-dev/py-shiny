@@ -103,6 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, and interactive HTML Reactlog export.
+
 * Added `local_server`, a pytest fixture that is the in-memory counterpart of `local_app`: a function-scoped `test_server()` session for the `app.py` next to the test file. (#2495)
 
 * Added `session.allow_reconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
