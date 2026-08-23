@@ -56,6 +56,10 @@ Run this from your own project rather than a clone of this repository: [`library
 
 To see what's bundled without installing anything, run `shiny skills list`.
 
+## Developer CLI
+
+- `shiny inspect app.py --reactlog`: Static reactive dependency graph (DAG) with simulated invalidation ordering and interactive HTML export (`--html`). It does not execute app code.
+
 ## Development
 
 * Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/
