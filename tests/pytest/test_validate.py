@@ -84,3 +84,52 @@ def test_runtime_outputs_duplicate_warning() -> None:
         @render.text
         def result() -> str:  # noqa: F811
             return "second"
+
+
+def test_core_shiny_output_id_order_independent() -> None:
+    server_first_code = """from shiny import App, render, ui
+
+def server(input, output, session):
+    @render.text
+    def summary():
+        return "Summary"
+
+app_ui = ui.page_fluid(
+    ui.output_text("summary")
+)
+
+app = App(app_ui, server)
+"""
+    res1 = validate_shiny_code(server_first_code)
+    assert res1["valid"] is True
+    assert len([w for w in res1["warnings"] if w["code"] == "DUPLICATE_ID"]) == 0
+
+    ui_first_code = """from shiny import App, render, ui
+
+app_ui = ui.page_fluid(
+    ui.output_text("summary")
+)
+
+def server(input, output, session):
+    @render.text
+    def summary():
+        return "Summary"
+
+app = App(app_ui, server)
+"""
+    res2 = validate_shiny_code(ui_first_code)
+    assert res2["valid"] is True
+    assert len([w for w in res2["warnings"] if w["code"] == "DUPLICATE_ID"]) == 0
+
+
+def test_duplicate_output_id_detected() -> None:
+    dup_code = """from shiny import App, ui
+
+app_ui = ui.page_fluid(
+    ui.output_text("summary"),
+    ui.output_text("summary")
+)
+"""
+    res = validate_shiny_code(dup_code)
+    dup_warnings = [w for w in res["warnings"] if w["code"] == "DUPLICATE_ID"]
+    assert len(dup_warnings) == 1
