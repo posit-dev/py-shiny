@@ -33,6 +33,42 @@ def test_remote_playwright_server_keeps_stdin_open() -> None:
     action = PLAYWRIGHT_REMOTE_ACTION.read_text()
 
     assert "--interactive" in action
+    assert "--tty" in action
+
+
+def test_shared_page_reset_handles_close_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    playwright_conftest = _load_module(
+        "playwright_conftest_for_close_failure_test", PLAYWRIGHT_TESTS / "conftest.py"
+    )
+
+    class BrokenPage:
+        def is_closed(self) -> bool:
+            return False
+
+        def goto(self, url: str) -> None:
+            raise PlaywrightError("Target page, context or browser has been closed")
+
+        def close(self) -> None:
+            raise PlaywrightError("Target page, context or browser has been closed")
+
+    class NewPage:
+        def set_viewport_size(self, size: dict[str, int]) -> None:
+            assert size == {"width": 1920, "height": 1080}
+
+    new_page = NewPage()
+
+    def new_session_page(browser: object) -> NewPage:
+        return new_page
+
+    monkeypatch.setattr(playwright_conftest, "_new_session_page", new_session_page)
+
+    page_fixture: Callable[..., Any] = playwright_conftest.page.__wrapped__
+    session_holder = [BrokenPage()]  # type: ignore[list-item]
+    result = page_fixture(object(), session_holder)
+    assert result is new_page
+    assert session_holder == [new_page]
 
 
 def test_remote_playwright_readiness_uses_server_metadata() -> None:
