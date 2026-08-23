@@ -17,7 +17,8 @@ def test_offcanvas_trigger(page: Page, local_app: ShinyAppProc) -> None:
     panel.expect_placement("left")
     state.expect_value("closed")
 
-    panel.open()
+    # Verify the declarative trigger button still opens the panel (client-side)
+    controller.InputActionButton(page, "open_btn").click()
     panel.expect_open(True)
     panel.expect_title("Trigger Panel")
     panel.expect_body("Panel via trigger.")
@@ -28,11 +29,12 @@ def test_offcanvas_trigger(page: Page, local_app: ShinyAppProc) -> None:
     panel.expect_open(False)
     state.expect_value("closed")
 
-    panel.show()
+    # Verify controller open via loc_trigger
+    panel.open()
     panel.expect_open(True)
     state.expect_value("open")
 
-    panel.set(open=False)
+    panel.close()
     panel.expect_open(False)
     state.expect_value("closed")
 
@@ -40,7 +42,7 @@ def test_offcanvas_trigger(page: Page, local_app: ShinyAppProc) -> None:
     panel.expect_open(True)
     state.expect_value("open")
 
-    panel.close()
+    panel.set(open=False)
     panel.expect_open(False)
     state.expect_value("closed")
 
@@ -58,6 +60,16 @@ def test_offcanvas_server_toggle(page: Page, local_app: ShinyAppProc) -> None:
     panel.expect_open(True)
     panel.expect_title("Server Panel")
     panel.expect_body(re.compile(r"Panel via server\."))
+    state.expect_value("open")
+
+    # Verify server-side hide still works
+    controller.InputActionButton(page, "hide_btn").click()
+    panel.expect_open(False)
+    state.expect_value("closed")
+
+    # Also verify controller close works after a server-side open
+    controller.InputActionButton(page, "show_btn").click()
+    panel.expect_open(True)
     state.expect_value("open")
 
     panel.close()

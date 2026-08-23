@@ -399,19 +399,6 @@ class Offcanvas(UiBase):
         """
         self.set(open=True, timeout=timeout)
 
-    def show(self, *, timeout: Timeout = None) -> None:
-        """
-        Shows (opens) the offcanvas panel.
-
-        Alias for :meth:`~shiny.playwright.controller.Offcanvas.open`.
-
-        Parameters
-        ----------
-        timeout
-            The maximum time to wait for the offcanvas to open. Defaults to `None`.
-        """
-        self.open(timeout=timeout)
-
     def close(self, *, timeout: Timeout = None) -> None:
         """
         Closes the offcanvas panel.
