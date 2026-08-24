@@ -263,10 +263,24 @@ def inspect(
 
         if record_flag:
             if not app_file_to_run:
-                click.echo(cli_danger("Cannot record without an app file."))
+                if output_format == "json":
+                    click.echo(
+                        json.dumps(
+                            {
+                                "success": False,
+                                "error": "Cannot record without an app file.",
+                            }
+                        )
+                    )
+                else:
+                    click.echo(cli_danger("Cannot record without an app file."))
                 sys.exit(1)
 
-            click.echo(cli_bold(f"Recording Playwright session for {target_desc}..."))
+            is_machine_output = output_format in ("json", "mermaid", "dot")
+            click.echo(
+                cli_bold(f"Recording Playwright session for {target_desc}..."),
+                err=is_machine_output,
+            )
             rec_result = record_shiny_session(
                 app_file_to_run,
                 video_path=video_path,
@@ -291,10 +305,14 @@ def inspect(
             click.echo(
                 cli_success(
                     f"Recorded {act_count} action(s) in {rec_result.get('duration_secs')}s"
-                )
+                ),
+                err=is_machine_output,
             )
             if actual_video_path:
-                click.echo(cli_info(f"Session video saved to: {actual_video_path}"))
+                click.echo(
+                    cli_info(f"Session video saved to: {actual_video_path}"),
+                    err=is_machine_output,
+                )
 
         reactlog_data = generate_reactlog(
             source_code,
@@ -321,6 +339,7 @@ def inspect(
                 title=f"Reactive Log: {target_desc}",
                 source_code=source_code,
                 video_path=actual_video_path,
+                html_path=out_file_path,
             )
             Path(out_file_path).write_text(html_content, encoding="utf-8")
             click.echo(
@@ -380,31 +399,31 @@ def inspect(
             click.echo(cli_bold(f"Reactive Dependency Graph for {target_desc}"))
             click.echo(cli_info(str(reactlog_data["summary"])) + "\n")
 
-            nodes_by_type: Dict[str, List[str]] = {
+            nodes_by_type: Dict[str, List[Dict[str, Any]]] = {
                 "source": [],
                 "conductor": [],
                 "observer": [],
             }
             for n in reactlog_data.get("nodes", []):
                 role: str = str(n.get("role", "conductor"))
-                nodes_by_type.setdefault(role, []).append(str(n["id"]))
+                nodes_by_type.setdefault(role, []).append(n)
 
             if nodes_by_type["source"]:
                 click.echo(cli_bold("Inputs (Sources):"))
-                for inp in nodes_by_type["source"]:
-                    click.echo(f"  📥 input.{inp}")
+                for inp_node in nodes_by_type["source"]:
+                    click.echo(f"  📥 {inp_node.get('label', inp_node['id'])}")
                 click.echo("")
 
             if nodes_by_type["conductor"]:
                 click.echo(cli_bold("Reactive Calcs (Conductors):"))
-                for c in nodes_by_type["conductor"]:
-                    click.echo(f"  ⚡ {c}")
+                for c_node in nodes_by_type["conductor"]:
+                    click.echo(f"  ⚡ {c_node.get('label', c_node['id'])}")
                 click.echo("")
 
             if nodes_by_type["observer"]:
                 click.echo(cli_bold("Outputs & Effects (Observers):"))
-                for out in nodes_by_type["observer"]:
-                    click.echo(f"  📊 {out}")
+                for out_node in nodes_by_type["observer"]:
+                    click.echo(f"  📊 {out_node.get('label', out_node['id'])}")
                 click.echo("")
 
             edges = reactlog_data.get("edges", [])
