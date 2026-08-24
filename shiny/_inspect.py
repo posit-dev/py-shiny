@@ -9,8 +9,6 @@ import json
 import keyword
 import os
 import shutil
-import socket
-import subprocess
 import sys
 import tempfile
 import time
@@ -654,13 +652,6 @@ def generate_reactlog(
     }
 
 
-def _find_free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
-
-
 def _record_session_sync(
     app_path: str,
     video_path: Optional[str] = "recording.webm",
@@ -678,7 +669,6 @@ def _record_session_sync(
             "video_path": None,
         }
 
-    port = _find_free_port()
     app_target = Path(app_path).resolve()
     if not app_target.exists():
         return {
@@ -688,62 +678,30 @@ def _record_session_sync(
             "video_path": None,
         }
 
-    env = dict(os.environ)
-    env["SHINY_TESTMODE"] = "1"
-    env["PYTHONUNBUFFERED"] = "1"
+    from .run._run import run_shiny_app
 
-    proc = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "shiny",
-            "run",
-            str(app_target),
-            "--port",
-            str(port),
-            "--no-dev-mode",
-            "--log-level=warning",
-        ],
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-    )
+    start_time = time.time()
+    try:
+        sa = run_shiny_app(
+            app_target,
+            wait_for_start=True,
+            timeout_secs=20,
+            env={"SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1"},
+        )
+    except Exception as err:
+        return {
+            "success": False,
+            "error": f"Failed to start Shiny app: {err}",
+            "actions": [],
+            "video_path": None,
+        }
 
-    app_url = f"http://127.0.0.1:{port}"
+    app_url = sa.url
     temp_dir = tempfile.mkdtemp(prefix="shiny_record_")
     recorded_actions: List[Dict[str, Any]] = []
     saved_video_path: Optional[str] = None
 
     try:
-        start_time = time.time()
-        connected = False
-        while time.time() - start_time < 10.0:
-            if proc.poll() is not None:
-                _, err_bytes = proc.communicate()
-                err_str = (
-                    err_bytes.decode("utf-8", errors="replace") if err_bytes else ""
-                )
-                return {
-                    "success": False,
-                    "error": f"Shiny server failed to start: {err_str}",
-                    "actions": [],
-                    "video_path": None,
-                }
-            try:
-                with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                    connected = True
-                    break
-            except OSError:
-                time.sleep(0.1)
-
-        if not connected:
-            return {
-                "success": False,
-                "error": f"Failed to connect to Shiny app server at {app_url}",
-                "actions": [],
-                "video_path": None,
-            }
-
         with sync_playwright() as p:
             ws_endpoint = os.environ.get("PW_TEST_CONNECT_WS_ENDPOINT")
             if ws_endpoint:
@@ -873,11 +831,7 @@ def _record_session_sync(
         }
 
     finally:
-        proc.terminate()
-        try:
-            proc.wait(timeout=2.0)
-        except Exception:
-            proc.kill()
+        sa.close()
         try:
             shutil.rmtree(temp_dir, ignore_errors=True)
         except Exception:
