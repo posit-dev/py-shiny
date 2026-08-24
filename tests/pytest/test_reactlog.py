@@ -343,11 +343,79 @@ def txt():
     graph = inspect_reactive_graph(code)
     mermaid = format_graph_mermaid(graph)
     assert "graph TD" in mermaid
-    assert "input_n --> output_txt" in mermaid
+    assert "n0" in mermaid
+    assert "n1" in mermaid
+    assert "n0 --> n1" in mermaid
 
     dot = format_graph_dot(graph)
     assert "digraph ReactiveGraph" in dot
-    assert '"input_n" -> "output_txt";' in dot
+    assert '"n0" -> "n1";' in dot
+
+
+def test_mermaid_and_dot_hyphen_underscore_collision():
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("a_b", "A_B", 1)
+ui.input_numeric("a-b", "A-B", 2)
+@render.text
+def out1():
+    return str(input.a_b())
+@render.text
+def out2():
+    return str(input["a-b"]())
+"""
+    graph = inspect_reactive_graph(code)
+    mermaid = format_graph_mermaid(graph)
+    assert (
+        'n0["📥 input.a-b"]:::inputClass' in mermaid
+        or 'n1["📥 input.a-b"]:::inputClass' in mermaid
+    )
+    assert (
+        'n0["📥 input.a_b"]:::inputClass' in mermaid
+        or 'n1["📥 input.a_b"]:::inputClass' in mermaid
+    )
+    dot = format_graph_dot(graph)
+    assert 'label="input.a-b"' in dot
+    assert 'label="input.a_b"' in dot
+
+
+def test_unresolved_inputs_creates_source_nodes():
+    code = """from shiny.express import input, render
+
+@render.text
+def result():
+    return f"Hello {input.customer()}"
+"""
+    graph = inspect_reactive_graph(code)
+    assert graph["success"] is True
+    node_ids = {n["id"] for n in graph["nodes"]}
+    assert "input:customer" in node_ids
+    assert "output:result" in node_ids
+
+    inp_node = next(n for n in graph["nodes"] if n["id"] == "input:customer")
+    assert inp_node["declaration"] == "unresolved"
+    assert inp_node["role"] == "source"
+
+    edges = [(e["from"], e["to"]) for e in graph["edges"]]
+    assert ("input:customer", "output:result") in edges
+
+
+def test_inferred_events_count_includes_recording_complete():
+    code = """from shiny.express import input, render, ui
+ui.input_text("name", "Name")
+@render.text
+def greet():
+    return f"Hi {input.name()}"
+"""
+    reactlog = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "input", "name": "name", "value": "Alice", "timestamp": 100}
+        ],
+    )
+    inferred_events = [
+        e for e in reactlog["events"] if e.get("provenance") == "inferred"
+    ]
+    assert reactlog["inferred_events_count"] == len(inferred_events)
 
 
 def test_cli_inspect_basic():
@@ -388,6 +456,30 @@ def out():
     assert data["success"] is True
     assert len(data["nodes"]) == 2
     assert len(data["edges"]) == 1
+
+
+def test_cli_inspect_record_json_clean_stdout(tmp_path: Path):
+    app_file = tmp_path / "app.py"
+    app_file.write_text(
+        """from shiny.express import input, render, ui
+ui.input_numeric("n", "N", 10)
+@render.text
+def out():
+    return f"Val={input.n()}"
+""",
+        encoding="utf-8",
+    )
+    runner = CliRunner(mix_stderr=False)
+    res = runner.invoke(
+        main,
+        ["inspect", str(app_file), "--record", "--headless", "--json"],
+    )
+    assert res.exit_code == 0
+    assert "Recording Playwright session" in res.stderr
+    data = json.loads(res.stdout)
+    assert data["success"] is True
+    assert "events" in data
+    assert data["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
 
 
 def test_cli_inspect_reactlog():

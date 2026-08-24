@@ -152,8 +152,20 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
 
     known_calcs = set(visitor.calcs.keys())
 
+    referenced_inputs: Set[str] = set()
+    for meta in visitor.outputs.values():
+        referenced_inputs.update(meta["deps"])
+    for meta in visitor.effects.values():
+        referenced_inputs.update(meta["deps"])
+    for meta in visitor.calcs.values():
+        referenced_inputs.update(meta["deps"])
+
+    all_inputs = set(visitor.inputs.keys()) | referenced_inputs
+
     nodes: List[Dict[str, Any]] = []
-    for inp, line in sorted(visitor.inputs.items()):
+    for inp in sorted(all_inputs):
+        is_declared = inp in visitor.inputs
+        line = visitor.inputs.get(inp)
         nodes.append(
             {
                 "id": f"input:{inp}",
@@ -162,6 +174,7 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
                 "role": "source",
                 "label": f"input.{inp}",
                 "line": line,
+                "declaration": "declared" if is_declared else "unresolved",
             }
         )
     for c, meta in sorted(visitor.calcs.items()):
@@ -225,7 +238,7 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
         "success": True,
         "nodes": nodes,
         "edges": edges,
-        "summary": f"{len(visitor.inputs)} inputs (sources), {len(visitor.calcs)} reactives (conductors), {total_observers} outputs & effects (observers)",
+        "summary": f"{len(all_inputs)} inputs (sources), {len(visitor.calcs)} reactives (conductors), {total_observers} outputs & effects (observers)",
     }
 
 
@@ -542,9 +555,6 @@ def generate_reactlog(
                 )
                 step += 1
 
-        obs_count = len([e for e in events if e.get("provenance") == "observed"])
-        inf_count = len([e for e in events if e.get("provenance") == "inferred"])
-
         events.append(
             {
                 "step": step,
@@ -557,9 +567,16 @@ def generate_reactlog(
                 "status": "idle",
                 "timestamp": last_ts,
                 "time_sec": round(last_ts / 1000.0, 2),
-                "details": f"Playwright recording finished: {obs_count} observed browser event(s), {inf_count} inferred dependency step(s)",
+                "details": "Playwright recording complete",
             }
         )
+        step += 1
+
+        obs_count = len([e for e in events if e.get("provenance") == "observed"])
+        inf_count = len([e for e in events if e.get("provenance") == "inferred"])
+        events[-1][
+            "details"
+        ] = f"Playwright recording finished: {obs_count} observed browser event(s), {inf_count} inferred dependency step(s)"
 
         init_count = len([e for e in events if e.get("phase") == "init"])
         interact_count = len([e for e in events if e.get("phase") == "interaction"])
@@ -914,11 +931,11 @@ def _record_session_sync(
                 time.sleep(0.5)
             elif not headless:
                 try:
-                    sys.stdout.write(
+                    sys.stderr.write(
                         "\n🔴 Recording browser session... Interact with your Shiny app.\n"
                         "Press [Enter] here (or close the browser window) when done recording: "
                     )
-                    sys.stdout.flush()
+                    sys.stderr.flush()
                     deadline = time.time() + timeout_secs
                     while time.time() < deadline:
                         if page.is_closed():
@@ -1003,24 +1020,27 @@ def record_shiny_session(
 
 def format_graph_mermaid(graph: Dict[str, Any]) -> str:
     lines = ["graph TD"]
-    for node in graph.get("nodes", []):
-        raw_id = node["id"]
-        nid = raw_id.replace(":", "_").replace("-", "_").replace(".", "_")
+    node_id_map: Dict[str, str] = {}
+    for idx, node in enumerate(graph.get("nodes", [])):
+        raw_id = str(node["id"])
+        syn_id = f"n{idx}"
+        node_id_map[raw_id] = syn_id
         ntype = node.get("type", "")
-        label = node.get("label", raw_id)
+        label = str(node.get("label", raw_id)).replace('"', '\\"')
         if ntype == "input":
-            lines.append(f'    {nid}["📥 {label}"]:::inputClass')
+            lines.append(f'    {syn_id}["📥 {label}"]:::inputClass')
         elif ntype == "calc":
-            lines.append(f'    {nid}["⚡ {label}"]:::calcClass')
+            lines.append(f'    {syn_id}["⚡ {label}"]:::calcClass')
         elif ntype == "effect":
-            lines.append(f'    {nid}["🔔 {label}"]:::effectClass')
+            lines.append(f'    {syn_id}["🔔 {label}"]:::effectClass')
         else:
-            lines.append(f'    {nid}["📊 {label}"]:::outputClass')
+            lines.append(f'    {syn_id}["📊 {label}"]:::outputClass')
 
     for edge in graph.get("edges", []):
-        f = edge["from"].replace(":", "_").replace("-", "_").replace(".", "_")
-        t = edge["to"].replace(":", "_").replace("-", "_").replace(".", "_")
-        lines.append(f"    {f} --> {t}")
+        f = node_id_map.get(str(edge["from"]))
+        t = node_id_map.get(str(edge["to"]))
+        if f and t:
+            lines.append(f"    {f} --> {t}")
 
     lines.append(
         "    classDef inputClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;"
@@ -1041,10 +1061,12 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
         "    rankdir=LR;",
         "    node [shape=box, style=rounded];",
     ]
-    for node in graph.get("nodes", []):
-        raw_id = node["id"]
-        nid = raw_id.replace(":", "_").replace("-", "_").replace(".", "_")
-        label = node.get("label", raw_id)
+    node_id_map: Dict[str, str] = {}
+    for idx, node in enumerate(graph.get("nodes", [])):
+        raw_id = str(node["id"])
+        syn_id = f"n{idx}"
+        node_id_map[raw_id] = syn_id
+        label = str(node.get("label", raw_id)).replace('"', '\\"')
         ntype = node.get("type", "")
         if ntype == "input":
             color = "#0284c7"
@@ -1054,12 +1076,13 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
             color = "#9333ea"
         else:
             color = "#16a34a"
-        lines.append(f'    "{nid}" [label="{label}", color="{color}"];')
+        lines.append(f'    "{syn_id}" [label="{label}", color="{color}"];')
 
     for edge in graph.get("edges", []):
-        f = edge["from"].replace(":", "_").replace("-", "_").replace(".", "_")
-        t = edge["to"].replace(":", "_").replace("-", "_").replace(".", "_")
-        lines.append(f'    "{f}" -> "{t}";')
+        f = node_id_map.get(str(edge["from"]))
+        t = node_id_map.get(str(edge["to"]))
+        if f and t:
+            lines.append(f'    "{f}" -> "{t}";')
 
     lines.append("}")
     return "\n".join(lines)
