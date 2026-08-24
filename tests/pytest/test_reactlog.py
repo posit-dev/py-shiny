@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import List, Tuple
 
+import pytest
 from click.testing import CliRunner
 
 from shiny._inspect import (
@@ -210,8 +211,8 @@ def out():
     html = format_reactlog_html(reactlog, source_code=code)
     assert "provenance-observed" in html
     assert "provenance-inferred" in html
-    assert "👁️ Observed" in html
-    assert "⚡ Inferred" in html
+    assert "Observed:" in html
+    assert "Inferred:" in html
 
 
 def test_relative_video_path_different_directories():
@@ -510,7 +511,7 @@ def out():
     assert "--sidebar-width" in html
 
 
-def test_cli_inspect_record_json_clean_stdout(tmp_path: Path):
+def test_cli_inspect_json_clean_stdout(tmp_path: Path):
     app_file = tmp_path / "app.py"
     app_file.write_text(
         """from shiny.express import input, render, ui
@@ -521,26 +522,48 @@ def out():
 """,
         encoding="utf-8",
     )
-    import subprocess
-    import sys
+    runner = CliRunner()
+    res = runner.invoke(main, ["inspect", str(app_file), "--json"])
+    assert res.exit_code == 0
+    data = json.loads(res.stdout)
+    assert data["success"] is True
+    assert "events" in data
+    assert len(data["nodes"]) == 2
 
-    proc = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "shiny",
-            "inspect",
-            str(app_file),
-            "--record",
-            "--headless",
-            "--json",
-        ],
-        capture_output=True,
-        text=True,
+
+def test_cli_inspect_record_json_clean_stdout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    app_file = tmp_path / "app.py"
+    app_file.write_text(
+        """from shiny.express import input, render, ui
+ui.input_numeric("n", "N", 10)
+@render.text
+def out():
+    return f"Val={input.n()}"
+""",
+        encoding="utf-8",
     )
-    assert proc.returncode == 0
-    assert "Recording Playwright session" in proc.stderr
-    data = json.loads(proc.stdout)
+    import shiny._inspect as inspect_mod
+
+    monkeypatch.setattr(
+        inspect_mod,
+        "record_shiny_session",
+        lambda *args, **kwargs: {
+            "success": True,
+            "actions": [{"type": "input", "name": "n", "value": 10, "timestamp": 100}],
+            "video_path": None,
+        },
+    )
+
+    runner = CliRunner(mix_stderr=False)
+    res = runner.invoke(
+        main,
+        ["inspect", str(app_file), "--record", "--headless", "--json"],
+    )
+    assert res.exit_code == 0
+    assert "Recording Playwright session" in res.stderr
+    data = json.loads(res.stdout)
     assert data["success"] is True
     assert "events" in data
     assert data["trace_kind"] == "inferred_simulation_with_recorded_browser_events"

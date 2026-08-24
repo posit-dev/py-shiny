@@ -4,6 +4,7 @@ import ast
 import asyncio
 import concurrent.futures
 import html as html_lib
+import inspect
 import io
 import json
 import keyword
@@ -842,7 +843,17 @@ def _record_session_sync(
         with sync_playwright() as p:
             ws_endpoint = os.environ.get("PW_TEST_CONNECT_WS_ENDPOINT")
             if ws_endpoint:
-                browser = p.chromium.connect(ws_endpoint)
+                connect_kwargs: Dict[str, Any] = {}
+                connect_param_name = (
+                    "endpoint"
+                    if "endpoint" in inspect.signature(p.chromium.connect).parameters
+                    else "ws_endpoint"
+                )
+                connect_kwargs[connect_param_name] = ws_endpoint
+                expose_net = os.environ.get("PW_TEST_CONNECT_EXPOSE_NETWORK")
+                if expose_net:
+                    connect_kwargs["expose_network"] = expose_net
+                browser = p.chromium.connect(**connect_kwargs)
             else:
                 browser = p.chromium.launch(headless=headless)
             context = browser.new_context(
@@ -1260,12 +1271,14 @@ def format_reactlog_html(
     .btn.primary:hover {{ background: #267ec4; }}
     .btn.accent-skip {{ background: #2b2146; border-color: #63439b; color: #d8b4fe; }}
     .btn.accent-skip:hover {{ background: #3b2b63; border-color: #8b5cf6; }}
+    .inline-icon {{ display: inline-block; vertical-align: -0.15em; margin-right: 0.35rem; flex-shrink: 0; }}
+    .btn.icon svg {{ display: block; margin: auto; }}
     .phase-selector {{ display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }}
-    .phase-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 6px; font: 700 0.7rem var(--mono); cursor: pointer; transition: all 120ms ease; }}
+    .phase-btn {{ display: inline-flex; align-items: center; background: transparent; border: none; color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 6px; font: 700 0.7rem var(--mono); cursor: pointer; transition: all 120ms ease; }}
     .phase-btn:hover {{ color: var(--text); background: var(--surface-2); }}
     .phase-btn.is-active {{ background: var(--surface-3); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }}
     .search-wrap {{ position: relative; flex: 0 1 200px; min-width: 130px; }}
-    .search-wrap::before {{ content: "⌕"; position: absolute; left: 0.7rem; top: 50%; transform: translateY(-53%); color: var(--text-muted); font: 700 1rem var(--mono); pointer-events: none; }}
+    .search-icon {{ position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
     .search-input {{ width: 100%; height: 34px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 0 0.7rem 0 2rem; font-size: 0.76rem; }}
     .search-input::placeholder {{ color: #6f8194; }}
     .filter-btn[aria-pressed="true"] {{ color: var(--text); background: var(--surface-3); }}
@@ -1354,7 +1367,9 @@ def format_reactlog_html(
 <body>
   <header class="app-header">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true">⚡</div>
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
       <div class="brand-copy">
         <div class="brand-title">{escaped_title}</div>
         <div class="brand-subtitle">Interactive Shiny Reactive Log & Graph Explorer (Statically Inferred Dependency Execution)</div>
@@ -1363,28 +1378,28 @@ def format_reactlog_html(
     <div class="stats">
       <span class="stat" id="stat-nodes">Nodes: 0</span>
       <span class="stat" id="stat-edges">Edges: 0</span>
-      <span class="stat" id="stat-observed">👁️ Observed: 0</span>
-      <span class="stat" id="stat-inferred">⚡ Inferred: 0</span>
+      <span class="stat" id="stat-observed"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Observed: 0</span>
+      <span class="stat" id="stat-inferred"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Inferred: 0</span>
     </div>
   </header>
 
   <main class="toolbar" role="toolbar" aria-label="Reactlog controls">
     <div class="toolbar-group">
-      <button class="btn icon" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play">▶</button>
-      <button class="btn icon" onclick="stepBack()" aria-label="Step back" title="Step back">⏮</button>
-      <button class="btn icon" onclick="stepForward()" aria-label="Step forward" title="Step forward">⏭</button>
-      <button class="btn icon" onclick="resetTimeline()" aria-label="Reset timeline" title="Reset">↺</button>
+      <button class="btn icon" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+      <button class="btn icon" onclick="stepBack()" aria-label="Step back" title="Step back"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
+      <button class="btn icon" onclick="stepForward()" aria-label="Step forward" title="Step forward"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
+      <button class="btn icon" onclick="resetTimeline()" aria-label="Reset timeline" title="Reset"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
     </div>
 
     <div class="toolbar-divider" aria-hidden="true"></div>
 
     <div class="phase-selector" role="group" aria-label="Timeline phase filter">
-      <button class="phase-btn is-active" id="phase-btn-all" onclick="setPhaseFilter('all')">All (<span id="count-all">0</span>)</button>
-      <button class="phase-btn" id="phase-btn-init" onclick="setPhaseFilter('init')">⚙️ Init (<span id="count-init">0</span>)</button>
-      <button class="phase-btn" id="phase-btn-interaction" onclick="setPhaseFilter('interaction')">🎬 Actions (<span id="count-interaction">0</span>)</button>
+      <button class="phase-btn is-active" id="phase-btn-all" onclick="setPhaseFilter('all')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>All (<span id="count-all">0</span>)</button>
+      <button class="phase-btn" id="phase-btn-init" onclick="setPhaseFilter('init')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Init (<span id="count-init">0</span>)</button>
+      <button class="phase-btn" id="phase-btn-interaction" onclick="setPhaseFilter('interaction')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>Actions (<span id="count-interaction">0</span>)</button>
     </div>
 
-    <button class="btn accent-skip" id="btn-skip-init" onclick="skipToInteractions()" title="Skip initialization steps and start at first app action">⏭ Skip to Actions</button>
+    <button class="btn accent-skip" id="btn-skip-init" onclick="skipToInteractions()" title="Skip initialization steps and start at first app action"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>Skip to Actions</button>
 
     <div class="toolbar-divider" aria-hidden="true"></div>
 
@@ -1396,6 +1411,7 @@ def format_reactlog_html(
     <div class="toolbar-divider" aria-hidden="true"></div>
 
     <div class="search-wrap">
+      <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       <input type="search" class="search-input" id="search-input" placeholder="Filter graph nodes..." oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name or type" />
     </div>
 
@@ -1416,10 +1432,10 @@ def format_reactlog_html(
           <div class="legend-item"><span class="legend-dot" style="--role-color: var(--effect)"></span> Effects</div>
         </div>
         <div class="zoom-controls">
-          <button class="btn icon" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in">+</button>
-          <button class="btn icon" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out">−</button>
-          <button class="btn icon" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view">⊡</button>
-          <button class="btn icon" onclick="resetZoom()" aria-label="Reset zoom" title="Reset zoom">1:1</button>
+          <button class="btn icon" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+          <button class="btn icon" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+          <button class="btn icon" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+          <button class="btn icon" onclick="resetZoom()" aria-label="Reset zoom" title="Reset zoom" style="font: 700 0.7rem var(--mono)">1:1</button>
         </div>
       </div>
       <div id="live-action-toast" class="action-toast" hidden></div>
@@ -1472,6 +1488,13 @@ def format_reactlog_html(
 
   <script>
     const reactlogData = {escaped_json};
+    const ICONS = {{
+      play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+      pause: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
+      video: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>',
+      eye: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+      zap: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+    }};
     let currentStep = 0;
     let isPlaying = false;
     let playTimer = null;
@@ -1604,8 +1627,8 @@ def format_reactlog_html(
       document.getElementById('stat-edges').textContent = `Edges: ${{reactlogData.edges.length}}`;
       const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : reactlogData.events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
       const infCount = reactlogData.inferred_events_count !== undefined ? reactlogData.inferred_events_count : reactlogData.events.reduce((acc, e) => acc + (e.provenance === 'inferred' ? 1 : 0), 0);
-      document.getElementById('stat-observed').textContent = `👁️ Observed: ${{obsCount}}`;
-      document.getElementById('stat-inferred').textContent = `⚡ Inferred: ${{infCount}}`;
+      document.getElementById('stat-observed').innerHTML = `${{ICONS.eye}} Observed: ${{obsCount}}`;
+      document.getElementById('stat-inferred').innerHTML = `${{ICONS.zap}} Inferred: ${{infCount}}`;
 
       const initCount = reactlogData.init_steps_count !== undefined ? reactlogData.init_steps_count : reactlogData.events.reduce((acc, e) => acc + (e.phase === 'init' ? 1 : 0), 0);
       const interactCount = reactlogData.interaction_steps_count !== undefined ? reactlogData.interaction_steps_count : (reactlogData.events.length - initCount);
@@ -1971,7 +1994,7 @@ def format_reactlog_html(
 
       if (ev && ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated')) {{
         const timeStr = ev.time_sec !== undefined ? `[${{formatTime(ev.time_sec)}}] ` : '';
-        toast.textContent = `🎬 ${{timeStr}}${{ev.details || ev.event}}`;
+        toast.innerHTML = `${{ICONS.video}} ${{timeStr}}${{ev.details || ev.event}}`;
         toast.hidden = false;
       }} else {{
         toast.hidden = true;
@@ -1986,17 +2009,17 @@ def format_reactlog_html(
 
       video.addEventListener('play', () => {{
         isPlaying = true;
-        if (btn) btn.textContent = '⏸';
+        if (btn) btn.innerHTML = ICONS.pause;
       }});
 
       video.addEventListener('pause', () => {{
         isPlaying = false;
-        if (btn) btn.textContent = '▶';
+        if (btn) btn.innerHTML = ICONS.play;
       }});
 
       video.addEventListener('ended', () => {{
         isPlaying = false;
-        if (btn) btn.textContent = '▶';
+        if (btn) btn.innerHTML = ICONS.play;
       }});
 
       const syncGraphFromVideo = () => {{
@@ -2067,7 +2090,7 @@ def format_reactlog_html(
 
       isPlaying = !isPlaying;
       const btn = document.getElementById('btn-play');
-      if (btn) btn.textContent = isPlaying ? '⏸' : '▶';
+      if (btn) btn.innerHTML = isPlaying ? ICONS.pause : ICONS.play;
 
       if (isPlaying) {{
         if (currentStep >= reactlogData.events.length - 1) currentStep = 0;
