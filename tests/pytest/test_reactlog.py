@@ -458,6 +458,58 @@ def out():
     assert len(data["edges"]) == 1
 
 
+def test_exact_edge_highlighting_with_multiple_dependencies():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("a", "A", 1)
+ui.input_numeric("b", "B", 2)
+
+@reactive.calc
+def total():
+    return input.a() + input.b()
+
+@render.text
+def out():
+    return str(total())
+"""
+    actions = [
+        {"type": "input", "name": "a", "value": 10, "timestamp": 100},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=actions)
+    propagate_events = [e for e in reactlog["events"] if e["event"] == "propagate"]
+    assert len(propagate_events) >= 1
+    first_prop = propagate_events[0]
+    assert first_prop["edge_from"] == "input:a"
+    assert first_prop["edge_to"] == "calc:total"
+
+    depends_events = [e for e in reactlog["events"] if e["event"] == "dependsOn"]
+    assert any(
+        e.get("edge_from") == "input:a" and e.get("edge_to") == "calc:total"
+        for e in depends_events
+    )
+    assert any(
+        e.get("edge_from") == "input:b" and e.get("edge_to") == "calc:total"
+        for e in depends_events
+    )
+
+
+def test_format_reactlog_html_has_draggable_splitter():
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("val", "Val", 10)
+@render.text
+def out():
+    return f"V: {input.val()}"
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert 'id="split-resizer"' in html
+    assert 'class="resizer-handle"' in html
+    assert 'aria-label="Resize sidebar panel"' in html
+    assert "initSplitResizer()" in html
+    assert "--sidebar-width" in html
+
+
 def test_cli_inspect_record_json_clean_stdout(tmp_path: Path):
     app_file = tmp_path / "app.py"
     app_file.write_text(
@@ -469,14 +521,26 @@ def out():
 """,
         encoding="utf-8",
     )
-    runner = CliRunner(mix_stderr=False)
-    res = runner.invoke(
-        main,
-        ["inspect", str(app_file), "--record", "--headless", "--json"],
+    import subprocess
+    import sys
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "shiny",
+            "inspect",
+            str(app_file),
+            "--record",
+            "--headless",
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
     )
-    assert res.exit_code == 0
-    assert "Recording Playwright session" in res.stderr
-    data = json.loads(res.stdout)
+    assert proc.returncode == 0
+    assert "Recording Playwright session" in proc.stderr
+    data = json.loads(proc.stdout)
     assert data["success"] is True
     assert "events" in data
     assert data["trace_kind"] == "inferred_simulation_with_recorded_browser_events"

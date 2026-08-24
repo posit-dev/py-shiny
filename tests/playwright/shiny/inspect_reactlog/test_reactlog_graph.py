@@ -213,3 +213,31 @@ def out_txt():
     init_btn = page.locator("#phase-btn-init")
     init_btn.click()
     expect(page.locator(".event-item.is-current")).to_have_count(0)
+
+
+def test_draggable_splitter_and_video_tab_resize(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("val", "Val", 10)
+@render.text
+def out():
+    return f"V={input.val()}"
+"""
+    reactlog = generate_reactlog(code, video_path="demo.webm")
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
+        wait_until="domcontentloaded",
+    )
+
+    resizer = page.locator("#split-resizer")
+    expect(resizer).to_be_visible()
+
+    # Keyboard resizing
+    resizer.focus()
+    page.keyboard.press("ArrowLeft")
+    expect(resizer).to_have_attribute("aria-valuenow", "464")
+
+    # Switching to recording tab widens sidebar
+    video_tab = page.locator("#video-tab")
+    video_tab.click()
+    expect(page.locator("#video-panel")).to_be_visible()
+    expect(page.locator("video")).to_be_visible()
