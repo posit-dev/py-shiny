@@ -72,7 +72,7 @@ def other():
         wait_until="domcontentloaded",
     )
 
-    page.locator('.graph-node[data-id="doubled"]').hover()
+    page.locator('.graph-node[data-id="calc:doubled"]').hover()
     page.wait_for_function(
         "() => Array.from(document.querySelectorAll('.graph-edge')).some(edge => parseFloat(edge.style.opacity) === 1)"
     )
@@ -94,7 +94,7 @@ def greeting():
     input_step = next(
         index
         for index, event in enumerate(reactlog["events"])
-        if event["event"] == "define" and event["node_id"] == "name"
+        if event["event"] == "define" and event["node_id"] == "input:name"
     )
 
     page.set_content(
@@ -174,7 +174,7 @@ def out():
         video_path=str(video_out),
     )
     assert reactlog["success"] is True
-    assert reactlog["trace_kind"] == "playwright_recording"
+    assert reactlog["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
 
 
 def test_phase_filter_and_skip_button(page: Page) -> None:

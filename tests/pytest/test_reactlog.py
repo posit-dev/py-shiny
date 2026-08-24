@@ -54,10 +54,10 @@ def out():
     graph = inspect_reactive_graph(code)
     assert graph["success"] is True
     roles = {n["id"]: n["role"] for n in graph["nodes"]}
-    assert roles["n"] == "source"
-    assert roles["doubled"] == "conductor"
-    assert roles["log_val"] == "observer"
-    assert roles["out"] == "observer"
+    assert roles["input:n"] == "source"
+    assert roles["calc:doubled"] == "conductor"
+    assert roles["effect:log_val"] == "observer"
+    assert roles["output:out"] == "observer"
 
 
 def test_topological_execution_order():
@@ -84,14 +84,41 @@ def out():
     calc_events = [
         e["node_id"] for e in reactlog["events"] if e["event"] == "wouldEvaluate"
     ]
-    assert "z_base" in calc_events
-    assert "a_derived" in calc_events
-    assert "out" in calc_events
+    assert "calc:z_base" in calc_events
+    assert "calc:a_derived" in calc_events
+    assert "output:out" in calc_events
 
-    z_index = calc_events.index("z_base")
-    a_index = calc_events.index("a_derived")
-    out_index = calc_events.index("out")
+    z_index = calc_events.index("calc:z_base")
+    a_index = calc_events.index("calc:a_derived")
+    out_index = calc_events.index("output:out")
     assert z_index < a_index < out_index
+
+
+def test_node_id_collision_input_and_calc_same_name():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("value", "Value", 10)
+
+@reactive.calc
+def value():
+    return input.value() * 2
+
+@render.text
+def value():
+    return f"Final {value()}"
+"""
+    graph = inspect_reactive_graph(code)
+    assert graph["success"] is True
+    node_ids = {n["id"] for n in graph["nodes"]}
+    assert "input:value" in node_ids
+    assert "calc:value" in node_ids
+    assert "output:value" in node_ids
+    assert len(graph["nodes"]) == 3
+
+    edges = [(e["from"], e["to"]) for e in graph["edges"]]
+    assert ("input:value", "calc:value") in edges
+    assert ("calc:value", "output:value") in edges
 
 
 def test_generate_reactlog_with_recorded_actions():
@@ -122,8 +149,10 @@ def display():
 
     reactlog = generate_reactlog(code, recorded_actions=actions, video_path="demo.webm")
     assert reactlog["success"] is True
-    assert reactlog["trace_kind"] == "playwright_recording"
+    assert reactlog["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
     assert reactlog["video_path"] == "demo.webm"
+    assert reactlog["observed_events_count"] == 3
+    assert reactlog["inferred_events_count"] > 0
 
     event_types = [e["event"] for e in reactlog["events"]]
     assert "analysisInit" in event_types
@@ -134,22 +163,92 @@ def display():
     assert "recordingComplete" in event_types
 
 
-def test_format_reactlog_html_includes_video_panel():
+def test_deduplicate_input_actions():
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("val", "Val", 1)
+@render.text
+def out():
+    return str(input.val())
+"""
+    actions = [
+        {"type": "input", "name": "val", "value": 10, "timestamp": 100},
+        {
+            "type": "input",
+            "name": "val",
+            "value": 10,
+            "timestamp": 120,
+        },  # duplicate within 20ms
+        {"type": "input", "name": "val", "value": 20, "timestamp": 600},  # new value
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=actions)
+    input_changes = [e for e in reactlog["events"] if e["event"] == "inputChange"]
+    assert len(input_changes) == 2
+    assert input_changes[0]["value"] == "10"
+    assert input_changes[1]["value"] == "20"
+
+
+def test_observed_vs_inferred_provenance_labels():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("n", "N", 5)
+@reactive.calc
+def double():
+    return input.n() * 2
+@render.text
+def out():
+    return str(double())
+"""
+    actions = [
+        {"type": "input", "name": "n", "value": 15, "timestamp": 200},
+        {"type": "output", "name": "out", "timestamp": 300},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=actions)
+    for e in reactlog["events"]:
+        assert e.get("provenance") in ("observed", "inferred")
+
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert "provenance-observed" in html
+    assert "provenance-inferred" in html
+    assert "👁️ Observed" in html
+    assert "⚡ Inferred" in html
+
+
+def test_relative_video_path_different_directories():
     code = """from shiny.express import input, render, ui
 ui.input_text("name", "Name")
 @render.text
 def greeting():
     return f"Hello, {input.name()}"
 """
-    reactlog = generate_reactlog(code, video_path="/path/to/my_recording.webm")
+    reactlog = generate_reactlog(code)
     html = format_reactlog_html(
-        reactlog, source_code=code, video_path="/path/to/my_recording.webm"
+        reactlog,
+        source_code=code,
+        video_path="/project/recordings/sub/session.webm",
+        html_path="/project/reports/reactlog.html",
     )
+    assert "../recordings/sub/session.webm" in html
 
-    assert "my_recording.webm" in html
-    assert 'id="video-tab"' in html
-    assert 'id="video-panel"' in html
-    assert "<video" in html
+
+def test_format_reactlog_html_self_contained_and_accessible():
+    code = """from shiny.express import input, render, ui
+ui.input_text("name", "Name")
+@render.text
+def greeting():
+    return f"Hello, {input.name()}"
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert "https://" not in html
+    assert 'src="http' not in html
+    assert 'href="http' not in html
+    assert 'aria-label="Filter reactive nodes by name or type"' in html
+    assert 'aria-label="Fit graph to view"' in html
+    assert 'aria-label="Zoom in"' in html
+    assert 'aria-label="Zoom out"' in html
+    assert 'aria-label="Timeline step scrubber"' in html
+    assert "aria-pressed=" in html
 
 
 def test_format_reactlog_html_escaping():
@@ -244,11 +343,11 @@ def txt():
     graph = inspect_reactive_graph(code)
     mermaid = format_graph_mermaid(graph)
     assert "graph TD" in mermaid
-    assert "n --> txt" in mermaid
+    assert "input_n --> output_txt" in mermaid
 
     dot = format_graph_dot(graph)
     assert "digraph ReactiveGraph" in dot
-    assert '"n" -> "txt";' in dot
+    assert '"input_n" -> "output_txt";' in dot
 
 
 def test_cli_inspect_basic():
