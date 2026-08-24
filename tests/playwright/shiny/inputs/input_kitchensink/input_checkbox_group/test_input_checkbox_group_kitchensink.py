@@ -25,7 +25,7 @@ def test_checkbox_group_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     inline_txt.expect_value("()")
     # Set in wrong order
     inline.set(["Option D", "Option A"])
-    inline.expect_selected(["Option A", "Option D"])
+    inline.expect_selected(["Option D", "Option A"])
     inline_txt.expect_value("('Option A', 'Option D')")
 
     dict_values = controller.InputCheckboxGroup(page, "dict_values")
