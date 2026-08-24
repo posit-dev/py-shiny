@@ -745,7 +745,11 @@ def _record_session_sync(
             }
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=headless)
+            ws_endpoint = os.environ.get("PW_TEST_CONNECT_WS_ENDPOINT")
+            if ws_endpoint:
+                browser = p.chromium.connect(ws_endpoint)
+            else:
+                browser = p.chromium.launch(headless=headless)
             context = browser.new_context(
                 record_video_dir=temp_dir,
                 record_video_size={"width": 1280, "height": 720},
@@ -829,7 +833,9 @@ def _record_session_sync(
                             break
                         import select
 
-                        r, _, _ = select.select([sys.stdin], [], [], 0.3)
+                        empty_r: List[Any] = []
+                        empty_w: List[Any] = []
+                        r, _, _ = select.select([sys.stdin], empty_r, empty_w, 0.3)
                         if r:
                             sys.stdin.readline()
                             break
