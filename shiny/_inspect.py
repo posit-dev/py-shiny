@@ -156,7 +156,8 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
     for inp, line in sorted(visitor.inputs.items()):
         nodes.append(
             {
-                "id": inp,
+                "id": f"input:{inp}",
+                "name": inp,
                 "type": "input",
                 "role": "source",
                 "label": f"input.{inp}",
@@ -166,7 +167,8 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
     for c, meta in sorted(visitor.calcs.items()):
         nodes.append(
             {
-                "id": c,
+                "id": f"calc:{c}",
+                "name": c,
                 "type": "calc",
                 "role": "conductor",
                 "label": f"calc:{c}",
@@ -176,7 +178,8 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
     for eff, meta in sorted(visitor.effects.items()):
         nodes.append(
             {
-                "id": eff,
+                "id": f"effect:{eff}",
+                "name": eff,
                 "type": "effect",
                 "role": "observer",
                 "label": f"effect:{eff}",
@@ -186,7 +189,8 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
     for out, meta in sorted(visitor.outputs.items()):
         nodes.append(
             {
-                "id": out,
+                "id": f"output:{out}",
+                "name": out,
                 "type": "output",
                 "role": "observer",
                 "label": f"output:{out}",
@@ -197,24 +201,24 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
     edges: List[Dict[str, str]] = []
     for out_name, meta in visitor.outputs.items():
         for dep in sorted(meta["deps"]):
-            edges.append({"from": dep, "to": out_name})
+            edges.append({"from": f"input:{dep}", "to": f"output:{out_name}"})
         for cdep in sorted(meta["calc_deps"]):
             if cdep in known_calcs:
-                edges.append({"from": cdep, "to": out_name})
+                edges.append({"from": f"calc:{cdep}", "to": f"output:{out_name}"})
 
     for eff_name, meta in visitor.effects.items():
         for dep in sorted(meta["deps"]):
-            edges.append({"from": dep, "to": eff_name})
+            edges.append({"from": f"input:{dep}", "to": f"effect:{eff_name}"})
         for cdep in sorted(meta["calc_deps"]):
             if cdep in known_calcs:
-                edges.append({"from": cdep, "to": eff_name})
+                edges.append({"from": f"calc:{cdep}", "to": f"effect:{eff_name}"})
 
     for calc_name, meta in visitor.calcs.items():
         for dep in sorted(meta["deps"]):
-            edges.append({"from": dep, "to": calc_name})
+            edges.append({"from": f"input:{dep}", "to": f"calc:{calc_name}"})
         for cdep in sorted(meta["calc_deps"]):
             if cdep in known_calcs and cdep != calc_name:
-                edges.append({"from": cdep, "to": calc_name})
+                edges.append({"from": f"calc:{cdep}", "to": f"calc:{calc_name}"})
 
     total_observers = len(visitor.outputs) + len(visitor.effects)
     return {
@@ -254,6 +258,7 @@ def generate_reactlog(
             "step": step,
             "event": "analysisInit",
             "phase": "init",
+            "provenance": "inferred",
             "timestamp": 0,
             "time_sec": 0.0,
             "node_id": None,
@@ -275,13 +280,14 @@ def generate_reactlog(
                 "step": step,
                 "event": "define",
                 "phase": "init",
+                "provenance": "inferred",
                 "timestamp": 0,
                 "time_sec": 0.0,
                 "node_id": node["id"],
                 "node_label": node["label"],
                 "node_type": node["role"],
                 "status": "discovered",
-                "details": f"Found {node['role']} node at line {node.get('line', '?')}",
+                "details": f"Discovered {node['role']} node '{node['label']}' at line {node.get('line', '?')}",
             }
         )
         step += 1
@@ -326,22 +332,25 @@ def generate_reactlog(
     def cascade_record_invalidate(
         nid: str, cur_step: int, invalidated: Set[str], ts_ms: int, ts_s: float
     ) -> int:
+        nid_lbl = nodes_by_id.get(nid, {}).get("label", nid)
         for down in adj_downstream.get(nid, []):
             if down not in invalidated:
                 invalidated.add(down)
                 node_obj = nodes_by_id.get(down, {})
+                down_lbl = node_obj.get("label", down)
                 events.append(
                     {
                         "step": cur_step,
                         "event": "propagate",
                         "phase": "interaction",
+                        "provenance": "inferred",
                         "timestamp": ts_ms,
                         "time_sec": ts_s,
                         "node_id": down,
-                        "node_label": node_obj.get("label", down),
+                        "node_label": down_lbl,
                         "node_type": node_obj.get("role", "conductor"),
                         "status": "affected",
-                        "details": f"Invalidated by '{nid}'",
+                        "details": f"Inferred invalidation of '{down_lbl}' by '{nid_lbl}'",
                     }
                 )
                 cur_step += 1
@@ -350,11 +359,27 @@ def generate_reactlog(
                 )
         return cur_step
 
+    unmatched_inputs: List[str] = []
+
     if recorded_actions:
+        deduped_actions: List[Dict[str, Any]] = []
+        last_input_action: Dict[str, tuple[Any, int]] = {}
+        for act in recorded_actions:
+            atype = act.get("type")
+            aname = act.get("name")
+            aval = act.get("value")
+            ats = int(act.get("timestamp") or 0)
+            if atype == "input" and aname:
+                last_val, last_time = last_input_action.get(aname, (None, -999999))
+                if str(last_val) == str(aval) and (ats - last_time) < 250:
+                    continue
+                last_input_action[aname] = (aval, ats)
+            deduped_actions.append(act)
+
         last_ts = 0
-        for action in recorded_actions:
+        for action in deduped_actions:
             action_type = action.get("type", "action")
-            action_name = action.get("name") or action.get("target") or "unknown"
+            raw_name = str(action.get("name") or action.get("target") or "unknown")
             action_val = action.get("value")
             ts = action.get("timestamp")
             if ts is not None:
@@ -362,98 +387,139 @@ def generate_reactlog(
             ts_ms = last_ts
             ts_sec = round(ts_ms / 1000.0, 2)
 
-            if action_type == "input" and action_name in nodes_by_id:
-                events.append(
-                    {
-                        "step": step,
-                        "event": "inputChange",
-                        "phase": "interaction",
-                        "node_id": action_name,
-                        "node_label": f"input.{action_name}",
-                        "node_type": "source",
-                        "status": "assumed",
-                        "value": str(action_val),
-                        "timestamp": ts_ms,
-                        "time_sec": ts_sec,
-                        "details": f"Recorded input change: input.{action_name} = {action_val!r}",
-                    }
+            if action_type == "input":
+                node_id = (
+                    f"input:{raw_name}"
+                    if f"input:{raw_name}" in nodes_by_id
+                    else (raw_name if raw_name in nodes_by_id else None)
                 )
-                step += 1
-
-                invalidated_nodes: Set[str] = set()
-                step = cascade_record_invalidate(
-                    action_name, step, invalidated_nodes, ts_ms, ts_sec
-                )
-
-                eval_order = compute_evaluation_order(invalidated_nodes)
-                for target in eval_order:
-                    tid = target["id"]
-                    tlabel = target["label"]
-                    trole = target["role"]
-
+                if node_id and node_id in nodes_by_id:
+                    node_obj = nodes_by_id[node_id]
                     events.append(
                         {
                             "step": step,
-                            "event": "wouldEvaluate",
+                            "event": "inputChange",
                             "phase": "interaction",
-                            "node_id": tid,
-                            "node_label": tlabel,
-                            "node_type": trole,
-                            "status": "scheduled",
+                            "provenance": "observed",
+                            "node_id": node_id,
+                            "node_label": node_obj["label"],
+                            "node_type": "source",
+                            "status": "assumed",
+                            "value": str(action_val),
                             "timestamp": ts_ms,
                             "time_sec": ts_sec,
-                            "details": f"Re-evaluating '{tid}'",
+                            "details": f"Observed browser input change: {node_obj['label']} = {action_val!r}",
                         }
                     )
                     step += 1
 
-                    for dep in adj_upstream.get(tid, []):
+                    invalidated_nodes: Set[str] = set()
+                    step = cascade_record_invalidate(
+                        node_id, step, invalidated_nodes, ts_ms, ts_sec
+                    )
+
+                    eval_order = compute_evaluation_order(invalidated_nodes)
+                    for target in eval_order:
+                        tid = target["id"]
+                        tlabel = target["label"]
+                        trole = target["role"]
+
                         events.append(
                             {
                                 "step": step,
-                                "event": "dependsOn",
+                                "event": "wouldEvaluate",
                                 "phase": "interaction",
+                                "provenance": "inferred",
                                 "node_id": tid,
                                 "node_label": tlabel,
                                 "node_type": trole,
                                 "status": "scheduled",
                                 "timestamp": ts_ms,
                                 "time_sec": ts_sec,
-                                "details": f"Dependency '{dep}' used by '{tid}'",
+                                "details": f"Inferred evaluation: '{tlabel}' (static topological order)",
                             }
                         )
                         step += 1
 
+                        for dep in adj_upstream.get(tid, []):
+                            dep_lbl = nodes_by_id.get(dep, {}).get("label", dep)
+                            events.append(
+                                {
+                                    "step": step,
+                                    "event": "dependsOn",
+                                    "phase": "interaction",
+                                    "provenance": "inferred",
+                                    "node_id": tid,
+                                    "node_label": tlabel,
+                                    "node_type": trole,
+                                    "status": "scheduled",
+                                    "timestamp": ts_ms,
+                                    "time_sec": ts_sec,
+                                    "details": f"Inferred dependency: '{dep_lbl}' used by '{tlabel}'",
+                                }
+                            )
+                            step += 1
+
+                        events.append(
+                            {
+                                "step": step,
+                                "event": "ordered",
+                                "phase": "interaction",
+                                "provenance": "inferred",
+                                "node_id": tid,
+                                "node_label": tlabel,
+                                "node_type": trole,
+                                "status": "scheduled",
+                                "timestamp": ts_ms,
+                                "time_sec": ts_sec,
+                                "details": f"Inferred completed state for '{tlabel}'",
+                            }
+                        )
+                        step += 1
+                else:
+                    unmatched_inputs.append(raw_name)
                     events.append(
                         {
                             "step": step,
-                            "event": "ordered",
+                            "event": "inputChange",
                             "phase": "interaction",
-                            "node_id": tid,
-                            "node_label": tlabel,
-                            "node_type": trole,
-                            "status": "scheduled",
+                            "provenance": "observed",
+                            "node_id": None,
+                            "node_label": f"input.{raw_name}",
+                            "node_type": "source",
+                            "status": "assumed",
+                            "value": str(action_val),
                             "timestamp": ts_ms,
                             "time_sec": ts_sec,
-                            "details": f"Updated state for '{tid}'",
+                            "details": f"Observed browser input change (unmatched node): input.{raw_name} = {action_val!r}",
                         }
                     )
                     step += 1
 
             elif action_type == "output":
-                node_obj = nodes_by_id.get(action_name, {})
+                out_id = (
+                    f"output:{raw_name}"
+                    if f"output:{raw_name}" in nodes_by_id
+                    else (raw_name if raw_name in nodes_by_id else None)
+                )
+                node_lbl = (
+                    nodes_by_id[out_id]["label"]
+                    if out_id and out_id in nodes_by_id
+                    else f"output:{raw_name}"
+                )
                 events.append(
                     {
                         "step": step,
                         "event": "outputUpdated",
                         "phase": "interaction",
-                        "node_id": action_name,
-                        "node_label": node_obj.get("label", f"output:{action_name}"),
+                        "provenance": "observed",
+                        "node_id": out_id,
+                        "node_label": node_lbl,
                         "node_type": "observer",
                         "status": "scheduled",
                         "timestamp": ts_ms,
                         "time_sec": ts_sec,
-                        "details": f"Output '{action_name}' rendered updated content",
+                        "details": f"Observed browser output render: {node_lbl}",
                     }
                 )
                 step += 1
@@ -464,29 +530,34 @@ def generate_reactlog(
                         "step": step,
                         "event": "userClick",
                         "phase": "interaction",
-                        "node_id": action_name if action_name in nodes_by_id else None,
-                        "node_label": action_name,
+                        "provenance": "observed",
+                        "node_id": None,
+                        "node_label": raw_name,
                         "node_type": "user",
                         "status": "active",
                         "timestamp": ts_ms,
                         "time_sec": ts_sec,
-                        "details": f"User clicked: {action.get('text', action_name)}",
+                        "details": f"Observed user click: {action.get('text', raw_name)}",
                     }
                 )
                 step += 1
+
+        obs_count = len([e for e in events if e.get("provenance") == "observed"])
+        inf_count = len([e for e in events if e.get("provenance") == "inferred"])
 
         events.append(
             {
                 "step": step,
                 "event": "recordingComplete",
                 "phase": "interaction",
+                "provenance": "inferred",
                 "node_id": None,
                 "node_label": "session",
                 "node_type": "engine",
                 "status": "idle",
                 "timestamp": last_ts,
                 "time_sec": round(last_ts / 1000.0, 2),
-                "details": f"Playwright recording finished with {len(recorded_actions)} action(s) across {len(events)} reactive step(s)",
+                "details": f"Playwright recording finished: {obs_count} observed browser event(s), {inf_count} inferred dependency step(s)",
             }
         )
 
@@ -498,7 +569,7 @@ def generate_reactlog(
 
         return {
             "success": True,
-            "trace_kind": "playwright_recording",
+            "trace_kind": "inferred_simulation_with_recorded_browser_events",
             "nodes": nodes,
             "edges": edges,
             "events": events,
@@ -506,33 +577,44 @@ def generate_reactlog(
             "init_steps_count": init_count,
             "interaction_steps_count": interact_count,
             "first_interaction_step": first_interact,
-            "recorded_actions": recorded_actions,
+            "observed_events_count": obs_count,
+            "inferred_events_count": inf_count,
+            "unmatched_inputs": unmatched_inputs,
+            "unmatched_inputs_count": len(unmatched_inputs),
+            "recorded_actions": deduped_actions,
             "video_path": video_path,
-            "summary": f"Recorded {len(recorded_actions)} user action(s) generating {len(events)} reactive steps across {len(nodes)} graph nodes",
+            "disclaimer": "Server reactive execution is statically inferred from AST dependency analysis. Dynamic dependencies or isolated reactives may not appear in this graph.",
+            "summary": f"Observed {obs_count} browser event(s); inferred {inf_count} simulated dependency steps across {len(nodes)} graph nodes",
         }
 
     sim_inputs = dict(inputs or {})
     if not sim_inputs:
         input_nodes = [n for n in nodes if n["role"] == "source"]
         for n in input_nodes:
-            sim_inputs[n["id"]] = 10
+            sim_inputs[n["name"]] = 10
 
     invalidated_nodes_static: Set[str] = set()
 
     def cascade_invalidate(nid: str, cur_step: int) -> int:
+        nid_lbl = nodes_by_id.get(nid, {}).get("label", nid)
         for down in adj_downstream.get(nid, []):
             if down not in invalidated_nodes_static:
                 invalidated_nodes_static.add(down)
+                node_obj = nodes_by_id.get(down, {})
+                down_lbl = node_obj.get("label", down)
                 events.append(
                     {
                         "step": cur_step,
                         "event": "propagate",
                         "phase": "interaction",
+                        "provenance": "inferred",
+                        "timestamp": 0,
+                        "time_sec": 0.0,
                         "node_id": down,
-                        "node_label": nodes_by_id.get(down, {}).get("label", down),
-                        "node_type": nodes_by_id.get(down, {}).get("role", "conductor"),
+                        "node_label": down_lbl,
+                        "node_type": node_obj.get("role", "conductor"),
                         "status": "affected",
-                        "details": f"Static analysis flags '{down}' as dependent on '{nid}'",
+                        "details": f"Inferred invalidation of '{down_lbl}' from '{nid_lbl}'",
                     }
                 )
                 cur_step += 1
@@ -540,27 +622,39 @@ def generate_reactlog(
         return cur_step
 
     for input_name, input_val in sim_inputs.items():
+        node_id = (
+            f"input:{input_name}"
+            if f"input:{input_name}" in nodes_by_id
+            else (input_name if input_name in nodes_by_id else input_name)
+        )
+        node_lbl = nodes_by_id.get(node_id, {}).get("label", f"input.{input_name}")
         events.append(
             {
                 "step": step,
                 "event": "assumeValue",
                 "phase": "interaction",
-                "node_id": input_name,
-                "node_label": f"input.{input_name}",
+                "provenance": "inferred",
+                "timestamp": 0,
+                "time_sec": 0.0,
+                "node_id": node_id,
+                "node_label": node_lbl,
                 "node_type": "source",
                 "status": "assumed",
                 "value": str(input_val),
-                "details": f"Simulation assumes input.{input_name} is set to {input_val!r}",
+                "details": f"Simulation assumes {node_lbl} is set to {input_val!r}",
             }
         )
         step += 1
-        step = cascade_invalidate(input_name, step)
+        step = cascade_invalidate(node_id, step)
 
     events.append(
         {
             "step": step,
             "event": "orderingStart",
             "phase": "interaction",
+            "provenance": "inferred",
+            "timestamp": 0,
+            "time_sec": 0.0,
             "node_id": None,
             "node_label": "reactiveEnvironment",
             "node_type": "engine",
@@ -581,26 +675,33 @@ def generate_reactlog(
                 "step": step,
                 "event": "wouldEvaluate",
                 "phase": "interaction",
+                "provenance": "inferred",
+                "timestamp": 0,
+                "time_sec": 0.0,
                 "node_id": tid,
                 "node_label": tlabel,
                 "node_type": trole,
                 "status": "scheduled",
-                "details": f"Static ordering places '{tid}' at this position; it was not executed",
+                "details": f"Inferred evaluation: '{tlabel}' (static topological order; not executed)",
             }
         )
         step += 1
 
         for dep in adj_upstream.get(tid, []):
+            dep_lbl = nodes_by_id.get(dep, {}).get("label", dep)
             events.append(
                 {
                     "step": step,
                     "event": "dependsOn",
                     "phase": "interaction",
+                    "provenance": "inferred",
+                    "timestamp": 0,
+                    "time_sec": 0.0,
                     "node_id": tid,
                     "node_label": tlabel,
                     "node_type": trole,
                     "status": "scheduled",
-                    "details": f"AST inspection found dependency edge from '{dep}'",
+                    "details": f"Inferred dependency edge: '{dep_lbl}' used by '{tlabel}'",
                 }
             )
             step += 1
@@ -610,11 +711,14 @@ def generate_reactlog(
                 "step": step,
                 "event": "ordered",
                 "phase": "interaction",
+                "provenance": "inferred",
+                "timestamp": 0,
+                "time_sec": 0.0,
                 "node_id": tid,
                 "node_label": tlabel,
                 "node_type": trole,
                 "status": "scheduled",
-                "details": "Node placed in the simulated static order; no runtime result is known",
+                "details": f"Inferred completed state for '{tlabel}'",
             }
         )
         step += 1
@@ -624,6 +728,9 @@ def generate_reactlog(
             "step": step,
             "event": "orderingComplete",
             "phase": "interaction",
+            "provenance": "inferred",
+            "timestamp": 0,
+            "time_sec": 0.0,
             "node_id": None,
             "node_label": "reactiveEnvironment",
             "node_type": "engine",
@@ -640,7 +747,7 @@ def generate_reactlog(
 
     return {
         "success": True,
-        "trace_kind": "static_dependency_simulation",
+        "trace_kind": "static_inferred_simulation",
         "nodes": nodes,
         "edges": edges,
         "events": events,
@@ -648,6 +755,11 @@ def generate_reactlog(
         "init_steps_count": init_count,
         "interaction_steps_count": interact_count,
         "first_interaction_step": first_interact,
+        "observed_events_count": 0,
+        "inferred_events_count": len(events),
+        "unmatched_inputs": [],
+        "unmatched_inputs_count": 0,
+        "disclaimer": "Server reactive execution is statically inferred from AST dependency analysis. Dynamic dependencies or isolated reactives may not appear in this graph.",
         "summary": f"Static dependency simulation: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes_static)} affected); app code was not executed",
     }
 
@@ -685,7 +797,7 @@ def _record_session_sync(
         sa = run_shiny_app(
             app_target,
             wait_for_start=True,
-            timeout_secs=20,
+            timeout_secs=min(timeout_secs, 30.0),
             env={"SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1"},
         )
     except Exception as err:
@@ -718,6 +830,9 @@ def _record_session_sync(
             recorder_init_script = """
             window.__recordedActions = [];
             window.__recordStartTime = Date.now();
+            const recentInputs = new Map();
+            let lastClickTime = 0;
+            let lastClickTarget = '';
 
             function trackAction(item) {
                 item.timestamp = Date.now() - window.__recordStartTime;
@@ -728,11 +843,13 @@ def _record_session_sync(
                 if (window.$ && window.Shiny) {
                     $(document).off('.shinyRecorder');
                     $(document).on('shiny:inputchanged.shinyRecorder', (e) => {
+                        const valKey = typeof e.value === 'object' ? JSON.stringify(e.value) : String(e.value);
+                        recentInputs.set(e.name, { val: valKey, t: Date.now() });
                         trackAction({
                             type: 'input',
                             name: e.name,
                             value: e.value,
-                            inputType: e.inputType || 'unknown'
+                            inputType: e.inputType || 'shiny'
                         });
                     });
                     $(document).on('shiny:value.shinyRecorder', (e) => {
@@ -750,25 +867,41 @@ def _record_session_sync(
 
             document.addEventListener('change', (e) => {
                 const target = e.target;
-                if (target && target.id && !target.id.startsWith('.')) {
-                    trackAction({
-                        type: 'input',
-                        name: target.id,
-                        value: target.value !== undefined ? target.value : target.checked,
-                        inputType: target.type || target.tagName.toLowerCase()
-                    });
+                if (!target || !target.id || target.id.startsWith('.')) return;
+                const id = target.id;
+                const val = target.value !== undefined ? target.value : target.checked;
+                const valKey = String(val);
+                const rec = recentInputs.get(id);
+                if (rec && (Date.now() - rec.t < 350) && rec.val === valKey) {
+                    return;
                 }
+                if (window.Shiny && window.Shiny.setInputValue && target.closest('.shiny-input-container')) {
+                    return;
+                }
+                recentInputs.set(id, { val: valKey, t: Date.now() });
+                trackAction({
+                    type: 'input',
+                    name: id,
+                    value: val,
+                    inputType: target.type || target.tagName.toLowerCase()
+                });
             }, true);
 
             document.addEventListener('click', (e) => {
                 const target = e.target.closest('button, input, select, textarea, a, .btn');
-                if (target) {
-                    trackAction({
-                        type: 'click',
-                        target: target.id || target.name || target.tagName.toLowerCase(),
-                        text: (target.innerText || target.value || '').trim().slice(0, 50)
-                    });
+                if (!target) return;
+                const tgtName = target.id || target.name || target.tagName.toLowerCase();
+                const now = Date.now();
+                if (tgtName === lastClickTarget && (now - lastClickTime < 200)) {
+                    return;
                 }
+                lastClickTime = now;
+                lastClickTarget = tgtName;
+                trackAction({
+                    type: 'click',
+                    target: tgtName,
+                    text: (target.innerText || target.value || '').trim().slice(0, 50)
+                });
             }, true);
             """
             page.add_init_script(recorder_init_script)
@@ -786,7 +919,8 @@ def _record_session_sync(
                         "Press [Enter] here (or close the browser window) when done recording: "
                     )
                     sys.stdout.flush()
-                    while True:
+                    deadline = time.time() + timeout_secs
+                    while time.time() < deadline:
                         if page.is_closed():
                             break
                         import select
@@ -870,9 +1004,10 @@ def record_shiny_session(
 def format_graph_mermaid(graph: Dict[str, Any]) -> str:
     lines = ["graph TD"]
     for node in graph.get("nodes", []):
-        nid = node["id"].replace("-", "_").replace(".", "_")
+        raw_id = node["id"]
+        nid = raw_id.replace(":", "_").replace("-", "_").replace(".", "_")
         ntype = node.get("type", "")
-        label = node.get("label", node["id"])
+        label = node.get("label", raw_id)
         if ntype == "input":
             lines.append(f'    {nid}["📥 {label}"]:::inputClass')
         elif ntype == "calc":
@@ -883,8 +1018,8 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
             lines.append(f'    {nid}["📊 {label}"]:::outputClass')
 
     for edge in graph.get("edges", []):
-        f = edge["from"].replace("-", "_").replace(".", "_")
-        t = edge["to"].replace("-", "_").replace(".", "_")
+        f = edge["from"].replace(":", "_").replace("-", "_").replace(".", "_")
+        t = edge["to"].replace(":", "_").replace("-", "_").replace(".", "_")
         lines.append(f"    {f} --> {t}")
 
     lines.append(
@@ -907,8 +1042,9 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
         "    node [shape=box, style=rounded];",
     ]
     for node in graph.get("nodes", []):
-        nid = node["id"].replace("-", "_").replace(".", "_")
-        label = node.get("label", node["id"])
+        raw_id = node["id"]
+        nid = raw_id.replace(":", "_").replace("-", "_").replace(".", "_")
+        label = node.get("label", raw_id)
         ntype = node.get("type", "")
         if ntype == "input":
             color = "#0284c7"
@@ -921,8 +1057,8 @@ def format_graph_dot(graph: Dict[str, Any]) -> str:
         lines.append(f'    "{nid}" [label="{label}", color="{color}"];')
 
     for edge in graph.get("edges", []):
-        f = edge["from"].replace("-", "_").replace(".", "_")
-        t = edge["to"].replace("-", "_").replace(".", "_")
+        f = edge["from"].replace(":", "_").replace("-", "_").replace(".", "_")
+        t = edge["to"].replace(":", "_").replace("-", "_").replace(".", "_")
         lines.append(f'    "{f}" -> "{t}";')
 
     lines.append("}")
@@ -985,6 +1121,7 @@ def format_reactlog_html(
     source_code: str,
     title: str = "Shiny Reactive Dependency Simulation",
     video_path: Optional[str] = None,
+    html_path: Optional[str] = None,
 ) -> str:
     escaped_title = html_lib.escape(title)
     formatted_source = _format_python_source_html(source_code)
@@ -993,7 +1130,18 @@ def format_reactlog_html(
     video_tab_btn = ""
     video_panel = ""
     if actual_video:
-        rel_video = html_lib.escape(os.path.basename(actual_video))
+        if html_path:
+            html_dir = os.path.dirname(os.path.abspath(html_path))
+            try:
+                rel_video_str = os.path.relpath(
+                    os.path.abspath(actual_video), start=html_dir
+                )
+            except ValueError:
+                rel_video_str = actual_video
+            rel_video = html_lib.escape(rel_video_str.replace("\\", "/"))
+        else:
+            rel_video = html_lib.escape(os.path.basename(actual_video))
+
         video_tab_btn = (
             '<button class="sidebar-tab" id="video-tab" role="tab" '
             'aria-selected="false" aria-controls="video-panel" '
@@ -1153,6 +1301,8 @@ def format_reactlog_html(
     .event-badges {{ display: flex; align-items: center; gap: 0.3rem; }}
     .event-time {{ font: 600 0.64rem var(--mono); color: #93c5fd; background: #13273b; border-radius: 4px; padding: 0.1rem 0.3rem; }}
     .event-badge {{ font: 700 0.62rem var(--mono); border-radius: 4px; padding: 0.1rem 0.35rem; text-transform: uppercase; }}
+    .event-badge.provenance-observed {{ background: #0c2d48; color: #38bdf8; border: 1px solid #0284c7; }}
+    .event-badge.provenance-inferred {{ background: #2d1847; color: #c084fc; border: 1px solid #7e22ce; }}
     .event-badge.assumed {{ background: #1b4728; color: #7ee787; }}
     .event-badge.affected {{ background: #4e3510; color: #f0883e; }}
     .event-badge.scheduled {{ background: #193147; color: #79c0ff; }}
@@ -1173,13 +1323,14 @@ def format_reactlog_html(
       <div class="brand-mark" aria-hidden="true">⚡</div>
       <div class="brand-copy">
         <div class="brand-title">{escaped_title}</div>
-        <div class="brand-subtitle">Interactive Shiny Reactive Log & Graph Explorer</div>
+        <div class="brand-subtitle">Interactive Shiny Reactive Log & Graph Explorer (Statically Inferred Dependency Execution)</div>
       </div>
     </div>
     <div class="stats">
       <span class="stat" id="stat-nodes">Nodes: 0</span>
       <span class="stat" id="stat-edges">Edges: 0</span>
-      <span class="stat" id="stat-steps">Steps: 0</span>
+      <span class="stat" id="stat-observed">👁️ Observed: 0</span>
+      <span class="stat" id="stat-inferred">⚡ Inferred: 0</span>
     </div>
   </header>
 
@@ -1211,7 +1362,7 @@ def format_reactlog_html(
     <div class="toolbar-divider" aria-hidden="true"></div>
 
     <div class="search-wrap">
-      <input type="search" class="search-input" id="search-input" placeholder="Filter graph nodes..." oninput="handleSearch(this.value)" aria-label="Search graph nodes" />
+      <input type="search" class="search-input" id="search-input" placeholder="Filter graph nodes..." oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name or type" />
     </div>
 
     <div class="toolbar-group">
@@ -1298,7 +1449,10 @@ def format_reactlog_html(
     function init() {{
       document.getElementById('stat-nodes').textContent = `Nodes: ${{reactlogData.nodes.length}}`;
       document.getElementById('stat-edges').textContent = `Edges: ${{reactlogData.edges.length}}`;
-      document.getElementById('stat-steps').textContent = `Steps: ${{reactlogData.events.length}}`;
+      const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : reactlogData.events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
+      const infCount = reactlogData.inferred_events_count !== undefined ? reactlogData.inferred_events_count : reactlogData.events.reduce((acc, e) => acc + (e.provenance === 'inferred' ? 1 : 0), 0);
+      document.getElementById('stat-observed').textContent = `👁️ Observed: ${{obsCount}}`;
+      document.getElementById('stat-inferred').textContent = `⚡ Inferred: ${{infCount}}`;
 
       const initCount = reactlogData.init_steps_count !== undefined ? reactlogData.init_steps_count : reactlogData.events.reduce((acc, e) => acc + (e.phase === 'init' ? 1 : 0), 0);
       const interactCount = reactlogData.interaction_steps_count !== undefined ? reactlogData.interaction_steps_count : (reactlogData.events.length - initCount);
@@ -1395,6 +1549,12 @@ def format_reactlog_html(
           timeSpan.textContent = formatTime(ev.time_sec);
           badgesWrap.appendChild(timeSpan);
         }}
+
+        const provBadge = document.createElement('span');
+        const prov = ev.provenance || 'inferred';
+        provBadge.className = `event-badge provenance-${{prov}}`;
+        provBadge.textContent = prov === 'observed' ? '👁️ OBSERVED' : '⚡ INFERRED';
+        badgesWrap.appendChild(provBadge);
 
         const badge = document.createElement('span');
         badge.className = `event-badge ${{ev.status || 'idle'}}`;
