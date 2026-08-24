@@ -363,6 +363,8 @@ def generate_reactlog(
                         "node_label": down_lbl,
                         "node_type": node_obj.get("role", "conductor"),
                         "status": "affected",
+                        "edge_from": nid,
+                        "edge_to": down,
                         "details": f"Inferred invalidation of '{down_lbl}' by '{nid_lbl}'",
                     }
                 )
@@ -466,6 +468,8 @@ def generate_reactlog(
                                     "node_label": tlabel,
                                     "node_type": trole,
                                     "status": "scheduled",
+                                    "edge_from": dep,
+                                    "edge_to": tid,
                                     "timestamp": ts_ms,
                                     "time_sec": ts_sec,
                                     "details": f"Inferred dependency: '{dep_lbl}' used by '{tlabel}'",
@@ -631,6 +635,8 @@ def generate_reactlog(
                         "node_label": down_lbl,
                         "node_type": node_obj.get("role", "conductor"),
                         "status": "affected",
+                        "edge_from": nid,
+                        "edge_to": down,
                         "details": f"Inferred invalidation of '{down_lbl}' from '{nid_lbl}'",
                     }
                 )
@@ -718,6 +724,8 @@ def generate_reactlog(
                     "node_label": tlabel,
                     "node_type": trole,
                     "status": "scheduled",
+                    "edge_from": dep,
+                    "edge_to": tid,
                     "details": f"Inferred dependency edge: '{dep_lbl}' used by '{tlabel}'",
                 }
             )
@@ -1267,9 +1275,12 @@ def format_reactlog_html(
     .scrubber {{ flex: 1; min-width: 130px; display: flex; align-items: center; gap: 0.6rem; }}
     .scrubber input[type="range"] {{ width: 100%; accent-color: var(--accent); cursor: pointer; }}
     .step-display {{ font: 700 0.72rem var(--mono); color: var(--accent); min-width: 80px; text-align: right; }}
-    .main-view {{ display: grid; grid-template-columns: minmax(0, 1fr) 380px; flex: 1; min-height: 0; overflow: hidden; transition: grid-template-columns 180ms ease; }}
-    .main-view.source-visible {{ grid-template-columns: minmax(0, 1fr) min(54vw, 680px); }}
-    .main-view.sidebar-hidden {{ grid-template-columns: minmax(0, 1fr) 0; }}
+    .main-view {{ display: grid; grid-template-columns: minmax(0, 1fr) 8px var(--sidebar-width, 440px); flex: 1; min-height: 0; overflow: hidden; position: relative; }}
+    .main-view.sidebar-hidden {{ grid-template-columns: minmax(0, 1fr) 0 0; }}
+    .split-resizer {{ width: 8px; background: var(--surface); border-left: 1px solid var(--border); border-right: 1px solid var(--border); cursor: col-resize; display: flex; align-items: center; justify-content: center; user-select: none; transition: background 120ms ease; z-index: 10; }}
+    .split-resizer:hover, .split-resizer:focus-visible, .split-resizer.is-dragging {{ background: var(--surface-3); border-color: var(--accent); outline: none; }}
+    .resizer-handle {{ width: 2px; height: 32px; border-radius: 1px; background: var(--border-strong); }}
+    .split-resizer:hover .resizer-handle, .split-resizer.is-dragging .resizer-handle {{ background: var(--accent); }}
     .graph-container {{ min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(rgba(105, 128, 151, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(105, 128, 151, 0.055) 1px, transparent 1px); background-size: 24px 24px; }}
     .graph-topbar {{ position: absolute; z-index: 3; top: 0.8rem; left: 0.8rem; right: 0.8rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; pointer-events: none; }}
     .legend {{ display: flex; gap: 0.4rem; flex-wrap: wrap; padding: 0.4rem; border: 1px solid var(--border); border-radius: 9px; background: rgba(17, 24, 33, 0.9); backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,0.18); pointer-events: auto; }}
@@ -1431,7 +1442,11 @@ def format_reactlog_html(
       </svg>
     </div>
 
-    <aside class="sidebar" aria-label="Details and Timeline">
+    <div class="split-resizer" id="split-resizer" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize sidebar panel" aria-valuenow="440" aria-valuemin="320" aria-valuemax="1200" title="Drag to resize sidebar, double-click to reset (or use Left/Right arrows)">
+      <div class="resizer-handle"></div>
+    </div>
+
+    <aside class="sidebar" id="sidebar" aria-label="Details and Timeline">
       <div class="sidebar-header">
         <div class="sidebar-tabs" role="tablist" aria-label="Sidebar views">
           <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Timeline</button>
@@ -1468,6 +1483,93 @@ def format_reactlog_html(
     let panOffset = {{ x: 0, y: 0 }};
     let isPanning = false;
     let startPan = {{ x: 0, y: 0 }};
+    let hasUserCustomWidth = false;
+
+    function setSidebarWidth(widthPx) {{
+      const minW = 320;
+      const maxW = Math.max(minW, Math.min(window.innerWidth * 0.65, 1200));
+      const clamped = Math.max(minW, Math.min(widthPx, maxW));
+      document.documentElement.style.setProperty('--sidebar-width', `${{clamped}}px`);
+      const resizer = document.getElementById('split-resizer');
+      if (resizer) resizer.setAttribute('aria-valuenow', String(Math.round(clamped)));
+    }}
+
+    function initSplitResizer() {{
+      const resizer = document.getElementById('split-resizer');
+      const mainView = document.getElementById('main-view');
+      if (!resizer || !mainView) return;
+
+      let isDragging = false;
+
+      const onMouseDown = (e) => {{
+        isDragging = true;
+        hasUserCustomWidth = true;
+        resizer.classList.add('is-dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      }};
+
+      const onMouseMove = (e) => {{
+        if (!isDragging) return;
+        const newW = window.innerWidth - e.clientX;
+        setSidebarWidth(newW);
+      }};
+
+      const onMouseUp = () => {{
+        if (!isDragging) return;
+        isDragging = false;
+        resizer.classList.remove('is-dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }};
+
+      resizer.addEventListener('mousedown', onMouseDown);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+
+      resizer.addEventListener('touchstart', (e) => {{
+        if (e.touches.length === 1) {{
+          isDragging = true;
+          hasUserCustomWidth = true;
+          resizer.classList.add('is-dragging');
+        }}
+      }}, {{ passive: true }});
+      window.addEventListener('touchmove', (e) => {{
+        if (isDragging && e.touches.length === 1) {{
+          const newW = window.innerWidth - e.touches[0].clientX;
+          setSidebarWidth(newW);
+        }}
+      }}, {{ passive: true }});
+      window.addEventListener('touchend', () => {{
+        if (isDragging) {{
+          isDragging = false;
+          resizer.classList.remove('is-dragging');
+        }}
+      }});
+
+      resizer.addEventListener('dblclick', () => {{
+        hasUserCustomWidth = false;
+        setSidebarWidth(440);
+      }});
+
+      resizer.addEventListener('keydown', (e) => {{
+        const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || 440;
+        if (e.key === 'ArrowLeft') {{
+          hasUserCustomWidth = true;
+          setSidebarWidth(curW + 24);
+          e.preventDefault();
+        }} else if (e.key === 'ArrowRight') {{
+          hasUserCustomWidth = true;
+          setSidebarWidth(curW - 24);
+          e.preventDefault();
+        }} else if (e.key === 'Home') {{
+          hasUserCustomWidth = false;
+          setSidebarWidth(440);
+          e.preventDefault();
+        }}
+      }});
+    }}
 
     function init() {{
       document.getElementById('stat-nodes').textContent = `Nodes: ${{reactlogData.nodes.length}}`;
@@ -1492,6 +1594,7 @@ def format_reactlog_html(
       seekTo(0);
       setupPanZoom();
       setupVideoSync();
+      initSplitResizer();
     }}
 
     function nodeKind(n) {{
@@ -1512,11 +1615,15 @@ def format_reactlog_html(
           panel.hidden = !isTarget;
         }}
       }});
-      const mainView = document.getElementById('main-view');
-      if (panelName === 'source') {{
-        mainView.classList.add('source-visible');
-      }} else {{
-        mainView.classList.remove('source-visible');
+
+      if (!hasUserCustomWidth) {{
+        if (panelName === 'video') {{
+          setSidebarWidth(Math.max(480, Math.round(window.innerWidth * 0.45)));
+        }} else if (panelName === 'source') {{
+          setSidebarWidth(Math.max(480, Math.min(window.innerWidth * 0.52, 680)));
+        }} else {{
+          setSidebarWidth(440);
+        }}
       }}
     }}
 
@@ -1671,7 +1778,9 @@ def format_reactlog_html(
           const y2 = p2.y;
           const midX = x1 + Math.max(35, (x2 - x1) * 0.5);
 
-          const isEdgeActive = activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate');
+          const isEdgeActive = (activeEvent.edge_from && activeEvent.edge_to)
+            ? (activeEvent.edge_from === e.from && activeEvent.edge_to === e.to)
+            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate'));
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{midX}} ${{y1}}, ${{midX}} ${{y2}}, ${{x2}} ${{y2}}`);
           path.setAttribute('fill', 'none');
@@ -1825,8 +1934,24 @@ def format_reactlog_html(
       const video = document.getElementById('session-video');
       if (!video) return;
 
-      video.addEventListener('timeupdate', () => {{
-        if (isPlaying) return;
+      const btn = document.getElementById('btn-play');
+
+      video.addEventListener('play', () => {{
+        isPlaying = true;
+        if (btn) btn.textContent = '⏸';
+      }});
+
+      video.addEventListener('pause', () => {{
+        isPlaying = false;
+        if (btn) btn.textContent = '▶';
+      }});
+
+      video.addEventListener('ended', () => {{
+        isPlaying = false;
+        if (btn) btn.textContent = '▶';
+      }});
+
+      const syncGraphFromVideo = () => {{
         const curSec = video.currentTime;
         let matchIdx = 0;
         for (let i = 0; i < reactlogData.events.length; i++) {{
@@ -1838,7 +1963,10 @@ def format_reactlog_html(
         if (matchIdx !== currentStep) {{
           seekTo(matchIdx, true);
         }}
-      }});
+      }};
+
+      video.addEventListener('timeupdate', syncGraphFromVideo);
+      video.addEventListener('seeked', syncGraphFromVideo);
     }}
 
     function updateSourceHighlight() {{
@@ -1874,16 +2002,26 @@ def format_reactlog_html(
     }}
 
     function togglePlay() {{
+      const video = document.getElementById('session-video');
+      if (video) {{
+        if (video.paused) {{
+          if (video.ended || (currentStep >= reactlogData.events.length - 1)) {{
+            video.currentTime = 0;
+            seekTo(0, true);
+          }}
+          video.play().catch(() => {{}});
+        }} else {{
+          video.pause();
+        }}
+        return;
+      }}
+
       isPlaying = !isPlaying;
       const btn = document.getElementById('btn-play');
-      btn.textContent = isPlaying ? '⏸' : '▶';
-      const video = document.getElementById('session-video');
+      if (btn) btn.textContent = isPlaying ? '⏸' : '▶';
 
       if (isPlaying) {{
         if (currentStep >= reactlogData.events.length - 1) currentStep = 0;
-        if (video) {{
-          video.play().catch(() => {{}});
-        }}
         playTimer = setInterval(() => {{
           if (currentStep < reactlogData.events.length - 1) {{
             seekTo(currentStep + 1);
@@ -1892,9 +2030,6 @@ def format_reactlog_html(
           }}
         }}, 600);
       }} else {{
-        if (video) {{
-          video.pause();
-        }}
         clearInterval(playTimer);
       }}
     }}
