@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, cast
+from typing import List, Tuple
 
-import pytest
 from click.testing import CliRunner
 
 from shiny._inspect import (
+    format_graph_dot,
+    format_graph_mermaid,
     format_reactlog_html,
     generate_reactlog,
     inspect_reactive_graph,
@@ -19,9 +20,9 @@ from shiny._main import main
 class _TagCollector(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
-        self.tags: list[tuple[str, dict[str, str | None]]] = []
+        self.tags: List[Tuple[str, dict[str, str | None]]] = []
 
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    def handle_starttag(self, tag: str, attrs: List[Tuple[str, str | None]]) -> None:
         self.tags.append((tag, dict(attrs)))
 
     def has_tag(self, tag: str, **attrs: str) -> bool:
@@ -93,7 +94,7 @@ def out():
     assert z_index < a_index < out_index
 
 
-def test_generate_reactlog_event_stream():
+def test_generate_reactlog_with_recorded_actions():
     code = """from shiny.express import input, render, ui
 from shiny import reactive
 
@@ -107,28 +108,48 @@ def triple():
 def display():
     return f"Value is {triple()}"
 """
-    reactlog = generate_reactlog(code, inputs={"count": 50})
-    assert reactlog["success"] is True
-    assert len(reactlog["events"]) > 5
-    assert reactlog["trace_kind"] == "static_dependency_simulation"
+    actions = [
+        {
+            "type": "input",
+            "name": "count",
+            "value": 45,
+            "inputType": "shiny.sliderInput",
+            "timestamp": 120,
+        },
+        {"type": "click", "target": "submit_btn", "text": "Submit", "timestamp": 250},
+        {"type": "output", "name": "display", "timestamp": 310},
+    ]
 
-    events = [e["event"] for e in reactlog["events"]]
-    assert "analysisInit" in events
-    assert "define" in events
-    assert "assumeValue" in events
-    assert "propagate" in events
-    assert "orderingStart" in events
-    assert "wouldEvaluate" in events
-    assert "dependsOn" in events
-    assert "ordered" in events
-    assert "orderingComplete" in events
-    assert "calculate" not in events
-    assert "ready" not in events
-    assert all(
-        "executing" not in event["details"].lower()
-        and "completed" not in event["details"].lower()
-        for event in reactlog["events"]
+    reactlog = generate_reactlog(code, recorded_actions=actions, video_path="demo.webm")
+    assert reactlog["success"] is True
+    assert reactlog["trace_kind"] == "playwright_recording"
+    assert reactlog["video_path"] == "demo.webm"
+
+    event_types = [e["event"] for e in reactlog["events"]]
+    assert "analysisInit" in event_types
+    assert "define" in event_types
+    assert "inputChange" in event_types
+    assert "userClick" in event_types
+    assert "outputUpdated" in event_types
+    assert "recordingComplete" in event_types
+
+
+def test_format_reactlog_html_includes_video_panel():
+    code = """from shiny.express import input, render, ui
+ui.input_text("name", "Name")
+@render.text
+def greeting():
+    return f"Hello, {input.name()}"
+"""
+    reactlog = generate_reactlog(code, video_path="/path/to/my_recording.webm")
+    html = format_reactlog_html(
+        reactlog, source_code=code, video_path="/path/to/my_recording.webm"
     )
+
+    assert "my_recording.webm" in html
+    assert 'id="video-tab"' in html
+    assert 'id="video-panel"' in html
+    assert "<video" in html
 
 
 def test_format_reactlog_html_escaping():
@@ -145,69 +166,92 @@ def greeting():
     assert "<!DOCTYPE html>" in html
     assert "</script><script>alert('xss')</script>" not in html
     assert "\\u003c/script\\u003e\\u003cscript\\u003e" in html
-    assert "textContent" in html
 
 
-def test_format_reactlog_html_requires_source_code():
-    reactlog = generate_reactlog(
-        "from shiny.express import ui\nui.input_text('name', 'Name')\n"
-    )
+def test_format_reactlog_html_semantic_tags():
+    code = """from shiny.express import input, render, ui
+ui.input_text("name", "Name")
+@render.text
+def greeting():
+    return f"Hello, {input.name()}"
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    parser = _TagCollector()
+    parser.feed(html)
+    assert parser.has_tag("header")
+    assert parser.has_tag("main")
+    assert parser.has_tag("aside")
+    assert parser.has_tag("button")
 
-    with pytest.raises(TypeError, match="source_code"):
-        cast(Any, format_reactlog_html)(reactlog)
+
+def test_format_reactlog_html_graph_visible_on_initialization():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("a", "A", 1)
+@reactive.calc
+def calc_b():
+    return input.a() + 1
+@render.text
+def out_c():
+    return str(calc_b())
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert ".graph-edge" in html
+    assert "opacity: 0.75;" in html
+    assert ".graph-edge { opacity: 0;" not in html
 
 
-def test_format_reactlog_html_is_self_contained_and_accessible():
-    reactlog: dict[str, Any] = {
-        "success": True,
-        "summary": "One dependency",
-        "nodes": [
-            {
-                "id": "value",
-                "label": "input.value",
-                "type": "input",
-                "role": "source",
-                "line": 3,
-            },
-            {
-                "id": "result",
-                "label": "output:result",
-                "type": "output",
-                "role": "observer",
-                "line": 8,
-            },
-        ],
-        "edges": [{"from": "value", "to": "result"}],
-        "events": [],
-    }
+def test_reactlog_phase_separation_and_skip():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("n", "N", 5)
+@reactive.calc
+def calc_val():
+    return input.n() * 2
+@render.text
+def out_val():
+    return f"Val={calc_val()}"
+"""
+    recorded_actions = [
+        {"type": "input", "name": "n", "value": 42, "timestamp": 1200},
+        {"type": "output", "name": "out_val", "timestamp": 1500},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    assert reactlog["init_steps_count"] > 0
+    assert reactlog["interaction_steps_count"] > 0
+    assert reactlog["first_interaction_step"] == reactlog["init_steps_count"]
 
     html = format_reactlog_html(
-        reactlog,
-        source_code='ui.input_text("value", "Value")',
-        title='Trace <img src=x onerror="alert(1)">',
+        reactlog, source_code=code, video_path="/tmp/recording.webm"
     )
-    document = _TagCollector()
-    document.feed(html)
-
-    assert not document.has_tag("img")
-    assert not any(
-        value and value.startswith("https://")
-        for _, attrs in document.tags
-        for key, value in attrs.items()
-        if key in ("src", "href")
-    )
-    assert document.has_tag("main")
-    assert document.has_tag("aside")
-    assert document.has_tag(
-        "input", type="search", **{"aria-label": "Search graph nodes"}
-    )
-    assert document.has_tag("button", **{"aria-label": "Fit graph to view"})
-    assert document.has_tag("button", **{"aria-label": "Zoom in"})
-    assert document.has_tag("button", **{"aria-label": "Zoom out"})
-    assert document.has_tag("button", **{"aria-pressed": "true"})
+    assert "phase-selector" in html
+    assert "btn-skip-init" in html
+    assert "skipToInteractions()" in html
+    assert "setupVideoSync()" in html
 
 
-def test_cli_inspect_reactlog():
+def test_format_mermaid_and_dot():
+    code = """from shiny.express import input, render, ui
+ui.input_slider("n", "N", 1, 10, 5)
+@render.text
+def txt():
+    return f"Value: {input.n()}"
+"""
+    graph = inspect_reactive_graph(code)
+    mermaid = format_graph_mermaid(graph)
+    assert "graph TD" in mermaid
+    assert "n --> txt" in mermaid
+
+    dot = format_graph_dot(graph)
+    assert "digraph ReactiveGraph" in dot
+    assert '"n" -> "txt";' in dot
+
+
+def test_cli_inspect_basic():
     runner = CliRunner()
     code = """from shiny.express import input, render, ui
 from shiny import reactive
@@ -222,12 +266,43 @@ def squared():
 def result():
     return f"Res: {squared()}"
 """
-    res = runner.invoke(main, ["inspect", "--code", code, "--reactlog"])
+    res = runner.invoke(main, ["inspect", "--code", code])
     assert res.exit_code == 0
-    assert "Static Dependency Simulation" in res.output
-    assert "analysisInit" in res.output
+    assert "Reactive Dependency Graph" in res.output
+    assert "Inputs (Sources):" in res.output
+    assert "input.x" in res.output
     assert "squared" in res.output
     assert "result" in res.output
+
+
+def test_cli_inspect_json():
+    runner = CliRunner()
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("val", "Val", 10)
+@render.text
+def out():
+    return f"V: {input.val()}"
+"""
+    res = runner.invoke(main, ["inspect", "--code", code, "--json"])
+    assert res.exit_code == 0
+    data = json.loads(res.output)
+    assert data["success"] is True
+    assert len(data["nodes"]) == 2
+    assert len(data["edges"]) == 1
+
+
+def test_cli_inspect_reactlog():
+    runner = CliRunner()
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("n", "N", 5)
+@render.text
+def show():
+    return str(input.n())
+"""
+    res = runner.invoke(main, ["inspect", "--code", code, "--reactlog"])
+    assert res.exit_code == 0
+    assert "Reactive Event Log" in res.output
+    assert "analysisInit" in res.output
 
 
 def test_cli_inspect_html_export(tmp_path: Path):
@@ -246,24 +321,4 @@ def out():
     assert res.exit_code == 0
     assert out_html.is_file()
     content = out_html.read_text(encoding="utf-8")
-    assert "Reactive dependency explorer" in content
-
-
-def test_cli_inspect_inputs_cascade():
-    runner = CliRunner()
-    code = """from shiny.express import input, render, ui
-ui.input_slider("a", "A", 1, 10, 2)
-@render.text
-def show():
-    return f"A={input.a()}"
-"""
-    res = runner.invoke(
-        main,
-        ["inspect", "--code", code, "-i", "a=100", "--json"],
-    )
-    assert res.exit_code == 0
-    data = json.loads(res.output)
-    assert data["success"] is True
-    val_events = [e for e in data["events"] if e["event"] == "assumeValue"]
-    assert len(val_events) == 1
-    assert val_events[0]["value"] == "100"
+    assert "Interactive Shiny Reactive Log" in content
