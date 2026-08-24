@@ -1,13 +1,23 @@
 from __future__ import annotations
 
 import ast
+import asyncio
+import concurrent.futures
 import html as html_lib
 import io
 import json
 import keyword
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
 import tokenize
 from collections import deque
-from typing import Any, Dict, List, Optional, Set
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Set, cast
 
 
 class GraphVisitor(ast.NodeVisitor):
@@ -218,7 +228,10 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
 
 
 def generate_reactlog(
-    code: str, inputs: Optional[Dict[str, Any]] = None
+    code: str,
+    inputs: Optional[Dict[str, Any]] = None,
+    recorded_actions: Optional[List[Dict[str, Any]]] = None,
+    video_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     graph = inspect_reactive_graph(code)
     if not graph.get("success"):
@@ -229,15 +242,31 @@ def generate_reactlog(
     events: List[Dict[str, Any]] = []
     step = 0
 
+    adj_downstream: Dict[str, List[str]] = {}
+    adj_upstream: Dict[str, List[str]] = {}
+    for edge in edges:
+        f, t = edge["from"], edge["to"]
+        adj_downstream.setdefault(f, []).append(t)
+        adj_upstream.setdefault(t, []).append(f)
+
+    nodes_by_id = {n["id"]: n for n in nodes}
+
     events.append(
         {
             "step": step,
             "event": "analysisInit",
+            "phase": "init",
+            "timestamp": 0,
+            "time_sec": 0.0,
             "node_id": None,
             "node_label": "session",
             "node_type": "session",
             "status": "active",
-            "details": "Started static AST dependency analysis; app code was not executed",
+            "details": (
+                "Initialized reactive session with recorded Playwright interactions"
+                if recorded_actions
+                else "Started static AST dependency analysis; app code was not executed"
+            ),
         }
     )
     step += 1
@@ -247,6 +276,9 @@ def generate_reactlog(
             {
                 "step": step,
                 "event": "define",
+                "phase": "init",
+                "timestamp": 0,
+                "time_sec": 0.0,
                 "node_id": node["id"],
                 "node_label": node["label"],
                 "node_type": node["role"],
@@ -256,12 +288,230 @@ def generate_reactlog(
         )
         step += 1
 
-    adj_downstream: Dict[str, List[str]] = {}
-    adj_upstream: Dict[str, List[str]] = {}
-    for edge in edges:
-        f, t = edge["from"], edge["to"]
-        adj_downstream.setdefault(f, []).append(t)
-        adj_upstream.setdefault(t, []).append(f)
+    def compute_evaluation_order(invalidated: Set[str]) -> List[Dict[str, Any]]:
+        conductor_ids = {
+            n["id"]
+            for n in nodes
+            if n["role"] == "conductor" and n["id"] in invalidated
+        }
+        conductor_in_degree: Dict[str, int] = {cid: 0 for cid in conductor_ids}
+        for cid in conductor_ids:
+            for up in adj_upstream.get(cid, []):
+                if up in conductor_ids:
+                    conductor_in_degree[cid] += 1
+
+        queue = deque(
+            [cid for cid, deg in sorted(conductor_in_degree.items()) if deg == 0]
+        )
+        sorted_conductors: List[str] = []
+        while queue:
+            curr = queue.popleft()
+            sorted_conductors.append(curr)
+            for down in adj_downstream.get(curr, []):
+                if down in conductor_in_degree:
+                    conductor_in_degree[down] -= 1
+                    if conductor_in_degree[down] == 0:
+                        queue.append(down)
+
+        for cid in sorted(conductor_ids):
+            if cid not in sorted_conductors:
+                sorted_conductors.append(cid)
+
+        observer_nodes = [
+            n for n in nodes if n["role"] == "observer" and n["id"] in invalidated
+        ]
+
+        return [
+            nodes_by_id[cid] for cid in sorted_conductors if cid in nodes_by_id
+        ] + observer_nodes
+
+    def cascade_record_invalidate(
+        nid: str, cur_step: int, invalidated: Set[str], ts_ms: int, ts_s: float
+    ) -> int:
+        for down in adj_downstream.get(nid, []):
+            if down not in invalidated:
+                invalidated.add(down)
+                node_obj = nodes_by_id.get(down, {})
+                events.append(
+                    {
+                        "step": cur_step,
+                        "event": "propagate",
+                        "phase": "interaction",
+                        "timestamp": ts_ms,
+                        "time_sec": ts_s,
+                        "node_id": down,
+                        "node_label": node_obj.get("label", down),
+                        "node_type": node_obj.get("role", "conductor"),
+                        "status": "affected",
+                        "details": f"Invalidated by '{nid}'",
+                    }
+                )
+                cur_step += 1
+                cur_step = cascade_record_invalidate(
+                    down, cur_step, invalidated, ts_ms, ts_s
+                )
+        return cur_step
+
+    if recorded_actions:
+        last_ts = 0
+        for action in recorded_actions:
+            action_type = action.get("type", "action")
+            action_name = action.get("name") or action.get("target") or "unknown"
+            action_val = action.get("value")
+            ts = action.get("timestamp")
+            if ts is not None:
+                last_ts = int(ts)
+            ts_ms = last_ts
+            ts_sec = round(ts_ms / 1000.0, 2)
+
+            if action_type == "input" and action_name in nodes_by_id:
+                events.append(
+                    {
+                        "step": step,
+                        "event": "inputChange",
+                        "phase": "interaction",
+                        "node_id": action_name,
+                        "node_label": f"input.{action_name}",
+                        "node_type": "source",
+                        "status": "assumed",
+                        "value": str(action_val),
+                        "timestamp": ts_ms,
+                        "time_sec": ts_sec,
+                        "details": f"Recorded input change: input.{action_name} = {action_val!r}",
+                    }
+                )
+                step += 1
+
+                invalidated_nodes: Set[str] = set()
+                step = cascade_record_invalidate(
+                    action_name, step, invalidated_nodes, ts_ms, ts_sec
+                )
+
+                eval_order = compute_evaluation_order(invalidated_nodes)
+                for target in eval_order:
+                    tid = target["id"]
+                    tlabel = target["label"]
+                    trole = target["role"]
+
+                    events.append(
+                        {
+                            "step": step,
+                            "event": "wouldEvaluate",
+                            "phase": "interaction",
+                            "node_id": tid,
+                            "node_label": tlabel,
+                            "node_type": trole,
+                            "status": "scheduled",
+                            "timestamp": ts_ms,
+                            "time_sec": ts_sec,
+                            "details": f"Re-evaluating '{tid}'",
+                        }
+                    )
+                    step += 1
+
+                    for dep in adj_upstream.get(tid, []):
+                        events.append(
+                            {
+                                "step": step,
+                                "event": "dependsOn",
+                                "phase": "interaction",
+                                "node_id": tid,
+                                "node_label": tlabel,
+                                "node_type": trole,
+                                "status": "scheduled",
+                                "timestamp": ts_ms,
+                                "time_sec": ts_sec,
+                                "details": f"Dependency '{dep}' used by '{tid}'",
+                            }
+                        )
+                        step += 1
+
+                    events.append(
+                        {
+                            "step": step,
+                            "event": "ordered",
+                            "phase": "interaction",
+                            "node_id": tid,
+                            "node_label": tlabel,
+                            "node_type": trole,
+                            "status": "scheduled",
+                            "timestamp": ts_ms,
+                            "time_sec": ts_sec,
+                            "details": f"Updated state for '{tid}'",
+                        }
+                    )
+                    step += 1
+
+            elif action_type == "output":
+                node_obj = nodes_by_id.get(action_name, {})
+                events.append(
+                    {
+                        "step": step,
+                        "event": "outputUpdated",
+                        "phase": "interaction",
+                        "node_id": action_name,
+                        "node_label": node_obj.get("label", f"output:{action_name}"),
+                        "node_type": "observer",
+                        "status": "scheduled",
+                        "timestamp": ts_ms,
+                        "time_sec": ts_sec,
+                        "details": f"Output '{action_name}' rendered updated content",
+                    }
+                )
+                step += 1
+
+            elif action_type == "click":
+                events.append(
+                    {
+                        "step": step,
+                        "event": "userClick",
+                        "phase": "interaction",
+                        "node_id": action_name if action_name in nodes_by_id else None,
+                        "node_label": action_name,
+                        "node_type": "user",
+                        "status": "active",
+                        "timestamp": ts_ms,
+                        "time_sec": ts_sec,
+                        "details": f"User clicked: {action.get('text', action_name)}",
+                    }
+                )
+                step += 1
+
+        events.append(
+            {
+                "step": step,
+                "event": "recordingComplete",
+                "phase": "interaction",
+                "node_id": None,
+                "node_label": "session",
+                "node_type": "engine",
+                "status": "idle",
+                "timestamp": last_ts,
+                "time_sec": round(last_ts / 1000.0, 2),
+                "details": f"Playwright recording finished with {len(recorded_actions)} action(s) across {len(events)} reactive step(s)",
+            }
+        )
+
+        init_count = len([e for e in events if e.get("phase") == "init"])
+        interact_count = len([e for e in events if e.get("phase") == "interaction"])
+        first_interact = next(
+            (i for i, e in enumerate(events) if e.get("phase") == "interaction"), 0
+        )
+
+        return {
+            "success": True,
+            "trace_kind": "playwright_recording",
+            "nodes": nodes,
+            "edges": edges,
+            "events": events,
+            "steps_total": len(events),
+            "init_steps_count": init_count,
+            "interaction_steps_count": interact_count,
+            "first_interaction_step": first_interact,
+            "recorded_actions": recorded_actions,
+            "video_path": video_path,
+            "summary": f"Recorded {len(recorded_actions)} user action(s) generating {len(events)} reactive steps across {len(nodes)} graph nodes",
+        }
 
     sim_inputs = dict(inputs or {})
     if not sim_inputs:
@@ -269,95 +519,60 @@ def generate_reactlog(
         for n in input_nodes:
             sim_inputs[n["id"]] = 10
 
-    invalidated_nodes: Set[str] = set()
+    invalidated_nodes_static: Set[str] = set()
 
     def cascade_invalidate(nid: str, cur_step: int) -> int:
         for down in adj_downstream.get(nid, []):
-            if down not in invalidated_nodes:
-                invalidated_nodes.add(down)
+            if down not in invalidated_nodes_static:
+                invalidated_nodes_static.add(down)
                 events.append(
                     {
                         "step": cur_step,
                         "event": "propagate",
+                        "phase": "interaction",
                         "node_id": down,
-                        "node_label": next(
-                            (n["label"] for n in nodes if n["id"] == down), down
-                        ),
-                        "node_type": next(
-                            (n["role"] for n in nodes if n["id"] == down), "conductor"
-                        ),
+                        "node_label": nodes_by_id.get(down, {}).get("label", down),
+                        "node_type": nodes_by_id.get(down, {}).get("role", "conductor"),
                         "status": "affected",
-                        "details": f"Static dependency path propagates from '{nid}'",
+                        "details": f"Static analysis flags '{down}' as dependent on '{nid}'",
                     }
                 )
                 cur_step += 1
                 cur_step = cascade_invalidate(down, cur_step)
         return cur_step
 
-    for input_id, val in sim_inputs.items():
+    for input_name, input_val in sim_inputs.items():
         events.append(
             {
                 "step": step,
                 "event": "assumeValue",
-                "node_id": input_id,
-                "node_label": f"input.{input_id}",
+                "phase": "interaction",
+                "node_id": input_name,
+                "node_label": f"input.{input_name}",
                 "node_type": "source",
                 "status": "assumed",
-                "value": str(val),
-                "details": f"Assumed input value {val!r} for dependency analysis",
+                "value": str(input_val),
+                "details": f"Simulation assumes input.{input_name} is set to {input_val!r}",
             }
         )
         step += 1
-        step = cascade_invalidate(input_id, step)
+        step = cascade_invalidate(input_name, step)
 
     events.append(
         {
             "step": step,
             "event": "orderingStart",
+            "phase": "interaction",
             "node_id": None,
             "node_label": "reactiveEnvironment",
             "node_type": "engine",
-            "status": "ordering",
-            "details": f"Computing a possible topological order for {len(invalidated_nodes)} affected nodes",
+            "status": "active",
+            "details": f"Simulating static ordering for {len(invalidated_nodes_static)} affected node(s)",
         }
     )
     step += 1
 
-    conductor_ids = {
-        n["id"]
-        for n in nodes
-        if n["role"] == "conductor" and n["id"] in invalidated_nodes
-    }
-    conductor_in_degree: Dict[str, int] = {cid: 0 for cid in conductor_ids}
-    for cid in conductor_ids:
-        for up in adj_upstream.get(cid, []):
-            if up in conductor_ids:
-                conductor_in_degree[cid] += 1
-
-    queue = deque([cid for cid, deg in sorted(conductor_in_degree.items()) if deg == 0])
-    sorted_conductors: List[str] = []
-    while queue:
-        curr = queue.popleft()
-        sorted_conductors.append(curr)
-        for down in adj_downstream.get(curr, []):
-            if down in conductor_in_degree:
-                conductor_in_degree[down] -= 1
-                if conductor_in_degree[down] == 0:
-                    queue.append(down)
-
-    for cid in sorted(conductor_ids):
-        if cid not in sorted_conductors:
-            sorted_conductors.append(cid)
-
-    observer_nodes = [
-        n for n in nodes if n["role"] == "observer" and n["id"] in invalidated_nodes
-    ]
-
-    nodes_by_id = {n["id"]: n for n in nodes}
-    eval_order: List[Dict[str, Any]] = [
-        nodes_by_id[cid] for cid in sorted_conductors if cid in nodes_by_id
-    ] + observer_nodes
-
+    eval_order = compute_evaluation_order(invalidated_nodes_static)
     for target in eval_order:
         tid = target["id"]
         tlabel = target["label"]
@@ -367,6 +582,7 @@ def generate_reactlog(
             {
                 "step": step,
                 "event": "wouldEvaluate",
+                "phase": "interaction",
                 "node_id": tid,
                 "node_label": tlabel,
                 "node_type": trole,
@@ -381,6 +597,7 @@ def generate_reactlog(
                 {
                     "step": step,
                     "event": "dependsOn",
+                    "phase": "interaction",
                     "node_id": tid,
                     "node_label": tlabel,
                     "node_type": trole,
@@ -394,6 +611,7 @@ def generate_reactlog(
             {
                 "step": step,
                 "event": "ordered",
+                "phase": "interaction",
                 "node_id": tid,
                 "node_label": tlabel,
                 "node_type": trole,
@@ -407,12 +625,19 @@ def generate_reactlog(
         {
             "step": step,
             "event": "orderingComplete",
+            "phase": "interaction",
             "node_id": None,
             "node_label": "reactiveEnvironment",
             "node_type": "engine",
             "status": "idle",
             "details": f"Static ordering contains {len(eval_order)} nodes; no reactive flush occurred",
         }
+    )
+
+    init_count = len([e for e in events if e.get("phase") == "init"])
+    interact_count = len([e for e in events if e.get("phase") == "interaction"])
+    first_interact = next(
+        (i for i, e in enumerate(events) if e.get("phase") == "interaction"), 0
     )
 
     return {
@@ -422,8 +647,264 @@ def generate_reactlog(
         "edges": edges,
         "events": events,
         "steps_total": len(events),
-        "summary": f"Static dependency simulation: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes)} affected); app code was not executed",
+        "init_steps_count": init_count,
+        "interaction_steps_count": interact_count,
+        "first_interaction_step": first_interact,
+        "summary": f"Static dependency simulation: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes_static)} affected); app code was not executed",
     }
+
+
+def _find_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
+def _record_session_sync(
+    app_path: str,
+    video_path: Optional[str] = "recording.webm",
+    headless: bool = False,
+    record_script: Optional[Callable[[Any], None]] = None,
+    timeout_secs: float = 60.0,
+) -> Dict[str, Any]:
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return {
+            "success": False,
+            "error": "Playwright is not installed. Install it with: pip install playwright && playwright install chromium",
+            "actions": [],
+            "video_path": None,
+        }
+
+    port = _find_free_port()
+    app_target = Path(app_path).resolve()
+    if not app_target.exists():
+        return {
+            "success": False,
+            "error": f"App file not found: {app_path}",
+            "actions": [],
+            "video_path": None,
+        }
+
+    env = dict(os.environ)
+    env["SHINY_TESTMODE"] = "1"
+    env["PYTHONUNBUFFERED"] = "1"
+
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "shiny",
+            "run",
+            str(app_target),
+            "--port",
+            str(port),
+            "--no-dev-mode",
+            "--log-level=warning",
+        ],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+
+    app_url = f"http://127.0.0.1:{port}"
+    temp_dir = tempfile.mkdtemp(prefix="shiny_record_")
+    recorded_actions: List[Dict[str, Any]] = []
+    saved_video_path: Optional[str] = None
+
+    try:
+        start_time = time.time()
+        connected = False
+        while time.time() - start_time < 10.0:
+            if proc.poll() is not None:
+                _, err_bytes = proc.communicate()
+                err_str = (
+                    err_bytes.decode("utf-8", errors="replace") if err_bytes else ""
+                )
+                return {
+                    "success": False,
+                    "error": f"Shiny server failed to start: {err_str}",
+                    "actions": [],
+                    "video_path": None,
+                }
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                    connected = True
+                    break
+            except OSError:
+                time.sleep(0.1)
+
+        if not connected:
+            return {
+                "success": False,
+                "error": f"Failed to connect to Shiny app server at {app_url}",
+                "actions": [],
+                "video_path": None,
+            }
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=headless)
+            context = browser.new_context(
+                record_video_dir=temp_dir,
+                record_video_size={"width": 1280, "height": 720},
+                viewport={"width": 1280, "height": 720},
+            )
+            page = context.new_page()
+
+            recorder_init_script = """
+            window.__recordedActions = [];
+            window.__recordStartTime = Date.now();
+
+            function trackAction(item) {
+                item.timestamp = Date.now() - window.__recordStartTime;
+                window.__recordedActions.push(item);
+            }
+
+            function attachShinyListeners() {
+                if (window.$ && window.Shiny) {
+                    $(document).off('.shinyRecorder');
+                    $(document).on('shiny:inputchanged.shinyRecorder', (e) => {
+                        trackAction({
+                            type: 'input',
+                            name: e.name,
+                            value: e.value,
+                            inputType: e.inputType || 'unknown'
+                        });
+                    });
+                    $(document).on('shiny:value.shinyRecorder', (e) => {
+                        trackAction({
+                            type: 'output',
+                            name: e.name
+                        });
+                    });
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', attachShinyListeners);
+            window.addEventListener('load', attachShinyListeners);
+            document.addEventListener('shiny:connected', attachShinyListeners);
+
+            document.addEventListener('change', (e) => {
+                const target = e.target;
+                if (target && target.id && !target.id.startsWith('.')) {
+                    trackAction({
+                        type: 'input',
+                        name: target.id,
+                        value: target.value !== undefined ? target.value : target.checked,
+                        inputType: target.type || target.tagName.toLowerCase()
+                    });
+                }
+            }, true);
+
+            document.addEventListener('click', (e) => {
+                const target = e.target.closest('button, input, select, textarea, a, .btn');
+                if (target) {
+                    trackAction({
+                        type: 'click',
+                        target: target.id || target.name || target.tagName.toLowerCase(),
+                        text: (target.innerText || target.value || '').trim().slice(0, 50)
+                    });
+                }
+            }, true);
+            """
+            page.add_init_script(recorder_init_script)
+
+            page.goto(app_url, wait_until="domcontentloaded")
+            time.sleep(0.5)
+
+            if record_script:
+                record_script(page)
+                time.sleep(0.5)
+            elif not headless:
+                try:
+                    sys.stdout.write(
+                        "\n🔴 Recording browser session... Interact with your Shiny app.\n"
+                        "Press [Enter] here (or close the browser window) when done recording: "
+                    )
+                    sys.stdout.flush()
+                    while True:
+                        if page.is_closed():
+                            break
+                        import select
+
+                        r, _, _ = select.select([sys.stdin], [], [], 0.3)
+                        if r:
+                            sys.stdin.readline()
+                            break
+                except Exception:
+                    time.sleep(2.0)
+            else:
+                time.sleep(1.0)
+
+            try:
+                if not page.is_closed():
+                    raw_actions = page.evaluate("() => window.__recordedActions || []")
+                    if isinstance(raw_actions, list):
+                        recorded_actions = cast(List[Dict[str, Any]], raw_actions)
+            except Exception:
+                pass
+
+            page.close()
+            context.close()
+            browser.close()
+
+        video_files = list(Path(temp_dir).glob("*.webm"))
+        if video_files and video_path:
+            out_v = Path(video_path).resolve()
+            out_v.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(video_files[0], out_v)
+            saved_video_path = str(out_v)
+        elif video_files:
+            saved_video_path = str(video_files[0])
+
+        return {
+            "success": True,
+            "actions": recorded_actions,
+            "video_path": saved_video_path,
+            "duration_secs": round(time.time() - start_time, 2),
+        }
+
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=2.0)
+        except Exception:
+            proc.kill()
+        try:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        except Exception:
+            pass
+
+
+def record_shiny_session(
+    app_path: str,
+    video_path: Optional[str] = "recording.webm",
+    headless: bool = False,
+    record_script: Optional[Callable[[Any], None]] = None,
+    timeout_secs: float = 60.0,
+) -> Dict[str, Any]:
+    try:
+        asyncio.get_running_loop()
+        has_running_loop = True
+    except RuntimeError:
+        has_running_loop = False
+
+    if has_running_loop:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                _record_session_sync,
+                app_path,
+                video_path,
+                headless,
+                record_script,
+                timeout_secs,
+            )
+            return future.result()
+    return _record_session_sync(
+        app_path, video_path, headless, record_script, timeout_secs
+    )
 
 
 def format_graph_mermaid(graph: Dict[str, Any]) -> str:
@@ -542,10 +1023,37 @@ def _format_python_source_html(source: str) -> str:
 def format_reactlog_html(
     reactlog: Dict[str, Any],
     source_code: str,
-    title: str = "Static Shiny Dependency Simulation",
+    title: str = "Shiny Reactive Dependency Simulation",
+    video_path: Optional[str] = None,
 ) -> str:
     escaped_title = html_lib.escape(title)
     formatted_source = _format_python_source_html(source_code)
+    actual_video = video_path or reactlog.get("video_path")
+
+    video_tab_btn = ""
+    video_panel = ""
+    if actual_video:
+        rel_video = html_lib.escape(os.path.basename(actual_video))
+        video_tab_btn = (
+            '<button class="sidebar-tab" id="video-tab" role="tab" '
+            'aria-selected="false" aria-controls="video-panel" '
+            "onclick=\"showSidebarPanel('video')\">Recording</button>"
+        )
+        video_panel = f"""
+        <div class="video-panel sidebar-panel" id="video-panel" role="tabpanel" aria-labelledby="video-tab" hidden>
+          <div class="video-container">
+            <video id="session-video" controls preload="metadata">
+              <source src="{rel_video}" type="video/webm">
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          <div class="video-meta">
+            <span class="video-badge">Playwright Video Recording</span>
+            <span class="video-filename">{rel_video}</span>
+          </div>
+        </div>
+        """
+
     source_tab = (
         '<button class="sidebar-tab" id="source-tab" role="tab" '
         'aria-selected="false" aria-controls="source-panel" '
@@ -563,6 +1071,7 @@ def format_reactlog_html(
         .replace(">", "\\u003e")
         .replace("&", "\\u0026")
     )
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -601,15 +1110,22 @@ def format_reactlog_html(
     .brand-subtitle {{ color: var(--text-muted); font-size: 0.74rem; margin-top: 0.15rem; }}
     .stats {{ display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; justify-content: flex-end; }}
     .stat {{ border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; color: var(--text-muted); padding: 0.28rem 0.58rem; font: 600 0.7rem var(--mono); }}
-    .toolbar {{ min-height: 58px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.65rem 1rem; display: flex; align-items: center; gap: 0.65rem; }}
+    .toolbar {{ min-height: 58px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.65rem 1rem; display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }}
     .toolbar-group {{ display: flex; align-items: center; gap: 0.35rem; }}
     .toolbar-divider {{ width: 1px; height: 28px; background: var(--border); margin: 0 0.2rem; }}
     .btn {{ min-height: 34px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.42rem 0.66rem; border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.38rem; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; font-size: 0.76rem; font-weight: 700; }}
     .btn:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
     .btn:active {{ transform: translateY(1px); }}
     .btn.icon {{ width: 34px; padding: 0; font-family: var(--mono); }}
-    .btn.primary {{ background: #1f69a3; border-color: #2d86c8; }}
-    .search-wrap {{ position: relative; flex: 0 1 240px; min-width: 150px; }}
+    .btn.primary {{ background: #1f69a3; border-color: #2d86c8; color: #fff; }}
+    .btn.primary:hover {{ background: #267ec4; }}
+    .btn.accent-skip {{ background: #2b2146; border-color: #63439b; color: #d8b4fe; }}
+    .btn.accent-skip:hover {{ background: #3b2b63; border-color: #8b5cf6; }}
+    .phase-selector {{ display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }}
+    .phase-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 6px; font: 700 0.7rem var(--mono); cursor: pointer; transition: all 120ms ease; }}
+    .phase-btn:hover {{ color: var(--text); background: var(--surface-2); }}
+    .phase-btn.is-active {{ background: var(--surface-3); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }}
+    .search-wrap {{ position: relative; flex: 0 1 200px; min-width: 130px; }}
     .search-wrap::before {{ content: "⌕"; position: absolute; left: 0.7rem; top: 50%; transform: translateY(-53%); color: var(--text-muted); font: 700 1rem var(--mono); pointer-events: none; }}
     .search-input {{ width: 100%; height: 34px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 0 0.7rem 0 2rem; font-size: 0.76rem; }}
     .search-input::placeholder {{ color: #6f8194; }}
@@ -619,8 +1135,8 @@ def format_reactlog_html(
     .filter-btn[data-role="observer"][aria-pressed="true"] {{ border-color: var(--output); }}
     .scrubber {{ flex: 1; min-width: 130px; display: flex; align-items: center; gap: 0.6rem; }}
     .scrubber input[type="range"] {{ width: 100%; accent-color: var(--accent); cursor: pointer; }}
-    .step-display {{ font: 700 0.72rem var(--mono); color: var(--accent); min-width: 72px; text-align: right; }}
-    .main-view {{ display: grid; grid-template-columns: minmax(0, 1fr) 360px; flex: 1; min-height: 0; overflow: hidden; transition: grid-template-columns 180ms ease; }}
+    .step-display {{ font: 700 0.72rem var(--mono); color: var(--accent); min-width: 80px; text-align: right; }}
+    .main-view {{ display: grid; grid-template-columns: minmax(0, 1fr) 380px; flex: 1; min-height: 0; overflow: hidden; transition: grid-template-columns 180ms ease; }}
     .main-view.source-visible {{ grid-template-columns: minmax(0, 1fr) min(54vw, 680px); }}
     .main-view.sidebar-hidden {{ grid-template-columns: minmax(0, 1fr) 0; }}
     .graph-container {{ min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(rgba(105, 128, 151, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(105, 128, 151, 0.055) 1px, transparent 1px); background-size: 24px 24px; }}
@@ -629,10 +1145,12 @@ def format_reactlog_html(
     .legend-item {{ display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.66rem var(--mono); padding: 0.18rem 0.32rem; }}
     .legend-dot {{ width: 7px; height: 7px; border-radius: 50%; background: var(--role-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--role-color) 18%, transparent); }}
     .zoom-controls {{ display: flex; gap: 0.3rem; pointer-events: auto; }}
+    .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: rgba(23, 33, 45, 0.95); border: 1px solid var(--accent); border-radius: 999px; padding: 0.45rem 1.1rem; color: var(--text); font: 650 0.76rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 0.6rem; pointer-events: none; animation: toast-pop 200ms ease; }}
+    @keyframes toast-pop {{ from {{ opacity: 0; transform: translate(-50%, 8px); }} to {{ opacity: 1; transform: translate(-50%, 0); }} }}
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
     .graph-node, .graph-edge {{ transition: opacity 160ms ease, filter 160ms ease, stroke 160ms ease, stroke-width 160ms ease; }}
-    .graph-edge {{ opacity: 0; pointer-events: none; }}
-    .graph-edge[data-active="true"] {{ stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
+    .graph-edge {{ opacity: 0.75; stroke: #527494; stroke-width: 1.8px; }}
+    .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: #63b3ff !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
     @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge {{ transition: none; }}
@@ -655,331 +1173,350 @@ def format_reactlog_html(
     .source-panel code {{ position: relative; z-index: 1; font: inherit; }}
     .source-line-highlight {{ position: absolute; z-index: 0; left: 0; right: 0; margin: 0; padding: 0; border: 0; border-left: 3px solid var(--source-highlight-color, var(--accent)); border-radius: 0; background: color-mix(in srgb, var(--source-highlight-color, var(--accent)) 16%, transparent); box-shadow: inset 0 1px color-mix(in srgb, var(--source-highlight-color, var(--accent)) 12%, transparent), inset 0 -1px color-mix(in srgb, var(--source-highlight-color, var(--accent)) 12%, transparent); pointer-events: none; transition: top 150ms ease, background 150ms ease; }}
     .source-line-highlight[hidden] {{ display: none; }}
+    .video-panel {{ display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; background: #0c1219; overflow: auto; }}
+    .video-container {{ width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #000; }}
+    .video-container video {{ width: 100%; display: block; }}
+    .video-meta {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }}
+    .video-badge {{ background: #193147; border: 1px solid #2d618d; color: #79c0ff; border-radius: 999px; padding: 0.2rem 0.55rem; font: 700 0.68rem var(--mono); }}
+    .video-sync-status {{ color: #7ee787; font: 700 0.68rem var(--mono); display: inline-flex; align-items: center; gap: 0.3rem; }}
+    .video-filename {{ color: var(--text-muted); font: 500 0.7rem var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
     .syntax-keyword {{ color: #c792ea; font-weight: 700; }}
     .syntax-string {{ color: #a8d279; }}
     .syntax-number {{ color: #f6c177; }}
     .syntax-comment {{ color: #718096; font-style: italic; }}
-    .syntax-operator {{ color: #89ddff; }}
-    .inspector {{ margin: 0.75rem; padding: 0.85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; }}
-    .inspector-eyebrow {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; }}
-    .inspector-node {{ font: 700 0.88rem var(--mono); color: var(--text); overflow-wrap: anywhere; }}
-    .inspector-detail {{ color: var(--text-muted); font-size: 0.75rem; line-height: 1.45; margin-top: 0.35rem; }}
-    .event-list {{ flex: 1; overflow-y: auto; padding: 0 0.5rem 0.75rem; list-style: none; }}
-    .event-item {{ padding: 0.58rem 0.65rem; border-radius: 7px; font-size: 0.76rem; margin-bottom: 0.22rem; border: 1px solid transparent; cursor: pointer; transition: background 120ms ease, border-color 120ms ease; }}
-    .event-item:hover {{ background: var(--surface-2); }}
-    .event-item.active {{ background: rgba(99, 179, 255, 0.1); border-color: rgba(99, 179, 255, 0.62); }}
-    .event-row {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
-    .event-node {{ color: var(--text); font: 650 0.73rem var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-    .event-step {{ color: #708195; font: 600 0.65rem var(--mono); }}
-    .badge {{ display: inline-flex; align-items: center; max-width: 100%; font: 750 0.6rem var(--mono); padding: 0.16rem 0.35rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.025em; background: var(--surface-3); color: var(--text-muted); }}
-    .badge.assumeValue {{ background: rgba(56,189,248,0.13); color: #7dd3fc; }}
-    .badge.propagate {{ background: rgba(251,146,60,0.13); color: #fdba74; }}
-    .badge.wouldEvaluate, .badge.dependsOn {{ background: rgba(99,179,255,0.13); color: #93c5fd; }}
-    .badge.ordered {{ background: rgba(74,222,128,0.13); color: #86efac; }}
-    .sidebar-hidden .sidebar {{ visibility: hidden; }}
-    @media (max-width: 980px) {{
-      .app-header {{ align-items: flex-start; }}
-      .stats .stat.summary {{ display: none; }}
-      .toolbar {{ flex-wrap: wrap; }}
-      .toolbar .scrubber {{ order: 3; flex-basis: 100%; }}
-      .main-view {{ grid-template-columns: minmax(0, 1fr) 310px; }}
-    }}
-    @media (max-width: 720px) {{
-      body {{ overflow: auto; min-height: 100vh; }}
-      .app-header {{ position: static; }}
-      .brand-subtitle, .stats {{ display: none; }}
-      .toolbar-divider, .filter-btn {{ display: none; }}
-      .search-wrap {{ flex: 1; }}
-      .main-view, .main-view.sidebar-hidden, .main-view.source-visible {{ display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(460px, 60vh) 320px; overflow: visible; }}
-      .graph-container {{ overflow: auto; }}
-      #reactlog-svg {{ width: 1400px; max-width: none; }}
-      .sidebar {{ border-left: 0; border-top: 1px solid var(--border); visibility: visible !important; }}
-      .sidebar-toggle {{ display: none; }}
-    }}
+    .event-list {{ flex: 1; overflow-y: auto; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; }}
+    .event-item {{ padding: 0.55rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; display: flex; flex-direction: column; gap: 0.2rem; }}
+    .event-item:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
+    .event-item.is-current {{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }}
+    .event-header {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
+    .event-name {{ font: 700 0.76rem var(--mono); color: var(--text); }}
+    .event-badges {{ display: flex; align-items: center; gap: 0.3rem; }}
+    .event-time {{ font: 600 0.64rem var(--mono); color: #93c5fd; background: #13273b; border-radius: 4px; padding: 0.1rem 0.3rem; }}
+    .event-badge {{ font: 700 0.62rem var(--mono); border-radius: 4px; padding: 0.1rem 0.35rem; text-transform: uppercase; }}
+    .event-badge.assumed {{ background: #1b4728; color: #7ee787; }}
+    .event-badge.affected {{ background: #4e3510; color: #f0883e; }}
+    .event-badge.scheduled {{ background: #193147; color: #79c0ff; }}
+    .event-badge.discovered {{ background: #262933; color: #a5d6ff; }}
+    .event-badge.idle {{ background: #21262d; color: #8b949e; }}
+    .event-badge.active {{ background: #3d2459; color: #d2a8ff; }}
+    .event-details {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
+    .inspector-panel {{ border-top: 1px solid var(--border); padding: 0.8rem; background: var(--surface); }}
+    .inspector-title {{ font: 700 0.8rem var(--mono); color: var(--text); margin-bottom: 0.4rem; }}
+    .inspector-row {{ display: flex; justify-content: space-between; font-size: 0.74rem; padding: 0.2rem 0; }}
+    .inspector-label {{ color: var(--text-muted); }}
+    .inspector-val {{ font-family: var(--mono); color: var(--text); font-weight: 600; }}
   </style>
 </head>
 <body>
   <header class="app-header">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true">S</div>
+      <div class="brand-mark" aria-hidden="true">⚡</div>
       <div class="brand-copy">
-        <div class="brand-title">Reactive dependency explorer</div>
-        <div class="brand-subtitle">Static simulation · app code is not executed</div>
+        <div class="brand-title">{escaped_title}</div>
+        <div class="brand-subtitle">Interactive Shiny Reactive Log & Graph Explorer</div>
       </div>
     </div>
-    <div class="stats" id="graph-stats" aria-label="Graph summary"></div>
+    <div class="stats">
+      <span class="stat" id="stat-nodes">Nodes: 0</span>
+      <span class="stat" id="stat-edges">Edges: 0</span>
+      <span class="stat" id="stat-steps">Steps: 0</span>
+    </div>
   </header>
-  <nav class="toolbar" aria-label="Graph controls">
-    <div class="toolbar-group" aria-label="Timeline playback">
-      <button class="btn icon" onclick="firstStep()" aria-label="First event" title="First event">|‹</button>
-      <button class="btn icon" onclick="prevStep()" aria-label="Previous event" title="Previous event">‹</button>
-      <button class="btn primary" id="play-btn" onclick="togglePlay()" aria-label="Play timeline"><span aria-hidden="true">▶</span> Play</button>
-      <button class="btn icon" onclick="nextStep()" aria-label="Next event" title="Next event">›</button>
-      <button class="btn icon" onclick="lastStep()" aria-label="Last event" title="Last event">›|</button>
+
+  <main class="toolbar" role="toolbar" aria-label="Reactlog controls">
+    <div class="toolbar-group">
+      <button class="btn icon" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play">▶</button>
+      <button class="btn icon" onclick="stepBack()" aria-label="Step back" title="Step back">⏮</button>
+      <button class="btn icon" onclick="stepForward()" aria-label="Step forward" title="Step forward">⏭</button>
+      <button class="btn icon" onclick="resetTimeline()" aria-label="Reset timeline" title="Reset">↺</button>
     </div>
+
     <div class="toolbar-divider" aria-hidden="true"></div>
-    <label class="search-wrap">
-      <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Search graph nodes</span>
-      <input id="node-search" class="search-input" type="search" aria-label="Search graph nodes" placeholder="Find a reactive…" oninput="applyGraphFilters()" />
-    </label>
-    <div class="toolbar-group" aria-label="Node type filters">
-      <button class="btn filter-btn" data-role="source" aria-pressed="true" onclick="toggleRole(this)">Inputs</button>
-      <button class="btn filter-btn" data-role="conductor" aria-pressed="true" onclick="toggleRole(this)">Calcs</button>
-      <button class="btn filter-btn" data-role="observer" aria-pressed="true" onclick="toggleRole(this)">Observers</button>
+
+    <div class="phase-selector" role="group" aria-label="Timeline phase filter">
+      <button class="phase-btn is-active" id="phase-btn-all" onclick="setPhaseFilter('all')">All (<span id="count-all">0</span>)</button>
+      <button class="phase-btn" id="phase-btn-init" onclick="setPhaseFilter('init')">⚙️ Init (<span id="count-init">0</span>)</button>
+      <button class="phase-btn" id="phase-btn-interaction" onclick="setPhaseFilter('interaction')">🎬 Actions (<span id="count-interaction">0</span>)</button>
     </div>
+
+    <button class="btn accent-skip" id="btn-skip-init" onclick="skipToInteractions()" title="Skip initialization steps and start at first app action">⏭ Skip to Actions</button>
+
     <div class="toolbar-divider" aria-hidden="true"></div>
+
     <div class="scrubber">
-      <input type="range" id="scrubber-range" min="0" value="0" aria-label="Timeline event" oninput="setStep(parseInt(this.value))" />
-      <div class="step-display" id="step-counter" role="status" aria-live="polite">0 / 0</div>
+      <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
+      <span class="step-display" id="step-display">Step 0 / 0</span>
     </div>
-  </nav>
-  <main class="main-view" id="main-view">
-    <section class="graph-container" id="graph-viewport" aria-label="Reactive dependency graph">
+
+    <div class="toolbar-divider" aria-hidden="true"></div>
+
+    <div class="search-wrap">
+      <input type="search" class="search-input" id="search-input" placeholder="Filter graph nodes..." oninput="handleSearch(this.value)" aria-label="Search graph nodes" />
+    </div>
+
+    <div class="toolbar-group">
+      <button class="btn filter-btn" data-role="source" aria-pressed="true" onclick="toggleRoleFilter('source', this)">Inputs</button>
+      <button class="btn filter-btn" data-role="conductor" aria-pressed="true" onclick="toggleRoleFilter('conductor', this)">Calcs</button>
+      <button class="btn filter-btn" data-role="observer" aria-pressed="true" onclick="toggleRoleFilter('observer', this)">Outputs</button>
+    </div>
+  </main>
+
+  <div class="main-view" id="main-view">
+    <div class="graph-container" id="graph-container">
       <div class="graph-topbar">
-        <div class="legend" aria-label="Node type legend">
-          <span class="legend-item" style="--role-color:var(--source)"><span class="legend-dot"></span>Input</span>
-          <span class="legend-item" style="--role-color:var(--calc)"><span class="legend-dot"></span>Calculation</span>
-          <span class="legend-item" style="--role-color:var(--effect)"><span class="legend-dot"></span>Effect</span>
-          <span class="legend-item" style="--role-color:var(--output)"><span class="legend-dot"></span>Output</span>
-          <span class="legend-item" title="Hover or keyboard-focus a node to reveal its dependency path">⇢ Hover to trace</span>
+        <div class="legend" aria-label="Node types legend">
+          <div class="legend-item"><span class="legend-dot" style="--role-color: var(--source)"></span> Inputs</div>
+          <div class="legend-item"><span class="legend-dot" style="--role-color: var(--calc)"></span> Calcs</div>
+          <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Outputs</div>
+          <div class="legend-item"><span class="legend-dot" style="--role-color: var(--effect)"></span> Effects</div>
         </div>
-        <div class="zoom-controls" aria-label="Graph zoom">
-          <button class="btn icon" onclick="zoomGraph(1.2)" aria-label="Zoom in" title="Zoom in">+</button>
-          <button class="btn icon" onclick="zoomGraph(0.8)" aria-label="Zoom out" title="Zoom out">−</button>
-          <button class="btn" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit graph to view">Fit</button>
-          <button class="btn sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" aria-label="Hide timeline" title="Show or hide timeline">Timeline ›</button>
+        <div class="zoom-controls">
+          <button class="btn icon" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in">+</button>
+          <button class="btn icon" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out">−</button>
+          <button class="btn icon" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view">⊡</button>
+          <button class="btn icon" onclick="resetZoom()" aria-label="Reset zoom" title="Reset zoom">1:1</button>
         </div>
       </div>
-      <svg id="reactlog-svg" role="img" aria-label="Layered reactive dependency graph"></svg>
-    </section>
-    <aside class="sidebar" aria-label="Dependency details and event timeline">
+      <div id="live-action-toast" class="action-toast" hidden></div>
+      <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6685a3" />
+          </marker>
+          <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#63b3ff" />
+          </marker>
+          <marker id="arrow-invalidate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#fb923c" />
+          </marker>
+          <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.32" />
+          </filter>
+        </defs>
+        <g id="viewport-g"></g>
+      </svg>
+    </div>
+
+    <aside class="sidebar" aria-label="Details and Timeline">
       <div class="sidebar-header">
-        <div class="sidebar-tabs" role="tablist" aria-label="Reactlog details">
+        <div class="sidebar-tabs" role="tablist" aria-label="Sidebar views">
           <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Timeline</button>
           {source_tab}
+          {video_tab_btn}
         </div>
       </div>
+
       <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-labelledby="timeline-tab">
-        <div class="inspector" id="active-inspector" aria-live="polite"></div>
-        <ul class="event-list" id="event-list"></ul>
+        <div class="event-list" id="event-list"></div>
+        <div class="inspector-panel" id="inspector-panel">
+          <div class="inspector-title" id="insp-title">Node Details</div>
+          <div class="inspector-row"><span class="inspector-label">Type:</span><span class="inspector-val" id="insp-type">-</span></div>
+          <div class="inspector-row"><span class="inspector-label">Line:</span><span class="inspector-val" id="insp-line">-</span></div>
+          <div class="inspector-row"><span class="inspector-label">Status:</span><span class="inspector-val" id="insp-status">-</span></div>
+        </div>
       </div>
+
       {source_panel}
+      {video_panel}
     </aside>
-  </main>
+  </div>
+
   <script>
-    const LOG_DATA = {escaped_json};
+    const reactlogData = {escaped_json};
     let currentStep = 0;
     let isPlaying = false;
     let playTimer = null;
-    let zoomLevel = 1;
-    let graphBounds = {{ width: 900, height: 560 }};
     let selectedNodeId = null;
+    let searchQuery = "";
+    let activeRoles = new Set(['source', 'conductor', 'observer']);
+    let currentPhaseFilter = 'all';
+    let zoomLevel = 1;
+    let panOffset = {{ x: 0, y: 0 }};
+    let isPanning = false;
+    let startPan = {{ x: 0, y: 0 }};
 
-    const totalSteps = (LOG_DATA.events || []).length;
-    document.getElementById('scrubber-range').max = Math.max(0, totalSteps - 1);
-    const nodeCounts = (LOG_DATA.nodes || []).reduce((counts, node) => {{
-      counts[node.type] = (counts[node.type] || 0) + 1;
-      return counts;
-    }}, {{}});
-    document.getElementById('graph-stats').innerHTML = [
-      `<span class="stat">${{(LOG_DATA.nodes || []).length}} nodes</span>`,
-      `<span class="stat">${{(LOG_DATA.edges || []).length}} dependencies</span>`,
-      `<span class="stat summary">static trace</span>`
-    ].join('');
+    function init() {{
+      document.getElementById('stat-nodes').textContent = `Nodes: ${{reactlogData.nodes.length}}`;
+      document.getElementById('stat-edges').textContent = `Edges: ${{reactlogData.edges.length}}`;
+      document.getElementById('stat-steps').textContent = `Steps: ${{reactlogData.events.length}}`;
 
-    function eventName(name) {{
-      return String(name || 'event').replace(/([a-z])([A-Z])/g, '$1 $2');
+      const initCount = reactlogData.init_steps_count !== undefined ? reactlogData.init_steps_count : reactlogData.events.reduce((acc, e) => acc + (e.phase === 'init' ? 1 : 0), 0);
+      const interactCount = reactlogData.interaction_steps_count !== undefined ? reactlogData.interaction_steps_count : (reactlogData.events.length - initCount);
+      document.getElementById('count-all').textContent = String(reactlogData.events.length);
+      document.getElementById('count-init').textContent = String(initCount);
+      document.getElementById('count-interaction').textContent = String(interactCount);
+
+      const scrubber = document.getElementById('scrubber-range');
+      scrubber.max = Math.max(0, reactlogData.events.length - 1);
+      scrubber.value = 0;
+
+      renderEventList();
+      renderGraph();
+      seekTo(0);
+      setupPanZoom();
+      setupVideoSync();
     }}
 
-    function nodeKind(node) {{
-      if (node.type === 'input') return {{ label: 'INPUT', color: '#38bdf8', glyph: 'I' }};
-      if (node.type === 'effect') return {{ label: 'EFFECT', color: '#c084fc', glyph: 'E' }};
-      if (node.type === 'output') return {{ label: 'OUTPUT', color: '#4ade80', glyph: 'O' }};
-      return {{ label: 'CALC', color: '#fbbf24', glyph: 'C' }};
+    function nodeKind(n) {{
+      if (n.role === 'source') return {{ label: 'Input', color: '#38bdf8' }};
+      if (n.role === 'conductor') return {{ label: 'Reactive Calc', color: '#fbbf24' }};
+      if (n.type === 'effect') return {{ label: 'Effect', color: '#c084fc' }};
+      return {{ label: 'Output', color: '#4ade80' }};
     }}
 
-    function truncate(value, maxLength) {{
-      const text = String(value || '');
-      return text.length > maxLength ? text.slice(0, maxLength - 1) + '…' : text;
-    }}
-
-    function renderInspector() {{
-      const inspector = document.getElementById('active-inspector');
-      const event = (LOG_DATA.events || [])[currentStep];
-      const selectedNode = (LOG_DATA.nodes || []).find(node => node.id === selectedNodeId);
-      if (selectedNode) {{
-        const kind = nodeKind(selectedNode);
-        const incoming = (LOG_DATA.edges || []).reduce((count, edge) => count + (edge.to === selectedNode.id ? 1 : 0), 0);
-        const outgoing = (LOG_DATA.edges || []).reduce((count, edge) => count + (edge.from === selectedNode.id ? 1 : 0), 0);
-        inspector.innerHTML = '<div class="inspector-eyebrow"><span class="badge"></span><span class="event-step"></span></div><div class="inspector-node"></div><div class="inspector-detail"></div>';
-        inspector.querySelector('.badge').textContent = kind.label;
-        inspector.querySelector('.event-step').textContent = `line ${{selectedNode.line || '—'}}`;
-        inspector.querySelector('.inspector-node').textContent = selectedNode.id;
-        inspector.querySelector('.inspector-detail').textContent = `${{incoming}} upstream · ${{outgoing}} downstream. Select an event below to return to timeline details.`;
-        return;
+    function showSidebarPanel(panelName) {{
+      const tabs = ['timeline', 'source', 'video'];
+      tabs.forEach(t => {{
+        const btn = document.getElementById(`${{t}}-tab`);
+        const panel = document.getElementById(`${{t}}-panel`);
+        if (btn && panel) {{
+          const isTarget = t === panelName;
+          btn.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+          panel.hidden = !isTarget;
+        }}
+      }});
+      const mainView = document.getElementById('main-view');
+      if (panelName === 'source') {{
+        mainView.classList.add('source-visible');
+      }} else {{
+        mainView.classList.remove('source-visible');
       }}
-      if (!event) {{
-        inspector.innerHTML = '<div class="inspector-node">No simulated events</div><div class="inspector-detail">The dependency graph is still available to explore.</div>';
-        return;
-      }}
-      inspector.innerHTML = '<div class="inspector-eyebrow"><span class="badge"></span><span class="event-step"></span></div><div class="inspector-node"></div><div class="inspector-detail"></div>';
-      const badge = inspector.querySelector('.badge');
-      badge.textContent = eventName(event.event);
-      if (/^[A-Za-z][A-Za-z0-9_-]*$/.test(event.event || '')) badge.classList.add(event.event);
-      inspector.querySelector('.event-step').textContent = `#${{event.step ?? currentStep}}`;
-      inspector.querySelector('.inspector-node').textContent = event.node_label || 'Reactive environment';
-      inspector.querySelector('.inspector-detail').textContent = event.details || '';
     }}
 
-    function renderEventsList() {{
+    function setPhaseFilter(phase) {{
+      currentPhaseFilter = phase;
+      ['all', 'init', 'interaction'].forEach(p => {{
+        const btn = document.getElementById(`phase-btn-${{p}}`);
+        if (btn) btn.classList.toggle('is-active', p === phase);
+      }});
+      renderEventList();
+    }}
+
+    function skipToInteractions() {{
+      const firstActionIdx = reactlogData.first_interaction_step || 0;
+      setPhaseFilter('interaction');
+      seekTo(firstActionIdx);
+    }}
+
+    function formatTime(sec) {{
+      if (sec === undefined || sec === null) return '';
+      const s = Number(sec);
+      const mins = Math.floor(s / 60);
+      const rem = (s % 60).toFixed(1);
+      return `${{mins > 0 ? mins + 'm ' : ''}}${{rem}}s`;
+    }}
+
+    function renderEventList() {{
       const list = document.getElementById('event-list');
       list.innerHTML = '';
-      (LOG_DATA.events || []).forEach((ev, idx) => {{
-        const li = document.createElement('li');
-        li.className = 'event-item' + (idx === currentStep ? ' active' : '');
-        li.onclick = () => {{ selectedNodeId = null; setStep(idx); }};
+      reactlogData.events.forEach((ev, idx) => {{
+        if (currentPhaseFilter !== 'all' && ev.phase && ev.phase !== currentPhaseFilter) {{
+          return;
+        }}
 
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'event-row';
+        const item = document.createElement('div');
+        item.className = 'event-item' + (idx === currentStep ? ' is-current' : '');
+        item.setAttribute('data-step', String(idx));
+        item.onclick = () => seekTo(idx);
+
+        const header = document.createElement('div');
+        header.className = 'event-header';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'event-name';
+        nameSpan.textContent = ev.node_label || ev.event;
+
+        const badgesWrap = document.createElement('div');
+        badgesWrap.className = 'event-badges';
+
+        if (ev.time_sec !== undefined && ev.time_sec > 0) {{
+          const timeSpan = document.createElement('span');
+          timeSpan.className = 'event-time';
+          timeSpan.textContent = formatTime(ev.time_sec);
+          badgesWrap.appendChild(timeSpan);
+        }}
 
         const badge = document.createElement('span');
-        badge.className = 'badge ' + (ev.event || '');
-        badge.textContent = eventName(ev.event);
+        badge.className = `event-badge ${{ev.status || 'idle'}}`;
+        badge.textContent = ev.status || ev.event;
+        badgesWrap.appendChild(badge);
 
-        const stepNum = document.createElement('span');
-        stepNum.className = 'event-step';
-        stepNum.textContent = '#' + (ev.step != null ? ev.step : idx);
+        header.appendChild(nameSpan);
+        header.appendChild(badgesWrap);
 
-        headerDiv.appendChild(badge);
-        headerDiv.appendChild(stepNum);
+        const details = document.createElement('div');
+        details.className = 'event-details';
+        details.textContent = ev.details || '';
 
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'event-node';
-        titleDiv.textContent = ev.node_label || 'Reactive environment';
-
-        li.appendChild(headerDiv);
-        li.appendChild(titleDiv);
-        list.appendChild(li);
+        item.appendChild(header);
+        item.appendChild(details);
+        list.appendChild(item);
       }});
     }}
 
     function renderGraph() {{
-      const svg = document.getElementById('reactlog-svg');
-      svg.innerHTML = '<defs>' +
-        '<filter id="card-shadow" x="-20%" y="-30%" width="140%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000000" flood-opacity="0.28"/></filter>' +
-        '<filter id="edge-glow" x="-30%" y="-50%" width="160%" height="200%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
-        '<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 1 1.5 L 8 5 L 1 8.5" fill="none" stroke="#6685a3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
-        '<marker id="arrow-hover" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 1 1.5 L 8 5 L 1 8.5" fill="none" stroke="#9bd3ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
-        '<marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 1 1.5 L 8 5 L 1 8.5" fill="none" stroke="#63b3ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
-        '<marker id="arrow-invalidate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 1 1.5 L 8 5 L 1 8.5" fill="none" stroke="#fb923c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
-        '</defs>';
+      const svg = document.getElementById('viewport-g');
+      svg.innerHTML = '';
 
-      const nodes = LOG_DATA.nodes || [];
-      const edges = LOG_DATA.edges || [];
-      const activeEvent = LOG_DATA.events[currentStep] || {{}};
-
-      const inEdges = {{}};
-      const outEdges = {{}};
-      nodes.forEach(n => {{ inEdges[n.id] = []; outEdges[n.id] = []; }});
-      edges.forEach(e => {{
-        if (outEdges[e.from]) outEdges[e.from].push(e.to);
-        if (inEdges[e.to]) inEdges[e.to].push(e.from);
+      const nodes = [];
+      reactlogData.nodes.forEach(n => {{
+        if (!activeRoles.has(n.role)) return;
+        if (searchQuery && !n.id.toLowerCase().includes(searchQuery) && !(n.label || '').toLowerCase().includes(searchQuery)) return;
+        nodes.push(n);
       }});
 
-      const ranks = {{}};
-      nodes.forEach(n => {{
-        if (n.role === 'source' || inEdges[n.id].length === 0) {{
-          ranks[n.id] = 0;
+      const nodeSet = new Set(nodes.map(n => n.id));
+      const edges = [];
+      reactlogData.edges.forEach(e => {{
+        if (nodeSet.has(e.from) && nodeSet.has(e.to)) {{
+          edges.push(e);
         }}
       }});
 
-      let changed = true;
-      let iterations = 0;
-      while (changed && iterations < 30) {{
-        changed = false;
-        iterations++;
-        edges.forEach(e => {{
-          const rFrom = ranks[e.from] ?? 0;
-          const curTo = ranks[e.to] ?? 0;
-          if (rFrom + 1 > curTo) {{
-            ranks[e.to] = rFrom + 1;
-            changed = true;
-          }}
-        }});
-      }}
+      const inDegree = {{}};
+      nodes.forEach(n => inDegree[n.id] = 0);
+      edges.forEach(e => inDegree[e.to] = (inDegree[e.to] || 0) + 1);
 
-      const maxRank = Math.max(0, ...Object.values(ranks));
+      const ranks = {{}};
+      nodes.forEach(n => ranks[n.id] = n.role === 'source' ? 0 : 1);
+      edges.forEach(e => {{
+        ranks[e.to] = Math.max(ranks[e.to] || 1, (ranks[e.from] || 0) + 1);
+      }});
+
+      const maxRank = Math.max(1, ...Object.values(ranks));
       const columns = Array.from({{ length: maxRank + 1 }}, () => []);
       nodes.forEach(n => {{
         const r = ranks[n.id] || 0;
         columns[r].push(n);
       }});
 
-      columns.forEach(column => column.sort((a, b) => String(a.id).localeCompare(String(b.id))));
-      for (let colIdx = 1; colIdx < columns.length; colIdx++) {{
-        const previousOrder = new Map();
-        columns.slice(0, colIdx).flat().forEach((node, idx) => previousOrder.set(node.id, idx));
-        columns[colIdx].sort((a, b) => {{
-          const barycenter = node => {{
-            const parents = [];
-            edges.forEach(edge => {{
-              if (edge.to !== node.id) return;
-              const value = previousOrder.get(edge.from);
-              if (value != null) parents.push(value);
-            }});
-            return parents.length ? parents.reduce((sum, value) => sum + value, 0) / parents.length : Number.MAX_SAFE_INTEGER;
-          }};
-          return barycenter(a) - barycenter(b) || String(a.id).localeCompare(String(b.id));
-        }});
-      }}
-
-      const colWidth = 292;
-      const rowHeight = 92;
-      const nodeWidth = 224;
-      const nodeHeight = 62;
+      const colWidth = 280;
+      const rowHeight = 88;
+      const nodeWidth = 210;
+      const nodeHeight = 58;
       const maxInCol = Math.max(1, ...columns.map(c => c.length));
-      const svgHeight = Math.max(560, maxInCol * rowHeight + 150);
-      const svgWidth = Math.max(920, (maxRank + 1) * colWidth + 100);
-      graphBounds = {{ width: svgWidth, height: svgHeight }};
-
-      svg.setAttribute('width', '100%');
-      svg.setAttribute('height', '100%');
-      applyZoom();
+      const svgHeight = Math.max(520, maxInCol * rowHeight + 140);
 
       const pos = {{}};
       columns.forEach((colNodes, colIdx) => {{
-        const colX = 162 + colIdx * colWidth;
+        const colX = 140 + colIdx * colWidth;
         const totalH = (colNodes.length - 1) * rowHeight;
-        const startY = 116 + (svgHeight - 150 - totalH) / 2;
-
-        const stageBand = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        stageBand.setAttribute('x', colX - (colWidth / 2) + 14);
-        stageBand.setAttribute('y', '72');
-        stageBand.setAttribute('width', colWidth - 28);
-        stageBand.setAttribute('height', svgHeight - 100);
-        stageBand.setAttribute('rx', '14');
-        stageBand.setAttribute('fill', colIdx % 2 === 0 ? '#0d141c' : '#0b1118');
-        stageBand.setAttribute('stroke', '#1c2936');
-        stageBand.setAttribute('stroke-width', '1');
-        stageBand.setAttribute('pointer-events', 'none');
-        svg.appendChild(stageBand);
+        const startY = 100 + (svgHeight - 140 - totalH) / 2;
 
         const stageHeader = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         stageHeader.setAttribute('x', colX);
-        stageHeader.setAttribute('y', 54);
+        stageHeader.setAttribute('y', 50);
         stageHeader.setAttribute('class', 'stage-label');
         stageHeader.setAttribute('text-anchor', 'middle');
-        stageHeader.textContent = colIdx === 0 ? 'INPUTS' : (colIdx === maxRank ? 'FINAL OBSERVERS' : `REACTIVE STAGE ${{colIdx}}`);
+        stageHeader.textContent = colIdx === 0 ? 'INPUTS' : (colIdx === maxRank ? 'OUTPUTS / EFFECTS' : `STAGE ${{colIdx}}`);
         svg.appendChild(stageHeader);
 
         colNodes.forEach((n, rowIdx) => {{
-          pos[n.id] = {{
-            x: colX,
-            y: startY + rowIdx * rowHeight,
-            rank: colIdx
-          }};
+          pos[n.id] = {{ x: colX, y: startY + rowIdx * rowHeight }};
         }});
       }});
+
+      const activeEvent = reactlogData.events[currentStep] || {{}};
 
       edges.forEach(e => {{
         const p1 = pos[e.from];
@@ -989,45 +1526,18 @@ def format_reactlog_html(
           const y1 = p1.y;
           const x2 = p2.x - (nodeWidth / 2);
           const y2 = p2.y;
-          const midX = x1 + Math.max(42, (x2 - x1) * 0.5);
+          const midX = x1 + Math.max(35, (x2 - x1) * 0.5);
 
-          const isEdgeActive = activeEvent.node_id === e.to &&
-            activeEvent.event === 'dependsOn' &&
-            activeEvent.details &&
-            activeEvent.details.includes(`'${{e.from}}'`);
-
-          const isInvalidateEdge = activeEvent.event === 'propagate' &&
-            activeEvent.node_id === e.to &&
-            activeEvent.details &&
-            activeEvent.details.includes(`'${{e.from}}'`);
-
-          const isStepContext = Boolean(activeEvent.node_id) &&
-            (activeEvent.node_id === e.from || activeEvent.node_id === e.to);
-
+          const isEdgeActive = activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate');
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{midX}} ${{y1}}, ${{midX}} ${{y2}}, ${{x2}} ${{y2}}`);
           path.setAttribute('fill', 'none');
           path.setAttribute('stroke-linecap', 'round');
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
-          path.setAttribute('data-active', isEdgeActive || isInvalidateEdge ? 'true' : 'false');
-          path.setAttribute('data-context', isStepContext ? 'true' : 'false');
-          path.setAttribute('data-tone', isInvalidateEdge ? 'warning' : 'accent');
+          path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
           path.setAttribute('class', 'graph-edge');
-
-          if (isEdgeActive) {{
-            path.setAttribute('stroke', '#63b3ff');
-            path.setAttribute('stroke-width', '3');
-            path.setAttribute('marker-end', 'url(#arrow-active)');
-          }} else if (isInvalidateEdge) {{
-            path.setAttribute('stroke', '#fb923c');
-            path.setAttribute('stroke-width', '3');
-            path.setAttribute('marker-end', 'url(#arrow-invalidate)');
-          }} else {{
-            path.setAttribute('stroke', '#6685a3');
-            path.setAttribute('stroke-width', '1.7');
-            path.setAttribute('marker-end', 'url(#arrow)');
-          }}
+          path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : 'url(#arrow)');
 
           svg.appendChild(path);
         }}
@@ -1038,15 +1548,6 @@ def format_reactlog_html(
         const isActive = activeEvent.node_id === n.id;
         const isSelected = selectedNodeId === n.id;
         const kind = nodeKind(n);
-        let strokeColor = isSelected ? '#63b3ff' : '#35475a';
-        let fillColor = '#121b25';
-
-        if (isActive) {{
-          fillColor = '#192737';
-          if (activeEvent.status === 'affected') strokeColor = '#d29922';
-          else if (activeEvent.status === 'scheduled') strokeColor = '#58a6ff';
-          else if (activeEvent.status === 'assumed') strokeColor = '#3fb950';
-        }}
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : ''));
@@ -1054,37 +1555,24 @@ def format_reactlog_html(
         g.setAttribute('data-role', n.role);
         g.setAttribute('tabindex', '0');
         g.setAttribute('role', 'button');
-        g.setAttribute('aria-label', `${{kind.label.toLowerCase()}} ${{n.id}}, line ${{n.line || 'unknown'}}`);
+        g.setAttribute('aria-label', `${{kind.label}} ${{n.id}}, line ${{n.line || 'unknown'}}`);
 
         g.onclick = () => {{
           selectedNodeId = n.id;
           renderInspector();
           renderGraph();
         }};
-        g.onkeydown = event => {{
-          if (event.key === 'Enter' || event.key === ' ') {{
-            event.preventDefault();
-            g.onclick();
-          }}
-        }};
-
         g.onmouseenter = () => highlightDependencies(n.id);
         g.onmouseleave = () => resetHighlight();
-        g.onfocus = () => highlightDependencies(n.id);
-        g.onblur = () => resetHighlight();
-
-        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-        title.textContent = `${{n.label || n.id}} · ${{kind.label.toLowerCase()}} · line ${{n.line || 'unknown'}}`;
-        g.appendChild(title);
 
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('x', p.x - (nodeWidth / 2));
         rect.setAttribute('y', p.y - (nodeHeight / 2));
         rect.setAttribute('width', nodeWidth);
         rect.setAttribute('height', nodeHeight);
-        rect.setAttribute('rx', '10');
-        rect.setAttribute('fill', fillColor);
-        rect.setAttribute('stroke', strokeColor);
+        rect.setAttribute('rx', '9');
+        rect.setAttribute('fill', isActive ? '#192838' : '#121b25');
+        rect.setAttribute('stroke', isActive ? '#63b3ff' : (isSelected ? '#63b3ff' : '#35475a'));
         rect.setAttribute('stroke-width', isActive || isSelected ? '2' : '1');
         rect.setAttribute('filter', 'url(#card-shadow)');
         rect.setAttribute('class', 'node-card');
@@ -1092,284 +1580,234 @@ def format_reactlog_html(
 
         const accent = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         accent.setAttribute('x', p.x - (nodeWidth / 2));
-        accent.setAttribute('y', p.y - (nodeHeight / 2) + 8);
+        accent.setAttribute('y', p.y - (nodeHeight / 2) + 6);
         accent.setAttribute('width', '4');
-        accent.setAttribute('height', nodeHeight - 16);
+        accent.setAttribute('height', nodeHeight - 12);
         accent.setAttribute('rx', '2');
         accent.setAttribute('fill', kind.color);
         g.appendChild(accent);
 
-        const glyphBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        glyphBg.setAttribute('cx', p.x - 82);
-        glyphBg.setAttribute('cy', p.y);
-        glyphBg.setAttribute('r', '15');
-        glyphBg.setAttribute('fill', kind.color);
-        glyphBg.setAttribute('fill-opacity', '0.14');
-        glyphBg.setAttribute('stroke', kind.color);
-        glyphBg.setAttribute('stroke-opacity', '0.42');
-        g.appendChild(glyphBg);
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', p.x - (nodeWidth / 2) + 14);
+        text.setAttribute('y', p.y - 4);
+        text.setAttribute('fill', '#edf4fb');
+        text.setAttribute('font-family', 'var(--mono)');
+        text.setAttribute('font-size', '12px');
+        text.setAttribute('font-weight', '700');
+        text.textContent = n.label || n.id;
+        g.appendChild(text);
 
-        const glyph = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        glyph.setAttribute('x', p.x - 82);
-        glyph.setAttribute('y', p.y + 4);
-        glyph.setAttribute('fill', kind.color);
-        glyph.setAttribute('font-size', '11');
-        glyph.setAttribute('font-weight', '800');
-        glyph.setAttribute('font-family', 'ui-monospace, monospace');
-        glyph.setAttribute('text-anchor', 'middle');
-        glyph.textContent = kind.glyph;
-        g.appendChild(glyph);
-
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', p.x - 58);
-        label.setAttribute('y', p.y - 5);
-        label.setAttribute('fill', '#edf4fb');
-        label.setAttribute('font-size', '12');
-        label.setAttribute('font-weight', '700');
-        label.setAttribute('font-family', 'ui-monospace, monospace');
-        label.textContent = truncate(n.id, 22);
-        g.appendChild(label);
-
-        const incoming = inEdges[n.id].length;
-        const outgoing = outEdges[n.id].length;
-        const meta = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        meta.setAttribute('x', p.x - 58);
-        meta.setAttribute('y', p.y + 14);
-        meta.setAttribute('fill', '#8293a7');
-        meta.setAttribute('font-size', '9.5');
-        meta.setAttribute('font-weight', '600');
-        meta.setAttribute('font-family', 'ui-monospace, monospace');
-        meta.textContent = `${{kind.label}} · line ${{n.line || '—'}} · ${{incoming}}↑ ${{outgoing}}↓`;
-        g.appendChild(meta);
+        const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        subText.setAttribute('x', p.x - (nodeWidth / 2) + 14);
+        subText.setAttribute('y', p.y + 14);
+        subText.setAttribute('fill', '#91a1b3');
+        subText.setAttribute('font-size', '10px');
+        subText.textContent = `${{kind.label}} · line ${{n.line || '?'}}`;
+        g.appendChild(subText);
 
         svg.appendChild(g);
       }});
-      applyGraphFilters();
     }}
 
     function highlightDependencies(nodeId) {{
-      const upstream = new Set();
-      const downstream = new Set();
-
-      const findUp = (id) => {{
-        (LOG_DATA.edges || []).forEach(e => {{
-          if (e.to === id && !upstream.has(e.from)) {{
-            upstream.add(e.from);
-            findUp(e.from);
-          }}
-        }});
-      }};
-      const findDown = (id) => {{
-        (LOG_DATA.edges || []).forEach(e => {{
-          if (e.from === id && !downstream.has(e.to)) {{
-            downstream.add(e.to);
-            findDown(e.to);
-          }}
-        }});
-      }};
-
-      findUp(nodeId);
-      findDown(nodeId);
-      const related = new Set([nodeId, ...upstream, ...downstream]);
-
-      document.querySelectorAll('.graph-node').forEach(el => {{
-        const id = el.getAttribute('data-id');
-        if (related.has(id)) {{
-          el.style.opacity = '1';
+      document.querySelectorAll('.graph-edge').forEach(edge => {{
+        const from = edge.getAttribute('data-from');
+        const to = edge.getAttribute('data-to');
+        if (from === nodeId || to === nodeId) {{
+          edge.style.opacity = '1';
+          edge.style.stroke = '#63b3ff';
+          edge.style.strokeWidth = '2.5px';
         }} else {{
-          el.style.opacity = '0.14';
-        }}
-      }});
-
-      document.querySelectorAll('.graph-edge').forEach(el => {{
-        const f = el.getAttribute('data-from');
-        const t = el.getAttribute('data-to');
-        if (related.has(f) && related.has(t)) {{
-          el.style.opacity = '1';
-          el.setAttribute('stroke', '#9bd3ff');
-          el.setAttribute('stroke-width', '2.2');
-          el.setAttribute('marker-end', 'url(#arrow-hover)');
-          el.style.filter = 'none';
-        }} else {{
-          el.style.opacity = '0';
+          edge.style.opacity = '0.15';
         }}
       }});
     }}
 
     function resetHighlight() {{
-      applyGraphFilters();
-    }}
-
-    function toggleRole(button) {{
-      button.setAttribute('aria-pressed', button.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
-      applyGraphFilters();
-    }}
-
-    function applyGraphFilters() {{
-      const query = (document.getElementById('node-search')?.value || '').trim().toLowerCase();
-      const enabledRoles = new Set(
-        Array.from(document.querySelectorAll('.filter-btn[aria-pressed="true"]')).map(button => button.dataset.role)
-      );
-      const visibleNodes = new Set();
-      document.querySelectorAll('.graph-node').forEach(element => {{
-        const id = element.getAttribute('data-id') || '';
-        const role = element.getAttribute('data-role');
-        const visible = enabledRoles.has(role) && (!query || id.toLowerCase().includes(query));
-        element.style.opacity = visible ? '1' : '0.1';
-        element.style.pointerEvents = visible ? 'auto' : 'none';
-        if (visible) visibleNodes.add(id);
-      }});
-      document.querySelectorAll('.graph-edge').forEach(element => {{
-        const visible = visibleNodes.has(element.getAttribute('data-from')) && visibleNodes.has(element.getAttribute('data-to'));
-        const active = element.getAttribute('data-active') === 'true';
-        const contextual = element.getAttribute('data-context') === 'true';
-        const warning = element.getAttribute('data-tone') === 'warning';
-        element.style.opacity = visible && (active || contextual) ? (active ? '1' : '0.62') : '0';
-        element.style.filter = active ? 'url(#edge-glow)' : 'none';
-        element.setAttribute('stroke', warning ? '#fb923c' : (active ? '#63b3ff' : '#6685a3'));
-        element.setAttribute('stroke-width', active ? '3' : '1.7');
-        element.setAttribute('marker-end', warning ? 'url(#arrow-invalidate)' : (active ? 'url(#arrow-active)' : 'url(#arrow)'));
+      document.querySelectorAll('.graph-edge').forEach(edge => {{
+        edge.style.opacity = '0.75';
+        edge.style.stroke = '#527494';
+        edge.style.strokeWidth = '1.8px';
       }});
     }}
 
-    function applyZoom() {{
-      const svg = document.getElementById('reactlog-svg');
-      const width = graphBounds.width / zoomLevel;
-      const height = graphBounds.height / zoomLevel;
-      const x = (graphBounds.width - width) / 2;
-      const y = (graphBounds.height - height) / 2;
-      svg.setAttribute('viewBox', `${{x}} ${{y}} ${{width}} ${{height}}`);
-    }}
-
-    function zoomGraph(factor) {{
-      zoomLevel = Math.max(0.65, Math.min(2.4, zoomLevel * factor));
-      applyZoom();
-    }}
-
-    function fitGraph() {{
-      zoomLevel = 1;
-      applyZoom();
-    }}
-
-    function toggleSidebar() {{
-      const main = document.getElementById('main-view');
-      const hidden = main.classList.toggle('sidebar-hidden');
-      const button = document.getElementById('sidebar-toggle');
-      button.textContent = hidden ? 'Timeline ‹' : 'Timeline ›';
-      button.setAttribute('aria-label', hidden ? 'Show timeline' : 'Hide timeline');
-    }}
-
-    function showSidebarPanel(panelName) {{
-      const showSource = panelName === 'source';
-      const main = document.getElementById('main-view');
-      const timelinePanel = document.getElementById('timeline-panel');
-      const sourcePanel = document.getElementById('source-panel');
-      const timelineTab = document.getElementById('timeline-tab');
-      const sourceTab = document.getElementById('source-tab');
-      main.classList.remove('sidebar-hidden');
-      main.classList.toggle('source-visible', showSource);
-      timelinePanel.hidden = showSource;
-      timelineTab.setAttribute('aria-selected', showSource ? 'false' : 'true');
-      if (sourcePanel && sourceTab) {{
-        sourcePanel.hidden = !showSource;
-        sourceTab.setAttribute('aria-selected', showSource ? 'true' : 'false');
-      }}
-      const sidebarButton = document.getElementById('sidebar-toggle');
-      sidebarButton.textContent = 'Timeline ›';
-      sidebarButton.setAttribute('aria-label', 'Hide timeline');
-      if (showSource) updateSourceHighlight(true);
-    }}
-
-    function updateSourceHighlight(shouldScroll = false) {{
-      const sourcePanel = document.getElementById('source-panel');
-      const highlight = document.getElementById('source-line-highlight');
-      if (!sourcePanel || !highlight) return;
-      const event = (LOG_DATA.events || [])[currentStep];
-      const node = event && (LOG_DATA.nodes || []).find(candidate => candidate.id === event.node_id);
-      const line = Number(node && node.line);
-      if (!Number.isInteger(line) || line < 1) {{
-        highlight.hidden = true;
-        highlight.removeAttribute('data-line');
-        return;
-      }}
-
-      const panelStyle = getComputedStyle(sourcePanel);
-      const lineHeight = parseFloat(panelStyle.lineHeight);
-      const paddingTop = parseFloat(panelStyle.paddingTop);
-      const highlightTop = paddingTop + (line - 1) * lineHeight;
-      highlight.hidden = false;
-      highlight.dataset.line = String(line);
-      highlight.style.top = `${{highlightTop}}px`;
-      highlight.style.height = `${{lineHeight}}px`;
-      highlight.style.setProperty('--source-highlight-color', nodeKind(node).color);
-
-      if (shouldScroll && !sourcePanel.hidden) {{
-        const margin = lineHeight * 3;
-        const belowViewport = highlightTop + lineHeight > sourcePanel.scrollTop + sourcePanel.clientHeight - margin;
-        const aboveViewport = highlightTop < sourcePanel.scrollTop + margin;
-        if (aboveViewport || belowViewport) {{
-          sourcePanel.scrollTo({{
-            top: Math.max(0, highlightTop - sourcePanel.clientHeight / 2),
-            behavior: isPlaying ? 'auto' : 'smooth'
-          }});
-        }}
-      }}
-    }}
-
-    function setStep(idx) {{
-      selectedNodeId = null;
-      currentStep = totalSteps ? Math.max(0, Math.min(idx, totalSteps - 1)) : 0;
+    function seekTo(step, fromVideo = false) {{
+      currentStep = Math.max(0, Math.min(step, reactlogData.events.length - 1));
       document.getElementById('scrubber-range').value = currentStep;
-      document.getElementById('step-counter').textContent = totalSteps ? `${{currentStep + 1}} / ${{totalSteps}}` : '0 / 0';
+      document.getElementById('step-display').textContent = `Step ${{currentStep}} / ${{Math.max(0, reactlogData.events.length - 1)}}`;
+
+      document.querySelectorAll('.event-item').forEach(item => {{
+        const stepNum = Number(item.getAttribute('data-step'));
+        const isCur = stepNum === currentStep;
+        item.classList.toggle('is-current', isCur);
+        if (isCur) {{
+          item.scrollIntoView({{ block: 'nearest', behavior: 'smooth' }});
+        }}
+      }});
+
+      const ev = reactlogData.events[currentStep];
+      if (ev && ev.node_id) {{
+        selectedNodeId = ev.node_id;
+      }}
       renderInspector();
-      renderEventsList();
       renderGraph();
-      updateSourceHighlight(true);
-      const activeEl = document.querySelectorAll('.event-item')[currentStep];
-      if (activeEl) {{
-        const eventList = document.getElementById('event-list');
-        const itemTop = activeEl.offsetTop - eventList.offsetTop;
-        const itemBottom = itemTop + activeEl.offsetHeight;
-        if (itemTop < eventList.scrollTop) eventList.scrollTop = itemTop;
-        if (itemBottom > eventList.scrollTop + eventList.clientHeight) {{
-          eventList.scrollTop = itemBottom - eventList.clientHeight;
+      updateSourceHighlight();
+      updateActionToast();
+
+      if (!fromVideo) {{
+        const video = document.getElementById('session-video');
+        if (video && ev && ev.time_sec !== undefined && !isNaN(ev.time_sec)) {{
+          try {{
+            video.currentTime = Math.max(0, ev.time_sec);
+          }} catch (e) {{}}
         }}
       }}
     }}
 
-    function firstStep() {{ setStep(0); }}
-    function prevStep() {{ setStep(currentStep - 1); }}
-    function nextStep() {{
-      if (currentStep < totalSteps - 1) {{
-        setStep(currentStep + 1);
-      }} else if (isPlaying) {{
-        togglePlay();
+    function updateActionToast() {{
+      const ev = reactlogData.events[currentStep];
+      const toast = document.getElementById('live-action-toast');
+      if (!toast) return;
+
+      if (ev && ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated')) {{
+        const timeStr = ev.time_sec !== undefined ? `[${{formatTime(ev.time_sec)}}] ` : '';
+        toast.textContent = `🎬 ${{timeStr}}${{ev.details || ev.event}}`;
+        toast.hidden = false;
+      }} else {{
+        toast.hidden = true;
       }}
     }}
-    function lastStep() {{ setStep(totalSteps - 1); }}
+
+    function setupVideoSync() {{
+      const video = document.getElementById('session-video');
+      if (!video) return;
+
+      video.addEventListener('timeupdate', () => {{
+        if (isPlaying) return;
+        const curSec = video.currentTime;
+        let matchIdx = 0;
+        for (let i = 0; i < reactlogData.events.length; i++) {{
+          const ev = reactlogData.events[i];
+          if (ev.time_sec !== undefined && ev.time_sec <= curSec) {{
+            matchIdx = i;
+          }}
+        }}
+        if (matchIdx !== currentStep) {{
+          seekTo(matchIdx, true);
+        }}
+      }});
+    }}
+
+    function updateSourceHighlight() {{
+      const ev = reactlogData.events[currentStep];
+      const highlight = document.getElementById('source-line-highlight');
+      if (!highlight) return;
+
+      let targetLine = null;
+      if (ev && ev.node_id) {{
+        const node = reactlogData.nodes.find(n => n.id === ev.node_id);
+        if (node && node.line) targetLine = node.line;
+      }}
+
+      if (targetLine !== null) {{
+        highlight.hidden = false;
+        highlight.setAttribute('data-line', String(targetLine));
+        highlight.style.top = `${{(targetLine - 1) * 1.62}}em`;
+        highlight.style.height = '1.62em';
+      }} else {{
+        highlight.hidden = true;
+      }}
+    }}
+
+    function renderInspector() {{
+      const node = reactlogData.nodes.find(n => n.id === selectedNodeId);
+      if (node) {{
+        document.getElementById('insp-title').textContent = node.label || node.id;
+        document.getElementById('insp-type').textContent = nodeKind(node).label;
+        document.getElementById('insp-line').textContent = node.line || 'Unknown';
+        const ev = reactlogData.events[currentStep];
+        document.getElementById('insp-status').textContent = ev && ev.node_id === node.id ? ev.status : 'idle';
+      }}
+    }}
 
     function togglePlay() {{
       isPlaying = !isPlaying;
-      const btn = document.getElementById('play-btn');
+      const btn = document.getElementById('btn-play');
+      btn.textContent = isPlaying ? '⏸' : '▶';
+      const video = document.getElementById('session-video');
+
       if (isPlaying) {{
-        btn.innerHTML = '<span aria-hidden="true">Ⅱ</span> Pause';
-        btn.setAttribute('aria-label', 'Pause timeline');
-        playTimer = setInterval(nextStep, 700);
+        if (currentStep >= reactlogData.events.length - 1) currentStep = 0;
+        if (video) {{
+          video.play().catch(() => {{}});
+        }}
+        playTimer = setInterval(() => {{
+          if (currentStep < reactlogData.events.length - 1) {{
+            seekTo(currentStep + 1);
+          }} else {{
+            togglePlay();
+          }}
+        }}, 600);
       }} else {{
-        btn.innerHTML = '<span aria-hidden="true">▶</span> Play';
-        btn.setAttribute('aria-label', 'Play timeline');
+        if (video) {{
+          video.pause();
+        }}
         clearInterval(playTimer);
       }}
     }}
 
-    document.addEventListener('keydown', event => {{
-      if (event.target instanceof HTMLInputElement) return;
-      if (event.key === 'ArrowLeft') prevStep();
-      if (event.key === 'ArrowRight') nextStep();
-      if (event.key === 'Escape') {{ selectedNodeId = null; renderInspector(); renderGraph(); }}
-    }});
+    function stepForward() {{ seekTo(currentStep + 1); }}
+    function stepBack() {{ seekTo(currentStep - 1); }}
+    function resetTimeline() {{ seekTo(0); }}
 
-    setStep(0);
+    function handleSearch(q) {{
+      searchQuery = (q || '').trim().toLowerCase();
+      renderGraph();
+    }}
+
+    function toggleRoleFilter(role, btn) {{
+      if (activeRoles.has(role)) {{
+        activeRoles.delete(role);
+        btn.setAttribute('aria-pressed', 'false');
+      }} else {{
+        activeRoles.add(role);
+        btn.setAttribute('aria-pressed', 'true');
+      }}
+      renderGraph();
+    }}
+
+    function setupPanZoom() {{
+      const svg = document.getElementById('reactlog-svg');
+      svg.addEventListener('mousedown', e => {{
+        if (e.target.closest('.graph-node')) return;
+        isPanning = true;
+        startPan = {{ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y }};
+      }});
+      window.addEventListener('mousemove', e => {{
+        if (!isPanning) return;
+        panOffset = {{ x: e.clientX - startPan.x, y: e.clientY - startPan.y }};
+        applyZoom();
+      }});
+      window.addEventListener('mouseup', () => isPanning = false);
+      svg.addEventListener('wheel', e => {{
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        zoomLevel = Math.max(0.4, Math.min(2.5, zoomLevel * delta));
+        applyZoom();
+      }});
+    }}
+
+    function applyZoom() {{
+      const g = document.getElementById('viewport-g');
+      if (g) g.setAttribute('transform', `translate(${{panOffset.x}}, ${{panOffset.y}}) scale(${{zoomLevel}})`);
+    }}
+
+    function zoomIn() {{ zoomLevel = Math.min(2.5, zoomLevel * 1.2); applyZoom(); }}
+    function zoomOut() {{ zoomLevel = Math.max(0.4, zoomLevel * 0.8); applyZoom(); }}
+    function resetZoom() {{ zoomLevel = 1; panOffset = {{ x: 0, y: 0 }}; applyZoom(); }}
+    function fitGraph() {{ resetZoom(); }}
+
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
