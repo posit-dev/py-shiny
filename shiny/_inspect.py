@@ -1571,7 +1571,35 @@ def format_reactlog_html(
       }});
     }}
 
+    function prepareEventTimings() {{
+      const events = reactlogData.events;
+      if (!events || events.length === 0) return;
+
+      let i = 0;
+      while (i < events.length) {{
+        const baseTime = events[i].time_sec !== undefined ? events[i].time_sec : 0;
+        let j = i;
+        while (j < events.length && Math.abs((events[j].time_sec !== undefined ? events[j].time_sec : 0) - baseTime) < 0.04) {{
+          j++;
+        }}
+        const clusterLen = j - i;
+        const nextTime = (j < events.length && events[j].time_sec !== undefined) ? events[j].time_sec : (baseTime + 1.2);
+        const windowDuration = Math.min(0.75, Math.max(0.25, (nextTime - baseTime) * 0.7));
+
+        for (let k = 0; k < clusterLen; k++) {{
+          const evIdx = i + k;
+          if (events[evIdx].time_sec !== undefined) {{
+            events[evIdx].effective_time = baseTime + (clusterLen > 1 ? (k / (clusterLen - 1)) * windowDuration : 0);
+          }} else {{
+            events[evIdx].effective_time = baseTime;
+          }}
+        }}
+        i = j;
+      }}
+    }}
+
     function init() {{
+      prepareEventTimings();
       document.getElementById('stat-nodes').textContent = `Nodes: ${{reactlogData.nodes.length}}`;
       document.getElementById('stat-edges').textContent = `Edges: ${{reactlogData.edges.length}}`;
       const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : reactlogData.events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
@@ -1799,12 +1827,14 @@ def format_reactlog_html(
         const p = pos[n.id] || {{ x: 200, y: 200 }};
         const isActive = activeEvent.node_id === n.id;
         const isSelected = selectedNodeId === n.id;
+        const isEdgeSource = activeEvent.edge_from === n.id;
         const kind = nodeKind(n);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
+        g.setAttribute('data-active', isActive ? 'true' : 'false');
         g.setAttribute('tabindex', '0');
         g.setAttribute('role', 'button');
         g.setAttribute('aria-label', `${{kind.label}} ${{n.id}}, line ${{n.line || 'unknown'}}`);
@@ -1823,10 +1853,28 @@ def format_reactlog_html(
         rect.setAttribute('width', nodeWidth);
         rect.setAttribute('height', nodeHeight);
         rect.setAttribute('rx', '9');
-        rect.setAttribute('fill', isActive ? '#192838' : '#121b25');
-        rect.setAttribute('stroke', isActive ? '#63b3ff' : (isSelected ? '#63b3ff' : '#35475a'));
-        rect.setAttribute('stroke-width', isActive || isSelected ? '2' : '1');
-        rect.setAttribute('filter', 'url(#card-shadow)');
+
+        let fillCol = '#121b25';
+        let strokeCol = isSelected ? '#63b3ff' : '#35475a';
+        let strokeW = isSelected ? '2' : '1';
+        let filterVal = isSelected ? 'drop-shadow(0 0 9px rgba(99,179,255,0.36))' : 'url(#card-shadow)';
+
+        if (isActive) {{
+          fillCol = `color-mix(in srgb, ${{kind.color}} 26%, #0f1722)`;
+          strokeCol = kind.color;
+          strokeW = '2.5';
+          filterVal = `drop-shadow(0 0 16px ${{kind.color}})`;
+        }} else if (isEdgeSource) {{
+          fillCol = 'color-mix(in srgb, #38bdf8 18%, #0f1722)';
+          strokeCol = '#38bdf8';
+          strokeW = '2';
+          filterVal = 'drop-shadow(0 0 10px rgba(56,189,248,0.45))';
+        }}
+
+        rect.setAttribute('fill', fillCol);
+        rect.setAttribute('stroke', strokeCol);
+        rect.setAttribute('stroke-width', strokeW);
+        rect.setAttribute('filter', filterVal);
         rect.setAttribute('class', 'node-card');
         g.appendChild(rect);
 
@@ -1956,7 +2004,8 @@ def format_reactlog_html(
         let matchIdx = 0;
         for (let i = 0; i < reactlogData.events.length; i++) {{
           const ev = reactlogData.events[i];
-          if (ev.time_sec !== undefined && ev.time_sec <= curSec) {{
+          const t = ev.effective_time !== undefined ? ev.effective_time : (ev.time_sec !== undefined ? ev.time_sec : 0);
+          if (t <= curSec) {{
             matchIdx = i;
           }}
         }}
