@@ -520,13 +520,20 @@ Feedstock names are all under the `conda-forge/` org.
 
 | conda package | Feedstock | Phase | Automerge | `recipe-maintainers` |
 |---|---|---|---|---|
-| `htmltools` | `py-htmltools-feedstock` | 2 | yes | wch, sugatoray |
+| `htmltools` | `py-htmltools-feedstock` | 2 | yes | schloerke, wch, sugatoray |
 | `shiny` | `py-shiny-feedstock` | 3 | yes | cpsievert, schloerke, wch, sugatoray |
 | `shinyswatch` | `shinyswatch-feedstock` | 4 | yes | schloerke |
 | `shinywidgets` | `shinywidgets-feedstock` | 5 | yes | cpsievert, schloerke, daylinmorgan |
 | `shinychat` | `shinychat-feedstock` | — (own cadence) | yes | schloerke |
-| `faicons` | `faicons-feedstock` | — (own cadence) | **no** | daylinmorgan |
-| `shiny-validate` | `shiny-validate-feedstock` | — (own cadence) | **no** | julibeg |
+| `faicons` | `faicons-feedstock` | — (own cadence) | **no** | daylinmorgan (+ schloerke pending) |
+| `shiny-validate` | `shiny-validate-feedstock` | — (own cadence) | **no** | julibeg (+ schloerke pending) |
+
+`faicons` and `shiny-validate` came from outside contributors and are the two gaps.
+`@conda-forge-admin, please add user @schloerke` PRs are open on both —
+[faicons#3](https://github.com/conda-forge/faicons-feedstock/pull/3),
+[shiny-validate#2](https://github.com/conda-forge/shiny-validate-feedstock/pull/2) — and need
+the existing maintainer to merge them. Automerge is still off on both; that is a separate
+issue to file (see below).
 
 `shinychat`, `faicons`, and `shiny-validate` are not part of the release train, but if one of
 them happened to be released alongside py-shiny or have an outdated feedstock, check its bot PR too.
