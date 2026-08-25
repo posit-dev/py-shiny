@@ -249,3 +249,12 @@ def big():
     res = simulate(code=code, timeout_secs=5.0)
     assert res.success is True
     assert len(res.outputs["big"]) == 2_000_000
+
+
+def test_simulate_worker_crash_is_reported_as_process_error():
+    code = """import os
+os._exit(42)
+"""
+    res = simulate(code=code)
+    assert res.success is False
+    assert "exited with code 42" in str(res.error)

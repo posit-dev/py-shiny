@@ -357,13 +357,22 @@ async def _simulate_shiny_app_subprocess(
     loop = asyncio.get_running_loop()
 
     def read_from_process() -> Optional[Dict[str, Any]]:
+        has_data = False
         try:
-            if parent_conn.poll(timeout=timeout_secs):
+            has_data = parent_conn.poll(timeout=timeout_secs)
+        except Exception:
+            pass
+
+        if has_data:
+            try:
                 data = parent_conn.recv()
                 proc.join(timeout=1.0)
                 return cast(Dict[str, Any], data)
-        except Exception:
-            pass
+            except EOFError:
+                proc.join(timeout=1.0)
+                raise RuntimeError(
+                    f"Simulation worker process exited with code {proc.exitcode} without returning a result"
+                )
 
         if proc.is_alive():
             proc.terminate()
@@ -371,7 +380,12 @@ async def _simulate_shiny_app_subprocess(
             if proc.is_alive():
                 proc.kill()
                 proc.join()
-        return None
+            return None
+        else:
+            proc.join(timeout=0.5)
+            raise RuntimeError(
+                f"Simulation worker process exited with code {proc.exitcode} without returning a result"
+            )
 
     try:
         data = await loop.run_in_executor(None, read_from_process)
