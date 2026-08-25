@@ -509,6 +509,8 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
       analysis usually lives there, and re-deriving it wastes a lot of time.
 - [ ] **Sync `recipe/meta.yaml`'s `run:` section by hand** — see below. The bot does not do
       this, and it is the usual reason a bump fails.
+- [ ] **Do the editing in a fork** (`schloerke/py-shiny-feedstock`), never on a branch pushed
+      to `conda-forge/*-feedstock` — being a maintainer means the wrong thing also works
 - [ ] Verify `about/license_file` against the new sdist, in both directions (below)
 - [ ] If tests pass, `[bot-automerge]` lands it without help
 - [ ] While in a feedstock, **confirm bot automerge is on and that the team has maintainer
@@ -651,6 +653,30 @@ touched `README.md`; wait for the second commit before concluding anything.
 The bot stops issuing PRs when more than 3 of its version-bump PRs are open, so close
 superseded ones.
 
+### Work in a fork, never on the feedstock itself
+
+`recipe-maintainers` have push access to `conda-forge/*-feedstock`, so pushing a branch
+straight there appears to work — that is the trap. Feedstock changes go through a **personal
+fork** (`schloerke/py-shiny-feedstock`), exactly like an outside contribution would. A branch
+on the upstream feedstock burns the feedstock's CI, shows up for every other maintainer, and
+has to be deleted by hand afterwards.
+
+```bash
+gh repo fork conda-forge/py-shiny-feedstock --clone --remote
+# origin -> schloerke/py-shiny-feedstock, upstream -> conda-forge/py-shiny-feedstock
+git checkout -b bump-1.7.0
+# ... edit recipe/meta.yaml ...
+git push origin bump-1.7.0
+gh pr create --repo conda-forge/py-shiny-feedstock --base main
+```
+
+If the fork already exists from a previous cycle, sync it first (`gh repo sync
+schloerke/py-shiny-feedstock`) — a stale fork is the usual source of a confusing diff.
+
+The one exception is amending an **existing bot PR**, below: that branch already lives on the
+bot's fork, so it is pushed there rather than to yours. Either way, never to
+`conda-forge/...`.
+
 ### Pushing to a bot PR's branch
 
 Bot branches live on the **bot's fork**, not the feedstock. Check `maintainerCanModify` (it is
@@ -669,9 +695,8 @@ The owner is `conda-forge-admin` for webservice PRs and `regro-cf-autotick-bot` 
 PRs. `git fetch origin <branch>` fails with `couldn't find remote ref` — that is the giveaway
 that you are looking at the wrong repo.
 
-Current `recipe-maintainers`: `cpsievert`, `schloerke`, `wch`, `sugatoray` — so both Carson
-and Barret can push directly. (Verify with the recipe's `extra/recipe-maintainers` rather
-than trusting this list.)
+Who can do this is per-feedstock — see the `recipe-maintainers` column of the inventory above,
+and verify against the recipe rather than trusting either list.
 
 ### Known issue: license_file references
 
