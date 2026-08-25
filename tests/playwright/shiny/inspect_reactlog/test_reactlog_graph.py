@@ -269,3 +269,158 @@ def res():
     expect(page.locator("#lane-outputs .trace-chip")).to_have_count(2)
     expect(page.locator("#lane-calcs .trace-chip")).to_have_count(0)
     expect(page.locator(".trace-chip")).to_have_count(3)
+
+
+def test_event_timeline_labels_initialization_and_recorded_actions(
+    page: Page,
+) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("multiplier", "Mult", 5)
+@render.text
+def res():
+    return str(input.multiplier() * 10)
+"""
+    reactlog = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "input", "name": "multiplier", "value": 8, "timestamp": 1200},
+            {"type": "output", "name": "res", "timestamp": 1600},
+        ],
+        video_path="demo.webm",
+    )
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
+        wait_until="domcontentloaded",
+    )
+
+    phase_labels = page.locator(".event-phase-label")
+    expect(phase_labels).to_have_count(2)
+    expect(phase_labels.nth(0)).to_have_text("Initialization")
+    expect(phase_labels.nth(1)).to_have_text("Recorded actions")
+
+
+def test_event_items_can_be_activated_with_keyboard(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("multiplier", "Mult", 5)
+@render.text
+def res():
+    return str(input.multiplier() * 10)
+"""
+    reactlog = generate_reactlog(code, inputs={"multiplier": 8})
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    target = page.locator(".event-item").nth(2)
+    target_step = target.get_attribute("data-step")
+    assert target_step is not None
+    target.focus()
+    expect(target).to_be_focused()
+    page.keyboard.press("Enter")
+    expect(page.locator("#step-display")).to_have_text(
+        f"Step {target_step} / {reactlog['steps_total'] - 1}"
+    )
+
+
+def test_event_inspector_describes_steps_without_graph_nodes(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("multiplier", "Mult", 5)
+@render.text
+def res():
+    return str(input.multiplier() * 10)
+"""
+    reactlog = generate_reactlog(code, inputs={"multiplier": 8})
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    expect(page.locator("#insp-title")).to_have_text("session")
+    expect(page.locator("#insp-type")).to_have_text("Initialization event")
+    expect(page.locator("#insp-status")).to_have_text("active")
+
+
+def test_video_playback_resumes_without_rewinding_after_last_graph_event(
+    page: Page,
+) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("multiplier", "Mult", 5)
+@render.text
+def res():
+    return str(input.multiplier() * 10)
+"""
+    reactlog = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "input", "name": "multiplier", "value": 8, "timestamp": 1200},
+            {"type": "output", "name": "res", "timestamp": 1600},
+        ],
+        video_path="demo.webm",
+    )
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
+        wait_until="domcontentloaded",
+    )
+
+    page.locator("#session-video").evaluate("""video => {
+            let mediaTime = 2;
+            Object.defineProperties(video, {
+                currentTime: {
+                    configurable: true,
+                    get: () => mediaTime,
+                    set: value => { mediaTime = value; },
+                },
+                duration: { configurable: true, get: () => 10 },
+                ended: { configurable: true, get: () => false },
+                paused: { configurable: true, get: () => true },
+            });
+            video.play = () => Promise.resolve();
+        }""")
+    page.evaluate(f"seekTo({reactlog['steps_total'] - 1}, true)")
+    page.locator("#session-video").evaluate("video => { video.currentTime = 2; }")
+
+    page.locator("#btn-play").click()
+
+    assert page.locator("#session-video").evaluate("video => video.currentTime") == 2
+
+
+def test_video_frame_callback_updates_graph_between_timeupdate_events(
+    page: Page,
+) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("multiplier", "Mult", 5)
+@render.text
+def res():
+    return str(input.multiplier() * 10)
+"""
+    reactlog = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "input", "name": "multiplier", "value": 8, "timestamp": 1200},
+            {"type": "output", "name": "res", "timestamp": 1600},
+        ],
+        video_path="demo.webm",
+    )
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
+        wait_until="domcontentloaded",
+    )
+
+    page.locator("#session-video").evaluate("""video => {
+            Object.defineProperties(video, {
+                paused: { configurable: true, get: () => false },
+                ended: { configurable: true, get: () => false },
+            });
+            video.requestVideoFrameCallback = callback => {
+                window.__videoFrameCallback = callback;
+                return 1;
+            };
+            video.dispatchEvent(new Event('play'));
+        }""")
+
+    assert page.evaluate("Boolean(window.__videoFrameCallback)") is True
+    page.evaluate("window.__videoFrameCallback(performance.now(), { mediaTime: 1.25 })")
+    expect(page.locator("#step-display")).to_have_text(
+        f"Step {reactlog['first_interaction_step']} / {reactlog['steps_total'] - 1}"
+    )
