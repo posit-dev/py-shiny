@@ -198,7 +198,7 @@ def server(input, output, session):
 ```
 
 ### Why It Fails
-Module-level variables persist across the entire Python process. When multiple users connect, they share the same global reactive value, causing severe security, privacy, and data corruption bugs.
+Module-level variables persist across the entire Python process. When reactive values at module scope contain user- or session-specific data (such as login state, user preferences, or cart items), multiple concurrent users share and overwrite the same state, causing cross-session leakage. (Note: Global reactive values are valid when cross-session state sharing is explicitly intended, e.g. shared persistent counters or application-wide broadcast channels).
 
 ### Good Code
 ```python

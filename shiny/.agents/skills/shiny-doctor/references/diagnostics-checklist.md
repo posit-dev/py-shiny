@@ -29,7 +29,7 @@ This reference provides a step-by-step audit and verification checklist for vali
 - [ ] Are R Shiny idioms (`shinyApp`, `fluidPage`, `reactiveVal`, `observeEvent`, `renderUI`) eliminated and replaced with Python Shiny equivalents?
 
 ## 5. Session Scope & Security Checklist
-- [ ] Are user-specific reactive values initialized inside the `server` function or Express session context (never at global module scope)?
+- [ ] Are user-specific reactive values initialized inside the `server` function or Express session context (and any global reactive state verified as intentionally shared)?
 - [ ] Are database sessions, user auth context, and state isolated per connection?
 
 ## 6. Runtime Verification Checklist
