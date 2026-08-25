@@ -177,15 +177,17 @@ async def _simulate_shiny_app_in_process(
         outputs = dict(session._outbound_message_queues.test_values)
         errors = dict(session._outbound_message_queues.test_errors)
         exports: Dict[str, Any] = {}
-        test_exports_dict = getattr(session, "_test_value_exports", None) or getattr(
+        raw_exports: Any = getattr(session, "_test_value_exports", None) or getattr(
             session, "_test_values", None
         )
-        if isinstance(test_exports_dict, dict):
+        if isinstance(raw_exports, dict):
+            typed_exports = cast(Dict[str, Any], raw_exports)
             with session_context(session):
                 with isolate():
-                    for k, fn in test_exports_dict.items():
+                    for k, fn in typed_exports.items():
                         try:
-                            exports[k] = fn() if callable(fn) else fn
+                            fn_obj = cast(object, fn)
+                            exports[k] = fn() if callable(fn_obj) else fn
                         except Exception as e:
                             exports[k] = f"<Error evaluating export {k}: {e}>"
 
