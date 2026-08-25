@@ -85,12 +85,15 @@ def display():
 
 ### Bad Code
 ```python
-from shiny import App, ui
+from shiny import App, input, ui
 
 app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 1, 100, 50),
     ui.output_text("txt")
 )
+
+# BAD: reading input.n() at top-level module scope outside a reactive context
+initial_val = input.n()
 ```
 
 ### Why It Fails
@@ -126,9 +129,10 @@ from shiny import reactive
 
 items = reactive.value([])
 
-def add_item(new_item: str):
-    # BAD: mutating the list in-place does not trigger invalidation!
-    items().append(new_item)
+@reactive.effect
+def _():
+    # BAD: In-place mutation inside reactive effect does NOT trigger downstream invalidations
+    items().append("new_item")
 ```
 
 ### Why It Fails
@@ -140,9 +144,11 @@ from shiny import reactive
 
 items = reactive.value([])
 
-def add_item(new_item: str):
+@reactive.effect
+def _():
+    # GOOD: Assigning a new container or calling .set() triggers reactive invalidation
     current = list(items())
-    current.append(new_item)
+    current.append("new_item")
     items.set(current)
 ```
 

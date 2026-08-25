@@ -85,7 +85,7 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
 
 ### Phase 7: Runtime Verification & Validation
 1. **Startup & Execution Validation**:
-   - When execution is available, run or start the application (e.g. `python app.py` or through test runner) to detect startup exceptions, invalid syntax, or deprecation warnings.
+   - When execution is available, start the application using `shiny run app.py` (or through a Shiny test harness / pytest) to establish a real ASGI server session and verify that reactive graph initialization, WebSockets, and renderers start without runtime errors or deprecation warnings. (Do not rely on `python app.py`, which only executes top-level module code and exits without booting the Shiny server).
 2. **Reproduce & Retest**:
    - If tests exist (pytest, Playwright), run them before modifying code to confirm failure, and rerun them after applying the fix to verify resolution.
 3. **Strict Verification Labeling Rule**:
