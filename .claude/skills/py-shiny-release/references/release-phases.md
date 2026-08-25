@@ -511,18 +511,22 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
       this, and it is the usual reason a bump fails.
 - [ ] Verify `about/license_file` against the new sdist, in both directions (below)
 - [ ] If tests pass, `[bot-automerge]` lands it without help
+- [ ] While in a feedstock, **confirm bot automerge is on and that the team has maintainer
+      coverage** (below) — both are cheap to check and both silently cost a whole cycle
 
 ### Feedstock inventory (verified 2026-08-25)
 
-| conda package | Feedstock | Released in phase |
-|---------------|-----------|-------------------|
-| `htmltools` | `conda-forge/py-htmltools-feedstock` | 2 |
-| `shiny` | `conda-forge/py-shiny-feedstock` | 3 |
-| `shinyswatch` | `conda-forge/shinyswatch-feedstock` | 4 |
-| `shinywidgets` | `conda-forge/shinywidgets-feedstock` | 5 |
-| `shinychat` | `conda-forge/shinychat-feedstock` | — (own cadence) |
-| `faicons` | `conda-forge/faicons-feedstock` | — (own cadence) |
-| `shiny-validate` | `conda-forge/shiny-validate-feedstock` | — (own cadence) |
+Feedstock names are all under the `conda-forge/` org.
+
+| conda package | Feedstock | Phase | Automerge | `recipe-maintainers` |
+|---|---|---|---|---|
+| `htmltools` | `py-htmltools-feedstock` | 2 | yes | wch, sugatoray |
+| `shiny` | `py-shiny-feedstock` | 3 | yes | cpsievert, schloerke, wch, sugatoray |
+| `shinyswatch` | `shinyswatch-feedstock` | 4 | yes | schloerke |
+| `shinywidgets` | `shinywidgets-feedstock` | 5 | yes | cpsievert, schloerke, daylinmorgan |
+| `shinychat` | `shinychat-feedstock` | — (own cadence) | yes | schloerke |
+| `faicons` | `faicons-feedstock` | — (own cadence) | **no** | daylinmorgan |
+| `shiny-validate` | `shiny-validate-feedstock` | — (own cadence) | **no** | julibeg |
 
 `shinychat`, `faicons`, and `shiny-validate` are not part of the release train, but if one of
 them happened to be released alongside py-shiny or have an outdated feedstock, check its bot PR too.
@@ -531,6 +535,44 @@ Bump the feedstocks in dependency order — `htmltools` → `shiny` → (`shinys
 `shinywidgets`, `shinychat`) — because the downstream recipes' test phase imports `shiny`. A
 downstream bump opened before `shiny` has landed will fail to solve; that is expected, so
 leave it parked rather than trying to fix the recipe.
+
+### Confirm automerge and maintainer coverage
+
+Two settings turn a feedstock into a release bottleneck, and neither announces itself:
+
+- **Automerge off.** Every bump then waits on a human to notice and merge it, which is how a
+  feedstock quietly drifts versions behind.
+- **No overlap with the Shiny team.** Only `recipe-maintainers` can push to a bot PR's branch
+  or merge it. A feedstock maintained solely by an outside contributor cannot be unblocked
+  from inside the team, however urgent the release.
+
+Re-derive the last two columns of the inventory rather than trusting them — recipes come in
+both v0 (`recipe/meta.yaml`) and v1 (`recipe/recipe.yaml`) layouts, so check both paths:
+
+```bash
+for f in py-htmltools py-shiny shinyswatch shinywidgets shinychat faicons shiny-validate; do
+  base="https://raw.githubusercontent.com/conda-forge/$f-feedstock/main"
+  am=$(curl -s "$base/conda-forge.yml" | grep -c automerge)
+  m=""
+  for rf in recipe/recipe.yaml recipe/meta.yaml; do
+    m=$(curl -sf "$base/$rf" | grep -A8 recipe-maintainers | grep -E '^ +- ' | tr -d ' -' | paste -sd, -)
+    [ -n "$m" ] && break
+  done
+  printf "%-16s automerge=%s maintainers=%s\n" "$f" "$am" "$m"
+done
+```
+
+Fix either gap by opening an **issue on the feedstock** with the title set exactly to one of
+these — `conda-forge-webservices` reads the title and opens the PR itself:
+
+| Gap | Issue title |
+|-----|-------------|
+| Automerge not enabled | `@conda-forge-admin, please add bot automerge` |
+| Maintainer missing | `@conda-forge-admin, please add user @username` |
+
+Adding a maintainer only opens a PR against `recipe-maintainers`; the person still has to
+accept the conda-forge GitHub invitation before they can actually push. So do this ahead of a
+release, not in the middle of one.
 
 ### Feedstocks pending creation (staged-recipes)
 
