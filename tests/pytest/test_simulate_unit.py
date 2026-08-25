@@ -143,7 +143,7 @@ def test_reactive_effect_error_is_failure():
     assert "Fatal effect crash" in str(res.error)
 
 
-def test_simulate_restores_app_test_mode():
+def test_simulate_restores_app_test_mode_and_server():
     app_ui = ui.page_fluid(ui.output_text("out"))
 
     def server(input: Inputs, output: Outputs, session: Session):
@@ -152,11 +152,13 @@ def test_simulate_restores_app_test_mode():
             return "ok"
 
     app = App(app_ui, server, test_mode=False)
+    original_server = app.server
     assert app._test_mode is False
 
     res = simulate(app)
     assert res.success is True
     assert app._test_mode is False
+    assert app.server is original_server
 
 
 def test_simulate_isolated_sibling_modules(tmp_path: Path):
@@ -236,3 +238,14 @@ def test_simulate_mapping_interface():
     assert len(res) == 7
     assert res.get("outputs") == {"out": "simulated"}
     assert res.to_dict()["success"] is True
+
+
+def test_simulate_large_output_does_not_deadlock():
+    code = """from shiny.express import render
+@render.text
+def big():
+    return "x" * 2_000_000
+"""
+    res = simulate(code=code, timeout_secs=5.0)
+    assert res.success is True
+    assert len(res.outputs["big"]) == 2_000_000

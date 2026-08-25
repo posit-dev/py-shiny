@@ -30,7 +30,6 @@ from .._app import App
 from .._connection import MockConnection
 from ..express import is_express_app
 from ..express._run import wrap_express_app
-from ..reactive import on_flushed
 from ..session._session import AppSession
 
 T = TypeVar("T")
@@ -111,9 +110,10 @@ async def _simulate_shiny_app_in_process(
     temp_dir: Optional[tempfile.TemporaryDirectory[str]] = None
     app_dir: Optional[str] = None
     saved_sys_path = list(sys.path)
-    old_app_test_mode: Optional[bool] = None
-
     app_obj: Optional[App] = None
+    old_app_test_mode: Optional[bool] = None
+    old_app_server: Optional[Callable[..., Any]] = None
+
     try:
         if app is not None and isinstance(app, App):
             app_obj = app
@@ -178,7 +178,8 @@ async def _simulate_shiny_app_in_process(
             custom_print_error  # pyright: ignore[reportAttributeAccessIssue]
         )
 
-        orig_server: Callable[..., Any] = app_obj.server
+        old_app_server = app_obj.server
+        orig_server = old_app_server
 
         def wrapped_server(input: Any, output: Any, session: Any) -> Any:
             try:
@@ -201,7 +202,7 @@ async def _simulate_shiny_app_in_process(
                 )
             conn.cause_disconnect()
 
-        on_flushed(on_initial_flush, once=True)
+        session.on_flushed(on_initial_flush, once=True)
 
         conn.cause_receive(json.dumps({"method": "init", "data": initial_inputs}))
 
@@ -274,8 +275,11 @@ async def _simulate_shiny_app_in_process(
             os.environ["SHINY_TESTMODE"] = old_testmode
         if temp_dir is not None:
             temp_dir.cleanup()
-        if app_obj is not None and old_app_test_mode is not None:
-            app_obj._test_mode = old_app_test_mode
+        if app_obj is not None:
+            if old_app_test_mode is not None:
+                app_obj._test_mode = old_app_test_mode
+            if old_app_server is not None:
+                app_obj.server = old_app_server
 
 
 def _load_app_from_file(target_path: Path) -> Optional[App]:
@@ -352,22 +356,25 @@ async def _simulate_shiny_app_subprocess(
 
     loop = asyncio.get_running_loop()
 
-    def wait_for_process() -> Optional[Dict[str, Any]]:
-        proc.join(timeout=timeout_secs)
+    def read_from_process() -> Optional[Dict[str, Any]]:
+        try:
+            if parent_conn.poll(timeout=timeout_secs):
+                data = parent_conn.recv()
+                proc.join(timeout=1.0)
+                return cast(Dict[str, Any], data)
+        except Exception:
+            pass
+
         if proc.is_alive():
             proc.terminate()
             proc.join(timeout=0.5)
             if proc.is_alive():
                 proc.kill()
                 proc.join()
-            return None
-        if parent_conn.poll():
-            data = parent_conn.recv()
-            return cast(Dict[str, Any], data)
         return None
 
     try:
-        data = await loop.run_in_executor(None, wait_for_process)
+        data = await loop.run_in_executor(None, read_from_process)
         elapsed_ms = (time.perf_counter() - start_t) * 1000.0
 
         if data is None:
