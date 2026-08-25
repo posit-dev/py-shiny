@@ -984,7 +984,6 @@ def _record_session_sync(
 
             page.close()
             context.close()
-            browser.close()
 
             if page_video and video_path:
                 out_v = Path(video_path).resolve()
@@ -1001,6 +1000,8 @@ def _record_session_sync(
                     saved_video_path = str(temp_video)
                 except Exception:
                     pass
+
+            browser.close()
 
         if not saved_video_path:
             video_files = list(Path(temp_dir).glob("*.webm"))
