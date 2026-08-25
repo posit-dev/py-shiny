@@ -1212,7 +1212,7 @@ def format_reactlog_html(
         video_panel = f"""
         <div class="video-panel sidebar-panel" id="video-panel" role="tabpanel" aria-labelledby="video-tab" hidden>
           <div class="video-container">
-            <video id="session-video" controls preload="metadata">
+            <video id="session-video" controls preload="metadata" playsinline>
               <source src="{rel_video}" type="video/webm">
               Your browser does not support the video tag.
             </video>
@@ -1221,8 +1221,17 @@ def format_reactlog_html(
             <span class="video-badge">Playwright Video Recording</span>
             <span class="video-filename">{rel_video}</span>
           </div>
+          <p class="video-help">Play, pause, or seek here—the graph, event list, and recording timeline follow the video.</p>
         </div>
         """
+
+    trace_label = "Recording timeline" if actual_video else "Event timeline"
+    video_sync_indicator = (
+        '<span class="video-sync-status" id="video-sync-status" role="status" '
+        'aria-live="polite">● Graph follows recording</span>'
+        if actual_video
+        else ""
+    )
 
     source_tab = (
         '<button class="sidebar-tab" id="source-tab" role="tab" '
@@ -1247,6 +1256,7 @@ def format_reactlog_html(
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090d12" />
   <title>{escaped_title}</title>
   <style>
     :root {{
@@ -1294,7 +1304,7 @@ def format_reactlog_html(
     .inline-icon {{ display: inline-block; vertical-align: -0.15em; margin-right: 0.35rem; flex-shrink: 0; }}
     .btn.icon svg {{ display: block; margin: auto; }}
     .phase-selector {{ display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }}
-    .phase-btn {{ display: inline-flex; align-items: center; background: transparent; border: none; color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 6px; font: 700 0.7rem var(--mono); cursor: pointer; transition: all 120ms ease; }}
+    .phase-btn {{ display: inline-flex; align-items: center; background: transparent; border: none; color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 6px; font: 700 0.7rem var(--mono); cursor: pointer; transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease; }}
     .phase-btn:hover {{ color: var(--text); background: var(--surface-2); }}
     .phase-btn.is-active {{ background: var(--surface-3); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }}
     .search-wrap {{ position: relative; flex: 0 1 200px; min-width: 130px; }}
@@ -1328,8 +1338,9 @@ def format_reactlog_html(
     .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: #63b3ff !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
     @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
-      .graph-node, .graph-edge {{ transition: none; }}
+      .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
       .graph-edge[data-active="true"] {{ animation: none; }}
+      .action-toast {{ animation: none; }}
     }}
     .graph-node {{ cursor: pointer; }}
     .graph-node:hover .node-card {{ filter: brightness(1.14); }}
@@ -1355,18 +1366,26 @@ def format_reactlog_html(
     .video-badge {{ background: #193147; border: 1px solid #2d618d; color: #79c0ff; border-radius: 999px; padding: 0.2rem 0.55rem; font: 700 0.68rem var(--mono); }}
     .video-sync-status {{ color: #7ee787; font: 700 0.68rem var(--mono); display: inline-flex; align-items: center; gap: 0.3rem; }}
     .video-filename {{ color: var(--text-muted); font: 500 0.7rem var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+    .video-help {{ color: var(--text-muted); font-size: 0.72rem; line-height: 1.5; text-wrap: pretty; }}
     .syntax-keyword {{ color: #c792ea; font-weight: 700; }}
     .syntax-string {{ color: #a8d279; }}
     .syntax-number {{ color: #f6c177; }}
     .syntax-comment {{ color: #718096; font-style: italic; }}
-    .event-list {{ flex: 1; overflow-y: auto; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; }}
-    .event-item {{ padding: 0.55rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; display: flex; flex-direction: column; gap: 0.2rem; }}
+    .event-list {{ flex: 1; overflow-y: auto; padding: 0 0.6rem 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; overscroll-behavior: contain; }}
+    .event-phase-label {{ position: sticky; top: 0; z-index: 2; margin: 0 -0.6rem; padding: 0.65rem 0.75rem 0.4rem; color: var(--text-muted); background: linear-gradient(var(--surface) 78%, transparent); font: 800 0.64rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }}
+    .event-item {{ width: 100%; padding: 0.55rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); border-left: 3px solid var(--border-strong); background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 0.25rem; }}
     .event-item:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
     .event-item.is-current {{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }}
+    .event-item.kind-input {{ border-left-color: var(--source); }}
+    .event-item.kind-calc {{ border-left-color: var(--calc); }}
+    .event-item.kind-output {{ border-left-color: var(--output); }}
+    .event-item.kind-effect {{ border-left-color: var(--effect); }}
     .event-header {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
+    .event-name-wrap {{ min-width: 0; display: flex; align-items: baseline; gap: 0.45rem; }}
+    .event-step {{ color: var(--text-muted); font: 650 0.62rem var(--mono); font-variant-numeric: tabular-nums; }}
     .event-name {{ font: 700 0.76rem var(--mono); color: var(--text); }}
-    .event-badges {{ display: flex; align-items: center; gap: 0.3rem; }}
-    .event-time {{ font: 600 0.64rem var(--mono); color: #93c5fd; background: #13273b; border-radius: 4px; padding: 0.1rem 0.3rem; }}
+    .event-badges {{ display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; flex-wrap: wrap; }}
+    .event-time {{ font: 600 0.64rem var(--mono); font-variant-numeric: tabular-nums; color: #93c5fd; background: #13273b; border-radius: 4px; padding: 0.1rem 0.3rem; }}
     .event-badge {{ font: 700 0.62rem var(--mono); border-radius: 4px; padding: 0.1rem 0.35rem; text-transform: uppercase; }}
     .event-badge.provenance-observed {{ background: #0c2d48; color: #38bdf8; border: 1px solid #0284c7; }}
     .event-badge.provenance-inferred {{ background: #2d1847; color: #c084fc; border: 1px solid #7e22ce; }}
@@ -1386,7 +1405,7 @@ def format_reactlog_html(
     .trace-header {{ display: flex; align-items: center; justify-content: space-between; gap: 1rem; }}
     .trace-controls {{ display: flex; align-items: center; gap: 0.45rem; font: 700 0.74rem var(--mono); color: var(--text); }}
     .trace-badge {{ background: #193147; border: 1px solid #2d618d; color: #79c0ff; border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.62rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
-    .trace-clock {{ color: #63b3ff; font-weight: 800; }}
+    .trace-clock {{ color: #63b3ff; font-weight: 800; font-variant-numeric: tabular-nums; }}
     .trace-sep {{ color: var(--text-muted); opacity: 0.5; }}
     .trace-total {{ color: var(--text-muted); }}
     .trace-nav-actions {{ display: flex; gap: 0.2rem; margin-left: 0.2rem; }}
@@ -1400,7 +1419,8 @@ def format_reactlog_html(
     .trace-main-wrap {{ display: flex; align-items: stretch; gap: 0.6rem; position: relative; }}
     .trace-lanes-labels {{ display: flex; flex-direction: column; justify-content: space-between; width: 52px; padding-top: 14px; }}
     .lane-label {{ font: 700 0.6rem var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; height: 20px; display: flex; align-items: center; }}
-    .trace-track-wrap {{ flex: 1; position: relative; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; outline: none; }}
+    .trace-track-wrap {{ flex: 1; position: relative; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; outline: none; border-radius: 6px; }}
+    .trace-track-wrap:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
     .trace-ruler {{ position: relative; height: 14px; width: 100%; pointer-events: none; }}
     .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 5px; background: var(--border-strong); }}
     .trace-ruler-tick.major {{ height: 9px; background: var(--text-muted); }}
@@ -1409,7 +1429,7 @@ def format_reactlog_html(
     .trace-lane {{ position: relative; height: 22px; width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.06); }}
     .trace-lane:last-of-type {{ border-bottom: none; }}
     .trace-fill {{ position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 5px 0 0 5px; pointer-events: none; }}
-    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 16px; max-width: 120px; padding: 0 6px; border-radius: 4px; font: 700 0.58rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.5); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 2; }}
+    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 18px; max-width: 120px; padding: 0 6px; border-radius: 4px; font: 700 0.58rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.5); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 2; }}
     .trace-chip:hover, .trace-chip.is-active {{ transform: translate(-50%, -50%) scale(1.12); z-index: 10; box-shadow: 0 0 10px var(--accent); }}
     .trace-chip.kind-input {{ background: rgba(12, 45, 72, 0.95); color: #38bdf8; border: 1px solid #0284c7; }}
     .trace-chip.kind-click {{ background: rgba(43, 24, 70, 0.95); color: #d8b4fe; border: 1px solid #7e22ce; }}
@@ -1431,7 +1451,7 @@ def format_reactlog_html(
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       </div>
       <div class="brand-copy">
-        <div class="brand-title">{escaped_title}</div>
+        <h1 class="brand-title">{escaped_title}</h1>
         <div class="brand-subtitle">Interactive Shiny Reactive Log & Graph Explorer (Statically Inferred Dependency Execution)</div>
       </div>
     </div>
@@ -1454,9 +1474,9 @@ def format_reactlog_html(
     <div class="toolbar-divider" aria-hidden="true"></div>
 
     <div class="phase-selector" role="group" aria-label="Timeline phase filter">
-      <button class="phase-btn is-active" id="phase-btn-all" onclick="setPhaseFilter('all')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>All (<span id="count-all">0</span>)</button>
-      <button class="phase-btn" id="phase-btn-init" onclick="setPhaseFilter('init')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Init (<span id="count-init">0</span>)</button>
-      <button class="phase-btn" id="phase-btn-interaction" onclick="setPhaseFilter('interaction')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>Actions (<span id="count-interaction">0</span>)</button>
+      <button class="phase-btn is-active" id="phase-btn-all" aria-pressed="true" onclick="setPhaseFilter('all')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>All (<span id="count-all">0</span>)</button>
+      <button class="phase-btn" id="phase-btn-init" aria-pressed="false" onclick="setPhaseFilter('init')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Init (<span id="count-init">0</span>)</button>
+      <button class="phase-btn" id="phase-btn-interaction" aria-pressed="false" onclick="setPhaseFilter('interaction')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>Actions (<span id="count-interaction">0</span>)</button>
     </div>
 
     <button class="btn accent-skip" id="btn-skip-init" onclick="skipToInteractions()" title="Skip initialization steps and start at first app action"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>Skip to Actions</button>
@@ -1472,7 +1492,7 @@ def format_reactlog_html(
 
     <div class="search-wrap">
       <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="search" class="search-input" id="search-input" placeholder="Filter graph nodes..." oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name or type" />
+      <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Filter graph nodes…" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name or type" />
     </div>
 
     <div class="toolbar-group">
@@ -1485,7 +1505,7 @@ def format_reactlog_html(
   <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Session Recording Trace Scrubber">
     <div class="trace-header">
       <div class="trace-controls">
-        <span class="trace-badge">TRACE</span>
+        <span class="trace-badge">{trace_label}</span>
         <span class="trace-clock" id="trace-current-time">0.0s</span>
         <span class="trace-sep">/</span>
         <span class="trace-total" id="trace-total-time">0.0s</span>
@@ -1495,6 +1515,7 @@ def format_reactlog_html(
         </div>
       </div>
       <div class="trace-legend-mini">
+        {video_sync_indicator}
         <span class="legend-chip lane-input"><span class="chip-dot"></span>Inputs & Clicks</span>
         <span class="legend-chip lane-calc"><span class="chip-dot"></span>Reactive Calcs</span>
         <span class="legend-chip lane-output"><span class="chip-dot"></span>Outputs</span>
@@ -1540,7 +1561,7 @@ def format_reactlog_html(
           <button class="btn icon" onclick="resetZoom()" aria-label="Reset zoom" title="Reset zoom" style="font: 700 0.7rem var(--mono)">1:1</button>
         </div>
       </div>
-      <div id="live-action-toast" class="action-toast" hidden></div>
+      <div id="live-action-toast" class="action-toast" role="status" aria-live="polite" hidden></div>
       <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
@@ -1564,10 +1585,10 @@ def format_reactlog_html(
       <div class="resizer-handle"></div>
     </div>
 
-    <aside class="sidebar" id="sidebar" aria-label="Details and Timeline">
+    <aside class="sidebar" id="sidebar" aria-label="Details and events">
       <div class="sidebar-header">
         <div class="sidebar-tabs" role="tablist" aria-label="Sidebar views">
-          <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Timeline</button>
+          <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Events</button>
           {source_tab}
           {video_tab_btn}
         </div>
@@ -1611,6 +1632,8 @@ def format_reactlog_html(
     let hasUserCustomWidth = false;
     let maxSessionDuration = 1.0;
     let isDraggingTrace = false;
+    let videoFrameRequest = null;
+    let videoFrameRequestKind = null;
 
     function setSidebarWidth(widthPx) {{
       const minW = 320;
@@ -1835,12 +1858,16 @@ def format_reactlog_html(
         const pct = Math.min(96, Math.max(4, (wave.time / maxSessionDuration) * 100));
 
         if (wave.inputs.length > 0) {{
-          const cleanInpNames = [...new Set(wave.inputs.map(i => i.name).filter(Boolean))];
-          let meaningfulInps = cleanInpNames.filter(name => !genericTokens.has(name.toLowerCase()));
+          const cleanInpNames = [...new Set(wave.inputs.flatMap(i => i.name ? [i.name] : []))];
+          let meaningfulInps = [];
+          for (const name of cleanInpNames) {{
+            if (!genericTokens.has(name.toLowerCase())) meaningfulInps.push(name);
+          }}
           if (meaningfulInps.length === 0) meaningfulInps = cleanInpNames;
 
           if (meaningfulInps.length > 0) {{
-            const chip = document.createElement('div');
+            const chip = document.createElement('button');
+            chip.type = 'button';
             const isClick = wave.inputs.some(i => i.isClick);
             chip.className = `trace-chip ${{isClick ? 'kind-click' : 'kind-input'}}`;
             chip.style.left = `${{pct}}%`;
@@ -1857,9 +1884,10 @@ def format_reactlog_html(
           }}
         }}
 
-        const cleanCalcNames = [...new Set(wave.calcs.map(c => c.name).filter(Boolean))];
+        const cleanCalcNames = [...new Set(wave.calcs.flatMap(c => c.name ? [c.name] : []))];
         if (cleanCalcNames.length > 0) {{
-          const chip = document.createElement('div');
+          const chip = document.createElement('button');
+          chip.type = 'button';
           chip.className = 'trace-chip kind-calc';
           chip.style.left = `${{pct}}%`;
           chip.setAttribute('data-step', String(wave.calcs[0].step));
@@ -1874,9 +1902,10 @@ def format_reactlog_html(
           laneCalcs.appendChild(chip);
         }}
 
-        const cleanOutputNames = [...new Set(wave.outputs.map(o => o.name).filter(Boolean))];
+        const cleanOutputNames = [...new Set(wave.outputs.flatMap(o => o.name ? [o.name] : []))];
         if (cleanOutputNames.length > 0) {{
-          const chip = document.createElement('div');
+          const chip = document.createElement('button');
+          chip.type = 'button';
           chip.className = 'trace-chip kind-output';
           chip.style.left = `${{pct}}%`;
           chip.setAttribute('data-step', String(wave.outputs[0].step));
@@ -1950,7 +1979,10 @@ def format_reactlog_html(
 
             if (inList) tooltipHtml += `<span class="tooltip-title">${{inList}}</span>`;
             if (calcList || outList) {{
-              tooltipHtml += `<span class="tooltip-desc">↳ ${{[calcList, outList].filter(Boolean).join(' → ')}}</span>`;
+              const dependencyParts = [];
+              if (calcList) dependencyParts.push(calcList);
+              if (outList) dependencyParts.push(outList);
+              tooltipHtml += `<span class="tooltip-desc">↳ ${{dependencyParts.join(' → ')}}</span>`;
             }}
           }}
           tooltip.innerHTML = tooltipHtml;
@@ -2069,7 +2101,11 @@ def format_reactlog_html(
       currentPhaseFilter = phase;
       ['all', 'init', 'interaction'].forEach(p => {{
         const btn = document.getElementById(`phase-btn-${{p}}`);
-        if (btn) btn.classList.toggle('is-active', p === phase);
+        if (btn) {{
+          const isActive = p === phase;
+          btn.classList.toggle('is-active', isActive);
+          btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        }}
       }});
       renderEventList();
     }}
@@ -2091,22 +2127,49 @@ def format_reactlog_html(
     function renderEventList() {{
       const list = document.getElementById('event-list');
       list.innerHTML = '';
+      let visiblePhase = null;
       reactlogData.events.forEach((ev, idx) => {{
         if (currentPhaseFilter !== 'all' && ev.phase && ev.phase !== currentPhaseFilter) {{
           return;
         }}
 
-        const item = document.createElement('div');
+        const eventPhase = ev.phase || 'interaction';
+        if (eventPhase !== visiblePhase) {{
+          const phaseLabel = document.createElement('h2');
+          phaseLabel.className = 'event-phase-label';
+          phaseLabel.textContent = eventPhase === 'init' ? 'Initialization' : 'Recorded actions';
+          list.appendChild(phaseLabel);
+          visiblePhase = eventPhase;
+        }}
+
+        const item = document.createElement('button');
+        item.type = 'button';
         item.className = 'event-item' + (idx === currentStep ? ' is-current' : '');
         item.setAttribute('data-step', String(idx));
+        const nodeId = ev.node_id || '';
+        if (nodeId.startsWith('input:')) item.classList.add('kind-input');
+        else if (nodeId.startsWith('calc:')) item.classList.add('kind-calc');
+        else if (nodeId.startsWith('output:')) item.classList.add('kind-output');
+        else if (nodeId.startsWith('effect:')) item.classList.add('kind-effect');
+        item.setAttribute('aria-label', `Step ${{idx}}: ${{ev.node_label || ev.event}}. ${{ev.details || ''}}`);
         item.onclick = () => seekTo(idx);
 
         const header = document.createElement('div');
         header.className = 'event-header';
 
+        const nameWrap = document.createElement('div');
+        nameWrap.className = 'event-name-wrap';
+
+        const stepSpan = document.createElement('span');
+        stepSpan.className = 'event-step';
+        stepSpan.textContent = `#${{idx}}`;
+
         const nameSpan = document.createElement('span');
         nameSpan.className = 'event-name';
         nameSpan.textContent = ev.node_label || ev.event;
+
+        nameWrap.appendChild(stepSpan);
+        nameWrap.appendChild(nameSpan);
 
         const badgesWrap = document.createElement('div');
         badgesWrap.className = 'event-badges';
@@ -2129,7 +2192,7 @@ def format_reactlog_html(
         badge.textContent = ev.status || ev.event;
         badgesWrap.appendChild(badge);
 
-        header.appendChild(nameSpan);
+        header.appendChild(nameWrap);
         header.appendChild(badgesWrap);
 
         const details = document.createElement('div');
@@ -2341,7 +2404,7 @@ def format_reactlog_html(
       }});
     }}
 
-    function seekTo(step, fromVideo = false) {{
+    function seekTo(step, fromVideo = false, mediaTime = null) {{
       currentStep = Math.max(0, Math.min(step, reactlogData.events.length - 1));
       document.getElementById('scrubber-range').value = currentStep;
       document.getElementById('step-display').textContent = `Step ${{currentStep}} / ${{Math.max(0, reactlogData.events.length - 1)}}`;
@@ -2351,7 +2414,8 @@ def format_reactlog_html(
         const isCur = stepNum === currentStep;
         item.classList.toggle('is-current', isCur);
         if (isCur) {{
-          item.scrollIntoView({{ block: 'nearest', behavior: 'smooth' }});
+          const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          item.scrollIntoView({{ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }});
         }}
       }});
 
@@ -2364,7 +2428,9 @@ def format_reactlog_html(
       updateSourceHighlight();
       updateActionToast();
 
-      const curSec = ev && ev.time_sec !== undefined ? ev.time_sec : 0;
+      const curSec = fromVideo && mediaTime !== null
+        ? mediaTime
+        : (ev && ev.time_sec !== undefined ? ev.time_sec : 0);
       updateTraceTimelineScrubber(curSec);
 
       if (!fromVideo) {{
@@ -2396,6 +2462,64 @@ def format_reactlog_html(
       if (!video) return;
 
       const btn = document.getElementById('btn-play');
+      const syncStatus = document.getElementById('video-sync-status');
+
+      const updatePlayButton = (playing) => {{
+        if (!btn) return;
+        btn.innerHTML = playing ? ICONS.pause : ICONS.play;
+        btn.setAttribute('aria-label', playing ? 'Pause recording' : 'Play recording');
+        btn.title = playing ? 'Pause recording' : 'Play recording';
+      }};
+
+      const updateSyncStatus = (message) => {{
+        if (syncStatus) syncStatus.textContent = `● ${{message}}`;
+      }};
+
+      const syncGraphToTime = (curSec) => {{
+        updateTraceTimelineScrubber(curSec);
+        let matchIdx = 0;
+        for (let i = 0; i < reactlogData.events.length; i++) {{
+          const ev = reactlogData.events[i];
+          const t = ev.effective_time !== undefined ? ev.effective_time : (ev.time_sec !== undefined ? ev.time_sec : 0);
+          if (t <= curSec) matchIdx = i;
+        }}
+        if (matchIdx !== currentStep) {{
+          seekTo(matchIdx, true, curSec);
+        }}
+      }};
+
+      const stopFrameSync = () => {{
+        if (videoFrameRequest === null) return;
+        if (videoFrameRequestKind === 'video' && typeof video.cancelVideoFrameCallback === 'function') {{
+          video.cancelVideoFrameCallback(videoFrameRequest);
+        }} else if (videoFrameRequestKind === 'animation') {{
+          cancelAnimationFrame(videoFrameRequest);
+        }}
+        videoFrameRequest = null;
+        videoFrameRequestKind = null;
+      }};
+
+      const syncVideoFrame = (_now, metadata) => {{
+        videoFrameRequest = null;
+        videoFrameRequestKind = null;
+        if (video.paused || video.ended) return;
+        const mediaTime = metadata && Number.isFinite(metadata.mediaTime)
+          ? metadata.mediaTime
+          : video.currentTime;
+        syncGraphToTime(mediaTime);
+        requestNextFrame();
+      }};
+
+      const requestNextFrame = () => {{
+        if (videoFrameRequest !== null || video.paused || video.ended) return;
+        if (typeof video.requestVideoFrameCallback === 'function') {{
+          videoFrameRequestKind = 'video';
+          videoFrameRequest = video.requestVideoFrameCallback(syncVideoFrame);
+        }} else {{
+          videoFrameRequestKind = 'animation';
+          videoFrameRequest = requestAnimationFrame((now) => syncVideoFrame(now, null));
+        }}
+      }};
 
       video.addEventListener('loadedmetadata', () => {{
         if (video.duration && !isNaN(video.duration)) {{
@@ -2408,37 +2532,27 @@ def format_reactlog_html(
 
       video.addEventListener('play', () => {{
         isPlaying = true;
-        if (btn) btn.innerHTML = ICONS.pause;
+        updatePlayButton(true);
+        updateSyncStatus('Following recording');
+        requestNextFrame();
       }});
 
       video.addEventListener('pause', () => {{
         isPlaying = false;
-        if (btn) btn.innerHTML = ICONS.play;
+        stopFrameSync();
+        updatePlayButton(false);
+        updateSyncStatus(`Paused at ${{formatTime(video.currentTime)}}`);
       }});
 
       video.addEventListener('ended', () => {{
         isPlaying = false;
-        if (btn) btn.innerHTML = ICONS.play;
+        stopFrameSync();
+        updatePlayButton(false);
+        updateSyncStatus('Recording complete');
       }});
 
-      const syncGraphFromVideo = () => {{
-        const curSec = video.currentTime;
-        updateTraceTimelineScrubber(curSec);
-        let matchIdx = 0;
-        for (let i = 0; i < reactlogData.events.length; i++) {{
-          const ev = reactlogData.events[i];
-          const t = ev.effective_time !== undefined ? ev.effective_time : (ev.time_sec !== undefined ? ev.time_sec : 0);
-          if (t <= curSec) {{
-            matchIdx = i;
-          }}
-        }}
-        if (matchIdx !== currentStep) {{
-          seekTo(matchIdx, true);
-        }}
-      }};
-
-      video.addEventListener('timeupdate', syncGraphFromVideo);
-      video.addEventListener('seeked', syncGraphFromVideo);
+      video.addEventListener('timeupdate', () => syncGraphToTime(video.currentTime));
+      video.addEventListener('seeked', () => syncGraphToTime(video.currentTime));
     }}
 
     function updateSourceHighlight() {{
@@ -2463,13 +2577,18 @@ def format_reactlog_html(
     }}
 
     function renderInspector() {{
+      const ev = reactlogData.events[currentStep];
       const node = reactlogData.nodes.find(n => n.id === selectedNodeId);
       if (node) {{
         document.getElementById('insp-title').textContent = node.label || node.id;
         document.getElementById('insp-type').textContent = nodeKind(node).label;
         document.getElementById('insp-line').textContent = node.line || 'Unknown';
-        const ev = reactlogData.events[currentStep];
         document.getElementById('insp-status').textContent = ev && ev.node_id === node.id ? ev.status : 'idle';
+      }} else if (ev) {{
+        document.getElementById('insp-title').textContent = ev.node_label || ev.event;
+        document.getElementById('insp-type').textContent = ev.phase === 'init' ? 'Initialization event' : 'Recorded event';
+        document.getElementById('insp-line').textContent = '—';
+        document.getElementById('insp-status').textContent = ev.status || 'idle';
       }}
     }}
 
@@ -2477,7 +2596,12 @@ def format_reactlog_html(
       const video = document.getElementById('session-video');
       if (video) {{
         if (video.paused) {{
-          if (video.ended || (currentStep >= reactlogData.events.length - 1)) {{
+          const atVideoEnd = video.ended || (
+            Number.isFinite(video.duration)
+            && video.duration > 0
+            && video.currentTime >= video.duration - 0.05
+          );
+          if (atVideoEnd) {{
             video.currentTime = 0;
             seekTo(0, true);
           }}
