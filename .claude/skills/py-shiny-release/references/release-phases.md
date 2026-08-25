@@ -162,7 +162,8 @@ installed shiny.
 - [ ] `CHANGELOG.md`: follow the established wording — "Update pre-built shinyswatch themes
       for use with Shiny vX.Y.Z." — plus a line noting the new shiny floor
 
-Note: py-shinyswatch has no conda-forge feedstock, so Phase 11 does not apply to it.
+Note: py-shinyswatch has had a `conda-forge/shinyswatch-feedstock` since July 2026, so it is
+now in scope for Phase 11.
 
 Ask user: "Is py-shinyswatch being released? What version? Do we need to update docs after shinylive updates?"
 
@@ -505,17 +506,58 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 
 ## Phase 11: Conda-forge
 
-- [ ] Check `conda-forge/py-shiny-feedstock` for an auto-created bot PR (and
-      `conda-forge/py-htmltools-feedstock`, only if py-htmltools was released)
+- [ ] Check each feedstock in the inventory below for an auto-created bot PR, for every
+      package that was actually released in this train
 - [ ] **Read the existing PRs' comments before investigating anything.** Prior cycles'
       analysis usually lives there, and re-deriving it wastes a lot of time.
 - [ ] **Sync `recipe/meta.yaml`'s `run:` section by hand** — see below. The bot does not do
       this, and it is the usual reason a bump fails.
 - [ ] Verify `about/license_file` against the new sdist, in both directions (below)
 - [ ] If tests pass, `[bot-automerge]` lands it without help
-- [ ] Feedstocks: py-shiny and py-htmltools. py-shinyswatch and shinychat were submitted to
-      `staged-recipes` in July 2026 (#34339, #34338) — check whether they now have feedstocks
-      that also need bumping. py-shinywidgets and py-shinylive still do not.
+
+### Feedstock inventory (verified 2026-08-25)
+
+| conda package | Feedstock | Released in phase |
+|---------------|-----------|-------------------|
+| `htmltools` | `conda-forge/py-htmltools-feedstock` | 2 |
+| `shiny` | `conda-forge/py-shiny-feedstock` | 3 |
+| `shinyswatch` | `conda-forge/shinyswatch-feedstock` | 4 |
+| `shinywidgets` | `conda-forge/shinywidgets-feedstock` | 5 |
+| `shinychat` | `conda-forge/shinychat-feedstock` | — (own cadence) |
+| `faicons` | `conda-forge/faicons-feedstock` | — (own cadence) |
+| `shiny-validate` | `conda-forge/shiny-validate-feedstock` | — (own cadence) |
+
+Two naming traps. Only the two oldest feedstocks carry the `py-` prefix; the newer ones match
+the **PyPI** name, not the GitHub repo name. And `posit-dev/py-shinylive` publishes to PyPI as
+`shinylive`, so its feedstock will be `shinylive-feedstock` once it exists.
+
+`shinychat`, `faicons`, and `shiny-validate` are not part of the release train, but if one of
+them happened to be released alongside py-shiny, check its bot PR too.
+
+Bump the feedstocks in dependency order — `htmltools` → `shiny` → (`shinyswatch`,
+`shinywidgets`, `shinychat`) — because the downstream recipes' test phase imports `shiny`. A
+downstream bump opened before `shiny` has landed will fail to solve; that is expected, so
+leave it parked rather than trying to fix the recipe.
+
+### Feedstocks pending creation (staged-recipes)
+
+Until a `staged-recipes` PR merges there is no feedstock and no bot PR to check. Verify the
+current state rather than trusting this list, then move anything that has landed into the
+table above:
+
+| conda package | staged-recipes PR |
+|---------------|-------------------|
+| `shinylive` | https://github.com/conda-forge/staged-recipes/pull/34628 |
+| `querychat`, `chatlas` | https://github.com/conda-forge/staged-recipes/pull/34629 |
+| `brand-yml` | https://github.com/conda-forge/staged-recipes/pull/34630 |
+
+```bash
+# 200 = on conda-forge, 404 = still pending
+for p in shinylive querychat chatlas brand-yml; do
+  printf "%-12s %s\n" "$p" \
+    "$(curl -s -o /dev/null -w '%{http_code}' https://api.anaconda.org/package/conda-forge/$p)"
+done
+```
 
 ### The bot bumps the version; it does not add dependencies
 
