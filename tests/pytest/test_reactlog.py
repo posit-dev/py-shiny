@@ -540,7 +540,9 @@ def out():
     runner = CliRunner()
     res = runner.invoke(main, ["inspect", str(app_file), "--json"])
     assert res.exit_code == 0
-    data = json.loads(res.stdout)
+    json_start = res.output.find("{")
+    assert json_start != -1
+    data = json.loads(res.output[json_start:])
     assert data["success"] is True
     assert "events" in data
     assert len(data["nodes"]) == 2
