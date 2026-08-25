@@ -11,12 +11,16 @@ Unstable state, infinite reactive invalidation loops, or duplicate updates.
 
 ### Bad Code
 ```python
+from shiny import reactive, render
+
+row_count = reactive.value(0)
+
 @reactive.calc
 def filtered_data():
-    df = load_data()
+    df = [1, 2, 3]
     # BAD: mutating reactive state inside a calculation!
     row_count.set(len(df))
-    return df[df["score"] > input.threshold()]
+    return df
 ```
 
 ### Why It Fails
@@ -24,10 +28,11 @@ def filtered_data():
 
 ### Good Code
 ```python
+from shiny import reactive, render
+
 @reactive.calc
 def filtered_data():
-    df = load_data()
-    return df[df["score"] > input.threshold()]
+    return [1, 2, 3]
 
 @render.text
 def summary():
@@ -43,9 +48,11 @@ Outputs render as `<function ... at 0x...>` or expressions silently evaluate to 
 
 ### Bad Code
 ```python
+from shiny import reactive, render
+
 @reactive.calc
 def total_cost():
-    return input.price() * input.quantity()
+    return 100
 
 @render.text
 def display():
@@ -58,6 +65,12 @@ In Python, `@reactive.calc` and `reactive.value` objects are callables. Referenc
 
 ### Good Code
 ```python
+from shiny import reactive, render
+
+@reactive.calc
+def total_cost():
+    return 100
+
 @render.text
 def display():
     return f"Total: ${total_cost():,.2f}"
@@ -72,13 +85,12 @@ def display():
 
 ### Bad Code
 ```python
-# BAD: reading input or reactive value at top-level module scope
+from shiny import App, ui
+
 app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 1, 100, 50),
     ui.output_text("txt")
 )
-# Top-level execution fails or captures static initial value once:
-initial_val = input.n()
 ```
 
 ### Why It Fails
@@ -86,6 +98,8 @@ Reactive sources can only be read inside reactive contexts (`@reactive.calc`, `@
 
 ### Good Code
 ```python
+from shiny import App, render, ui
+
 app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 1, 100, 50),
     ui.output_text("txt")
@@ -108,13 +122,13 @@ Modifying a list or dictionary stored in a `reactive.value` does not trigger dep
 
 ### Bad Code
 ```python
+from shiny import reactive
+
 items = reactive.value([])
 
-@reactive.effect
-@reactive.event(input.add_btn)
-def _():
+def add_item(new_item: str):
     # BAD: mutating the list in-place does not trigger invalidation!
-    items().append(input.new_item())
+    items().append(new_item)
 ```
 
 ### Why It Fails
@@ -122,13 +136,13 @@ Shiny tracks value invalidations when `.set()` is called or when the reactive va
 
 ### Good Code
 ```python
+from shiny import reactive
+
 items = reactive.value([])
 
-@reactive.effect
-@reactive.event(input.add_btn)
-def _():
+def add_item(new_item: str):
     current = list(items())
-    current.append(input.new_item())
+    current.append(new_item)
     items.set(current)
 ```
 
@@ -141,14 +155,15 @@ One user's actions affect or overwrite another user's session data in multi-user
 
 ### Bad Code
 ```python
+from shiny import App, reactive, render, ui
+
 # BAD: Global reactive value at module scope shared across all connections
 user_state = reactive.value({"logged_in": False})
 
 def server(input, output, session):
-    @reactive.effect
-    @reactive.event(input.login)
-    def _():
-        user_state.set({"logged_in": True, "user": input.username()})
+    @render.text
+    def status():
+        return f"Logged in: {user_state()['logged_in']}"
 ```
 
 ### Why It Fails
@@ -156,60 +171,97 @@ Module-level variables persist across the entire Python process. When multiple u
 
 ### Good Code
 ```python
+from shiny import App, reactive, render, ui
+
 def server(input, output, session):
     # GOOD: Per-session state initialized inside the server function
     user_state = reactive.value({"logged_in": False})
 
-    @reactive.effect
-    @reactive.event(input.login)
-    def _():
-        user_state.set({"logged_in": True, "user": input.username()})
+    @render.text
+    def status():
+        return f"Logged in: {user_state()['logged_in']}"
 ```
 
 ---
 
-## 6. Blocking the Async Event Loop
+## 6. Blocking the Async Event Loop and Extended Tasks
 
 ### Symptom
-The whole application stops responding for all connected users during a computation or download.
+The application stops responding for all connected users during a computation, download, or sleep.
 
-### Bad Code
+### Bad Code 1: Blocking call on the event loop
 ```python
 import time
-import requests
+from shiny import render
 
 @render.text
 def report():
-    # BAD: synchronous sleep or requests block the asyncio thread!
+    # BAD: time.sleep blocks the asyncio event loop thread!
     time.sleep(5)
-    resp = requests.get("https://api.example.com/data")
-    return resp.text
+    return "Done"
+```
+
+### Bad Code 2: False belief that `@reactive.extended_task` automatically runs in a thread/process pool
+```python
+import time
+from shiny import reactive
+
+@reactive.extended_task
+async def compute_heavy_task(n: int):
+    # BAD: ExtendedTask runs on the main thread's event loop!
+    # time.sleep(10) STILL freezes the whole server!
+    time.sleep(10)
+    return n * 42
 ```
 
 ### Why It Fails
-Shiny runs on an asynchronous event loop. Synchronous blocking calls prevent the event loop from processing WebSocket frames, ping/heartbeat checks, and UI rendering for any session.
+Shiny server functions and `@reactive.extended_task` coroutines run on the single asyncio event loop thread. Calling `time.sleep()`, synchronous `requests`, or CPU-bound loops directly inside `async def` blocks the event loop from servicing other WebSocket connections and reactive flushes.
 
-### Good Code
+### Good Code: True async I/O
 ```python
 import asyncio
-import httpx
+from shiny import render
 
 @render.text
 async def report():
+    # GOOD: Non-blocking async sleep yields to the event loop
     await asyncio.sleep(5)
-    async with httpx.AsyncClient() as client:
-        resp = await client.get("https://api.example.com/data")
-        return resp.text
+    return "Done"
 ```
 
-For long CPU-bound synchronous calculations, use `@reactive.extended_task`:
+### Good Code: Blocking synchronous I/O offloaded to a worker thread
 ```python
-@reactive.extended_task
-async def compute_heavy_task(n: int):
-    # Runs in a background worker pool
-    import time
-    time.sleep(10)
+import asyncio
+import time
+from shiny import reactive
+
+def blocking_io_work(n: int) -> int:
+    time.sleep(5)
     return n * 42
+
+@reactive.extended_task
+async def fetch_task(n: int):
+    # GOOD: Offloads synchronous blocking I/O to a worker thread pool
+    return await asyncio.to_thread(blocking_io_work, n)
+```
+
+### Good Code: CPU-bound computation offloaded to a ProcessPoolExecutor
+```python
+import asyncio
+from concurrent.futures import ProcessPoolExecutor
+from shiny import reactive
+
+process_pool = ProcessPoolExecutor(max_workers=2)
+
+def heavy_cpu_crunch(n: int) -> int:
+    total = sum(i * i for i in range(n))
+    return total
+
+@reactive.extended_task
+async def cpu_task(n: int):
+    # GOOD: Offloads heavy CPU calculation to a background process pool
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(process_pool, heavy_cpu_crunch, n)
 ```
 
 ---
@@ -221,6 +273,8 @@ Output area in browser remains blank or silently unpopulated without explicit Py
 
 ### Bad Code
 ```python
+from shiny import App, render, ui
+
 app_ui = ui.page_fluid(
     ui.output_text_verbatim("summary_output")
 )
@@ -230,6 +284,8 @@ def server(input, output, session):
     @render.text
     def summary_text():
         return "Calculation finished."
+
+app = App(app_ui, server)
 ```
 
 ### Why It Fails
@@ -237,6 +293,8 @@ In Shiny Core mode, the `@render.*` decorator registers the output using the exa
 
 ### Good Code
 ```python
+from shiny import App, render, ui
+
 app_ui = ui.page_fluid(
     ui.output_text_verbatim("summary_output")
 )
@@ -245,6 +303,8 @@ def server(input, output, session):
     @render.text
     def summary_output():
         return "Calculation finished."
+
+app = App(app_ui, server)
 ```
 
 ---
@@ -256,6 +316,8 @@ Inputs behave erratically, input values override each other, or outputs overwrit
 
 ### Bad Code
 ```python
+from shiny import ui
+
 app_ui = ui.page_fluid(
     ui.input_text("query", "Search Products"),
     ui.input_text("query", "Search Customers"),  # BAD: Duplicate ID "query"
@@ -267,6 +329,8 @@ HTML element IDs and Shiny input/output keys must be unique within their namespa
 
 ### Good Code
 ```python
+from shiny import ui
+
 app_ui = ui.page_fluid(
     ui.input_text("product_query", "Search Products"),
     ui.input_text("customer_query", "Search Customers"),
@@ -275,34 +339,18 @@ app_ui = ui.page_fluid(
 
 ---
 
-## 9. Module Namespace Omission
+## 9. Module Instance ID Mismatches and Collisions
 
 ### Symptom
-Module inputs or outputs fail to update or throw `KeyError` when invoked multiple times.
+Module outputs remain blank, module inputs never update, or two module instances collide.
 
-### Bad Code
+### Bad Code 1: Mismatched instance ID between UI and Server call
 ```python
-from shiny import module, ui, render
+from shiny import App, module, reactive, render, ui
 
 @module.ui
 def counter_ui():
-    # BAD: missing ns() wrapper on IDs inside module UI!
-    return ui.div(
-        ui.input_action_button("btn", "Increment"),
-        ui.output_text("val"),
-    )
-```
-
-### Why It Fails
-Without namespacing (`ns("btn")`), multiple instances of `counter_ui()` generate identical HTML IDs, breaking isolation.
-
-### Good Code
-```python
-from shiny import module, ui, render
-
-@module.ui
-def counter_ui():
-    # GOOD: session.ns (or ns) automatically scopes IDs to this module instance
+    # Note: @module.ui automatically namespaces "btn" and "val"!
     return ui.div(
         ui.input_action_button("btn", "Increment"),
         ui.output_text("val"),
@@ -320,6 +368,66 @@ def counter_server(input, output, session):
     @render.text
     def val():
         return f"Count: {count()}"
+
+app_ui = ui.page_fluid(
+    counter_ui("counter_a")
+)
+
+def server(input, output, session):
+    # BAD: Typo in module instance ID ('counter_1' vs 'counter_a')!
+    counter_server("counter_1")
+
+app = App(app_ui, server)
+```
+
+### Bad Code 2: Duplicate module instance IDs
+```python
+from shiny import ui
+
+# BAD: Calling counter_ui twice with the same instance ID "counter_a"
+app_ui = ui.page_fluid(
+    counter_ui("counter_a"),
+    counter_ui("counter_a")
+)
+```
+
+### Why It Fails
+In Shiny for Python, `@module.ui` automatically prefixes all inner input and output IDs using the instance ID passed to `counter_ui("id")`. If the server module is called with a different instance ID (`counter_server("different_id")`), the server listens on a completely different namespace than the UI rendered.
+
+### Good Code
+```python
+from shiny import App, module, reactive, render, ui
+
+@module.ui
+def counter_ui():
+    return ui.div(
+        ui.input_action_button("btn", "Increment"),
+        ui.output_text("val"),
+    )
+
+@module.server
+def counter_server(input, output, session):
+    count = reactive.value(0)
+
+    @reactive.effect
+    @reactive.event(input.btn)
+    def _():
+        count.set(count() + 1)
+
+    @render.text
+    def val():
+        return f"Count: {count()}"
+
+app_ui = ui.page_fluid(
+    counter_ui("counter_1"),
+    counter_ui("counter_2")
+)
+
+def server(input, output, session):
+    counter_server("counter_1")
+    counter_server("counter_2")
+
+app = App(app_ui, server)
 ```
 
 ---
@@ -350,7 +458,7 @@ Shiny Express apps evaluate top-level code directly into the UI tree and wrap se
 
 ### Good Code (Express Mode)
 ```python
-from shiny.express import ui, render, input
+from shiny.express import input, render, ui
 
 ui.page_opts(title="My Express App")
 ui.h2("Title")

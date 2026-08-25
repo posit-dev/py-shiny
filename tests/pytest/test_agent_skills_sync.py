@@ -54,3 +54,43 @@ def test_shiny_doctor_references() -> None:
     assert "@reactive.calc" in antipatterns_text
     assert "@reactive.extended_task" in antipatterns_text
     assert "reactive.value" in antipatterns_text
+
+
+def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
+    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
+    skill_text = (doctor_dir / "SKILL.md").read_text()
+    antipatterns_text = (doctor_dir / "references" / "antipatterns.md").read_text()
+
+    assert "session.ns" not in skill_text
+    assert "missing ns() wrapper" not in antipatterns_text
+    assert "asyncio.to_thread" in antipatterns_text
+    assert "ProcessPoolExecutor" in antipatterns_text
+    assert "Runtime Verified" in skill_text
+
+
+def test_shiny_doctor_code_blocks_compile() -> None:
+    import re
+
+    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
+    for md_file in doctor_dir.rglob("*.md"):
+        content = md_file.read_text()
+        code_blocks = re.findall(r"```python\n(.*?)```", content, re.DOTALL)
+        for i, code in enumerate(code_blocks):
+            try:
+                compile(code, f"{md_file.name}_block_{i}", "exec")
+            except SyntaxError as e:
+                raise AssertionError(
+                    f"Syntax error in code block {i} in {md_file.name}: {e}\nCode:\n{code}"
+                ) from e
+
+
+def test_shiny_doctor_markdown_links() -> None:
+    import re
+
+    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
+    for md_file in doctor_dir.rglob("*.md"):
+        content = md_file.read_text()
+        links = re.findall(r"\[.*?\]\((references/[^\)]+)\)", content)
+        for link in links:
+            target_path = (doctor_dir / link.split("#")[0]).resolve()
+            assert target_path.is_file(), f"Broken link {link} in {md_file.name}"
