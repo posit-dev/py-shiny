@@ -42,3 +42,15 @@ def test_otel_reference_mentions_collect_levels() -> None:
             f"OtelCollectLevel.{level.name} is not documented in the otel "
             "reference's collection-levels table."
         )
+
+
+def test_shiny_doctor_references() -> None:
+    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
+    skill_text = (doctor_dir / "SKILL.md").read_text()
+    assert "shiny-doctor" in skill_text
+    assert (doctor_dir / "references" / "antipatterns.md").is_file()
+    assert (doctor_dir / "references" / "diagnostics-checklist.md").is_file()
+    antipatterns_text = (doctor_dir / "references" / "antipatterns.md").read_text()
+    assert "@reactive.calc" in antipatterns_text
+    assert "@reactive.extended_task" in antipatterns_text
+    assert "reactive.value" in antipatterns_text
