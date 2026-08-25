@@ -259,7 +259,7 @@ def inspect(
                 sys.exit(1)
 
         recorded_actions: Optional[List[Dict[str, Any]]] = None
-        actual_video_path: Optional[str] = None
+        actual_video_path: Optional[str] = video_path if video_path else None
 
         if record_flag:
             if not app_file_to_run:
