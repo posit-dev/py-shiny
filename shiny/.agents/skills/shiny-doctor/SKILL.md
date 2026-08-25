@@ -72,7 +72,7 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
 
 ### Phase 5: Session Isolation & State Scope
 1. **Per-Session State**:
-   - `reactive.value()`, user session data, and connection state must be created *inside* the `server()` function or module server (in Core) or inside the per-session execution context (in Express).
+   - Session-specific `reactive.value()` state, user session data, and connection state must be created *inside* the `server()` function or module server (in Core) or inside the per-session execution context (in Express).
    - Flag mutable global `reactive.value()` state when it contains user/session-specific data; verify whether cross-session state sharing is intentional (e.g. shared persistent counters or global caches) before treating it as a bug.
 2. **Container Mutation**:
    - When modifying lists or dictionaries in a `reactive.value`, re-assign a new/copied container or call `.set()` so downstream reactives invalidate properly.
