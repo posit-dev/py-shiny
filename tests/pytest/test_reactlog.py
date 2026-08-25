@@ -562,6 +562,7 @@ def out():
         encoding="utf-8",
     )
     import shiny._inspect as inspect_mod
+    import shiny._main._inspect as main_inspect_mod
 
     def _mock_record(*args: object, **kwargs: object) -> dict[str, object]:
         return {
@@ -571,6 +572,7 @@ def out():
         }
 
     monkeypatch.setattr(inspect_mod, "record_shiny_session", _mock_record)
+    monkeypatch.setattr(main_inspect_mod, "record_shiny_session", _mock_record)
 
     runner = CliRunner()
     res = runner.invoke(
