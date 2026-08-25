@@ -162,9 +162,6 @@ installed shiny.
 - [ ] `CHANGELOG.md`: follow the established wording — "Update pre-built shinyswatch themes
       for use with Shiny vX.Y.Z." — plus a line noting the new shiny floor
 
-Note: py-shinyswatch has had a `conda-forge/shinyswatch-feedstock` since July 2026, so it is
-now in scope for Phase 11.
-
 Ask user: "Is py-shinyswatch being released? What version? Do we need to update docs after shinylive updates?"
 
 ---
@@ -527,12 +524,8 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 | `faicons` | `conda-forge/faicons-feedstock` | — (own cadence) |
 | `shiny-validate` | `conda-forge/shiny-validate-feedstock` | — (own cadence) |
 
-Two naming traps. Only the two oldest feedstocks carry the `py-` prefix; the newer ones match
-the **PyPI** name, not the GitHub repo name. And `posit-dev/py-shinylive` publishes to PyPI as
-`shinylive`, so its feedstock will be `shinylive-feedstock` once it exists.
-
 `shinychat`, `faicons`, and `shiny-validate` are not part of the release train, but if one of
-them happened to be released alongside py-shiny, check its bot PR too.
+them happened to be released alongside py-shiny or have an outdated feedstock, check its bot PR too.
 
 Bump the feedstocks in dependency order — `htmltools` → `shiny` → (`shinyswatch`,
 `shinywidgets`, `shinychat`) — because the downstream recipes' test phase imports `shiny`. A
