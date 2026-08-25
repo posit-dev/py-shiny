@@ -84,13 +84,14 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
    - When diagnosing performance bottlenecks, use `shiny.otel` (`SHINY_OTEL_COLLECT=all`) to trace span timings across the reactive graph.
 
 ### Phase 7: Runtime Verification & Validation
-1. **Startup & Execution Validation**:
-   - When execution is available, start the application using `shiny run app.py` (or through a Shiny test harness / pytest) to establish a real ASGI server session and verify that reactive graph initialization, WebSockets, and renderers start without runtime errors or deprecation warnings. (Do not rely on `python app.py`, which only executes top-level module code and exits without booting the Shiny server).
-2. **Reproduce & Retest**:
-   - If tests exist (pytest, Playwright), run them before modifying code to confirm failure, and rerun them after applying the fix to verify resolution.
+1. **Server Startup Validation**:
+   - When execution is available, start the application using `shiny run app.py` to verify application import and ASGI server startup without top-level syntax errors, import failures, or invalid schema configurations. (Do not rely on `python app.py`, which only executes top-level module code and exits without booting the Shiny server).
+2. **Session-Level Verification**:
+   - To claim full session-level runtime verification, connect to the application through a browser, Playwright harness, or Shiny test session (`shiny.test`) so that the `server(input, output, session)` function, reactive graph initialization, WebSocket connection, and `@render.*` outputs are genuinely exercised.
 3. **Strict Verification Labeling Rule**:
-   - **Never** claim a fix is "verified" based purely on static code inspection.
-   - If runtime verification was executed and passed, label the result as **Runtime Verified**.
+   - **Never** claim an app's behavior is fully verified based purely on static code inspection or server port listening alone.
+   - If connected client tests (e.g. Playwright or Shiny test sessions) passed, label as **Runtime Verified (Session Level)**.
+   - If only server startup was executed without a client connection, label as **Server Startup Verified**.
    - If runtime execution was unavailable, explicitly label the diagnosis as **Static Diagnosis Only**.
 
 ---

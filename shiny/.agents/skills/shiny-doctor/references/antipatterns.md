@@ -85,33 +85,32 @@ def display():
 
 ### Bad Code
 ```python
-from shiny import App, input, ui
+from shiny import reactive
 
-app_ui = ui.page_fluid(
-    ui.input_slider("n", "N", 1, 100, 50),
-    ui.output_text("txt")
-)
+val = reactive.value(10)
 
-# BAD: reading input.n() at top-level module scope outside a reactive context
-initial_val = input.n()
+# BAD: reading val() at top-level module scope outside a reactive context raises RuntimeError
+initial_val = val()
 ```
 
 ### Why It Fails
-Reactive sources can only be read inside reactive contexts (`@reactive.calc`, `@reactive.effect`, `@render.*`, or `with reactive.isolate():`). Outside these contexts, no dependency tracking can occur.
+Reactive values and calculations can only be read inside a reactive context (`@reactive.calc`, `@reactive.effect`, `@render.*`, or `with reactive.isolate():`). Outside these contexts, no dependency tracking or session scope exists, raising a `RuntimeError`.
 
 ### Good Code
 ```python
-from shiny import App, render, ui
+from shiny import App, reactive, render, ui
 
 app_ui = ui.page_fluid(
-    ui.input_slider("n", "N", 1, 100, 50),
     ui.output_text("txt")
 )
 
 def server(input, output, session):
+    val = reactive.value(10)
+
     @render.text
     def txt():
-        return f"Current slider: {input.n()}"
+        # GOOD: reactive read inside a renderer context
+        return f"Current value: {val()}"
 
 app = App(app_ui, server)
 ```
@@ -121,15 +120,17 @@ app = App(app_ui, server)
 ## 4. In-Place Mutation of Reactive Values
 
 ### Symptom
-Modifying a list or dictionary stored in a `reactive.value` does not trigger dependent outputs or calculations to update.
+Modifying a list or dictionary stored in a `reactive.value` does not trigger dependent outputs or calculations to update, or causes self-invalidation loops if done in an unconditional effect.
 
 ### Bad Code
 ```python
 from shiny import reactive
 
 items = reactive.value([])
+trigger = reactive.value(0)
 
 @reactive.effect
+@reactive.event(trigger)
 def _():
     # BAD: In-place mutation inside reactive effect does NOT trigger downstream invalidations
     items().append("new_item")
@@ -143,10 +144,12 @@ Shiny tracks value invalidations when `.set()` is called or when the reactive va
 from shiny import reactive
 
 items = reactive.value([])
+trigger = reactive.value(0)
 
 @reactive.effect
+@reactive.event(trigger)
 def _():
-    # GOOD: Assigning a new container or calling .set() triggers reactive invalidation
+    # GOOD: @reactive.event isolates other reads; assigning a new container or .set() invalidates consumers
     current = list(items())
     current.append("new_item")
     items.set(current)

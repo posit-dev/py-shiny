@@ -66,10 +66,12 @@ def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
     assert "asyncio.to_thread" in antipatterns_text
     assert "ProcessPoolExecutor" in antipatterns_text
     assert "Runtime Verified" in skill_text
+    assert "Server Startup Verified" in skill_text
     assert "shiny run app.py" in skill_text
     assert "Do not rely on `python app.py`" in skill_text
-    assert "initial_val = input.n()" in antipatterns_text
-    assert "@reactive.effect\ndef _():" in antipatterns_text
+    assert "from shiny import input" not in antipatterns_text
+    assert "initial_val = val()" in antipatterns_text
+    assert "@reactive.event(trigger)" in antipatterns_text
 
 
 def test_shiny_doctor_code_blocks_compile() -> None:
