@@ -241,3 +241,28 @@ def out():
     video_tab.click()
     expect(page.locator("#video-panel")).to_be_visible()
     expect(page.locator("video")).to_be_visible()
+
+
+def test_trace_timeline_scrubber_and_action_chips(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("multiplier", "Mult", 5)
+@render.text
+def res():
+    return str(input.multiplier() * 10)
+"""
+    recorded_actions = [
+        {"type": "input", "name": "multiplier", "value": 8, "timestamp": 1200},
+        {"type": "output", "name": "res", "timestamp": 1600},
+    ]
+    reactlog = generate_reactlog(
+        code, recorded_actions=recorded_actions, video_path="demo.webm"
+    )
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
+        wait_until="domcontentloaded",
+    )
+
+    trace_bar = page.locator("#trace-timeline-bar")
+    expect(trace_bar).to_be_visible()
+    expect(page.locator("#trace-playhead")).to_be_visible()
+    expect(page.locator(".trace-chip")).to_have_count(3)

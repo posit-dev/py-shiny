@@ -980,18 +980,37 @@ def _record_session_sync(
             except Exception:
                 pass
 
+            page_video = page.video
+
             page.close()
             context.close()
             browser.close()
 
-        video_files = list(Path(temp_dir).glob("*.webm"))
-        if video_files and video_path:
-            out_v = Path(video_path).resolve()
-            out_v.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(video_files[0], out_v)
-            saved_video_path = str(out_v)
-        elif video_files:
-            saved_video_path = str(video_files[0])
+            if page_video and video_path:
+                out_v = Path(video_path).resolve()
+                out_v.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    page_video.save_as(str(out_v))
+                    saved_video_path = str(out_v)
+                except Exception:
+                    pass
+            elif page_video:
+                temp_video = Path(temp_dir) / "recording.webm"
+                try:
+                    page_video.save_as(str(temp_video))
+                    saved_video_path = str(temp_video)
+                except Exception:
+                    pass
+
+        if not saved_video_path:
+            video_files = list(Path(temp_dir).glob("*.webm"))
+            if video_files and video_path:
+                out_v = Path(video_path).resolve()
+                out_v.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(video_files[0], out_v)
+                saved_video_path = str(out_v)
+            elif video_files:
+                saved_video_path = str(video_files[0])
 
         return {
             "success": True,
@@ -1362,6 +1381,29 @@ def format_reactlog_html(
     .inspector-row {{ display: flex; justify-content: space-between; font-size: 0.74rem; padding: 0.2rem 0; }}
     .inspector-label {{ color: var(--text-muted); }}
     .inspector-val {{ font-family: var(--mono); color: var(--text); font-weight: 600; }}
+    .trace-timeline-bar {{ display: flex; align-items: center; gap: 0.8rem; padding: 0.4rem 1rem; background: #0b1017; border-bottom: 1px solid var(--border); user-select: none; min-height: 48px; }}
+    .trace-time-display {{ display: flex; align-items: center; gap: 0.45rem; font: 700 0.74rem var(--mono); color: var(--text); white-space: nowrap; min-width: 195px; }}
+    .trace-badge {{ background: #193147; border: 1px solid #2d618d; color: #79c0ff; border-radius: 4px; padding: 0.12rem 0.4rem; font-size: 0.65rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
+    .btn.mini {{ padding: 0.2rem 0.4rem; font-size: 0.68rem; }}
+    .trace-nav-actions {{ display: flex; gap: 0.25rem; margin-left: 0.3rem; }}
+    .trace-track-wrap {{ flex: 1; position: relative; height: 38px; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; outline: none; }}
+    .trace-ruler {{ position: relative; height: 14px; width: 100%; pointer-events: none; }}
+    .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 6px; background: var(--border-strong); }}
+    .trace-ruler-tick.major {{ height: 10px; background: var(--text-muted); }}
+    .trace-ruler-label {{ position: absolute; bottom: 5px; transform: translateX(-50%); font: 600 0.6rem var(--mono); color: var(--text-muted); pointer-events: none; }}
+    .trace-track {{ position: relative; height: 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; overflow: visible; }}
+    .trace-fill {{ position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 5px 0 0 5px; pointer-events: none; }}
+    .trace-actions-container {{ position: absolute; inset: 0; pointer-events: none; }}
+    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 14px; padding: 0 5px; border-radius: 999px; font: 700 0.58rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 2; }}
+    .trace-chip:hover, .trace-chip.is-active {{ transform: translate(-50%, -50%) scale(1.18); z-index: 5; box-shadow: 0 0 8px var(--accent); }}
+    .trace-chip.kind-input {{ background: #0c2d48; color: #38bdf8; border: 1px solid #0284c7; }}
+    .trace-chip.kind-click {{ background: #2b1846; color: #d8b4fe; border: 1px solid #7e22ce; }}
+    .trace-chip.kind-output {{ background: #0f331e; color: #4ade80; border: 1px solid #16a34a; }}
+    .trace-chip.kind-calc {{ background: #38280b; color: #fbbf24; border: 1px solid #d97706; }}
+    .trace-playhead {{ position: absolute; top: -6px; bottom: -4px; left: 0%; width: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); pointer-events: none; z-index: 10; transition: left 40ms linear; }}
+    .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 9px; height: 9px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 6px var(--accent); }}
+    .playhead-line {{ width: 100%; height: 100%; }}
+    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: rgba(17, 24, 33, 0.95); border: 1px solid var(--accent); border-radius: 6px; padding: 0.35rem 0.6rem; font: 600 0.68rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 20; }}
   </style>
 </head>
 <body>
@@ -1421,6 +1463,29 @@ def format_reactlog_html(
       <button class="btn filter-btn" data-role="observer" aria-pressed="true" onclick="toggleRoleFilter('observer', this)">Outputs</button>
     </div>
   </main>
+
+  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Session Recording Trace Scrubber">
+    <div class="trace-time-display" id="trace-time-display">
+      <span class="trace-badge">Trace</span>
+      <span id="trace-current-time">00:00.00</span> / <span id="trace-total-time">00:00.00</span>
+      <div class="trace-nav-actions">
+        <button class="btn icon mini" onclick="prevAction()" aria-label="Previous action" title="Previous action"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
+        <button class="btn icon mini" onclick="nextAction()" aria-label="Next action" title="Next action"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
+      </div>
+    </div>
+    <div class="trace-track-wrap" id="trace-track-wrap" tabindex="0" role="slider" aria-label="Scrub trace recording" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="trace-ruler" id="trace-ruler"></div>
+      <div class="trace-track" id="trace-track">
+        <div class="trace-fill" id="trace-fill"></div>
+        <div class="trace-actions-container" id="trace-actions-container"></div>
+        <div class="trace-playhead" id="trace-playhead">
+          <div class="playhead-handle"></div>
+          <div class="playhead-line"></div>
+        </div>
+      </div>
+      <div class="trace-tooltip" id="trace-tooltip" hidden></div>
+    </div>
+  </div>
 
   <div class="main-view" id="main-view">
     <div class="graph-container" id="graph-container">
@@ -1507,6 +1572,8 @@ def format_reactlog_html(
     let isPanning = false;
     let startPan = {{ x: 0, y: 0 }};
     let hasUserCustomWidth = false;
+    let maxSessionDuration = 1.0;
+    let isDraggingTrace = false;
 
     function setSidebarWidth(widthPx) {{
       const minW = 320;
@@ -1621,6 +1688,172 @@ def format_reactlog_html(
       }}
     }}
 
+    function initTraceTimeline() {{
+      const bar = document.getElementById('trace-timeline-bar');
+      const trackWrap = document.getElementById('trace-track-wrap');
+      const ruler = document.getElementById('trace-ruler');
+      const actionsContainer = document.getElementById('trace-actions-container');
+      if (!bar || !trackWrap || !ruler || !actionsContainer) return;
+
+      const events = reactlogData.events;
+      let maxTime = 0;
+      for (const ev of events) {{
+        if (ev.time_sec !== undefined && ev.time_sec > maxTime) maxTime = ev.time_sec;
+        if (ev.effective_time !== undefined && ev.effective_time > maxTime) maxTime = ev.effective_time;
+      }}
+      const video = document.getElementById('session-video');
+      if (video && video.duration && !isNaN(video.duration)) {{
+        maxTime = Math.max(maxTime, video.duration);
+      }}
+      maxSessionDuration = Math.max(1.0, maxTime);
+
+      const totalDisplay = document.getElementById('trace-total-time');
+      if (totalDisplay) totalDisplay.textContent = formatTime(maxSessionDuration);
+      const curDisplay = document.getElementById('trace-current-time');
+      if (curDisplay) curDisplay.textContent = formatTime(0);
+
+      ruler.innerHTML = '';
+      const stepSec = maxSessionDuration <= 5 ? 0.5 : (maxSessionDuration <= 20 ? 1.0 : 2.0);
+      for (let sec = 0; sec <= maxSessionDuration + 0.001; sec += stepSec) {{
+        const pct = (sec / maxSessionDuration) * 100;
+        if (pct > 100) break;
+        const isMajor = Math.abs(sec - Math.round(sec)) < 0.01;
+        const tick = document.createElement('div');
+        tick.className = `trace-ruler-tick ${{isMajor ? 'major' : ''}}`;
+        tick.style.left = `${{pct}}%`;
+        ruler.appendChild(tick);
+
+        if (isMajor || sec === 0) {{
+          const lbl = document.createElement('span');
+          lbl.className = 'trace-ruler-label';
+          lbl.style.left = `${{pct}}%`;
+          lbl.textContent = `${{Math.round(sec)}}s`;
+          ruler.appendChild(lbl);
+        }}
+      }}
+
+      actionsContainer.innerHTML = '';
+      events.forEach((ev, idx) => {{
+        if (ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated' || ev.event === 'dependsOn')) {{
+          const t = ev.time_sec !== undefined ? ev.time_sec : 0;
+          const pct = Math.min(100, Math.max(0, (t / maxSessionDuration) * 100));
+          const chip = document.createElement('div');
+          let kindClass = 'kind-input';
+          let shortLabel = ev.node_id || ev.event;
+          if (ev.event === 'userClick') {{
+            kindClass = 'kind-click';
+            shortLabel = ev.details || 'click';
+          }} else if (ev.event === 'outputUpdated') {{
+            kindClass = 'kind-output';
+          }} else if (ev.event === 'dependsOn') {{
+            kindClass = 'kind-calc';
+          }}
+          chip.className = `trace-chip ${{kindClass}}`;
+          chip.style.left = `${{pct}}%`;
+          chip.setAttribute('data-step', String(idx));
+          chip.setAttribute('data-time', String(t));
+          chip.title = `[${{formatTime(t)}}] ${{ev.details || ev.event}}`;
+          chip.textContent = shortLabel.slice(0, 16);
+          chip.onclick = (e) => {{
+            e.stopPropagation();
+            seekTo(idx);
+          }};
+          actionsContainer.appendChild(chip);
+        }}
+      }});
+
+      const tooltip = document.getElementById('trace-tooltip');
+      const seekFromPointer = (e) => {{
+        const rect = trackWrap.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const targetSec = ratio * maxSessionDuration;
+
+        let matchIdx = 0;
+        for (let i = 0; i < events.length; i++) {{
+          const ev = events[i];
+          const t = ev.effective_time !== undefined ? ev.effective_time : (ev.time_sec !== undefined ? ev.time_sec : 0);
+          if (t <= targetSec) matchIdx = i;
+        }}
+        seekTo(matchIdx);
+
+        if (video) {{
+          try {{ video.currentTime = targetSec; }} catch (err) {{}}
+        }}
+      }};
+
+      trackWrap.addEventListener('pointerdown', (e) => {{
+        isDraggingTrace = true;
+        try {{ trackWrap.setPointerCapture(e.pointerId); }} catch (err) {{}}
+        seekFromPointer(e);
+      }});
+
+      trackWrap.addEventListener('pointermove', (e) => {{
+        const rect = trackWrap.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const targetSec = ratio * maxSessionDuration;
+
+        if (isDraggingTrace) {{
+          seekFromPointer(e);
+        }}
+
+        if (tooltip) {{
+          tooltip.hidden = false;
+          tooltip.style.left = `${{ratio * 100}}%`;
+          tooltip.textContent = `${{formatTime(targetSec)}}`;
+        }}
+      }});
+
+      trackWrap.addEventListener('pointerleave', () => {{
+        if (!isDraggingTrace && tooltip) tooltip.hidden = true;
+      }});
+
+      trackWrap.addEventListener('pointerup', (e) => {{
+        isDraggingTrace = false;
+        try {{ trackWrap.releasePointerCapture(e.pointerId); }} catch (err) {{}}
+        if (tooltip) tooltip.hidden = true;
+      }});
+    }}
+
+    function updateTraceTimelineScrubber(curSec) {{
+      if (!maxSessionDuration || isNaN(maxSessionDuration)) return;
+      const playhead = document.getElementById('trace-playhead');
+      const fill = document.getElementById('trace-fill');
+      const curDisplay = document.getElementById('trace-current-time');
+      const pct = Math.min(100, Math.max(0, (curSec / maxSessionDuration) * 100));
+
+      if (playhead) playhead.style.left = `${{pct}}%`;
+      if (fill) fill.style.width = `${{pct}}%`;
+      if (curDisplay) curDisplay.textContent = formatTime(curSec);
+
+      document.querySelectorAll('.trace-chip').forEach(chip => {{
+        const chipTime = parseFloat(chip.getAttribute('data-time') || '0');
+        const isActive = Math.abs(chipTime - curSec) < 0.35;
+        chip.classList.toggle('is-active', isActive);
+      }});
+    }}
+
+    function nextAction() {{
+      for (let i = currentStep + 1; i < reactlogData.events.length; i++) {{
+        const ev = reactlogData.events[i];
+        if (ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated')) {{
+          seekTo(i);
+          return;
+        }}
+      }}
+    }}
+
+    function prevAction() {{
+      for (let i = currentStep - 1; i >= 0; i--) {{
+        const ev = reactlogData.events[i];
+        if (ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated')) {{
+          seekTo(i);
+          return;
+        }}
+      }}
+      seekTo(0);
+    }}
+
     function init() {{
       prepareEventTimings();
       document.getElementById('stat-nodes').textContent = `Nodes: ${{reactlogData.nodes.length}}`;
@@ -1642,6 +1875,7 @@ def format_reactlog_html(
 
       renderEventList();
       renderGraph();
+      initTraceTimeline();
       seekTo(0);
       setupPanZoom();
       setupVideoSync();
@@ -1977,6 +2211,9 @@ def format_reactlog_html(
       updateSourceHighlight();
       updateActionToast();
 
+      const curSec = ev && ev.time_sec !== undefined ? ev.time_sec : 0;
+      updateTraceTimelineScrubber(curSec);
+
       if (!fromVideo) {{
         const video = document.getElementById('session-video');
         if (video && ev && ev.time_sec !== undefined && !isNaN(ev.time_sec)) {{
@@ -2007,6 +2244,15 @@ def format_reactlog_html(
 
       const btn = document.getElementById('btn-play');
 
+      video.addEventListener('loadedmetadata', () => {{
+        if (video.duration && !isNaN(video.duration)) {{
+          maxSessionDuration = Math.max(maxSessionDuration, video.duration);
+          const totalDisplay = document.getElementById('trace-total-time');
+          if (totalDisplay) totalDisplay.textContent = formatTime(maxSessionDuration);
+          initTraceTimeline();
+        }}
+      }});
+
       video.addEventListener('play', () => {{
         isPlaying = true;
         if (btn) btn.innerHTML = ICONS.pause;
@@ -2024,6 +2270,7 @@ def format_reactlog_html(
 
       const syncGraphFromVideo = () => {{
         const curSec = video.currentTime;
+        updateTraceTimelineScrubber(curSec);
         let matchIdx = 0;
         for (let i = 0; i < reactlogData.events.length; i++) {{
           const ev = reactlogData.events[i];

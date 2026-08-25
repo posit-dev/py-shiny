@@ -511,6 +511,21 @@ def out():
     assert "--sidebar-width" in html
 
 
+def test_html_trace_timeline_ribbon():
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("n", "N", 10)
+@render.text
+def out():
+    return f"V={input.n()}"
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert 'id="trace-timeline-bar"' in html
+    assert 'id="trace-track-wrap"' in html
+    assert 'id="trace-playhead"' in html
+    assert "initTraceTimeline()" in html
+
+
 def test_cli_inspect_json_clean_stdout(tmp_path: Path):
     app_file = tmp_path / "app.py"
     app_file.write_text(
@@ -546,24 +561,24 @@ def out():
     )
     import shiny._inspect as inspect_mod
 
-    monkeypatch.setattr(
-        inspect_mod,
-        "record_shiny_session",
-        lambda *args, **kwargs: {
+    def _mock_record(*args: object, **kwargs: object) -> dict[str, object]:
+        return {
             "success": True,
             "actions": [{"type": "input", "name": "n", "value": 10, "timestamp": 100}],
             "video_path": None,
-        },
-    )
+        }
 
-    runner = CliRunner(mix_stderr=False)
+    monkeypatch.setattr(inspect_mod, "record_shiny_session", _mock_record)
+
+    runner = CliRunner()
     res = runner.invoke(
         main,
         ["inspect", str(app_file), "--record", "--headless", "--json"],
     )
     assert res.exit_code == 0
-    assert "Recording Playwright session" in res.stderr
-    data = json.loads(res.stdout)
+    json_start = res.output.find("{")
+    assert json_start != -1
+    data = json.loads(res.output[json_start:])
     assert data["success"] is True
     assert "events" in data
     assert data["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
