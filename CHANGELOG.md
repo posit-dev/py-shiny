@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `shiny simulate` CLI command and Python in-memory simulation API (`shiny.pytest.simulate`, `shiny.simulate.simulate`) to test reactive Shiny apps without a browser.
+* Added `shiny simulate` CLI command and Python in-memory simulation API (`shiny.pytest.simulate`, `shiny.simulate.simulate`) to test reactive Shiny apps without a browser. (#2470)
 
 * Added `session.allow_reconnect()`, the Python counterpart to Shiny for R's `session$allowReconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
 
