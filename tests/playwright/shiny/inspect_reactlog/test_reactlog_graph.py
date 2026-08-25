@@ -265,4 +265,7 @@ def res():
     trace_bar = page.locator("#trace-timeline-bar")
     expect(trace_bar).to_be_visible()
     expect(page.locator("#trace-playhead")).to_be_visible()
+    expect(page.locator("#lane-inputs .trace-chip")).to_have_count(1)
+    expect(page.locator("#lane-outputs .trace-chip")).to_have_count(2)
+    expect(page.locator("#lane-calcs .trace-chip")).to_have_count(0)
     expect(page.locator(".trace-chip")).to_have_count(3)
