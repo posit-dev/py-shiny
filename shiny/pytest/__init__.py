@@ -7,6 +7,19 @@ except ImportError:
         "\n\n    pip install pytest"
     )
 
+from ..simulate import (
+    SimulationResult,
+    simulate,
+    simulate_app,
+    simulate_async,
+)
 from ._fixture import ScopeName, create_app_fixture
 
-__all__ = ("create_app_fixture", "ScopeName")
+__all__ = (
+    "create_app_fixture",
+    "ScopeName",
+    "simulate",
+    "simulate_app",
+    "simulate_async",
+    "SimulationResult",
+)
