@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, cast
 
 import click
 
-from ..simulate import simulate_shiny_app
+from ..simulate import simulate_async
 from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success
 
 
@@ -87,9 +87,11 @@ def simulate(
     if inputs_json:
         try:
             parsed = json.loads(inputs_json)
-            if isinstance(parsed, dict):
-                typed_dict = cast(Dict[str, Any], parsed)
-                sim_inputs.update(typed_dict)
+            if not isinstance(parsed, dict):
+                raise ValueError(
+                    f"JSON must be an object/dict, got {type(parsed).__name__}"
+                )
+            sim_inputs.update(cast(Dict[str, Any], parsed))
         except Exception as e:
             if json_output:
                 click.echo(
@@ -151,7 +153,7 @@ def simulate(
 
     start_t = time.perf_counter()
     result = asyncio.run(
-        simulate_shiny_app(
+        simulate_async(
             code=code,
             file_path=app_path,
             inputs=sim_inputs,

@@ -100,3 +100,13 @@ app = App(app_ui, server)
 
     assert res.exit_code == 0
     assert "result: loaded sibling" in res.output
+
+
+def test_cli_simulate_rejects_non_dict_inputs_json():
+    runner = CliRunner()
+    res = runner.invoke(
+        main,
+        ["simulate", "--code", "from shiny.express import ui", "--inputs", "[1, 2, 3]"],
+    )
+    assert res.exit_code == 1
+    assert "JSON must be an object/dict" in res.output
