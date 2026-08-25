@@ -1382,29 +1382,46 @@ def format_reactlog_html(
     .inspector-row {{ display: flex; justify-content: space-between; font-size: 0.74rem; padding: 0.2rem 0; }}
     .inspector-label {{ color: var(--text-muted); }}
     .inspector-val {{ font-family: var(--mono); color: var(--text); font-weight: 600; }}
-    .trace-timeline-bar {{ display: flex; align-items: center; gap: 0.8rem; padding: 0.4rem 1rem; background: #0b1017; border-bottom: 1px solid var(--border); user-select: none; min-height: 48px; }}
-    .trace-time-display {{ display: flex; align-items: center; gap: 0.45rem; font: 700 0.74rem var(--mono); color: var(--text); white-space: nowrap; min-width: 195px; }}
-    .trace-badge {{ background: #193147; border: 1px solid #2d618d; color: #79c0ff; border-radius: 4px; padding: 0.12rem 0.4rem; font-size: 0.65rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
-    .btn.mini {{ padding: 0.2rem 0.4rem; font-size: 0.68rem; }}
-    .trace-nav-actions {{ display: flex; gap: 0.25rem; margin-left: 0.3rem; }}
-    .trace-track-wrap {{ flex: 1; position: relative; height: 38px; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; outline: none; }}
+    .trace-timeline-bar {{ display: flex; flex-direction: column; gap: 0.35rem; padding: 0.45rem 1rem 0.55rem 1rem; background: #080d14; border-bottom: 1px solid var(--border); user-select: none; }}
+    .trace-header {{ display: flex; align-items: center; justify-content: space-between; gap: 1rem; }}
+    .trace-controls {{ display: flex; align-items: center; gap: 0.45rem; font: 700 0.74rem var(--mono); color: var(--text); }}
+    .trace-badge {{ background: #193147; border: 1px solid #2d618d; color: #79c0ff; border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.62rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
+    .trace-clock {{ color: #63b3ff; font-weight: 800; }}
+    .trace-sep {{ color: var(--text-muted); opacity: 0.5; }}
+    .trace-total {{ color: var(--text-muted); }}
+    .trace-nav-actions {{ display: flex; gap: 0.2rem; margin-left: 0.2rem; }}
+    .btn.mini {{ padding: 0.18rem 0.35rem; font-size: 0.65rem; }}
+    .trace-legend-mini {{ display: flex; align-items: center; gap: 0.8rem; font: 600 0.64rem var(--mono); color: var(--text-muted); }}
+    .legend-chip {{ display: inline-flex; align-items: center; gap: 0.3rem; }}
+    .chip-dot {{ width: 6px; height: 6px; border-radius: 50%; display: inline-block; }}
+    .lane-input .chip-dot {{ background: #38bdf8; box-shadow: 0 0 4px #38bdf8; }}
+    .lane-calc .chip-dot {{ background: #fbbf24; box-shadow: 0 0 4px #fbbf24; }}
+    .lane-output .chip-dot {{ background: #4ade80; box-shadow: 0 0 4px #4ade80; }}
+    .trace-main-wrap {{ display: flex; align-items: stretch; gap: 0.6rem; position: relative; }}
+    .trace-lanes-labels {{ display: flex; flex-direction: column; justify-content: space-between; width: 52px; padding-top: 14px; }}
+    .lane-label {{ font: 700 0.6rem var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; height: 20px; display: flex; align-items: center; }}
+    .trace-track-wrap {{ flex: 1; position: relative; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; outline: none; }}
     .trace-ruler {{ position: relative; height: 14px; width: 100%; pointer-events: none; }}
-    .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 6px; background: var(--border-strong); }}
-    .trace-ruler-tick.major {{ height: 10px; background: var(--text-muted); }}
-    .trace-ruler-label {{ position: absolute; bottom: 5px; transform: translateX(-50%); font: 600 0.6rem var(--mono); color: var(--text-muted); pointer-events: none; }}
-    .trace-track {{ position: relative; height: 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; overflow: visible; }}
-    .trace-fill {{ position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 5px 0 0 5px; pointer-events: none; }}
-    .trace-actions-container {{ position: absolute; inset: 0; pointer-events: none; }}
-    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 14px; padding: 0 5px; border-radius: 999px; font: 700 0.58rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 2; }}
-    .trace-chip:hover, .trace-chip.is-active {{ transform: translate(-50%, -50%) scale(1.18); z-index: 5; box-shadow: 0 0 8px var(--accent); }}
-    .trace-chip.kind-input {{ background: #0c2d48; color: #38bdf8; border: 1px solid #0284c7; }}
-    .trace-chip.kind-click {{ background: #2b1846; color: #d8b4fe; border: 1px solid #7e22ce; }}
-    .trace-chip.kind-output {{ background: #0f331e; color: #4ade80; border: 1px solid #16a34a; }}
-    .trace-chip.kind-calc {{ background: #38280b; color: #fbbf24; border: 1px solid #d97706; }}
-    .trace-playhead {{ position: absolute; top: -6px; bottom: -4px; left: 0%; width: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); pointer-events: none; z-index: 10; transition: left 40ms linear; }}
-    .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 9px; height: 9px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 6px var(--accent); }}
+    .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 5px; background: var(--border-strong); }}
+    .trace-ruler-tick.major {{ height: 9px; background: var(--text-muted); }}
+    .trace-ruler-label {{ position: absolute; bottom: 4px; transform: translateX(-50%); font: 600 0.58rem var(--mono); color: var(--text-muted); pointer-events: none; }}
+    .trace-lanes {{ position: relative; height: 66px; background: #0a111a; border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; overflow: visible; }}
+    .trace-lane {{ position: relative; height: 22px; width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.06); }}
+    .trace-lane:last-of-type {{ border-bottom: none; }}
+    .trace-fill {{ position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 5px 0 0 5px; pointer-events: none; }}
+    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 16px; max-width: 120px; padding: 0 6px; border-radius: 4px; font: 700 0.58rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.5); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 2; }}
+    .trace-chip:hover, .trace-chip.is-active {{ transform: translate(-50%, -50%) scale(1.12); z-index: 10; box-shadow: 0 0 10px var(--accent); }}
+    .trace-chip.kind-input {{ background: rgba(12, 45, 72, 0.95); color: #38bdf8; border: 1px solid #0284c7; }}
+    .trace-chip.kind-click {{ background: rgba(43, 24, 70, 0.95); color: #d8b4fe; border: 1px solid #7e22ce; }}
+    .trace-chip.kind-calc {{ background: rgba(56, 40, 11, 0.95); color: #fbbf24; border: 1px solid #d97706; }}
+    .trace-chip.kind-output {{ background: rgba(15, 51, 30, 0.95); color: #4ade80; border: 1px solid #16a34a; }}
+    .trace-playhead {{ position: absolute; top: -5px; bottom: -3px; left: 0%; width: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); pointer-events: none; z-index: 15; transition: left 40ms linear; }}
+    .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 8px; height: 8px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 6px var(--accent); }}
     .playhead-line {{ width: 100%; height: 100%; }}
-    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: rgba(17, 24, 33, 0.95); border: 1px solid var(--accent); border-radius: 6px; padding: 0.35rem 0.6rem; font: 600 0.68rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 20; }}
+    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: rgba(13, 20, 29, 0.96); border: 1px solid var(--accent); border-radius: 6px; padding: 0.4rem 0.65rem; font: 600 0.68rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index: 25; display: flex; flex-direction: column; gap: 0.15rem; }}
+    .tooltip-time {{ color: #63b3ff; font-weight: 800; font-size: 0.72rem; }}
+    .tooltip-title {{ color: var(--text); font-weight: 700; }}
+    .tooltip-desc {{ color: var(--text-muted); font-size: 0.62rem; }}
   </style>
 </head>
 <body>
@@ -1466,25 +1483,44 @@ def format_reactlog_html(
   </main>
 
   <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Session Recording Trace Scrubber">
-    <div class="trace-time-display" id="trace-time-display">
-      <span class="trace-badge">Trace</span>
-      <span id="trace-current-time">00:00.00</span> / <span id="trace-total-time">00:00.00</span>
-      <div class="trace-nav-actions">
-        <button class="btn icon mini" onclick="prevAction()" aria-label="Previous action" title="Previous action"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
-        <button class="btn icon mini" onclick="nextAction()" aria-label="Next action" title="Next action"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
-      </div>
-    </div>
-    <div class="trace-track-wrap" id="trace-track-wrap" tabindex="0" role="slider" aria-label="Scrub trace recording" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-      <div class="trace-ruler" id="trace-ruler"></div>
-      <div class="trace-track" id="trace-track">
-        <div class="trace-fill" id="trace-fill"></div>
-        <div class="trace-actions-container" id="trace-actions-container"></div>
-        <div class="trace-playhead" id="trace-playhead">
-          <div class="playhead-handle"></div>
-          <div class="playhead-line"></div>
+    <div class="trace-header">
+      <div class="trace-controls">
+        <span class="trace-badge">TRACE</span>
+        <span class="trace-clock" id="trace-current-time">0.0s</span>
+        <span class="trace-sep">/</span>
+        <span class="trace-total" id="trace-total-time">0.0s</span>
+        <div class="trace-nav-actions">
+          <button class="btn icon mini" onclick="prevAction()" aria-label="Previous action" title="Previous action"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
+          <button class="btn icon mini" onclick="nextAction()" aria-label="Next action" title="Next action"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
         </div>
       </div>
-      <div class="trace-tooltip" id="trace-tooltip" hidden></div>
+      <div class="trace-legend-mini">
+        <span class="legend-chip lane-input"><span class="chip-dot"></span>Inputs & Clicks</span>
+        <span class="legend-chip lane-calc"><span class="chip-dot"></span>Reactive Calcs</span>
+        <span class="legend-chip lane-output"><span class="chip-dot"></span>Outputs</span>
+      </div>
+    </div>
+
+    <div class="trace-main-wrap">
+      <div class="trace-lanes-labels">
+        <div class="lane-label">Inputs</div>
+        <div class="lane-label">Calcs</div>
+        <div class="lane-label">Outputs</div>
+      </div>
+      <div class="trace-track-wrap" id="trace-track-wrap" tabindex="0" role="slider" aria-label="Scrub trace recording" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="trace-ruler" id="trace-ruler"></div>
+        <div class="trace-lanes" id="trace-lanes">
+          <div class="trace-fill" id="trace-fill"></div>
+          <div class="trace-lane" id="lane-inputs"></div>
+          <div class="trace-lane" id="lane-calcs"></div>
+          <div class="trace-lane" id="lane-outputs"></div>
+          <div class="trace-playhead" id="trace-playhead">
+            <div class="playhead-handle"></div>
+            <div class="playhead-line"></div>
+          </div>
+        </div>
+        <div class="trace-tooltip" id="trace-tooltip" hidden></div>
+      </div>
     </div>
   </div>
 
@@ -1693,8 +1729,10 @@ def format_reactlog_html(
       const bar = document.getElementById('trace-timeline-bar');
       const trackWrap = document.getElementById('trace-track-wrap');
       const ruler = document.getElementById('trace-ruler');
-      const actionsContainer = document.getElementById('trace-actions-container');
-      if (!bar || !trackWrap || !ruler || !actionsContainer) return;
+      const laneInputs = document.getElementById('lane-inputs');
+      const laneCalcs = document.getElementById('lane-calcs');
+      const laneOutputs = document.getElementById('lane-outputs');
+      if (!bar || !trackWrap || !ruler || !laneInputs || !laneCalcs || !laneOutputs) return;
 
       const events = reactlogData.events;
       let maxTime = 0;
@@ -1733,33 +1771,124 @@ def format_reactlog_html(
         }}
       }}
 
-      actionsContainer.innerHTML = '';
+      laneInputs.innerHTML = '';
+      laneCalcs.innerHTML = '';
+      laneOutputs.innerHTML = '';
+
+      const waves = [];
+      let curWave = null;
+
+      const cleanName = (n) => {{
+        if (!n) return '';
+        let s = String(n);
+        s = s.replace(/^Observed\\s+[^:]*:\\s*/i, '');
+        s = s.replace(/^click\\s+(on\\s+)?/i, '');
+        s = s.replace(/^(input|output|calc|effect)[:.]/, '');
+        s = s.replace(/^(input#|#)/, '');
+        s = s.replace(/^(on[,\\s]+)/i, '');
+        s = s.replace(/^[.#]/, '');
+        s = s.split('=')[0].trim();
+        return s;
+      }};
+
       events.forEach((ev, idx) => {{
-        if (ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated' || ev.event === 'dependsOn')) {{
+        if (ev.phase === 'interaction') {{
           const t = ev.time_sec !== undefined ? ev.time_sec : 0;
-          const pct = Math.min(100, Math.max(0, (t / maxSessionDuration) * 100));
-          const chip = document.createElement('div');
-          let kindClass = 'kind-input';
-          let shortLabel = ev.node_id || ev.event;
-          if (ev.event === 'userClick') {{
-            kindClass = 'kind-click';
-            shortLabel = ev.details || 'click';
-          }} else if (ev.event === 'outputUpdated') {{
-            kindClass = 'kind-output';
-          }} else if (ev.event === 'dependsOn') {{
-            kindClass = 'kind-calc';
+          if (!curWave || (t - curWave.startTime) > 0.35) {{
+            curWave = {{
+              startTime: t,
+              time: t,
+              startStep: idx,
+              inputs: [],
+              calcs: [],
+              outputs: [],
+              details: ev.details || ev.event,
+            }};
+            waves.push(curWave);
           }}
-          chip.className = `trace-chip ${{kindClass}}`;
+
+          if (ev.event === 'inputChange' || ev.event === 'userClick' || (ev.node_id && ev.node_id.startsWith('input:'))) {{
+            const raw = ev.node_id || ev.details || '';
+            if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
+              const name = cleanName(raw) || 'input';
+              if (!curWave.inputs.some(item => item.name === name)) {{
+                curWave.inputs.push({{ name, step: idx, isClick: ev.event === 'userClick', details: ev.details }});
+              }}
+            }}
+          }} else if (ev.node_id && (ev.node_id.startsWith('calc:') || ev.node_id.startsWith('effect:'))) {{
+            const name = cleanName(ev.node_id);
+            if (name && !curWave.calcs.some(item => item.name === name)) {{
+              curWave.calcs.push({{ name, step: idx, details: ev.details }});
+            }}
+          }} else if (ev.node_id && ev.node_id.startsWith('output:')) {{
+            const name = cleanName(ev.node_id);
+            if (name && !curWave.outputs.some(item => item.name === name)) {{
+              curWave.outputs.push({{ name, step: idx, details: ev.details }});
+            }}
+          }}
+        }}
+      }});
+
+      const genericTokens = new Set(['on', 'off', 'true', 'false', 'null', 'undefined', 'click', 'button', 'input']);
+
+      waves.forEach(wave => {{
+        const pct = Math.min(96, Math.max(4, (wave.time / maxSessionDuration) * 100));
+
+        if (wave.inputs.length > 0) {{
+          const cleanInpNames = [...new Set(wave.inputs.map(i => i.name).filter(Boolean))];
+          let meaningfulInps = cleanInpNames.filter(name => !genericTokens.has(name.toLowerCase()));
+          if (meaningfulInps.length === 0) meaningfulInps = cleanInpNames;
+
+          if (meaningfulInps.length > 0) {{
+            const chip = document.createElement('div');
+            const isClick = wave.inputs.some(i => i.isClick);
+            chip.className = `trace-chip ${{isClick ? 'kind-click' : 'kind-input'}}`;
+            chip.style.left = `${{pct}}%`;
+            chip.setAttribute('data-step', String(wave.inputs[0].step));
+            chip.setAttribute('data-time', String(wave.time));
+            const label = meaningfulInps.length === 1 ? meaningfulInps[0] : (meaningfulInps.length === 2 ? `${{meaningfulInps[0]}}, ${{meaningfulInps[1]}}` : `${{meaningfulInps.length}} inputs`);
+            chip.title = `[${{formatTime(wave.time)}}] ${{wave.inputs.map(i => i.details || i.name).join(' | ')}}`;
+            chip.textContent = label;
+            chip.onclick = (e) => {{
+              e.stopPropagation();
+              seekTo(wave.inputs[0].step);
+            }};
+            laneInputs.appendChild(chip);
+          }}
+        }}
+
+        const cleanCalcNames = [...new Set(wave.calcs.map(c => c.name).filter(Boolean))];
+        if (cleanCalcNames.length > 0) {{
+          const chip = document.createElement('div');
+          chip.className = 'trace-chip kind-calc';
           chip.style.left = `${{pct}}%`;
-          chip.setAttribute('data-step', String(idx));
-          chip.setAttribute('data-time', String(t));
-          chip.title = `[${{formatTime(t)}}] ${{ev.details || ev.event}}`;
-          chip.textContent = shortLabel.slice(0, 16);
+          chip.setAttribute('data-step', String(wave.calcs[0].step));
+          chip.setAttribute('data-time', String(wave.time));
+          const label = cleanCalcNames.length === 1 ? cleanCalcNames[0] : (cleanCalcNames.length === 2 ? `${{cleanCalcNames[0]}}, ${{cleanCalcNames[1]}}` : `${{cleanCalcNames.length}} calcs`);
+          chip.title = `[${{formatTime(wave.time)}}] Recalculates: ${{cleanCalcNames.join(', ')}}`;
+          chip.textContent = label;
           chip.onclick = (e) => {{
             e.stopPropagation();
-            seekTo(idx);
+            seekTo(wave.calcs[0].step);
           }};
-          actionsContainer.appendChild(chip);
+          laneCalcs.appendChild(chip);
+        }}
+
+        const cleanOutputNames = [...new Set(wave.outputs.map(o => o.name).filter(Boolean))];
+        if (cleanOutputNames.length > 0) {{
+          const chip = document.createElement('div');
+          chip.className = 'trace-chip kind-output';
+          chip.style.left = `${{pct}}%`;
+          chip.setAttribute('data-step', String(wave.outputs[0].step));
+          chip.setAttribute('data-time', String(wave.time));
+          const label = cleanOutputNames.length === 1 ? cleanOutputNames[0] : (cleanOutputNames.length === 2 ? `${{cleanOutputNames[0]}}, ${{cleanOutputNames[1]}}` : `${{cleanOutputNames.length}} outputs`);
+          chip.title = `[${{formatTime(wave.time)}}] Updates: ${{cleanOutputNames.join(', ')}}`;
+          chip.textContent = label;
+          chip.onclick = (e) => {{
+            e.stopPropagation();
+            seekTo(wave.outputs[0].step);
+          }};
+          laneOutputs.appendChild(chip);
         }}
       }});
 
@@ -1800,8 +1929,31 @@ def format_reactlog_html(
 
         if (tooltip) {{
           tooltip.hidden = false;
-          tooltip.style.left = `${{ratio * 100}}%`;
-          tooltip.textContent = `${{formatTime(targetSec)}}`;
+          const leftPx = Math.max(80, Math.min(rect.width - 80, ratio * rect.width));
+          tooltip.style.left = `${{leftPx}}px`;
+
+          let nearestWave = null;
+          let minDiff = Infinity;
+          for (const w of waves) {{
+            const diff = Math.abs(w.time - targetSec);
+            if (diff < minDiff) {{
+              minDiff = diff;
+              nearestWave = w;
+            }}
+          }}
+
+          let tooltipHtml = `<span class="tooltip-time">⏱ ${{formatTime(targetSec)}}</span>`;
+          if (nearestWave && minDiff < 0.8) {{
+            const inList = nearestWave.inputs.map(i => (i.isClick ? `👆 click on ${{i.name}}` : `📥 ${{i.name}}`)).join(', ');
+            const outList = nearestWave.outputs.map(o => o.name).join(', ');
+            const calcList = nearestWave.calcs.map(c => c.name).join(', ');
+
+            if (inList) tooltipHtml += `<span class="tooltip-title">${{inList}}</span>`;
+            if (calcList || outList) {{
+              tooltipHtml += `<span class="tooltip-desc">↳ ${{[calcList, outList].filter(Boolean).join(' → ')}}</span>`;
+            }}
+          }}
+          tooltip.innerHTML = tooltipHtml;
         }}
       }});
 
