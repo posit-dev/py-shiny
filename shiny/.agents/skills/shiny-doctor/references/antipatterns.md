@@ -124,16 +124,27 @@ Modifying a list or dictionary stored in a `reactive.value` does not trigger dep
 
 ### Bad Code
 ```python
-from shiny import reactive
+from shiny import App, reactive, render, ui
 
-items = reactive.value([])
-trigger = reactive.value(0)
+app_ui = ui.page_fluid(
+    ui.input_action_button("add_btn", "Add Item"),
+    ui.output_text("item_count")
+)
 
-@reactive.effect
-@reactive.event(trigger)
-def _():
-    # BAD: In-place mutation inside reactive effect does NOT trigger downstream invalidations
-    items().append("new_item")
+def server(input, output, session):
+    items = reactive.value([])
+
+    @reactive.effect
+    @reactive.event(input.add_btn)
+    def _():
+        # BAD: In-place mutation inside reactive effect does NOT trigger downstream invalidations
+        items().append("new_item")
+
+    @render.text
+    def item_count():
+        return f"Total items: {len(items())}"
+
+app = App(app_ui, server)
 ```
 
 ### Why It Fails
@@ -141,18 +152,29 @@ Shiny tracks value invalidations when `.set()` is called or when the reactive va
 
 ### Good Code
 ```python
-from shiny import reactive
+from shiny import App, reactive, render, ui
 
-items = reactive.value([])
-trigger = reactive.value(0)
+app_ui = ui.page_fluid(
+    ui.input_action_button("add_btn", "Add Item"),
+    ui.output_text("item_count")
+)
 
-@reactive.effect
-@reactive.event(trigger)
-def _():
-    # GOOD: @reactive.event isolates other reads; assigning a new container or .set() invalidates consumers
-    current = list(items())
-    current.append("new_item")
-    items.set(current)
+def server(input, output, session):
+    items = reactive.value([])
+
+    @reactive.effect
+    @reactive.event(input.add_btn)
+    def _():
+        # GOOD: @reactive.event isolates other reads; assigning a new container or .set() invalidates consumers
+        current = list(items())
+        current.append("new_item")
+        items.set(current)
+
+    @render.text
+    def item_count():
+        return f"Total items: {len(items())}"
+
+app = App(app_ui, server)
 ```
 
 ---

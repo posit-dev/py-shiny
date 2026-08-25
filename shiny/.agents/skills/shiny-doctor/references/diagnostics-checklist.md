@@ -34,7 +34,7 @@ This reference provides a step-by-step audit and verification checklist for vali
 
 ## 6. Runtime Verification Checklist
 - [ ] Has the application been launched with `shiny run app.py` to verify import and ASGI server startup without crashes or schema errors?
-- [ ] If claiming session-level verification, has a client connection (browser, Playwright, or `shiny.test` session) been established to exercise the `server()` function, WebSocket connection, and reactive renderers?
+- [ ] If claiming session-level verification, has a client connection (browser or Playwright test harness using `shiny.pytest` fixtures) been established to exercise the `server()` function, WebSocket connection, and reactive renderers?
 - [ ] Have automated tests been rerun to confirm resolution?
 - [ ] Has the report been accurately labeled (**Runtime Verified (Session Level)**, **Server Startup Verified**, or **Static Diagnosis Only**)?
 

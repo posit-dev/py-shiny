@@ -87,10 +87,10 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
 1. **Server Startup Validation**:
    - When execution is available, start the application using `shiny run app.py` to verify application import and ASGI server startup without top-level syntax errors, import failures, or invalid schema configurations. (Do not rely on `python app.py`, which only executes top-level module code and exits without booting the Shiny server).
 2. **Session-Level Verification**:
-   - To claim full session-level runtime verification, connect to the application through a browser, Playwright harness, or Shiny test session (`shiny.test`) so that the `server(input, output, session)` function, reactive graph initialization, WebSocket connection, and `@render.*` outputs are genuinely exercised.
+   - To claim full session-level runtime verification, connect to the application through a browser or Playwright test harness (typically using `shiny.pytest` fixtures such as `local_app` or `create_app_fixture`) so that the `server(input, output, session)` function, reactive graph initialization, WebSocket connection, and `@render.*` outputs are genuinely exercised.
 3. **Strict Verification Labeling Rule**:
    - **Never** claim an app's behavior is fully verified based purely on static code inspection or server port listening alone.
-   - If connected client tests (e.g. Playwright or Shiny test sessions) passed, label as **Runtime Verified (Session Level)**.
+   - If connected client tests (e.g. Playwright or `shiny.pytest` fixtures) passed, label as **Runtime Verified (Session Level)**.
    - If only server startup was executed without a client connection, label as **Server Startup Verified**.
    - If runtime execution was unavailable, explicitly label the diagnosis as **Static Diagnosis Only**.
 

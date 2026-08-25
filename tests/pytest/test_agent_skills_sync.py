@@ -71,7 +71,9 @@ def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
     assert "Do not rely on `python app.py`" in skill_text
     assert "from shiny import input" not in antipatterns_text
     assert "initial_val = val()" in antipatterns_text
-    assert "@reactive.event(trigger)" in antipatterns_text
+    assert "@reactive.event(input.add_btn)" in antipatterns_text
+    assert "shiny.test" not in skill_text
+    assert "shiny.pytest" in skill_text
 
 
 def test_shiny_doctor_code_blocks_compile() -> None:
