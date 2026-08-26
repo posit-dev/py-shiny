@@ -22,6 +22,7 @@ quartodoc:
         - ui.page_bootstrap
         - ui.page_auto
         - ui.page_output
+        - ui.ShinyHTMLTextDocument
     - title: UI Layouts
       desc: Control the layout of multiple UI components.
       contents:
@@ -244,7 +245,6 @@ quartodoc:
         - run_app
         # uses class.rst template
         - App
-        - ShinyHTMLTextDocument
         - Inputs
         - Outputs
         - Session

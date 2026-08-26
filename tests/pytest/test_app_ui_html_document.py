@@ -7,7 +7,8 @@ from htmltools import HTMLDependency, HTMLDocument, HTMLTextDocument, TagList, t
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from shiny import App, ShinyHTMLTextDocument
+from shiny import App
+from shiny.ui import ShinyHTMLTextDocument
 
 PLACEHOLDER = ShinyHTMLTextDocument.DEPS_PLACEHOLDER
 HTML = f"<html><head>{PLACEHOLDER}</head><body>hello</body></html>"
@@ -60,7 +61,7 @@ def test_document_ui_without_placeholder_errors():
 
 
 def test_plain_html_text_document_errors():
-    with pytest.raises(TypeError, match="must be a `ShinyHTMLTextDocument`"):
+    with pytest.raises(TypeError, match="must be a `ui.ShinyHTMLTextDocument`"):
         App(HTMLTextDocument(HTML), None)  # pyright: ignore[reportArgumentType]
 
 
