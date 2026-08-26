@@ -85,7 +85,7 @@ covered in `.claude/references/assets.md`.
 ### App UI types
 
 `App(ui=)` accepts a `Tag`/`TagList`, a `Path` to a complete HTML file, a
-`ui.ShinyHTMLTextDocument` (a complete HTML document with Shiny's dependencies
+`ui.PageDocument` (a complete HTML document with Shiny's dependencies
 prefixed onto the app author's), or a function taking a `Request` and returning
 any of those (except for `Path`, see below).
 
@@ -104,7 +104,7 @@ complete document -- splat it, so they cannot drift.
 `Path` is the deliberate exception: it names a file to read once at startup
 rather than a UI value, so it is handled in `App.__init__()` and rejected in
 `_render_page()`. A UI function that wants to serve a file reads it and returns
-a `ui.ShinyHTMLTextDocument`, which makes the per-pageview file read explicit.
+a `ui.PageDocument`, which makes the per-pageview file read explicit.
 
 ## Input/Output Bindings
 

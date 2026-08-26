@@ -69,7 +69,7 @@ from ._card import (
 )
 from ._chat import Chat, chat_ui
 from ._download_button import download_button, download_link
-from ._html_text_document import ShinyHTMLTextDocument
+from ._page_document import PageDocument
 from ._include_helpers import include_css, include_js
 from ._input_action_button import input_action_button, input_action_link
 from ._input_check_radio import (
@@ -369,6 +369,7 @@ __all__ = (
     "page_bootstrap",
     "page_auto",
     "page_output",
+    "PageDocument",
     # _popover
     "popover",
     # _valuebox
@@ -401,7 +402,6 @@ __all__ = (
     "TagAttrValue",
     "tags",
     "HTML",
-    "ShinyHTMLTextDocument",
     "head_content",
     "p",
     "h1",

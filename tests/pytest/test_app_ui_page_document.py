@@ -1,4 +1,4 @@
-"""Tests for `App(ui=ShinyHTMLTextDocument(...))` -- a complete, author-owned document."""
+"""Tests for `App(ui=PageDocument(...))` -- a complete, author-owned document."""
 
 import pathlib
 
@@ -8,14 +8,14 @@ from starlette.requests import Request
 from starlette.testclient import TestClient
 
 from shiny import App
-from shiny.ui import ShinyHTMLTextDocument
+from shiny.ui import PageDocument
 
-PLACEHOLDER = ShinyHTMLTextDocument.DEPS_PLACEHOLDER
+PLACEHOLDER = PageDocument.DEPS_PLACEHOLDER
 HTML = f"<html><head>{PLACEHOLDER}</head><body>hello</body></html>"
 
 
 def test_document_ui_gets_shiny_deps():
-    app = App(ShinyHTMLTextDocument(HTML), None)
+    app = App(PageDocument(HTML), None)
 
     assert not callable(app.ui)
     html = app.ui["html"]
@@ -28,7 +28,7 @@ def test_document_ui_gets_shiny_deps():
 
 def test_document_ui_keeps_extra_deps_in_one_manifest():
     dep = HTMLDependency("my-dep", "1.0.0", script={"src": "my-dep.js"})
-    app = App(ShinyHTMLTextDocument(HTML, extra_deps=[dep]), None)
+    app = App(PageDocument(HTML, extra_deps=[dep]), None)
 
     assert not callable(app.ui)
     html = app.ui["html"]
@@ -43,7 +43,7 @@ def test_document_ui_keeps_extra_deps_in_one_manifest():
 
 def test_document_ui_custom_replace_pattern():
     app = App(
-        ShinyHTMLTextDocument(
+        PageDocument(
             "<html><head><!-- deps --></head><body></body></html>",
             deps_replace_pattern="<!-- deps -->",
         ),
@@ -55,13 +55,13 @@ def test_document_ui_custom_replace_pattern():
 
 
 def test_document_ui_without_placeholder_errors():
-    doc = ShinyHTMLTextDocument("<html><head></head><body>hello</body></html>")
+    doc = PageDocument("<html><head></head><body>hello</body></html>")
     with pytest.raises(ValueError, match="could not be inserted"):
         App(doc, None)
 
 
-def test_plain_html_text_document_errors():
-    with pytest.raises(TypeError, match="must be a `ui.ShinyHTMLTextDocument`"):
+def test_plain_page_document_errors():
+    with pytest.raises(TypeError, match="must be a `ui.PageDocument`"):
         App(HTMLTextDocument(HTML), None)  # pyright: ignore[reportArgumentType]
 
 
@@ -101,7 +101,7 @@ def test_page_deps_match_between_a_document_and_a_tag_tree():
     app = App(TagList("hello"), None)
     assert not callable(app.ui)
 
-    doc_deps = ShinyHTMLTextDocument(HTML).render()["dependencies"]
+    doc_deps = PageDocument(HTML).render()["dependencies"]
     tag_deps = app.ui["dependencies"]
 
     assert [d.name for d in doc_deps] == [d.name for d in tag_deps]
@@ -109,8 +109,8 @@ def test_page_deps_match_between_a_document_and_a_tag_tree():
 
 def test_document_ui_from_a_ui_function():
     # A UI function is what bookmarking requires, and it may return a document.
-    def ui(request: Request) -> ShinyHTMLTextDocument:
-        return ShinyHTMLTextDocument(HTML.replace("hello", request.url.path))
+    def ui(request: Request) -> PageDocument:
+        return PageDocument(HTML.replace("hello", request.url.path))
 
     app = App(ui, None, bookmark_store="url")
 

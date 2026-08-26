@@ -4,10 +4,10 @@ from htmltools import HTMLDependency, HTMLTextDocument
 
 from ..html_dependencies import _page_deps
 
-__all__ = ("ShinyHTMLTextDocument",)
+__all__ = ("PageDocument",)
 
 
-class ShinyHTMLTextDocument(HTMLTextDocument):
+class PageDocument(HTMLTextDocument):
     """
     A complete HTML document to serve as an app's UI, with Shiny's dependencies.
 
@@ -16,6 +16,9 @@ class ShinyHTMLTextDocument(HTMLTextDocument):
     for you from ``ui.page_*()`` components. The document is served as-is, with
     Shiny's own HTML dependencies (and any in ``extra_deps``) inserted at
     ``deps_replace_pattern``.
+
+    This is an :class:`~htmltools.HTMLTextDocument`, so it can also be rendered
+    directly with ``.render()``.
 
     Parameters
     ----------
@@ -40,7 +43,7 @@ class ShinyHTMLTextDocument(HTMLTextDocument):
 
     index_html = (Path(__file__).parent / "dist" / "index.html").read_text()
 
-    app = App(ui.ShinyHTMLTextDocument(index_html, extra_deps=[my_bundle_dep]), server)
+    app = App(ui.PageDocument(index_html, extra_deps=[my_bundle_dep]), server)
     ```
     """
 

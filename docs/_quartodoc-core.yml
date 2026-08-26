@@ -22,7 +22,7 @@ quartodoc:
         - ui.page_bootstrap
         - ui.page_auto
         - ui.page_output
-        - ui.ShinyHTMLTextDocument
+        - ui.PageDocument
     - title: UI Layouts
       desc: Control the layout of multiple UI components.
       contents:

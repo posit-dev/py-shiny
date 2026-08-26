@@ -53,7 +53,7 @@ from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
-from .ui._html_text_document import ShinyHTMLTextDocument
+from .ui._page_document import PageDocument
 
 T = TypeVar("T")
 
@@ -79,17 +79,17 @@ class App:
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview -- which is also what bookmarking requires. Finally, it can
         be a complete HTML document that you own: either a :class:`~pathlib.Path` to an
-        HTML file, or a :class:`~shiny.ui.ShinyHTMLTextDocument`, which additionally lets
+        HTML file, or a :class:`~shiny.ui.PageDocument`, which additionally lets
         you attach your own :class:`~htmltools.HTMLDependency` objects. Such a document
         is served as-is, and must contain
         ``<meta name="shiny-dependency-placeholder" content="">`` (or the
-        ``deps_replace_pattern=`` the ``ShinyHTMLTextDocument`` was created with) to
+        ``deps_replace_pattern=`` the ``PageDocument`` was created with) to
         mark where Shiny's HTML dependencies are inserted.
 
-        A ``Tag``, ``TagList``, or ``ShinyHTMLTextDocument`` may equally be *returned
+        A ``Tag``, ``TagList``, or ``PageDocument`` may equally be *returned
         by* the function above, for a UI that varies per pageview. A ``Path`` may not:
         it names a file to read once at startup, so a function that wants to serve a
-        file should read it and return a ``ShinyHTMLTextDocument``.
+        file should read it and return a ``PageDocument``.
     server
         A function which is called once for each session, ensuring that each session is
         independent.
@@ -154,7 +154,7 @@ class App:
     ``SafeException`` messages bypass sanitization regardless of this setting.
     """
 
-    ui: RenderedHTML | Callable[[Request], Tag | TagList | ShinyHTMLTextDocument]
+    ui: RenderedHTML | Callable[[Request], Tag | TagList | PageDocument]
     server: Callable[[Inputs, Outputs, Session], None]
 
     _bookmark_save_dir_fn: BookmarkSaveDirFn | None | MISSING_TYPE
@@ -167,9 +167,9 @@ class App:
             Tag
             | TagList
             | Tagified
-            | Callable[[Request], Tag | TagList | Tagified | ShinyHTMLTextDocument]
+            | Callable[[Request], Tag | TagList | Tagified | PageDocument]
             | Path
-            | ShinyHTMLTextDocument
+            | PageDocument
         ),
         server: (
             Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
@@ -258,9 +258,7 @@ class App:
             if is_async_callable(cast(Callable[[Request], Any], ui)):
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
-            self.ui = cast(
-                "Callable[[Request], Tag | TagList | ShinyHTMLTextDocument]", ui
-            )
+            self.ui = cast("Callable[[Request], Tag | TagList | PageDocument]", ui)
         elif isinstance(ui, Path):
             if not ui.is_absolute():
                 raise ValueError("Path to UI must be absolute")
@@ -268,13 +266,13 @@ class App:
             # Read once, here: a `Path` names a file to serve, not a per-pageview UI
             # value, so it is not something a UI function may return.
             self.ui = self._render_page(
-                ShinyHTMLTextDocument(ui.read_text()), lib_prefix=self.lib_prefix
+                PageDocument(ui.read_text()), lib_prefix=self.lib_prefix
             )
 
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
-                cast("Tag | TagList | ShinyHTMLTextDocument", ui),
+                cast("Tag | TagList | PageDocument", ui),
                 lib_prefix=self.lib_prefix,
             )
 
@@ -523,7 +521,7 @@ class App:
 
     def _render_page(
         self,
-        ui: Tag | TagList | ShinyHTMLTextDocument,
+        ui: Tag | TagList | PageDocument,
         lib_prefix: str,
     ) -> RenderedHTML:
         # Every UI *value* type must be handled here, and nowhere else. This is the one
@@ -536,7 +534,7 @@ class App:
         if isinstance(ui, Path):
             raise TypeError(
                 "A UI function cannot return a `Path`. Read the file and return a"
-                " `ui.ShinyHTMLTextDocument` instead, so it is clear when the file is"
+                " `ui.PageDocument` instead, so it is clear when the file is"
                 " read."
             )
 
@@ -550,14 +548,14 @@ class App:
                 "An `HTMLDocument` cannot be used as a UI. Pass its contents (a `Tag`"
                 " or `TagList`) instead, and Shiny will build the document -- or, for"
                 " a complete HTML document of your own, use a"
-                " `ui.ShinyHTMLTextDocument`."
+                " `ui.PageDocument`."
             )
 
         if isinstance(ui, HTMLTextDocument):
-            if not isinstance(ui, ShinyHTMLTextDocument):
+            if not isinstance(ui, PageDocument):
                 raise TypeError(
                     "A complete HTML document used as a UI must be a"
-                    " `ui.ShinyHTMLTextDocument`, which is what prefixes Shiny's own"
+                    " `ui.PageDocument`, which is what prefixes Shiny's own"
                     " HTML dependencies onto the app author's."
                 )
 
@@ -573,7 +571,7 @@ class App:
                 raise ValueError(
                     "The UI document does not contain the string that marks where"
                     " Shiny's HTML dependencies are inserted, so they could not be"
-                    f" inserted. Add `{ShinyHTMLTextDocument.DEPS_PLACEHOLDER}` to the"
+                    f" inserted. Add `{PageDocument.DEPS_PLACEHOLDER}` to the"
                     " document, or the `deps_replace_pattern=` it was created with."
                 )
         else:
@@ -623,8 +621,8 @@ def is_uifunc(
         | Tag
         | TagList
         | Tagified
-        | Callable[[Request], Tag | TagList | Tagified | ShinyHTMLTextDocument]
-        | ShinyHTMLTextDocument
+        | Callable[[Request], Tag | TagList | Tagified | PageDocument]
+        | PageDocument
     ),
 ) -> bool:
     if (
