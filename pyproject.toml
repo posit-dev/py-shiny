@@ -121,7 +121,7 @@ test = [
     "shinychat>=0.6.0",
     "seaborn",
     "plotnine",
-    "plotly",
+    "plotly<7",
     "anywidget",
     "duckdb",
     "holoviews",
