@@ -82,6 +82,34 @@ HTML is generated using the `htmltools` package:
 Asset vendoring (bslib CSS/JS, theme presets, `make upgrade-html-deps`) is
 covered in `.claude/references/assets.md`.
 
+### App UI types
+
+`App(ui=)` accepts a `Tag`/`TagList`, a `Path` to a complete HTML file, a
+`ShinyHTMLTextDocument` (a complete HTML document with Shiny's dependencies
+prefixed onto the app author's), or a function taking a `Request` and returning
+any of those.
+
+**Every UI *value* type must work in both positions: passed directly, and
+returned by a UI function.** The function form is what bookmarking requires --
+`App._init_bookmarking()` rejects a static UI, since the UI has to be
+reconstructed from the bookmarked state -- so a type supported only when passed
+directly is silently unavailable to bookmark-enabled apps.
+
+`App._render_page()` is the single place both are rendered, so handle a new UI
+value type there rather than in `App.__init__()`, and extend the
+`Callable[[Request], ...]` return union alongside the direct one.
+
+The page-level dependency set (requirejs, jQuery, Shiny) has one definition,
+`html_dependencies._page_deps()`. Both page forms -- the tag tree and the
+complete document -- splat it, so they cannot drift. `HTMLDocument` is rejected
+as a UI: it hoists dependencies into `<head>` in tag-tree order, so Shiny's
+could only land after the app author's.
+
+`Path` is the deliberate exception: it names a file to read once at startup
+rather than a UI value, so it is handled in `App.__init__()` and rejected in
+`_render_page()`. A UI function that wants to serve a file reads it and returns
+a `ShinyHTMLTextDocument`, which makes the per-pageview file read explicit.
+
 ## Input/Output Bindings
 
 Client-server communication works through bindings:

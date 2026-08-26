@@ -244,6 +244,7 @@ quartodoc:
         - run_app
         # uses class.rst template
         - App
+        - ShinyHTMLTextDocument
         - Inputs
         - Outputs
         - Session

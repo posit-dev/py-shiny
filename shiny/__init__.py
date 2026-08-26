@@ -17,7 +17,7 @@ from . import session
 from . import ui
 
 # Private submodules that have some user-facing functionality
-from ._app import App
+from ._app import App, ShinyHTMLTextDocument
 from ._validation import req
 from ._deprecated import *
 
@@ -50,6 +50,7 @@ __all__ = (
     "otel",
     # _app.py
     "App",
+    "ShinyHTMLTextDocument",
     # _main.py
     "run_app",
     # _modules.py

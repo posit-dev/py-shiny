@@ -48,7 +48,7 @@ from .bookmark._types import (
     BookmarkSaveDirFn,
     BookmarkStore,
 )
-from .html_dependencies import jquery_deps, require_deps, shiny_deps
+from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
@@ -64,6 +64,64 @@ SANITIZE_ERROR_MSG: str = (
 SANITIZE_OTEL_ERRORS: bool = True
 
 
+class ShinyHTMLTextDocument(HTMLTextDocument):
+    """
+    A complete HTML document to serve as an app's UI, with Shiny's dependencies.
+
+    Use this as ``App(ui=)`` when your app's UI is a complete HTML document that you
+    own -- the ``index.html`` a JS bundler emits, say -- rather than one Shiny builds
+    for you from ``ui.page_*()`` components. The document is served as-is, with
+    Shiny's own HTML dependencies (and any in ``extra_deps``) inserted at
+    ``deps_replace_pattern``.
+
+    Parameters
+    ----------
+    html
+        A complete HTML document, including ``<html>``. It must contain
+        ``deps_replace_pattern`` to mark where the dependencies are inserted.
+    extra_deps
+        Additional HTML dependencies to include, alongside Shiny's own. These are
+        inserted after Shiny's, and their files are served by the app.
+    deps_replace_pattern
+        The string in ``html`` to replace with the dependencies. The first instance is
+        replaced. Defaults to :attr:`DEPS_PLACEHOLDER`.
+
+    Examples
+    --------
+
+    ```{python}
+    #| eval: false
+    from pathlib import Path
+
+    from shiny import App, ShinyHTMLTextDocument
+
+    index_html = (Path(__file__).parent / "dist" / "index.html").read_text()
+
+    app = App(ShinyHTMLTextDocument(index_html, extra_deps=[my_bundle_dep]), server)
+    ```
+    """
+
+    DEPS_PLACEHOLDER = '<meta name="shiny-dependency-placeholder" content="">'
+    """
+    The default marker in the document that is replaced with the HTML dependencies.
+    """
+
+    def __init__(
+        self,
+        html: str,
+        *,
+        extra_deps: list[HTMLDependency] | None = None,
+        deps_replace_pattern: str = DEPS_PLACEHOLDER,
+    ) -> None:
+        super().__init__(
+            html,
+            # A complete document has no tag tree to inspect for the Bootstrap
+            # dependency, so Shiny's CSS is always included.
+            deps=[*_page_deps(include_css=True), *(extra_deps or [])],
+            deps_replace_pattern=deps_replace_pattern,
+        )
+
+
 class App:
     """
     Create a Shiny app instance.
@@ -75,7 +133,19 @@ class App:
         similar, with layouts and controls nested inside). You can
         also pass a function that takes a :class:`~starlette.requests.Request` and
         returns a UI definition, if you need the UI definition to be created dynamically
-        for each pageview.
+        for each pageview -- which is also what bookmarking requires. Finally, it can
+        be a complete HTML document that you own: either a :class:`~pathlib.Path` to an
+        HTML file, or a :class:`~shiny.ShinyHTMLTextDocument`, which additionally lets
+        you attach your own :class:`~htmltools.HTMLDependency` objects. Such a document
+        is served as-is, and must contain
+        ``<meta name="shiny-dependency-placeholder" content="">`` (or the
+        ``deps_replace_pattern=`` the ``ShinyHTMLTextDocument`` was created with) to
+        mark where Shiny's HTML dependencies are inserted.
+
+        A ``Tag``, ``TagList``, or ``ShinyHTMLTextDocument`` may equally be *returned
+        by* the function above, for a UI that varies per pageview. A ``Path`` may not:
+        it names a file to read once at startup, so a function that wants to serve a
+        file should read it and return a ``ShinyHTMLTextDocument``.
     server
         A function which is called once for each session, ensuring that each session is
         independent.
@@ -140,7 +210,7 @@ class App:
     ``SafeException`` messages bypass sanitization regardless of this setting.
     """
 
-    ui: RenderedHTML | Callable[[Request], Tag | TagList]
+    ui: RenderedHTML | Callable[[Request], Tag | TagList | ShinyHTMLTextDocument]
     server: Callable[[Inputs, Outputs, Session], None]
 
     _bookmark_save_dir_fn: BookmarkSaveDirFn | None | MISSING_TYPE
@@ -153,8 +223,9 @@ class App:
             Tag
             | TagList
             | Tagified
-            | Callable[[Request], Tag | TagList | Tagified]
+            | Callable[[Request], Tag | TagList | Tagified | ShinyHTMLTextDocument]
             | Path
+            | ShinyHTMLTextDocument
         ),
         server: (
             Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
@@ -243,17 +314,24 @@ class App:
             if is_async_callable(cast(Callable[[Request], Any], ui)):
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
-            self.ui = cast("Callable[[Request], Tag | TagList]", ui)
+            self.ui = cast(
+                "Callable[[Request], Tag | TagList | ShinyHTMLTextDocument]", ui
+            )
         elif isinstance(ui, Path):
             if not ui.is_absolute():
                 raise ValueError("Path to UI must be absolute")
 
-            self.ui = self._render_page_from_file(ui, lib_prefix=self.lib_prefix)
+            # Read once, here: a `Path` names a file to serve, not a per-pageview UI
+            # value, so it is not something a UI function may return.
+            self.ui = self._render_page(
+                ShinyHTMLTextDocument(ui.read_text()), lib_prefix=self.lib_prefix
+            )
 
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
-                cast("Tag | TagList", ui), lib_prefix=self.lib_prefix
+                cast("Tag | TagList | ShinyHTMLTextDocument", ui),
+                lib_prefix=self.lib_prefix,
             )
 
     def init_starlette_app(self) -> starlette.applications.Starlette:
@@ -499,38 +577,73 @@ class App:
 
         self._registered_dependencies[dep_name] = dep
 
-    def _render_page(self, ui: Tag | TagList, lib_prefix: str) -> RenderedHTML:
-        # Use presence of the Bootstrap dependency as a signal that the UI uses a
-        # shiny.ui.page_*() function, in which case the Shiny CSS is already included.
-        has_bootstrap = any(dep.name == "bootstrap" for dep in ui.get_dependencies())
-        # Make sure requirejs, jQuery, and Shiny come before any other dependencies.
-        # (see require_deps() for a comment about why we even include it)
-        # Compose a new TagList so this works for any UI input shape, including
-        # pre-tagified (and immutable) TagifiedTag/TagifiedTagList values that
-        # express mode produces (`run_express(...).tagify()` in `express/_run.py`).
-        ui_res = TagList(
-            require_deps(),
-            jquery_deps(),
-            *shiny_deps(include_css=not has_bootstrap),
-            ui,
-        )
-        rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
+    def _render_page(
+        self, ui: Tag | TagList | ShinyHTMLTextDocument, lib_prefix: str
+    ) -> RenderedHTML:
+        # Every UI *value* type must be handled here, and nowhere else. This is the one
+        # place both `App(ui=)` and a UI function's return value are rendered, so
+        # handling a type here is what makes it work in both positions. Adding a UI
+        # type without doing so silently supports it in only one of them.
+        #
+        # `Path` is the exception, and is handled in `__init__()`: it names a file to
+        # read once at startup, not a UI value, so a UI function may not return one.
+        if isinstance(ui, Path):
+            raise TypeError(
+                "A UI function cannot return a `Path`. Read the file and return a"
+                " `ShinyHTMLTextDocument` instead, so it is clear when the file is"
+                " read."
+            )
+
+        if isinstance(ui, HTMLDocument):
+            # Not supported: `HTMLDocument` builds a document out of a tag tree and
+            # hoists the dependencies it finds there into <head> in tree order, so
+            # Shiny's could only be appended after the app author's -- jQuery would
+            # load after the scripts that need it. Pass the tags themselves instead
+            # and let Shiny build the document.
+            raise TypeError(
+                "An `HTMLDocument` cannot be used as a UI. Pass its contents (a `Tag`"
+                " or `TagList`) instead, and Shiny will build the document -- or, for"
+                " a complete HTML document of your own, use a"
+                " `ShinyHTMLTextDocument`."
+            )
+
+        if isinstance(ui, HTMLTextDocument):
+            if not isinstance(ui, ShinyHTMLTextDocument):
+                raise TypeError(
+                    "A complete HTML document used as a UI must be a"
+                    " `ShinyHTMLTextDocument`, which is what prefixes Shiny's own HTML"
+                    " dependencies onto the app author's."
+                )
+
+            # Render the document as-is: wrapping it in an HTMLDocument would nest
+            # <html> inside <html>.
+            rendered = ui.render(lib_prefix=lib_prefix)
+
+            # `render()` replaces `deps_replace_pattern` with the dependency markup,
+            # or silently does nothing if the pattern isn't in the document. The
+            # document always has dependencies, so a missing manifest means the
+            # pattern wasn't found -- i.e. we'd serve a page with no Shiny on it.
+            if "application/html-dependencies" not in rendered["html"]:
+                raise ValueError(
+                    "The UI document does not contain the string that marks where"
+                    " Shiny's HTML dependencies are inserted, so they could not be"
+                    f" inserted. Add `{ShinyHTMLTextDocument.DEPS_PLACEHOLDER}` to the"
+                    " document, or the `deps_replace_pattern=` it was created with."
+                )
+        else:
+            # Use presence of the Bootstrap dependency as a signal that the UI uses a
+            # shiny.ui.page_*() function, in which case the Shiny CSS is already
+            # included.
+            has_bootstrap = any(
+                dep.name == "bootstrap" for dep in ui.get_dependencies()
+            )
+            # Compose a new TagList so this works for any UI input shape, including
+            # pre-tagified (and immutable) TagifiedTag/TagifiedTagList values that
+            # express mode produces (`run_express(...).tagify()` in `express/_run.py`).
+            ui_res = TagList(*_page_deps(include_css=not has_bootstrap), ui)
+            rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
+
         self._ensure_web_dependencies(rendered["dependencies"])
-        return rendered
-
-    def _render_page_from_file(self, file: Path, lib_prefix: str) -> RenderedHTML:
-        with open(file, "r") as f:
-            page_html = f.read()
-
-        doc = HTMLTextDocument(
-            page_html,
-            deps=[require_deps(), jquery_deps(), *shiny_deps(include_css=True)],
-            deps_replace_pattern='<meta name="shiny-dependency-placeholder" content="">',
-        )
-
-        rendered = doc.render(lib_prefix=lib_prefix)
-        self._ensure_web_dependencies(rendered["dependencies"])
-
         return rendered
 
     # ==========================================================================
@@ -559,7 +672,14 @@ class App:
 
 
 def is_uifunc(
-    x: Path | Tag | TagList | Tagified | Callable[[Request], Tag | TagList | Tagified],
+    x: (
+        Path
+        | Tag
+        | TagList
+        | Tagified
+        | Callable[[Request], Tag | TagList | Tagified | ShinyHTMLTextDocument]
+        | ShinyHTMLTextDocument
+    ),
 ) -> bool:
     if (
         isinstance(x, Path)

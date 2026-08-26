@@ -8,7 +8,40 @@ from . import __version__
 from .ui._html_deps_py_shiny import busy_indicators_dep
 
 
+def _page_deps(*, include_css: bool) -> list[HTMLDependency]:
+    """
+    The complete, ordered set of HTML dependencies that every Shiny page needs.
+
+    This is the one definition of that set: use it wherever a page is assembled, so the
+    two forms a page can take -- a tag tree, and a complete HTML document -- cannot
+    drift apart.
+
+    Requirejs, jQuery, and Shiny must come before any other dependency (see
+    :func:`require_deps` for why requirejs is here at all).
+
+    Parameters
+    ----------
+    include_css
+        Whether to include Shiny's CSS. Pass `False` when the page already has the
+        Bootstrap dependency, whose CSS bundles Shiny's.
+    """
+    return [require_deps(), jquery_deps(), *shiny_deps(include_css=include_css)]
+
+
 def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
+    """
+    Shiny's own client-side dependencies: `shiny.js`, and the busy indicators.
+
+    Also includes a `shiny-devmode` dependency, which sets
+    `window.__SHINY_DEV_MODE__`, when the `SHINY_DEV_MODE` environment variable is
+    `"1"`.
+
+    Parameters
+    ----------
+    include_css
+        Whether to include Shiny's CSS. Pass `False` when the page already has the
+        Bootstrap dependency, whose CSS bundles Shiny's.
+    """
     deps = [
         HTMLDependency(
             name="shiny",
@@ -43,6 +76,11 @@ def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
 
 
 def jquery_deps() -> HTMLDependency:
+    """
+    jQuery, which `shiny.js` and Bootstrap's JavaScript are both written against.
+
+    Must come before either of them on the page.
+    """
     return HTMLDependency(
         name="jquery",
         version="3.6.0",
@@ -51,17 +89,22 @@ def jquery_deps() -> HTMLDependency:
     )
 
 
-# Shiny doesn't (currently) use requirejs directly, but it does include it because a
-# custom requirejs setup is need to get HTMLDependency()s (i.e., loading JS via <script>
-# tags) to be usable. At the moment, we're just setting `window.define.amd=false` after
-# loading requirejs so that the typical UMD pattern won't result in an anonymous
-# define() error.
-# https://requirejs.org/docs/errors.html#mismatch
-# https://github.com/umdjs/umd
-#
-# Someday, we may want the same/similar thing in R, but this definitely more of an
-# immediate issue for Python since many Jupyter extensions use requirejs.
 def require_deps() -> HTMLDependency:
+    """
+    Requirejs, which must load before every other script on the page.
+
+    Shiny doesn't (currently) use requirejs directly, but it does include it because a
+    custom requirejs setup is need to get `HTMLDependency()`s (i.e., loading JS via
+    `<script>` tags) to be usable. At the moment, we're just setting
+    `window.define.amd=false` after loading requirejs so that the typical UMD pattern
+    won't result in an anonymous `define()` error. That only works if this loads first.
+
+    * <https://requirejs.org/docs/errors.html#mismatch>
+    * <https://github.com/umdjs/umd>
+
+    Someday, we may want the same/similar thing in R, but this definitely more of an
+    immediate issue for Python since many Jupyter extensions use requirejs.
+    """
     return HTMLDependency(
         name="requirejs",
         version="2.3.6",
