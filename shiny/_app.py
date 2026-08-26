@@ -266,7 +266,7 @@ class App:
             # Read once, here: a `Path` names a file to serve, not a per-pageview UI
             # value, so it is not something a UI function may return.
             self.ui = self._render_page(
-                PageDocument(ui.read_text()), lib_prefix=self.lib_prefix
+                PageDocument(ui.read_text(encoding="utf-8")), lib_prefix=self.lib_prefix
             )
 
         else:
@@ -571,8 +571,9 @@ class App:
                 raise ValueError(
                     "The UI document does not contain the string that marks where"
                     " Shiny's HTML dependencies are inserted, so they could not be"
-                    f" inserted. Add `{PageDocument.DEPS_PLACEHOLDER}` to the"
-                    " document, or the `deps_replace_pattern=` it was created with."
+                    " inserted. Add the `deps_replace_pattern=` the `ui.PageDocument`"
+                    " was created with (by default,"
+                    f" `{PageDocument.DEPS_PLACEHOLDER}`) to the document."
                 )
         else:
             # Use presence of the Bootstrap dependency as a signal that the UI uses a

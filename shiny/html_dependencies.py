@@ -94,7 +94,7 @@ def require_deps() -> HTMLDependency:
     Requirejs, which must load before every other script on the page.
 
     Shiny doesn't (currently) use requirejs directly, but it does include it because a
-    custom requirejs setup is need to get `HTMLDependency()`s (i.e., loading JS via
+    custom requirejs setup is needed to get `HTMLDependency()`s (i.e., loading JS via
     `<script>` tags) to be usable. At the moment, we're just setting
     `window.define.amd=false` after loading requirejs so that the typical UMD pattern
     won't result in an anonymous `define()` error. That only works if this loads first.
@@ -102,7 +102,7 @@ def require_deps() -> HTMLDependency:
     * <https://requirejs.org/docs/errors.html#mismatch>
     * <https://github.com/umdjs/umd>
 
-    Someday, we may want the same/similar thing in R, but this definitely more of an
+    Someday, we may want the same/similar thing in R, but this is definitely more of an
     immediate issue for Python since many Jupyter extensions use requirejs.
     """
     return HTMLDependency(
