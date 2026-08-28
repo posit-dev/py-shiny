@@ -162,8 +162,6 @@ installed shiny.
 - [ ] `CHANGELOG.md`: follow the established wording — "Update pre-built shinyswatch themes
       for use with Shiny vX.Y.Z." — plus a line noting the new shiny floor
 
-Note: py-shinyswatch has no conda-forge feedstock, so Phase 11 does not apply to it.
-
 Ask user: "Is py-shinyswatch being released? What version? Do we need to update docs after shinylive updates?"
 
 ---
@@ -505,17 +503,105 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 
 ## Phase 11: Conda-forge
 
-- [ ] Check `conda-forge/py-shiny-feedstock` for an auto-created bot PR (and
-      `conda-forge/py-htmltools-feedstock`, only if py-htmltools was released)
+- [ ] Check each feedstock in the inventory below for an auto-created bot PR, for every
+      package that was actually released in this train
 - [ ] **Read the existing PRs' comments before investigating anything.** Prior cycles'
       analysis usually lives there, and re-deriving it wastes a lot of time.
 - [ ] **Sync `recipe/meta.yaml`'s `run:` section by hand** — see below. The bot does not do
       this, and it is the usual reason a bump fails.
+- [ ] **Do the editing in a fork** (`schloerke/py-shiny-feedstock`), never on a branch pushed
+      to `conda-forge/*-feedstock` — being a maintainer means the wrong thing also works
 - [ ] Verify `about/license_file` against the new sdist, in both directions (below)
 - [ ] If tests pass, `[bot-automerge]` lands it without help
-- [ ] Feedstocks: py-shiny and py-htmltools. py-shinyswatch and shinychat were submitted to
-      `staged-recipes` in July 2026 (#34339, #34338) — check whether they now have feedstocks
-      that also need bumping. py-shinywidgets and py-shinylive still do not.
+- [ ] While in a feedstock, **confirm bot automerge is on and that the team has maintainer
+      coverage** (below) — both are cheap to check and both silently cost a whole cycle
+
+### Feedstock inventory (verified 2026-08-25)
+
+Feedstock names are all under the `conda-forge/` org.
+
+| conda package | Feedstock | Phase | Automerge | `recipe-maintainers` |
+|---|---|---|---|---|
+| `htmltools` | `py-htmltools-feedstock` | 2 | yes | schloerke, wch, sugatoray |
+| `shiny` | `py-shiny-feedstock` | 3 | yes | cpsievert, schloerke, wch, sugatoray |
+| `shinyswatch` | `shinyswatch-feedstock` | 4 | yes | schloerke |
+| `shinywidgets` | `shinywidgets-feedstock` | 5 | yes | cpsievert, schloerke, daylinmorgan |
+| `shinychat` | `shinychat-feedstock` | — (own cadence) | yes | schloerke |
+| `faicons` | `faicons-feedstock` | — (own cadence) | **no** | daylinmorgan (+ schloerke pending) |
+| `shiny-validate` | `shiny-validate-feedstock` | — (own cadence) | **no** | julibeg (+ schloerke pending) |
+
+`faicons` and `shiny-validate` came from outside contributors and are the two gaps.
+`@conda-forge-admin, please add user @schloerke` PRs are open on both —
+[faicons#3](https://github.com/conda-forge/faicons-feedstock/pull/3),
+[shiny-validate#2](https://github.com/conda-forge/shiny-validate-feedstock/pull/2) — and need
+the existing maintainer to merge them. Automerge is still off on both; that is a separate
+issue to file (see below).
+
+`shinychat`, `faicons`, and `shiny-validate` are not part of the release train, but if one of
+them happened to be released alongside py-shiny or have an outdated feedstock, check its bot PR too.
+
+Bump the feedstocks in dependency order — `htmltools` → `shiny` → (`shinyswatch`,
+`shinywidgets`, `shinychat`) — because the downstream recipes' test phase imports `shiny`. A
+downstream bump opened before `shiny` has landed will fail to solve; that is expected, so
+leave it parked rather than trying to fix the recipe.
+
+### Confirm automerge and maintainer coverage
+
+Two settings turn a feedstock into a release bottleneck, and neither announces itself:
+
+- **Automerge off.** Every bump then waits on a human to notice and merge it, which is how a
+  feedstock quietly drifts versions behind.
+- **No overlap with the Shiny team.** Only `recipe-maintainers` can push to a bot PR's branch
+  or merge it. A feedstock maintained solely by an outside contributor cannot be unblocked
+  from inside the team, however urgent the release.
+
+Re-derive the last two columns of the inventory rather than trusting them — recipes come in
+both v0 (`recipe/meta.yaml`) and v1 (`recipe/recipe.yaml`) layouts, so check both paths:
+
+```bash
+for f in py-htmltools py-shiny shinyswatch shinywidgets shinychat faicons shiny-validate; do
+  base="https://raw.githubusercontent.com/conda-forge/$f-feedstock/main"
+  am=$(curl -s "$base/conda-forge.yml" | grep -c automerge)
+  m=""
+  for rf in recipe/recipe.yaml recipe/meta.yaml; do
+    m=$(curl -sf "$base/$rf" | grep -A8 recipe-maintainers | grep -E '^ +- ' | tr -d ' -' | paste -sd, -)
+    [ -n "$m" ] && break
+  done
+  printf "%-16s automerge=%s maintainers=%s\n" "$f" "$am" "$m"
+done
+```
+
+Fix either gap by opening an **issue on the feedstock** with the title set exactly to one of
+these — `conda-forge-webservices` reads the title and opens the PR itself:
+
+| Gap | Issue title |
+|-----|-------------|
+| Automerge not enabled | `@conda-forge-admin, please add bot automerge` |
+| Maintainer missing | `@conda-forge-admin, please add user @username` |
+
+Adding a maintainer only opens a PR against `recipe-maintainers`; the person still has to
+accept the conda-forge GitHub invitation before they can actually push. So do this ahead of a
+release, not in the middle of one.
+
+### Feedstocks pending creation (staged-recipes)
+
+Until a `staged-recipes` PR merges there is no feedstock and no bot PR to check. Verify the
+current state rather than trusting this list, then move anything that has landed into the
+table above:
+
+| conda package | staged-recipes PR |
+|---------------|-------------------|
+| `shinylive` | https://github.com/conda-forge/staged-recipes/pull/34628 |
+| `querychat`, `chatlas` | https://github.com/conda-forge/staged-recipes/pull/34629 |
+| `brand-yml` | https://github.com/conda-forge/staged-recipes/pull/34630 |
+
+```bash
+# 200 = on conda-forge, 404 = still pending
+for p in shinylive querychat chatlas brand-yml; do
+  printf "%-12s %s\n" "$p" \
+    "$(curl -s -o /dev/null -w '%{http_code}' https://api.anaconda.org/package/conda-forge/$p)"
+done
+```
 
 ### The bot bumps the version; it does not add dependencies
 
@@ -567,6 +653,30 @@ touched `README.md`; wait for the second commit before concluding anything.
 The bot stops issuing PRs when more than 3 of its version-bump PRs are open, so close
 superseded ones.
 
+### Work in a fork, never on the feedstock itself
+
+`recipe-maintainers` have push access to `conda-forge/*-feedstock`, so pushing a branch
+straight there appears to work — that is the trap. Feedstock changes go through a **personal
+fork** (`schloerke/py-shiny-feedstock`), exactly like an outside contribution would. A branch
+on the upstream feedstock burns the feedstock's CI, shows up for every other maintainer, and
+has to be deleted by hand afterwards.
+
+```bash
+gh repo fork conda-forge/py-shiny-feedstock --clone --remote
+# origin -> schloerke/py-shiny-feedstock, upstream -> conda-forge/py-shiny-feedstock
+git checkout -b bump-1.7.0
+# ... edit recipe/meta.yaml ...
+git push origin bump-1.7.0
+gh pr create --repo conda-forge/py-shiny-feedstock --base main
+```
+
+If the fork already exists from a previous cycle, sync it first (`gh repo sync
+schloerke/py-shiny-feedstock`) — a stale fork is the usual source of a confusing diff.
+
+The one exception is amending an **existing bot PR**, below: that branch already lives on the
+bot's fork, so it is pushed there rather than to yours. Either way, never to
+`conda-forge/...`.
+
 ### Pushing to a bot PR's branch
 
 Bot branches live on the **bot's fork**, not the feedstock. Check `maintainerCanModify` (it is
@@ -585,9 +695,8 @@ The owner is `conda-forge-admin` for webservice PRs and `regro-cf-autotick-bot` 
 PRs. `git fetch origin <branch>` fails with `couldn't find remote ref` — that is the giveaway
 that you are looking at the wrong repo.
 
-Current `recipe-maintainers`: `cpsievert`, `schloerke`, `wch`, `sugatoray` — so both Carson
-and Barret can push directly. (Verify with the recipe's `extra/recipe-maintainers` rather
-than trusting this list.)
+Who can do this is per-feedstock — see the `recipe-maintainers` column of the inventory above,
+and verify against the recipe rather than trusting either list.
 
 ### Known issue: license_file references
 
