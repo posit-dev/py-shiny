@@ -201,7 +201,9 @@ class AsyncTestServerSession:
                 self._fatal_errors.append((RuntimeError(str(message)), str(message)))
             orig_print_error(message)
 
-        self._session._print_error_message = custom_print_error  # pyright: ignore[reportAttributeAccessIssue]
+        self._session._print_error_message = (
+            custom_print_error  # pyright: ignore[reportAttributeAccessIssue]
+        )
 
         self._old_app_server = self._app_obj.server
         orig_server = self._old_app_server
