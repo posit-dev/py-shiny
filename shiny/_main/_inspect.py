@@ -13,6 +13,7 @@ from .._inspect import (
     format_graph_mermaid,
     format_reactlog_html,
     generate_reactlog,
+    load_reactlog_json,
     record_shiny_session,
 )
 from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success
@@ -46,7 +47,8 @@ def _parse_input_value(val_str: str) -> Any:
         shiny inspect app.py --record --video demo.webm --html reactlog.html
         shiny inspect app.py --format mermaid
         shiny inspect app.py --reactlog
-        shiny inspect app.py --html
+        shiny inspect app.py --html --theme light
+        shiny inspect legacy_reactlog.json --html
     """,
 )
 @click.argument("path", required=False, type=click.Path(exists=False))
@@ -85,6 +87,13 @@ def _parse_input_value(val_str: str) -> Any:
     ),
     default="text",
     help="Output format for the dependency graph (default: text).",
+)
+@click.option(
+    "--theme",
+    "theme",
+    type=click.Choice(["dark", "light", "auto"], case_sensitive=False),
+    default="dark",
+    help="Theme for interactive HTML explorer (dark, light, auto; default: dark).",
 )
 @click.option(
     "--reactlog",
@@ -137,6 +146,7 @@ def inspect(
     video_path: str,
     headless: bool,
     output_format: str,
+    theme: str,
     reactlog_flag: bool,
     html_out: Optional[str],
     json_flag: bool,
@@ -314,12 +324,23 @@ def inspect(
                     err=is_machine_output,
                 )
 
-        reactlog_data = generate_reactlog(
-            source_code,
-            inputs=sim_inputs if sim_inputs else None,
-            recorded_actions=recorded_actions,
-            video_path=actual_video_path,
-        )
+        is_json_input = False
+        if target_desc.endswith(".json") or source_code.strip().startswith(("{", "[")):
+            try:
+                parsed_json = json.loads(source_code)
+                if isinstance(parsed_json, (dict, list)):
+                    is_json_input = True
+                    reactlog_data = load_reactlog_json(parsed_json)
+            except Exception:
+                is_json_input = False
+
+        if not is_json_input:
+            reactlog_data = generate_reactlog(
+                source_code,
+                inputs=sim_inputs if sim_inputs else None,
+                recorded_actions=recorded_actions,
+                video_path=actual_video_path,
+            )
 
         if not reactlog_data.get("success"):
             if output_format == "json":
@@ -337,9 +358,10 @@ def inspect(
             html_content = format_reactlog_html(
                 reactlog_data,
                 title=f"Reactive Log: {target_desc}",
-                source_code=source_code,
+                source_code=source_code if not is_json_input else "# Loaded from Reactlog JSON",
                 video_path=actual_video_path,
                 html_path=out_file_path,
+                theme=theme,
             )
             Path(out_file_path).write_text(html_content, encoding="utf-8")
             click.echo(

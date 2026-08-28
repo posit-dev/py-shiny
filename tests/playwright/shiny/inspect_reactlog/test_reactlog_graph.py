@@ -424,3 +424,62 @@ def res():
     expect(page.locator("#step-display")).to_have_text(
         f"Step {reactlog['first_interaction_step']} / {reactlog['steps_total'] - 1}"
     )
+
+
+def test_theme_toggle_button_and_modes(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("val", "Val", 10)
+@render.text
+def out():
+    return f"V={input.val()}"
+"""
+    reactlog = generate_reactlog(code)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code, theme="dark"),
+        wait_until="domcontentloaded",
+    )
+
+    html_el = page.locator("html")
+    expect(html_el).to_have_attribute("data-theme", "dark")
+
+    theme_btn = page.locator("#btn-theme-toggle")
+    expect(theme_btn).to_be_visible()
+    theme_btn.click()
+
+    expect(html_el).to_have_attribute("data-theme", "light")
+
+    theme_btn.click()
+    expect(html_el).to_have_attribute("data-theme", "dark")
+
+
+def test_in_browser_load_reactlog_json(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("val", "Val", 10)
+@render.text
+def out():
+    return f"V={input.val()}"
+"""
+    reactlog = generate_reactlog(code)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    r_reactlog_data = {
+        "version": "1.0",
+        "session": "test_sess",
+        "log": [
+            {"action": "define", "id": "input:alpha", "label": "alpha", "type": "observable", "time": 0.1},
+            {"action": "define", "id": "calc:beta", "label": "beta", "type": "calc", "time": 0.2},
+            {"action": "dependsOn", "id": "calc:beta", "dependsOn": "input:alpha", "time": 0.3},
+            {"action": "define", "id": "output:gamma", "label": "gamma", "type": "observer", "time": 0.4},
+            {"action": "dependsOn", "id": "output:gamma", "dependsOn": "calc:beta", "time": 0.5},
+        ]
+    }
+
+    page.evaluate("data => loadReactlogObject(data)", r_reactlog_data)
+
+    expect(page.locator("#stat-nodes")).to_have_text("Nodes: 3")
+    expect(page.locator("#stat-edges")).to_have_text("Edges: 2")
+    expect(page.locator(".graph-node")).to_have_count(3)
+    expect(page.locator(".graph-edge")).to_have_count(2)

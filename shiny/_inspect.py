@@ -243,11 +243,83 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
     }
 
 
+def _make_event(
+    step: int,
+    event: str,
+    phase: str,
+    provenance: str,
+    node_id: Optional[str] = None,
+    node_label: Optional[str] = None,
+    node_type: Optional[str] = None,
+    status: str = "idle",
+    timestamp: int = 0,
+    time_sec: float = 0.0,
+    value: Optional[str] = None,
+    edge_from: Optional[str] = None,
+    edge_to: Optional[str] = None,
+    details: str = "",
+    session: str = "default",
+    action: Optional[str] = None,
+) -> Dict[str, Any]:
+    act = action
+    if not act:
+        if event == "analysisInit":
+            act = "createContext"
+        elif event in ("define",):
+            act = "define"
+        elif event in ("inputChange", "assumeValue", "outputUpdated"):
+            act = "valueChange"
+        elif event in ("userClick",):
+            act = "userAction"
+        elif event in ("propagate",):
+            act = "invalidate"
+        elif event in ("orderingStart", "orderingComplete", "recordingComplete"):
+            act = "idle"
+        elif event in ("wouldEvaluate",):
+            act = "enter"
+        elif event in ("dependsOn",):
+            act = "dependsOn"
+        elif event in ("ordered",):
+            act = "exit"
+        else:
+            act = event
+
+    item: Dict[str, Any] = {
+        "step": step,
+        "action": act,
+        "event": event,
+        "id": node_id,
+        "node_id": node_id,
+        "label": node_label,
+        "node_label": node_label,
+        "type": node_type,
+        "node_type": node_type,
+        "status": status,
+        "phase": phase,
+        "provenance": provenance,
+        "time": time_sec,
+        "time_sec": time_sec,
+        "timestamp": timestamp,
+        "value": value,
+        "session": session,
+        "details": details,
+    }
+    if act == "dependsOn" or edge_from:
+        item["dependsOn"] = edge_from
+        item["edge_from"] = edge_from
+        item["edge_to"] = edge_to
+    elif edge_from or edge_to:
+        item["edge_from"] = edge_from
+        item["edge_to"] = edge_to
+    return item
+
+
 def generate_reactlog(
     code: str,
     inputs: Optional[Dict[str, Any]] = None,
     recorded_actions: Optional[List[Dict[str, Any]]] = None,
     video_path: Optional[str] = None,
+    session: str = "default",
 ) -> Dict[str, Any]:
     graph = inspect_reactive_graph(code)
     if not graph.get("success"):
@@ -268,41 +340,43 @@ def generate_reactlog(
     nodes_by_id = {n["id"]: n for n in nodes}
 
     events.append(
-        {
-            "step": step,
-            "event": "analysisInit",
-            "phase": "init",
-            "provenance": "inferred",
-            "timestamp": 0,
-            "time_sec": 0.0,
-            "node_id": None,
-            "node_label": "session",
-            "node_type": "session",
-            "status": "active",
-            "details": (
+        _make_event(
+            step=step,
+            event="analysisInit",
+            phase="init",
+            provenance="inferred",
+            node_id=None,
+            node_label="session",
+            node_type="session",
+            status="active",
+            timestamp=0,
+            time_sec=0.0,
+            details=(
                 "Initialized reactive session with recorded Playwright interactions"
                 if recorded_actions
                 else "Started static AST dependency analysis; app code was not executed"
             ),
-        }
+            session=session,
+        )
     )
     step += 1
 
     for node in nodes:
         events.append(
-            {
-                "step": step,
-                "event": "define",
-                "phase": "init",
-                "provenance": "inferred",
-                "timestamp": 0,
-                "time_sec": 0.0,
-                "node_id": node["id"],
-                "node_label": node["label"],
-                "node_type": node["role"],
-                "status": "discovered",
-                "details": f"Discovered {node['role']} node '{node['label']}' at line {node.get('line', '?')}",
-            }
+            _make_event(
+                step=step,
+                event="define",
+                phase="init",
+                provenance="inferred",
+                node_id=node["id"],
+                node_label=node["label"],
+                node_type=node["role"],
+                status="discovered",
+                timestamp=0,
+                time_sec=0.0,
+                details=f"Discovered {node['role']} node '{node['label']}' at line {node.get('line', '?')}",
+                session=session,
+            )
         )
         step += 1
 
@@ -353,21 +427,22 @@ def generate_reactlog(
                 node_obj = nodes_by_id.get(down, {})
                 down_lbl = node_obj.get("label", down)
                 events.append(
-                    {
-                        "step": cur_step,
-                        "event": "propagate",
-                        "phase": "interaction",
-                        "provenance": "inferred",
-                        "timestamp": ts_ms,
-                        "time_sec": ts_s,
-                        "node_id": down,
-                        "node_label": down_lbl,
-                        "node_type": node_obj.get("role", "conductor"),
-                        "status": "affected",
-                        "edge_from": nid,
-                        "edge_to": down,
-                        "details": f"Inferred invalidation of '{down_lbl}' by '{nid_lbl}'",
-                    }
+                    _make_event(
+                        step=cur_step,
+                        event="propagate",
+                        phase="interaction",
+                        provenance="inferred",
+                        node_id=down,
+                        node_label=down_lbl,
+                        node_type=node_obj.get("role", "conductor"),
+                        status="affected",
+                        timestamp=ts_ms,
+                        time_sec=ts_s,
+                        edge_from=nid,
+                        edge_to=down,
+                        details=f"Inferred invalidation of '{down_lbl}' by '{nid_lbl}'",
+                        session=session,
+                    )
                 )
                 cur_step += 1
                 cur_step = cascade_record_invalidate(
@@ -412,20 +487,21 @@ def generate_reactlog(
                 if node_id and node_id in nodes_by_id:
                     node_obj = nodes_by_id[node_id]
                     events.append(
-                        {
-                            "step": step,
-                            "event": "inputChange",
-                            "phase": "interaction",
-                            "provenance": "observed",
-                            "node_id": node_id,
-                            "node_label": node_obj["label"],
-                            "node_type": "source",
-                            "status": "assumed",
-                            "value": str(action_val),
-                            "timestamp": ts_ms,
-                            "time_sec": ts_sec,
-                            "details": f"Observed browser input change: {node_obj['label']} = {action_val!r}",
-                        }
+                        _make_event(
+                            step=step,
+                            event="inputChange",
+                            phase="interaction",
+                            provenance="observed",
+                            node_id=node_id,
+                            node_label=node_obj["label"],
+                            node_type="source",
+                            status="assumed",
+                            timestamp=ts_ms,
+                            time_sec=ts_sec,
+                            value=str(action_val),
+                            details=f"Observed browser input change: {node_obj['label']} = {action_val!r}",
+                            session=session,
+                        )
                     )
                     step += 1
 
@@ -441,76 +517,80 @@ def generate_reactlog(
                         trole = target["role"]
 
                         events.append(
-                            {
-                                "step": step,
-                                "event": "wouldEvaluate",
-                                "phase": "interaction",
-                                "provenance": "inferred",
-                                "node_id": tid,
-                                "node_label": tlabel,
-                                "node_type": trole,
-                                "status": "scheduled",
-                                "timestamp": ts_ms,
-                                "time_sec": ts_sec,
-                                "details": f"Inferred evaluation: '{tlabel}' (static topological order)",
-                            }
+                            _make_event(
+                                step=step,
+                                event="wouldEvaluate",
+                                phase="interaction",
+                                provenance="inferred",
+                                node_id=tid,
+                                node_label=tlabel,
+                                node_type=trole,
+                                status="scheduled",
+                                timestamp=ts_ms,
+                                time_sec=ts_sec,
+                                details=f"Inferred evaluation: '{tlabel}' (static topological order)",
+                                session=session,
+                            )
                         )
                         step += 1
 
                         for dep in adj_upstream.get(tid, []):
                             dep_lbl = nodes_by_id.get(dep, {}).get("label", dep)
                             events.append(
-                                {
-                                    "step": step,
-                                    "event": "dependsOn",
-                                    "phase": "interaction",
-                                    "provenance": "inferred",
-                                    "node_id": tid,
-                                    "node_label": tlabel,
-                                    "node_type": trole,
-                                    "status": "scheduled",
-                                    "edge_from": dep,
-                                    "edge_to": tid,
-                                    "timestamp": ts_ms,
-                                    "time_sec": ts_sec,
-                                    "details": f"Inferred dependency: '{dep_lbl}' used by '{tlabel}'",
-                                }
+                                _make_event(
+                                    step=step,
+                                    event="dependsOn",
+                                    phase="interaction",
+                                    provenance="inferred",
+                                    node_id=tid,
+                                    node_label=tlabel,
+                                    node_type=trole,
+                                    status="scheduled",
+                                    timestamp=ts_ms,
+                                    time_sec=ts_sec,
+                                    edge_from=dep,
+                                    edge_to=tid,
+                                    details=f"Inferred dependency: '{dep_lbl}' used by '{tlabel}'",
+                                    session=session,
+                                )
                             )
                             step += 1
 
                         events.append(
-                            {
-                                "step": step,
-                                "event": "ordered",
-                                "phase": "interaction",
-                                "provenance": "inferred",
-                                "node_id": tid,
-                                "node_label": tlabel,
-                                "node_type": trole,
-                                "status": "scheduled",
-                                "timestamp": ts_ms,
-                                "time_sec": ts_sec,
-                                "details": f"Inferred completed state for '{tlabel}'",
-                            }
+                            _make_event(
+                                step=step,
+                                event="ordered",
+                                phase="interaction",
+                                provenance="inferred",
+                                node_id=tid,
+                                node_label=tlabel,
+                                node_type=trole,
+                                status="scheduled",
+                                timestamp=ts_ms,
+                                time_sec=ts_sec,
+                                details=f"Inferred completed state for '{tlabel}'",
+                                session=session,
+                            )
                         )
                         step += 1
                 else:
                     unmatched_inputs.append(raw_name)
                     events.append(
-                        {
-                            "step": step,
-                            "event": "inputChange",
-                            "phase": "interaction",
-                            "provenance": "observed",
-                            "node_id": None,
-                            "node_label": f"input.{raw_name}",
-                            "node_type": "source",
-                            "status": "assumed",
-                            "value": str(action_val),
-                            "timestamp": ts_ms,
-                            "time_sec": ts_sec,
-                            "details": f"Observed browser input change (unmatched node): input.{raw_name} = {action_val!r}",
-                        }
+                        _make_event(
+                            step=step,
+                            event="inputChange",
+                            phase="interaction",
+                            provenance="observed",
+                            node_id=None,
+                            node_label=f"input.{raw_name}",
+                            node_type="source",
+                            status="assumed",
+                            timestamp=ts_ms,
+                            time_sec=ts_sec,
+                            value=str(action_val),
+                            details=f"Observed browser input change (unmatched node): input.{raw_name} = {action_val!r}",
+                            session=session,
+                        )
                     )
                     step += 1
 
@@ -526,54 +606,57 @@ def generate_reactlog(
                     else f"output:{raw_name}"
                 )
                 events.append(
-                    {
-                        "step": step,
-                        "event": "outputUpdated",
-                        "phase": "interaction",
-                        "provenance": "observed",
-                        "node_id": out_id,
-                        "node_label": node_lbl,
-                        "node_type": "observer",
-                        "status": "scheduled",
-                        "timestamp": ts_ms,
-                        "time_sec": ts_sec,
-                        "details": f"Observed browser output render: {node_lbl}",
-                    }
+                    _make_event(
+                        step=step,
+                        event="outputUpdated",
+                        phase="interaction",
+                        provenance="observed",
+                        node_id=out_id,
+                        node_label=node_lbl,
+                        node_type="observer",
+                        status="scheduled",
+                        timestamp=ts_ms,
+                        time_sec=ts_sec,
+                        details=f"Observed browser output render: {node_lbl}",
+                        session=session,
+                    )
                 )
                 step += 1
 
             elif action_type == "click":
                 events.append(
-                    {
-                        "step": step,
-                        "event": "userClick",
-                        "phase": "interaction",
-                        "provenance": "observed",
-                        "node_id": None,
-                        "node_label": raw_name,
-                        "node_type": "user",
-                        "status": "active",
-                        "timestamp": ts_ms,
-                        "time_sec": ts_sec,
-                        "details": f"Observed user click: {action.get('text', raw_name)}",
-                    }
+                    _make_event(
+                        step=step,
+                        event="userClick",
+                        phase="interaction",
+                        provenance="observed",
+                        node_id=None,
+                        node_label=raw_name,
+                        node_type="user",
+                        status="active",
+                        timestamp=ts_ms,
+                        time_sec=ts_sec,
+                        details=f"Observed user click: {action.get('text', raw_name)}",
+                        session=session,
+                    )
                 )
                 step += 1
 
         events.append(
-            {
-                "step": step,
-                "event": "recordingComplete",
-                "phase": "interaction",
-                "provenance": "inferred",
-                "node_id": None,
-                "node_label": "session",
-                "node_type": "engine",
-                "status": "idle",
-                "timestamp": last_ts,
-                "time_sec": round(last_ts / 1000.0, 2),
-                "details": "Playwright recording complete",
-            }
+            _make_event(
+                step=step,
+                event="recordingComplete",
+                phase="interaction",
+                provenance="inferred",
+                node_id=None,
+                node_label="session",
+                node_type="engine",
+                status="idle",
+                timestamp=last_ts,
+                time_sec=round(last_ts / 1000.0, 2),
+                details="Playwright recording complete",
+                session=session,
+            )
         )
         step += 1
 
@@ -591,10 +674,13 @@ def generate_reactlog(
 
         return {
             "success": True,
+            "version": "1.0",
+            "session": session,
             "trace_kind": "inferred_simulation_with_recorded_browser_events",
             "nodes": nodes,
             "edges": edges,
             "events": events,
+            "log": events,
             "steps_total": len(events),
             "init_steps_count": init_count,
             "interaction_steps_count": interact_count,
@@ -625,21 +711,22 @@ def generate_reactlog(
                 node_obj = nodes_by_id.get(down, {})
                 down_lbl = node_obj.get("label", down)
                 events.append(
-                    {
-                        "step": cur_step,
-                        "event": "propagate",
-                        "phase": "interaction",
-                        "provenance": "inferred",
-                        "timestamp": 0,
-                        "time_sec": 0.0,
-                        "node_id": down,
-                        "node_label": down_lbl,
-                        "node_type": node_obj.get("role", "conductor"),
-                        "status": "affected",
-                        "edge_from": nid,
-                        "edge_to": down,
-                        "details": f"Inferred invalidation of '{down_lbl}' from '{nid_lbl}'",
-                    }
+                    _make_event(
+                        step=cur_step,
+                        event="propagate",
+                        phase="interaction",
+                        provenance="inferred",
+                        node_id=down,
+                        node_label=down_lbl,
+                        node_type=node_obj.get("role", "conductor"),
+                        status="affected",
+                        timestamp=0,
+                        time_sec=0.0,
+                        edge_from=nid,
+                        edge_to=down,
+                        details=f"Inferred invalidation of '{down_lbl}' from '{nid_lbl}'",
+                        session=session,
+                    )
                 )
                 cur_step += 1
                 cur_step = cascade_invalidate(down, cur_step)
@@ -653,38 +740,40 @@ def generate_reactlog(
         )
         node_lbl = nodes_by_id.get(node_id, {}).get("label", f"input.{input_name}")
         events.append(
-            {
-                "step": step,
-                "event": "assumeValue",
-                "phase": "interaction",
-                "provenance": "inferred",
-                "timestamp": 0,
-                "time_sec": 0.0,
-                "node_id": node_id,
-                "node_label": node_lbl,
-                "node_type": "source",
-                "status": "assumed",
-                "value": str(input_val),
-                "details": f"Simulation assumes {node_lbl} is set to {input_val!r}",
-            }
+            _make_event(
+                step=step,
+                event="assumeValue",
+                phase="interaction",
+                provenance="inferred",
+                node_id=node_id,
+                node_label=node_lbl,
+                node_type="source",
+                status="assumed",
+                timestamp=0,
+                time_sec=0.0,
+                value=str(input_val),
+                details=f"Simulation assumes {node_lbl} is set to {input_val!r}",
+                session=session,
+            )
         )
         step += 1
         step = cascade_invalidate(node_id, step)
 
     events.append(
-        {
-            "step": step,
-            "event": "orderingStart",
-            "phase": "interaction",
-            "provenance": "inferred",
-            "timestamp": 0,
-            "time_sec": 0.0,
-            "node_id": None,
-            "node_label": "reactiveEnvironment",
-            "node_type": "engine",
-            "status": "active",
-            "details": f"Simulating static ordering for {len(invalidated_nodes_static)} affected node(s)",
-        }
+        _make_event(
+            step=step,
+            event="orderingStart",
+            phase="interaction",
+            provenance="inferred",
+            node_id=None,
+            node_label="reactiveEnvironment",
+            node_type="engine",
+            status="active",
+            timestamp=0,
+            time_sec=0.0,
+            details=f"Simulating static ordering for {len(invalidated_nodes_static)} affected node(s)",
+            session=session,
+        )
     )
     step += 1
 
@@ -695,74 +784,78 @@ def generate_reactlog(
         trole = target["role"]
 
         events.append(
-            {
-                "step": step,
-                "event": "wouldEvaluate",
-                "phase": "interaction",
-                "provenance": "inferred",
-                "timestamp": 0,
-                "time_sec": 0.0,
-                "node_id": tid,
-                "node_label": tlabel,
-                "node_type": trole,
-                "status": "scheduled",
-                "details": f"Inferred evaluation: '{tlabel}' (static topological order; not executed)",
-            }
+            _make_event(
+                step=step,
+                event="wouldEvaluate",
+                phase="interaction",
+                provenance="inferred",
+                node_id=tid,
+                node_label=tlabel,
+                node_type=trole,
+                status="scheduled",
+                timestamp=0,
+                time_sec=0.0,
+                details=f"Inferred evaluation: '{tlabel}' (static topological order; not executed)",
+                session=session,
+            )
         )
         step += 1
 
         for dep in adj_upstream.get(tid, []):
             dep_lbl = nodes_by_id.get(dep, {}).get("label", dep)
             events.append(
-                {
-                    "step": step,
-                    "event": "dependsOn",
-                    "phase": "interaction",
-                    "provenance": "inferred",
-                    "timestamp": 0,
-                    "time_sec": 0.0,
-                    "node_id": tid,
-                    "node_label": tlabel,
-                    "node_type": trole,
-                    "status": "scheduled",
-                    "edge_from": dep,
-                    "edge_to": tid,
-                    "details": f"Inferred dependency edge: '{dep_lbl}' used by '{tlabel}'",
-                }
+                _make_event(
+                    step=step,
+                    event="dependsOn",
+                    phase="interaction",
+                    provenance="inferred",
+                    node_id=tid,
+                    node_label=tlabel,
+                    node_type=trole,
+                    status="scheduled",
+                    timestamp=0,
+                    time_sec=0.0,
+                    edge_from=dep,
+                    edge_to=tid,
+                    details=f"Inferred dependency edge: '{dep_lbl}' used by '{tlabel}'",
+                    session=session,
+                )
             )
             step += 1
 
         events.append(
-            {
-                "step": step,
-                "event": "ordered",
-                "phase": "interaction",
-                "provenance": "inferred",
-                "timestamp": 0,
-                "time_sec": 0.0,
-                "node_id": tid,
-                "node_label": tlabel,
-                "node_type": trole,
-                "status": "scheduled",
-                "details": f"Inferred completed state for '{tlabel}'",
-            }
+            _make_event(
+                step=step,
+                event="ordered",
+                phase="interaction",
+                provenance="inferred",
+                node_id=tid,
+                node_label=tlabel,
+                node_type=trole,
+                status="scheduled",
+                timestamp=0,
+                time_sec=0.0,
+                details=f"Inferred completed state for '{tlabel}'",
+                session=session,
+            )
         )
         step += 1
 
     events.append(
-        {
-            "step": step,
-            "event": "orderingComplete",
-            "phase": "interaction",
-            "provenance": "inferred",
-            "timestamp": 0,
-            "time_sec": 0.0,
-            "node_id": None,
-            "node_label": "reactiveEnvironment",
-            "node_type": "engine",
-            "status": "idle",
-            "details": f"Static ordering contains {len(eval_order)} nodes; no reactive flush occurred",
-        }
+        _make_event(
+            step=step,
+            event="orderingComplete",
+            phase="interaction",
+            provenance="inferred",
+            node_id=None,
+            node_label="reactiveEnvironment",
+            node_type="engine",
+            status="idle",
+            timestamp=0,
+            time_sec=0.0,
+            details=f"Static ordering contains {len(eval_order)} nodes; no reactive flush occurred",
+            session=session,
+        )
     )
 
     init_count = len([e for e in events if e.get("phase") == "init"])
@@ -773,10 +866,13 @@ def generate_reactlog(
 
     return {
         "success": True,
+        "version": "1.0",
+        "session": session,
         "trace_kind": "static_inferred_simulation",
         "nodes": nodes,
         "edges": edges,
         "events": events,
+        "log": events,
         "steps_total": len(events),
         "init_steps_count": init_count,
         "interaction_steps_count": interact_count,
@@ -787,6 +883,227 @@ def generate_reactlog(
         "unmatched_inputs_count": 0,
         "disclaimer": "Server reactive execution is statically inferred from AST dependency analysis. Dynamic dependencies or isolated reactives may not appear in this graph.",
         "summary": f"Static dependency simulation: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes_static)} affected); app code was not executed",
+    }
+
+
+def load_reactlog_json(
+    json_data: str | Dict[str, Any] | List[Any],
+    source_code: Optional[str] = None,
+) -> Dict[str, Any]:
+    if isinstance(json_data, str):
+        try:
+            parsed = json.loads(json_data)
+        except json.JSONDecodeError as e:
+            return {
+                "success": False,
+                "error": f"Invalid JSON reactlog: {e}",
+                "nodes": [],
+                "edges": [],
+                "events": [],
+                "log": [],
+                "summary": "Invalid JSON reactlog",
+            }
+    else:
+        parsed = json_data
+
+    version = "1.0"
+    session_name = "default"
+    raw_events: List[Dict[str, Any]] = []
+    existing_nodes: Optional[List[Dict[str, Any]]] = None
+    existing_edges: Optional[List[Dict[str, Any]]] = None
+
+    if isinstance(parsed, list):
+        raw_events = [e for e in parsed if isinstance(e, dict)]
+    elif isinstance(parsed, dict):
+        version = str(parsed.get("version", "1.0"))
+        session_name = str(parsed.get("session", "default"))
+        if "nodes" in parsed and isinstance(parsed["nodes"], list):
+            existing_nodes = parsed["nodes"]
+        if "edges" in parsed and isinstance(parsed["edges"], list):
+            existing_edges = parsed["edges"]
+
+        if "log" in parsed and isinstance(parsed["log"], list):
+            raw_events = [e for e in parsed["log"] if isinstance(e, dict)]
+        elif "events" in parsed and isinstance(parsed["events"], list):
+            raw_events = [e for e in parsed["events"] if isinstance(e, dict)]
+        elif "entries" in parsed and isinstance(parsed["entries"], list):
+            raw_events = [e for e in parsed["entries"] if isinstance(e, dict)]
+
+    nodes_map: Dict[str, Dict[str, Any]] = {}
+    edges_set: Set[tuple[str, str]] = set()
+
+    if existing_nodes:
+        for n in existing_nodes:
+            nid = str(n.get("id", ""))
+            if nid:
+                nodes_map[nid] = dict(n)
+
+    if existing_edges:
+        for e in existing_edges:
+            f, t = str(e.get("from", "")), str(e.get("to", ""))
+            if f and t:
+                edges_set.add((f, t))
+
+    normalized_events: List[Dict[str, Any]] = []
+    step_idx = 0
+
+    for item in raw_events:
+        action = str(item.get("action") or item.get("event") or "")
+        nid = item.get("node_id") or item.get("id")
+        lbl = item.get("node_label") or item.get("label") or nid or ""
+        ntype = item.get("node_type") or item.get("type") or "calc"
+        val = item.get("value")
+        val_str = str(val) if val is not None else None
+
+        dep_from = item.get("dependsOn") or item.get("edge_from")
+        dep_to = nid or item.get("edge_to")
+
+        t_sec = float(
+            item.get("time")
+            or item.get("time_sec")
+            or (int(item.get("timestamp") or 0) / 1000.0)
+        )
+        t_ms = int(item.get("timestamp") or (t_sec * 1000))
+
+        prov = item.get("provenance") or (
+            "observed"
+            if action in ("valueChange", "inputChange", "userClick", "userAction")
+            else "inferred"
+        )
+        phase = item.get("phase") or (
+            "init"
+            if action in ("define", "analysisInit", "createContext", "sessionInit")
+            else "interaction"
+        )
+        status = item.get("status")
+        if not status:
+            if action in ("define",):
+                status = "discovered"
+            elif action in ("invalidate", "propagate"):
+                status = "affected"
+            elif action in ("enter", "wouldEvaluate", "outputUpdated"):
+                status = "scheduled"
+            elif action in ("exit", "ordered", "idle", "recordingComplete"):
+                status = "idle"
+            elif action in ("valueChange", "inputChange", "assumeValue"):
+                status = "assumed"
+            else:
+                status = "active"
+
+        details = item.get("details")
+        if not details:
+            if action == "define":
+                details = f"Defined reactive node '{lbl}'"
+            elif action == "dependsOn":
+                details = f"Dependency: '{dep_from}' used by '{dep_to}'"
+            elif action == "invalidate":
+                details = f"Invalidated '{lbl}'"
+            elif action in ("valueChange", "inputChange"):
+                details = f"Value change for '{lbl}': {val_str}"
+            elif action in ("enter", "wouldEvaluate"):
+                details = f"Evaluating '{lbl}'"
+            elif action in ("exit", "ordered"):
+                details = f"Completed evaluation of '{lbl}'"
+            else:
+                details = f"Event '{action}' on '{lbl}'"
+
+        if action == "dependsOn" and dep_from and dep_to:
+            edges_set.add((str(dep_from), str(dep_to)))
+
+        if nid and str(nid) not in nodes_map:
+            role = "conductor"
+            clean_type = str(ntype).lower()
+            if clean_type in ("observable", "input") or str(nid).startswith("input:"):
+                role = "source"
+                clean_type = "input"
+            elif clean_type in ("observer", "output", "effect") or str(nid).startswith(
+                "output:"
+            ) or str(nid).startswith("effect:"):
+                role = "observer"
+                clean_type = "output"
+            elif clean_type in ("calc", "reactive"):
+                role = "conductor"
+                clean_type = "calc"
+
+            nodes_map[str(nid)] = {
+                "id": str(nid),
+                "name": str(nid).split(":", 1)[-1] if ":" in str(nid) else str(nid),
+                "type": clean_type,
+                "role": role,
+                "label": str(lbl),
+                "line": item.get("line"),
+            }
+
+        ev_dict = _make_event(
+            step=step_idx,
+            event=action,
+            phase=phase,
+            provenance=prov,
+            node_id=str(nid) if nid else None,
+            node_label=str(lbl) if lbl else None,
+            node_type=str(ntype) if ntype else None,
+            status=status,
+            timestamp=t_ms,
+            time_sec=round(t_sec, 3),
+            value=val_str,
+            edge_from=str(dep_from) if (action == "dependsOn" or dep_from) else None,
+            edge_to=str(dep_to) if (action == "dependsOn" or dep_to) else None,
+            details=details,
+            session=str(item.get("session") or session_name),
+            action=action,
+        )
+        normalized_events.append(ev_dict)
+        step_idx += 1
+
+    final_nodes = list(nodes_map.values())
+    final_edges = [{"from": f, "to": t} for f, t in sorted(edges_set)]
+
+    if not normalized_events and final_nodes:
+        for i, n in enumerate(final_nodes):
+            normalized_events.append(
+                _make_event(
+                    step=i,
+                    event="define",
+                    phase="init",
+                    provenance="inferred",
+                    node_id=n["id"],
+                    node_label=n["label"],
+                    node_type=n["role"],
+                    status="discovered",
+                    details=f"Defined {n['role']} node '{n['label']}'",
+                )
+            )
+
+    init_count = len([e for e in normalized_events if e.get("phase") == "init"])
+    interact_count = len(
+        [e for e in normalized_events if e.get("phase") == "interaction"]
+    )
+    first_interact = next(
+        (i for i, e in enumerate(normalized_events) if e.get("phase") == "interaction"),
+        0,
+    )
+    obs_count = len([e for e in normalized_events if e.get("provenance") == "observed"])
+    inf_count = len([e for e in normalized_events if e.get("provenance") == "inferred"])
+
+    return {
+        "success": True,
+        "version": version,
+        "session": session_name,
+        "trace_kind": "loaded_reactlog_json",
+        "nodes": final_nodes,
+        "edges": final_edges,
+        "events": normalized_events,
+        "log": normalized_events,
+        "steps_total": len(normalized_events),
+        "init_steps_count": init_count,
+        "interaction_steps_count": interact_count,
+        "first_interaction_step": first_interact,
+        "observed_events_count": obs_count,
+        "inferred_events_count": inf_count,
+        "unmatched_inputs": [],
+        "unmatched_inputs_count": 0,
+        "disclaimer": "Imported reactive log data from JSON format.",
+        "summary": f"Imported Reactlog graph: {len(final_nodes)} nodes, {len(final_edges)} edges, {len(normalized_events)} log events",
     }
 
 
@@ -1184,6 +1501,7 @@ def format_reactlog_html(
     title: str = "Shiny Reactive Dependency Simulation",
     video_path: Optional[str] = None,
     html_path: Optional[str] = None,
+    theme: str = "dark",
 ) -> str:
     escaped_title = html_lib.escape(title)
     formatted_source = _format_python_source_html(source_code)
@@ -1250,16 +1568,17 @@ def format_reactlog_html(
         .replace(">", "\\u003e")
         .replace("&", "\\u0026")
     )
+    safe_theme = html_lib.escape(theme if theme in ("dark", "light", "auto") else "dark")
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{safe_theme}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#090d12" />
   <title>{escaped_title}</title>
   <style>
-    :root {{
+    :root, [data-theme="dark"] {{
       color-scheme: dark;
       --bg: #090d12;
       --surface: #111821;
@@ -1275,14 +1594,86 @@ def format_reactlog_html(
       --effect: #c084fc;
       --output: #4ade80;
       --warning: #fb923c;
+      --grid-line: rgba(105, 128, 151, 0.055);
+      --header-bg: rgba(17, 24, 33, 0.96);
+      --node-fill: #121b25;
+      --node-stroke: #35475a;
+      --node-text: #edf4fb;
+      --node-subtext: #91a1b3;
+      --source-panel-bg: #0c1219;
+      --source-panel-text: #d9e7f5;
+      --trace-bg: #080d14;
+      --trace-lane-bg: #0a111a;
+      --toast-bg: rgba(23, 33, 45, 0.95);
+      --legend-bg: rgba(17, 24, 33, 0.9);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }}
+    [data-theme="light"] {{
+      color-scheme: light;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --surface-3: #e2e8f0;
+      --border: #cbd5e1;
+      --border-strong: #94a3b8;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --accent: #0284c7;
+      --source: #0284c7;
+      --calc: #d97706;
+      --effect: #9333ea;
+      --output: #16a34a;
+      --warning: #ea580c;
+      --grid-line: rgba(15, 23, 42, 0.06);
+      --header-bg: rgba(255, 255, 255, 0.96);
+      --node-fill: #ffffff;
+      --node-stroke: #cbd5e1;
+      --node-text: #0f172a;
+      --node-subtext: #64748b;
+      --source-panel-bg: #f8fafc;
+      --source-panel-text: #1e293b;
+      --trace-bg: #f1f5f9;
+      --trace-lane-bg: #ffffff;
+      --toast-bg: rgba(255, 255, 255, 0.95);
+      --legend-bg: rgba(255, 255, 255, 0.92);
+    }}
+    @media (prefers-color-scheme: light) {{
+      [data-theme="auto"] {{
+        color-scheme: light;
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-2: #f1f5f9;
+        --surface-3: #e2e8f0;
+        --border: #cbd5e1;
+        --border-strong: #94a3b8;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --accent: #0284c7;
+        --source: #0284c7;
+        --calc: #d97706;
+        --effect: #9333ea;
+        --output: #16a34a;
+        --warning: #ea580c;
+        --grid-line: rgba(15, 23, 42, 0.06);
+        --header-bg: rgba(255, 255, 255, 0.96);
+        --node-fill: #ffffff;
+        --node-stroke: #cbd5e1;
+        --node-text: #0f172a;
+        --node-subtext: #64748b;
+        --source-panel-bg: #f8fafc;
+        --source-panel-text: #1e293b;
+        --trace-bg: #f1f5f9;
+        --trace-lane-bg: #ffffff;
+        --toast-bg: rgba(255, 255, 255, 0.95);
+        --legend-bg: rgba(255, 255, 255, 0.92);
+      }}
     }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     button, input {{ font: inherit; }}
     button:focus-visible, input:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
     body {{ background: var(--bg); color: var(--text); font-family: var(--sans); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }}
-    .app-header {{ min-height: 64px; background: rgba(17, 24, 33, 0.96); border-bottom: 1px solid var(--border); padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; gap: 1rem; align-items: center; }}
+    .app-header {{ min-height: 64px; background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; gap: 1rem; align-items: center; }}
     .brand {{ display: flex; align-items: center; gap: 0.75rem; min-width: 0; }}
     .brand-mark {{ width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #07111c; background: linear-gradient(145deg, #82c9ff, #3b9ced); font-family: var(--mono); font-weight: 900; box-shadow: 0 7px 20px rgba(58, 158, 239, 0.22); }}
     .brand-copy {{ min-width: 0; }}
@@ -1299,18 +1690,18 @@ def format_reactlog_html(
     .btn.icon {{ width: 34px; padding: 0; font-family: var(--mono); }}
     .btn.primary {{ background: #1f69a3; border-color: #2d86c8; color: #fff; }}
     .btn.primary:hover {{ background: #267ec4; }}
-    .btn.accent-skip {{ background: #2b2146; border-color: #63439b; color: #d8b4fe; }}
-    .btn.accent-skip:hover {{ background: #3b2b63; border-color: #8b5cf6; }}
+    .btn.accent-skip {{ background: color-mix(in srgb, var(--effect) 14%, var(--surface-2)); border-color: color-mix(in srgb, var(--effect) 40%, var(--border)); color: var(--effect); }}
+    .btn.accent-skip:hover {{ background: color-mix(in srgb, var(--effect) 22%, var(--surface-2)); }}
     .inline-icon {{ display: inline-block; vertical-align: -0.15em; margin-right: 0.35rem; flex-shrink: 0; }}
     .btn.icon svg {{ display: block; margin: auto; }}
     .phase-selector {{ display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }}
     .phase-btn {{ display: inline-flex; align-items: center; background: transparent; border: none; color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 6px; font: 700 0.7rem var(--mono); cursor: pointer; transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease; }}
     .phase-btn:hover {{ color: var(--text); background: var(--surface-2); }}
-    .phase-btn.is-active {{ background: var(--surface-3); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }}
+    .phase-btn.is-active {{ background: var(--surface-3); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }}
     .search-wrap {{ position: relative; flex: 0 1 200px; min-width: 130px; }}
     .search-icon {{ position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
     .search-input {{ width: 100%; height: 34px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 0 0.7rem 0 2rem; font-size: 0.76rem; }}
-    .search-input::placeholder {{ color: #6f8194; }}
+    .search-input::placeholder {{ color: var(--text-muted); }}
     .filter-btn[aria-pressed="true"] {{ color: var(--text); background: var(--surface-3); }}
     .filter-btn[data-role="source"][aria-pressed="true"] {{ border-color: var(--source); }}
     .filter-btn[data-role="conductor"][aria-pressed="true"] {{ border-color: var(--calc); }}
@@ -1324,18 +1715,18 @@ def format_reactlog_html(
     .split-resizer:hover, .split-resizer:focus-visible, .split-resizer.is-dragging {{ background: var(--surface-3); border-color: var(--accent); outline: none; }}
     .resizer-handle {{ width: 2px; height: 32px; border-radius: 1px; background: var(--border-strong); }}
     .split-resizer:hover .resizer-handle, .split-resizer.is-dragging .resizer-handle {{ background: var(--accent); }}
-    .graph-container {{ min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(rgba(105, 128, 151, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(105, 128, 151, 0.055) 1px, transparent 1px); background-size: 24px 24px; }}
+    .graph-container {{ min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 24px 24px; }}
     .graph-topbar {{ position: absolute; z-index: 3; top: 0.8rem; left: 0.8rem; right: 0.8rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; pointer-events: none; }}
-    .legend {{ display: flex; gap: 0.4rem; flex-wrap: wrap; padding: 0.4rem; border: 1px solid var(--border); border-radius: 9px; background: rgba(17, 24, 33, 0.9); backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,0.18); pointer-events: auto; }}
+    .legend {{ display: flex; gap: 0.4rem; flex-wrap: wrap; padding: 0.4rem; border: 1px solid var(--border); border-radius: 9px; background: var(--legend-bg); backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); pointer-events: auto; }}
     .legend-item {{ display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.66rem var(--mono); padding: 0.18rem 0.32rem; }}
     .legend-dot {{ width: 7px; height: 7px; border-radius: 50%; background: var(--role-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--role-color) 18%, transparent); }}
     .zoom-controls {{ display: flex; gap: 0.3rem; pointer-events: auto; }}
-    .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: rgba(23, 33, 45, 0.95); border: 1px solid var(--accent); border-radius: 999px; padding: 0.45rem 1.1rem; color: var(--text); font: 650 0.76rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 0.6rem; pointer-events: none; animation: toast-pop 200ms ease; }}
+    .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 0.45rem 1.1rem; color: var(--text); font: 650 0.76rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.6rem; pointer-events: none; animation: toast-pop 200ms ease; }}
     @keyframes toast-pop {{ from {{ opacity: 0; transform: translate(-50%, 8px); }} to {{ opacity: 1; transform: translate(-50%, 0); }} }}
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
     .graph-node, .graph-edge {{ transition: opacity 160ms ease, filter 160ms ease, stroke 160ms ease, stroke-width 160ms ease; }}
     .graph-edge {{ opacity: 0.75; stroke: #527494; stroke-width: 1.8px; }}
-    .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: #63b3ff !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
+    .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
     @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
@@ -1343,9 +1734,9 @@ def format_reactlog_html(
       .action-toast {{ animation: none; }}
     }}
     .graph-node {{ cursor: pointer; }}
-    .graph-node:hover .node-card {{ filter: brightness(1.14); }}
-    .graph-node.is-selected .node-card {{ filter: drop-shadow(0 0 9px rgba(99,179,255,0.36)); }}
-    .stage-label {{ font: 700 10px var(--mono); fill: #718297; letter-spacing: 0.08em; }}
+    .graph-node:hover .node-card {{ filter: brightness(1.08); }}
+    .graph-node.is-selected .node-card {{ filter: drop-shadow(0 0 9px color-mix(in srgb, var(--accent) 50%, transparent)); }}
+    .stage-label {{ font: 700 10px var(--mono); fill: var(--text-muted); letter-spacing: 0.08em; }}
     .sidebar {{ min-width: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }}
     .sidebar-header {{ min-height: 46px; padding: 0.7rem 0.8rem 0.65rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }}
     .sidebar-tabs {{ display: flex; align-items: center; gap: 0.25rem; }}
@@ -1355,22 +1746,25 @@ def format_reactlog_html(
     .sidebar-panel {{ min-height: 0; flex: 1; }}
     .sidebar-panel[hidden] {{ display: none; }}
     .timeline-panel {{ display: flex; flex-direction: column; }}
-    .source-panel {{ position: relative; overflow: auto; padding: 1rem; background: #0c1219; color: #d9e7f5; font: 500 0.76rem/1.62 var(--mono); white-space: pre; tab-size: 4; }}
+    .source-panel {{ position: relative; overflow: auto; padding: 1rem; background: var(--source-panel-bg); color: var(--source-panel-text); font: 500 0.76rem/1.62 var(--mono); white-space: pre; tab-size: 4; }}
     .source-panel code {{ position: relative; z-index: 1; font: inherit; }}
     .source-line-highlight {{ position: absolute; z-index: 0; left: 0; right: 0; margin: 0; padding: 0; border: 0; border-left: 3px solid var(--source-highlight-color, var(--accent)); border-radius: 0; background: color-mix(in srgb, var(--source-highlight-color, var(--accent)) 16%, transparent); box-shadow: inset 0 1px color-mix(in srgb, var(--source-highlight-color, var(--accent)) 12%, transparent), inset 0 -1px color-mix(in srgb, var(--source-highlight-color, var(--accent)) 12%, transparent); pointer-events: none; transition: top 150ms ease, background 150ms ease; }}
     .source-line-highlight[hidden] {{ display: none; }}
-    .video-panel {{ display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; background: #0c1219; overflow: auto; }}
+    .video-panel {{ display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; background: var(--surface); overflow: auto; }}
     .video-container {{ width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #000; }}
     .video-container video {{ width: 100%; display: block; }}
     .video-meta {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }}
-    .video-badge {{ background: #193147; border: 1px solid #2d618d; color: #79c0ff; border-radius: 999px; padding: 0.2rem 0.55rem; font: 700 0.68rem var(--mono); }}
-    .video-sync-status {{ color: #7ee787; font: 700 0.68rem var(--mono); display: inline-flex; align-items: center; gap: 0.3rem; }}
+    .video-badge {{ background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 0.2rem 0.55rem; font: 700 0.68rem var(--mono); }}
+    .video-sync-status {{ color: var(--output); font: 700 0.68rem var(--mono); display: inline-flex; align-items: center; gap: 0.3rem; }}
     .video-filename {{ color: var(--text-muted); font: 500 0.7rem var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
     .video-help {{ color: var(--text-muted); font-size: 0.72rem; line-height: 1.5; text-wrap: pretty; }}
-    .syntax-keyword {{ color: #c792ea; font-weight: 700; }}
-    .syntax-string {{ color: #a8d279; }}
-    .syntax-number {{ color: #f6c177; }}
-    .syntax-comment {{ color: #718096; font-style: italic; }}
+    .syntax-keyword {{ color: #c084fc; font-weight: 700; }}
+    [data-theme="light"] .syntax-keyword {{ color: #7e22ce; font-weight: 700; }}
+    .syntax-string {{ color: #4ade80; }}
+    [data-theme="light"] .syntax-string {{ color: #15803d; }}
+    .syntax-number {{ color: #fbbf24; }}
+    [data-theme="light"] .syntax-number {{ color: #b45309; }}
+    .syntax-comment {{ color: var(--text-muted); font-style: italic; }}
     .event-list {{ flex: 1; overflow-y: auto; padding: 0 0.6rem 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; overscroll-behavior: contain; }}
     .event-phase-label {{ position: sticky; top: 0; z-index: 2; margin: 0 -0.6rem; padding: 0.65rem 0.75rem 0.4rem; color: var(--text-muted); background: linear-gradient(var(--surface) 78%, transparent); font: 800 0.64rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }}
     .event-item {{ width: 100%; padding: 0.55rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); border-left: 3px solid var(--border-strong); background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 0.25rem; }}
@@ -1385,27 +1779,27 @@ def format_reactlog_html(
     .event-step {{ color: var(--text-muted); font: 650 0.62rem var(--mono); font-variant-numeric: tabular-nums; }}
     .event-name {{ font: 700 0.76rem var(--mono); color: var(--text); }}
     .event-badges {{ display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; flex-wrap: wrap; }}
-    .event-time {{ font: 600 0.64rem var(--mono); font-variant-numeric: tabular-nums; color: #93c5fd; background: #13273b; border-radius: 4px; padding: 0.1rem 0.3rem; }}
+    .event-time {{ font: 600 0.64rem var(--mono); font-variant-numeric: tabular-nums; color: var(--accent); background: var(--surface-3); border-radius: 4px; padding: 0.1rem 0.3rem; }}
     .event-badge {{ font: 700 0.62rem var(--mono); border-radius: 4px; padding: 0.1rem 0.35rem; text-transform: uppercase; }}
-    .event-badge.provenance-observed {{ background: #0c2d48; color: #38bdf8; border: 1px solid #0284c7; }}
-    .event-badge.provenance-inferred {{ background: #2d1847; color: #c084fc; border: 1px solid #7e22ce; }}
-    .event-badge.assumed {{ background: #1b4728; color: #7ee787; }}
-    .event-badge.affected {{ background: #4e3510; color: #f0883e; }}
-    .event-badge.scheduled {{ background: #193147; color: #79c0ff; }}
-    .event-badge.discovered {{ background: #262933; color: #a5d6ff; }}
-    .event-badge.idle {{ background: #21262d; color: #8b949e; }}
-    .event-badge.active {{ background: #3d2459; color: #d2a8ff; }}
+    .event-badge.provenance-observed {{ background: color-mix(in srgb, var(--source) 18%, var(--surface)); color: var(--source); border: 1px solid var(--source); }}
+    .event-badge.provenance-inferred {{ background: color-mix(in srgb, var(--effect) 18%, var(--surface)); color: var(--effect); border: 1px solid var(--effect); }}
+    .event-badge.assumed {{ background: color-mix(in srgb, var(--output) 18%, var(--surface)); color: var(--output); }}
+    .event-badge.affected {{ background: color-mix(in srgb, var(--warning) 18%, var(--surface)); color: var(--warning); }}
+    .event-badge.scheduled {{ background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--accent); }}
+    .event-badge.discovered {{ background: var(--surface-3); color: var(--text); }}
+    .event-badge.idle {{ background: var(--surface-3); color: var(--text-muted); }}
+    .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
     .event-details {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
     .inspector-panel {{ border-top: 1px solid var(--border); padding: 0.8rem; background: var(--surface); }}
     .inspector-title {{ font: 700 0.8rem var(--mono); color: var(--text); margin-bottom: 0.4rem; }}
     .inspector-row {{ display: flex; justify-content: space-between; font-size: 0.74rem; padding: 0.2rem 0; }}
     .inspector-label {{ color: var(--text-muted); }}
     .inspector-val {{ font-family: var(--mono); color: var(--text); font-weight: 600; }}
-    .trace-timeline-bar {{ display: flex; flex-direction: column; gap: 0.35rem; padding: 0.45rem 1rem 0.55rem 1rem; background: #080d14; border-bottom: 1px solid var(--border); user-select: none; }}
+    .trace-timeline-bar {{ display: flex; flex-direction: column; gap: 0.35rem; padding: 0.45rem 1rem 0.55rem 1rem; background: var(--trace-bg); border-bottom: 1px solid var(--border); user-select: none; }}
     .trace-header {{ display: flex; align-items: center; justify-content: space-between; gap: 1rem; }}
     .trace-controls {{ display: flex; align-items: center; gap: 0.45rem; font: 700 0.74rem var(--mono); color: var(--text); }}
-    .trace-badge {{ background: #193147; border: 1px solid #2d618d; color: #79c0ff; border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.62rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
-    .trace-clock {{ color: #63b3ff; font-weight: 800; font-variant-numeric: tabular-nums; }}
+    .trace-badge {{ background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.62rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
+    .trace-clock {{ color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }}
     .trace-sep {{ color: var(--text-muted); opacity: 0.5; }}
     .trace-total {{ color: var(--text-muted); }}
     .trace-nav-actions {{ display: flex; gap: 0.2rem; margin-left: 0.2rem; }}
@@ -1413,9 +1807,9 @@ def format_reactlog_html(
     .trace-legend-mini {{ display: flex; align-items: center; gap: 0.8rem; font: 600 0.64rem var(--mono); color: var(--text-muted); }}
     .legend-chip {{ display: inline-flex; align-items: center; gap: 0.3rem; }}
     .chip-dot {{ width: 6px; height: 6px; border-radius: 50%; display: inline-block; }}
-    .lane-input .chip-dot {{ background: #38bdf8; box-shadow: 0 0 4px #38bdf8; }}
-    .lane-calc .chip-dot {{ background: #fbbf24; box-shadow: 0 0 4px #fbbf24; }}
-    .lane-output .chip-dot {{ background: #4ade80; box-shadow: 0 0 4px #4ade80; }}
+    .lane-input .chip-dot {{ background: var(--source); box-shadow: 0 0 4px var(--source); }}
+    .lane-calc .chip-dot {{ background: var(--calc); box-shadow: 0 0 4px var(--calc); }}
+    .lane-output .chip-dot {{ background: var(--output); box-shadow: 0 0 4px var(--output); }}
     .trace-main-wrap {{ display: flex; align-items: stretch; gap: 0.6rem; position: relative; }}
     .trace-lanes-labels {{ display: flex; flex-direction: column; justify-content: space-between; width: 52px; padding-top: 14px; }}
     .lane-label {{ font: 700 0.6rem var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; height: 20px; display: flex; align-items: center; }}
@@ -1425,21 +1819,21 @@ def format_reactlog_html(
     .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 5px; background: var(--border-strong); }}
     .trace-ruler-tick.major {{ height: 9px; background: var(--text-muted); }}
     .trace-ruler-label {{ position: absolute; bottom: 4px; transform: translateX(-50%); font: 600 0.58rem var(--mono); color: var(--text-muted); pointer-events: none; }}
-    .trace-lanes {{ position: relative; height: 66px; background: #0a111a; border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; overflow: visible; }}
-    .trace-lane {{ position: relative; height: 22px; width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.06); }}
+    .trace-lanes {{ position: relative; height: 66px; background: var(--trace-lane-bg); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; overflow: visible; }}
+    .trace-lane {{ position: relative; height: 22px; width: 100%; border-bottom: 1px dashed var(--border); }}
     .trace-lane:last-of-type {{ border-bottom: none; }}
     .trace-fill {{ position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 5px 0 0 5px; pointer-events: none; }}
-    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 18px; max-width: 120px; padding: 0 6px; border-radius: 4px; font: 700 0.58rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.5); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 2; }}
+    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 18px; max-width: 120px; padding: 0 6px; border-radius: 4px; font: 700 0.58rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.25); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 2; }}
     .trace-chip:hover, .trace-chip.is-active {{ transform: translate(-50%, -50%) scale(1.12); z-index: 10; box-shadow: 0 0 10px var(--accent); }}
-    .trace-chip.kind-input {{ background: rgba(12, 45, 72, 0.95); color: #38bdf8; border: 1px solid #0284c7; }}
-    .trace-chip.kind-click {{ background: rgba(43, 24, 70, 0.95); color: #d8b4fe; border: 1px solid #7e22ce; }}
-    .trace-chip.kind-calc {{ background: rgba(56, 40, 11, 0.95); color: #fbbf24; border: 1px solid #d97706; }}
-    .trace-chip.kind-output {{ background: rgba(15, 51, 30, 0.95); color: #4ade80; border: 1px solid #16a34a; }}
+    .trace-chip.kind-input {{ background: color-mix(in srgb, var(--source) 18%, var(--surface)); color: var(--source); border: 1px solid var(--source); }}
+    .trace-chip.kind-click {{ background: color-mix(in srgb, var(--effect) 18%, var(--surface)); color: var(--effect); border: 1px solid var(--effect); }}
+    .trace-chip.kind-calc {{ background: color-mix(in srgb, var(--calc) 18%, var(--surface)); color: var(--calc); border: 1px solid var(--calc); }}
+    .trace-chip.kind-output {{ background: color-mix(in srgb, var(--output) 18%, var(--surface)); color: var(--output); border: 1px solid var(--output); }}
     .trace-playhead {{ position: absolute; top: -5px; bottom: -3px; left: 0%; width: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); pointer-events: none; z-index: 15; transition: left 40ms linear; }}
     .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 8px; height: 8px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 6px var(--accent); }}
     .playhead-line {{ width: 100%; height: 100%; }}
-    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: rgba(13, 20, 29, 0.96); border: 1px solid var(--accent); border-radius: 6px; padding: 0.4rem 0.65rem; font: 600 0.68rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index: 25; display: flex; flex-direction: column; gap: 0.15rem; }}
-    .tooltip-time {{ color: #63b3ff; font-weight: 800; font-size: 0.72rem; }}
+    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 0.4rem 0.65rem; font: 600 0.68rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 25; display: flex; flex-direction: column; gap: 0.15rem; }}
+    .tooltip-time {{ color: var(--accent); font-weight: 800; font-size: 0.72rem; }}
     .tooltip-title {{ color: var(--text); font-weight: 700; }}
     .tooltip-desc {{ color: var(--text-muted); font-size: 0.62rem; }}
   </style>
@@ -1452,7 +1846,7 @@ def format_reactlog_html(
       </div>
       <div class="brand-copy">
         <h1 class="brand-title">{escaped_title}</h1>
-        <div class="brand-subtitle">Interactive Shiny Reactive Log & Graph Explorer (Statically Inferred Dependency Execution)</div>
+        <div class="brand-subtitle">Interactive Shiny Reactive Log & Graph Explorer</div>
       </div>
     </div>
     <div class="stats">
@@ -1460,6 +1854,7 @@ def format_reactlog_html(
       <span class="stat" id="stat-edges">Edges: 0</span>
       <span class="stat" id="stat-observed"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Observed: 0</span>
       <span class="stat" id="stat-inferred"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Inferred: 0</span>
+      <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
     </div>
   </header>
 
@@ -1499,6 +1894,13 @@ def format_reactlog_html(
       <button class="btn filter-btn" data-role="source" aria-pressed="true" onclick="toggleRoleFilter('source', this)">Inputs</button>
       <button class="btn filter-btn" data-role="conductor" aria-pressed="true" onclick="toggleRoleFilter('conductor', this)">Calcs</button>
       <button class="btn filter-btn" data-role="observer" aria-pressed="true" onclick="toggleRoleFilter('observer', this)">Outputs</button>
+    </div>
+
+    <div class="toolbar-divider" aria-hidden="true"></div>
+
+    <div class="toolbar-group">
+      <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
+      <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open existing Reactlog JSON file"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
     </div>
   </main>
 
@@ -1568,13 +1970,13 @@ def format_reactlog_html(
             <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6685a3" />
           </marker>
           <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#63b3ff" />
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
           </marker>
           <marker id="arrow-invalidate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#fb923c" />
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--warning)" />
           </marker>
           <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.32" />
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.22" />
           </filter>
         </defs>
         <g id="viewport-g"></g>
@@ -1634,6 +2036,42 @@ def format_reactlog_html(
     let isDraggingTrace = false;
     let videoFrameRequest = null;
     let videoFrameRequestKind = null;
+
+    function getActiveTheme() {{
+      const currentAttr = document.documentElement.getAttribute('data-theme');
+      if (currentAttr === 'light' || currentAttr === 'dark') return currentAttr;
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
+      return 'dark';
+    }}
+
+    function updateThemeButton() {{
+      const btn = document.getElementById('btn-theme-toggle');
+      if (!btn) return;
+      const isLight = getActiveTheme() === 'light';
+      btn.innerHTML = isLight
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>';
+      btn.title = isLight ? 'Switch to dark mode' : 'Switch to light mode';
+      btn.setAttribute('aria-label', btn.title);
+    }}
+
+    function toggleTheme() {{
+      const current = getActiveTheme();
+      const next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      try {{ localStorage.setItem('shiny_reactlog_theme', next); }} catch (e) {{}}
+      updateThemeButton();
+      renderGraph();
+    }}
+
+    function initTheme() {{
+      let saved = null;
+      try {{ saved = localStorage.getItem('shiny_reactlog_theme'); }} catch (e) {{}}
+      if (saved === 'light' || saved === 'dark') {{
+        document.documentElement.setAttribute('data-theme', saved);
+      }}
+      updateThemeButton();
+    }}
 
     function setSidebarWidth(widthPx) {{
       const minW = 320;
@@ -1722,23 +2160,23 @@ def format_reactlog_html(
     }}
 
     function prepareEventTimings() {{
-      const events = reactlogData.events;
+      const events = reactlogData.events || reactlogData.log || [];
       if (!events || events.length === 0) return;
 
       let i = 0;
       while (i < events.length) {{
-        const baseTime = events[i].time_sec !== undefined ? events[i].time_sec : 0;
+        const baseTime = events[i].time_sec !== undefined ? events[i].time_sec : (events[i].time !== undefined ? events[i].time : 0);
         let j = i;
-        while (j < events.length && Math.abs((events[j].time_sec !== undefined ? events[j].time_sec : 0) - baseTime) < 0.04) {{
+        while (j < events.length && Math.abs(((events[j].time_sec !== undefined ? events[j].time_sec : events[j].time) || 0) - baseTime) < 0.04) {{
           j++;
         }}
         const clusterLen = j - i;
-        const nextTime = (j < events.length && events[j].time_sec !== undefined) ? events[j].time_sec : (baseTime + 1.2);
+        const nextTime = (j < events.length && (events[j].time_sec !== undefined || events[j].time !== undefined)) ? (events[j].time_sec ?? events[j].time) : (baseTime + 1.2);
         const windowDuration = Math.min(0.75, Math.max(0.25, (nextTime - baseTime) * 0.7));
 
         for (let k = 0; k < clusterLen; k++) {{
           const evIdx = i + k;
-          if (events[evIdx].time_sec !== undefined) {{
+          if (events[evIdx].time_sec !== undefined || events[evIdx].time !== undefined) {{
             events[evIdx].effective_time = baseTime + (clusterLen > 1 ? (k / (clusterLen - 1)) * windowDuration : 0);
           }} else {{
             events[evIdx].effective_time = baseTime;
@@ -1757,10 +2195,11 @@ def format_reactlog_html(
       const laneOutputs = document.getElementById('lane-outputs');
       if (!bar || !trackWrap || !ruler || !laneInputs || !laneCalcs || !laneOutputs) return;
 
-      const events = reactlogData.events;
+      const events = reactlogData.events || reactlogData.log || [];
       let maxTime = 0;
       for (const ev of events) {{
-        if (ev.time_sec !== undefined && ev.time_sec > maxTime) maxTime = ev.time_sec;
+        const tVal = ev.time_sec !== undefined ? ev.time_sec : ev.time;
+        if (tVal !== undefined && tVal > maxTime) maxTime = tVal;
         if (ev.effective_time !== undefined && ev.effective_time > maxTime) maxTime = ev.effective_time;
       }}
       const video = document.getElementById('session-video');
@@ -1815,8 +2254,10 @@ def format_reactlog_html(
       }};
 
       events.forEach((ev, idx) => {{
-        if (ev.phase === 'interaction') {{
-          const t = ev.time_sec !== undefined ? ev.time_sec : 0;
+        const evAction = ev.action || ev.event || '';
+        const isInteract = ev.phase === 'interaction' || !['define', 'analysisInit', 'createContext', 'sessionInit'].includes(evAction);
+        if (isInteract) {{
+          const t = ev.time_sec !== undefined ? ev.time_sec : (ev.time !== undefined ? ev.time : 0);
           if (!curWave || (t - curWave.startTime) > 0.35) {{
             curWave = {{
               startTime: t,
@@ -1825,26 +2266,27 @@ def format_reactlog_html(
               inputs: [],
               calcs: [],
               outputs: [],
-              details: ev.details || ev.event,
+              details: ev.details || evAction,
             }};
             waves.push(curWave);
           }}
 
-          if (ev.event === 'inputChange' || ev.event === 'userClick' || (ev.node_id && ev.node_id.startsWith('input:'))) {{
-            const raw = ev.node_id || ev.details || '';
+          const nId = ev.node_id || ev.id || '';
+          if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:')) {{
+            const raw = nId || ev.details || '';
             if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
               const name = cleanName(raw) || 'input';
               if (!curWave.inputs.some(item => item.name === name)) {{
-                curWave.inputs.push({{ name, step: idx, isClick: ev.event === 'userClick', details: ev.details }});
+                curWave.inputs.push({{ name, step: idx, isClick: evAction === 'userClick' || evAction === 'userAction', details: ev.details }});
               }}
             }}
-          }} else if (ev.node_id && (ev.node_id.startsWith('calc:') || ev.node_id.startsWith('effect:'))) {{
-            const name = cleanName(ev.node_id);
+          }} else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor'))) {{
+            const name = cleanName(nId);
             if (name && !curWave.calcs.some(item => item.name === name)) {{
               curWave.calcs.push({{ name, step: idx, details: ev.details }});
             }}
-          }} else if (ev.node_id && ev.node_id.startsWith('output:')) {{
-            const name = cleanName(ev.node_id);
+          }} else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer'))) {{
+            const name = cleanName(nId);
             if (name && !curWave.outputs.some(item => item.name === name)) {{
               curWave.outputs.push({{ name, step: idx, details: ev.details }});
             }}
@@ -1931,7 +2373,7 @@ def format_reactlog_html(
         let matchIdx = 0;
         for (let i = 0; i < events.length; i++) {{
           const ev = events[i];
-          const t = ev.effective_time !== undefined ? ev.effective_time : (ev.time_sec !== undefined ? ev.time_sec : 0);
+          const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
           if (t <= targetSec) matchIdx = i;
         }}
         seekTo(matchIdx);
@@ -2019,9 +2461,11 @@ def format_reactlog_html(
     }}
 
     function nextAction() {{
-      for (let i = currentStep + 1; i < reactlogData.events.length; i++) {{
-        const ev = reactlogData.events[i];
-        if (ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated')) {{
+      const events = reactlogData.events || reactlogData.log || [];
+      for (let i = currentStep + 1; i < events.length; i++) {{
+        const ev = events[i];
+        const act = ev.action || ev.event || '';
+        if (ev.phase === 'interaction' && (act === 'inputChange' || act === 'userClick' || act === 'userAction' || act === 'outputUpdated' || act === 'valueChange')) {{
           seekTo(i);
           return;
         }}
@@ -2029,9 +2473,11 @@ def format_reactlog_html(
     }}
 
     function prevAction() {{
+      const events = reactlogData.events || reactlogData.log || [];
       for (let i = currentStep - 1; i >= 0; i--) {{
-        const ev = reactlogData.events[i];
-        if (ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated')) {{
+        const ev = events[i];
+        const act = ev.action || ev.event || '';
+        if (ev.phase === 'interaction' && (act === 'inputChange' || act === 'userClick' || act === 'userAction' || act === 'outputUpdated' || act === 'valueChange')) {{
           seekTo(i);
           return;
         }}
@@ -2040,22 +2486,27 @@ def format_reactlog_html(
     }}
 
     function init() {{
+      initTheme();
       prepareEventTimings();
-      document.getElementById('stat-nodes').textContent = `Nodes: ${{reactlogData.nodes.length}}`;
-      document.getElementById('stat-edges').textContent = `Edges: ${{reactlogData.edges.length}}`;
-      const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : reactlogData.events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
-      const infCount = reactlogData.inferred_events_count !== undefined ? reactlogData.inferred_events_count : reactlogData.events.reduce((acc, e) => acc + (e.provenance === 'inferred' ? 1 : 0), 0);
+      const events = reactlogData.events || reactlogData.log || [];
+      const nodes = reactlogData.nodes || [];
+      const edges = reactlogData.edges || [];
+
+      document.getElementById('stat-nodes').textContent = `Nodes: ${{nodes.length}}`;
+      document.getElementById('stat-edges').textContent = `Edges: ${{edges.length}}`;
+      const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
+      const infCount = reactlogData.inferred_events_count !== undefined ? reactlogData.inferred_events_count : events.reduce((acc, e) => acc + (e.provenance === 'inferred' ? 1 : 0), 0);
       document.getElementById('stat-observed').innerHTML = `${{ICONS.eye}} Observed: ${{obsCount}}`;
       document.getElementById('stat-inferred').innerHTML = `${{ICONS.zap}} Inferred: ${{infCount}}`;
 
-      const initCount = reactlogData.init_steps_count !== undefined ? reactlogData.init_steps_count : reactlogData.events.reduce((acc, e) => acc + (e.phase === 'init' ? 1 : 0), 0);
-      const interactCount = reactlogData.interaction_steps_count !== undefined ? reactlogData.interaction_steps_count : (reactlogData.events.length - initCount);
-      document.getElementById('count-all').textContent = String(reactlogData.events.length);
+      const initCount = reactlogData.init_steps_count !== undefined ? reactlogData.init_steps_count : events.reduce((acc, e) => acc + (e.phase === 'init' ? 1 : 0), 0);
+      const interactCount = reactlogData.interaction_steps_count !== undefined ? reactlogData.interaction_steps_count : (events.length - initCount);
+      document.getElementById('count-all').textContent = String(events.length);
       document.getElementById('count-init').textContent = String(initCount);
       document.getElementById('count-interaction').textContent = String(interactCount);
 
       const scrubber = document.getElementById('scrubber-range');
-      scrubber.max = Math.max(0, reactlogData.events.length - 1);
+      scrubber.max = Math.max(0, events.length - 1);
       scrubber.value = 0;
 
       renderEventList();
@@ -2068,10 +2519,10 @@ def format_reactlog_html(
     }}
 
     function nodeKind(n) {{
-      if (n.role === 'source') return {{ label: 'Input', color: '#38bdf8' }};
-      if (n.role === 'conductor') return {{ label: 'Reactive Calc', color: '#fbbf24' }};
-      if (n.type === 'effect') return {{ label: 'Effect', color: '#c084fc' }};
-      return {{ label: 'Output', color: '#4ade80' }};
+      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: '#0284c7' }};
+      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: '#d97706' }};
+      if (n.type === 'effect') return {{ label: 'Effect', color: '#9333ea' }};
+      return {{ label: 'Output', color: '#16a34a' }};
     }}
 
     function showSidebarPanel(panelName) {{
@@ -2128,7 +2579,9 @@ def format_reactlog_html(
       const list = document.getElementById('event-list');
       list.innerHTML = '';
       let visiblePhase = null;
-      reactlogData.events.forEach((ev, idx) => {{
+      const events = reactlogData.events || reactlogData.log || [];
+
+      events.forEach((ev, idx) => {{
         if (currentPhaseFilter !== 'all' && ev.phase && ev.phase !== currentPhaseFilter) {{
           return;
         }}
@@ -2146,12 +2599,12 @@ def format_reactlog_html(
         item.type = 'button';
         item.className = 'event-item' + (idx === currentStep ? ' is-current' : '');
         item.setAttribute('data-step', String(idx));
-        const nodeId = ev.node_id || '';
+        const nodeId = ev.node_id || ev.id || '';
         if (nodeId.startsWith('input:')) item.classList.add('kind-input');
         else if (nodeId.startsWith('calc:')) item.classList.add('kind-calc');
         else if (nodeId.startsWith('output:')) item.classList.add('kind-output');
         else if (nodeId.startsWith('effect:')) item.classList.add('kind-effect');
-        item.setAttribute('aria-label', `Step ${{idx}}: ${{ev.node_label || ev.event}}. ${{ev.details || ''}}`);
+        item.setAttribute('aria-label', `Step ${{idx}}: ${{ev.node_label || ev.label || ev.event || ev.action}}. ${{ev.details || ''}}`);
         item.onclick = () => seekTo(idx);
 
         const header = document.createElement('div');
@@ -2166,7 +2619,7 @@ def format_reactlog_html(
 
         const nameSpan = document.createElement('span');
         nameSpan.className = 'event-name';
-        nameSpan.textContent = ev.node_label || ev.event;
+        nameSpan.textContent = ev.node_label || ev.label || ev.event || ev.action;
 
         nameWrap.appendChild(stepSpan);
         nameWrap.appendChild(nameSpan);
@@ -2174,10 +2627,11 @@ def format_reactlog_html(
         const badgesWrap = document.createElement('div');
         badgesWrap.className = 'event-badges';
 
-        if (ev.time_sec !== undefined && ev.time_sec > 0) {{
+        const tVal = ev.time_sec !== undefined ? ev.time_sec : ev.time;
+        if (tVal !== undefined && tVal > 0) {{
           const timeSpan = document.createElement('span');
           timeSpan.className = 'event-time';
-          timeSpan.textContent = formatTime(ev.time_sec);
+          timeSpan.textContent = formatTime(tVal);
           badgesWrap.appendChild(timeSpan);
         }}
 
@@ -2189,7 +2643,7 @@ def format_reactlog_html(
 
         const badge = document.createElement('span');
         badge.className = `event-badge ${{ev.status || 'idle'}}`;
-        badge.textContent = ev.status || ev.event;
+        badge.textContent = ev.status || ev.action || ev.event;
         badgesWrap.appendChild(badge);
 
         header.appendChild(nameWrap);
@@ -2208,9 +2662,11 @@ def format_reactlog_html(
     function renderGraph() {{
       const svg = document.getElementById('viewport-g');
       svg.innerHTML = '';
+      const isLight = getActiveTheme() === 'light';
 
+      const rawNodes = reactlogData.nodes || [];
       const nodes = [];
-      reactlogData.nodes.forEach(n => {{
+      rawNodes.forEach(n => {{
         if (!activeRoles.has(n.role)) return;
         if (searchQuery && !n.id.toLowerCase().includes(searchQuery) && !(n.label || '').toLowerCase().includes(searchQuery)) return;
         nodes.push(n);
@@ -2218,7 +2674,7 @@ def format_reactlog_html(
 
       const nodeSet = new Set(nodes.map(n => n.id));
       const edges = [];
-      reactlogData.edges.forEach(e => {{
+      (reactlogData.edges || []).forEach(e => {{
         if (nodeSet.has(e.from) && nodeSet.has(e.to)) {{
           edges.push(e);
         }}
@@ -2267,7 +2723,8 @@ def format_reactlog_html(
         }});
       }});
 
-      const activeEvent = reactlogData.events[currentStep] || {{}};
+      const events = reactlogData.events || reactlogData.log || [];
+      const activeEvent = events[currentStep] || {{}};
 
       edges.forEach(e => {{
         const p1 = pos[e.from];
@@ -2279,9 +2736,11 @@ def format_reactlog_html(
           const y2 = p2.y;
           const midX = x1 + Math.max(35, (x2 - x1) * 0.5);
 
-          const isEdgeActive = (activeEvent.edge_from && activeEvent.edge_to)
-            ? (activeEvent.edge_from === e.from && activeEvent.edge_to === e.to)
-            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate'));
+          const fromMatch = activeEvent.edge_from || activeEvent.dependsOn;
+          const toMatch = activeEvent.edge_to || activeEvent.node_id || activeEvent.id;
+          const isEdgeActive = (fromMatch && toMatch)
+            ? (fromMatch === e.from && toMatch === e.to)
+            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate'));
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{midX}} ${{y1}}, ${{midX}} ${{y2}}, ${{x2}} ${{y2}}`);
           path.setAttribute('fill', 'none');
@@ -2298,9 +2757,11 @@ def format_reactlog_html(
 
       nodes.forEach(n => {{
         const p = pos[n.id] || {{ x: 200, y: 200 }};
-        const isActive = activeEvent.node_id === n.id;
+        const activeNodeId = activeEvent.node_id || activeEvent.id;
+        const isActive = activeNodeId === n.id;
         const isSelected = selectedNodeId === n.id;
-        const isEdgeSource = activeEvent.edge_from === n.id;
+        const fromMatch = activeEvent.edge_from || activeEvent.dependsOn;
+        const isEdgeSource = fromMatch === n.id;
         const kind = nodeKind(n);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -2327,21 +2788,21 @@ def format_reactlog_html(
         rect.setAttribute('height', nodeHeight);
         rect.setAttribute('rx', '9');
 
-        let fillCol = '#121b25';
-        let strokeCol = isSelected ? '#63b3ff' : '#35475a';
+        let fillCol = isLight ? '#ffffff' : '#121b25';
+        let strokeCol = isSelected ? (isLight ? '#0284c7' : '#63b3ff') : (isLight ? '#cbd5e1' : '#35475a');
         let strokeW = isSelected ? '2' : '1';
-        let filterVal = isSelected ? 'drop-shadow(0 0 9px rgba(99,179,255,0.36))' : 'url(#card-shadow)';
+        let filterVal = isSelected ? (isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.35))' : 'drop-shadow(0 0 9px rgba(99,179,255,0.36))') : 'url(#card-shadow)';
 
         if (isActive) {{
-          fillCol = `color-mix(in srgb, ${{kind.color}} 26%, #0f1722)`;
+          fillCol = isLight ? `color-mix(in srgb, ${{kind.color}} 14%, #ffffff)` : `color-mix(in srgb, ${{kind.color}} 26%, #0f1722)`;
           strokeCol = kind.color;
           strokeW = '2.5';
-          filterVal = `drop-shadow(0 0 16px ${{kind.color}})`;
+          filterVal = isLight ? `drop-shadow(0 0 12px ${{kind.color}})` : `drop-shadow(0 0 16px ${{kind.color}})`;
         }} else if (isEdgeSource) {{
-          fillCol = 'color-mix(in srgb, #38bdf8 18%, #0f1722)';
-          strokeCol = '#38bdf8';
+          fillCol = isLight ? 'color-mix(in srgb, #0284c7 12%, #ffffff)' : 'color-mix(in srgb, #38bdf8 18%, #0f1722)';
+          strokeCol = isLight ? '#0284c7' : '#38bdf8';
           strokeW = '2';
-          filterVal = 'drop-shadow(0 0 10px rgba(56,189,248,0.45))';
+          filterVal = isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.3))' : 'drop-shadow(0 0 10px rgba(56,189,248,0.45))';
         }}
 
         rect.setAttribute('fill', fillCol);
@@ -2363,7 +2824,7 @@ def format_reactlog_html(
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', p.x - (nodeWidth / 2) + 14);
         text.setAttribute('y', p.y - 4);
-        text.setAttribute('fill', '#edf4fb');
+        text.setAttribute('fill', isLight ? '#0f172a' : '#edf4fb');
         text.setAttribute('font-family', 'var(--mono)');
         text.setAttribute('font-size', '12px');
         text.setAttribute('font-weight', '700');
@@ -2373,9 +2834,9 @@ def format_reactlog_html(
         const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         subText.setAttribute('x', p.x - (nodeWidth / 2) + 14);
         subText.setAttribute('y', p.y + 14);
-        subText.setAttribute('fill', '#91a1b3');
+        subText.setAttribute('fill', isLight ? '#64748b' : '#91a1b3');
         subText.setAttribute('font-size', '10px');
-        subText.textContent = `${{kind.label}} · line ${{n.line || '?'}}`;
+        subText.textContent = `${{kind.label}}${{n.line ? ' · line ' + n.line : ''}}`;
         g.appendChild(subText);
 
         svg.appendChild(g);
@@ -2388,7 +2849,7 @@ def format_reactlog_html(
         const to = edge.getAttribute('data-to');
         if (from === nodeId || to === nodeId) {{
           edge.style.opacity = '1';
-          edge.style.stroke = '#63b3ff';
+          edge.style.stroke = 'var(--accent)';
           edge.style.strokeWidth = '2.5px';
         }} else {{
           edge.style.opacity = '0.15';
@@ -2405,9 +2866,10 @@ def format_reactlog_html(
     }}
 
     function seekTo(step, fromVideo = false, mediaTime = null) {{
-      currentStep = Math.max(0, Math.min(step, reactlogData.events.length - 1));
+      const events = reactlogData.events || reactlogData.log || [];
+      currentStep = Math.max(0, Math.min(step, events.length - 1));
       document.getElementById('scrubber-range').value = currentStep;
-      document.getElementById('step-display').textContent = `Step ${{currentStep}} / ${{Math.max(0, reactlogData.events.length - 1)}}`;
+      document.getElementById('step-display').textContent = `Step ${{currentStep}} / ${{Math.max(0, events.length - 1)}}`;
 
       document.querySelectorAll('.event-item').forEach(item => {{
         const stepNum = Number(item.getAttribute('data-step'));
@@ -2419,38 +2881,42 @@ def format_reactlog_html(
         }}
       }});
 
-      const ev = reactlogData.events[currentStep];
-      if (ev && ev.node_id) {{
-        selectedNodeId = ev.node_id;
+      const ev = events[currentStep];
+      if (ev && (ev.node_id || ev.id)) {{
+        selectedNodeId = ev.node_id || ev.id;
       }}
       renderInspector();
       renderGraph();
       updateSourceHighlight();
       updateActionToast();
 
+      const evTime = ev && (ev.time_sec !== undefined ? ev.time_sec : ev.time);
       const curSec = fromVideo && mediaTime !== null
         ? mediaTime
-        : (ev && ev.time_sec !== undefined ? ev.time_sec : 0);
+        : (evTime !== undefined ? evTime : 0);
       updateTraceTimelineScrubber(curSec);
 
       if (!fromVideo) {{
         const video = document.getElementById('session-video');
-        if (video && ev && ev.time_sec !== undefined && !isNaN(ev.time_sec)) {{
+        if (video && evTime !== undefined && !isNaN(evTime)) {{
           try {{
-            video.currentTime = Math.max(0, ev.time_sec);
+            video.currentTime = Math.max(0, evTime);
           }} catch (e) {{}}
         }}
       }}
     }}
 
     function updateActionToast() {{
-      const ev = reactlogData.events[currentStep];
+      const events = reactlogData.events || reactlogData.log || [];
+      const ev = events[currentStep];
       const toast = document.getElementById('live-action-toast');
       if (!toast) return;
 
-      if (ev && ev.phase === 'interaction' && (ev.event === 'inputChange' || ev.event === 'userClick' || ev.event === 'outputUpdated')) {{
-        const timeStr = ev.time_sec !== undefined ? `[${{formatTime(ev.time_sec)}}] ` : '';
-        toast.innerHTML = `${{ICONS.video}} ${{timeStr}}${{ev.details || ev.event}}`;
+      const act = ev ? (ev.action || ev.event || '') : '';
+      if (ev && (ev.phase === 'interaction' || !['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act)) && (act === 'inputChange' || act === 'userClick' || act === 'userAction' || act === 'outputUpdated' || act === 'valueChange')) {{
+        const evTime = ev.time_sec !== undefined ? ev.time_sec : ev.time;
+        const timeStr = evTime !== undefined ? `[${{formatTime(evTime)}}] ` : '';
+        toast.innerHTML = `${{ICONS.video}} ${{timeStr}}${{ev.details || act}}`;
         toast.hidden = false;
       }} else {{
         toast.hidden = true;
@@ -2478,9 +2944,10 @@ def format_reactlog_html(
       const syncGraphToTime = (curSec) => {{
         updateTraceTimelineScrubber(curSec);
         let matchIdx = 0;
-        for (let i = 0; i < reactlogData.events.length; i++) {{
-          const ev = reactlogData.events[i];
-          const t = ev.effective_time !== undefined ? ev.effective_time : (ev.time_sec !== undefined ? ev.time_sec : 0);
+        const events = reactlogData.events || reactlogData.log || [];
+        for (let i = 0; i < events.length; i++) {{
+          const ev = events[i];
+          const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
           if (t <= curSec) matchIdx = i;
         }}
         if (matchIdx !== currentStep) {{
@@ -2556,13 +3023,15 @@ def format_reactlog_html(
     }}
 
     function updateSourceHighlight() {{
-      const ev = reactlogData.events[currentStep];
+      const events = reactlogData.events || reactlogData.log || [];
+      const ev = events[currentStep];
       const highlight = document.getElementById('source-line-highlight');
       if (!highlight) return;
 
       let targetLine = null;
-      if (ev && ev.node_id) {{
-        const node = reactlogData.nodes.find(n => n.id === ev.node_id);
+      if (ev && (ev.node_id || ev.id)) {{
+        const nid = ev.node_id || ev.id;
+        const node = (reactlogData.nodes || []).find(n => n.id === nid);
         if (node && node.line) targetLine = node.line;
       }}
 
@@ -2577,15 +3046,17 @@ def format_reactlog_html(
     }}
 
     function renderInspector() {{
-      const ev = reactlogData.events[currentStep];
-      const node = reactlogData.nodes.find(n => n.id === selectedNodeId);
+      const events = reactlogData.events || reactlogData.log || [];
+      const ev = events[currentStep];
+      const node = (reactlogData.nodes || []).find(n => n.id === selectedNodeId);
       if (node) {{
         document.getElementById('insp-title').textContent = node.label || node.id;
         document.getElementById('insp-type').textContent = nodeKind(node).label;
         document.getElementById('insp-line').textContent = node.line || 'Unknown';
-        document.getElementById('insp-status').textContent = ev && ev.node_id === node.id ? ev.status : 'idle';
+        const activeNodeId = ev ? (ev.node_id || ev.id) : null;
+        document.getElementById('insp-status').textContent = ev && activeNodeId === node.id ? (ev.status || 'active') : 'idle';
       }} else if (ev) {{
-        document.getElementById('insp-title').textContent = ev.node_label || ev.event;
+        document.getElementById('insp-title').textContent = ev.node_label || ev.label || ev.action || ev.event;
         document.getElementById('insp-type').textContent = ev.phase === 'init' ? 'Initialization event' : 'Recorded event';
         document.getElementById('insp-line').textContent = '—';
         document.getElementById('insp-status').textContent = ev.status || 'idle';
@@ -2612,14 +3083,15 @@ def format_reactlog_html(
         return;
       }}
 
+      const events = reactlogData.events || reactlogData.log || [];
       isPlaying = !isPlaying;
       const btn = document.getElementById('btn-play');
       if (btn) btn.innerHTML = isPlaying ? ICONS.pause : ICONS.play;
 
       if (isPlaying) {{
-        if (currentStep >= reactlogData.events.length - 1) currentStep = 0;
+        if (currentStep >= events.length - 1) currentStep = 0;
         playTimer = setInterval(() => {{
-          if (currentStep < reactlogData.events.length - 1) {{
+          if (currentStep < events.length - 1) {{
             seekTo(currentStep + 1);
           }} else {{
             togglePlay();
@@ -2680,6 +3152,112 @@ def format_reactlog_html(
     function zoomOut() {{ zoomLevel = Math.max(0.4, zoomLevel * 0.8); applyZoom(); }}
     function resetZoom() {{ zoomLevel = 1; panOffset = {{ x: 0, y: 0 }}; applyZoom(); }}
     function fitGraph() {{ resetZoom(); }}
+
+    function loadReactlogObject(loadedData) {{
+      let normalized = loadedData;
+      if (Array.isArray(loadedData) || (loadedData && (!loadedData.nodes || !loadedData.events))) {{
+        const rawEvents = Array.isArray(loadedData) ? loadedData : (loadedData.log || loadedData.events || loadedData.entries || []);
+        const nodesMap = {{}};
+        const edgesSet = new Set();
+        const normEvents = [];
+        let sIdx = 0;
+
+        rawEvents.forEach(item => {{
+          const act = item.action || item.event || '';
+          const nid = item.node_id || item.id;
+          const lbl = item.node_label || item.label || nid || '';
+          const ntype = item.node_type || item.type || 'calc';
+          const depFrom = item.dependsOn || item.edge_from;
+          const depTo = nid || item.edge_to;
+          const tSec = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
+          const tMs = Number(item.timestamp || (tSec * 1000));
+          const prov = item.provenance || (['valueChange', 'inputChange', 'userClick', 'userAction'].includes(act) ? 'observed' : 'inferred');
+          const phase = item.phase || (['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act) ? 'init' : 'interaction');
+
+          if (act === 'dependsOn' && depFrom && depTo) {{
+            edgesSet.add(`${{depFrom}}==>${{depTo}}`);
+          }}
+
+          if (nid && !nodesMap[nid]) {{
+            let role = 'conductor';
+            let ctype = String(ntype).toLowerCase();
+            if (['observable', 'input'].includes(ctype) || String(nid).startsWith('input:')) {{
+              role = 'source'; ctype = 'input';
+            }} else if (['observer', 'output', 'effect'].includes(ctype) || String(nid).startsWith('output:') || String(nid).startsWith('effect:')) {{
+              role = 'observer'; ctype = 'output';
+            }}
+            nodesMap[nid] = {{
+              id: nid,
+              name: String(nid).includes(':') ? String(nid).split(':')[1] : nid,
+              type: ctype,
+              role: role,
+              label: lbl,
+              line: item.line
+            }};
+          }}
+
+          normEvents.push({{
+            step: sIdx,
+            action: act,
+            event: act,
+            id: nid,
+            node_id: nid,
+            label: lbl,
+            node_label: lbl,
+            type: ntype,
+            node_type: ntype,
+            status: item.status || (act === 'define' ? 'discovered' : (act === 'invalidate' ? 'affected' : 'scheduled')),
+            phase: phase,
+            provenance: prov,
+            time: tSec,
+            time_sec: tSec,
+            timestamp: tMs,
+            value: item.value !== undefined ? String(item.value) : null,
+            edge_from: depFrom,
+            edge_to: depTo,
+            details: item.details || `Event ${{act}} on ${{lbl}}`
+          }});
+          sIdx++;
+        }});
+
+        const finalNodes = Object.values(nodesMap);
+        const finalEdges = Array.from(edgesSet).map(e => {{
+          const parts = e.split('==>');
+          return {{ from: parts[0], to: parts[1] }};
+        }});
+
+        normalized = {{
+          success: true,
+          version: loadedData.version || "1.0",
+          session: loadedData.session || "default",
+          nodes: finalNodes,
+          edges: finalEdges,
+          events: normEvents,
+          log: normEvents,
+          summary: `Loaded Reactlog: ${{finalNodes.length}} nodes, ${{finalEdges.length}} edges, ${{normEvents.length}} log events`
+        }};
+      }}
+
+      Object.assign(reactlogData, normalized);
+      selectedNodeId = null;
+      currentStep = 0;
+      init();
+    }}
+
+    function handleReactlogFileUpload(e) {{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {{
+        try {{
+          const parsed = JSON.parse(evt.target.result);
+          loadReactlogObject(parsed);
+        }} catch (err) {{
+          alert('Error parsing JSON file: ' + err.message);
+        }}
+      }};
+      reader.readAsText(file);
+    }}
 
     window.addEventListener('DOMContentLoaded', init);
   </script>

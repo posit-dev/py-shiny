@@ -14,6 +14,7 @@ from shiny._inspect import (
     format_reactlog_html,
     generate_reactlog,
     inspect_reactive_graph,
+    load_reactlog_json,
 )
 from shiny._main import main
 
@@ -619,3 +620,153 @@ def out():
     assert out_html.is_file()
     content = out_html.read_text(encoding="utf-8")
     assert "Interactive Shiny Reactive Log" in content
+
+
+def test_reactlog_json_contract_r_shiny_compatibility():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("n", "Number", 5)
+
+@reactive.calc
+def double():
+    return input.n() * 2
+
+@render.text
+def txt():
+    return str(double())
+"""
+    reactlog = generate_reactlog(code)
+    assert reactlog["version"] == "1.0"
+    assert "session" in reactlog
+    assert "log" in reactlog
+    assert isinstance(reactlog["log"], list)
+    assert len(reactlog["log"]) > 0
+
+    actions = {ev["action"] for ev in reactlog["log"]}
+    assert "define" in actions
+    assert "dependsOn" in actions
+
+    for ev in reactlog["log"]:
+        assert "action" in ev
+        assert "id" in ev
+        assert "label" in ev
+        assert "type" in ev
+        assert "time" in ev
+        assert "session" in ev
+
+
+def test_load_reactlog_json_with_r_reactlog_schema():
+    r_reactlog = {
+        "version": "1.0",
+        "session": "session_abc",
+        "log": [
+            {
+                "action": "define",
+                "id": "input:num",
+                "label": "num",
+                "type": "observable",
+                "time": 0.01,
+                "session": "session_abc",
+            },
+            {
+                "action": "define",
+                "id": "calc:double",
+                "label": "double",
+                "type": "calc",
+                "time": 0.02,
+                "session": "session_abc",
+            },
+            {
+                "action": "dependsOn",
+                "id": "calc:double",
+                "dependsOn": "input:num",
+                "time": 0.03,
+                "session": "session_abc",
+            },
+            {
+                "action": "define",
+                "id": "output:txt",
+                "label": "txt",
+                "type": "observer",
+                "time": 0.04,
+                "session": "session_abc",
+            },
+            {
+                "action": "dependsOn",
+                "id": "output:txt",
+                "dependsOn": "calc:double",
+                "time": 0.05,
+                "session": "session_abc",
+            },
+            {
+                "action": "valueChange",
+                "id": "input:num",
+                "value": "42",
+                "time": 1.0,
+                "session": "session_abc",
+            },
+        ],
+    }
+    loaded = load_reactlog_json(r_reactlog)
+    assert loaded["success"] is True
+    assert len(loaded["nodes"]) == 3
+    assert len(loaded["edges"]) == 2
+    assert len(loaded["events"]) == 6
+
+    input_node = next(n for n in loaded["nodes"] if n["id"] == "input:num")
+    assert input_node["role"] == "source"
+    assert input_node["type"] == "input"
+
+    raw_events_list = r_reactlog["log"]
+    loaded_raw = load_reactlog_json(raw_events_list)
+    assert loaded_raw["success"] is True
+    assert len(loaded_raw["nodes"]) == 3
+    assert len(loaded_raw["edges"]) == 2
+
+
+def test_format_reactlog_html_theme_support():
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("n", "N", 5)
+@render.text
+def out():
+    return str(input.n())
+"""
+    reactlog = generate_reactlog(code)
+
+    html_dark = format_reactlog_html(reactlog, source_code=code, theme="dark")
+    assert 'data-theme="dark"' in html_dark
+    assert 'id="btn-theme-toggle"' in html_dark
+    assert 'id="btn-open-json"' in html_dark
+
+    html_light = format_reactlog_html(reactlog, source_code=code, theme="light")
+    assert 'data-theme="light"' in html_light
+    assert '[data-theme="light"]' in html_light
+    assert '--bg: #f8fafc;' in html_light
+
+
+def test_cli_inspect_theme_and_json_file(tmp_path: Path):
+    r_reactlog = {
+        "version": "1.0",
+        "session": "s1",
+        "log": [
+            {"action": "define", "id": "input:x", "label": "x", "type": "observable", "time": 0.1},
+            {"action": "define", "id": "output:y", "label": "y", "type": "observer", "time": 0.2},
+            {"action": "dependsOn", "id": "output:y", "dependsOn": "input:x", "time": 0.3},
+        ],
+    }
+    json_file = tmp_path / "legacy.json"
+    json_file.write_text(json.dumps(r_reactlog), encoding="utf-8")
+
+    out_html = tmp_path / "legacy_out.html"
+    runner = CliRunner()
+    res = runner.invoke(
+        main,
+        ["inspect", str(json_file), "--html", str(out_html), "--theme", "light"],
+    )
+    assert res.exit_code == 0
+    assert out_html.is_file()
+    html_content = out_html.read_text(encoding="utf-8")
+    assert 'data-theme="light"' in html_content
+    assert "input:x" in html_content
+    assert "output:y" in html_content
