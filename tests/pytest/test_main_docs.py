@@ -117,53 +117,81 @@ def test_docs_json_mode() -> None:
     assert str(set_method["signature"]).startswith("def set(")
 
 
-def test_docs_short_aliases() -> None:
+def test_docs_implied_shiny_prefix() -> None:
     runner = CliRunner()
 
     res_ui = runner.invoke(main, ["docs", "ui.value_box"])
     assert res_ui.exit_code == 0
     assert "def value_box(" in res_ui.output
 
-    res_ctrl = runner.invoke(main, ["docs", "Accordion"])
+    res_ctrl = runner.invoke(main, ["docs", "playwright.controller.Accordion"])
     assert res_ctrl.exit_code == 0
     assert "class Accordion" in res_ctrl.output
 
-    res_calc = runner.invoke(main, ["docs", "calc"])
+    res_calc = runner.invoke(main, ["docs", "reactive.calc"])
     assert res_calc.exit_code == 0
     assert "def calc(" in res_calc.output
 
 
-def test_docs_method_short_aliases() -> None:
+def test_docs_no_bare_magic_lookups() -> None:
     runner = CliRunner()
 
-    res_short = runner.invoke(main, ["docs", "Accordion.expect_height"])
-    assert res_short.exit_code == 0
-    assert "def expect_height(" in res_short.output
-    assert "Expects the accordion to have the specified height." in res_short.output
+    res_ctrl = runner.invoke(main, ["docs", "Accordion"])
+    assert res_ctrl.exit_code != 0
+    assert "Could not find documentation for 'Accordion'." in res_ctrl.output
 
-    res_module = runner.invoke(main, ["docs", "controller.Accordion.expect_height"])
-    assert res_module.exit_code == 0
-    assert "def expect_height(" in res_module.output
+    res_calc = runner.invoke(main, ["docs", "calc"])
+    assert res_calc.exit_code != 0
+    assert "Could not find documentation for 'calc'." in res_calc.output
+
+    res_method = runner.invoke(main, ["docs", "Accordion.expect_height"])
+    assert res_method.exit_code != 0
+    assert (
+        "Could not find documentation for 'Accordion.expect_height'."
+        in res_method.output
+    )
+
+
+def test_docs_method_path() -> None:
+    runner = CliRunner()
+
+    res_full = runner.invoke(
+        main, ["docs", "shiny.playwright.controller.Accordion.expect_height"]
+    )
+    assert res_full.exit_code == 0
+    assert "def expect_height(" in res_full.output
+    assert "Expects the accordion to have the specified height." in res_full.output
+
+    res_implied = runner.invoke(
+        main, ["docs", "playwright.controller.Accordion.expect_height"]
+    )
+    assert res_implied.exit_code == 0
+    assert "def expect_height(" in res_implied.output
 
 
 def test_docs_autocomplete_flag() -> None:
     runner = CliRunner()
-    result = runner.invoke(main, ["docs", "--complete", "Accordion.expect"])
+    result = runner.invoke(
+        main, ["docs", "--complete", "playwright.controller.Accordion.expect"]
+    )
 
     assert result.exit_code == 0
-    assert "Accordion.expect_height" in result.output
-    assert "Accordion.expect_class" in result.output
+    assert "playwright.controller.Accordion.expect_height" in result.output
+    assert "playwright.controller.Accordion.expect_class" in result.output
 
 
 def test_docs_autocomplete_json() -> None:
     runner = CliRunner()
-    result = runner.invoke(main, ["docs", "--complete", "Accordion.expect", "--json"])
+    result = runner.invoke(
+        main,
+        ["docs", "--complete", "playwright.controller.Accordion.expect", "--json"],
+    )
 
     assert result.exit_code == 0
     items = json.loads(result.output)
     assert isinstance(items, list)
-    assert "Accordion.expect_height" in items
-    assert "Accordion.expect_class" in items
+    assert "playwright.controller.Accordion.expect_height" in items
+    assert "playwright.controller.Accordion.expect_class" in items
 
 
 def test_shell_complete_symbol_names() -> None:
@@ -173,12 +201,11 @@ def test_shell_complete_symbol_names() -> None:
 
     ctx = Context(main)
     param = Argument(["names"])
-    items = _complete_symbol_names(ctx, param, "Accordion.exp")
+    items = _complete_symbol_names(ctx, param, "playwright.controller.Accordion.exp")
     values = [item.value for item in items]
-    assert "Accordion.expect_height" in values
-    assert "Accordion.expect_class" in values
-    # Must only match prefix, not other prefixes
-    assert "controller.Accordion.expect_height" not in values
+    assert "playwright.controller.Accordion.expect_height" in values
+    assert "playwright.controller.Accordion.expect_class" in values
+    assert "shiny.playwright.controller.Accordion.expect_height" not in values
 
 
 def test_docs_unknown_symbol() -> None:
@@ -189,6 +216,143 @@ def test_docs_unknown_symbol() -> None:
     assert (
         "Could not find documentation for 'non_existent_symbol_xyz'." in result.output
     )
+
+
+def test_docs_three_with_one_error_at_start() -> None:
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["docs", "non_existent_symbol", "shiny.ui.card", "shiny.ui.value_box"],
+    )
+
+    assert result.exit_code != 0
+    error_idx = result.output.find(
+        "Could not find documentation for 'non_existent_symbol'."
+    )
+    card_idx = result.output.find("def card(")
+    value_box_idx = result.output.find("def value_box(")
+
+    assert error_idx != -1
+    assert card_idx != -1
+    assert value_box_idx != -1
+    assert error_idx < card_idx
+    assert error_idx < value_box_idx
+
+
+def test_docs_three_with_one_error_in_middle() -> None:
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["docs", "shiny.ui.card", "non_existent_symbol", "shiny.ui.value_box"],
+    )
+
+    assert result.exit_code != 0
+    error_idx = result.output.find(
+        "Could not find documentation for 'non_existent_symbol'."
+    )
+    card_idx = result.output.find("def card(")
+    value_box_idx = result.output.find("def value_box(")
+
+    assert error_idx != -1
+    assert card_idx != -1
+    assert value_box_idx != -1
+    assert error_idx < card_idx
+    assert error_idx < value_box_idx
+
+
+def test_docs_three_with_one_error_at_end() -> None:
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["docs", "shiny.ui.card", "shiny.ui.value_box", "non_existent_symbol"],
+    )
+
+    assert result.exit_code != 0
+    error_idx = result.output.find(
+        "Could not find documentation for 'non_existent_symbol'."
+    )
+    card_idx = result.output.find("def card(")
+    value_box_idx = result.output.find("def value_box(")
+
+    assert error_idx != -1
+    assert card_idx != -1
+    assert value_box_idx != -1
+    assert error_idx < card_idx
+    assert error_idx < value_box_idx
+
+
+def test_docs_three_with_one_error_json_mode() -> None:
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "docs",
+            "--json",
+            "shiny.ui.card",
+            "non_existent_symbol",
+            "shiny.ui.value_box",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Could not find documentation for 'non_existent_symbol'." in result.output
+    error_idx = result.output.find(
+        "Could not find documentation for 'non_existent_symbol'."
+    )
+    json_start_idx = result.output.find("[")
+    assert error_idx != -1
+    assert json_start_idx != -1
+    assert error_idx < json_start_idx
+
+    json_str = result.output[json_start_idx:]
+    data = json.loads(json_str)
+    assert len(data) == 2
+    assert data[0]["name"] == "shiny.ui.card"
+    assert data[1]["name"] == "shiny.ui.value_box"
+
+
+def test_docs_fuzzy_suggestion_single() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "ui.value_bx"])
+
+    assert result.exit_code != 0
+    assert "Could not find documentation for 'ui.value_bx'." in result.output
+    assert "Did you mean 'ui.value_box'?" in result.output
+
+
+def test_docs_fuzzy_suggestion_multiple() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "Accordion"])
+
+    assert result.exit_code != 0
+    assert "Could not find documentation for 'Accordion'." in result.output
+    assert "Did you mean" in result.output
+    assert "'playwright.controller.Accordion'" in result.output
+
+
+def test_docs_fuzzy_suggestion_method() -> None:
+    runner = CliRunner()
+    result = runner.invoke(
+        main, ["docs", "playwright.controller.Accordion.expect_hight"]
+    )
+
+    assert result.exit_code != 0
+    assert (
+        "Could not find documentation for 'playwright.controller.Accordion.expect_hight'."
+        in result.output
+    )
+    assert (
+        "Did you mean 'playwright.controller.Accordion.expect_height'?" in result.output
+    )
+
+
+def test_docs_fuzzy_suggestion_shiny_prefix() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "shiny.ui.value_bx"])
+
+    assert result.exit_code != 0
+    assert "Could not find documentation for 'shiny.ui.value_bx'." in result.output
+    assert "Did you mean 'shiny.ui.value_box'?" in result.output
 
 
 def test_docs_no_args() -> None:

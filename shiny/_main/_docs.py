@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import difflib
 import functools
 import importlib
 import inspect
@@ -10,6 +11,119 @@ from typing import Any
 
 import click
 from click.shell_completion import CompletionItem
+
+
+@functools.lru_cache(maxsize=1)
+def _get_all_documentable_symbols() -> list[str]:
+    symbols: set[str] = set()
+    modules_to_scan = [
+        ("shiny.ui", "ui"),
+        ("shiny.express.ui", "express.ui"),
+        ("shiny.render", "render"),
+        ("shiny.reactive", "reactive"),
+        ("shiny.playwright.controller", "playwright.controller"),
+        ("shiny.session", "session"),
+        ("shiny.types", "types"),
+    ]
+    for full_mod, short_mod in modules_to_scan:
+        try:
+            mod = importlib.import_module(full_mod)
+        except Exception:
+            continue
+        for attr in dir(mod):
+            if attr.startswith("_"):
+                continue
+            obj = getattr(mod, attr, None)
+            if obj is None:
+                continue
+            if inspect.isroutine(obj) or inspect.isclass(obj):
+                symbols.add(f"{full_mod}.{attr}")
+                symbols.add(f"{short_mod}.{attr}")
+                if inspect.isclass(obj):
+                    for m_name in dir(obj):
+                        if not m_name.startswith("_"):
+                            try:
+                                m_obj = getattr(obj, m_name, None)
+                                if callable(m_obj):
+                                    symbols.add(f"{full_mod}.{attr}.{m_name}")
+                                    symbols.add(f"{short_mod}.{attr}.{m_name}")
+                            except Exception:
+                                pass
+    return sorted(symbols)
+
+
+def _suggest_similar_symbols(name: str, max_suggestions: int = 3) -> list[str]:
+    symbols = _get_all_documentable_symbols()
+    candidates = (
+        [s for s in symbols if s.startswith("shiny.")]
+        if name.startswith("shiny.")
+        else [s for s in symbols if not s.startswith("shiny.")]
+    )
+
+    name_lower = name.lower()
+    name_parts = name_lower.split(".")
+    target_attr = name_parts[-1]
+
+    if len(name_parts) > 1:
+        prefix_parts = name_parts[:-1]
+        same_prefix = [
+            c for c in candidates if c.lower().split(".")[:-1] == prefix_parts
+        ]
+        if same_prefix:
+            scored_same: list[tuple[float, str]] = []
+            for cand in same_prefix:
+                cand_attr = cand.lower().split(".")[-1]
+                score = difflib.SequenceMatcher(None, target_attr, cand_attr).ratio()
+                if score >= 0.55:
+                    scored_same.append((score, cand))
+            if scored_same:
+                scored_same.sort(key=lambda x: x[0], reverse=True)
+                top = scored_same[0][0]
+                if len(scored_same) == 1 or (
+                    top >= 0.8 and (top - scored_same[1][0]) >= 0.12
+                ):
+                    return [scored_same[0][1]]
+                filtered = [
+                    cand for s, cand in scored_same if s >= max(0.6, top - 0.15)
+                ]
+                return filtered[:max_suggestions]
+
+    scored: list[tuple[float, str]] = []
+    for cand in candidates:
+        cand_lower = cand.lower()
+        cand_parts = cand_lower.split(".")
+        cand_attr = cand_parts[-1]
+
+        if len(name_parts) == 1:
+            if cand_attr == target_attr:
+                score = 1.0
+            elif cand_lower.endswith(f".{name_lower}"):
+                score = 0.95
+            else:
+                score = difflib.SequenceMatcher(None, name_lower, cand_attr).ratio()
+        else:
+            full_ratio = difflib.SequenceMatcher(None, name_lower, cand_lower).ratio()
+            attr_ratio = difflib.SequenceMatcher(None, target_attr, cand_attr).ratio()
+
+            if cand_lower.endswith(f".{name_lower}"):
+                score = 0.95
+            else:
+                score = 0.5 * full_ratio + 0.5 * attr_ratio
+
+        if score >= 0.55:
+            scored.append((score, cand))
+
+    if not scored:
+        return []
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    top_score = scored[0][0]
+    if len(scored) == 1 or (top_score >= 0.85 and (top_score - scored[1][0]) >= 0.12):
+        return [scored[0][1]]
+
+    filtered = [cand for s, cand in scored if s >= max(0.6, top_score - 0.15)]
+    return filtered[:max_suggestions]
 
 
 def _resolve_symbol(name: str) -> tuple[Any, str]:
@@ -28,73 +142,26 @@ def _resolve_symbol(name: str) -> tuple[Any, str]:
                 pass
         return None
 
-    obj = _try_resolve(name)
-    if obj is not None:
-        return obj, name
-
-    if not name.startswith("shiny."):
+    if name.startswith("shiny."):
+        obj = _try_resolve(name)
+        if obj is not None:
+            return obj, name
+    else:
         obj = _try_resolve(f"shiny.{name}")
         if obj is not None:
             return obj, f"shiny.{name}"
 
-    prefixes = [
-        "shiny.ui",
-        "shiny.express.ui",
-        "shiny.playwright.controller",
-        "shiny.playwright",
-        "shiny.reactive",
-        "shiny.render",
-        "shiny.session",
-        "shiny.types",
-    ]
-    for prefix in prefixes:
-        candidate = f"{prefix}.{name}"
-        obj = _try_resolve(candidate)
-        if obj is not None:
-            return obj, candidate
-
-    raise click.ClickException(f"Could not find documentation for '{name}'.")
-
-
-@functools.lru_cache(maxsize=1)
-def _get_all_documentable_symbols() -> list[str]:
-    symbols: set[str] = set()
-    modules_to_scan = [
-        ("shiny.ui", "ui"),
-        ("shiny.express.ui", "express.ui"),
-        ("shiny.render", "render"),
-        ("shiny.reactive", "reactive"),
-        ("shiny.playwright.controller", "controller"),
-        ("shiny.session", "session"),
-        ("shiny.types", "types"),
-    ]
-    for full_mod, short_mod in modules_to_scan:
-        try:
-            mod = importlib.import_module(full_mod)
-        except Exception:
-            continue
-        for attr in dir(mod):
-            if attr.startswith("_"):
-                continue
-            obj = getattr(mod, attr, None)
-            if obj is None:
-                continue
-            if inspect.isroutine(obj) or inspect.isclass(obj):
-                symbols.add(f"{full_mod}.{attr}")
-                symbols.add(f"{short_mod}.{attr}")
-                symbols.add(attr)
-                if inspect.isclass(obj):
-                    for m_name in dir(obj):
-                        if not m_name.startswith("_"):
-                            try:
-                                m_obj = getattr(obj, m_name, None)
-                                if callable(m_obj):
-                                    symbols.add(f"{full_mod}.{attr}.{m_name}")
-                                    symbols.add(f"{short_mod}.{attr}.{m_name}")
-                                    symbols.add(f"{attr}.{m_name}")
-                            except Exception:
-                                pass
-    return sorted(symbols)
+    suggestions = _suggest_similar_symbols(name)
+    if not suggestions:
+        raise click.ClickException(f"Could not find documentation for '{name}'.")
+    if len(suggestions) == 1:
+        raise click.ClickException(
+            f"Could not find documentation for '{name}'. Did you mean '{suggestions[0]}'?"
+        )
+    formatted = ", ".join(f"'{s}'" for s in suggestions)
+    raise click.ClickException(
+        f"Could not find documentation for '{name}'. Did you mean one of: {formatted}?"
+    )
 
 
 def _complete_symbol_names(
@@ -344,7 +411,9 @@ def _format_text_doc(info: dict[str, Any]) -> str:
     default=False,
     help="Output documentation or completions in JSON format.",
 )
+@click.pass_context
 def docs(
+    ctx: click.Context,
     names: tuple[str, ...],
     complete_prefix: str | None,
     as_json: bool,
@@ -368,13 +437,27 @@ def docs(
         raise click.UsageError("Missing argument 'NAMES...'.")
 
     results: list[dict[str, Any]] = []
+    errors: list[str] = []
     for name in names:
-        obj, full_name = _resolve_symbol(name)
-        info = _get_doc_info(obj, full_name)
-        results.append(info)
+        try:
+            obj, full_name = _resolve_symbol(name)
+            info = _get_doc_info(obj, full_name)
+            results.append(info)
+        except Exception as e:
+            if isinstance(e, click.ClickException):
+                errors.append(e.format_message())
+            else:
+                errors.append(str(e) or f"Could not find documentation for '{name}'.")
 
-    if as_json:
-        click.echo(json.dumps(results, indent=2))
-    else:
-        text_blocks = [_format_text_doc(r) for r in results]
-        click.echo("\n\n---\n\n".join(text_blocks))
+    for err_msg in errors:
+        click.echo(f"Error: {err_msg}", err=True)
+
+    if results:
+        if as_json:
+            click.echo(json.dumps(results, indent=2))
+        else:
+            text_blocks = [_format_text_doc(r) for r in results]
+            click.echo("\n\n---\n\n".join(text_blocks))
+
+    if errors:
+        ctx.exit(1)
