@@ -154,8 +154,7 @@ For detailed steps in each phase, read [references/release-phases.md](references
 | py-shinylive | `posit-dev/py-shinylive` | PyPI |
 | r-shinylive | `posit-dev/r-shinylive` | CRAN |
 | py-shiny-site | `posit-dev/py-shiny-site` | GitHub Pages |
-| conda htmltools | `conda-forge/py-htmltools-feedstock` | conda-forge |
-| conda shiny | `conda-forge/py-shiny-feedstock` | conda-forge |
+| conda feedstocks | see the Phase 11 inventory in `references/release-phases.md` | conda-forge |
 
 ## General Package Release Pattern
 
