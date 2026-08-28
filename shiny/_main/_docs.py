@@ -6,6 +6,7 @@ import functools
 import importlib
 import inspect
 import json
+import operator
 import textwrap
 from typing import Any
 
@@ -77,7 +78,7 @@ def _suggest_similar_symbols(name: str, max_suggestions: int = 3) -> list[str]:
                 if score >= 0.55:
                     scored_same.append((score, cand))
             if scored_same:
-                scored_same.sort(key=lambda x: x[0], reverse=True)
+                scored_same.sort(key=operator.itemgetter(0), reverse=True)
                 top = scored_same[0][0]
                 if len(scored_same) == 1 or (
                     top >= 0.8 and (top - scored_same[1][0]) >= 0.12
@@ -116,7 +117,7 @@ def _suggest_similar_symbols(name: str, max_suggestions: int = 3) -> list[str]:
     if not scored:
         return []
 
-    scored.sort(key=lambda x: x[0], reverse=True)
+    scored.sort(key=operator.itemgetter(0), reverse=True)
 
     top_score = scored[0][0]
     if len(scored) == 1 or (top_score >= 0.85 and (top_score - scored[1][0]) >= 0.12):
