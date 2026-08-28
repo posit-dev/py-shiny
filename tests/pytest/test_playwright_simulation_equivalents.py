@@ -90,7 +90,9 @@ def test_sim_action_button_kitchensink():
 def test_sim_app_test_values():
     app_path = REPO_ROOT / "tests" / "playwright" / "shiny" / "test_mode" / "app.py"
 
-    res_init = test_server(app_path, inputs={"name": "abc", "secret": "hunter2", "n": 20})
+    res_init = test_server(
+        app_path, inputs={"name": "abc", "secret": "hunter2", "n": 20}
+    )
     assert res_init.success is True
     assert res_init.outputs["double_txt"] == "doubled = 40"
     assert res_init.exports["doubled"] == 40

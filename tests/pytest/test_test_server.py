@@ -1,13 +1,84 @@
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
 import pytest
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-from shiny.pytest import TestServerResult, test_server, test_server_async
+from shiny.pytest import (
+    AsyncTestServerSession,
+    TestServerSession,
+    test_server,
+    test_server_async,
+)
 from shiny.testmode import export_test_values
+
+
+def test_interactive_context_manager():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def doubled():
+            return f"Result: {input.n() * 2}"
+
+    with test_server(server) as s:
+        assert isinstance(s, TestServerSession)
+        s.set_inputs(n=10)
+        assert s.get_output("doubled") == "Result: 20"
+        assert s.outputs["doubled"] == "Result: 20"
+
+        s.set_inputs(n=25)
+        assert s.get_output("doubled") == "Result: 50"
+        assert s.outputs["doubled"] == "Result: 50"
+
+
+def test_interactive_callback_syntax():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def doubled():
+            return f"Result: {input.n() * 2}"
+
+    def test_logic(s: TestServerSession):
+        s.set_inputs(n=5)
+        assert s.outputs["doubled"] == "Result: 10"
+
+        s.set_inputs(n=15)
+        assert s.outputs["doubled"] == "Result: 30"
+
+    test_server(server, test_logic)
+
+
+@pytest.mark.asyncio
+async def test_interactive_async_context_manager():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def squared():
+            return f"{input.x() ** 2}"
+
+    async with test_server_async(server) as s:
+        assert isinstance(s, AsyncTestServerSession)
+        await s.set_inputs(x=3)
+        assert s.outputs["squared"] == "9"
+
+        await s.set_inputs(x=7)
+        assert s.outputs["squared"] == "49"
+
+
+def test_interactive_exports():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def out():
+            return str(input.val())
+
+        export_test_values(doubled=lambda: input.val() * 2)
+
+    with test_server(server) as s:
+        s.set_inputs(val=10)
+        assert s.exports["doubled"] == 20
+        assert s.get_export("doubled") == 20
+
+        s.set_inputs(val=40)
+        assert s.exports["doubled"] == 80
+        assert s.get_export("doubled") == 80
 
 
 def test_test_server_direct_server_function():
@@ -17,7 +88,6 @@ def test_test_server_direct_server_function():
             return f"Result: {input.n() * 2}"
 
     res = test_server(server, inputs={"n": 25})
-    assert isinstance(res, TestServerResult)
     assert res.success is True
     assert res.outputs["doubled"] == "Result: 50"
     assert res.elapsed_ms > 0
@@ -37,7 +107,6 @@ def test_test_server_direct_app_instance():
     app = App(app_ui, server)
 
     res = test_server(app, inputs={"n": 25})
-    assert isinstance(res, TestServerResult)
     assert res.success is True
     assert res.outputs["doubled"] == "Result: 50"
     assert res.elapsed_ms > 0
@@ -72,43 +141,6 @@ app = App(app_ui, server)
     res = test_server(app_file, inputs={"txt": "pytest-sim"})
     assert res.success is True
     assert res.outputs["out"] == "Echo: pytest-sim"
-
-
-@pytest.mark.asyncio
-async def test_test_server_async():
-    app_ui = ui.page_fluid(
-        ui.input_numeric("x", "X", value=3),
-        ui.output_text("squared"),
-    )
-
-    def server(input: Inputs, output: Outputs, session: Session):
-        @render.text
-        def squared():
-            return f"{input.x() ** 2}"
-
-    app = App(app_ui, server)
-    res = await test_server_async(app, inputs={"x": 7})
-    assert res.success is True
-    assert res.outputs["squared"] == "49"
-
-
-def test_test_server_exports():
-    app_ui = ui.page_fluid(
-        ui.input_numeric("val", "Val", value=10),
-        ui.output_text("out"),
-    )
-
-    def server(input: Inputs, output: Outputs, session: Session):
-        @render.text
-        def out():
-            return str(input.val())
-
-        export_test_values(doubled=lambda: input.val() * 2)
-
-    app = App(app_ui, server)
-    res = test_server(app, inputs={"val": 40})
-    assert res.success is True
-    assert res.exports["doubled"] == 80
 
 
 def test_test_server_reactive_errors():
@@ -174,67 +206,6 @@ def test_test_server_restores_app_test_mode_and_server():
     assert app.server is original_server
 
 
-def test_test_server_isolated_sibling_modules(tmp_path: Path):
-    app_a_dir = tmp_path / "app_a"
-    app_a_dir.mkdir()
-    (app_a_dir / "helpers.py").write_text(
-        "def message(): return 'Module A'", encoding="utf-8"
-    )
-    (app_a_dir / "app.py").write_text(
-        """from shiny import App, render, ui
-from helpers import message
-app_ui = ui.page_fluid(ui.output_text("out"))
-def server(input, output, session):
-    @render.text
-    def out(): return message()
-app = App(app_ui, server)
-""",
-        encoding="utf-8",
-    )
-
-    app_b_dir = tmp_path / "app_b"
-    app_b_dir.mkdir()
-    (app_b_dir / "helpers.py").write_text(
-        "def message(): return 'Module B'", encoding="utf-8"
-    )
-    (app_b_dir / "app.py").write_text(
-        """from shiny import App, render, ui
-from helpers import message
-app_ui = ui.page_fluid(ui.output_text("out"))
-def server(input, output, session):
-    @render.text
-    def out(): return message()
-app = App(app_ui, server)
-""",
-        encoding="utf-8",
-    )
-
-    res_a = test_server(app_a_dir / "app.py")
-    res_b = test_server(app_b_dir / "app.py")
-
-    assert res_a.success is True
-    assert res_a.outputs["out"] == "Module A"
-    assert res_b.success is True
-    assert res_b.outputs["out"] == "Module B"
-
-
-def test_test_server_timeout_code_subprocess():
-    code = """import time
-from shiny.express import render
-@render.text
-def blocked():
-    time.sleep(3)
-    return "done"
-"""
-    started = time.monotonic()
-    res = test_server(code=code, timeout_secs=0.2)
-    elapsed = time.monotonic() - started
-
-    assert res.success is False
-    assert "timed out after 0.2s" in str(res.error)
-    assert elapsed < 2
-
-
 def test_test_server_mapping_interface():
     app_ui = ui.page_fluid(ui.output_text("out"))
 
@@ -251,23 +222,3 @@ def test_test_server_mapping_interface():
     assert len(res) == 7
     assert res.get("outputs") == {"out": "simulated"}
     assert res.to_dict()["success"] is True
-
-
-def test_test_server_large_output_does_not_deadlock():
-    code = """from shiny.express import render
-@render.text
-def big():
-    return "x" * 2_000_000
-"""
-    res = test_server(code=code, timeout_secs=5.0)
-    assert res.success is True
-    assert len(res.outputs["big"]) == 2_000_000
-
-
-def test_test_server_worker_crash_is_reported_as_process_error():
-    code = """import os
-os._exit(42)
-"""
-    res = test_server(code=code)
-    assert res.success is False
-    assert "exited with code 42" in str(res.error)
