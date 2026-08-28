@@ -6,11 +6,24 @@ from pathlib import Path
 import pytest
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-from shiny.pytest import SimulationResult, simulate, simulate_async
+from shiny.pytest import TestServerResult, test_server, test_server_async
 from shiny.testmode import export_test_values
 
 
-def test_simulate_direct_app_instance():
+def test_test_server_direct_server_function():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def doubled():
+            return f"Result: {input.n() * 2}"
+
+    res = test_server(server, inputs={"n": 25})
+    assert isinstance(res, TestServerResult)
+    assert res.success is True
+    assert res.outputs["doubled"] == "Result: 50"
+    assert res.elapsed_ms > 0
+
+
+def test_test_server_direct_app_instance():
     app_ui = ui.page_fluid(
         ui.input_numeric("n", "N", value=10),
         ui.output_text("doubled"),
@@ -23,26 +36,26 @@ def test_simulate_direct_app_instance():
 
     app = App(app_ui, server)
 
-    res = simulate(app, inputs={"n": 25})
-    assert isinstance(res, SimulationResult)
+    res = test_server(app, inputs={"n": 25})
+    assert isinstance(res, TestServerResult)
     assert res.success is True
     assert res.outputs["doubled"] == "Result: 50"
     assert res.elapsed_ms > 0
 
 
-def test_simulate_express_code():
+def test_test_server_express_code():
     code = """from shiny.express import input, render, ui
 ui.input_slider("n", "N", 1, 100, 20)
 @render.text
 def doubled():
     return f"Result: {input.n() * 2}"
 """
-    res = simulate(code=code, inputs={"n": 30})
+    res = test_server(code=code, inputs={"n": 30})
     assert res.success is True
     assert res.outputs["doubled"] == "Result: 60"
 
 
-def test_simulate_file_path(tmp_path: Path):
+def test_test_server_file_path(tmp_path: Path):
     app_file = tmp_path / "app.py"
     app_file.write_text(
         """from shiny import App, Inputs, Outputs, Session, render, ui
@@ -56,13 +69,13 @@ app = App(app_ui, server)
         encoding="utf-8",
     )
 
-    res = simulate(app_file, inputs={"txt": "pytest-sim"})
+    res = test_server(app_file, inputs={"txt": "pytest-sim"})
     assert res.success is True
     assert res.outputs["out"] == "Echo: pytest-sim"
 
 
 @pytest.mark.asyncio
-async def test_simulate_async():
+async def test_test_server_async():
     app_ui = ui.page_fluid(
         ui.input_numeric("x", "X", value=3),
         ui.output_text("squared"),
@@ -74,12 +87,12 @@ async def test_simulate_async():
             return f"{input.x() ** 2}"
 
     app = App(app_ui, server)
-    res = await simulate_async(app, inputs={"x": 7})
+    res = await test_server_async(app, inputs={"x": 7})
     assert res.success is True
     assert res.outputs["squared"] == "49"
 
 
-def test_simulate_test_exports():
+def test_test_server_exports():
     app_ui = ui.page_fluid(
         ui.input_numeric("val", "Val", value=10),
         ui.output_text("out"),
@@ -93,12 +106,12 @@ def test_simulate_test_exports():
         export_test_values(doubled=lambda: input.val() * 2)
 
     app = App(app_ui, server)
-    res = simulate(app, inputs={"val": 40})
+    res = test_server(app, inputs={"val": 40})
     assert res.success is True
     assert res.exports["doubled"] == 80
 
 
-def test_simulate_reactive_errors():
+def test_test_server_reactive_errors():
     app_ui = ui.page_fluid(
         ui.output_text("err_out"),
     )
@@ -109,26 +122,26 @@ def test_simulate_reactive_errors():
             raise ValueError("Custom calculation error")
 
     app = App(app_ui, server)
-    res = simulate(app)
+    res = test_server(app)
     assert res.success is False
     assert "err_out" in res.errors
     assert "Custom calculation error" in str(res.errors["err_out"])
 
 
-def test_server_initialization_error_is_failure():
+def test_test_server_initialization_error_is_failure():
     app_ui = ui.page_fluid(ui.output_text("out"))
 
     def server(input: Inputs, output: Outputs, session: Session):
         raise RuntimeError("Fatal server init crash")
 
     app = App(app_ui, server)
-    res = simulate(app)
+    res = test_server(app)
 
     assert res.success is False
     assert "Fatal server init crash" in str(res.error)
 
 
-def test_reactive_effect_error_is_failure():
+def test_test_server_reactive_effect_error_is_failure():
     app_ui = ui.page_fluid(ui.output_text("out"))
 
     def server(input: Inputs, output: Outputs, session: Session):
@@ -137,13 +150,13 @@ def test_reactive_effect_error_is_failure():
             raise RuntimeError("Fatal effect crash")
 
     app = App(app_ui, server)
-    res = simulate(app)
+    res = test_server(app)
 
     assert res.success is False
     assert "Fatal effect crash" in str(res.error)
 
 
-def test_simulate_restores_app_test_mode_and_server():
+def test_test_server_restores_app_test_mode_and_server():
     app_ui = ui.page_fluid(ui.output_text("out"))
 
     def server(input: Inputs, output: Outputs, session: Session):
@@ -155,13 +168,13 @@ def test_simulate_restores_app_test_mode_and_server():
     original_server = app.server
     assert app._test_mode is False
 
-    res = simulate(app)
+    res = test_server(app)
     assert res.success is True
     assert app._test_mode is False
     assert app.server is original_server
 
 
-def test_simulate_isolated_sibling_modules(tmp_path: Path):
+def test_test_server_isolated_sibling_modules(tmp_path: Path):
     app_a_dir = tmp_path / "app_a"
     app_a_dir.mkdir()
     (app_a_dir / "helpers.py").write_text(
@@ -196,8 +209,8 @@ app = App(app_ui, server)
         encoding="utf-8",
     )
 
-    res_a = simulate(app_a_dir / "app.py")
-    res_b = simulate(app_b_dir / "app.py")
+    res_a = test_server(app_a_dir / "app.py")
+    res_b = test_server(app_b_dir / "app.py")
 
     assert res_a.success is True
     assert res_a.outputs["out"] == "Module A"
@@ -205,7 +218,7 @@ app = App(app_ui, server)
     assert res_b.outputs["out"] == "Module B"
 
 
-def test_simulate_timeout_code_subprocess():
+def test_test_server_timeout_code_subprocess():
     code = """import time
 from shiny.express import render
 @render.text
@@ -214,7 +227,7 @@ def blocked():
     return "done"
 """
     started = time.monotonic()
-    res = simulate(code=code, timeout_secs=0.2)
+    res = test_server(code=code, timeout_secs=0.2)
     elapsed = time.monotonic() - started
 
     assert res.success is False
@@ -222,7 +235,7 @@ def blocked():
     assert elapsed < 2
 
 
-def test_simulate_mapping_interface():
+def test_test_server_mapping_interface():
     app_ui = ui.page_fluid(ui.output_text("out"))
 
     def server(input: Inputs, output: Outputs, session: Session):
@@ -231,7 +244,7 @@ def test_simulate_mapping_interface():
             return "simulated"
 
     app = App(app_ui, server)
-    res = simulate(app)
+    res = test_server(app)
 
     assert res["outputs"]["out"] == "simulated"
     assert "outputs" in res
@@ -240,21 +253,21 @@ def test_simulate_mapping_interface():
     assert res.to_dict()["success"] is True
 
 
-def test_simulate_large_output_does_not_deadlock():
+def test_test_server_large_output_does_not_deadlock():
     code = """from shiny.express import render
 @render.text
 def big():
     return "x" * 2_000_000
 """
-    res = simulate(code=code, timeout_secs=5.0)
+    res = test_server(code=code, timeout_secs=5.0)
     assert res.success is True
     assert len(res.outputs["big"]) == 2_000_000
 
 
-def test_simulate_worker_crash_is_reported_as_process_error():
+def test_test_server_worker_crash_is_reported_as_process_error():
     code = """import os
 os._exit(42)
 """
-    res = simulate(code=code)
+    res = test_server(code=code)
     assert res.success is False
     assert "exited with code 42" in str(res.error)

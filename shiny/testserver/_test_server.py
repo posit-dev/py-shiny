@@ -31,12 +31,15 @@ from .._connection import MockConnection
 from ..express import is_express_app
 from ..express._run import wrap_express_app
 from ..session._session import AppSession
+from ..ui import page_fluid
 
 T = TypeVar("T")
 
 
 @dataclass
-class SimulationResult(Mapping[str, Any]):
+class TestServerResult(Mapping[str, Any]):
+    __test__ = False
+
     success: bool
     error: Optional[str]
     traceback: str
@@ -83,10 +86,10 @@ class SimulationResult(Mapping[str, Any]):
         }
 
 
-def _simulation_error_result(
+def _error_result(
     message: str, traceback_text: str = "", elapsed_ms: float = 0.0
-) -> SimulationResult:
-    return SimulationResult(
+) -> TestServerResult:
+    return TestServerResult(
         success=False,
         error=message,
         traceback=traceback_text,
@@ -97,12 +100,12 @@ def _simulation_error_result(
     )
 
 
-async def _simulate_shiny_app_in_process(
-    app: Optional[App] = None,
+async def _test_server_in_process(
+    app: Optional[Union[App, Callable[..., Any]]] = None,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
     inputs: Optional[Mapping[str, Any]] = None,
-) -> SimulationResult:
+) -> TestServerResult:
     start_t = time.perf_counter()
     old_testmode = os.environ.get("SHINY_TESTMODE")
     os.environ["SHINY_TESTMODE"] = "1"
@@ -115,8 +118,11 @@ async def _simulate_shiny_app_in_process(
     old_app_server: Optional[Callable[..., Any]] = None
 
     try:
-        if app is not None and isinstance(app, App):
-            app_obj = app
+        if app is not None:
+            if isinstance(app, App):
+                app_obj = app
+            elif callable(app):
+                app_obj = App(page_fluid(), app)
         elif code is not None:
             temp_dir = tempfile.TemporaryDirectory()
             temp_path = Path(temp_dir.name) / "app.py"
@@ -132,7 +138,7 @@ async def _simulate_shiny_app_in_process(
         elif file_path is not None:
             target_path = Path(file_path).resolve()
             if not target_path.exists():
-                return _simulation_error_result(f"File not found: {file_path}")
+                return _error_result(f"File not found: {file_path}")
             app_dir = str(target_path.parent)
             sys.path.insert(0, app_dir)
             if is_express_app(str(target_path), app_dir=None):
@@ -140,12 +146,12 @@ async def _simulate_shiny_app_in_process(
             else:
                 app_obj = _load_app_from_file(target_path)
         else:
-            return _simulation_error_result(
+            return _error_result(
                 "Either 'app', 'code', or 'file_path' must be provided."
             )
 
         if app_obj is None:
-            return _simulation_error_result(
+            return _error_result(
                 "No Shiny 'App' instance found (expected 'app' or 'app_ui' + 'server')."
             )
 
@@ -236,7 +242,7 @@ async def _simulate_shiny_app_in_process(
             first_exc, first_tb = fatal_errors[0]
             errors["__fatal__"] = str(first_exc)
             elapsed_ms = (time.perf_counter() - start_t) * 1000.0
-            return SimulationResult(
+            return TestServerResult(
                 success=False,
                 error=f"Session fatal error: {type(first_exc).__name__}: {first_exc}",
                 traceback=first_tb,
@@ -250,7 +256,7 @@ async def _simulate_shiny_app_in_process(
         success = len(errors) == 0
         error_msg = None if success else f"{len(errors)} reactive error(s) occurred"
 
-        return SimulationResult(
+        return TestServerResult(
             success=success,
             error=error_msg,
             traceback="",
@@ -262,8 +268,8 @@ async def _simulate_shiny_app_in_process(
 
     except Exception as e:
         elapsed_ms = (time.perf_counter() - start_t) * 1000.0
-        return _simulation_error_result(
-            f"Failed to simulate Shiny app: {e}",
+        return _error_result(
+            f"Failed to test server: {e}",
             traceback.format_exc(),
             elapsed_ms=elapsed_ms,
         )
@@ -285,7 +291,7 @@ async def _simulate_shiny_app_in_process(
 def _load_app_from_file(target_path: Path) -> Optional[App]:
     import importlib.util
 
-    module_name = f"_sim_app_{target_path.stem}_{abs(hash(str(target_path)))}"
+    module_name = f"_test_server_app_{target_path.stem}_{abs(hash(str(target_path)))}"
     spec = importlib.util.spec_from_file_location(module_name, target_path)
     if spec is None or spec.loader is None:
         return None
@@ -309,7 +315,7 @@ def _load_app_from_file(target_path: Path) -> Optional[App]:
     return None
 
 
-def _subprocess_simulation_worker(
+def _subprocess_test_server_worker(
     pipe: Connection,
     code: Optional[str],
     file_path: Optional[str],
@@ -317,7 +323,7 @@ def _subprocess_simulation_worker(
 ) -> None:
     try:
         res = _run_coroutine_sync(
-            _simulate_shiny_app_in_process(
+            _test_server_in_process(
                 code=code,
                 file_path=file_path,
                 inputs=inputs,
@@ -326,7 +332,7 @@ def _subprocess_simulation_worker(
         )
         pipe.send(res.to_dict())
     except Exception as e:
-        err_res = _simulation_error_result(
+        err_res = _error_result(
             f"Subprocess worker crashed: {e}", traceback.format_exc()
         )
         pipe.send(err_res.to_dict())
@@ -334,12 +340,12 @@ def _subprocess_simulation_worker(
         pipe.close()
 
 
-async def _simulate_shiny_app_subprocess(
+async def _test_server_subprocess(
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
     inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 3.0,
-) -> SimulationResult:
+) -> TestServerResult:
     start_t = time.perf_counter()
     ctx = multiprocessing.get_context("spawn")
     parent_conn, child_conn = ctx.Pipe()
@@ -348,7 +354,7 @@ async def _simulate_shiny_app_subprocess(
     dict_inputs = dict(inputs or {})
 
     proc = ctx.Process(
-        target=_subprocess_simulation_worker,
+        target=_subprocess_test_server_worker,
         args=(child_conn, code, str_path, dict_inputs),
     )
     proc.start()
@@ -371,7 +377,7 @@ async def _simulate_shiny_app_subprocess(
             except EOFError:
                 proc.join(timeout=1.0)
                 raise RuntimeError(
-                    f"Simulation worker process exited with code {proc.exitcode} without returning a result"
+                    f"Test server worker process exited with code {proc.exitcode} without returning a result"
                 )
 
         if proc.is_alive():
@@ -384,7 +390,7 @@ async def _simulate_shiny_app_subprocess(
         else:
             proc.join(timeout=0.5)
             raise RuntimeError(
-                f"Simulation worker process exited with code {proc.exitcode} without returning a result"
+                f"Test server worker process exited with code {proc.exitcode} without returning a result"
             )
 
     try:
@@ -392,12 +398,12 @@ async def _simulate_shiny_app_subprocess(
         elapsed_ms = (time.perf_counter() - start_t) * 1000.0
 
         if data is None:
-            return _simulation_error_result(
-                f"Simulation timed out after {timeout_secs}s",
+            return _error_result(
+                f"Test server timed out after {timeout_secs}s",
                 elapsed_ms=elapsed_ms,
             )
 
-        return SimulationResult(
+        return TestServerResult(
             success=data["success"],
             error=data["error"],
             traceback=data.get("traceback", ""),
@@ -408,7 +414,7 @@ async def _simulate_shiny_app_subprocess(
         )
     except Exception as e:
         elapsed_ms = (time.perf_counter() - start_t) * 1000.0
-        return _simulation_error_result(
+        return _error_result(
             f"Process error: {e}",
             traceback.format_exc(),
             elapsed_ms=elapsed_ms,
@@ -418,8 +424,8 @@ async def _simulate_shiny_app_subprocess(
 
 
 def _run_coroutine_sync(
-    coro: Coroutine[Any, Any, SimulationResult], timeout_secs: float
-) -> SimulationResult:
+    coro: Coroutine[Any, Any, TestServerResult], timeout_secs: float
+) -> TestServerResult:
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -433,20 +439,20 @@ def _run_coroutine_sync(
         else:
             return asyncio.run(coro)
     except (asyncio.TimeoutError, concurrent.futures.TimeoutError):
-        return _simulation_error_result(f"Simulation timed out after {timeout_secs}s")
+        return _error_result(f"Test server timed out after {timeout_secs}s")
 
 
-def simulate(
-    app: Optional[Union[App, str, Path]] = None,
+def test_server(
+    app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
     inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 3.0,
     in_process: Optional[bool] = None,
-) -> SimulationResult:
+) -> TestServerResult:
     return _run_coroutine_sync(
-        simulate_async(
+        test_server_async(
             app=app,
             code=code,
             file_path=file_path,
@@ -458,21 +464,21 @@ def simulate(
     )
 
 
-async def simulate_async(
-    app: Optional[Union[App, str, Path]] = None,
+async def test_server_async(
+    app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
     inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 3.0,
     in_process: Optional[bool] = None,
-) -> SimulationResult:
-    target_app: Optional[App] = None
+) -> TestServerResult:
+    target_app: Optional[Union[App, Callable[..., Any]]] = None
     target_path: Optional[Union[str, Path]] = file_path
     target_code: Optional[str] = code
 
     if app is not None:
-        if isinstance(app, App):
+        if isinstance(app, App) or callable(app):
             target_app = app
         elif isinstance(app, (str, Path)):
             target_path = app
@@ -486,7 +492,7 @@ async def simulate_async(
     try:
         if use_in_process:
             return await asyncio.wait_for(
-                _simulate_shiny_app_in_process(
+                _test_server_in_process(
                     app=target_app,
                     code=target_code,
                     file_path=target_path,
@@ -495,11 +501,15 @@ async def simulate_async(
                 timeout=timeout_secs,
             )
         else:
-            return await _simulate_shiny_app_subprocess(
+            return await _test_server_subprocess(
                 code=target_code,
                 file_path=target_path,
                 inputs=inputs,
                 timeout_secs=timeout_secs,
             )
     except asyncio.TimeoutError:
-        return _simulation_error_result(f"Simulation timed out after {timeout_secs}s")
+        return _error_result(f"Test server timed out after {timeout_secs}s")
+
+
+test_server.__test__ = False  # pyright: ignore[reportFunctionMemberAccess]
+test_server_async.__test__ = False  # pyright: ignore[reportFunctionMemberAccess]
