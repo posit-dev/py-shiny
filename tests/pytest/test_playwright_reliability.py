@@ -18,6 +18,7 @@ PLAYWRIGHT_REMOTE_ACTION = (
     / "setup-playwright-remote"
     / "action.yaml"
 )
+PLAYWRIGHT_REMOTE_START_SERVER = PLAYWRIGHT_REMOTE_ACTION.parent / "start-server.sh"
 
 
 def _load_module(name: str, path: Path) -> ModuleType:
@@ -30,7 +31,7 @@ def _load_module(name: str, path: Path) -> ModuleType:
 
 
 def test_remote_playwright_server_keeps_stdin_open() -> None:
-    action = PLAYWRIGHT_REMOTE_ACTION.read_text()
+    action = PLAYWRIGHT_REMOTE_START_SERVER.read_text()
 
     assert "--interactive" in action
     assert "--tty" in action
