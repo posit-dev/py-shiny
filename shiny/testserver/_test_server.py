@@ -251,7 +251,7 @@ class AsyncTestServerSession:
 
         orig_print_error = self._session._print_error_message
 
-        def custom_print_error(message: str | Exception) -> None:
+        def custom_print_error(message: Union[str, Exception]) -> None:
             if isinstance(message, Exception):
                 self._fatal_errors.append((message, traceback.format_exc()))
             else:
@@ -565,7 +565,14 @@ class TestServerSession(Mapping[str, Any]):
             self._async_session.set_inputs(inputs=inputs, **kwargs),
             self._loop,
         )
-        future.result(timeout=self._timeout_secs)
+        try:
+            future.result(timeout=self._timeout_secs)
+        except (asyncio.TimeoutError, Exception) as e:
+            if isinstance(e, TimeoutError) or type(e).__name__ == "TimeoutError":
+                raise TimeoutError(
+                    f"test_server timed out after {self._timeout_secs}s waiting for reactive flush following set_inputs()."
+                ) from e
+            raise
 
     def flush(self) -> None:
         if self._loop is not None and self._is_running:
@@ -573,7 +580,14 @@ class TestServerSession(Mapping[str, Any]):
                 self._async_session.flush(),
                 self._loop,
             )
-            future.result(timeout=self._timeout_secs)
+            try:
+                future.result(timeout=self._timeout_secs)
+            except (asyncio.TimeoutError, Exception) as e:
+                if isinstance(e, TimeoutError) or type(e).__name__ == "TimeoutError":
+                    raise TimeoutError(
+                        f"test_server timed out after {self._timeout_secs}s during flush."
+                    ) from e
+                raise
 
     def _ensure_run_once(self) -> None:
         if not self._is_running and self._cached_result is None:
@@ -771,7 +785,7 @@ def test_server(
 @overload
 def test_server_async(
     app: Optional[Union[App, Callable[..., Any], str, Path]],
-    fn: Callable[[AsyncTestServerSession], Awaitable[None] | None],
+    fn: Callable[[AsyncTestServerSession], Optional[Awaitable[None]]],
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
