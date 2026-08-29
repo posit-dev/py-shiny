@@ -389,8 +389,12 @@ def map_linear(
     clip: bool = True,
 ) -> pd.Series[float]:
     factor = (range_max - range_min) / (domain_max - domain_min)
-    val = cast("pd.Series[float]", x - domain_min)
-    newval = cast("pd.Series[float]", (val * factor) + range_min)
+    val = cast(  # pyright: ignore[reportUnnecessaryCast]
+        "pd.Series[float]", x - domain_min
+    )
+    newval = cast(  # pyright: ignore[reportUnnecessaryCast]
+        "pd.Series[float]", (val * factor) + range_min
+    )
 
     if clip:
         maxval = max(range_max, range_min)

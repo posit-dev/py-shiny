@@ -68,14 +68,27 @@ studyName[0] = htmlDep
 pd_penguins["studyName"] = studyName
 pd_penguins["Species"] = cast(
     Any,
-    [make_underlined_html(x) for x in cast("pd.Series[Any]", pd_penguins["Species"])],
+    [
+        make_underlined_html(x)
+        for x in cast(  # pyright: ignore[reportUnnecessaryCast]
+            "pd.Series[Any]", pd_penguins["Species"]
+        )
+    ],
 )
 pd_penguins["Region"] = [
-    make_heading(x) for x in cast("pd.Series[Any]", pd_penguins["Region"])
+    make_heading(x)
+    for x in cast(  # pyright: ignore[reportUnnecessaryCast]
+        "pd.Series[Any]", pd_penguins["Region"]
+    )
 ]
 pd_penguins["Island"] = cast(
     Any,
-    [make_island_content(x) for x in cast("pd.Series[Any]", pd_penguins["Island"])],
+    [
+        make_island_content(x)
+        for x in cast(  # pyright: ignore[reportUnnecessaryCast]
+            "pd.Series[Any]", pd_penguins["Island"]
+        )
+    ],
 )
 # Convert column 5 (Stage) to object dtype before assigning HTML objects (required for pandas 3.0+)
 pd_penguins["Stage"] = pd_penguins["Stage"].astype("object")
