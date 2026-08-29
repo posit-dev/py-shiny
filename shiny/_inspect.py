@@ -1845,11 +1845,24 @@ def _format_python_source_html(source: str) -> str:
             else:
                 fragments.append(escaped_token)
             cursor = end
+        fragments.append(html_lib.escape(source[cursor:]))
+        full_html = "".join(fragments)
     except (IndentationError, tokenize.TokenError):
-        return html_lib.escape(source)
+        full_html = html_lib.escape(source)
 
-    fragments.append(html_lib.escape(source[cursor:]))
-    return "".join(fragments)
+    code_lines = full_html.split("\n")
+    if len(code_lines) > 0 and code_lines[-1] == "":
+        code_lines.pop()
+
+    output_lines: List[str] = []
+    for i, line_content in enumerate(code_lines, 1):
+        output_lines.append(
+            f'<div class="source-line" data-line="{i}">'
+            f'<span class="source-line-num" aria-hidden="true">{i}</span>'
+            f'<span class="source-line-content">{line_content}</span>'
+            f"</div>"
+        )
+    return "".join(output_lines)
 
 
 def format_reactlog_html(
@@ -2283,7 +2296,9 @@ def format_reactlog_html(
     .source-drawer {{ background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }}
     .source-drawer-toggle {{ width: 100%; padding: 0.45rem 0.65rem; background: var(--surface-2); border: none; border-bottom: 1px solid var(--border); color: var(--text); font: 700 0.7rem var(--mono); text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }}
     .source-drawer-toggle:hover {{ background: var(--surface-3); }}
-    .source-drawer-code {{ padding: 0.65rem; font: 500 0.72rem/1.55 var(--mono); background: var(--source-panel-bg); color: var(--source-panel-text); white-space: pre; overflow-x: auto; max-height: 220px; }}
+    .source-drawer-code {{ padding: 0.4rem 0; font: 500 0.72rem/1.55 var(--mono); background: var(--source-panel-bg); color: var(--source-panel-text); white-space: pre; overflow-x: auto; max-height: 220px; }}
+    .source-drawer-code .source-line {{ display: flex; padding: 0 0.6rem 0 0; line-height: 1.55em; min-height: 1.55em; }}
+    .source-drawer-code .source-line-num {{ width: 2.2rem; min-width: 2.2rem; padding-right: 0.6rem; text-align: right; color: var(--text-muted); user-select: none; -webkit-user-select: none; opacity: 0.6; font-size: 0.68rem; }}
     .source-drawer-refs {{ padding: 0.4rem 0.65rem; font: 600 0.66rem var(--mono); color: var(--text-muted); border-top: 1px solid var(--border); background: var(--surface-2); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }}
 
     .actions-panel {{ padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; }}
@@ -2297,8 +2312,13 @@ def format_reactlog_html(
     .action-story-cascade {{ font: 600 0.66rem var(--mono); color: var(--text-muted); background: var(--surface); padding: 0.25rem 0.4rem; border-radius: 4px; margin-top: 0.15rem; border-left: 2px solid var(--calc); }}
 
     .timeline-panel {{ display: flex; flex-direction: column; }}
-    .source-panel {{ position: relative; overflow: auto; padding: 1rem; background: var(--source-panel-bg); color: var(--source-panel-text); font: 500 0.76rem/1.62 var(--mono); white-space: pre; tab-size: 4; }}
-    .source-panel code {{ position: relative; z-index: 1; font: inherit; }}
+    .source-panel {{ position: relative; overflow: auto; padding: 0.75rem 0; background: var(--source-panel-bg); color: var(--source-panel-text); font: 500 0.76rem/1.62 var(--mono); white-space: pre; tab-size: 4; }}
+    .source-panel code {{ position: relative; z-index: 1; font: inherit; display: block; min-width: 100%; }}
+    .source-line {{ display: flex; padding: 0 1rem 0 0; min-height: 1.62em; line-height: 1.62em; transition: background 120ms ease; }}
+    .source-line:hover {{ background: color-mix(in srgb, var(--surface-3) 40%, transparent); }}
+    .source-line.is-active {{ background: color-mix(in srgb, var(--accent) 18%, transparent); }}
+    .source-line-num {{ display: inline-block; width: 3.2rem; min-width: 3.2rem; padding-right: 1rem; text-align: right; color: var(--text-muted); user-select: none; -webkit-user-select: none; font-size: 0.7rem; opacity: 0.65; }}
+    .source-line-content {{ flex: 1; white-space: pre; }}
     .source-line-highlight {{ position: absolute; z-index: 0; left: 0; right: 0; margin: 0; padding: 0; border: 0; border-left: 3px solid var(--source-highlight-color, var(--accent)); border-radius: 0; background: color-mix(in srgb, var(--source-highlight-color, var(--accent)) 16%, transparent); pointer-events: none; transition: top 150ms ease, background 150ms ease; }}
     .source-line-highlight[hidden] {{ display: none; }}
     .video-panel {{ display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; background: var(--surface); overflow: auto; }}
@@ -4148,8 +4168,13 @@ def format_reactlog_html(
       const startLine = Math.max(0, node.line - 1);
       let endLine = Math.min(lines.length, startLine + 4);
 
-      let snippetLines = lines.slice(startLine, endLine);
-      codeBlock.querySelector('code').textContent = snippetLines.join('\\n');
+      let snippetHtml = '';
+      for (let i = startLine; i < endLine; i++) {{
+        const lineNum = i + 1;
+        const lineText = escapeHTML(lines[i]);
+        snippetHtml += `<div class="source-line${{lineNum === node.line ? ' is-active' : ''}}"><span class="source-line-num" aria-hidden="true">${{lineNum}}</span><span class="source-line-content">${{lineText}}</span></div>`;
+      }}
+      codeBlock.querySelector('code').innerHTML = snippetHtml;
 
       if (refsBlock) {{
         const children = Array.from(adjDownstream.get(node.id) || []);
@@ -4593,17 +4618,28 @@ def format_reactlog_html(
       if (!highlight) return;
 
       let targetLine = null;
-      if (ev && (ev.node_id || ev.id)) {{
+      if (selectedNodeId) {{
+        const selNode = nodeIndex.get(selectedNodeId);
+        if (selNode && selNode.line) targetLine = selNode.line;
+      }}
+      if (targetLine === null && ev && (ev.node_id || ev.id)) {{
         const nid = ev.node_id || ev.id;
         const node = nodeIndex.get(nid);
         if (node && node.line) targetLine = node.line;
       }}
 
+      document.querySelectorAll('.source-panel .source-line.is-active').forEach(el => el.classList.remove('is-active'));
+
       if (targetLine !== null) {{
         highlight.hidden = false;
         highlight.setAttribute('data-line', String(targetLine));
-        highlight.style.top = `${{(targetLine - 1) * 1.62}}em`;
+        highlight.style.top = `calc(0.75rem + ${{(targetLine - 1) * 1.62}}em)`;
         highlight.style.height = '1.62em';
+
+        const activeLineEl = document.querySelector(`.source-panel .source-line[data-line="${{targetLine}}"]`);
+        if (activeLineEl) {{
+          activeLineEl.classList.add('is-active');
+        }}
       }} else {{
         highlight.hidden = true;
       }}
