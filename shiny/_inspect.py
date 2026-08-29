@@ -887,12 +887,12 @@ def generate_reactlog(
 
 
 def load_reactlog_json(
-    json_data: str | Dict[str, Any] | List[Any],
+    json_data: str | Dict[str, Any] | List[Any] | Any,
     source_code: Optional[str] = None,
 ) -> Dict[str, Any]:
     if isinstance(json_data, str):
         try:
-            parsed = json.loads(json_data)
+            parsed: Any = json.loads(json_data)
         except json.JSONDecodeError as e:
             return {
                 "success": False,
@@ -913,21 +913,41 @@ def load_reactlog_json(
     existing_edges: Optional[List[Dict[str, Any]]] = None
 
     if isinstance(parsed, list):
-        raw_events = [e for e in parsed if isinstance(e, dict)]
+        for e in cast(List[Any], parsed):
+            if isinstance(e, dict):
+                raw_events.append(cast(Dict[str, Any], e))
     elif isinstance(parsed, dict):
-        version = str(parsed.get("version", "1.0"))
-        session_name = str(parsed.get("session", "default"))
-        if "nodes" in parsed and isinstance(parsed["nodes"], list):
-            existing_nodes = parsed["nodes"]
-        if "edges" in parsed and isinstance(parsed["edges"], list):
-            existing_edges = parsed["edges"]
+        dict_data = cast(Dict[str, Any], parsed)
+        version = str(dict_data.get("version", "1.0"))
+        session_name = str(dict_data.get("session", "default"))
+        nodes_field = dict_data.get("nodes")
+        if isinstance(nodes_field, list):
+            existing_nodes = []
+            for n in cast(List[Any], nodes_field):
+                if isinstance(n, dict):
+                    existing_nodes.append(cast(Dict[str, Any], n))
+        edges_field = dict_data.get("edges")
+        if isinstance(edges_field, list):
+            existing_edges = []
+            for ed in cast(List[Any], edges_field):
+                if isinstance(ed, dict):
+                    existing_edges.append(cast(Dict[str, Any], ed))
 
-        if "log" in parsed and isinstance(parsed["log"], list):
-            raw_events = [e for e in parsed["log"] if isinstance(e, dict)]
-        elif "events" in parsed and isinstance(parsed["events"], list):
-            raw_events = [e for e in parsed["events"] if isinstance(e, dict)]
-        elif "entries" in parsed and isinstance(parsed["entries"], list):
-            raw_events = [e for e in parsed["entries"] if isinstance(e, dict)]
+        log_field = dict_data.get("log")
+        events_field = dict_data.get("events")
+        entries_field = dict_data.get("entries")
+        target_field: Optional[List[Any]] = None
+        if isinstance(log_field, list):
+            target_field = cast(List[Any], log_field)
+        elif isinstance(events_field, list):
+            target_field = cast(List[Any], events_field)
+        elif isinstance(entries_field, list):
+            target_field = cast(List[Any], entries_field)
+
+        if target_field is not None:
+            for ev_item in target_field:
+                if isinstance(ev_item, dict):
+                    raw_events.append(cast(Dict[str, Any], ev_item))
 
     nodes_map: Dict[str, Dict[str, Any]] = {}
     edges_set: Set[tuple[str, str]] = set()
@@ -1016,9 +1036,11 @@ def load_reactlog_json(
             if clean_type in ("observable", "input") or str(nid).startswith("input:"):
                 role = "source"
                 clean_type = "input"
-            elif clean_type in ("observer", "output", "effect") or str(nid).startswith(
-                "output:"
-            ) or str(nid).startswith("effect:"):
+            elif (
+                clean_type in ("observer", "output", "effect")
+                or str(nid).startswith("output:")
+                or str(nid).startswith("effect:")
+            ):
                 role = "observer"
                 clean_type = "output"
             elif clean_type in ("calc", "reactive"):
@@ -1568,7 +1590,9 @@ def format_reactlog_html(
         .replace(">", "\\u003e")
         .replace("&", "\\u0026")
     )
-    safe_theme = html_lib.escape(theme if theme in ("dark", "light", "auto") else "dark")
+    safe_theme = html_lib.escape(
+        theme if theme in ("dark", "light", "auto") else "dark"
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="{safe_theme}">
