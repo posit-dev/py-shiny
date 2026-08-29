@@ -1,3 +1,28 @@
 {
-  "errors": []
+  "errors": [
+    {
+      "line": 314,
+      "column": 13,
+      "stop_line": 317,
+      "stop_column": 15,
+      "path": "shiny/plotutils.py",
+      "code": -2,
+      "name": "unsupported-operation",
+      "description": "Cannot set item in `_iLocIndexerFrame[DataFrame]`\n  Argument `tuple[ndarray[tuple[int, ...], dtype[signedinteger[_NBitIntP]]], int | ndarray[tuple[int, ...], dtype[numpy.bool]] | slice[Any, Any, Any]]` is not assignable to parameter `idx` with type `Index[Unknown] | Series[int] | int | list[int] | ndarray[tuple[int, ...], dtype[integer]] | slice[Any, Any, Any] | tuple[IndexType, IndexType] | tuple[IndexType, int] | tuple[int, IndexType] | tuple[int, int]` in function `pandas.core.frame._iLocIndexerFrame.__setitem__`",
+      "concise_description": "Cannot set item in `_iLocIndexerFrame[DataFrame]`",
+      "severity": "error"
+    },
+    {
+      "line": 250,
+      "column": 25,
+      "stop_line": 250,
+      "stop_column": 50,
+      "path": "shiny/render/_data_frame_utils/_tbl_data.py",
+      "code": -2,
+      "name": "bad-argument-type",
+      "description": "Argument `narwhals.series.Series[Any]` is not assignable to parameter `col` with type `narwhals.stable.v1.Series` in function `serialize_dtype`",
+      "concise_description": "Argument `narwhals.series.Series[Any]` is not assignable to parameter `col` with type `narwhals.stable.v1.Series` in function `serialize_dtype`",
+      "severity": "error"
+    }
+  ]
 }

@@ -785,11 +785,15 @@ def generate_reactlog(
                             "trigger_label": human_trigger,
                             "human_action": human_trigger,
                             "trigger_node_id": node_id,
-                            "trigger_value": str(action_val) if action_val is not None else None,
+                            "trigger_value": (
+                                str(action_val) if action_val is not None else None
+                            ),
                             "invalidated_nodes": sorted(list(invalidated_nodes)),
                             "inferred_executions": [t["id"] for t in eval_order],
                             "observed_executions": [node_id],
-                            "observed_outputs": [t["id"] for t in eval_order if t["role"] == "observer"],
+                            "observed_outputs": [
+                                t["id"] for t in eval_order if t["role"] == "observer"
+                            ],
                         }
                     )
                 else:
@@ -1604,7 +1608,9 @@ def _record_session_sync(
             elif auto_interact:
                 try:
                     time.sleep(0.8)
-                    input_locators = page.locator("input.shiny-input-number, input.shiny-input-text, input[type='number'], input[type='text']").all()
+                    input_locators = page.locator(
+                        "input.shiny-input-number, input.shiny-input-text, input[type='number'], input[type='text']"
+                    ).all()
                     for inp in input_locators[:3]:
                         try:
                             val = inp.input_value()
@@ -1616,7 +1622,9 @@ def _record_session_sync(
                         except Exception:
                             pass
 
-                    buttons = page.locator("button.action-button, button.btn-primary, button.btn").all()
+                    buttons = page.locator(
+                        "button.action-button, button.btn-primary, button.btn"
+                    ).all()
                     for btn in buttons[:2]:
                         try:
                             btn.click()
@@ -2892,6 +2900,14 @@ def format_reactlog_html(
       }}
     }}
 
+    function filterItems(arr, predicate) {{
+      const out = [];
+      for (const item of (arr || [])) {{
+        if (predicate(item)) out.push(item);
+      }}
+      return out;
+    }}
+
     function cleanName(n) {{
       if (!n) return '';
       let s = String(n);
@@ -2925,11 +2941,9 @@ def format_reactlog_html(
               value: w.trigger_value
             }});
           }}
-          const calcs = (w.inferred_executions || [])
-            .filter(id => id.startsWith('calc:'))
+          const calcs = filterItems(w.inferred_executions || [], id => id.startsWith('calc:'))
             .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
-          const outputs = (w.inferred_executions || [])
-            .filter(id => id.startsWith('output:'))
+          const outputs = filterItems(w.inferred_executions || [], id => id.startsWith('output:'))
             .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
 
           return {{
@@ -2958,7 +2972,7 @@ def format_reactlog_html(
           }};
         }});
         allBursts = mapped;
-        actionWaves = mapped.filter(w => !w.isInit);
+        actionWaves = filterItems(mapped, w => !w.isInit);
         return;
       }}
       actionWaves = [];
@@ -3482,7 +3496,7 @@ def format_reactlog_html(
       }}
 
       const triggerInputs = curWave.inputs || [];
-      const triggerNodeIds = triggerInputs.map(i => i.nodeId).filter(Boolean);
+      const triggerNodeIds = filterItems(triggerInputs.map(i => i.nodeId), Boolean);
 
       const downstreamSet = new Set();
       triggerNodeIds.forEach(tid => {{
@@ -3492,8 +3506,8 @@ def format_reactlog_html(
         }});
       }});
 
-      const causalCalcs = curWave.calcs.filter(c => triggerNodeIds.length === 0 || downstreamSet.has(c.nodeId) || downstreamSet.has(cleanName(c.name)));
-      const causalOutputs = curWave.outputs.filter(o => triggerNodeIds.length === 0 || downstreamSet.has(o.nodeId) || downstreamSet.has(cleanName(o.name)));
+      const causalCalcs = filterItems(curWave.calcs, c => triggerNodeIds.length === 0 || downstreamSet.has(c.nodeId) || downstreamSet.has(cleanName(c.name)));
+      const causalOutputs = filterItems(curWave.outputs, o => triggerNodeIds.length === 0 || downstreamSet.has(o.nodeId) || downstreamSet.has(cleanName(o.name)));
 
       let actionDesc = curWave.humanAction || curWave.triggerLabel || 'User action';
       if (actionDesc.includes(':')) {{
@@ -3618,9 +3632,9 @@ def format_reactlog_html(
       document.getElementById('stat-observed').textContent = String(obsCount);
       document.getElementById('stat-inferred').textContent = String(infCount);
 
-      const inCount = nodes.filter(n => n.role === 'source' || n.type === 'input').length;
-      const calcCount = nodes.filter(n => n.role === 'conductor' || n.type === 'calc').length;
-      const outCount = nodes.filter(n => n.role === 'observer' || n.type === 'output' || n.type === 'effect').length;
+      const inCount = filterItems(nodes, n => n.role === 'source' || n.type === 'input').length;
+      const calcCount = filterItems(nodes, n => n.role === 'conductor' || n.type === 'calc').length;
+      const outCount = filterItems(nodes, n => n.role === 'observer' || n.type === 'output' || n.type === 'effect').length;
       const nodesSubtext = document.getElementById('stat-nodes-subtext');
       if (nodesSubtext) nodesSubtext.textContent = `${{inCount}} in · ${{calcCount}} calc · ${{outCount}} out`;
 
@@ -3908,8 +3922,8 @@ def format_reactlog_html(
           if (e.node_label) executedNamesInBurst.add(cleanName(e.node_label));
         }});
 
-        const activeParents = directParents.filter(p => executedNamesInBurst.has(cleanName(p.name || p.id)));
-        const inactiveParents = directParents.filter(p => !activeParents.includes(p));
+        const activeParents = filterItems(directParents, p => executedNamesInBurst.has(cleanName(p.name || p.id)));
+        const inactiveParents = filterItems(directParents, p => !activeParents.includes(p));
 
         let narrative = '';
         if (targetNode.role === 'source' || targetNode.type === 'input') {{
@@ -3955,7 +3969,7 @@ def format_reactlog_html(
 
         let upstreamNote = 'No upstream dependencies were invalidated in this action.';
         if (curWave && curWave.invalidatedNodes && curWave.invalidatedNodes.size > 0) {{
-          const invParents = directParents.filter(p => curWave.invalidatedNodes.has(p.id));
+          const invParents = filterItems(directParents, p => curWave.invalidatedNodes.has(p.id));
           if (invParents.length > 0) {{
             upstreamNote = `Upstream dependencies invalidated: ${{invParents.map(p => escapeHTML(p.label)).join(', ')}}`;
           }}

@@ -16,7 +16,7 @@ def chat_mod_server(input: Inputs, output: Outputs, session: Session):
     async def _():
         user = chat.user_input()
         assert user is not None
-        await chat.append_message(f"You said: {user.text}")
+        await chat.append_message(f"You said: {user}")
 
 
 app_ui = ui.page_fillable(

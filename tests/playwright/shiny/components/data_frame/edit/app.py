@@ -267,7 +267,6 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     from shinywidgets import render_widget
 
     # shinywidgets does not statically know plotly's Figure is renderable
-    # pyrefly: ignore[bad-argument-type]
     @render_widget
     def country_detail_pop():  # pyright: ignore[reportUnknownParameterType]
         import plotly.express as px
