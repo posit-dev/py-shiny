@@ -69,8 +69,8 @@ def _parse_input_value(val_str: str) -> Any:
     "--video",
     "video_path",
     type=str,
-    default="recording.webm",
-    help="File path to save the recorded browser session video (default: recording.webm).",
+    default=None,
+    help="File path to save the recorded browser session video (default: recording.webm when --record is used).",
 )
 @click.option(
     "--headless",
@@ -85,8 +85,8 @@ def _parse_input_value(val_str: str) -> Any:
     type=click.Choice(
         ["text", "mermaid", "dot", "json", "html", "reactlog"], case_sensitive=False
     ),
-    default="text",
-    help="Output format for the dependency graph (default: text).",
+    default=None,
+    help="Output format for the dependency graph (default: text, or html when --html is used).",
 )
 @click.option(
     "--theme",
@@ -143,9 +143,9 @@ def inspect(
     path: Optional[str],
     code: Optional[str],
     record_flag: bool,
-    video_path: str,
+    video_path: Optional[str],
     headless: bool,
-    output_format: str,
+    output_format: Optional[str],
     theme: str,
     reactlog_flag: bool,
     html_out: Optional[str],
@@ -155,13 +155,18 @@ def inspect(
     inputs_json: Optional[str],
 ) -> None:
     if json_flag:
-        output_format = "json"
+        selected_format = "json"
     elif mermaid_flag:
-        output_format = "mermaid"
+        selected_format = "mermaid"
     elif reactlog_flag:
-        output_format = "reactlog"
+        selected_format = "reactlog"
+    elif output_format is not None:
+        selected_format = output_format.lower()
     elif html_out is not None or record_flag:
-        output_format = "html"
+        selected_format = "html"
+    else:
+        selected_format = "text"
+    output_format = selected_format
 
     sim_inputs: Dict[str, Any] = {}
     if inputs_json:
@@ -269,7 +274,7 @@ def inspect(
                 sys.exit(1)
 
         recorded_actions: Optional[List[Dict[str, Any]]] = None
-        actual_video_path: Optional[str] = video_path if video_path else None
+        actual_video_path: Optional[str] = None
 
         if record_flag:
             if not app_file_to_run:
@@ -286,6 +291,9 @@ def inspect(
                     click.echo(cli_danger("Cannot record without an app file."))
                 sys.exit(1)
 
+            effective_video_path = (
+                video_path if video_path is not None else "recording.webm"
+            )
             is_machine_output = output_format in ("json", "mermaid", "dot")
             click.echo(
                 cli_bold(f"Recording Playwright session for {target_desc}..."),
@@ -293,7 +301,7 @@ def inspect(
             )
             rec_result = record_shiny_session(
                 app_file_to_run,
-                video_path=video_path,
+                video_path=effective_video_path,
                 headless=headless,
             )
             if not rec_result.get("success"):

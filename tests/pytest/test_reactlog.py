@@ -791,3 +791,215 @@ def test_cli_inspect_theme_and_json_file(tmp_path: Path):
     assert 'data-theme="light"' in html_content
     assert "input:x" in html_content
     assert "output:y" in html_content
+
+
+def test_reactive_event_decorator_semantics():
+    code = """from shiny import reactive
+from shiny.express import input, render, ui
+
+ui.input_action_button("go", "Go")
+ui.input_text("secret", "Secret", value="hidden")
+
+@reactive.effect
+@reactive.event(input.go)
+def update():
+    x = input.secret()
+
+@reactive.calc
+@reactive.event(input.go)
+def compute():
+    return input.secret() + " computed"
+
+@render.text
+def txt():
+    return compute()
+"""
+    graph = inspect_reactive_graph(code)
+    assert graph["success"] is True
+
+    edges = graph["edges"]
+    assert {"from": "input:go", "to": "effect:update"} in edges
+    assert {"from": "input:secret", "to": "effect:update"} not in edges
+
+    assert {"from": "input:go", "to": "calc:compute"} in edges
+    assert {"from": "input:secret", "to": "calc:compute"} not in edges
+
+    assert {"from": "calc:compute", "to": "output:txt"} in edges
+
+
+def test_reactive_event_multiple_triggers():
+    code = """from shiny import reactive
+from shiny.express import input, render
+
+@reactive.calc
+def base_val():
+    return 10
+
+@reactive.calc
+@reactive.event(input.btn1, input.btn2, base_val)
+def multi_triggered():
+    body_val = input.ignored_input()
+    return body_val * 2
+"""
+    graph = inspect_reactive_graph(code)
+    assert graph["success"] is True
+
+    edges = graph["edges"]
+    assert {"from": "input:btn1", "to": "calc:multi_triggered"} in edges
+    assert {"from": "input:btn2", "to": "calc:multi_triggered"} in edges
+    assert {"from": "calc:base_val", "to": "calc:multi_triggered"} in edges
+    assert {"from": "input:ignored_input", "to": "calc:multi_triggered"} not in edges
+
+
+def test_reactive_isolate_block_semantics():
+    code = """from shiny import reactive
+from shiny.express import input, render
+
+@render.text
+def out():
+    val_a = input.a()
+    with reactive.isolate():
+        val_b = input.b()
+    return f"{val_a} {val_b}"
+"""
+    graph = inspect_reactive_graph(code)
+    assert graph["success"] is True
+
+    edges = graph["edges"]
+    assert {"from": "input:a", "to": "output:out"} in edges
+    assert {"from": "input:b", "to": "output:out"} not in edges
+
+
+def test_real_shiny_for_r_reactlog_parsing_and_epoch_time_normalization():
+    r_reactlog = {
+        "version": "1.0",
+        "session": "r_session_123",
+        "log": [
+            {
+                "action": "define",
+                "reactId": "r1",
+                "label": "input$num",
+                "type": "observable",
+                "time": 1650000000.100,
+                "session": "r_session_123",
+            },
+            {
+                "action": "define",
+                "reactId": "r2",
+                "label": "calc_double",
+                "type": "calc",
+                "time": 1650000000.250,
+                "session": "r_session_123",
+            },
+            {
+                "action": "define",
+                "reactId": "r3",
+                "label": "output$plot",
+                "type": "observer",
+                "time": 1650000000.300,
+                "session": "r_session_123",
+            },
+            {
+                "action": "dependsOn",
+                "reactId": "r2",
+                "depOnReactId": "r1",
+                "time": 1650000000.400,
+                "session": "r_session_123",
+            },
+            {
+                "action": "dependsOn",
+                "reactId": "r3",
+                "depOnReactId": "r2",
+                "time": 1650000000.500,
+                "session": "r_session_123",
+            },
+            {
+                "action": "valueChange",
+                "reactId": "r1",
+                "value": "99",
+                "time": 1650000001.100,
+                "session": "r_session_123",
+            },
+        ],
+    }
+
+    loaded = load_reactlog_json(r_reactlog)
+    assert loaded["success"] is True
+    assert len(loaded["nodes"]) == 3
+    assert len(loaded["edges"]) == 2
+    assert len(loaded["events"]) == 6
+
+    assert {"from": "r1", "to": "r2"} in loaded["edges"]
+    assert {"from": "r2", "to": "r3"} in loaded["edges"]
+
+    events = loaded["events"]
+    assert events[0]["time_sec"] == 0.0
+    assert round(events[-1]["time_sec"], 1) == 1.0
+    assert all(e["time_sec"] < 100.0 for e in events)
+
+
+def test_reactlog_html_xss_protection_on_imported_data():
+    malicious_log = {
+        "version": "1.0",
+        "session": "xss_session",
+        "log": [
+            {
+                "action": "define",
+                "reactId": "<img src=x onerror=alert(1)>",
+                "label": "<script>alert('xss')</script>",
+                "type": "observable",
+                "time": 1.0,
+                "details": "<b onmouseover=alert(2)>Click me</b>",
+            },
+            {
+                "action": "define",
+                "reactId": "out1",
+                "label": "Safe Output",
+                "type": "observer",
+                "time": 1.5,
+            },
+            {
+                "action": "dependsOn",
+                "reactId": "out1",
+                "depOnReactId": "<img src=x onerror=alert(1)>",
+                "time": 2.0,
+            },
+        ],
+    }
+
+    html = format_reactlog_html(malicious_log, source_code="# test")
+    assert "escapeHTML" in html
+    assert (
+        "<script>alert('xss')</script>" not in html
+        or "\\u003c" in html
+        or "\\u0022" in html
+        or "escapeHTML" in html
+    )
+
+
+def test_cli_inspect_record_with_format_json_and_video_defaults(tmp_path: Path):
+    app_file = tmp_path / "app.py"
+    app_file.write_text(
+        """from shiny.express import input, render, ui
+ui.input_numeric("x", "X", 10)
+@render.text
+def out():
+    return str(input.x())
+""",
+        encoding="utf-8",
+    )
+
+    runner = CliRunner()
+    res = runner.invoke(main, ["inspect", str(app_file), "--format", "json"])
+    assert res.exit_code == 0
+    data = json.loads(res.output)
+    assert data.get("success") is True
+    assert "nodes" in data
+    assert "edges" in data
+    assert "target" in data
+
+    html_out = tmp_path / "plain_report.html"
+    res_html = runner.invoke(main, ["inspect", str(app_file), "--html", str(html_out)])
+    assert res_html.exit_code == 0
+    html_text = html_out.read_text(encoding="utf-8")
+    assert 'id="video-tab"' not in html_text

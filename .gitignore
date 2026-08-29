@@ -144,3 +144,4 @@ tests/inspect-ai/scripts/test_metadata.json
 /.claude/plans/
 docs/plans/
 docs/superpowers/
+/dist_report

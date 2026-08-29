@@ -28,6 +28,30 @@ class GraphVisitor(ast.NodeVisitor):
         self.current_calc: Optional[str] = None
         self.current_output: Optional[str] = None
         self.current_effect: Optional[str] = None
+        self.isolated_depth: int = 0
+
+    def visit_With(self, node: ast.With) -> None:
+        is_isolate_block = False
+        for item in node.items:
+            ctx = item.context_expr
+            if isinstance(ctx, ast.Call):
+                func_name = self._get_decorator_name(ctx.func)
+                if func_name in ("reactive.isolate", "isolate") or func_name.endswith(
+                    ".isolate"
+                ):
+                    is_isolate_block = True
+            elif isinstance(ctx, (ast.Attribute, ast.Name)):
+                func_name = self._get_decorator_name(ctx)
+                if func_name in ("reactive.isolate", "isolate") or func_name.endswith(
+                    ".isolate"
+                ):
+                    is_isolate_block = True
+
+        if is_isolate_block:
+            self.isolated_depth += 1
+        self.generic_visit(node)
+        if is_isolate_block:
+            self.isolated_depth -= 1
 
     def visit_Call(self, node: ast.Call) -> None:
         func_name = ""
@@ -47,27 +71,41 @@ class GraphVisitor(ast.NodeVisitor):
             if input_id not in self.inputs:
                 self.inputs[input_id] = node.lineno
 
-        if (
-            isinstance(node.func, ast.Attribute)
-            and isinstance(node.func.value, ast.Name)
-            and node.func.value.id == "input"
-        ):
-            target_input = node.func.attr
-            if self.current_output and self.current_output in self.outputs:
-                self.outputs[self.current_output]["deps"].add(target_input)
-            elif self.current_effect and self.current_effect in self.effects:
-                self.effects[self.current_effect]["deps"].add(target_input)
-            elif self.current_calc and self.current_calc in self.calcs:
-                self.calcs[self.current_calc]["deps"].add(target_input)
+        is_isolate_call = func_name in (
+            "reactive.isolate",
+            "isolate",
+        ) or func_name.endswith(".isolate")
+        if is_isolate_call:
+            self.isolated_depth += 1
+            for arg in node.args:
+                self.visit(arg)
+            for kw in node.keywords:
+                self.visit(kw.value)
+            self.isolated_depth -= 1
+            return
 
-        if isinstance(node.func, ast.Name):
-            called_name = node.func.id
-            if self.current_output and self.current_output in self.outputs:
-                self.outputs[self.current_output]["calc_deps"].add(called_name)
-            elif self.current_effect and self.current_effect in self.effects:
-                self.effects[self.current_effect]["calc_deps"].add(called_name)
-            elif self.current_calc and self.current_calc in self.calcs:
-                self.calcs[self.current_calc]["calc_deps"].add(called_name)
+        if self.isolated_depth == 0:
+            if (
+                isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "input"
+            ):
+                target_input = node.func.attr
+                if self.current_output and self.current_output in self.outputs:
+                    self.outputs[self.current_output]["deps"].add(target_input)
+                elif self.current_effect and self.current_effect in self.effects:
+                    self.effects[self.current_effect]["deps"].add(target_input)
+                elif self.current_calc and self.current_calc in self.calcs:
+                    self.calcs[self.current_calc]["deps"].add(target_input)
+
+            if isinstance(node.func, ast.Name):
+                called_name = node.func.id
+                if self.current_output and self.current_output in self.outputs:
+                    self.outputs[self.current_output]["calc_deps"].add(called_name)
+                elif self.current_effect and self.current_effect in self.effects:
+                    self.effects[self.current_effect]["calc_deps"].add(called_name)
+                elif self.current_calc and self.current_calc in self.calcs:
+                    self.calcs[self.current_calc]["calc_deps"].add(called_name)
 
         self.generic_visit(node)
 
@@ -80,18 +118,65 @@ class GraphVisitor(ast.NodeVisitor):
             return f"{d.value.id}.{d.attr}"
         return ""
 
+    def _extract_event_triggers(self, d: ast.AST) -> tuple[Set[str], Set[str]]:
+        input_deps: Set[str] = set()
+        calc_deps: Set[str] = set()
+
+        if not isinstance(d, ast.Call):
+            return input_deps, calc_deps
+
+        def _process_expr(expr: ast.AST) -> None:
+            if (
+                isinstance(expr, ast.Attribute)
+                and isinstance(expr.value, ast.Name)
+                and expr.value.id == "input"
+            ):
+                input_deps.add(expr.attr)
+            elif isinstance(expr, ast.Call):
+                if (
+                    isinstance(expr.func, ast.Attribute)
+                    and isinstance(expr.func.value, ast.Name)
+                    and expr.func.value.id == "input"
+                ):
+                    input_deps.add(expr.func.attr)
+                elif isinstance(expr.func, ast.Name):
+                    calc_deps.add(expr.func.id)
+            elif isinstance(expr, ast.Name):
+                calc_deps.add(expr.id)
+            elif isinstance(expr, (ast.Tuple, ast.List)):
+                for elt in expr.elts:
+                    _process_expr(elt)
+
+        for arg in d.args:
+            _process_expr(arg)
+
+        return input_deps, calc_deps
+
     def _handle_func_def(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         decorators: List[str] = [
             name for d in node.decorator_list if (name := self._get_decorator_name(d))
         ]
 
+        has_event_decorator = False
+        event_input_deps: Set[str] = set()
+        event_calc_deps: Set[str] = set()
+
+        for d in node.decorator_list:
+            d_name = self._get_decorator_name(d)
+            if "event" in d_name:
+                has_event_decorator = True
+                inp_d, c_d = self._extract_event_triggers(d)
+                event_input_deps.update(inp_d)
+                event_calc_deps.update(c_d)
+
         is_effect = any("effect" in d or "Effect" in d for d in decorators)
         is_render = any(
             d.startswith("render.") or d.startswith("render_") for d in decorators
         )
-        is_calc = any(
-            ("calc" in d or "Calc" in d or "event" in d) and not is_effect
-            for d in decorators
+        is_calc = (
+            any(("calc" in d or "Calc" in d or "event" in d) for d in decorators)
+            and not is_effect
+            and not is_render
         )
 
         prev_out = self.current_output
@@ -102,28 +187,35 @@ class GraphVisitor(ast.NodeVisitor):
             self.current_output = node.name
             self.outputs[node.name] = {
                 "line": node.lineno,
-                "deps": set(),
-                "calc_deps": set(),
+                "deps": set(event_input_deps),
+                "calc_deps": set(event_calc_deps),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
             }
         elif is_effect:
             self.current_effect = node.name
             self.effects[node.name] = {
                 "line": node.lineno,
-                "deps": set(),
-                "calc_deps": set(),
+                "deps": set(event_input_deps),
+                "calc_deps": set(event_calc_deps),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
             }
         elif is_calc:
             self.current_calc = node.name
             self.calcs[node.name] = {
                 "line": node.lineno,
-                "deps": set(),
-                "calc_deps": set(),
+                "deps": set(event_input_deps),
+                "calc_deps": set(event_calc_deps),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
             }
 
-        self.generic_visit(node)
+        if has_event_decorator:
+            self.isolated_depth += 1
+
+        for stmt in node.body:
+            self.visit(stmt)
+
+        if has_event_decorator:
+            self.isolated_depth -= 1
 
         self.current_output = prev_out
         self.current_effect = prev_effect
@@ -289,6 +381,7 @@ def _make_event(
         "action": act,
         "event": event,
         "id": node_id,
+        "reactId": node_id,
         "node_id": node_id,
         "label": node_label,
         "node_label": node_label,
@@ -306,6 +399,7 @@ def _make_event(
     }
     if act == "dependsOn" or edge_from:
         item["dependsOn"] = edge_from
+        item["depOnReactId"] = edge_from
         item["edge_from"] = edge_from
         item["edge_to"] = edge_to
     elif edge_from or edge_to:
@@ -954,36 +1048,70 @@ def load_reactlog_json(
 
     if existing_nodes:
         for n in existing_nodes:
-            nid = str(n.get("id", ""))
+            nid = str(n.get("reactId") or n.get("id") or n.get("node_id") or "")
             if nid:
                 nodes_map[nid] = dict(n)
 
     if existing_edges:
         for e in existing_edges:
-            f, t = str(e.get("from", "")), str(e.get("to", ""))
+            f = str(e.get("depOnReactId") or e.get("from") or e.get("dependsOn") or "")
+            t = str(e.get("reactId") or e.get("to") or "")
             if f and t:
                 edges_set.add((f, t))
+
+    raw_times: List[float] = []
+    for item in raw_events:
+        t_val = (
+            item.get("time")
+            or item.get("time_sec")
+            or (
+                float(item.get("timestamp", 0)) / 1000.0
+                if item.get("timestamp")
+                else None
+            )
+        )
+        if t_val is not None:
+            try:
+                raw_times.append(float(t_val))
+            except (ValueError, TypeError):
+                pass
+
+    min_epoch_time = 0.0
+    if raw_times and min(raw_times) > 100000.0:
+        min_epoch_time = min(raw_times)
 
     normalized_events: List[Dict[str, Any]] = []
     step_idx = 0
 
     for item in raw_events:
         action = str(item.get("action") or item.get("event") or "")
-        nid = item.get("node_id") or item.get("id")
-        lbl = item.get("node_label") or item.get("label") or nid or ""
-        ntype = item.get("node_type") or item.get("type") or "calc"
+        nid = item.get("reactId") or item.get("node_id") or item.get("id")
+        lbl = item.get("label") or item.get("node_label") or nid or ""
+        ntype = item.get("type") or item.get("node_type") or "calc"
         val = item.get("value")
         val_str = str(val) if val is not None else None
 
-        dep_from = item.get("dependsOn") or item.get("edge_from")
-        dep_to = nid or item.get("edge_to")
+        dep_from = (
+            item.get("depOnReactId") or item.get("dependsOn") or item.get("edge_from")
+        )
+        dep_to = nid or item.get("reactId") or item.get("edge_to")
 
-        t_sec = float(
+        t_raw = float(
             item.get("time")
             or item.get("time_sec")
-            or (int(item.get("timestamp") or 0) / 1000.0)
+            or (
+                float(item.get("timestamp", 0)) / 1000.0
+                if item.get("timestamp")
+                else 0.0
+            )
+            or 0.0
         )
-        t_ms = int(item.get("timestamp") or (t_sec * 1000))
+        t_sec = (
+            round(max(0.0, t_raw - min_epoch_time), 4)
+            if min_epoch_time > 0
+            else round(max(0.0, t_raw), 4)
+        )
+        t_ms = int(t_sec * 1000)
 
         prov = item.get("provenance") or (
             "observed"
@@ -1047,9 +1175,10 @@ def load_reactlog_json(
                 role = "conductor"
                 clean_type = "calc"
 
+            name_val = str(nid).split(":", 1)[1] if ":" in str(nid) else str(nid)
             nodes_map[str(nid)] = {
                 "id": str(nid),
-                "name": str(nid).split(":", 1)[-1] if ":" in str(nid) else str(nid),
+                "name": name_val,
                 "type": clean_type,
                 "role": role,
                 "label": str(lbl),
@@ -2238,8 +2367,9 @@ def format_reactlog_html(
       if (curDisplay) curDisplay.textContent = formatTime(0);
 
       ruler.innerHTML = '';
-      const stepSec = maxSessionDuration <= 5 ? 0.5 : (maxSessionDuration <= 20 ? 1.0 : 2.0);
-      for (let sec = 0; sec <= maxSessionDuration + 0.001; sec += stepSec) {{
+      const safeDuration = Math.min(7200, Math.max(1.0, maxSessionDuration));
+      const stepSec = safeDuration <= 5 ? 0.5 : (safeDuration <= 20 ? 1.0 : (safeDuration <= 120 ? 5.0 : Math.max(10.0, safeDuration / 20)));
+      for (let sec = 0; sec <= safeDuration + 0.001; sec += stepSec) {{
         const pct = (sec / maxSessionDuration) * 100;
         if (pct > 100) break;
         const isMajor = Math.abs(sec - Math.round(sec)) < 0.01;
@@ -2437,11 +2567,11 @@ def format_reactlog_html(
             }}
           }}
 
-          let tooltipHtml = `<span class="tooltip-time">⏱ ${{formatTime(targetSec)}}</span>`;
+          let tooltipHtml = `<span class="tooltip-time">⏱ ${{escapeHTML(formatTime(targetSec))}}</span>`;
           if (nearestWave && minDiff < 0.8) {{
-            const inList = nearestWave.inputs.map(i => (i.isClick ? `👆 click on ${{i.name}}` : `📥 ${{i.name}}`)).join(', ');
-            const outList = nearestWave.outputs.map(o => o.name).join(', ');
-            const calcList = nearestWave.calcs.map(c => c.name).join(', ');
+            const inList = nearestWave.inputs.map(i => (i.isClick ? `👆 click on ${{escapeHTML(i.name)}}` : `📥 ${{escapeHTML(i.name)}}`)).join(', ');
+            const outList = nearestWave.outputs.map(o => escapeHTML(o.name)).join(', ');
+            const calcList = nearestWave.calcs.map(c => escapeHTML(c.name)).join(', ');
 
             if (inList) tooltipHtml += `<span class="tooltip-title">${{inList}}</span>`;
             if (calcList || outList) {{
@@ -2589,6 +2719,16 @@ def format_reactlog_html(
       const firstActionIdx = reactlogData.first_interaction_step || 0;
       setPhaseFilter('interaction');
       seekTo(firstActionIdx);
+    }}
+
+    function escapeHTML(str) {{
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }}
 
     function formatTime(sec) {{
@@ -2940,7 +3080,7 @@ def format_reactlog_html(
       if (ev && (ev.phase === 'interaction' || !['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act)) && (act === 'inputChange' || act === 'userClick' || act === 'userAction' || act === 'outputUpdated' || act === 'valueChange')) {{
         const evTime = ev.time_sec !== undefined ? ev.time_sec : ev.time;
         const timeStr = evTime !== undefined ? `[${{formatTime(evTime)}}] ` : '';
-        toast.innerHTML = `${{ICONS.video}} ${{timeStr}}${{ev.details || act}}`;
+        toast.innerHTML = `${{ICONS.video}} ${{escapeHTML(timeStr)}}${{escapeHTML(ev.details || act)}}`;
         toast.hidden = false;
       }} else {{
         toast.hidden = true;
@@ -3186,14 +3326,24 @@ def format_reactlog_html(
         const normEvents = [];
         let sIdx = 0;
 
+        let minEpochTime = Infinity;
+        let isEpoch = false;
+        rawEvents.forEach(item => {{
+          const t = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
+          if (t > 100000) isEpoch = true;
+          if (t > 0 && t < minEpochTime) minEpochTime = t;
+        }});
+        const baseEpoch = isEpoch && isFinite(minEpochTime) ? minEpochTime : 0;
+
         rawEvents.forEach(item => {{
           const act = item.action || item.event || '';
-          const nid = item.node_id || item.id;
-          const lbl = item.node_label || item.label || nid || '';
-          const ntype = item.node_type || item.type || 'calc';
-          const depFrom = item.dependsOn || item.edge_from;
-          const depTo = nid || item.edge_to;
-          const tSec = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
+          const nid = item.reactId || item.node_id || item.id;
+          const lbl = item.label || item.node_label || nid || '';
+          const ntype = item.type || item.node_type || 'calc';
+          const depFrom = item.depOnReactId || item.dependsOn || item.edge_from;
+          const depTo = nid || item.reactId || item.edge_to;
+          const rawT = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
+          const tSec = Math.max(0, baseEpoch > 0 ? (rawT - baseEpoch) : rawT);
           const tMs = Number(item.timestamp || (tSec * 1000));
           const prov = item.provenance || (['valueChange', 'inputChange', 'userClick', 'userAction'].includes(act) ? 'observed' : 'inferred');
           const phase = item.phase || (['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act) ? 'init' : 'interaction');
@@ -3205,14 +3355,14 @@ def format_reactlog_html(
           if (nid && !nodesMap[nid]) {{
             let role = 'conductor';
             let ctype = String(ntype).toLowerCase();
-            if (['observable', 'input'].includes(ctype) || String(nid).startsWith('input:')) {{
+            if (['observable', 'input'].includes(ctype) || String(nid).startsWith('input:') || String(nid).startsWith('input$')) {{
               role = 'source'; ctype = 'input';
-            }} else if (['observer', 'output', 'effect'].includes(ctype) || String(nid).startsWith('output:') || String(nid).startsWith('effect:')) {{
+            }} else if (['observer', 'output', 'effect'].includes(ctype) || String(nid).startsWith('output:') || String(nid).startsWith('output$') || String(nid).startsWith('effect:')) {{
               role = 'observer'; ctype = 'output';
             }}
             nodesMap[nid] = {{
               id: nid,
-              name: String(nid).includes(':') ? String(nid).split(':')[1] : nid,
+              name: String(nid).includes(':') ? String(nid).split(':')[1] : (String(nid).includes('$') ? String(nid).split('$')[1] : nid),
               type: ctype,
               role: role,
               label: lbl,
@@ -3225,6 +3375,7 @@ def format_reactlog_html(
             action: act,
             event: act,
             id: nid,
+            reactId: nid,
             node_id: nid,
             label: lbl,
             node_label: lbl,
@@ -3237,6 +3388,7 @@ def format_reactlog_html(
             time_sec: tSec,
             timestamp: tMs,
             value: item.value !== undefined ? String(item.value) : null,
+            depOnReactId: depFrom,
             edge_from: depFrom,
             edge_to: depTo,
             details: item.details || `Event ${{act}} on ${{lbl}}`
