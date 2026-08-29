@@ -1173,3 +1173,14 @@ def test_record_session_options_passive_by_default():
         sig_cb = py_inspect.signature(inspect_cli_fn.callback)
         assert sig_cb.parameters["auto_interact"].default is False
         assert sig_cb.parameters["redact_inputs"].default is False
+
+
+def test_source_code_html_includes_line_numbers():
+    from shiny._inspect import _format_python_source_html
+
+    code = "from shiny.express import input, render, ui\n\nui.input_numeric('x', 'X', 10)\n"
+    html = _format_python_source_html(code)
+    assert 'class="source-line" data-line="1"' in html
+    assert '<span class="source-line-num" aria-hidden="true">1</span>' in html
+    assert 'class="source-line" data-line="3"' in html
+    assert '<span class="source-line-num" aria-hidden="true">3</span>' in html
