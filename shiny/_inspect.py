@@ -622,6 +622,7 @@ def generate_reactlog(
             "end_step": step - 1,
             "trigger": "Init",
             "trigger_label": "Init",
+            "short_label": "Init",
             "human_action": "Init",
             "trigger_node_id": "",
             "trigger_value": None,
@@ -782,7 +783,8 @@ def generate_reactlog(
                             "start_step": action_start_step,
                             "end_step": step - 1,
                             "trigger": human_trigger,
-                            "trigger_label": human_trigger,
+                            "trigger_label": raw_name,
+                            "short_label": raw_name,
                             "human_action": human_trigger,
                             "trigger_node_id": node_id,
                             "trigger_value": (
@@ -876,6 +878,7 @@ def generate_reactlog(
                         "end_step": step - 1,
                         "trigger": f"Click: {action.get('text', raw_name)}",
                         "trigger_label": f"Click: {action.get('text', raw_name)}",
+                        "short_label": f"Click: {action.get('text', raw_name)[:12]}",
                         "human_action": f"Click: {action.get('text', raw_name)}",
                         "trigger_node_id": "",
                         "trigger_value": None,
@@ -2153,17 +2156,20 @@ def format_reactlog_html(
     .lane-output .chip-dot {{ background: var(--output); box-shadow: 0 0 4px var(--output); }}
 
     /* Level 1: Reactive Burst Ribbon */
-    .trace-burst-ribbon {{ position: relative; width: 100%; height: 28px; background: var(--trace-burst-bg); border-radius: 6px; display: flex; align-items: center; overflow: hidden; padding: 0 0.3rem; border: 1px solid var(--border); }}
+    .trace-burst-ribbon {{ position: relative; width: 100%; height: 30px; background: var(--trace-burst-bg); border-radius: 6px; display: flex; align-items: center; overflow: hidden; padding: 0 0.3rem; border: 1px solid var(--border); }}
     .burst-ribbon-track {{ position: relative; width: 100%; height: 100%; display: flex; align-items: center; }}
-    .burst-anchor {{ position: absolute; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 0.3rem; background: transparent; border: 1px solid transparent; color: var(--text-muted); border-radius: 999px; padding: 0.14rem 0.48rem; font: 650 0.62rem var(--mono); cursor: pointer; transition: all 120ms ease; z-index: 3; white-space: nowrap; opacity: 0.72; }}
-    .burst-anchor:hover {{ background: var(--surface-2); border-color: var(--border); color: var(--text); opacity: 1; }}
-    .burst-anchor.is-active {{ background: var(--surface-elevated); border: 1.5px solid var(--accent); color: var(--accent); opacity: 1; box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent); transform: translate(-50%, -50%) scale(1.05); font-weight: 800; z-index: 5; }}
-    .burst-anchor-dot {{ width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }}
+    .burst-anchor {{ position: absolute; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 0.28rem; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); border-radius: 999px; padding: 0.12rem 0.44rem; font: 650 0.62rem var(--mono); cursor: pointer; transition: all 120ms ease; z-index: 3; white-space: nowrap; max-width: 105px; }}
+    .burst-anchor .burst-anchor-label {{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 65px; }}
+    .burst-anchor:hover {{ background: var(--surface-3); border-color: var(--border-strong); color: var(--text); z-index: 6; max-width: 170px; }}
+    .burst-anchor:hover .burst-anchor-label {{ max-width: 110px; }}
+    .burst-anchor.is-active {{ background: var(--surface-elevated); border: 1.5px solid var(--accent); color: var(--accent); opacity: 1; box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent); transform: translate(-50%, -50%) scale(1.04); font-weight: 800; z-index: 7; max-width: 190px; }}
+    .burst-anchor.is-active .burst-anchor-label {{ max-width: 120px; }}
+    .burst-anchor-dot {{ width: 5px; height: 5px; min-width: 5px; border-radius: 50%; background: var(--text-muted); }}
     .burst-anchor.is-active .burst-anchor-dot {{ background: var(--accent); box-shadow: 0 0 6px var(--accent); }}
     .burst-anchor.is-init .burst-anchor-dot {{ background: var(--calc); }}
-    .burst-anchor-count {{ font-size: 0.54rem; color: var(--text-muted); background: var(--surface); padding: 0.04rem 0.22rem; border-radius: 4px; }}
+    .burst-anchor-count {{ font-size: 0.54rem; color: var(--text-muted); background: var(--surface); padding: 0.04rem 0.22rem; border-radius: 4px; white-space: nowrap; }}
     .burst-anchor.is-active .burst-anchor-count {{ color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }}
-    .time-break-indicator {{ position: absolute; top: 50%; transform: translate(-50%, -50%); font: 700 0.56rem var(--mono); color: var(--text-muted); background: var(--surface-2); border: 1px dashed var(--border); border-radius: 4px; padding: 0.06rem 0.28rem; pointer-events: none; z-index: 1; }}
+    .time-break-indicator {{ position: absolute; top: 50%; transform: translate(-50%, -50%); font: 700 0.56rem var(--mono); color: var(--text-muted); background: var(--surface-2); border: 1px dashed var(--border); border-radius: 4px; padding: 0.06rem 0.28rem; pointer-events: none; z-index: 1; white-space: nowrap; }}
 
     /* Level 2: Micro-Cascade Seismograph & Swimlanes */
     .trace-main-wrap {{ display: flex; align-items: stretch; gap: 0.5rem; position: relative; }}
@@ -2949,7 +2955,18 @@ def format_reactlog_html(
 
     function buildActionWaves() {{
       if (reactlogData.action_waves && reactlogData.action_waves.length > 0) {{
-        const mapped = reactlogData.action_waves.map((w, idx) => {{
+        const rawWaves = reactlogData.action_waves;
+        const coalesced = [];
+        for (let i = 0; i < rawWaves.length; i++) {{
+          const w = rawWaves[i];
+          const nextW = rawWaves[i + 1];
+          if (nextW && w.trigger && w.trigger.startsWith('Click:') && (w.inferred_executions || []).length === 0 && Math.abs((nextW.start_time || 0) - (w.start_time || 0)) <= 0.05) {{
+            nextW.human_action = `${{w.trigger}} → ${{nextW.human_action || nextW.trigger}}`;
+            continue;
+          }}
+          coalesced.push(w);
+        }}
+        const mapped = coalesced.map((w, idx) => {{
           const inputs = [];
           if (w.trigger_node_id) {{
             inputs.push({{
@@ -2966,6 +2983,19 @@ def format_reactlog_html(
           const outputs = filterItems(w.inferred_executions || [], id => id.startsWith('output:'))
             .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
 
+          let shortLabel = w.short_label || '';
+          if (!shortLabel) {{
+            if (w.is_init) {{
+              shortLabel = 'Init';
+            }} else if (w.trigger_node_id) {{
+              shortLabel = cleanName(w.trigger_node_id);
+            }} else if (w.trigger_label) {{
+              shortLabel = cleanName(w.trigger_label.split(':')[0]);
+            }} else {{
+              shortLabel = 'Action';
+            }}
+          }}
+
           return {{
             id: w.action_id || `burst-${{idx}}`,
             index: w.index !== undefined ? w.index : idx,
@@ -2976,6 +3006,7 @@ def format_reactlog_html(
             startStep: w.start_step || 0,
             endStep: w.end_step || 0,
             triggerLabel: w.trigger_label || w.trigger || 'Action',
+            shortLabel: shortLabel,
             humanAction: w.human_action || w.trigger || 'Action',
             triggerNodeId: w.trigger_node_id || '',
             triggerValue: w.trigger_value,
@@ -3029,6 +3060,7 @@ def format_reactlog_html(
               startStep: idx,
               endStep: idx,
               triggerLabel: 'Init',
+              shortLabel: 'Init',
               humanAction: 'Init',
               inputs: [],
               calcs: [],
@@ -3055,6 +3087,7 @@ def format_reactlog_html(
               startStep: idx,
               endStep: idx,
               triggerLabel: '',
+              shortLabel: '',
               humanAction: '',
               triggerNodeId: '',
               triggerValue: ev.value,
@@ -3081,18 +3114,20 @@ def format_reactlog_html(
               if (newVal !== null) lastKnownValues.set(name, newVal);
 
               if (!curWave.triggerLabel) {{
+                curWave.shortLabel = name;
                 if (evAction === 'userClick') {{
                   curWave.humanAction = `Click: ${{name}}`;
-                  curWave.triggerLabel = curWave.humanAction;
+                  curWave.triggerLabel = name;
+                  curWave.shortLabel = `Click: ${{name}}`;
                 }} else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {{
                   curWave.humanAction = `${{name}}: ${{formatHumanValue(prevVal)}} → ${{formatHumanValue(newVal)}}`;
-                  curWave.triggerLabel = curWave.humanAction;
+                  curWave.triggerLabel = name;
                 }} else if (newVal !== null) {{
                   curWave.humanAction = `${{name}}: ${{formatHumanValue(newVal)}}`;
-                  curWave.triggerLabel = curWave.humanAction;
+                  curWave.triggerLabel = name;
                 }} else {{
                   curWave.humanAction = `${{name}} changed`;
-                  curWave.triggerLabel = curWave.humanAction;
+                  curWave.triggerLabel = name;
                 }}
                 curWave.triggerNodeId = nId;
                 curWave.triggerValue = ev.value;
@@ -3120,16 +3155,20 @@ def format_reactlog_html(
         if (!w.triggerLabel) {{
           if (w.inputs.length > 0) {{
             w.humanAction = `${{w.inputs[0].name}} changed`;
-            w.triggerLabel = w.humanAction;
+            w.triggerLabel = w.inputs[0].name;
+            w.shortLabel = w.inputs[0].name;
           }} else if (w.calcs.length > 0) {{
             w.humanAction = `Recalc: ${{w.calcs[0].name}}`;
-            w.triggerLabel = w.humanAction;
+            w.triggerLabel = w.calcs[0].name;
+            w.shortLabel = w.calcs[0].name;
           }} else if (w.outputs.length > 0) {{
             w.humanAction = `Render: ${{w.outputs[0].name}}`;
-            w.triggerLabel = w.humanAction;
+            w.triggerLabel = w.outputs[0].name;
+            w.shortLabel = w.outputs[0].name;
           }} else {{
             w.humanAction = 'Action';
-            w.triggerLabel = w.humanAction;
+            w.triggerLabel = 'Action';
+            w.shortLabel = 'Action';
           }}
         }}
       }});
@@ -3208,7 +3247,6 @@ def format_reactlog_html(
       if (curDisplay) curDisplay.textContent = formatTime(0);
 
       document.querySelectorAll('.burst-region-column').forEach(el => el.remove());
-
       burstTrack.innerHTML = '';
       const colWidthPct = Math.max(12, (100 / Math.max(1, allBursts.length)) - 2);
 
@@ -3239,7 +3277,8 @@ def format_reactlog_html(
         anchor.appendChild(dot);
 
         const lbl = document.createElement('span');
-        lbl.textContent = wave.triggerLabel;
+        lbl.className = 'burst-anchor-label';
+        lbl.textContent = wave.shortLabel || wave.triggerLabel || 'Action';
         anchor.appendChild(lbl);
 
         const countBadge = document.createElement('span');
@@ -3248,7 +3287,7 @@ def format_reactlog_html(
         anchor.appendChild(countBadge);
 
         const eventSubtext = `${{wave.userChanges > 0 ? wave.userChanges + ' user change · ' : ''}}${{wave.totalEvents}} internal events`;
-        anchor.title = `[${{formatTime(wave.time)}}] ${{wave.triggerLabel}}\n${{eventSubtext}}`;
+        anchor.title = `[${{formatTime(wave.time)}}] ${{wave.humanAction || wave.triggerLabel}}\n${{eventSubtext}}`;
 
         anchor.onclick = (e) => {{
           e.stopPropagation();
@@ -3260,8 +3299,9 @@ def format_reactlog_html(
         if (wIdx < allBursts.length - 1 && timelineMode === 'realtime') {{
           const nextWave = allBursts[wIdx + 1];
           const idleGap = nextWave.startTime - wave.endTime;
-          if (idleGap > 0.4) {{
-            const nextPct = calculateTimePct(nextWave.startTime);
+          const nextPct = calculateTimePct(nextWave.startTime);
+          const gapPct = nextPct - wavePct;
+          if (idleGap >= 1.5 && gapPct >= 18) {{
             const midPct = (wavePct + nextPct) / 2;
             const breakIndicator = document.createElement('div');
             breakIndicator.className = 'time-break-indicator';

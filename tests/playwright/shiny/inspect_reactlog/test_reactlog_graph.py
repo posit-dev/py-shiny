@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from playwright.sync_api import Page, expect
@@ -881,7 +882,10 @@ def summary():
     # 1. Humanized Timeline Anchor
     burst_anchors = page.locator(".burst-anchor")
     expect(burst_anchors).to_have_count(2)
-    expect(burst_anchors.nth(1)).to_contain_text("price: 25 → 30")
+    expect(burst_anchors.nth(1)).to_contain_text("price")
+    expect(burst_anchors.nth(1)).to_have_attribute(
+        "title", re.compile(r"price: 25 → 30")
+    )
 
     # 2. Causal Story Banner above graph
     causal_banner = page.locator("#causal-summary-banner")
