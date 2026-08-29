@@ -72,10 +72,9 @@ def test_input_selectize_kitchensink(page: Page, local_app: ShinyAppProc) -> Non
     selectize_width_close_button_txt.expect_value("Orange")
     selectize_width_close_button.expect_width("400px")
     selectize_width_close_button.expect_choice_groups(["Citrus", "Berries"])
-    # # TODO-karan; Debug why this does not complete
-    # selectize_width_close_button.expect_choices(
-    #     ["Orange", "Lemon", "Lime", "Strawberry", "Blueberry", "Raspberry"]
-    # )
+    selectize_width_close_button.expect_choices(
+        ["Orange", "Lemon", "Lime", "Strawberry", "Blueberry", "Raspberry"]
+    )
     selectize_width_close_button.expect_choice_labels(
         [
             "Sweet and tangy",
