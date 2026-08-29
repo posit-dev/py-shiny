@@ -1003,3 +1003,51 @@ def out():
     assert res_html.exit_code == 0
     html_text = html_out.read_text(encoding="utf-8")
     assert 'id="video-tab"' not in html_text
+
+
+def test_reactlog_execution_debugger_elements_and_helpers():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("val", "Val", 10)
+@reactive.calc
+def computed():
+    return input.val() * 2
+@render.text
+def out():
+    return f"Computed: {computed()}"
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+
+    assert "why-card" in html
+    assert "why-story" in html
+    assert "why-cascade-flow" in html
+    assert "btn-focus-upstream" in html
+    assert "btn-focus-downstream" in html
+    assert "btn-focus-all" in html
+    assert "btn-summary-toggle" in html
+    assert "recording-summary-popover" in html
+    assert "actions-tab" in html
+    assert "actions-panel" in html
+    assert "action-list" in html
+    assert "insp-source-drawer" in html
+    assert "insp-upstream-list" in html
+    assert "insp-downstream-list" in html
+    assert "explainWhyNodeRan" in html
+    assert "buildGraphIndices" in html
+    assert "getUpstreamNodes" in html
+    assert "getDownstreamNodes" in html
+    assert "setFocusMode" in html
+    assert "renderInspector" in html
+    assert "toggleSummaryPopover" in html
+    assert "handleRoleDropdownChange" in html
+    assert "timeline-mode-select" in html
+    assert "trace-burst-ribbon" in html
+    assert "trace-burst-track" in html
+    assert "trace-seismograph" in html
+    assert "playhead-pin" in html
+    assert "trace-status-line" in html
+    assert "setTimelineMode" in html
+    assert "calculateTimePct" in html
+    assert "renderSeismographLines" in html

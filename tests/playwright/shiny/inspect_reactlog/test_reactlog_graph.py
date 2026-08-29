@@ -210,8 +210,9 @@ def out_txt():
         f"Step {first_interact_step} / {reactlog['steps_total'] - 1}"
     )
 
-    init_btn = page.locator("#phase-btn-init")
-    init_btn.click()
+    phase_select = page.locator("#phase-filter-select")
+    expect(phase_select).to_be_visible()
+    phase_select.select_option("init")
     expect(page.locator(".event-item.is-current")).to_have_count(0)
 
 
@@ -507,7 +508,466 @@ def out():
 
     page.evaluate("data => loadReactlogObject(data)", r_reactlog_data)
 
-    expect(page.locator("#stat-nodes")).to_have_text("Nodes: 3")
-    expect(page.locator("#stat-edges")).to_have_text("Edges: 2")
+    expect(page.locator("#stat-nodes")).to_have_text("3")
+    expect(page.locator("#stat-edges")).to_have_text("2")
     expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator(".graph-edge")).to_have_count(2)
+
+
+def test_why_did_this_run_causal_inspector(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("x", "X", 1)
+ui.input_numeric("y", "Y", 2)
+
+@reactive.calc
+def doubled():
+    return input.x() * 2
+
+@render.text
+def result():
+    return str(doubled())
+"""
+    reactlog = generate_reactlog(code, inputs={"x": 10, "y": 20})
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    calc_node = page.locator('.graph-node[data-id="calc:doubled"]')
+    calc_node.click()
+
+    why_title = page.locator("#why-title")
+    expect(why_title).to_contain_text("Why did calc:doubled run?")
+
+    why_story = page.locator("#why-story")
+    expect(why_story).to_contain_text("doubled")
+
+    flow_pills = page.locator("#why-cascade-flow .flow-node-pill")
+    expect(flow_pills).to_have_count(2)
+    expect(flow_pills.first).to_have_text("input.x")
+    expect(flow_pills.last).to_have_text("calc:doubled")
+
+    upstream_pills = page.locator("#insp-upstream-list .conn-pill")
+    expect(upstream_pills).to_have_count(1)
+    expect(upstream_pills.first).to_have_text("input.x")
+
+    downstream_pills = page.locator("#insp-downstream-list .conn-pill")
+    expect(downstream_pills).to_have_count(1)
+    expect(downstream_pills.first).to_have_text("output:result")
+
+
+def test_upstream_and_downstream_focus_isolation(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("x", "X", 1)
+ui.input_numeric("y", "Y", 2)
+
+@reactive.calc
+def doubled():
+    return input.x() * 2
+
+@render.text
+def result():
+    return str(doubled())
+
+@render.text
+def other():
+    return str(input.y())
+"""
+    reactlog = generate_reactlog(code, inputs={"x": 1, "y": 2})
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    expect(page.locator(".graph-node")).to_have_count(5)
+
+    page.locator('.graph-node[data-id="calc:doubled"]').click()
+
+    focus_upstream = page.locator("#btn-focus-upstream")
+    focus_upstream.click()
+    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(2)
+    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_be_visible()
+    expect(page.locator('.graph-node[data-id="input:x"]')).to_be_visible()
+
+    focus_downstream = page.locator("#btn-focus-downstream")
+    focus_downstream.click()
+    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(2)
+    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_be_visible()
+    expect(page.locator('.graph-node[data-id="output:result"]')).to_be_visible()
+
+    focus_all = page.locator("#btn-focus-all")
+    focus_all.click()
+    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(5)
+
+
+def test_recording_summary_popover_toggle(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("a", "A", 10)
+@render.text
+def out():
+    return f"A={input.a()}"
+"""
+    reactlog = generate_reactlog(code)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    popover = page.locator("#recording-summary-popover")
+    expect(popover).to_be_hidden()
+
+    summary_btn = page.locator("#btn-summary-toggle")
+    summary_btn.click()
+    expect(popover).to_be_visible()
+    expect(page.locator("#stat-nodes")).to_have_text("2")
+    expect(page.locator("#stat-edges")).to_have_text("1")
+
+    close_btn = popover.locator("button.mini")
+    close_btn.click()
+    expect(popover).to_be_hidden()
+
+
+def test_actions_story_tab_and_inline_code_drawer(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("val", "Val", 5)
+@reactive.calc
+def calc_b():
+    return input.val() + 1
+@render.text
+def out():
+    return str(calc_b())
+"""
+    recorded_actions = [
+        {"type": "input", "name": "val", "value": 42, "timestamp": 1000},
+        {"type": "output", "name": "out", "timestamp": 1200},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    actions_tab = page.locator("#actions-tab")
+    actions_tab.click()
+    actions_panel = page.locator("#actions-panel")
+    expect(actions_panel).to_be_visible()
+
+    action_items = page.locator(".action-story-item")
+    expect(action_items).to_have_count(1)
+
+    events_tab = page.locator("#timeline-tab")
+    events_tab.click()
+
+    page.locator('.graph-node[data-id="calc:calc_b"]').click()
+    drawer_toggle = page.locator("#btn-toggle-source-drawer")
+    expect(drawer_toggle).to_be_visible()
+
+    source_code = page.locator("#insp-source-code")
+    expect(source_code).to_be_hidden()
+
+    drawer_toggle.click()
+    expect(source_code).to_be_visible()
+    expect(source_code).to_contain_text("def calc_b():")
+
+
+def test_role_filter_dropdown(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("x", "X", 1)
+@reactive.calc
+def c():
+    return input.x() * 2
+@render.text
+def o():
+    return str(c())
+"""
+    reactlog = generate_reactlog(code)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    expect(page.locator(".graph-node")).to_have_count(3)
+
+    dropdown = page.locator("#role-filter-dropdown")
+    dropdown.select_option("source")
+    expect(page.locator(".graph-node")).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="input:x"]')).to_be_visible()
+
+    dropdown.select_option("conductor")
+    expect(page.locator(".graph-node")).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="calc:c"]')).to_be_visible()
+
+    dropdown.select_option("all")
+    expect(page.locator(".graph-node")).to_have_count(3)
+
+
+def test_timeline_activity_mode_and_realtime_toggle(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("val", "Val", 10)
+@render.text
+def out():
+    return f"V={input.val()}"
+"""
+    recorded_actions = [
+        {"type": "input", "name": "val", "value": 20, "timestamp": 1500},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    mode_select = page.locator("#timeline-mode-select")
+    expect(mode_select).to_be_visible()
+
+    burst_anchors = page.locator("#trace-burst-track .burst-anchor")
+    expect(burst_anchors).to_have_count(2)
+
+    mode_select.select_option("realtime")
+    expect(mode_select).to_have_value("realtime")
+
+    mode_select.select_option("activity")
+    expect(mode_select).to_have_value("activity")
+
+
+def test_timeline_seismograph_and_burst_anchors(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("x", "X", 1)
+@reactive.calc
+def doubled():
+    return input.x() * 2
+@render.text
+def res():
+    return str(doubled())
+"""
+    recorded_actions = [
+        {"type": "input", "name": "x", "value": 5, "timestamp": 1200},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    seismograph = page.locator("#trace-seismograph")
+    expect(seismograph).to_be_visible()
+
+    next_btn = page.locator("#btn-next-action")
+    prev_btn = page.locator("#btn-prev-action")
+    expect(next_btn).to_be_visible()
+    expect(prev_btn).to_be_visible()
+
+    next_btn.click()
+    status_line = page.locator("#trace-status-line")
+    expect(status_line).to_be_visible()
+
+
+def test_multi_parent_dag_tree_and_single_target_synchronization(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("a", "A", 1)
+ui.input_numeric("b", "B", 2)
+
+@reactive.calc
+def calc_a():
+    return input.a() * 10
+
+@reactive.calc
+def calc_b():
+    return input.b() * 20
+
+@render.text
+def merged():
+    return f"Sum: {calc_a() + calc_b()}"
+"""
+    reactlog = generate_reactlog(code)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    merged_node = page.locator('.graph-node[data-id="output:merged"]')
+    merged_node.click()
+
+    status_line = page.locator("#trace-status-line")
+    expect(status_line).to_contain_text("Selected: output:merged")
+
+    why_title = page.locator("#why-title")
+    expect(why_title).to_contain_text("Why did output:merged render?")
+
+    dag_pills = page.locator("#why-cascade-flow .flow-node-pill")
+    expect(dag_pills).to_have_count(3)
+
+    why_story = page.locator("#why-story")
+    expect(why_story).to_contain_text("Immediate causes:")
+    expect(why_story).to_contain_text("calc:calc_a")
+    expect(why_story).to_contain_text("calc:calc_b")
+
+
+def test_activity_mode_equidistant_distribution_and_group_popover(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("units", "Units", 10)
+@reactive.calc
+def subtotal():
+    return input.units() * 5
+
+@render.text
+def out_a():
+    return f"A: {subtotal()}"
+
+@render.text
+def out_b():
+    return f"B: {subtotal()}"
+"""
+    recorded_actions = [
+        {"type": "input", "name": "units", "value": 20, "timestamp": 1200},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    burst_cols = page.locator(".burst-region-column")
+    expect(burst_cols).to_have_count(2)
+
+    group_chip = page.locator("#lane-outputs .trace-chip.is-grouped")
+    expect(group_chip).to_be_visible()
+    expect(group_chip).to_contain_text("2 outputs")
+
+    group_chip.click()
+    popover = page.locator("#group-chip-popover")
+    expect(popover).to_be_visible()
+    expect(popover).to_contain_text("2 Outputs in burst")
+
+
+def test_humanized_timeline_dynamic_verbs_and_causal_summary(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("price", "Price", 25)
+@reactive.calc
+def subtotal():
+    return input.price() * 2
+
+@render.text
+def summary():
+    return f"Subtotal: {subtotal()}"
+"""
+    recorded_actions = [
+        {"type": "input", "name": "price", "value": 30, "timestamp": 1200},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    # 1. Humanized Timeline Anchor
+    burst_anchors = page.locator(".burst-anchor")
+    expect(burst_anchors).to_have_count(2)
+    expect(burst_anchors.nth(1)).to_contain_text("price: 25 → 30")
+
+    # 2. Causal Story Banner above graph
+    causal_banner = page.locator("#causal-summary-banner")
+    expect(causal_banner).to_be_visible()
+
+    # 3. Dynamic Why Question for Input
+    page.locator('.graph-node[data-id="input:price"]').click()
+    why_title = page.locator("#why-title")
+    expect(why_title).to_contain_text("Why did input.price change?")
+
+    # 4. Dynamic Why Question for Calc
+    page.locator('.graph-node[data-id="calc:subtotal"]').click()
+    expect(why_title).to_contain_text("Why did calc:subtotal run?")
+
+    # 5. Dynamic Why Question for Output
+    page.locator('.graph-node[data-id="output:summary"]').click()
+    expect(why_title).to_contain_text("Why did output:summary render?")
+
+    # 6. Streamlined Toolbar & Phase Filter
+    phase_select = page.locator("#phase-filter-select")
+    expect(phase_select).to_be_visible()
+    btn_skip = page.locator("#btn-skip-init")
+    expect(btn_skip).to_be_visible()
+
+
+def test_action_scoped_causal_story_and_did_not_run_explanation(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("price", "Price", 25)
+ui.input_numeric("units", "Units", 10)
+ui.input_text("client", "Client", "Acme")
+
+@reactive.calc
+def subtotal():
+    return input.price() * input.units()
+
+@reactive.calc
+def discount():
+    return 0.1 if input.client() == "Acme" else 0.0
+
+@render.text
+def order_summary():
+    return f"Order: {subtotal()}"
+
+@render.text
+def client_badge():
+    return f"Client: {input.client()} (Discount: {discount()})"
+"""
+    recorded_actions = [
+        {"type": "input", "name": "price", "value": 30, "timestamp": 1200},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    # 1. Skip to the price action burst
+    page.locator("#btn-skip-init").click()
+
+    # 2. Live story contains only nodes downstream of price (subtotal, order_summary)
+    causal_text = page.locator("#causal-summary-text")
+    expect(causal_text).to_contain_text("Price changed 25 → 30")
+    expect(causal_text).to_contain_text("subtotal")
+    expect(causal_text).to_contain_text("order_summary")
+    causal_str = causal_text.text_content() or ""
+    assert "discount" not in causal_str
+    assert "client_badge" not in causal_str
+
+    # 3. Clicking output:order_summary shows why it rendered in this burst
+    page.locator('.graph-node[data-id="output:order_summary"]').click()
+    why_title = page.locator("#why-title")
+    expect(why_title).to_contain_text("Why did output:order_summary render?")
+    why_story = page.locator("#why-story")
+    expect(why_story).to_contain_text("subtotal")
+
+    # 4. Contextual focus mode: output defaults to Causes
+    btn_causes = page.locator("#btn-focus-upstream")
+    expect(btn_causes).to_have_class("path-btn is-active")
+
+    # 5. Clicking unaffected node (client) shows did not change in this action
+    page.locator('.graph-node[data-id="input:client"]').click()
+    expect(why_title).to_contain_text("input.client did not change")
+    expect(page.locator("#why-story")).to_contain_text("Did not change during")
+
+    # 6. Contextual focus mode: input defaults to Effects
+    btn_effects = page.locator("#btn-focus-downstream")
+    expect(btn_effects).to_have_class("path-btn is-active")
