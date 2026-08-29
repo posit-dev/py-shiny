@@ -469,12 +469,40 @@ def out():
         "version": "1.0",
         "session": "test_sess",
         "log": [
-            {"action": "define", "id": "input:alpha", "label": "alpha", "type": "observable", "time": 0.1},
-            {"action": "define", "id": "calc:beta", "label": "beta", "type": "calc", "time": 0.2},
-            {"action": "dependsOn", "id": "calc:beta", "dependsOn": "input:alpha", "time": 0.3},
-            {"action": "define", "id": "output:gamma", "label": "gamma", "type": "observer", "time": 0.4},
-            {"action": "dependsOn", "id": "output:gamma", "dependsOn": "calc:beta", "time": 0.5},
-        ]
+            {
+                "action": "define",
+                "id": "input:alpha",
+                "label": "alpha",
+                "type": "observable",
+                "time": 0.1,
+            },
+            {
+                "action": "define",
+                "id": "calc:beta",
+                "label": "beta",
+                "type": "calc",
+                "time": 0.2,
+            },
+            {
+                "action": "dependsOn",
+                "id": "calc:beta",
+                "dependsOn": "input:alpha",
+                "time": 0.3,
+            },
+            {
+                "action": "define",
+                "id": "output:gamma",
+                "label": "gamma",
+                "type": "observer",
+                "time": 0.4,
+            },
+            {
+                "action": "dependsOn",
+                "id": "output:gamma",
+                "dependsOn": "calc:beta",
+                "time": 0.5,
+            },
+        ],
     }
 
     page.evaluate("data => loadReactlogObject(data)", r_reactlog_data)
