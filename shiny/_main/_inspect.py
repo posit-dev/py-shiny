@@ -148,6 +148,20 @@ def _parse_input_value(val_str: str) -> Any:
     help="JSON dictionary string of assumed values for dependency simulation.",
 )
 @click.option(
+    "--auto-interact",
+    "auto_interact",
+    is_flag=True,
+    default=False,
+    help="Automatically interact with app inputs and buttons for demo recording (WARNING: may cause side-effects).",
+)
+@click.option(
+    "--redact-inputs",
+    "redact_inputs",
+    is_flag=True,
+    default=False,
+    help="Redact all input values in recordings and exports.",
+)
+@click.option(
     "--title",
     "title",
     type=str,
@@ -168,6 +182,8 @@ def inspect(
     mermaid_flag: bool,
     input_pairs: tuple[str, ...],
     inputs_json: Optional[str],
+    auto_interact: bool = False,
+    redact_inputs: bool = False,
     title: Optional[str] = None,
 ) -> None:
     if json_flag:
@@ -319,6 +335,8 @@ def inspect(
                 app_file_to_run,
                 video_path=effective_video_path,
                 headless=headless,
+                auto_interact=auto_interact,
+                redact_inputs=redact_inputs,
             )
             if not rec_result.get("success"):
                 err = rec_result.get("error", "Unknown error during recording")
@@ -383,7 +401,9 @@ def inspect(
             detected_title = title or (
                 _extract_page_title(source_code) if not is_json_input else None
             )
-            report_title = detected_title or f"Reactive Log: {target_desc}"
+            report_title = (
+                detected_title or f"Interactive Shiny Reactive Log: {target_desc}"
+            )
             html_content = format_reactlog_html(
                 reactlog_data,
                 title=report_title,
