@@ -368,12 +368,12 @@ def out2():
     graph = inspect_reactive_graph(code)
     mermaid = format_graph_mermaid(graph)
     assert (
-        'n0["📥 input.a-b"]:::inputClass' in mermaid
-        or 'n1["📥 input.a-b"]:::inputClass' in mermaid
+        'n0["input.a-b"]:::inputClass' in mermaid
+        or 'n1["input.a-b"]:::inputClass' in mermaid
     )
     assert (
-        'n0["📥 input.a_b"]:::inputClass' in mermaid
-        or 'n1["📥 input.a_b"]:::inputClass' in mermaid
+        'n0["input.a_b"]:::inputClass' in mermaid
+        or 'n1["input.a_b"]:::inputClass' in mermaid
     )
     dot = format_graph_dot(graph)
     assert 'label="input.a-b"' in dot
