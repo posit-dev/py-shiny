@@ -1044,3 +1044,41 @@ def out():
     page.locator('.graph-node[data-id="calc:safe_node"]').click()
     is_pwned = page.evaluate("() => Boolean(window.__pwned)")
     assert is_pwned is False
+
+
+def test_app_code_tab_and_drawer_show_line_numbers(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("val", "Val", 10)
+
+@reactive.calc
+def double_val():
+    return input.val() * 2
+
+@render.text
+def out():
+    return f"Result: {double_val()}"
+"""
+    reactlog = generate_reactlog(code)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    # 1. Check App code tab line numbers
+    page.get_by_role("tab", name="App code").click()
+    source_panel = page.get_by_role("tabpanel", name="App code")
+    expect(source_panel).to_be_visible()
+
+    line_nums = page.locator("#source-panel .source-line-num")
+    expect(line_nums.first).to_have_text("1")
+    expect(line_nums.nth(3)).to_have_text("4")
+
+    # 2. Check inline drawer line numbers
+    page.get_by_role("tab", name="Inspector").click()
+    page.locator('.graph-node[data-id="calc:double_val"]').click()
+    page.locator("#btn-toggle-source-drawer").click()
+
+    drawer_line_nums = page.locator("#insp-source-code .source-line-num")
+    expect(drawer_line_nums.first).to_have_text("7")
