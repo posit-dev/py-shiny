@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 import shiny.otel
 from shiny.otel._collect import OtelCollectLevel
 
@@ -60,14 +62,22 @@ def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
     doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
     skill_text = (doctor_dir / "SKILL.md").read_text()
     antipatterns_text = (doctor_dir / "references" / "antipatterns.md").read_text()
+    checklist_text = (
+        doctor_dir / "references" / "diagnostics-checklist.md"
+    ).read_text()
 
     assert "session.ns" not in skill_text
     assert "missing ns() wrapper" not in antipatterns_text
     assert "asyncio.to_thread" in antipatterns_text
     assert "ProcessPoolExecutor" in antipatterns_text
+    assert "cannot directly read reactive sources" in skill_text
+    assert '@output(id="summary_output")' in antipatterns_text
+    assert "@output(id=" in skill_text
     assert "Runtime Verified" in skill_text
     assert "Server Startup Verified" in skill_text
-    assert "shiny run app.py" in skill_text
+    assert "managed background process" in skill_text
+    assert "timeout" in skill_text
+    assert "secrets" in checklist_text
     assert "Do not rely on `python app.py`" in skill_text
     assert "from shiny import input" not in antipatterns_text
     assert "initial_val = val()" in antipatterns_text
@@ -102,3 +112,61 @@ def test_shiny_doctor_markdown_links() -> None:
         for link in links:
             target_path = (doctor_dir / link.split("#")[0]).resolve()
             assert target_path.is_file(), f"Broken link {link} in {md_file.name}"
+
+
+@pytest.mark.asyncio
+async def test_shiny_doctor_output_id_override_runtime() -> None:
+    import asyncio
+    from shiny import App, Inputs, Outputs, Session, render, ui
+    from shiny._connection import MockConnection
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @output(id="summary_output")
+        @render.text
+        def make_summary():
+            return "Done"
+
+    conn = MockConnection()
+    app = App(ui.TagList(), server)
+    sess = app._create_session(conn)
+
+    async def mock_client():
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
+    assert "summary_output" in sess.output._outputs
+    assert "make_summary" not in sess.output._outputs
+
+
+@pytest.mark.asyncio
+async def test_shiny_doctor_extended_task_semantics_runtime() -> None:
+    import asyncio
+    import pytest
+    from shiny import reactive
+
+    def blocking_work(val: str) -> str:
+        return f"result_{val}"
+
+    @reactive.extended_task
+    async def task_with_param(val: str) -> str:
+        return await asyncio.to_thread(blocking_work, val)
+
+    task_with_param("input_val")
+    await asyncio.sleep(0.05)
+
+    with reactive.isolate():
+        assert task_with_param.result() == "result_input_val"
+
+    val_src = reactive.value("bad_read")
+
+    @reactive.extended_task
+    async def task_with_reactive_read():
+        return val_src()
+
+    task_with_reactive_read()
+    await asyncio.sleep(0.05)
+
+    with reactive.isolate():
+        with pytest.raises(RuntimeError, match=r"not allowed to read reactive sources"):
+            task_with_reactive_read.result()

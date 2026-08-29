@@ -218,7 +218,7 @@ def server(input, output, session):
 ## 6. Blocking the Async Event Loop and Extended Tasks
 
 ### Symptom
-The application stops responding for all connected users during a computation, download, or sleep.
+The application stops responding for all connected users during a computation, download, or sleep, or extended tasks attempt to read reactive values directly.
 
 ### Bad Code 1: Blocking call on the event loop
 ```python
@@ -245,8 +245,24 @@ async def compute_heavy_task(n: int):
     return n * 42
 ```
 
+### Bad Code 3: Reading reactive sources directly inside `@reactive.extended_task`
+```python
+import asyncio
+from shiny import reactive
+
+@reactive.extended_task
+async def do_work():
+    # BAD: Extended tasks cannot access reactive sources directly!
+    # input.filename() or reactive values cannot be read inside extended_task.
+    filename = "data.csv"
+    await asyncio.sleep(1)
+    return filename
+```
+
 ### Why It Fails
 Shiny server functions and `@reactive.extended_task` coroutines run on the single asyncio event loop thread. Calling `time.sleep()`, synchronous `requests`, or CPU-bound loops directly inside `async def` blocks the event loop from servicing other WebSocket connections and reactive flushes.
+
+Furthermore, `@reactive.extended_task` executes independently of reactive processing and **cannot directly read reactive sources** (`input.x()`, `reactive.value()`). Because inputs can change while an asynchronous task is executing, Shiny does not track reactive dependencies inside extended tasks. Any reactive values or inputs needed by the task must be passed in as arguments upon invocation.
 
 ### Good Code: True async I/O
 ```python
@@ -260,20 +276,40 @@ async def report():
     return "Done"
 ```
 
-### Good Code: Blocking synchronous I/O offloaded to a worker thread
+### Good Code: Blocking synchronous I/O offloaded to worker thread with invocation from reactive effect
 ```python
 import asyncio
 import time
-from shiny import reactive
+from shiny import App, reactive, render, ui
 
-def blocking_io_work(n: int) -> int:
-    time.sleep(5)
-    return n * 42
+def load_file(filename: str) -> str:
+    time.sleep(2)
+    return f"Loaded {filename}"
 
-@reactive.extended_task
-async def fetch_task(n: int):
-    # GOOD: Offloads synchronous blocking I/O to a worker thread pool
-    return await asyncio.to_thread(blocking_io_work, n)
+app_ui = ui.page_fluid(
+    ui.input_text("filename", "File Name", "data.csv"),
+    ui.input_action_button("run", "Load"),
+    ui.output_text("result"),
+)
+
+def server(input, output, session):
+    # GOOD: Task accepts needed inputs as parameters and offloads blocking work
+    @reactive.extended_task
+    async def do_work(filename: str) -> str:
+        return await asyncio.to_thread(load_file, filename)
+
+    # GOOD: Reactive effect captures reactive input value and invokes task
+    @reactive.effect
+    @reactive.event(input.run)
+    def _():
+        do_work(input.filename())
+
+    # GOOD: Output renderer consumes task result via .result()
+    @render.text
+    def result():
+        return do_work.result()
+
+app = App(app_ui, server)
 ```
 
 ### Good Code: CPU-bound computation offloaded to a ProcessPoolExecutor
@@ -320,9 +356,9 @@ app = App(app_ui, server)
 ```
 
 ### Why It Fails
-In Shiny Core mode, the `@render.*` decorator registers the output using the exact name of the Python function. If this name does not match the UI output placeholder ID, Shiny cannot connect the renderer to the DOM element.
+In Shiny Core mode, the `@render.*` decorator registers the output using the function name by default, or using the ID specified with `@output(id="...")`. If the effective output ID does not match the UI output placeholder ID, Shiny cannot connect the renderer to the DOM element.
 
-### Good Code
+### Good Code 1: Matching function name to UI ID
 ```python
 from shiny import App, render, ui
 
@@ -331,8 +367,27 @@ app_ui = ui.page_fluid(
 )
 
 def server(input, output, session):
+    # GOOD: Function name matches UI ID
     @render.text
     def summary_output():
+        return "Calculation finished."
+
+app = App(app_ui, server)
+```
+
+### Good Code 2: Overriding output ID with `@output(id=...)`
+```python
+from shiny import App, render, ui
+
+app_ui = ui.page_fluid(
+    ui.output_text_verbatim("summary_output")
+)
+
+def server(input, output, session):
+    # GOOD: Explicit @output(id=...) overrides function name to match UI ID
+    @output(id="summary_output")
+    @render.text
+    def make_summary():
         return "Calculation finished."
 
 app = App(app_ui, server)

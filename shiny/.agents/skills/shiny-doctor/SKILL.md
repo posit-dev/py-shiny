@@ -21,7 +21,7 @@ When diagnosing an application, follow the **7-Phase Diagnostic Protocol** below
 | **Reactivity** | Mutable object mutated in-place inside `reactive.value` | Graph fails to invalidate on change | [Antipatterns: In-Place Mutation](references/antipatterns.md#4-in-place-mutation-of-reactive-values) |
 | **Reactivity** | Global `reactive.value` shared across all users | Session cross-talk / multi-user state leakage | [Antipatterns: Shared Global State](references/antipatterns.md#5-global-state-leakage-across-sessions) |
 | **Async / Concurrency** | Synchronous blocking I/O or `time.sleep` in server or raw `extended_task` | Event loop freezes; app stops responding for all sessions | [Antipatterns: Blocking Event Loop](references/antipatterns.md#6-blocking-the-async-event-loop-and-extended-tasks) |
-| **UI / Server Contract** | Mismatched ID between UI placeholder and server renderer | Output never displays / remains blank | [Antipatterns: ID Mismatch](references/antipatterns.md#7-mismatched-ui-and-server-ids) |
+| **UI / Server Contract** | Mismatched effective ID between UI placeholder and server renderer | Output never displays / remains blank | [Antipatterns: ID Mismatch](references/antipatterns.md#7-mismatched-ui-and-server-ids) |
 | **UI / Server Contract** | Duplicate input/output IDs in single namespace | Unpredictable input collisions and overrides | [Antipatterns: Duplicate IDs](references/antipatterns.md#8-duplicate-element-ids) |
 | **Modules** | Mismatched UI/Server module instance IDs or duplicate module IDs | Module outputs disconnected; state collisions | [Antipatterns: Module Instance IDs](references/antipatterns.md#9-module-instance-id-mismatches-and-collisions) |
 | **Paradigms** | Mixing Express syntax inside Core or creating `App()` in Express | Duplicate app initialization / layout breaks | [Antipatterns: Paradigm Mixing](references/antipatterns.md#10-mixing-express-and-core-paradigms) |
@@ -57,15 +57,16 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
    - Server callbacks and reactive expressions execute on Python's asyncio event loop thread.
    - Synchronous blocking calls (`time.sleep()`, synchronous `requests.get()`, heavy synchronous DB queries) block the entire process and freeze all connected sessions.
    - Use native async calls (`await asyncio.sleep()`, `httpx.AsyncClient()`) for non-blocking I/O.
-2. **Proper `@reactive.extended_task` Usage**:
-   - `@reactive.extended_task` runs an asyncio task concurrently on the event loop thread using `asyncio.create_task`.
-   - **Crucial**: Simply wrapping a synchronous `time.sleep()` or CPU-bound function inside an `async def` `@reactive.extended_task` **still blocks the event loop thread**.
+2. **Proper `@reactive.extended_task` Usage & Reactive Scope**:
+   - `@reactive.extended_task` runs an asyncio task concurrently without blocking Shiny reactive processing.
+   - **Crucial Concurrency Rule**: Simply wrapping a synchronous `time.sleep()` or CPU-bound function inside an `async def` `@reactive.extended_task` **still blocks the event loop thread**.
    - For synchronous blocking I/O, offload to a worker thread: `await asyncio.to_thread(blocking_io_function, *args)`.
    - For heavy CPU-bound computation, offload to a process pool via `loop.run_in_executor(process_pool, cpu_bound_func, *args)`.
+   - **Crucial Reactive Rule**: An extended task runs independently of reactive processing and **cannot directly read reactive sources** (such as `input.x()` or `reactive.value()`). Any needed inputs or reactive values must be captured in reactive context (e.g. inside an `@reactive.effect` / `@reactive.event` or caller) and passed into the task function as parameters upon invocation (`do_work(input.filename())`).
 
 ### Phase 4: UI / Server Contract & ID Consistency
 1. **ID Matching**:
-   - In Core mode, verify every `@render.xxx` function name matches an existing `ui.output_xxx("name")` ID.
+   - In Core mode, verify that each renderer's effective output ID matches an existing `ui.output_xxx("name")` ID. By default, the effective output ID is the Python function name, unless explicitly overridden with `@output(id="name")`.
    - Verify every `input.xxx()` read matches a declared `ui.input_xxx("xxx")` ID.
 2. **ID Uniqueness**:
    - Ensure all input and output IDs are unique within their namespace.
@@ -85,7 +86,7 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
 
 ### Phase 7: Runtime Verification & Validation
 1. **Server Startup Validation**:
-   - When execution is available, start the application using `shiny run app.py` to verify application import and ASGI server startup without top-level syntax errors, import failures, or invalid schema configurations. (Do not rely on `python app.py`, which only executes top-level module code and exits without booting the Shiny server).
+   - When execution is available, verify application import and ASGI server startup using a managed background process or test fixture with a readiness check and timeout (e.g., launching `shiny run app.py` as a managed subprocess, polling for readiness or port listening within a timeout such as 5-10 seconds, performing the check, and ensuring process termination during cleanup). Do not run bare `shiny run` as a blocking foreground command, which causes the agent to hang indefinitely. (Do not rely on `python app.py`, which only executes top-level module code and exits without booting the ASGI Shiny server).
 2. **Session-Level Verification**:
    - To claim full session-level runtime verification, connect to the application through a browser or Playwright test harness (typically using `shiny.pytest` fixtures such as `local_app` or `create_app_fixture`) so that the `server(input, output, session)` function, reactive graph initialization, WebSocket connection, and `@render.*` outputs are genuinely exercised.
 3. **Strict Verification Labeling Rule**:
