@@ -1,3 +1,5 @@
+from typing import cast
+
 import pandas as pd
 import polars as pl
 from narwhals.stable.v1.typing import IntoDataFrame
@@ -22,7 +24,10 @@ distinct_df = pd.DataFrame(
     },
     index=[0, 1, 50, 51, 100, 101],
 )
-idxs = distinct_df.index.tolist()
+idxs = cast(
+    list[int],
+    distinct_df.index.tolist(),  # pyright: ignore[reportUnknownMemberType]
+)
 
 
 @module.ui
