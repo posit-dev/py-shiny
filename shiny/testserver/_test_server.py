@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import os
 import sys
@@ -13,14 +14,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import (
     Any,
+    Awaitable,
     Callable,
+    Coroutine,
     Dict,
     List,
     Optional,
+    Set,
     Tuple,
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 from .._app import App
@@ -121,6 +126,7 @@ class AsyncTestServerSession:
         self._session_task: Optional[asyncio.Task[None]] = None
         self._temp_dir: Optional[tempfile.TemporaryDirectory[str]] = None
         self._saved_sys_path: Optional[List[str]] = None
+        self._saved_modules: Optional[Set[str]] = None
         self._old_testmode: Optional[str] = None
         self._old_app_test_mode: Optional[bool] = None
         self._old_app_server: Optional[Callable[..., Any]] = None
@@ -131,11 +137,57 @@ class AsyncTestServerSession:
         self._is_started: bool = False
         self._start_time: float = 0.0
 
+    async def _cleanup(self) -> None:
+        if self._conn is not None:
+            self._conn.cause_disconnect()
+        if self._session_task is not None:
+            try:
+                await asyncio.wait_for(self._session_task, timeout=2.0)
+            except Exception:
+                pass
+            self._session_task = None
+
+        if self._saved_sys_path is not None:
+            sys.path[:] = self._saved_sys_path
+            self._saved_sys_path = None
+
+        if self._saved_modules is not None:
+            new_modules = set(sys.modules.keys()) - self._saved_modules
+            for mod_name in new_modules:
+                sys.modules.pop(mod_name, None)
+            self._saved_modules = None
+
+        if self._old_testmode is not None:
+            os.environ["SHINY_TESTMODE"] = self._old_testmode
+            self._old_testmode = None
+        else:
+            os.environ.pop("SHINY_TESTMODE", None)
+
+        if self._temp_dir is not None:
+            self._temp_dir.cleanup()
+            self._temp_dir = None
+
+        if self._app_obj is not None:
+            if self._old_app_test_mode is not None:
+                self._app_obj._test_mode = self._old_app_test_mode
+                self._old_app_test_mode = None
+            if self._old_app_server is not None:
+                self._app_obj.server = self._old_app_server
+                self._old_app_server = None
+
     async def start(self) -> AsyncTestServerSession:
+        try:
+            return await self._start_impl()
+        except Exception:
+            await self._cleanup()
+            raise
+
+    async def _start_impl(self) -> AsyncTestServerSession:
         self._start_time = time.perf_counter()
         self._old_testmode = os.environ.get("SHINY_TESTMODE")
         os.environ["SHINY_TESTMODE"] = "1"
         self._saved_sys_path = list(sys.path)
+        self._saved_modules = set(sys.modules.keys())
 
         if self._target_app is not None:
             if isinstance(self._target_app, App):
@@ -184,10 +236,15 @@ class AsyncTestServerSession:
         self._conn = MockConnection()
         self._session = self._app_obj._create_session(self._conn)
 
+        initial_flush_done = asyncio.Event()
+        unhide_flush_done = asyncio.Event()
+
         orig_unhandled_error = self._session._unhandled_error
 
         async def custom_unhandled_error(e: Exception) -> None:
             self._fatal_errors.append((e, traceback.format_exc()))
+            initial_flush_done.set()
+            unhide_flush_done.set()
             await orig_unhandled_error(e)
 
         self._session._unhandled_error = custom_unhandled_error
@@ -199,6 +256,8 @@ class AsyncTestServerSession:
                 self._fatal_errors.append((message, traceback.format_exc()))
             else:
                 self._fatal_errors.append((RuntimeError(str(message)), str(message)))
+            initial_flush_done.set()
+            unhide_flush_done.set()
             orig_print_error(message)
 
         self._session._print_error_message = (
@@ -213,12 +272,11 @@ class AsyncTestServerSession:
                 return orig_server(input, output, session)
             except Exception as e:
                 self._fatal_errors.append((e, traceback.format_exc()))
+                initial_flush_done.set()
+                unhide_flush_done.set()
                 raise
 
         self._app_obj.server = wrapped_server
-
-        initial_flush_done = asyncio.Event()
-        unhide_flush_done = asyncio.Event()
 
         async def unhide_all_outputs() -> None:
             if self._session is None or self._conn is None:
@@ -247,19 +305,45 @@ class AsyncTestServerSession:
         self._session.on_flushed(unhide_all_outputs, once=True)
 
         self._session_task = asyncio.create_task(self._session._run())
+
+        def on_session_task_done(_: asyncio.Task[None]) -> None:
+            initial_flush_done.set()
+            unhide_flush_done.set()
+
+        self._session_task.add_done_callback(on_session_task_done)
+
         self._conn.cause_receive(
             json.dumps({"method": "init", "data": self._initial_inputs})
         )
 
         self._is_started = True
 
-        try:
-            await asyncio.wait_for(
-                initial_flush_done.wait(), timeout=self._timeout_secs
+        deadline = time.monotonic() + self._timeout_secs
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"test_server timed out after {self._timeout_secs}s during session initialization."
             )
-            await asyncio.wait_for(unhide_flush_done.wait(), timeout=self._timeout_secs)
+        try:
+            await asyncio.wait_for(initial_flush_done.wait(), timeout=remaining)
         except asyncio.TimeoutError:
-            pass
+            raise TimeoutError(
+                f"test_server timed out after {self._timeout_secs}s waiting for initial flush."
+            )
+
+        if not self._fatal_errors and not self._session_task.done():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(
+                    f"test_server timed out after {self._timeout_secs}s during session initialization."
+                )
+            try:
+                await asyncio.wait_for(unhide_flush_done.wait(), timeout=remaining)
+            except asyncio.TimeoutError:
+                raise TimeoutError(
+                    f"test_server timed out after {self._timeout_secs}s waiting for output initialization."
+                )
 
         await asyncio.sleep(0.01)
         await self._refresh_snapshots()
@@ -319,7 +403,9 @@ class AsyncTestServerSession:
         try:
             await asyncio.wait_for(flush_done.wait(), timeout=self._timeout_secs)
         except asyncio.TimeoutError:
-            pass
+            raise TimeoutError(
+                f"test_server timed out after {self._timeout_secs}s waiting for reactive flush following set_inputs()."
+            )
         finally:
             if unreg is not None:
                 try:
@@ -381,30 +467,8 @@ class AsyncTestServerSession:
         )
 
     async def close(self) -> None:
-        if not self._is_started:
-            return
         self._is_started = False
-        if self._conn is not None:
-            self._conn.cause_disconnect()
-        if self._session_task is not None:
-            try:
-                await asyncio.wait_for(self._session_task, timeout=2.0)
-            except Exception:
-                pass
-
-        if self._saved_sys_path is not None:
-            sys.path = self._saved_sys_path
-        if self._old_testmode is None:
-            os.environ.pop("SHINY_TESTMODE", None)
-        else:
-            os.environ["SHINY_TESTMODE"] = self._old_testmode
-        if self._temp_dir is not None:
-            self._temp_dir.cleanup()
-        if self._app_obj is not None:
-            if self._old_app_test_mode is not None:
-                self._app_obj._test_mode = self._old_app_test_mode
-            if self._old_app_server is not None:
-                self._app_obj.server = self._old_app_server
+        await self._cleanup()
 
     async def __aenter__(self) -> AsyncTestServerSession:
         return await self.start()
@@ -434,6 +498,7 @@ class TestServerSession(Mapping[str, Any]):
         )
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread: Optional[threading.Thread] = None
+        self._stop_event: Optional[asyncio.Event] = None
         self._timeout_secs = timeout_secs
         self._is_running = False
         self._entered = False
@@ -448,6 +513,7 @@ class TestServerSession(Mapping[str, Any]):
         def runner():
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
+            self._stop_event = asyncio.Event()
 
             async def _init_and_run():
                 try:
@@ -458,20 +524,33 @@ class TestServerSession(Mapping[str, Any]):
                     ready_event.set()
                     return
 
-                while self._is_running:
-                    await asyncio.sleep(0.01)
+                if self._stop_event is not None:
+                    await self._stop_event.wait()
+                await self._async_session.close()
 
             try:
                 self._loop.run_until_complete(_init_and_run())
             finally:
+                pending = [t for t in asyncio.all_tasks(self._loop) if not t.done()]
+                for t in pending:
+                    t.cancel()
+                if pending:
+                    self._loop.run_until_complete(
+                        asyncio.gather(*pending, return_exceptions=True)
+                    )
                 self._loop.close()
 
         self._is_running = True
         self._thread = threading.Thread(target=runner, daemon=True)
         self._thread.start()
 
-        ready_event.wait(timeout=self._timeout_secs + 2.0)
+        if not ready_event.wait(timeout=self._timeout_secs):
+            self.close()
+            raise TimeoutError(
+                f"test_server timed out after {self._timeout_secs}s during startup."
+            )
         if start_error:
+            self.close()
             raise start_error[0]
         return self
 
@@ -597,18 +676,16 @@ class TestServerSession(Mapping[str, Any]):
     def close(self) -> None:
         if not self._is_running:
             return
-        if self._loop is not None and self._loop.is_running():
-            try:
-                future = asyncio.run_coroutine_threadsafe(
-                    self._async_session.close(),
-                    self._loop,
-                )
-                future.result(timeout=self._timeout_secs)
-            except Exception:
-                pass
         self._is_running = False
+        if (
+            self._loop is not None
+            and self._loop.is_running()
+            and self._stop_event is not None
+        ):
+            self._loop.call_soon_threadsafe(self._stop_event.set)
         if self._thread is not None:
-            self._thread.join(timeout=2.0)
+            self._thread.join(timeout=self._timeout_secs + 2.0)
+            self._thread = None
 
     def __enter__(self) -> TestServerSession:
         self._entered = True
@@ -645,6 +722,30 @@ def _load_app_from_file(target_path: Path) -> Optional[App]:
     return None
 
 
+@overload
+def test_server(
+    app: Optional[Union[App, Callable[..., Any], str, Path]],
+    fn: Callable[[TestServerSession], None],
+    *,
+    code: Optional[str] = None,
+    file_path: Optional[Union[str, Path]] = None,
+    inputs: Optional[Mapping[str, Any]] = None,
+    timeout_secs: float = 5.0,
+) -> TestServerSession: ...
+
+
+@overload
+def test_server(
+    app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
+    fn: None = None,
+    *,
+    code: Optional[str] = None,
+    file_path: Optional[Union[str, Path]] = None,
+    inputs: Optional[Mapping[str, Any]] = None,
+    timeout_secs: float = 5.0,
+) -> TestServerSession: ...
+
+
 def test_server(
     app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     fn: Optional[Callable[[TestServerSession], None]] = None,
@@ -667,6 +768,30 @@ def test_server(
     return session
 
 
+@overload
+def test_server_async(
+    app: Optional[Union[App, Callable[..., Any], str, Path]],
+    fn: Callable[[AsyncTestServerSession], Awaitable[None] | None],
+    *,
+    code: Optional[str] = None,
+    file_path: Optional[Union[str, Path]] = None,
+    inputs: Optional[Mapping[str, Any]] = None,
+    timeout_secs: float = 5.0,
+) -> Coroutine[Any, Any, AsyncTestServerSession]: ...
+
+
+@overload
+def test_server_async(
+    app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
+    fn: None = None,
+    *,
+    code: Optional[str] = None,
+    file_path: Optional[Union[str, Path]] = None,
+    inputs: Optional[Mapping[str, Any]] = None,
+    timeout_secs: float = 5.0,
+) -> AsyncTestServerSession: ...
+
+
 def test_server_async(
     app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     fn: Optional[Callable[[AsyncTestServerSession], Any]] = None,
@@ -675,14 +800,25 @@ def test_server_async(
     file_path: Optional[Union[str, Path]] = None,
     inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
-) -> AsyncTestServerSession:
-    return AsyncTestServerSession(
+) -> Union[AsyncTestServerSession, Coroutine[Any, Any, AsyncTestServerSession]]:
+    session = AsyncTestServerSession(
         app=app,
         code=code,
         file_path=file_path,
         inputs=inputs,
         timeout_secs=timeout_secs,
     )
+    if fn is not None:
+
+        async def _run_with_callback() -> AsyncTestServerSession:
+            async with session:
+                res = fn(session)
+                if inspect.isawaitable(res):
+                    await res
+                return session
+
+        return _run_with_callback()
+    return session
 
 
 test_server.__test__ = False  # pyright: ignore[reportFunctionMemberAccess]

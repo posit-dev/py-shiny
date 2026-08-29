@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -61,6 +63,25 @@ async def test_interactive_async_context_manager():
 
         await s.set_inputs(x=7)
         assert s.outputs["squared"] == "49"
+
+
+@pytest.mark.asyncio
+async def test_interactive_async_callback_syntax():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def doubled():
+            return f"Result: {input.n() * 2}"
+
+    called = False
+
+    async def async_test_logic(s: AsyncTestServerSession):
+        nonlocal called
+        called = True
+        await s.set_inputs(n=8)
+        assert s.outputs["doubled"] == "Result: 16"
+
+    await test_server_async(server, async_test_logic)
+    assert called is True
 
 
 def test_interactive_exports():
@@ -222,3 +243,80 @@ def test_test_server_mapping_interface():
     assert len(res) == 7
     assert res.get("outputs") == {"out": "simulated"}
     assert res.to_dict()["success"] is True
+
+
+def test_test_server_startup_failure_cleans_up_environment(tmp_path: Path):
+    orig_path = list(sys.path)
+    orig_testmode = os.environ.get("SHINY_TESTMODE")
+
+    bad_file = tmp_path / "bad_app.py"
+    bad_file.write_text("import non_existent_package_xyz_123\n", encoding="utf-8")
+
+    with pytest.raises(ModuleNotFoundError):
+        with test_server(bad_file):
+            pass
+
+    assert sys.path == orig_path
+    assert os.environ.get("SHINY_TESTMODE") == orig_testmode
+
+    with pytest.raises(FileNotFoundError):
+        with test_server(tmp_path / "does_not_exist.py"):
+            pass
+
+    assert sys.path == orig_path
+    assert os.environ.get("SHINY_TESTMODE") == orig_testmode
+
+
+def test_test_server_sibling_module_isolation(tmp_path: Path):
+    dir_a = tmp_path / "app_a"
+    dir_a.mkdir()
+    (dir_a / "helpers.py").write_text("VALUE = 'from_A'\n", encoding="utf-8")
+    (dir_a / "app.py").write_text(
+        """from shiny import App, Inputs, Outputs, Session, render, ui
+import helpers
+app_ui = ui.page_fluid(ui.output_text("txt"))
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def txt():
+        return helpers.VALUE
+app = App(app_ui, server)
+""",
+        encoding="utf-8",
+    )
+
+    dir_b = tmp_path / "app_b"
+    dir_b.mkdir()
+    (dir_b / "helpers.py").write_text("VALUE = 'from_B'\n", encoding="utf-8")
+    (dir_b / "app.py").write_text(
+        """from shiny import App, Inputs, Outputs, Session, render, ui
+import helpers
+app_ui = ui.page_fluid(ui.output_text("txt"))
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def txt():
+        return helpers.VALUE
+app = App(app_ui, server)
+""",
+        encoding="utf-8",
+    )
+
+    res_a = test_server(dir_a / "app.py")
+    assert res_a.outputs["txt"] == "from_A"
+
+    res_b = test_server(dir_b / "app.py")
+    assert res_b.outputs["txt"] == "from_B"
+
+
+def test_test_server_set_inputs_timeout():
+    import time
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @reactive.effect
+        def _():
+            val = input.hang()
+            if val is not None and val > 0:
+                time.sleep(1.0)
+
+    with test_server(server, timeout_secs=0.2) as s:
+        with pytest.raises(TimeoutError):
+            s.set_inputs(hang=1)
