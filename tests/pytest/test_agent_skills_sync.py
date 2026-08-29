@@ -10,11 +10,15 @@ removals fail loudly here. They check presence only, not prose accuracy.
 
 from __future__ import annotations
 
+import asyncio
+import re
 from pathlib import Path
 
 import pytest
 
 import shiny.otel
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny._connection import MockConnection
 from shiny.otel._collect import OtelCollectLevel
 
 REPO_ROOT = Path(__file__).parents[2]
@@ -87,8 +91,6 @@ def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
 
 
 def test_shiny_doctor_code_blocks_compile() -> None:
-    import re
-
     doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
     for md_file in doctor_dir.rglob("*.md"):
         content = md_file.read_text()
@@ -103,8 +105,6 @@ def test_shiny_doctor_code_blocks_compile() -> None:
 
 
 def test_shiny_doctor_markdown_links() -> None:
-    import re
-
     doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
     for md_file in doctor_dir.rglob("*.md"):
         content = md_file.read_text()
@@ -116,10 +116,6 @@ def test_shiny_doctor_markdown_links() -> None:
 
 @pytest.mark.asyncio
 async def test_shiny_doctor_output_id_override_runtime() -> None:
-    import asyncio
-    from shiny import App, Inputs, Outputs, Session, render, ui
-    from shiny._connection import MockConnection
-
     def server(input: Inputs, output: Outputs, session: Session):
         @output(id="summary_output")
         @render.text
@@ -141,10 +137,6 @@ async def test_shiny_doctor_output_id_override_runtime() -> None:
 
 @pytest.mark.asyncio
 async def test_shiny_doctor_extended_task_semantics_runtime() -> None:
-    import asyncio
-    import pytest
-    from shiny import reactive
-
     def blocking_work(val: str) -> str:
         return f"result_{val}"
 
