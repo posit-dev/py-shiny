@@ -22,6 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, cast
 class GraphVisitor(ast.NodeVisitor):
     def __init__(self) -> None:
         self.inputs: Dict[str, int] = {}
+        self.input_defaults: Dict[str, Any] = {}
         self.calcs: Dict[str, Dict[str, Any]] = {}
         self.outputs: Dict[str, Dict[str, Any]] = {}
         self.effects: Dict[str, Dict[str, Any]] = {}
@@ -70,6 +71,31 @@ class GraphVisitor(ast.NodeVisitor):
             input_id = node.args[0].value
             if input_id not in self.inputs:
                 self.inputs[input_id] = node.lineno
+            default_val = None
+            for kw in node.keywords:
+                if kw.arg == "value" and isinstance(kw.value, ast.Constant):
+                    default_val = kw.value.value
+            if default_val is None:
+                if (
+                    func_name
+                    in (
+                        "ui.input_numeric",
+                        "ui.input_text",
+                        "ui.input_password",
+                        "ui.input_text_area",
+                    )
+                    and len(node.args) >= 3
+                    and isinstance(node.args[2], ast.Constant)
+                ):
+                    default_val = node.args[2].value
+                elif (
+                    func_name == "ui.input_slider"
+                    and len(node.args) >= 5
+                    and isinstance(node.args[4], ast.Constant)
+                ):
+                    default_val = node.args[4].value
+            if default_val is not None:
+                self.input_defaults[input_id] = default_val
 
         is_isolate_call = func_name in (
             "reactive.isolate",
@@ -259,6 +285,7 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
     for inp in sorted(all_inputs):
         is_declared = inp in visitor.inputs
         line = visitor.inputs.get(inp)
+        default_val = visitor.input_defaults.get(inp)
         nodes.append(
             {
                 "id": f"input:{inp}",
@@ -267,6 +294,7 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
                 "role": "source",
                 "label": f"input.{inp}",
                 "line": line,
+                "value": default_val,
                 "declaration": "declared" if is_declared else "unresolved",
             }
         )
@@ -456,6 +484,9 @@ def generate_reactlog(
     step += 1
 
     for node in nodes:
+        initial_val = (inputs or {}).get(node.get("name", ""))
+        if initial_val is None:
+            initial_val = node.get("value")
         events.append(
             _make_event(
                 step=step,
@@ -468,6 +499,7 @@ def generate_reactlog(
                 status="discovered",
                 timestamp=0,
                 time_sec=0.0,
+                value=str(initial_val) if initial_val is not None else None,
                 details=f"Discovered {node['role']} node '{node['label']}' at line {node.get('line', '?')}",
                 session=session,
             )
@@ -1438,7 +1470,29 @@ def _record_session_sync(
                 except Exception:
                     time.sleep(2.0)
             else:
-                time.sleep(1.0)
+                try:
+                    time.sleep(0.8)
+                    input_locators = page.locator("input.shiny-input-number, input.shiny-input-text, input[type='number'], input[type='text']").all()
+                    for inp in input_locators[:3]:
+                        try:
+                            val = inp.input_value()
+                            if val.isdigit():
+                                inp.fill(str(int(val) + 5))
+                            elif val:
+                                inp.fill(f"{val} Updated")
+                            time.sleep(0.4)
+                        except Exception:
+                            pass
+
+                    buttons = page.locator("button.action-button, button.btn-primary, button.btn").all()
+                    for btn in buttons[:2]:
+                        try:
+                            btn.click()
+                            time.sleep(0.5)
+                        except Exception:
+                            pass
+                except Exception:
+                    time.sleep(1.0)
 
             try:
                 if not page.is_closed():
@@ -1690,11 +1744,11 @@ def format_reactlog_html(
             <span class="video-badge">Playwright Video Recording</span>
             <span class="video-filename">{rel_video}</span>
           </div>
-          <p class="video-help">Play, pause, or seek here—the graph, event list, and recording timeline follow the video.</p>
+          <p class="video-help">Play, pause, or seek here—the graph, causal explanations, and timeline follow the video.</p>
         </div>
         """
 
-    trace_label = "Recording timeline" if actual_video else "Event timeline"
+    trace_label = "Execution timeline"
     video_sync_indicator = (
         '<span class="video-sync-status" id="video-sync-status" role="status" '
         'aria-live="polite">● Graph follows recording</span>'
@@ -1719,6 +1773,12 @@ def format_reactlog_html(
         .replace(">", "\\u003e")
         .replace("&", "\\u0026")
     )
+    escaped_source_raw = (
+        json.dumps(source_code)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
     safe_theme = html_lib.escape(
         theme if theme in ("dark", "light", "auto") else "dark"
     )
@@ -1737,17 +1797,20 @@ def format_reactlog_html(
       --surface: #111821;
       --surface-2: #17212d;
       --surface-3: #1d2a38;
+      --surface-elevated: #223243;
       --border: #293747;
       --border-strong: #3a4b5f;
       --text: #edf4fb;
       --text-muted: #91a1b3;
       --accent: #63b3ff;
+      --accent-hover: #82c4ff;
       --source: #38bdf8;
       --calc: #fbbf24;
       --effect: #c084fc;
       --output: #4ade80;
       --warning: #fb923c;
-      --grid-line: rgba(105, 128, 151, 0.055);
+      --danger: #f87171;
+      --grid-line: rgba(105, 128, 151, 0.035);
       --header-bg: rgba(17, 24, 33, 0.96);
       --node-fill: #121b25;
       --node-stroke: #35475a;
@@ -1755,10 +1818,14 @@ def format_reactlog_html(
       --node-subtext: #91a1b3;
       --source-panel-bg: #0c1219;
       --source-panel-text: #d9e7f5;
-      --trace-bg: #080d14;
-      --trace-lane-bg: #0a111a;
+      --trace-bg: #0b1119;
+      --trace-lane-bg: #0d1520;
+      --trace-burst-bg: #111a26;
+      --burst-column-bg: rgba(99, 179, 255, 0.03);
+      --burst-column-active: rgba(99, 179, 255, 0.12);
       --toast-bg: rgba(23, 33, 45, 0.95);
-      --legend-bg: rgba(17, 24, 33, 0.9);
+      --legend-bg: rgba(17, 24, 33, 0.92);
+      --card-bg: #141e2b;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }}
@@ -1768,17 +1835,20 @@ def format_reactlog_html(
       --surface: #ffffff;
       --surface-2: #f1f5f9;
       --surface-3: #e2e8f0;
+      --surface-elevated: #ffffff;
       --border: #cbd5e1;
       --border-strong: #94a3b8;
       --text: #0f172a;
       --text-muted: #64748b;
       --accent: #0284c7;
+      --accent-hover: #0369a1;
       --source: #0284c7;
       --calc: #d97706;
       --effect: #9333ea;
       --output: #16a34a;
       --warning: #ea580c;
-      --grid-line: rgba(15, 23, 42, 0.06);
+      --danger: #dc2626;
+      --grid-line: rgba(15, 23, 42, 0.04);
       --header-bg: rgba(255, 255, 255, 0.96);
       --node-fill: #ffffff;
       --node-stroke: #cbd5e1;
@@ -1786,10 +1856,14 @@ def format_reactlog_html(
       --node-subtext: #64748b;
       --source-panel-bg: #f8fafc;
       --source-panel-text: #1e293b;
-      --trace-bg: #f1f5f9;
+      --trace-bg: #f8fafc;
       --trace-lane-bg: #ffffff;
+      --trace-burst-bg: #f1f5f9;
+      --burst-column-bg: rgba(2, 132, 199, 0.03);
+      --burst-column-active: rgba(2, 132, 199, 0.12);
       --toast-bg: rgba(255, 255, 255, 0.95);
       --legend-bg: rgba(255, 255, 255, 0.92);
+      --card-bg: #f8fafc;
     }}
     @media (prefers-color-scheme: light) {{
       [data-theme="auto"] {{
@@ -1798,17 +1872,20 @@ def format_reactlog_html(
         --surface: #ffffff;
         --surface-2: #f1f5f9;
         --surface-3: #e2e8f0;
+        --surface-elevated: #ffffff;
         --border: #cbd5e1;
         --border-strong: #94a3b8;
         --text: #0f172a;
         --text-muted: #64748b;
         --accent: #0284c7;
+        --accent-hover: #0369a1;
         --source: #0284c7;
         --calc: #d97706;
         --effect: #9333ea;
         --output: #16a34a;
         --warning: #ea580c;
-        --grid-line: rgba(15, 23, 42, 0.06);
+        --danger: #dc2626;
+        --grid-line: rgba(15, 23, 42, 0.04);
         --header-bg: rgba(255, 255, 255, 0.96);
         --node-fill: #ffffff;
         --node-stroke: #cbd5e1;
@@ -1816,92 +1893,261 @@ def format_reactlog_html(
         --node-subtext: #64748b;
         --source-panel-bg: #f8fafc;
         --source-panel-text: #1e293b;
-        --trace-bg: #f1f5f9;
+        --trace-bg: #f8fafc;
         --trace-lane-bg: #ffffff;
+        --trace-burst-bg: #f1f5f9;
+        --burst-column-bg: rgba(2, 132, 199, 0.03);
+        --burst-column-active: rgba(2, 132, 199, 0.12);
         --toast-bg: rgba(255, 255, 255, 0.95);
         --legend-bg: rgba(255, 255, 255, 0.92);
+        --card-bg: #f8fafc;
       }}
     }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    button, input {{ font: inherit; }}
-    button:focus-visible, input:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
+    button, input, select {{ font: inherit; }}
+    button:focus-visible, input:focus-visible, select:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
     body {{ background: var(--bg); color: var(--text); font-family: var(--sans); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }}
-    .app-header {{ min-height: 64px; background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; gap: 1rem; align-items: center; }}
-    .brand {{ display: flex; align-items: center; gap: 0.75rem; min-width: 0; }}
-    .brand-mark {{ width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #07111c; background: linear-gradient(145deg, #82c9ff, #3b9ced); font-family: var(--mono); font-weight: 900; box-shadow: 0 7px 20px rgba(58, 158, 239, 0.22); }}
+    .app-header {{ min-height: 50px; background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 0.5rem 1.1rem; display: flex; justify-content: space-between; gap: 1rem; align-items: center; z-index: 20; position: relative; }}
+    .brand {{ display: flex; align-items: center; gap: 0.7rem; min-width: 0; }}
+    .brand-mark {{ width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; color: #07111c; background: linear-gradient(145deg, #82c9ff, #3b9ced); font-family: var(--mono); font-weight: 900; box-shadow: 0 3px 12px rgba(58, 158, 239, 0.2); flex-shrink: 0; }}
     .brand-copy {{ min-width: 0; }}
-    .brand-title {{ font-weight: 760; font-size: 0.98rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-    .brand-subtitle {{ color: var(--text-muted); font-size: 0.74rem; margin-top: 0.15rem; }}
-    .stats {{ display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; justify-content: flex-end; }}
-    .stat {{ border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; color: var(--text-muted); padding: 0.28rem 0.58rem; font: 600 0.7rem var(--mono); }}
-    .toolbar {{ min-height: 58px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.65rem 1rem; display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }}
+    .brand-title {{ font-weight: 760; font-size: 0.9rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+    .brand-subtitle {{ color: var(--text-muted); font-size: 0.68rem; }}
+    .header-actions {{ display: flex; align-items: center; gap: 0.45rem; position: relative; }}
+    .summary-toggle-btn {{ background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.32rem 0.6rem; border-radius: 7px; font: 600 0.7rem var(--mono); cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 120ms ease, border-color 120ms ease; }}
+    .summary-toggle-btn:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
+    .summary-popover {{ position: absolute; top: calc(100% + 10px); right: 0; width: 360px; background: var(--surface-elevated); border: 1px solid var(--border-strong); border-radius: 12px; padding: 1.1rem; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4); z-index: 50; display: flex; flex-direction: column; gap: 0.85rem; animation: popover-fade 140ms ease; }}
+    .summary-popover[hidden] {{ display: none; }}
+    @keyframes popover-fade {{ from {{ opacity: 0; transform: translateY(-4px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+    .summary-title {{ font: 700 0.86rem var(--sans); color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }}
+    .summary-title-text {{ display: flex; align-items: center; gap: 0.45rem; }}
+    .summary-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }}
+    .summary-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; transition: border-color 120ms ease; }}
+    .summary-card:hover {{ border-color: var(--border-strong); }}
+    .summary-card-header {{ display: flex; align-items: center; justify-content: space-between; }}
+    .summary-card-label {{ font: 700 0.64rem var(--sans); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }}
+    .summary-card-icon {{ color: var(--text-muted); opacity: 0.8; }}
+    .summary-card-val {{ font: 800 1.35rem/1 var(--mono); color: var(--text); letter-spacing: -0.02em; }}
+    .summary-card.card-observed .summary-card-val {{ color: var(--source); }}
+    .summary-card.card-inferred .summary-card-val {{ color: var(--effect); }}
+    .summary-card-subtext {{ font: 500 0.64rem var(--mono); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+    .summary-breakdown-section {{ display: flex; flex-direction: column; gap: 0.4rem; background: var(--surface-2); padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); }}
+    .summary-breakdown-header {{ display: flex; justify-content: space-between; font: 700 0.65rem var(--mono); }}
+    .breakdown-legend-obs {{ color: var(--source); display: inline-flex; align-items: center; gap: 0.3rem; }}
+    .breakdown-legend-inf {{ color: var(--effect); display: inline-flex; align-items: center; gap: 0.3rem; }}
+    .summary-breakdown-bar {{ width: 100%; height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; display: flex; }}
+    .breakdown-seg-obs {{ background: var(--source); height: 100%; transition: width 200ms ease; }}
+    .breakdown-seg-inf {{ background: var(--effect); height: 100%; transition: width 200ms ease; }}
+    .summary-meta-note {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }}
+
+    /* Streamlined Toolbar */
+    .toolbar {{ min-height: 44px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.35rem 0.9rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }}
     .toolbar-group {{ display: flex; align-items: center; gap: 0.35rem; }}
-    .toolbar-divider {{ width: 1px; height: 28px; background: var(--border); margin: 0 0.2rem; }}
-    .btn {{ min-height: 34px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.42rem 0.66rem; border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.38rem; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; font-size: 0.76rem; font-weight: 700; }}
+    .toolbar-divider {{ width: 1px; height: 22px; background: var(--border); margin: 0 0.15rem; }}
+    .btn {{ min-height: 28px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.28rem 0.55rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; font-size: 0.72rem; font-weight: 700; }}
     .btn:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
     .btn:active {{ transform: translateY(1px); }}
-    .btn.icon {{ width: 34px; padding: 0; font-family: var(--mono); }}
+    .btn.icon {{ width: 28px; padding: 0; font-family: var(--mono); }}
     .btn.primary {{ background: #1f69a3; border-color: #2d86c8; color: #fff; }}
     .btn.primary:hover {{ background: #267ec4; }}
-    .btn.accent-skip {{ background: color-mix(in srgb, var(--effect) 14%, var(--surface-2)); border-color: color-mix(in srgb, var(--effect) 40%, var(--border)); color: var(--effect); }}
-    .btn.accent-skip:hover {{ background: color-mix(in srgb, var(--effect) 22%, var(--surface-2)); }}
-    .inline-icon {{ display: inline-block; vertical-align: -0.15em; margin-right: 0.35rem; flex-shrink: 0; }}
+    .btn.active-filter {{ background: var(--surface-3); border-color: var(--accent); color: var(--accent); }}
+    .inline-icon {{ display: inline-block; vertical-align: -0.15em; margin-right: 0.3rem; flex-shrink: 0; }}
     .btn.icon svg {{ display: block; margin: auto; }}
-    .phase-selector {{ display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }}
-    .phase-btn {{ display: inline-flex; align-items: center; background: transparent; border: none; color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 6px; font: 700 0.7rem var(--mono); cursor: pointer; transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease; }}
-    .phase-btn:hover {{ color: var(--text); background: var(--surface-2); }}
-    .phase-btn.is-active {{ background: var(--surface-3); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }}
-    .search-wrap {{ position: relative; flex: 0 1 200px; min-width: 130px; }}
-    .search-icon {{ position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
-    .search-input {{ width: 100%; height: 34px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 0 0.7rem 0 2rem; font-size: 0.76rem; }}
+    .filter-select {{ height: 28px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0 0.55rem; font: 650 0.72rem var(--sans); cursor: pointer; }}
+    .filter-select:hover {{ border-color: var(--border-strong); }}
+    .search-wrap {{ position: relative; width: 160px; }}
+    .search-icon {{ position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
+    .search-input {{ width: 100%; height: 28px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 0.55rem 0 1.75rem; font-size: 0.72rem; }}
     .search-input::placeholder {{ color: var(--text-muted); }}
-    .filter-btn[aria-pressed="true"] {{ color: var(--text); background: var(--surface-3); }}
-    .filter-btn[data-role="source"][aria-pressed="true"] {{ border-color: var(--source); }}
-    .filter-btn[data-role="conductor"][aria-pressed="true"] {{ border-color: var(--calc); }}
-    .filter-btn[data-role="observer"][aria-pressed="true"] {{ border-color: var(--output); }}
-    .scrubber {{ flex: 1; min-width: 130px; display: flex; align-items: center; gap: 0.6rem; }}
+    .scrubber {{ display: flex; align-items: center; gap: 0.5rem; min-width: 180px; }}
     .scrubber input[type="range"] {{ width: 100%; accent-color: var(--accent); cursor: pointer; }}
-    .step-display {{ font: 700 0.72rem var(--mono); color: var(--accent); min-width: 80px; text-align: right; }}
-    .main-view {{ display: grid; grid-template-columns: minmax(0, 1fr) 8px var(--sidebar-width, 440px); flex: 1; min-height: 0; overflow: hidden; position: relative; }}
+    .step-display {{ font: 700 0.7rem var(--mono); color: var(--accent); min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; }}
+    .path-controls {{ display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 2px; gap: 2px; }}
+    .path-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.2rem 0.45rem; border-radius: 4px; font: 700 0.66rem var(--mono); cursor: pointer; transition: color 120ms, background 120ms; }}
+    .path-btn:hover {{ color: var(--text); }}
+    .path-btn.is-active {{ background: var(--surface-3); color: var(--accent); }}
+
+    /* Execution Timeline Bar */
+    .trace-timeline-bar {{ display: flex; flex-direction: column; gap: 0.3rem; padding: 0.4rem 0.85rem 0.45rem 0.85rem; background: var(--trace-bg); border-bottom: 1px solid var(--border); user-select: none; }}
+    .trace-header {{ display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }}
+    .trace-controls {{ display: flex; align-items: center; gap: 0.45rem; font: 700 0.72rem var(--mono); color: var(--text); }}
+    .trace-badge {{ background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.62rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
+    .trace-clock {{ color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }}
+    .trace-sep {{ color: var(--text-muted); opacity: 0.5; }}
+    .trace-total {{ color: var(--text-muted); }}
+    .trace-status-line {{ font: 650 0.68rem var(--mono); color: var(--text); background: var(--surface-2); padding: 0.15rem 0.5rem; border-radius: 5px; border: 1px solid var(--border); }}
+    .trace-nav-actions {{ display: flex; gap: 0.25rem; align-items: center; }}
+    .timeline-mode-select {{ height: 24px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 5px; padding: 0 0.45rem; font: 700 0.66rem var(--mono); cursor: pointer; }}
+    .timeline-mode-select:hover {{ border-color: var(--border-strong); }}
+    .btn.mini {{ padding: 0.16rem 0.38rem; font-size: 0.65rem; }}
+    .trace-legend-mini {{ display: flex; align-items: center; gap: 0.65rem; font: 600 0.62rem var(--mono); color: var(--text-muted); }}
+    .legend-chip {{ display: inline-flex; align-items: center; gap: 0.25rem; }}
+    .chip-dot {{ width: 6px; height: 6px; border-radius: 50%; display: inline-block; }}
+    .lane-input .chip-dot {{ background: var(--source); box-shadow: 0 0 4px var(--source); }}
+    .lane-calc .chip-dot {{ background: var(--calc); box-shadow: 0 0 4px var(--calc); }}
+    .lane-output .chip-dot {{ background: var(--output); box-shadow: 0 0 4px var(--output); }}
+
+    /* Level 1: Reactive Burst Ribbon */
+    .trace-burst-ribbon {{ position: relative; width: 100%; height: 28px; background: var(--trace-burst-bg); border-radius: 6px; display: flex; align-items: center; overflow: hidden; padding: 0 0.3rem; border: 1px solid var(--border); }}
+    .burst-ribbon-track {{ position: relative; width: 100%; height: 100%; display: flex; align-items: center; }}
+    .burst-anchor {{ position: absolute; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 0.3rem; background: transparent; border: 1px solid transparent; color: var(--text-muted); border-radius: 999px; padding: 0.14rem 0.48rem; font: 650 0.62rem var(--mono); cursor: pointer; transition: all 120ms ease; z-index: 3; white-space: nowrap; opacity: 0.72; }}
+    .burst-anchor:hover {{ background: var(--surface-2); border-color: var(--border); color: var(--text); opacity: 1; }}
+    .burst-anchor.is-active {{ background: var(--surface-elevated); border: 1.5px solid var(--accent); color: var(--accent); opacity: 1; box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent); transform: translate(-50%, -50%) scale(1.05); font-weight: 800; z-index: 5; }}
+    .burst-anchor-dot {{ width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }}
+    .burst-anchor.is-active .burst-anchor-dot {{ background: var(--accent); box-shadow: 0 0 6px var(--accent); }}
+    .burst-anchor.is-init .burst-anchor-dot {{ background: var(--calc); }}
+    .burst-anchor-count {{ font-size: 0.54rem; color: var(--text-muted); background: var(--surface); padding: 0.04rem 0.22rem; border-radius: 4px; }}
+    .burst-anchor.is-active .burst-anchor-count {{ color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }}
+    .time-break-indicator {{ position: absolute; top: 50%; transform: translate(-50%, -50%); font: 700 0.56rem var(--mono); color: var(--text-muted); background: var(--surface-2); border: 1px dashed var(--border); border-radius: 4px; padding: 0.06rem 0.28rem; pointer-events: none; z-index: 1; }}
+
+    /* Level 2: Micro-Cascade Seismograph & Swimlanes */
+    .trace-main-wrap {{ display: flex; align-items: stretch; gap: 0.5rem; position: relative; }}
+    .trace-lanes-labels {{ display: flex; flex-direction: column; justify-content: space-between; width: 48px; padding-top: 6px; }}
+    .lane-label {{ font: 700 0.56rem var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; height: 18px; display: flex; align-items: center; }}
+    .trace-track-wrap {{ flex: 1; position: relative; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; outline: none; border-radius: 6px; }}
+    .trace-track-wrap:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
+    .trace-ruler {{ position: relative; height: 10px; width: 100%; pointer-events: none; }}
+    .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 4px; background: var(--border-strong); }}
+    .trace-ruler-tick.major {{ height: 7px; background: var(--text-muted); }}
+    .trace-ruler-label {{ position: absolute; bottom: 2px; transform: translateX(-50%); font: 600 0.54rem var(--mono); color: var(--text-muted); pointer-events: none; }}
+    .trace-lanes {{ position: relative; height: 56px; background: var(--trace-lane-bg); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; overflow: visible; }}
+    .trace-lane {{ position: relative; height: 18.5px; width: 100%; border-bottom: 1px dashed var(--border); z-index: 2; }}
+    .trace-lane:last-of-type {{ border-bottom: none; }}
+    .burst-region-column {{ position: absolute; top: 0; bottom: 0; transform: translateX(-50%); background: var(--burst-column-bg); pointer-events: auto; z-index: 0; transition: background 120ms ease; }}
+    .burst-region-column:hover, .burst-region-column.is-active {{ background: var(--burst-column-active); border-left: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-right: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }}
+    .trace-seismograph-svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }}
+    .seismograph-branch {{ stroke: var(--border-strong); stroke-width: 1.5px; fill: none; stroke-dasharray: 3 3; }}
+    .seismograph-branch.is-active {{ stroke: var(--accent); stroke-width: 2px; stroke-dasharray: none; }}
+    .trace-fill {{ position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 5px 0 0 5px; pointer-events: none; z-index: 0; }}
+
+    /* Semantic Event Chips */
+    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 16px; max-width: 130px; padding: 0 6px; border-radius: 4px; font: 700 0.56rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 3; }}
+    .trace-chip:hover, .trace-chip.is-active {{ transform: translate(-50%, -50%) scale(1.08); z-index: 10; box-shadow: 0 0 10px var(--accent); }}
+    .trace-chip.kind-input {{ background: color-mix(in srgb, var(--source) 18%, var(--surface)); color: var(--source); border: 1px solid var(--source); }}
+    .trace-chip.kind-click {{ background: color-mix(in srgb, var(--effect) 18%, var(--surface)); color: var(--effect); border: 1px solid var(--effect); }}
+    .trace-chip.kind-calc {{ background: color-mix(in srgb, var(--calc) 18%, var(--surface)); color: var(--calc); border: 1px solid var(--calc); }}
+    .trace-chip.kind-output {{ background: color-mix(in srgb, var(--output) 18%, var(--surface)); color: var(--output); border: 1px solid var(--output); }}
+    .trace-chip.is-grouped {{ border-style: double; font-weight: 800; }}
+
+    /* Group Popover */
+    .group-chip-popover {{ position: absolute; background: var(--surface-elevated); border: 1px solid var(--border-strong); border-radius: 7px; padding: 0.4rem; box-shadow: 0 8px 24px rgba(0,0,0,0.35); z-index: 40; display: flex; flex-direction: column; gap: 0.25rem; animation: popover-fade 120ms ease; min-width: 140px; }}
+    .group-chip-popover[hidden] {{ display: none; }}
+    .group-popover-title {{ font: 700 0.64rem var(--mono); color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 0.2rem; }}
+    .group-popover-item {{ background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 0.2rem 0.45rem; font: 650 0.68rem var(--mono); text-align: left; cursor: pointer; }}
+    .group-popover-item:hover {{ background: var(--surface-3); border-color: var(--accent); color: var(--accent); }}
+
+    /* Playhead with pin */
+    .trace-playhead {{ position: absolute; top: -5px; bottom: -3px; left: 0%; width: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); pointer-events: none; z-index: 15; transition: left 40ms linear; }}
+    .playhead-pin {{ position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #07111c; font: 800 0.56rem var(--mono); padding: 0.04rem 0.28rem; border-radius: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); pointer-events: none; white-space: nowrap; }}
+    .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 7px; height: 7px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 5px var(--accent); }}
+    .playhead-line {{ width: 100%; height: 100%; }}
+    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 0.35rem 0.6rem; font: 600 0.66rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 25; display: flex; flex-direction: column; gap: 0.15rem; }}
+    .tooltip-time {{ color: var(--accent); font-weight: 800; font-size: 0.7rem; display: inline-flex; align-items: center; gap: 0.25rem; }}
+    .tooltip-title {{ color: var(--text); font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }}
+
+    /* Main View & Graph */
+    .main-view {{ display: grid; grid-template-columns: minmax(0, 1fr) 8px var(--sidebar-width, 420px); flex: 1; min-height: 0; overflow: hidden; position: relative; }}
     .main-view.sidebar-hidden {{ grid-template-columns: minmax(0, 1fr) 0 0; }}
     .split-resizer {{ width: 8px; background: var(--surface); border-left: 1px solid var(--border); border-right: 1px solid var(--border); cursor: col-resize; display: flex; align-items: center; justify-content: center; user-select: none; transition: background 120ms ease; z-index: 10; }}
     .split-resizer:hover, .split-resizer:focus-visible, .split-resizer.is-dragging {{ background: var(--surface-3); border-color: var(--accent); outline: none; }}
     .resizer-handle {{ width: 2px; height: 32px; border-radius: 1px; background: var(--border-strong); }}
     .split-resizer:hover .resizer-handle, .split-resizer.is-dragging .resizer-handle {{ background: var(--accent); }}
     .graph-container {{ min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 24px 24px; }}
-    .graph-topbar {{ position: absolute; z-index: 3; top: 0.8rem; left: 0.8rem; right: 0.8rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; pointer-events: none; }}
-    .legend {{ display: flex; gap: 0.4rem; flex-wrap: wrap; padding: 0.4rem; border: 1px solid var(--border); border-radius: 9px; background: var(--legend-bg); backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); pointer-events: auto; }}
-    .legend-item {{ display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.66rem var(--mono); padding: 0.18rem 0.32rem; }}
-    .legend-dot {{ width: 7px; height: 7px; border-radius: 50%; background: var(--role-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--role-color) 18%, transparent); }}
-    .zoom-controls {{ display: flex; gap: 0.3rem; pointer-events: auto; }}
-    .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 0.45rem 1.1rem; color: var(--text); font: 650 0.76rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.6rem; pointer-events: none; animation: toast-pop 200ms ease; }}
-    @keyframes toast-pop {{ from {{ opacity: 0; transform: translate(-50%, 8px); }} to {{ opacity: 1; transform: translate(-50%, 0); }} }}
+
+    /* Causal Story Banner above graph */
+    .graph-topbar {{ position: absolute; z-index: 3; top: 0.65rem; left: 0.75rem; right: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }}
+    .graph-top-row {{ display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }}
+    .causal-summary-banner {{ background: var(--legend-bg); border: 1px solid var(--accent); border-radius: 8px; padding: 0.45rem 0.85rem; color: var(--text); font: 550 0.76rem var(--sans); backdrop-filter: blur(10px); box-shadow: 0 4px 16px rgba(0,0,0,0.18); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; pointer-events: auto; }}
+    .causal-summary-badge {{ background: color-mix(in srgb, var(--accent) 20%, var(--surface)); color: var(--accent); font-weight: 800; font-size: 0.62rem; font-family: var(--mono); text-transform: uppercase; padding: 0.12rem 0.4rem; border-radius: 4px; }}
+    .causal-step-pill {{ font: 700 0.72rem var(--mono); background: color-mix(in srgb, var(--accent) 15%, var(--surface-2)); border: 1px solid var(--border-strong); color: var(--text); padding: 0.12rem 0.38rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; }}
+    .causal-step-pill:hover {{ background: var(--accent); color: #07111c; border-color: var(--accent); transform: translateY(-1px); }}
+    .legend {{ display: flex; gap: 0.4rem; flex-wrap: wrap; padding: 0.3rem 0.45rem; border: 1px solid var(--border); border-radius: 7px; background: var(--legend-bg); backdrop-filter: blur(8px); pointer-events: auto; }}
+    .legend-item {{ display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.1rem 0.2rem; }}
+    .legend-dot {{ width: 7px; height: 7px; border-radius: 50%; background: var(--role-color); }}
+    .zoom-controls {{ display: flex; gap: 0.25rem; pointer-events: auto; }}
+    .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 0.4rem 1rem; color: var(--text); font: 650 0.74rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.5rem; pointer-events: none; }}
+
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
-    .graph-node, .graph-edge {{ transition: opacity 160ms ease, filter 160ms ease, stroke 160ms ease, stroke-width 160ms ease; }}
+    .graph-node, .graph-edge {{ transition: opacity 180ms ease, filter 180ms ease, stroke 180ms ease, stroke-width 180ms ease; }}
     .graph-edge {{ opacity: 0.75; stroke: #527494; stroke-width: 1.8px; }}
-    .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
+    .graph-edge.is-dimmed {{ opacity: 0.22 !important; }}
+    .graph-edge[data-active="true"], .graph-edge.is-causal-edge {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
     @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
-      .graph-edge[data-active="true"] {{ animation: none; }}
+      .graph-edge[data-active="true"], .graph-edge.is-causal-edge {{ animation: none; }}
       .action-toast {{ animation: none; }}
     }}
     .graph-node {{ cursor: pointer; }}
-    .graph-node:hover .node-card {{ filter: brightness(1.08); }}
-    .graph-node.is-selected .node-card {{ filter: drop-shadow(0 0 9px color-mix(in srgb, var(--accent) 50%, transparent)); }}
-    .stage-label {{ font: 700 10px var(--mono); fill: var(--text-muted); letter-spacing: 0.08em; }}
+    .graph-node.is-dimmed {{ opacity: 0.40; }}
+    .graph-node:hover .node-card {{ filter: brightness(1.1); }}
+    .graph-node.is-selected .node-card {{ stroke: var(--accent) !important; stroke-width: 2.8px !important; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 65%, transparent)); }}
+    .graph-node.is-executed .node-card {{ stroke: var(--accent) !important; stroke-width: 2.2px !important; }}
+    .graph-node.is-reachable .node-card {{ stroke: var(--text-muted) !important; stroke-dasharray: 4 3; }}
+    .stage-label {{ font: 800 11px var(--mono); fill: var(--text); letter-spacing: 0.1em; }}
+
+    /* Sidebar */
     .sidebar {{ min-width: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }}
-    .sidebar-header {{ min-height: 46px; padding: 0.7rem 0.8rem 0.65rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }}
-    .sidebar-tabs {{ display: flex; align-items: center; gap: 0.25rem; }}
-    .sidebar-tab {{ color: var(--text-muted); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 0.36rem 0.55rem; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }}
+    .sidebar-header {{ min-height: 42px; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
+    .sidebar-tabs {{ display: flex; align-items: center; gap: 0.2rem; flex-wrap: wrap; }}
+    .sidebar-tab {{ color: var(--text-muted); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 0.28rem 0.48rem; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }}
     .sidebar-tab:hover {{ color: var(--text); background: var(--surface-2); }}
-    .sidebar-tab[aria-selected="true"] {{ color: var(--text); background: var(--surface-3); border-color: var(--border); }}
-    .sidebar-panel {{ min-height: 0; flex: 1; }}
+    .sidebar-tab[aria-selected="true"] {{ color: var(--accent); background: var(--surface-3); border-color: var(--border); }}
+    .sidebar-panel {{ min-height: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }}
     .sidebar-panel[hidden] {{ display: none; }}
+    .inspector-container {{ padding: 0.8rem; display: flex; flex-direction: column; gap: 0.75rem; }}
+
+    /* Why Card */
+    .why-card {{ background: var(--card-bg); border: 1.5px solid var(--accent); border-radius: 9px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.6rem; box-shadow: 0 4px 16px rgba(0,0,0,0.14); position: relative; }}
+    .why-header {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
+    .why-title {{ font: 800 0.86rem var(--sans); color: var(--text); line-height: 1.3; }}
+    .why-narrative {{ font-size: 0.74rem; color: var(--text); line-height: 1.5; background: var(--surface-2); border-radius: 6px; padding: 0.6rem 0.7rem; border-left: 3px solid var(--accent); display: flex; flex-direction: column; gap: 0.35rem; }}
+    .why-section-title {{ font: 750 0.66rem var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }}
+    .why-causes-list {{ list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.72rem; }}
+    .why-causes-list li {{ display: flex; align-items: center; gap: 0.35rem; }}
+    .why-causes-list li::before {{ content: "•"; color: var(--accent); font-weight: bold; }}
+    .why-dag-tree {{ display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: var(--surface-3); border-radius: 7px; border: 1px solid var(--border); overflow-x: auto; }}
+    .dag-parents-col {{ display: flex; flex-direction: column; gap: 0.35rem; justify-content: center; }}
+    .dag-bracket {{ color: var(--accent); font-size: 0.9rem; font-weight: bold; }}
+    .dag-target-col {{ display: flex; align-items: center; }}
+    .flow-node-pill {{ font: 700 0.68rem var(--mono); padding: 0.22rem 0.48rem; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); cursor: pointer; color: var(--text); display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }}
+    .flow-node-pill:hover {{ border-color: var(--accent); color: var(--accent); background: var(--surface); }}
+    .flow-node-pill.is-trigger {{ background: color-mix(in srgb, var(--source) 18%, var(--surface)); border-color: var(--source); color: var(--source); }}
+    .flow-node-pill.is-target {{ background: color-mix(in srgb, var(--output) 18%, var(--surface)); border-color: var(--output); color: var(--output); font-weight: 800; }}
+
+    /* Simplified Node Details */
+    .node-details-card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.45rem; }}
+    .node-details-header {{ display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }}
+    .node-details-name {{ font: 750 0.84rem var(--mono); color: var(--text); }}
+    .node-details-meta {{ font: 600 0.68rem var(--mono); color: var(--text-muted); }}
+    .node-connections {{ display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.2rem; }}
+    .connections-label {{ font-size: 0.66rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }}
+    .connections-pills {{ display: flex; flex-wrap: wrap; gap: 0.3rem; }}
+    .conn-pill {{ font: 650 0.68rem var(--mono); padding: 0.18rem 0.4rem; border-radius: 4px; background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; }}
+    .conn-pill:hover {{ border-color: var(--accent); color: var(--accent); }}
+    .conn-pill-empty {{ font: 500 0.68rem var(--mono); color: var(--text-muted); font-style: italic; }}
+
+    /* Code Preview Drawer */
+    .source-drawer {{ background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }}
+    .source-drawer-toggle {{ width: 100%; padding: 0.45rem 0.65rem; background: var(--surface-2); border: none; border-bottom: 1px solid var(--border); color: var(--text); font: 700 0.7rem var(--mono); text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }}
+    .source-drawer-toggle:hover {{ background: var(--surface-3); }}
+    .source-drawer-code {{ padding: 0.65rem; font: 500 0.72rem/1.55 var(--mono); background: var(--source-panel-bg); color: var(--source-panel-text); white-space: pre; overflow-x: auto; max-height: 220px; }}
+    .source-drawer-refs {{ padding: 0.4rem 0.65rem; font: 600 0.66rem var(--mono); color: var(--text-muted); border-top: 1px solid var(--border); background: var(--surface-2); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }}
+
+    .actions-panel {{ padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; }}
+    .action-story-item {{ width: 100%; padding: 0.55rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); border-left: 3px solid var(--source); background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 0.25rem; transition: background 120ms ease, border-color 120ms ease; }}
+    .action-story-item:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
+    .action-story-item.is-active {{ border-color: var(--accent); border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }}
+    .action-story-header {{ display: flex; align-items: center; justify-content: space-between; }}
+    .action-story-title {{ font: 750 0.76rem var(--mono); color: var(--text); display: flex; align-items: center; gap: 0.35rem; }}
+    .action-story-time {{ font: 700 0.62rem var(--mono); color: var(--accent); background: var(--surface-3); padding: 0.08rem 0.3rem; border-radius: 4px; }}
+    .action-story-desc {{ font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; }}
+    .action-story-cascade {{ font: 600 0.66rem var(--mono); color: var(--text-muted); background: var(--surface); padding: 0.25rem 0.4rem; border-radius: 4px; margin-top: 0.15rem; border-left: 2px solid var(--calc); }}
+
     .timeline-panel {{ display: flex; flex-direction: column; }}
     .source-panel {{ position: relative; overflow: auto; padding: 1rem; background: var(--source-panel-bg); color: var(--source-panel-text); font: 500 0.76rem/1.62 var(--mono); white-space: pre; tab-size: 4; }}
     .source-panel code {{ position: relative; z-index: 1; font: inherit; }}
-    .source-line-highlight {{ position: absolute; z-index: 0; left: 0; right: 0; margin: 0; padding: 0; border: 0; border-left: 3px solid var(--source-highlight-color, var(--accent)); border-radius: 0; background: color-mix(in srgb, var(--source-highlight-color, var(--accent)) 16%, transparent); box-shadow: inset 0 1px color-mix(in srgb, var(--source-highlight-color, var(--accent)) 12%, transparent), inset 0 -1px color-mix(in srgb, var(--source-highlight-color, var(--accent)) 12%, transparent); pointer-events: none; transition: top 150ms ease, background 150ms ease; }}
+    .source-line-highlight {{ position: absolute; z-index: 0; left: 0; right: 0; margin: 0; padding: 0; border: 0; border-left: 3px solid var(--source-highlight-color, var(--accent)); border-radius: 0; background: color-mix(in srgb, var(--source-highlight-color, var(--accent)) 16%, transparent); pointer-events: none; transition: top 150ms ease, background 150ms ease; }}
     .source-line-highlight[hidden] {{ display: none; }}
     .video-panel {{ display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; background: var(--surface); overflow: auto; }}
     .video-container {{ width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #000; }}
@@ -1943,160 +2189,181 @@ def format_reactlog_html(
     .event-badge.idle {{ background: var(--surface-3); color: var(--text-muted); }}
     .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
     .event-details {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
-    .inspector-panel {{ border-top: 1px solid var(--border); padding: 0.8rem; background: var(--surface); }}
-    .inspector-title {{ font: 700 0.8rem var(--mono); color: var(--text); margin-bottom: 0.4rem; }}
-    .inspector-row {{ display: flex; justify-content: space-between; font-size: 0.74rem; padding: 0.2rem 0; }}
-    .inspector-label {{ color: var(--text-muted); }}
-    .inspector-val {{ font-family: var(--mono); color: var(--text); font-weight: 600; }}
-    .trace-timeline-bar {{ display: flex; flex-direction: column; gap: 0.35rem; padding: 0.45rem 1rem 0.55rem 1rem; background: var(--trace-bg); border-bottom: 1px solid var(--border); user-select: none; }}
-    .trace-header {{ display: flex; align-items: center; justify-content: space-between; gap: 1rem; }}
-    .trace-controls {{ display: flex; align-items: center; gap: 0.45rem; font: 700 0.74rem var(--mono); color: var(--text); }}
-    .trace-badge {{ background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.62rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
-    .trace-clock {{ color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }}
-    .trace-sep {{ color: var(--text-muted); opacity: 0.5; }}
-    .trace-total {{ color: var(--text-muted); }}
-    .trace-nav-actions {{ display: flex; gap: 0.2rem; margin-left: 0.2rem; }}
-    .btn.mini {{ padding: 0.18rem 0.35rem; font-size: 0.65rem; }}
-    .trace-legend-mini {{ display: flex; align-items: center; gap: 0.8rem; font: 600 0.64rem var(--mono); color: var(--text-muted); }}
-    .legend-chip {{ display: inline-flex; align-items: center; gap: 0.3rem; }}
-    .chip-dot {{ width: 6px; height: 6px; border-radius: 50%; display: inline-block; }}
-    .lane-input .chip-dot {{ background: var(--source); box-shadow: 0 0 4px var(--source); }}
-    .lane-calc .chip-dot {{ background: var(--calc); box-shadow: 0 0 4px var(--calc); }}
-    .lane-output .chip-dot {{ background: var(--output); box-shadow: 0 0 4px var(--output); }}
-    .trace-main-wrap {{ display: flex; align-items: stretch; gap: 0.6rem; position: relative; }}
-    .trace-lanes-labels {{ display: flex; flex-direction: column; justify-content: space-between; width: 52px; padding-top: 14px; }}
-    .lane-label {{ font: 700 0.6rem var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; height: 20px; display: flex; align-items: center; }}
-    .trace-track-wrap {{ flex: 1; position: relative; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; outline: none; border-radius: 6px; }}
-    .trace-track-wrap:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
-    .trace-ruler {{ position: relative; height: 14px; width: 100%; pointer-events: none; }}
-    .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 5px; background: var(--border-strong); }}
-    .trace-ruler-tick.major {{ height: 9px; background: var(--text-muted); }}
-    .trace-ruler-label {{ position: absolute; bottom: 4px; transform: translateX(-50%); font: 600 0.58rem var(--mono); color: var(--text-muted); pointer-events: none; }}
-    .trace-lanes {{ position: relative; height: 66px; background: var(--trace-lane-bg); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; overflow: visible; }}
-    .trace-lane {{ position: relative; height: 22px; width: 100%; border-bottom: 1px dashed var(--border); }}
-    .trace-lane:last-of-type {{ border-bottom: none; }}
-    .trace-fill {{ position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 5px 0 0 5px; pointer-events: none; }}
-    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 18px; max-width: 120px; padding: 0 6px; border-radius: 4px; font: 700 0.58rem var(--mono); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.25); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 2; }}
-    .trace-chip:hover, .trace-chip.is-active {{ transform: translate(-50%, -50%) scale(1.12); z-index: 10; box-shadow: 0 0 10px var(--accent); }}
-    .trace-chip.kind-input {{ background: color-mix(in srgb, var(--source) 18%, var(--surface)); color: var(--source); border: 1px solid var(--source); }}
-    .trace-chip.kind-click {{ background: color-mix(in srgb, var(--effect) 18%, var(--surface)); color: var(--effect); border: 1px solid var(--effect); }}
-    .trace-chip.kind-calc {{ background: color-mix(in srgb, var(--calc) 18%, var(--surface)); color: var(--calc); border: 1px solid var(--calc); }}
-    .trace-chip.kind-output {{ background: color-mix(in srgb, var(--output) 18%, var(--surface)); color: var(--output); border: 1px solid var(--output); }}
-    .trace-playhead {{ position: absolute; top: -5px; bottom: -3px; left: 0%; width: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); pointer-events: none; z-index: 15; transition: left 40ms linear; }}
-    .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 8px; height: 8px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 6px var(--accent); }}
-    .playhead-line {{ width: 100%; height: 100%; }}
-    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 0.4rem 0.65rem; font: 600 0.68rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 25; display: flex; flex-direction: column; gap: 0.2rem; }}
-    .tooltip-time {{ color: var(--accent); font-weight: 800; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.3rem; }}
-    .tooltip-title {{ color: var(--text); font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }}
-    .tooltip-desc {{ color: var(--text-muted); font-size: 0.64rem; display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }}
-    .tooltip-desc .inline-icon, .tooltip-title .inline-icon, .tooltip-time .inline-icon {{ margin-right: 0.15rem; vertical-align: -0.12em; }}
   </style>
 </head>
 <body>
   <header class="app-header">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       </div>
       <div class="brand-copy">
         <h1 class="brand-title">{escaped_title}</h1>
-        <div class="brand-subtitle">Interactive Shiny Reactive Log & Graph Explorer</div>
+        <div class="brand-subtitle">Interactive Shiny Reactive Log & Execution Debugger</div>
       </div>
     </div>
-    <div class="stats">
-      <span class="stat" id="stat-nodes">Nodes: 0</span>
-      <span class="stat" id="stat-edges">Edges: 0</span>
-      <span class="stat" id="stat-observed"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Observed: 0</span>
-      <span class="stat" id="stat-inferred"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Inferred: 0</span>
+    <div class="header-actions">
+      <button class="summary-toggle-btn" id="btn-summary-toggle" onclick="toggleSummaryPopover()" aria-expanded="false" aria-haspopup="dialog" title="View recording summary and execution diagnostics">
+        <svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        <span>Summary ▾</span>
+      </button>
+      <div class="summary-popover" id="recording-summary-popover" role="dialog" aria-label="Recording summary details" hidden>
+        <div class="summary-title">
+          <div class="summary-title-text">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+            <span>Session Summary</span>
+          </div>
+          <button class="btn icon mini" onclick="toggleSummaryPopover(false)" aria-label="Close summary" title="Close">✕</button>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-card-header">
+              <span class="summary-card-label">Nodes</span>
+              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>
+            </div>
+            <div class="summary-card-val" id="stat-nodes">0</div>
+            <div class="summary-card-subtext" id="stat-nodes-subtext">Reactive DAG</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-header">
+              <span class="summary-card-label">Edges</span>
+              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+            <div class="summary-card-val" id="stat-edges">0</div>
+            <div class="summary-card-subtext">Causal links</div>
+          </div>
+          <div class="summary-card card-observed">
+            <div class="summary-card-header">
+              <span class="summary-card-label">Observed:</span>
+              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--source)" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div class="summary-card-val" id="stat-observed">0</div>
+            <div class="summary-card-subtext">Browser events</div>
+          </div>
+          <div class="summary-card card-inferred">
+            <div class="summary-card-header">
+              <span class="summary-card-label">Inferred:</span>
+              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--effect)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="summary-card-val" id="stat-inferred">0</div>
+            <div class="summary-card-subtext">Cascade steps</div>
+          </div>
+        </div>
+        <div class="summary-breakdown-section">
+          <div class="summary-breakdown-header">
+            <span class="breakdown-legend-obs" id="legend-obs-text"><span class="chip-dot" style="background:var(--source)"></span> 0% Observed</span>
+            <span class="breakdown-legend-inf" id="legend-inf-text"><span class="chip-dot" style="background:var(--effect)"></span> 0% Inferred</span>
+          </div>
+          <div class="summary-breakdown-bar" id="summary-breakdown-bar" title="Observed vs Inferred events">
+            <div class="breakdown-seg-obs" id="seg-obs" style="width: 50%"></div>
+            <div class="breakdown-seg-inf" id="seg-inf" style="width: 50%"></div>
+          </div>
+        </div>
+        <div class="summary-meta-note" id="summary-meta-note">
+          Simulated dependency steps from AST static analysis.
+        </div>
+      </div>
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+      <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
+      <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open Reactlog JSON recording"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
     </div>
   </header>
 
+  <!-- Streamlined Toolbar -->
   <main class="toolbar" role="toolbar" aria-label="Reactlog controls">
     <div class="toolbar-group">
-      <button class="btn icon" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
-      <button class="btn icon" onclick="stepBack()" aria-label="Step back" title="Step back"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
-      <button class="btn icon" onclick="stepForward()" aria-label="Step forward" title="Step forward"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
-      <button class="btn icon" onclick="resetTimeline()" aria-label="Reset timeline" title="Reset"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
-    </div>
-
-    <div class="toolbar-divider" aria-hidden="true"></div>
-
-    <div class="phase-selector" role="group" aria-label="Timeline phase filter">
-      <button class="phase-btn is-active" id="phase-btn-all" aria-pressed="true" onclick="setPhaseFilter('all')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>All (<span id="count-all">0</span>)</button>
-      <button class="phase-btn" id="phase-btn-init" aria-pressed="false" onclick="setPhaseFilter('init')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Init (<span id="count-init">0</span>)</button>
-      <button class="phase-btn" id="phase-btn-interaction" aria-pressed="false" onclick="setPhaseFilter('interaction')"><svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>Actions (<span id="count-interaction">0</span>)</button>
-    </div>
-
-    <button class="btn accent-skip" id="btn-skip-init" onclick="skipToInteractions()" title="Skip initialization steps and start at first app action"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>Skip to Actions</button>
-
-    <div class="toolbar-divider" aria-hidden="true"></div>
-
-    <div class="scrubber">
-      <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
-      <span class="step-display" id="step-display">Step 0 / 0</span>
-    </div>
-
-    <div class="toolbar-divider" aria-hidden="true"></div>
-
-    <div class="search-wrap">
-      <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Filter graph nodes…" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name or type" />
+      <button class="btn icon" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+      <button class="btn icon" onclick="stepBack()" aria-label="Step back" title="Step back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
+      <button class="btn icon" onclick="stepForward()" aria-label="Step forward" title="Step forward"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
+      <button class="btn icon" onclick="resetTimeline()" aria-label="Reset timeline" title="Reset"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <div class="scrubber">
+        <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
+        <span class="step-display" id="step-display">Step 0 / 0</span>
+      </div>
     </div>
 
     <div class="toolbar-group">
-      <button class="btn filter-btn" data-role="source" aria-pressed="true" onclick="toggleRoleFilter('source', this)">Inputs</button>
-      <button class="btn filter-btn" data-role="conductor" aria-pressed="true" onclick="toggleRoleFilter('conductor', this)">Calcs</button>
-      <button class="btn filter-btn" data-role="observer" aria-pressed="true" onclick="toggleRoleFilter('observer', this)">Outputs</button>
-    </div>
+      <select class="filter-select phase-selector" id="phase-filter-select" onchange="handlePhaseSelect(this.value)" aria-label="Filter events by phase">
+        <option value="all">Phase: All events</option>
+        <option value="interaction" selected>Phase: User actions</option>
+        <option value="init">Phase: Init only</option>
+      </select>
+      <button class="btn mini" id="btn-skip-init" onclick="skipToInteractions()" title="Skip to user interaction actions">Skip to Actions</button>
 
-    <div class="toolbar-divider" aria-hidden="true"></div>
+      <select class="filter-select" id="role-filter-dropdown" onchange="handleRoleDropdownChange(this.value)" aria-label="Filter nodes by type">
+        <option value="all">Show: All nodes</option>
+        <option value="source">Show: Inputs</option>
+        <option value="conductor">Show: Calcs</option>
+        <option value="observer">Show: Outputs</option>
+      </select>
 
-    <div class="toolbar-group">
-      <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
-      <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open existing Reactlog JSON file"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
+      <div class="search-wrap">
+        <svg class="search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Filter nodes…" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name or type" />
+      </div>
+
+      <div class="path-controls" role="group" aria-label="Path focus">
+        <button class="path-btn is-active" id="btn-focus-upstream" aria-pressed="true" onclick="setFocusMode('upstream')" title="Show causal path leading to this node">← Causes</button>
+        <button class="path-btn" id="btn-focus-downstream" aria-pressed="false" onclick="setFocusMode('downstream')" title="Show effects caused by this node">Effects →</button>
+        <button class="path-btn" id="btn-focus-all" aria-pressed="false" onclick="setFocusMode('all')" title="Show all nodes">All</button>
+      </div>
     </div>
   </main>
 
-  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Session Recording Trace Scrubber">
+  <!-- Two-Level Execution Timeline -->
+  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution Timeline and Causal Cascade">
     <div class="trace-header">
       <div class="trace-controls">
         <span class="trace-badge">{trace_label}</span>
         <span class="trace-clock" id="trace-current-time">0.0s</span>
         <span class="trace-sep">/</span>
         <span class="trace-total" id="trace-total-time">0.0s</span>
+        <div class="trace-status-line" id="trace-status-line">Step 0 of 0</div>
         <div class="trace-nav-actions">
-          <button class="btn icon mini" onclick="prevAction()" aria-label="Previous action" title="Previous action"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
-          <button class="btn icon mini" onclick="nextAction()" aria-label="Next action" title="Next action"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
+          <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
+          <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
         </div>
       </div>
       <div class="trace-legend-mini">
         {video_sync_indicator}
-        <span class="legend-chip lane-input"><span class="chip-dot"></span>Inputs & Clicks</span>
-        <span class="legend-chip lane-calc"><span class="chip-dot"></span>Reactive Calcs</span>
+        <select class="timeline-mode-select" id="timeline-mode-select" onchange="setTimelineMode(this.value)" aria-label="Timeline spacing mode" title="Switch between compressed activity and linear real-time spacing">
+          <option value="activity">Timeline: Activity ▾</option>
+          <option value="realtime">Timeline: Real time ▾</option>
+        </select>
+        <span class="legend-chip lane-input"><span class="chip-dot"></span>Inputs</span>
+        <span class="legend-chip lane-calc"><span class="chip-dot"></span>Calcs</span>
         <span class="legend-chip lane-output"><span class="chip-dot"></span>Outputs</span>
       </div>
     </div>
 
+    <!-- Level 1: Reactive Burst Ribbon -->
+    <div class="trace-burst-ribbon" id="trace-burst-ribbon">
+      <div class="burst-ribbon-track" id="trace-burst-track"></div>
+    </div>
+
+    <!-- Level 2: Micro-Cascade Seismograph -->
     <div class="trace-main-wrap">
       <div class="trace-lanes-labels">
         <div class="lane-label">Inputs</div>
         <div class="lane-label">Calcs</div>
         <div class="lane-label">Outputs</div>
       </div>
-      <div class="trace-track-wrap" id="trace-track-wrap" tabindex="0" role="slider" aria-label="Scrub trace recording" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="trace-track-wrap" id="trace-track-wrap" tabindex="0" role="slider" aria-label="Scrub execution timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div class="trace-ruler" id="trace-ruler"></div>
         <div class="trace-lanes" id="trace-lanes">
+          <svg class="trace-seismograph-svg" id="trace-seismograph"></svg>
           <div class="trace-fill" id="trace-fill"></div>
           <div class="trace-lane" id="lane-inputs"></div>
           <div class="trace-lane" id="lane-calcs"></div>
           <div class="trace-lane" id="lane-outputs"></div>
           <div class="trace-playhead" id="trace-playhead">
+            <div class="playhead-pin" id="playhead-pin">0.0s</div>
             <div class="playhead-handle"></div>
             <div class="playhead-line"></div>
           </div>
         </div>
         <div class="trace-tooltip" id="trace-tooltip" hidden></div>
+        <div class="group-chip-popover" id="group-chip-popover" hidden></div>
       </div>
     </div>
   </div>
@@ -2104,17 +2371,22 @@ def format_reactlog_html(
   <div class="main-view" id="main-view">
     <div class="graph-container" id="graph-container">
       <div class="graph-topbar">
-        <div class="legend" aria-label="Node types legend">
-          <div class="legend-item"><span class="legend-dot" style="--role-color: var(--source)"></span> Inputs</div>
-          <div class="legend-item"><span class="legend-dot" style="--role-color: var(--calc)"></span> Calcs</div>
-          <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Outputs</div>
-          <div class="legend-item"><span class="legend-dot" style="--role-color: var(--effect)"></span> Effects</div>
-        </div>
-        <div class="zoom-controls">
-          <button class="btn icon" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
-          <button class="btn icon" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
-          <button class="btn icon" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
-          <button class="btn icon" onclick="resetZoom()" aria-label="Reset zoom" title="Reset zoom" style="font: 700 0.7rem var(--mono)">1:1</button>
+        <div class="graph-top-row">
+          <div class="causal-summary-banner" id="causal-summary-banner">
+            <span class="causal-summary-badge">Live Story</span>
+            <span id="causal-summary-text">Ready to trace causality</span>
+          </div>
+          <div class="legend" aria-label="Node types legend">
+            <div class="legend-item"><span class="legend-dot" style="--role-color: var(--source)"></span> Inputs</div>
+            <div class="legend-item"><span class="legend-dot" style="--role-color: var(--calc)"></span> Calcs</div>
+            <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Outputs</div>
+            <div class="legend-item"><span class="legend-dot" style="--role-color: var(--effect)"></span> Effects</div>
+          </div>
+          <div class="zoom-controls">
+            <button class="btn icon mini" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+            <button class="btn icon mini" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/></svg></button>
+            <button class="btn icon mini" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+          </div>
         </div>
       </div>
       <div id="live-action-toast" class="action-toast" role="status" aria-live="polite" hidden></div>
@@ -2126,38 +2398,72 @@ def format_reactlog_html(
           <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
             <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
           </marker>
-          <marker id="arrow-invalidate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--warning)" />
-          </marker>
           <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.22" />
+            <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.22" />
           </filter>
         </defs>
         <g id="viewport-g"></g>
       </svg>
     </div>
 
-    <div class="split-resizer" id="split-resizer" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize sidebar panel" aria-valuenow="440" aria-valuemin="320" aria-valuemax="1200" title="Drag to resize sidebar, double-click to reset (or use Left/Right arrows)">
+    <div class="split-resizer" id="split-resizer" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize sidebar panel" aria-valuenow="420" aria-valuemin="300" aria-valuemax="1200" title="Drag to resize sidebar, double-click to reset (or use Left/Right arrows)">
       <div class="resizer-handle"></div>
     </div>
 
     <aside class="sidebar" id="sidebar" aria-label="Details and events">
       <div class="sidebar-header">
         <div class="sidebar-tabs" role="tablist" aria-label="Sidebar views">
-          <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Events</button>
+          <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Inspector</button>
+          <button class="sidebar-tab" id="actions-tab" role="tab" aria-selected="false" aria-controls="actions-panel" onclick="showSidebarPanel('actions')">Actions</button>
           {source_tab}
           {video_tab_btn}
         </div>
       </div>
 
       <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-labelledby="timeline-tab">
-        <div class="event-list" id="event-list"></div>
-        <div class="inspector-panel" id="inspector-panel">
-          <div class="inspector-title" id="insp-title">Node Details</div>
-          <div class="inspector-row"><span class="inspector-label">Type:</span><span class="inspector-val" id="insp-type">-</span></div>
-          <div class="inspector-row"><span class="inspector-label">Line:</span><span class="inspector-val" id="insp-line">-</span></div>
-          <div class="inspector-row"><span class="inspector-label">Status:</span><span class="inspector-val" id="insp-status">-</span></div>
+        <div class="inspector-container">
+          <div class="why-card" id="why-card">
+            <div class="why-header">
+              <div class="why-title" id="why-title">Select a node to inspect causality</div>
+              <button class="btn mini primary" id="btn-why-run" onclick="focusCausalPath()" title="Isolate and highlight causal path on the graph">Show causal path</button>
+            </div>
+            <div class="why-narrative" id="why-story">
+              Click any node in the reactive graph or step through the timeline to see why it ran and what caused it.
+            </div>
+            <div class="why-dag-tree" id="why-cascade-flow"></div>
+          </div>
+
+          <div class="node-details-card" id="node-details-card">
+            <div class="node-details-header">
+              <div class="node-details-name" id="insp-title">session</div>
+              <span class="node-details-meta" id="insp-meta-line">Line —</span>
+              <span id="insp-type" style="display:none">Initialization event</span>
+              <span id="insp-status" style="display:none">active</span>
+            </div>
+            <div class="node-connections" id="insp-downstream-section">
+              <div class="connections-label">Feeds into (Downstream):</div>
+              <div class="connections-pills" id="insp-downstream-list"><span class="conn-pill-empty">None</span></div>
+            </div>
+            <div class="node-connections" id="insp-upstream-section">
+              <div class="connections-label">Depends on (Upstream):</div>
+              <div class="connections-pills" id="insp-upstream-list"><span class="conn-pill-empty">None</span></div>
+            </div>
+          </div>
+
+          <div class="source-drawer" id="insp-source-drawer" hidden>
+            <button class="source-drawer-toggle" id="btn-toggle-source-drawer" onclick="toggleSourceDrawer()" aria-expanded="false">
+              <span id="source-drawer-label">Source code</span>
+              <span id="source-drawer-arrow">▾</span>
+            </button>
+            <pre class="source-drawer-code" id="insp-source-code" hidden><code></code></pre>
+            <div class="source-drawer-refs" id="insp-source-refs" hidden></div>
+          </div>
         </div>
+        <div class="event-list" id="event-list"></div>
+      </div>
+
+      <div class="actions-panel sidebar-panel" id="actions-panel" role="tabpanel" aria-labelledby="actions-tab" hidden>
+        <div class="actions-panel" id="action-list"></div>
       </div>
 
       {source_panel}
@@ -2167,19 +2473,17 @@ def format_reactlog_html(
 
   <script>
     const reactlogData = {escaped_json};
+    const rawAppSource = {escaped_source_raw};
     const ICONS = {{
-      play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
-      pause: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
+      play: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+      pause: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
       video: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>',
       eye: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
       zap: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
       clock: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-      input: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>',
-      click: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></svg>',
-      calc: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-      output: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>',
       arrowRight: '<svg class="inline-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'
     }};
+
     let currentStep = 0;
     let isPlaying = false;
     let playTimer = null;
@@ -2187,6 +2491,9 @@ def format_reactlog_html(
     let searchQuery = "";
     let activeRoles = new Set(['source', 'conductor', 'observer']);
     let currentPhaseFilter = 'all';
+    let currentFocusMode = 'all';
+    let timelineMode = 'activity';
+    let activeBurstIndex = 0;
     let zoomLevel = 1;
     let panOffset = {{ x: 0, y: 0 }};
     let isPanning = false;
@@ -2196,6 +2503,14 @@ def format_reactlog_html(
     let isDraggingTrace = false;
     let videoFrameRequest = null;
     let videoFrameRequestKind = null;
+    let isSourceDrawerOpen = false;
+
+    let nodeIndex = new Map();
+    let adjUpstream = new Map();
+    let adjDownstream = new Map();
+    let actionWaves = [];
+    let allBursts = [];
+    let executionCounts = new Map();
 
     function getActiveTheme() {{
       const currentAttr = document.documentElement.getAttribute('data-theme');
@@ -2222,6 +2537,7 @@ def format_reactlog_html(
       try {{ localStorage.setItem('shiny_reactlog_theme', next); }} catch (e) {{}}
       updateThemeButton();
       renderGraph();
+      renderSeismographLines();
     }}
 
     function initTheme() {{
@@ -2233,8 +2549,31 @@ def format_reactlog_html(
       updateThemeButton();
     }}
 
+    function toggleSummaryPopover(forcedState) {{
+      const popover = document.getElementById('recording-summary-popover');
+      const btn = document.getElementById('btn-summary-toggle');
+      if (!popover) return;
+      const isHidden = forcedState !== undefined ? !forcedState : !popover.hidden;
+      popover.hidden = isHidden;
+      if (btn) btn.setAttribute('aria-expanded', String(!isHidden));
+    }}
+
+    document.addEventListener('click', (e) => {{
+      const popover = document.getElementById('recording-summary-popover');
+      const btn = document.getElementById('btn-summary-toggle');
+      if (popover && !popover.hidden && !popover.contains(e.target) && btn && !btn.contains(e.target)) {{
+        popover.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+      }}
+
+      const groupPop = document.getElementById('group-chip-popover');
+      if (groupPop && !groupPop.hidden && !groupPop.contains(e.target) && !e.target.closest('.trace-chip')) {{
+        groupPop.hidden = true;
+      }}
+    }});
+
     function setSidebarWidth(widthPx) {{
-      const minW = 320;
+      const minW = 300;
       const maxW = Math.max(minW, Math.min(window.innerWidth * 0.65, 1200));
       const clamped = Math.max(minW, Math.min(widthPx, maxW));
       document.documentElement.style.setProperty('--sidebar-width', `${{clamped}}px`);
@@ -2298,25 +2637,88 @@ def format_reactlog_html(
 
       resizer.addEventListener('dblclick', () => {{
         hasUserCustomWidth = false;
-        setSidebarWidth(440);
+        setSidebarWidth(420);
       }});
 
       resizer.addEventListener('keydown', (e) => {{
-        const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || 440;
+        const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || 420;
         if (e.key === 'ArrowLeft') {{
           hasUserCustomWidth = true;
-          setSidebarWidth(curW + 24);
+          setSidebarWidth(curW + 44);
           e.preventDefault();
         }} else if (e.key === 'ArrowRight') {{
           hasUserCustomWidth = true;
-          setSidebarWidth(curW - 24);
+          setSidebarWidth(curW - 44);
           e.preventDefault();
         }} else if (e.key === 'Home') {{
           hasUserCustomWidth = false;
-          setSidebarWidth(440);
+          setSidebarWidth(420);
           e.preventDefault();
         }}
       }});
+    }}
+
+    function buildGraphIndices() {{
+      nodeIndex.clear();
+      adjUpstream.clear();
+      adjDownstream.clear();
+      executionCounts.clear();
+
+      const nodes = reactlogData.nodes || [];
+      const edges = reactlogData.edges || [];
+      const events = reactlogData.events || reactlogData.log || [];
+
+      nodes.forEach(n => {{
+        nodeIndex.set(n.id, n);
+        adjUpstream.set(n.id, new Set());
+        adjDownstream.set(n.id, new Set());
+        executionCounts.set(n.id, 0);
+      }});
+
+      edges.forEach(e => {{
+        if (adjDownstream.has(e.from)) adjDownstream.get(e.from).add(e.to);
+        if (adjUpstream.has(e.to)) adjUpstream.get(e.to).add(e.from);
+      }});
+
+      events.forEach(ev => {{
+        const nid = ev.node_id || ev.id;
+        const act = ev.action || ev.event;
+        if (nid && (act === 'wouldEvaluate' || act === 'outputUpdated' || act === 'valueChange' || act === 'enter' || act === 'exit')) {{
+          executionCounts.set(nid, (executionCounts.get(nid) || 0) + 1);
+        }}
+      }});
+    }}
+
+    function getUpstreamNodes(nodeId) {{
+      const ancestors = new Set();
+      const queue = [nodeId];
+      while (queue.length > 0) {{
+        const curr = queue.shift();
+        const parents = adjUpstream.get(curr) || new Set();
+        for (const p of parents) {{
+          if (!ancestors.has(p)) {{
+            ancestors.add(p);
+            queue.push(p);
+          }}
+        }}
+      }}
+      return ancestors;
+    }}
+
+    function getDownstreamNodes(nodeId) {{
+      const descendants = new Set();
+      const queue = [nodeId];
+      while (queue.length > 0) {{
+        const curr = queue.shift();
+        const children = adjDownstream.get(curr) || new Set();
+        for (const c of children) {{
+          if (!descendants.has(c)) {{
+            descendants.add(c);
+            queue.push(c);
+          }}
+        }}
+      }}
+      return descendants;
     }}
 
     function prepareEventTimings() {{
@@ -2346,6 +2748,209 @@ def format_reactlog_html(
       }}
     }}
 
+    function cleanName(n) {{
+      if (!n) return '';
+      let s = String(n);
+      s = s.replace(/^Observed\\s+[^:]*:\\s*/i, '');
+      s = s.replace(/^click\\s+(on\\s+)?/i, '');
+      s = s.replace(/^(input|output|calc|effect)[:.]/, '');
+      s = s.replace(/^(input#|#)/, '');
+      s = s.replace(/^(on[,\\s]+)/i, '');
+      s = s.replace(/^[.#]/, '');
+      s = s.split('=')[0].trim();
+      return s;
+    }}
+
+    function formatHumanValue(val) {{
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'string' && val.length > 20) return val.slice(0, 18) + '…';
+      return String(val);
+    }}
+
+    function buildActionWaves() {{
+      actionWaves = [];
+      allBursts = [];
+      const events = reactlogData.events || reactlogData.log || [];
+      const lastKnownValues = new Map();
+      (reactlogData.nodes || []).forEach(n => {{
+        if (n.value !== undefined && n.value !== null) {{
+          lastKnownValues.set(cleanName(n.name || n.id), n.value);
+        }}
+      }});
+      let initWave = null;
+      let curWave = null;
+
+      events.forEach((ev, idx) => {{
+        const evAction = ev.action || ev.event || '';
+        const isInit = ev.phase === 'init' || ['define', 'analysisInit', 'createContext', 'sessionInit'].includes(evAction);
+        const t = ev.time_sec !== undefined ? ev.time_sec : (ev.time !== undefined ? ev.time : 0);
+
+        if (isInit) {{
+          if (ev.value !== undefined && ev.value !== null) {{
+            const raw = ev.node_id || ev.id || ev.node_label || ev.label || '';
+            const name = cleanName(raw);
+            if (name) lastKnownValues.set(name, ev.value);
+          }}
+          if (!initWave) {{
+            initWave = {{
+              id: 'burst-init',
+              index: 0,
+              isInit: true,
+              startTime: t,
+              endTime: t,
+              time: t,
+              startStep: idx,
+              endStep: idx,
+              triggerLabel: 'Init',
+              humanAction: 'Init',
+              inputs: [],
+              calcs: [],
+              outputs: [],
+              totalEvents: 0,
+              userChanges: 0,
+              details: 'Application Initialization',
+            }};
+          }}
+          initWave.endStep = idx;
+          initWave.endTime = t;
+          initWave.totalEvents++;
+        }} else {{
+          const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction';
+          const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0;
+          if (!curWave || (t - curWave.startTime) > 0.25 || isNewTrigger) {{
+            curWave = {{
+              id: `burst-${{actionWaves.length + 1}}`,
+              index: actionWaves.length + 1,
+              isInit: false,
+              startTime: t,
+              endTime: t,
+              time: t,
+              startStep: idx,
+              endStep: idx,
+              triggerLabel: '',
+              humanAction: '',
+              triggerNodeId: '',
+              triggerValue: ev.value,
+              inputs: [],
+              calcs: [],
+              outputs: [],
+              totalEvents: 0,
+              userChanges: 0,
+              details: ev.details || evAction,
+            }};
+            actionWaves.push(curWave);
+          }}
+          curWave.endStep = idx;
+          curWave.endTime = t;
+          curWave.totalEvents++;
+
+          const nId = ev.node_id || ev.id || '';
+          if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:')) {{
+            const raw = nId || ev.details || '';
+            if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
+              const name = cleanName(raw) || 'input';
+              const prevVal = lastKnownValues.get(name);
+              const newVal = ev.value !== undefined ? ev.value : null;
+              if (newVal !== null) lastKnownValues.set(name, newVal);
+
+              if (!curWave.triggerLabel) {{
+                if (evAction === 'userClick') {{
+                  curWave.humanAction = `Click: ${{name}}`;
+                  curWave.triggerLabel = curWave.humanAction;
+                }} else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {{
+                  curWave.humanAction = `${{name}}: ${{formatHumanValue(prevVal)}} → ${{formatHumanValue(newVal)}}`;
+                  curWave.triggerLabel = curWave.humanAction;
+                }} else if (newVal !== null) {{
+                  curWave.humanAction = `${{name}}: ${{formatHumanValue(newVal)}}`;
+                  curWave.triggerLabel = curWave.humanAction;
+                }} else {{
+                  curWave.humanAction = `${{name}} changed`;
+                  curWave.triggerLabel = curWave.humanAction;
+                }}
+                curWave.triggerNodeId = nId;
+                curWave.triggerValue = ev.value;
+              }}
+              if (!curWave.inputs.some(item => item.name === name)) {{
+                curWave.inputs.push({{ name, nodeId: nId, step: idx, isClick: evAction === 'userClick' || evAction === 'userAction', details: ev.details, value: ev.value }});
+                curWave.userChanges++;
+              }}
+            }}
+          }} else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor'))) {{
+            const name = cleanName(nId);
+            if (name && !curWave.calcs.some(item => item.name === name)) {{
+              curWave.calcs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
+            }}
+          }} else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer'))) {{
+            const name = cleanName(nId);
+            if (name && !curWave.outputs.some(item => item.name === name)) {{
+              curWave.outputs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
+            }}
+          }}
+        }}
+      }});
+
+      actionWaves.forEach(w => {{
+        if (!w.triggerLabel) {{
+          if (w.inputs.length > 0) {{
+            w.humanAction = `${{w.inputs[0].name}} changed`;
+            w.triggerLabel = w.humanAction;
+          }} else if (w.calcs.length > 0) {{
+            w.humanAction = `Recalc: ${{w.calcs[0].name}}`;
+            w.triggerLabel = w.humanAction;
+          }} else if (w.outputs.length > 0) {{
+            w.humanAction = `Render: ${{w.outputs[0].name}}`;
+            w.triggerLabel = w.humanAction;
+          }} else {{
+            w.humanAction = 'Action';
+            w.triggerLabel = w.humanAction;
+          }}
+        }}
+      }});
+
+      allBursts = (initWave && initWave.totalEvents > 0 ? [initWave] : []).concat(actionWaves);
+    }}
+
+    function calculateTimePct(tSec) {{
+      if (timelineMode === 'realtime') {{
+        return Math.min(94, Math.max(6, (tSec / maxSessionDuration) * 100));
+      }}
+
+      if (allBursts.length === 0) return 50;
+      if (allBursts.length === 1) return 50;
+
+      let burstIdx = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < allBursts.length; i++) {{
+        const b = allBursts[i];
+        if (tSec >= b.startTime && tSec <= b.endTime) {{
+          burstIdx = i;
+          break;
+        }}
+        const diff = Math.abs(b.startTime - tSec);
+        if (diff < minDiff) {{
+          minDiff = diff;
+          burstIdx = i;
+        }}
+      }}
+
+      const segWidth = 100 / allBursts.length;
+      return Math.min(96, Math.max(4, (burstIdx + 0.5) * segWidth));
+    }}
+
+    function setTimelineMode(mode) {{
+      timelineMode = mode;
+      const select = document.getElementById('timeline-mode-select');
+      if (select) select.value = mode;
+      initTraceTimeline();
+      updateTraceTimelineScrubber(getCurrentStepTime());
+    }}
+
+    function getCurrentStepTime() {{
+      const events = reactlogData.events || reactlogData.log || [];
+      const ev = events[currentStep];
+      return ev ? (ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0)) : 0;
+    }}
+
     function initTraceTimeline() {{
       const bar = document.getElementById('trace-timeline-bar');
       const trackWrap = document.getElementById('trace-track-wrap');
@@ -2353,7 +2958,9 @@ def format_reactlog_html(
       const laneInputs = document.getElementById('lane-inputs');
       const laneCalcs = document.getElementById('lane-calcs');
       const laneOutputs = document.getElementById('lane-outputs');
-      if (!bar || !trackWrap || !ruler || !laneInputs || !laneCalcs || !laneOutputs) return;
+      const burstTrack = document.getElementById('trace-burst-track');
+      const lanesContainer = document.getElementById('trace-lanes');
+      if (!bar || !trackWrap || !ruler || !laneInputs || !laneCalcs || !laneOutputs || !burstTrack || !lanesContainer) return;
 
       const events = reactlogData.events || reactlogData.log || [];
       let maxTime = 0;
@@ -2373,178 +2980,216 @@ def format_reactlog_html(
       const curDisplay = document.getElementById('trace-current-time');
       if (curDisplay) curDisplay.textContent = formatTime(0);
 
-      ruler.innerHTML = '';
-      const safeDuration = Math.min(7200, Math.max(1.0, maxSessionDuration));
-      const stepSec = safeDuration <= 5 ? 0.5 : (safeDuration <= 20 ? 1.0 : (safeDuration <= 120 ? 5.0 : Math.max(10.0, safeDuration / 20)));
-      for (let sec = 0; sec <= safeDuration + 0.001; sec += stepSec) {{
-        const pct = (sec / maxSessionDuration) * 100;
-        if (pct > 100) break;
-        const isMajor = Math.abs(sec - Math.round(sec)) < 0.01;
-        const tick = document.createElement('div');
-        tick.className = `trace-ruler-tick ${{isMajor ? 'major' : ''}}`;
-        tick.style.left = `${{pct}}%`;
-        ruler.appendChild(tick);
+      document.querySelectorAll('.burst-region-column').forEach(el => el.remove());
 
-        if (isMajor || sec === 0) {{
+      burstTrack.innerHTML = '';
+      const colWidthPct = Math.max(12, (100 / Math.max(1, allBursts.length)) - 2);
+
+      allBursts.forEach((wave, wIdx) => {{
+        const wavePct = calculateTimePct(wave.time);
+
+        const col = document.createElement('div');
+        col.className = 'burst-region-column' + (wIdx === activeBurstIndex ? ' is-active' : '');
+        col.style.left = `${{wavePct}}%`;
+        col.style.width = `${{colWidthPct}}%`;
+        col.setAttribute('data-wave-idx', String(wIdx));
+        col.onclick = (e) => {{
+          e.stopPropagation();
+          activeBurstIndex = wIdx;
+          seekTo(wave.startStep);
+        }};
+        lanesContainer.insertBefore(col, lanesContainer.firstChild);
+
+        const anchor = document.createElement('button');
+        anchor.type = 'button';
+        anchor.className = 'burst-anchor' + (wave.isInit ? ' is-init' : '') + (wIdx === activeBurstIndex ? ' is-active' : '');
+        anchor.style.left = `${{wavePct}}%`;
+        anchor.setAttribute('data-wave-idx', String(wIdx));
+        anchor.setAttribute('data-step', String(wave.startStep));
+
+        const dot = document.createElement('span');
+        dot.className = 'burst-anchor-dot';
+        anchor.appendChild(dot);
+
+        const lbl = document.createElement('span');
+        lbl.textContent = wave.triggerLabel;
+        anchor.appendChild(lbl);
+
+        const countBadge = document.createElement('span');
+        countBadge.className = 'burst-anchor-count';
+        countBadge.textContent = `${{wave.totalEvents}} ev`;
+        anchor.appendChild(countBadge);
+
+        const eventSubtext = `${{wave.userChanges > 0 ? wave.userChanges + ' user change · ' : ''}}${{wave.totalEvents}} internal events`;
+        anchor.title = `[${{formatTime(wave.time)}}] ${{wave.triggerLabel}}\n${{eventSubtext}}`;
+
+        anchor.onclick = (e) => {{
+          e.stopPropagation();
+          activeBurstIndex = wIdx;
+          seekTo(wave.startStep);
+        }};
+        burstTrack.appendChild(anchor);
+
+        if (wIdx < allBursts.length - 1 && timelineMode === 'realtime') {{
+          const nextWave = allBursts[wIdx + 1];
+          const idleGap = nextWave.startTime - wave.endTime;
+          if (idleGap > 0.4) {{
+            const nextPct = calculateTimePct(nextWave.startTime);
+            const midPct = (wavePct + nextPct) / 2;
+            const breakIndicator = document.createElement('div');
+            breakIndicator.className = 'time-break-indicator';
+            breakIndicator.style.left = `${{midPct}}%`;
+            breakIndicator.textContent = `// ${{idleGap.toFixed(1)}}s idle //`;
+            burstTrack.appendChild(breakIndicator);
+          }}
+        }}
+      }});
+
+      ruler.innerHTML = '';
+      if (timelineMode === 'realtime') {{
+        const safeDuration = Math.min(7200, Math.max(1.0, maxSessionDuration));
+        const stepSec = safeDuration <= 5 ? 0.5 : (safeDuration <= 20 ? 1.0 : (safeDuration <= 120 ? 5.0 : Math.max(10.0, safeDuration / 20)));
+        for (let sec = 0; sec <= safeDuration + 0.001; sec += stepSec) {{
+          const pct = (sec / maxSessionDuration) * 100;
+          if (pct > 100) break;
+          const isMajor = Math.abs(sec - Math.round(sec)) < 0.01;
+          const tick = document.createElement('div');
+          tick.className = `trace-ruler-tick ${{isMajor ? 'major' : ''}}`;
+          tick.style.left = `${{pct}}%`;
+          ruler.appendChild(tick);
+
+          if (isMajor || sec === 0) {{
+            const lbl = document.createElement('span');
+            lbl.className = 'trace-ruler-label';
+            lbl.style.left = `${{pct}}%`;
+            lbl.textContent = `${{Math.round(sec)}}s`;
+            ruler.appendChild(lbl);
+          }}
+        }}
+      }} else {{
+        allBursts.forEach(wave => {{
+          const pct = calculateTimePct(wave.time);
+          const tick = document.createElement('div');
+          tick.className = 'trace-ruler-tick major';
+          tick.style.left = `${{pct}}%`;
+          ruler.appendChild(tick);
+
           const lbl = document.createElement('span');
           lbl.className = 'trace-ruler-label';
           lbl.style.left = `${{pct}}%`;
-          lbl.textContent = `${{Math.round(sec)}}s`;
+          lbl.textContent = `${{wave.time.toFixed(2)}}s`;
           ruler.appendChild(lbl);
-        }}
+        }});
       }}
 
       laneInputs.innerHTML = '';
       laneCalcs.innerHTML = '';
       laneOutputs.innerHTML = '';
 
-      const waves = [];
-      let curWave = null;
-
-      const cleanName = (n) => {{
-        if (!n) return '';
-        let s = String(n);
-        s = s.replace(/^Observed\\s+[^:]*:\\s*/i, '');
-        s = s.replace(/^click\\s+(on\\s+)?/i, '');
-        s = s.replace(/^(input|output|calc|effect)[:.]/, '');
-        s = s.replace(/^(input#|#)/, '');
-        s = s.replace(/^(on[,\\s]+)/i, '');
-        s = s.replace(/^[.#]/, '');
-        s = s.split('=')[0].trim();
-        return s;
-      }};
-
-      events.forEach((ev, idx) => {{
-        const evAction = ev.action || ev.event || '';
-        const isInteract = ev.phase === 'interaction' || !['define', 'analysisInit', 'createContext', 'sessionInit'].includes(evAction);
-        if (isInteract) {{
-          const t = ev.time_sec !== undefined ? ev.time_sec : (ev.time !== undefined ? ev.time : 0);
-          if (!curWave || (t - curWave.startTime) > 0.35) {{
-            curWave = {{
-              startTime: t,
-              time: t,
-              startStep: idx,
-              inputs: [],
-              calcs: [],
-              outputs: [],
-              details: ev.details || evAction,
-            }};
-            waves.push(curWave);
-          }}
-
-          const nId = ev.node_id || ev.id || '';
-          if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:')) {{
-            const raw = nId || ev.details || '';
-            if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
-              const name = cleanName(raw) || 'input';
-              if (!curWave.inputs.some(item => item.name === name)) {{
-                curWave.inputs.push({{ name, step: idx, isClick: evAction === 'userClick' || evAction === 'userAction', details: ev.details }});
-              }}
-            }}
-          }} else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor'))) {{
-            const name = cleanName(nId);
-            if (name && !curWave.calcs.some(item => item.name === name)) {{
-              curWave.calcs.push({{ name, step: idx, details: ev.details }});
-            }}
-          }} else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer'))) {{
-            const name = cleanName(nId);
-            if (name && !curWave.outputs.some(item => item.name === name)) {{
-              curWave.outputs.push({{ name, step: idx, details: ev.details }});
-            }}
-          }}
-        }}
-      }});
-
-      const genericTokens = new Set(['on', 'off', 'true', 'false', 'null', 'undefined', 'click', 'button', 'input']);
-
-      waves.forEach(wave => {{
-        const pct = Math.min(96, Math.max(4, (wave.time / maxSessionDuration) * 100));
+      const displayWaves = actionWaves.length > 0 ? actionWaves : allBursts;
+      displayWaves.forEach(wave => {{
+        const wavePct = calculateTimePct(wave.time);
 
         if (wave.inputs.length > 0) {{
-          const cleanInpNames = [...new Set(wave.inputs.flatMap(i => i.name ? [i.name] : []))];
-          let meaningfulInps = [];
-          for (const name of cleanInpNames) {{
-            if (!genericTokens.has(name.toLowerCase())) meaningfulInps.push(name);
-          }}
-          if (meaningfulInps.length === 0) meaningfulInps = cleanInpNames;
-
-          if (meaningfulInps.length > 0) {{
-            const chip = document.createElement('button');
-            chip.type = 'button';
-            const isClick = wave.inputs.some(i => i.isClick);
-            chip.className = `trace-chip ${{isClick ? 'kind-click' : 'kind-input'}}`;
-            chip.style.left = `${{pct}}%`;
-            chip.setAttribute('data-step', String(wave.inputs[0].step));
-            chip.setAttribute('data-time', String(wave.time));
-            const label = meaningfulInps.length === 1 ? meaningfulInps[0] : (meaningfulInps.length === 2 ? `${{meaningfulInps[0]}}, ${{meaningfulInps[1]}}` : `${{meaningfulInps.length}} inputs`);
-            chip.title = `[${{formatTime(wave.time)}}] ${{wave.inputs.map(i => i.details || i.name).join(' | ')}}`;
-            chip.textContent = label;
-            chip.onclick = (e) => {{
-              e.stopPropagation();
-              seekTo(wave.inputs[0].step);
-            }};
-            laneInputs.appendChild(chip);
-          }}
-        }}
-
-        const cleanCalcNames = [...new Set(wave.calcs.flatMap(c => c.name ? [c.name] : []))];
-        if (cleanCalcNames.length > 0) {{
+          const isClick = wave.inputs.some(i => i.isClick);
           const chip = document.createElement('button');
           chip.type = 'button';
-          chip.className = 'trace-chip kind-calc';
-          chip.style.left = `${{pct}}%`;
-          chip.setAttribute('data-step', String(wave.calcs[0].step));
+          chip.className = `trace-chip ${{isClick ? 'kind-click' : 'kind-input'}}`;
+          chip.style.left = `${{wavePct}}%`;
+          chip.setAttribute('data-step', String(wave.inputs[0].step));
           chip.setAttribute('data-time', String(wave.time));
-          const label = cleanCalcNames.length === 1 ? cleanCalcNames[0] : (cleanCalcNames.length === 2 ? `${{cleanCalcNames[0]}}, ${{cleanCalcNames[1]}}` : `${{cleanCalcNames.length}} calcs`);
-          chip.title = `[${{formatTime(wave.time)}}] Recalculates: ${{cleanCalcNames.join(', ')}}`;
-          chip.textContent = label;
+          chip.setAttribute('data-node-id', wave.inputs[0].nodeId || `input:${{wave.inputs[0].name}}`);
+          chip.textContent = wave.inputs.length === 1 ? wave.inputs[0].name : `${{wave.inputs.length}} inputs`;
+          chip.title = `[${{formatTime(wave.time)}}] ${{wave.inputs.map(i => i.details || i.name).join(', ')}}`;
           chip.onclick = (e) => {{
             e.stopPropagation();
-            seekTo(wave.calcs[0].step);
+            if (wave.inputs[0].nodeId) selectNode(wave.inputs[0].nodeId);
+            seekTo(wave.inputs[0].step);
+          }};
+          laneInputs.appendChild(chip);
+        }}
+
+        if (wave.calcs.length > 0) {{
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          const isGroup = wave.calcs.length > 2;
+          chip.className = `trace-chip kind-calc ${{isGroup ? 'is-grouped' : ''}}`;
+          chip.style.left = `${{wavePct}}%`;
+          chip.setAttribute('data-step', String(wave.calcs[0].step));
+          chip.setAttribute('data-time', String(wave.time));
+          chip.setAttribute('data-node-id', wave.calcs[0].nodeId || `calc:${{wave.calcs[0].name}}`);
+          chip.textContent = wave.calcs.length === 1 ? wave.calcs[0].name : `${{wave.calcs.length}} calcs`;
+          chip.title = `[${{formatTime(wave.time)}}] Recalculates: ${{wave.calcs.map(c => c.name).join(', ')}}`;
+          chip.onclick = (e) => {{
+            e.stopPropagation();
+            if (wave.calcs.length > 1) {{
+              showGroupPopover(chip, wave.calcs, 'Calcs');
+            }} else {{
+              if (wave.calcs[0].nodeId) selectNode(wave.calcs[0].nodeId);
+              seekTo(wave.calcs[0].step);
+            }}
           }};
           laneCalcs.appendChild(chip);
         }}
 
-        const cleanOutputNames = [...new Set(wave.outputs.flatMap(o => o.name ? [o.name] : []))];
-        if (cleanOutputNames.length > 0) {{
+        if (wave.outputs.length > 0) {{
           const chip = document.createElement('button');
           chip.type = 'button';
-          chip.className = 'trace-chip kind-output';
-          chip.style.left = `${{pct}}%`;
+          const isGroup = wave.outputs.length > 1;
+          chip.className = `trace-chip kind-output ${{isGroup ? 'is-grouped' : ''}}`;
+          chip.style.left = `${{wavePct}}%`;
           chip.setAttribute('data-step', String(wave.outputs[0].step));
           chip.setAttribute('data-time', String(wave.time));
-          const label = cleanOutputNames.length === 1 ? cleanOutputNames[0] : (cleanOutputNames.length === 2 ? `${{cleanOutputNames[0]}}, ${{cleanOutputNames[1]}}` : `${{cleanOutputNames.length}} outputs`);
-          chip.title = `[${{formatTime(wave.time)}}] Updates: ${{cleanOutputNames.join(', ')}}`;
-          chip.textContent = label;
+          chip.setAttribute('data-node-id', wave.outputs[0].nodeId || `output:${{wave.outputs[0].name}}`);
+          chip.textContent = wave.outputs.length === 1 ? wave.outputs[0].name : `${{wave.outputs.length}} outputs`;
+          chip.title = `[${{formatTime(wave.time)}}] Updates: ${{wave.outputs.map(o => o.name).join(', ')}}`;
           chip.onclick = (e) => {{
             e.stopPropagation();
-            seekTo(wave.outputs[0].step);
+            if (wave.outputs.length > 1) {{
+              showGroupPopover(chip, wave.outputs, 'Outputs');
+            }} else {{
+              if (wave.outputs[0].nodeId) selectNode(wave.outputs[0].nodeId);
+              seekTo(wave.outputs[0].step);
+            }}
           }};
           laneOutputs.appendChild(chip);
         }}
       }});
+
+      renderSeismographLines();
 
       const tooltip = document.getElementById('trace-tooltip');
       const seekFromPointer = (e) => {{
         const rect = trackWrap.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        const targetSec = ratio * maxSessionDuration;
 
         let matchIdx = 0;
-        for (let i = 0; i < events.length; i++) {{
-          const ev = events[i];
-          const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
-          if (t <= targetSec) matchIdx = i;
+        if (timelineMode === 'realtime') {{
+          const targetSec = ratio * maxSessionDuration;
+          for (let i = 0; i < events.length; i++) {{
+            const ev = events[i];
+            const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
+            if (t <= targetSec) matchIdx = i;
+          }}
+          if (video) {{
+            try {{ video.currentTime = targetSec; }} catch (err) {{}}
+          }}
+        }} else {{
+          const burstIdx = Math.min(allBursts.length - 1, Math.floor(ratio * allBursts.length));
+          const targetBurst = allBursts[burstIdx] || allBursts[0];
+          matchIdx = targetBurst ? targetBurst.startStep : 0;
+          if (video && targetBurst) {{
+            try {{ video.currentTime = targetBurst.startTime; }} catch (err) {{}}
+          }}
         }}
         seekTo(matchIdx);
-
-        if (video) {{
-          try {{ video.currentTime = targetSec; }} catch (err) {{}}
-        }}
       }};
 
       trackWrap.addEventListener('pointerdown', (e) => {{
+        if (e.target.closest('.trace-chip') || e.target.closest('.group-chip-popover') || e.target.closest('.burst-anchor')) {{
+          return;
+        }}
         isDraggingTrace = true;
         try {{ trackWrap.setPointerCapture(e.pointerId); }} catch (err) {{}}
         seekFromPointer(e);
@@ -2553,42 +3198,17 @@ def format_reactlog_html(
       trackWrap.addEventListener('pointermove', (e) => {{
         const rect = trackWrap.getBoundingClientRect();
         const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        const targetSec = ratio * maxSessionDuration;
 
         if (isDraggingTrace) {{
           seekFromPointer(e);
         }}
 
-        if (tooltip) {{
+        if (tooltip && isDraggingTrace) {{
           tooltip.hidden = false;
           const leftPx = Math.max(80, Math.min(rect.width - 80, ratio * rect.width));
           tooltip.style.left = `${{leftPx}}px`;
-
-          let nearestWave = null;
-          let minDiff = Infinity;
-          for (const w of waves) {{
-            const diff = Math.abs(w.time - targetSec);
-            if (diff < minDiff) {{
-              minDiff = diff;
-              nearestWave = w;
-            }}
-          }}
-
-          let tooltipHtml = `<span class="tooltip-time">${{ICONS.clock}} ${{escapeHTML(formatTime(targetSec))}}</span>`;
-          if (nearestWave && minDiff < 0.8) {{
-            const inList = nearestWave.inputs.map(i => (i.isClick ? `${{ICONS.click}} click on ${{escapeHTML(i.name)}}` : `${{ICONS.input}} ${{escapeHTML(i.name)}}`)).join(', ');
-            const outList = nearestWave.outputs.map(o => `${{ICONS.output}} ${{escapeHTML(o.name)}}`).join(', ');
-            const calcList = nearestWave.calcs.map(c => `${{ICONS.calc}} ${{escapeHTML(c.name)}}`).join(', ');
-
-            if (inList) tooltipHtml += `<span class="tooltip-title">${{inList}}</span>`;
-            if (calcList || outList) {{
-              const dependencyParts = [];
-              if (calcList) dependencyParts.push(calcList);
-              if (outList) dependencyParts.push(outList);
-              tooltipHtml += `<span class="tooltip-desc">${{dependencyParts.join(' ' + ICONS.arrowRight + ' ')}}</span>`;
-            }}
-          }}
-          tooltip.innerHTML = tooltipHtml;
+          const targetSec = ratio * maxSessionDuration;
+          tooltip.innerHTML = `<span class="tooltip-time">${{ICONS.clock}} ${{escapeHTML(formatTime(targetSec))}}</span>`;
         }}
       }});
 
@@ -2603,22 +3223,152 @@ def format_reactlog_html(
       }});
     }}
 
+    function showGroupPopover(chipEl, items, typeLabel) {{
+      const popover = document.getElementById('group-chip-popover');
+      if (!popover) return;
+      popover.innerHTML = `<div class="group-popover-title">${{items.length}} ${{typeLabel}} in burst</div>`;
+      items.forEach(item => {{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'group-popover-item';
+        btn.textContent = item.name;
+        btn.onclick = (e) => {{
+          e.stopPropagation();
+          popover.hidden = true;
+          if (item.nodeId) selectNode(item.nodeId);
+          if (item.step !== undefined) seekTo(item.step);
+        }};
+        popover.appendChild(btn);
+      }});
+
+      const rect = chipEl.getBoundingClientRect();
+      const parentRect = chipEl.closest('#trace-track-wrap').getBoundingClientRect();
+      popover.style.left = `${{Math.max(10, Math.min(parentRect.width - 160, rect.left - parentRect.left))}}px`;
+      popover.style.bottom = '30px';
+      popover.hidden = false;
+    }}
+
+    function renderSeismographLines() {{
+      const svg = document.getElementById('trace-seismograph');
+      if (!svg) return;
+      svg.innerHTML = '';
+
+      allBursts.forEach((wave, wIdx) => {{
+        const wavePct = calculateTimePct(wave.time);
+        const hasInputs = wave.inputs.length > 0;
+        const hasCalcs = wave.calcs.length > 0;
+        const hasOutputs = wave.outputs.length > 0;
+
+        if (hasInputs && (hasCalcs || hasOutputs)) {{
+          const isSelectedBurst = wIdx === activeBurstIndex;
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', `${{wavePct}}%`);
+          line.setAttribute('y1', '9');
+          line.setAttribute('x2', `${{wavePct}}%`);
+          line.setAttribute('y2', hasOutputs ? '46' : '28');
+          line.setAttribute('class', 'seismograph-branch' + (isSelectedBurst ? ' is-active' : ''));
+          svg.appendChild(line);
+        }}
+      }});
+    }}
+
+    function updateCausalSummary(curWave) {{
+      const banner = document.getElementById('causal-summary-text');
+      if (!banner) return;
+
+      if (!curWave) {{
+        banner.textContent = 'Ready to trace reactive causality';
+        return;
+      }}
+
+      if (curWave.isInit) {{
+        const cLen = curWave.calcs.length;
+        const oLen = curWave.outputs.length;
+        banner.innerHTML = `<strong>App Initialized.</strong> Evaluated ${{cLen}} calcs and rendered ${{oLen}} outputs.`;
+        return;
+      }}
+
+      const triggerInputs = curWave.inputs || [];
+      const triggerNodeIds = triggerInputs.map(i => i.nodeId).filter(Boolean);
+
+      const downstreamSet = new Set();
+      triggerNodeIds.forEach(tid => {{
+        getDownstreamNodes(tid).forEach(nid => {{
+          downstreamSet.add(nid);
+          downstreamSet.add(cleanName(nid));
+        }});
+      }});
+
+      const causalCalcs = curWave.calcs.filter(c => triggerNodeIds.length === 0 || downstreamSet.has(c.nodeId) || downstreamSet.has(cleanName(c.name)));
+      const causalOutputs = curWave.outputs.filter(o => triggerNodeIds.length === 0 || downstreamSet.has(o.nodeId) || downstreamSet.has(cleanName(o.name)));
+
+      let actionDesc = curWave.humanAction || curWave.triggerLabel || 'User action';
+      if (actionDesc.includes(':')) {{
+        const parts = actionDesc.split(':');
+        const k = parts[0].trim();
+        const v = parts[1].trim();
+        actionDesc = `${{k.charAt(0).toUpperCase() + k.slice(1)}} changed ${{v}}`;
+      }}
+
+      let summaryHtml = `<strong>${{escapeHTML(actionDesc)}}.</strong>`;
+      if (causalCalcs.length > 0) {{
+        const calcPills = causalCalcs.map(c => `<button type="button" class="causal-step-pill" onclick="selectNode('${{c.nodeId || 'calc:' + c.name}}')">${{escapeHTML(cleanName(c.name))}}</button>`).join(' and ');
+        summaryHtml += ` This recalculated ${{calcPills}}`;
+      }}
+      if (causalOutputs.length > 0) {{
+        const outPills = causalOutputs.map(o => `<button type="button" class="causal-step-pill" onclick="selectNode('${{o.nodeId || 'output:' + o.name}}')">${{escapeHTML(cleanName(o.name))}}</button>`).join(' and ');
+        summaryHtml += (causalCalcs.length > 0 ? ', then rendered ' : ' This rendered ') + `${{outPills}}.`;
+      }} else if (causalCalcs.length > 0) {{
+        summaryHtml += '.';
+      }}
+
+      banner.innerHTML = summaryHtml;
+    }}
+
     function updateTraceTimelineScrubber(curSec) {{
-      if (!maxSessionDuration || isNaN(maxSessionDuration)) return;
       const playhead = document.getElementById('trace-playhead');
       const fill = document.getElementById('trace-fill');
       const curDisplay = document.getElementById('trace-current-time');
-      const pct = Math.min(100, Math.max(0, (curSec / maxSessionDuration) * 100));
+      const playheadPin = document.getElementById('playhead-pin');
+      const statusLine = document.getElementById('trace-status-line');
+      const pct = calculateTimePct(curSec);
 
       if (playhead) playhead.style.left = `${{pct}}%`;
       if (fill) fill.style.width = `${{pct}}%`;
       if (curDisplay) curDisplay.textContent = formatTime(curSec);
+      if (playheadPin) playheadPin.textContent = `${{curSec.toFixed(2)}}s`;
+
+      const events = reactlogData.events || reactlogData.log || [];
+      let curWave = allBursts.find(w => currentStep >= w.startStep && currentStep <= w.endStep) || allBursts[0];
+      activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
+
+      updateCausalSummary(curWave);
+
+      if (statusLine) {{
+        const targetNode = selectedNodeId ? nodeIndex.get(selectedNodeId) : null;
+        const nodeLabel = targetNode ? (targetNode.label || selectedNodeId) : null;
+        const waveLabel = curWave ? (curWave.humanAction || curWave.triggerLabel) : 'Ready';
+        statusLine.textContent = nodeLabel
+          ? `Selected: ${{nodeLabel}} · ${{waveLabel}}`
+          : `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}} · ${{waveLabel}}`;
+      }}
+
+      document.querySelectorAll('.burst-anchor').forEach(anchor => {{
+        const idx = Number(anchor.getAttribute('data-wave-idx') || '0');
+        anchor.classList.toggle('is-active', idx === activeBurstIndex);
+      }});
+      document.querySelectorAll('.burst-region-column').forEach(col => {{
+        const idx = Number(col.getAttribute('data-wave-idx') || '0');
+        col.classList.toggle('is-active', idx === activeBurstIndex);
+      }});
 
       document.querySelectorAll('.trace-chip').forEach(chip => {{
-        const chipTime = parseFloat(chip.getAttribute('data-time') || '0');
-        const isActive = Math.abs(chipTime - curSec) < 0.35;
-        chip.classList.toggle('is-active', isActive);
+        const chipNodeId = chip.getAttribute('data-node-id');
+        const isSelectedNode = selectedNodeId && (chipNodeId === selectedNodeId || chipNodeId === `calc:${{selectedNodeId}}` || chipNodeId === `output:${{selectedNodeId}}` || chipNodeId === `input:${{selectedNodeId}}`);
+        chip.classList.toggle('is-active', isSelectedNode);
       }});
+
+      renderSeismographLines();
     }}
 
     function nextAction() {{
@@ -2649,27 +3399,49 @@ def format_reactlog_html(
     function init() {{
       initTheme();
       prepareEventTimings();
+      buildGraphIndices();
+      buildActionWaves();
+
       const events = reactlogData.events || reactlogData.log || [];
       const nodes = reactlogData.nodes || [];
       const edges = reactlogData.edges || [];
 
-      document.getElementById('stat-nodes').textContent = `Nodes: ${{nodes.length}}`;
-      document.getElementById('stat-edges').textContent = `Edges: ${{edges.length}}`;
+      document.getElementById('stat-nodes').textContent = String(nodes.length);
+      document.getElementById('stat-edges').textContent = String(edges.length);
       const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
       const infCount = reactlogData.inferred_events_count !== undefined ? reactlogData.inferred_events_count : events.reduce((acc, e) => acc + (e.provenance === 'inferred' ? 1 : 0), 0);
-      document.getElementById('stat-observed').innerHTML = `${{ICONS.eye}} Observed: ${{obsCount}}`;
-      document.getElementById('stat-inferred').innerHTML = `${{ICONS.zap}} Inferred: ${{infCount}}`;
+      document.getElementById('stat-observed').textContent = String(obsCount);
+      document.getElementById('stat-inferred').textContent = String(infCount);
 
-      const initCount = reactlogData.init_steps_count !== undefined ? reactlogData.init_steps_count : events.reduce((acc, e) => acc + (e.phase === 'init' ? 1 : 0), 0);
-      const interactCount = reactlogData.interaction_steps_count !== undefined ? reactlogData.interaction_steps_count : (events.length - initCount);
-      document.getElementById('count-all').textContent = String(events.length);
-      document.getElementById('count-init').textContent = String(initCount);
-      document.getElementById('count-interaction').textContent = String(interactCount);
+      const inCount = nodes.filter(n => n.role === 'source' || n.type === 'input').length;
+      const calcCount = nodes.filter(n => n.role === 'conductor' || n.type === 'calc').length;
+      const outCount = nodes.filter(n => n.role === 'observer' || n.type === 'output' || n.type === 'effect').length;
+      const nodesSubtext = document.getElementById('stat-nodes-subtext');
+      if (nodesSubtext) nodesSubtext.textContent = `${{inCount}} in · ${{calcCount}} calc · ${{outCount}} out`;
+
+      const totEvents = Math.max(1, obsCount + infCount);
+      const obsPct = Math.round((obsCount / totEvents) * 100);
+      const infPct = 100 - obsPct;
+      const segObs = document.getElementById('seg-obs');
+      const segInf = document.getElementById('seg-inf');
+      if (segObs) segObs.style.width = `${{obsPct}}%`;
+      if (segInf) segInf.style.width = `${{infPct}}%`;
+
+      const legObs = document.getElementById('legend-obs-text');
+      if (legObs) legObs.innerHTML = `<span class="chip-dot" style="background:var(--source)"></span> ${{obsPct}}% Observed`;
+      const legInf = document.getElementById('legend-inf-text');
+      if (legInf) legInf.innerHTML = `<span class="chip-dot" style="background:var(--effect)"></span> ${{infPct}}% Inferred`;
+
+      const metaNote = document.getElementById('summary-meta-note');
+      if (metaNote) {{
+        metaNote.textContent = reactlogData.summary || `Captured ${{obsCount}} browser interactions triggering ${{infCount}} reactive cascade evaluations across ${{nodes.length}} graph nodes.`;
+      }}
 
       const scrubber = document.getElementById('scrubber-range');
       scrubber.max = Math.max(0, events.length - 1);
       scrubber.value = 0;
 
+      renderActionsList();
       renderEventList();
       renderGraph();
       initTraceTimeline();
@@ -2680,14 +3452,14 @@ def format_reactlog_html(
     }}
 
     function nodeKind(n) {{
-      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: '#0284c7' }};
-      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: '#d97706' }};
-      if (n.type === 'effect') return {{ label: 'Effect', color: '#9333ea' }};
-      return {{ label: 'Output', color: '#16a34a' }};
+      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: '#0284c7', verb: 'change' }};
+      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: '#d97706', verb: 'run' }};
+      if (n.type === 'effect') return {{ label: 'Effect', color: '#9333ea', verb: 'trigger' }};
+      return {{ label: 'Output', color: '#16a34a', verb: 'render' }};
     }}
 
     function showSidebarPanel(panelName) {{
-      const tabs = ['timeline', 'source', 'video'];
+      const tabs = ['timeline', 'actions', 'source', 'video'];
       tabs.forEach(t => {{
         const btn = document.getElementById(`${{t}}-tab`);
         const panel = document.getElementById(`${{t}}-panel`);
@@ -2704,28 +3476,36 @@ def format_reactlog_html(
         }} else if (panelName === 'source') {{
           setSidebarWidth(Math.max(480, Math.min(window.innerWidth * 0.52, 680)));
         }} else {{
-          setSidebarWidth(440);
+          setSidebarWidth(420);
         }}
       }}
     }}
 
-    function setPhaseFilter(phase) {{
-      currentPhaseFilter = phase;
-      ['all', 'init', 'interaction'].forEach(p => {{
-        const btn = document.getElementById(`phase-btn-${{p}}`);
-        if (btn) {{
-          const isActive = p === phase;
-          btn.classList.toggle('is-active', isActive);
-          btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        }}
-      }});
+    function handlePhaseSelect(val) {{
+      currentPhaseFilter = val;
       renderEventList();
     }}
 
     function skipToInteractions() {{
-      const firstActionIdx = reactlogData.first_interaction_step || 0;
-      setPhaseFilter('interaction');
-      seekTo(firstActionIdx);
+      const target = reactlogData.first_interaction_step !== undefined ? reactlogData.first_interaction_step : (actionWaves[0] ? actionWaves[0].startStep : 0);
+      seekTo(target);
+    }}
+
+    function setFocusMode(mode) {{
+      currentFocusMode = mode;
+      ['upstream', 'downstream', 'all'].forEach(m => {{
+        const btn = document.getElementById(`btn-focus-${{m}}`);
+        if (btn) {{
+          const isActive = m === mode;
+          btn.classList.toggle('is-active', isActive);
+          btn.setAttribute('aria-pressed', String(isActive));
+        }}
+      }});
+      renderGraph();
+    }}
+
+    function focusCausalPath() {{
+      setFocusMode('upstream');
     }}
 
     function escapeHTML(str) {{
@@ -2746,8 +3526,63 @@ def format_reactlog_html(
       return `${{mins > 0 ? mins + 'm ' : ''}}${{rem}}s`;
     }}
 
+    function renderActionsList() {{
+      const list = document.getElementById('action-list');
+      if (!list) return;
+      list.innerHTML = '';
+
+      if (actionWaves.length === 0) {{
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.75rem;padding:0.5rem">No user interaction actions recorded in this session.</p>';
+        return;
+      }}
+
+      actionWaves.forEach((wave) => {{
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'action-story-item';
+        item.setAttribute('data-wave-step', String(wave.startStep));
+
+        const isCurrentWave = currentStep >= wave.startStep && currentStep <= wave.endStep;
+        if (isCurrentWave) item.classList.add('is-active');
+
+        const header = document.createElement('div');
+        header.className = 'action-story-header';
+
+        const title = document.createElement('div');
+        title.className = 'action-story-title';
+        title.textContent = `${{wave.index}}. ${{wave.humanAction || wave.triggerLabel}}`;
+
+        const time = document.createElement('span');
+        time.className = 'action-story-time';
+        time.textContent = formatTime(wave.time);
+
+        header.appendChild(title);
+        header.appendChild(time);
+        item.appendChild(header);
+
+        const desc = document.createElement('div');
+        desc.className = 'action-story-desc';
+        desc.textContent = `${{wave.userChanges > 0 ? wave.userChanges + ' user change · ' : ''}}${{wave.totalEvents}} internal reactive events`;
+        item.appendChild(desc);
+
+        if (wave.calcs.length > 0 || wave.outputs.length > 0) {{
+          const cascade = document.createElement('div');
+          cascade.className = 'action-story-cascade';
+          const names = [...wave.calcs.map(c => c.name), ...wave.outputs.map(o => o.name)];
+          cascade.textContent = `➔ ${{names.join(' ➔ ')}}`;
+          item.appendChild(cascade);
+        }}
+
+        item.onclick = () => {{
+          seekTo(wave.startStep);
+        }};
+        list.appendChild(item);
+      }});
+    }}
+
     function renderEventList() {{
       const list = document.getElementById('event-list');
+      if (!list) return;
       list.innerHTML = '';
       let visiblePhase = null;
       const events = reactlogData.events || reactlogData.log || [];
@@ -2830,13 +3665,317 @@ def format_reactlog_html(
       }});
     }}
 
+    function explainWhyNodeRan(nodeId, stepIdx) {{
+      const events = reactlogData.events || reactlogData.log || [];
+      if (!nodeId) return null;
+
+      const targetNode = nodeIndex.get(nodeId);
+      if (!targetNode) return null;
+
+      const kind = nodeKind(targetNode);
+      const questionVerb = kind.verb || 'run';
+
+      let curWave = allBursts.find(w => stepIdx >= w.startStep && stepIdx <= w.endStep) || allBursts[0];
+      if (!curWave && allBursts.length > 0) curWave = allBursts[0];
+
+      const burstEvents = (curWave && events.length > 0)
+        ? events.slice(curWave.startStep, curWave.endStep + 1)
+        : events;
+
+      const cleanTargetName = cleanName(targetNode.name || targetNode.id);
+      const burstEventForNode = burstEvents.find(e => {{
+        const eid = e.node_id || e.id || '';
+        return eid === nodeId || cleanName(eid) === cleanTargetName || (e.node_label && cleanName(e.node_label) === cleanTargetName);
+      }});
+
+      const ranInBurst = Boolean(curWave && (curWave.isInit || burstEventForNode));
+      const directParents = Array.from(adjUpstream.get(nodeId) || []).map(p => nodeIndex.get(p) || {{ id: p, label: p }});
+
+      if (ranInBurst) {{
+        const question = `Why did ${{targetNode.label}} ${{questionVerb}}?`;
+        const execTime = (burstEventForNode && (burstEventForNode.time_sec !== undefined ? burstEventForNode.time_sec : burstEventForNode.time))
+          || (curWave ? curWave.time : 0);
+
+        const executedNamesInBurst = new Set();
+        burstEvents.forEach(e => {{
+          const eid = e.node_id || e.id || '';
+          if (eid) executedNamesInBurst.add(cleanName(eid));
+          if (e.node_label) executedNamesInBurst.add(cleanName(e.node_label));
+        }});
+
+        const activeParents = directParents.filter(p => executedNamesInBurst.has(cleanName(p.name || p.id)));
+        const inactiveParents = directParents.filter(p => !activeParents.includes(p));
+
+        let narrative = '';
+        if (targetNode.role === 'source' || targetNode.type === 'input') {{
+          const valChange = curWave && curWave.humanAction ? curWave.humanAction : targetNode.label;
+          narrative = `<p><strong>${{escapeHTML(targetNode.label)}}</strong> changed (${{escapeHTML(valChange)}}) at ${{escapeHTML(formatTime(execTime))}}.</p>`;
+        }} else {{
+          narrative = `<p><strong>${{escapeHTML(targetNode.label)}}</strong> ${{escapeHTML(questionVerb)}} at ${{escapeHTML(formatTime(execTime))}}.</p>`;
+          if (activeParents.length > 0) {{
+            narrative += `<div class="why-section-title">Immediate causes:</div><ul class="why-causes-list">${{activeParents.map(p => '<li><strong>' + escapeHTML(p.label) + '</strong> recalculated</li>').join('')}}</ul>`;
+          }} else if (directParents.length > 0) {{
+            narrative += `<div class="why-section-title">Immediate causes:</div><ul class="why-causes-list">${{directParents.map(p => '<li><strong>' + escapeHTML(p.label) + '</strong> changed</li>').join('')}}</ul>`;
+          }} else if (curWave && curWave.humanAction) {{
+            narrative += `<div class="why-section-title">Immediate causes:</div><ul class="why-causes-list"><li><strong>${{escapeHTML(curWave.humanAction)}}</strong></li></ul>`;
+          }}
+          if (inactiveParents.length > 0) {{
+            narrative += `<div class="why-section-title" style="margin-top:0.4rem;opacity:0.75">Other potential dependencies:</div><div style="font:500 0.68rem var(--mono);color:var(--text-muted)">${{inactiveParents.map(p => escapeHTML(p.label)).join(', ')}}</div>`;
+          }}
+        }}
+
+        return {{
+          nodeId,
+          targetLabel: targetNode.label,
+          question,
+          time: execTime,
+          narrative,
+          directParents: activeParents.length > 0 ? activeParents : directParents,
+          targetNode,
+          ranInBurst: true
+        }};
+      }} else {{
+        const actionName = curWave ? (curWave.humanAction || curWave.triggerLabel || 'this action') : 'this action';
+        const question = `${{targetNode.label}} did not ${{questionVerb}}`;
+
+        let lastExec = null;
+        for (let i = (curWave ? curWave.startStep - 1 : stepIdx); i >= 0; i--) {{
+          const e = events[i];
+          const eid = e.node_id || e.id || '';
+          if (eid === nodeId || cleanName(eid) === cleanTargetName) {{
+            lastExec = e;
+            break;
+          }}
+        }}
+
+        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">None of its upstream dependencies were invalidated in this action.</div></div>`;
+        if (lastExec) {{
+          const lastTime = lastExec.time_sec !== undefined ? lastExec.time_sec : (lastExec.time || 0);
+          narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${{escapeHTML(formatTime(lastTime))}}</span><button type="button" class="btn mini" onclick="seekTo(${{lastExec.step}})">Jump to run</button></div>`;
+        }}
+        if (directParents.length > 0) {{
+          narrative += `<div class="why-section-title" style="margin-top:0.5rem">Potential dependencies:</div><div style="font:500 0.68rem var(--mono);color:var(--text-muted)">${{directParents.map(p => escapeHTML(p.label)).join(', ')}}</div>`;
+        }}
+
+        return {{
+          nodeId,
+          targetLabel: targetNode.label,
+          question,
+          time: null,
+          narrative,
+          directParents: [],
+          targetNode,
+          ranInBurst: false
+        }};
+      }}
+    }}
+
+    function renderInspector() {{
+      const events = reactlogData.events || reactlogData.log || [];
+      const ev = events[currentStep] || {{}};
+      const currentEventNodeId = ev.node_id || ev.id;
+      const targetNodeId = selectedNodeId || currentEventNodeId;
+      const node = targetNodeId ? nodeIndex.get(targetNodeId) : null;
+
+      const whyTitle = document.getElementById('why-title');
+      const whyStory = document.getElementById('why-story');
+      const whyFlow = document.getElementById('why-cascade-flow');
+
+      if (node) {{
+        const explanation = explainWhyNodeRan(node.id, currentStep);
+        if (explanation) {{
+          whyTitle.textContent = explanation.question;
+          whyStory.innerHTML = explanation.narrative;
+
+          whyFlow.innerHTML = '';
+          if (explanation.directParents.length > 1) {{
+            const parentsCol = document.createElement('div');
+            parentsCol.className = 'dag-parents-col';
+            explanation.directParents.forEach(p => {{
+              const pill = document.createElement('button');
+              pill.type = 'button';
+              pill.className = 'flow-node-pill is-trigger';
+              pill.textContent = p.label;
+              pill.onclick = () => selectNode(p.id);
+              parentsCol.appendChild(pill);
+            }});
+            whyFlow.appendChild(parentsCol);
+
+            const bracket = document.createElement('div');
+            bracket.className = 'dag-bracket';
+            bracket.textContent = '➔';
+            whyFlow.appendChild(bracket);
+
+            const targetCol = document.createElement('div');
+            targetCol.className = 'dag-target-col';
+            const targetPill = document.createElement('button');
+            targetPill.type = 'button';
+            targetPill.className = 'flow-node-pill is-target';
+            targetPill.textContent = node.label;
+            targetCol.appendChild(targetPill);
+            whyFlow.appendChild(targetCol);
+          }} else if (explanation.directParents.length === 1) {{
+            const p = explanation.directParents[0];
+            const pPill = document.createElement('button');
+            pPill.type = 'button';
+            pPill.className = 'flow-node-pill is-trigger';
+            pPill.textContent = p.label;
+            pPill.onclick = () => selectNode(p.id);
+            whyFlow.appendChild(pPill);
+
+            const arrow = document.createElement('span');
+            arrow.className = 'dag-bracket';
+            arrow.textContent = '➔';
+            whyFlow.appendChild(arrow);
+
+            const targetPill = document.createElement('button');
+            targetPill.type = 'button';
+            targetPill.className = 'flow-node-pill is-target';
+            targetPill.textContent = node.label;
+            whyFlow.appendChild(targetPill);
+          }} else {{
+            const targetPill = document.createElement('button');
+            targetPill.type = 'button';
+            targetPill.className = 'flow-node-pill is-trigger is-target';
+            targetPill.textContent = node.label;
+            whyFlow.appendChild(targetPill);
+          }}
+        }}
+
+        const kind = nodeKind(node);
+        document.getElementById('insp-title').textContent = `${{node.label || node.id}} (${{kind.label}})`;
+        document.getElementById('insp-meta-line').textContent = node.line ? `Line ${{node.line}}` : 'Unknown';
+
+        const downstreamSec = document.getElementById('insp-downstream-section');
+        const downstreamWrap = document.getElementById('insp-downstream-list');
+        downstreamWrap.innerHTML = '';
+        const children = Array.from(adjDownstream.get(node.id) || []);
+        if (children.length === 0) {{
+          downstreamSec.hidden = true;
+        }} else {{
+          downstreamSec.hidden = false;
+          children.forEach(c => {{
+            const cNode = nodeIndex.get(c);
+            const pill = document.createElement('button');
+            pill.type = 'button';
+            pill.className = 'conn-pill';
+            pill.textContent = cNode ? cNode.label : c;
+            pill.onclick = () => selectNode(c);
+            downstreamWrap.appendChild(pill);
+          }});
+        }}
+
+        const upstreamSec = document.getElementById('insp-upstream-section');
+        const upstreamWrap = document.getElementById('insp-upstream-list');
+        upstreamWrap.innerHTML = '';
+        const parents = Array.from(adjUpstream.get(node.id) || []);
+        if (parents.length === 0) {{
+          upstreamSec.hidden = true;
+        }} else {{
+          upstreamSec.hidden = false;
+          parents.forEach(p => {{
+            const pNode = nodeIndex.get(p);
+            const pill = document.createElement('button');
+            pill.type = 'button';
+            pill.className = 'conn-pill';
+            pill.textContent = pNode ? pNode.label : p;
+            pill.onclick = () => selectNode(p);
+            upstreamWrap.appendChild(pill);
+          }});
+        }}
+
+        const inspType = document.getElementById('insp-type');
+        if (inspType) inspType.textContent = kind.label;
+        const inspStatus = document.getElementById('insp-status');
+        if (inspStatus) inspStatus.textContent = ev.status || 'active';
+
+        renderInlineSource(node);
+      }} else if (ev) {{
+        whyTitle.textContent = ev.node_label || ev.label || ev.action || ev.event;
+        whyStory.innerHTML = `<p>${{escapeHTML(ev.details || 'Step #' + currentStep)}}</p>`;
+        whyFlow.innerHTML = '';
+
+        document.getElementById('insp-title').textContent = ev.node_label || ev.label || ev.action || ev.event;
+        document.getElementById('insp-meta-line').textContent = '—';
+        const inspType = document.getElementById('insp-type');
+        if (inspType) inspType.textContent = ev.phase === 'init' ? 'Initialization event' : (ev.action || 'Event');
+        const inspStatus = document.getElementById('insp-status');
+        if (inspStatus) inspStatus.textContent = ev.status || 'active';
+        document.getElementById('insp-upstream-section').hidden = true;
+        document.getElementById('insp-downstream-section').hidden = true;
+      }}
+    }}
+
+    function renderInlineSource(node) {{
+      const drawer = document.getElementById('insp-source-drawer');
+      const codeBlock = document.getElementById('insp-source-code');
+      const refsBlock = document.getElementById('insp-source-refs');
+      if (!drawer || !codeBlock || !rawAppSource) return;
+
+      if (!node.line) {{
+        drawer.hidden = true;
+        return;
+      }}
+
+      drawer.hidden = false;
+      const lines = rawAppSource.split('\\n');
+      const startLine = Math.max(0, node.line - 1);
+      let endLine = Math.min(lines.length, startLine + 4);
+
+      let snippetLines = lines.slice(startLine, endLine);
+      codeBlock.querySelector('code').textContent = snippetLines.join('\\n');
+
+      if (refsBlock) {{
+        const children = Array.from(adjDownstream.get(node.id) || []);
+        if (children.length > 0) {{
+          refsBlock.hidden = false;
+          const refButtons = children.map(c => {{
+            const cNode = nodeIndex.get(c);
+            const lbl = cNode ? cNode.label : c;
+            const lineStr = cNode && cNode.line ? ` · line ${{cNode.line}}` : '';
+            return `<button type="button" class="conn-pill" onclick="selectNode('${{c}}')">${{escapeHTML(lbl)}}${{lineStr}}</button>`;
+          }}).join(' ');
+          refsBlock.innerHTML = `<span>Referenced by:</span> ${{refButtons}}`;
+        }} else {{
+          refsBlock.hidden = true;
+        }}
+      }}
+    }}
+
+    function toggleSourceDrawer() {{
+      const codeBlock = document.getElementById('insp-source-code');
+      const arrow = document.getElementById('source-drawer-arrow');
+      const btn = document.getElementById('btn-toggle-source-drawer');
+      if (!codeBlock || !arrow || !btn) return;
+      isSourceDrawerOpen = !isSourceDrawerOpen;
+      codeBlock.hidden = !isSourceDrawerOpen;
+      arrow.textContent = isSourceDrawerOpen ? '▴' : '▾';
+      btn.setAttribute('aria-expanded', String(isSourceDrawerOpen));
+    }}
+
+    function selectNode(nodeId) {{
+      selectedNodeId = nodeId;
+      const targetNode = nodeIndex.get(nodeId);
+      if (targetNode) {{
+        if (targetNode.role === 'source' || targetNode.type === 'input') {{
+          setFocusMode('downstream');
+        }} else {{
+          setFocusMode('upstream');
+        }}
+      }}
+      renderInspector();
+      renderGraph();
+      updateTraceTimelineScrubber(getCurrentStepTime());
+    }}
+
     function renderGraph() {{
       const svg = document.getElementById('viewport-g');
+      if (!svg) return;
       svg.innerHTML = '';
       const isLight = getActiveTheme() === 'light';
-
       const rawNodes = reactlogData.nodes || [];
       const nodes = [];
+
       rawNodes.forEach(n => {{
         if (!activeRoles.has(n.role)) return;
         if (searchQuery && !n.id.toLowerCase().includes(searchQuery) && !(n.label || '').toLowerCase().includes(searchQuery)) return;
@@ -2886,7 +4025,7 @@ def format_reactlog_html(
         stageHeader.setAttribute('y', 50);
         stageHeader.setAttribute('class', 'stage-label');
         stageHeader.setAttribute('text-anchor', 'middle');
-        stageHeader.textContent = colIdx === 0 ? 'INPUTS' : (colIdx === maxRank ? 'OUTPUTS / EFFECTS' : `STAGE ${{colIdx}}`);
+        stageHeader.textContent = colIdx === 0 ? 'INPUTS' : (colIdx === maxRank ? 'OUTPUTS & EFFECTS' : 'REACTIVE LOGIC');
         svg.appendChild(stageHeader);
 
         colNodes.forEach((n, rowIdx) => {{
@@ -2896,6 +4035,26 @@ def format_reactlog_html(
 
       const events = reactlogData.events || reactlogData.log || [];
       const activeEvent = events[currentStep] || {{}};
+      const activeNodeId = activeEvent.node_id || activeEvent.id;
+
+      let curWave = allBursts.find(w => currentStep >= w.startStep && currentStep <= w.endStep) || allBursts[0];
+      const executedInBurst = new Set();
+      if (curWave) {{
+        curWave.inputs.forEach(i => executedInBurst.add(i.nodeId));
+        curWave.calcs.forEach(c => executedInBurst.add(c.nodeId));
+        curWave.outputs.forEach(o => executedInBurst.add(o.nodeId));
+      }}
+
+      let causalNodeIds = new Set();
+      const focusTarget = (currentFocusMode !== 'all') ? (selectedNodeId || activeNodeId) : null;
+      if (focusTarget) {{
+        causalNodeIds.add(focusTarget);
+        if (currentFocusMode === 'upstream') {{
+          getUpstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
+        }} else if (currentFocusMode === 'downstream') {{
+          getDownstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
+        }}
+      }}
 
       edges.forEach(e => {{
         const p1 = pos[e.from];
@@ -2912,6 +4071,10 @@ def format_reactlog_html(
           const isEdgeActive = (fromMatch && toMatch)
             ? (fromMatch === e.from && toMatch === e.to)
             : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate'));
+
+          const isCausalEdge = focusTarget && causalNodeIds.has(e.from) && causalNodeIds.has(e.to);
+          const isDimmed = focusTarget && !isCausalEdge && !isEdgeActive;
+
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{midX}} ${{y1}}, ${{midX}} ${{y2}}, ${{x2}} ${{y2}}`);
           path.setAttribute('fill', 'none');
@@ -2919,8 +4082,8 @@ def format_reactlog_html(
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
-          path.setAttribute('class', 'graph-edge');
-          path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : 'url(#arrow)');
+          path.setAttribute('class', 'graph-edge' + (isCausalEdge ? ' is-causal-edge' : '') + (isDimmed ? ' is-dimmed' : ''));
+          path.setAttribute('marker-end', (isEdgeActive || isCausalEdge) ? 'url(#arrow-active)' : 'url(#arrow)');
 
           svg.appendChild(path);
         }}
@@ -2928,15 +4091,16 @@ def format_reactlog_html(
 
       nodes.forEach(n => {{
         const p = pos[n.id] || {{ x: 200, y: 200 }};
-        const activeNodeId = activeEvent.node_id || activeEvent.id;
         const isActive = activeNodeId === n.id;
         const isSelected = selectedNodeId === n.id;
-        const fromMatch = activeEvent.edge_from || activeEvent.dependsOn;
-        const isEdgeSource = fromMatch === n.id;
+        const isExecuted = executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
+        const isCausal = focusTarget && causalNodeIds.has(n.id);
+        const isReachable = isCausal && !isExecuted && !isSelected;
+        const isDimmed = focusTarget && !isCausal && !isActive && !isSelected;
         const kind = nodeKind(n);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isReachable ? ' is-reachable' : '') + (isDimmed ? ' is-dimmed' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
         g.setAttribute('data-active', isActive ? 'true' : 'false');
@@ -2944,10 +4108,9 @@ def format_reactlog_html(
         g.setAttribute('role', 'button');
         g.setAttribute('aria-label', `${{kind.label}} ${{n.id}}, line ${{n.line || 'unknown'}}`);
 
-        g.onclick = () => {{
-          selectedNodeId = n.id;
-          renderInspector();
-          renderGraph();
+        g.onclick = (e) => {{
+          e.stopPropagation();
+          selectNode(n.id);
         }};
         g.onmouseenter = () => highlightDependencies(n.id);
         g.onmouseleave = () => resetHighlight();
@@ -2957,23 +4120,21 @@ def format_reactlog_html(
         rect.setAttribute('y', p.y - (nodeHeight / 2));
         rect.setAttribute('width', nodeWidth);
         rect.setAttribute('height', nodeHeight);
-        rect.setAttribute('rx', '9');
+        rect.setAttribute('rx', '8');
 
         let fillCol = isLight ? '#ffffff' : '#121b25';
         let strokeCol = isSelected ? (isLight ? '#0284c7' : '#63b3ff') : (isLight ? '#cbd5e1' : '#35475a');
-        let strokeW = isSelected ? '2' : '1';
-        let filterVal = isSelected ? (isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.35))' : 'drop-shadow(0 0 9px rgba(99,179,255,0.36))') : 'url(#card-shadow)';
+        let strokeW = isSelected ? '2.8' : '1';
+        let filterVal = isSelected ? (isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.35))' : 'drop-shadow(0 0 10px rgba(99,179,255,0.4))') : 'url(#card-shadow)';
 
         if (isActive) {{
           fillCol = isLight ? `color-mix(in srgb, ${{kind.color}} 14%, #ffffff)` : `color-mix(in srgb, ${{kind.color}} 26%, #0f1722)`;
           strokeCol = kind.color;
           strokeW = '2.5';
           filterVal = isLight ? `drop-shadow(0 0 12px ${{kind.color}})` : `drop-shadow(0 0 16px ${{kind.color}})`;
-        }} else if (isEdgeSource) {{
-          fillCol = isLight ? 'color-mix(in srgb, #0284c7 12%, #ffffff)' : 'color-mix(in srgb, #38bdf8 18%, #0f1722)';
-          strokeCol = isLight ? '#0284c7' : '#38bdf8';
+        }} else if (isExecuted) {{
+          strokeCol = isLight ? '#0284c7' : '#63b3ff';
           strokeW = '2';
-          filterVal = isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.3))' : 'drop-shadow(0 0 10px rgba(56,189,248,0.45))';
         }}
 
         rect.setAttribute('fill', fillCol);
@@ -3050,6 +4211,12 @@ def format_reactlog_html(
           const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           item.scrollIntoView({{ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }});
         }}
+      }});
+
+      document.querySelectorAll('.action-story-item').forEach(item => {{
+        const s = Number(item.getAttribute('data-wave-step'));
+        const isCur = Math.abs(s - currentStep) < 4;
+        item.classList.toggle('is-active', isCur);
       }});
 
       const ev = events[currentStep];
@@ -3202,7 +4369,7 @@ def format_reactlog_html(
       let targetLine = null;
       if (ev && (ev.node_id || ev.id)) {{
         const nid = ev.node_id || ev.id;
-        const node = (reactlogData.nodes || []).find(n => n.id === nid);
+        const node = nodeIndex.get(nid);
         if (node && node.line) targetLine = node.line;
       }}
 
@@ -3213,24 +4380,6 @@ def format_reactlog_html(
         highlight.style.height = '1.62em';
       }} else {{
         highlight.hidden = true;
-      }}
-    }}
-
-    function renderInspector() {{
-      const events = reactlogData.events || reactlogData.log || [];
-      const ev = events[currentStep];
-      const node = (reactlogData.nodes || []).find(n => n.id === selectedNodeId);
-      if (node) {{
-        document.getElementById('insp-title').textContent = node.label || node.id;
-        document.getElementById('insp-type').textContent = nodeKind(node).label;
-        document.getElementById('insp-line').textContent = node.line || 'Unknown';
-        const activeNodeId = ev ? (ev.node_id || ev.id) : null;
-        document.getElementById('insp-status').textContent = ev && activeNodeId === node.id ? (ev.status || 'active') : 'idle';
-      }} else if (ev) {{
-        document.getElementById('insp-title').textContent = ev.node_label || ev.label || ev.action || ev.event;
-        document.getElementById('insp-type').textContent = ev.phase === 'init' ? 'Initialization event' : 'Recorded event';
-        document.getElementById('insp-line').textContent = '—';
-        document.getElementById('insp-status').textContent = ev.status || 'idle';
       }}
     }}
 
@@ -3282,19 +4431,22 @@ def format_reactlog_html(
       renderGraph();
     }}
 
-    function toggleRoleFilter(role, btn) {{
-      if (activeRoles.has(role)) {{
-        activeRoles.delete(role);
-        btn.setAttribute('aria-pressed', 'false');
-      }} else {{
-        activeRoles.add(role);
-        btn.setAttribute('aria-pressed', 'true');
+    function handleRoleDropdownChange(val) {{
+      if (val === 'all') {{
+        activeRoles = new Set(['source', 'conductor', 'observer']);
+      }} else if (val === 'source') {{
+        activeRoles = new Set(['source']);
+      }} else if (val === 'conductor') {{
+        activeRoles = new Set(['conductor']);
+      }} else if (val === 'observer') {{
+        activeRoles = new Set(['observer']);
       }}
       renderGraph();
     }}
 
     function setupPanZoom() {{
       const svg = document.getElementById('reactlog-svg');
+      if (!svg) return;
       svg.addEventListener('mousedown', e => {{
         if (e.target.closest('.graph-node')) return;
         isPanning = true;

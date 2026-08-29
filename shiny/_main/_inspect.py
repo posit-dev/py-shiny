@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -17,6 +18,13 @@ from .._inspect import (
     record_shiny_session,
 )
 from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success
+
+
+def _extract_page_title(code: str) -> Optional[str]:
+    m = re.search(r"""(?:ui\.)?page_opts\s*\([^)]*title\s*=\s*["']([^"']+)["']""", code)
+    if m:
+        return m.group(1)
+    return None
 
 
 def _parse_input_value(val_str: str) -> Any:
@@ -139,6 +147,13 @@ def _parse_input_value(val_str: str) -> Any:
     default=None,
     help="JSON dictionary string of assumed values for dependency simulation.",
 )
+@click.option(
+    "--title",
+    "title",
+    type=str,
+    default=None,
+    help="Title for the interactive HTML reactlog explorer (default: detected app title or filename).",
+)
 def inspect(
     path: Optional[str],
     code: Optional[str],
@@ -153,6 +168,7 @@ def inspect(
     mermaid_flag: bool,
     input_pairs: tuple[str, ...],
     inputs_json: Optional[str],
+    title: Optional[str] = None,
 ) -> None:
     if json_flag:
         selected_format = "json"
@@ -364,9 +380,13 @@ def inspect(
 
         if output_format == "html":
             out_file_path = html_out if html_out is not None else "reactlog.html"
+            detected_title = title or (
+                _extract_page_title(source_code) if not is_json_input else None
+            )
+            report_title = detected_title or f"Reactive Log: {target_desc}"
             html_content = format_reactlog_html(
                 reactlog_data,
-                title=f"Reactive Log: {target_desc}",
+                title=report_title,
                 source_code=(
                     source_code if not is_json_input else "# Loaded from Reactlog JSON"
                 ),

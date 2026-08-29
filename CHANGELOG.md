@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, and interactive HTML Reactlog export.
+* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, Playwright session recording with synchronized video playback, and interactive HTML Reactlog export with action-scoped execution causality and "Why did this run?" root-cause inspection. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
 
 * Added `session.allow_reconnect()`, the Python counterpart to Shiny for R's `session$allowReconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
 
