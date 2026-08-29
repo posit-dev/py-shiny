@@ -846,7 +846,7 @@ def out_b():
     burst_cols = page.locator(".burst-region-column")
     expect(burst_cols).to_have_count(2)
 
-    group_chip = page.locator("#lane-outputs .trace-chip.is-grouped")
+    group_chip = page.locator("#lane-outputs .trace-chip.is-grouped").first
     expect(group_chip).to_be_visible()
     expect(group_chip).to_contain_text("2 outputs")
 
@@ -903,8 +903,6 @@ def summary():
     # 6. Streamlined Toolbar & Phase Filter
     phase_select = page.locator("#phase-filter-select")
     expect(phase_select).to_be_visible()
-    btn_skip = page.locator("#btn-skip-init")
-    expect(btn_skip).to_be_visible()
 
 
 def test_action_scoped_causal_story_and_did_not_run_explanation(page: Page) -> None:
@@ -971,3 +969,78 @@ def client_badge():
     # 6. Contextual focus mode: input defaults to Effects
     btn_effects = page.locator("#btn-focus-downstream")
     expect(btn_effects).to_have_class("path-btn is-active")
+
+
+def test_malicious_node_id_no_code_execution_xss_protection(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("val", "Val", 10)
+@render.text
+def out():
+    return f"V: {input.val()}"
+"""
+    reactlog = generate_reactlog(code)
+    malicious_json = {
+        "version": "1.0",
+        "session": "pwn_test",
+        "nodes": [
+            {
+                "id": "calc:safe_node",
+                "label": "calc:safe_node",
+                "role": "conductor",
+                "type": "calc",
+            },
+            {
+                "id": "output:xss'); window.__pwned=1; ('",
+                "label": "<img src=x onerror=window.__pwned=1>",
+                "role": "observer",
+                "type": "output",
+            },
+        ],
+        "edges": [
+            {
+                "from": "calc:safe_node",
+                "to": "output:xss'); window.__pwned=1; ('",
+            }
+        ],
+        "events": [
+            {
+                "step": 0,
+                "event": "define",
+                "action": "define",
+                "id": "calc:safe_node",
+                "node_id": "calc:safe_node",
+                "phase": "init",
+                "provenance": "observed",
+            },
+            {
+                "step": 1,
+                "event": "define",
+                "action": "define",
+                "id": "output:xss'); window.__pwned=1; ('",
+                "node_id": "output:xss'); window.__pwned=1; ('",
+                "phase": "init",
+                "provenance": "observed",
+            },
+            {
+                "step": 2,
+                "event": "dependsOn",
+                "action": "dependsOn",
+                "edge_from": "calc:safe_node",
+                "edge_to": "output:xss'); window.__pwned=1; ('",
+                "node_id": "output:xss'); window.__pwned=1; ('",
+                "phase": "init",
+                "provenance": "observed",
+            },
+        ],
+    }
+
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+    page.evaluate("data => loadReactlogObject(data)", malicious_json)
+
+    # Click nodes and buttons to trigger any handlers
+    page.locator('.graph-node[data-id="calc:safe_node"]').click()
+    is_pwned = page.evaluate("() => Boolean(window.__pwned)")
+    assert is_pwned is False

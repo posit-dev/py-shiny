@@ -71,31 +71,37 @@ class GraphVisitor(ast.NodeVisitor):
             input_id = node.args[0].value
             if input_id not in self.inputs:
                 self.inputs[input_id] = node.lineno
-            default_val = None
-            for kw in node.keywords:
-                if kw.arg == "value" and isinstance(kw.value, ast.Constant):
-                    default_val = kw.value.value
-            if default_val is None:
-                if (
-                    func_name
-                    in (
-                        "ui.input_numeric",
-                        "ui.input_text",
-                        "ui.input_password",
-                        "ui.input_text_area",
-                    )
-                    and len(node.args) >= 3
-                    and isinstance(node.args[2], ast.Constant)
-                ):
-                    default_val = node.args[2].value
-                elif (
-                    func_name == "ui.input_slider"
-                    and len(node.args) >= 5
-                    and isinstance(node.args[4], ast.Constant)
-                ):
-                    default_val = node.args[4].value
-            if default_val is not None:
-                self.input_defaults[input_id] = default_val
+            is_password_input = func_name == "ui.input_password" or any(
+                s in input_id.lower()
+                for s in ("password", "secret", "token", "api_key", "apikey")
+            )
+            if is_password_input:
+                self.input_defaults[input_id] = "[REDACTED]"
+            else:
+                default_val = None
+                for kw in node.keywords:
+                    if kw.arg == "value" and isinstance(kw.value, ast.Constant):
+                        default_val = kw.value.value
+                if default_val is None:
+                    if (
+                        func_name
+                        in (
+                            "ui.input_numeric",
+                            "ui.input_text",
+                            "ui.input_text_area",
+                        )
+                        and len(node.args) >= 3
+                        and isinstance(node.args[2], ast.Constant)
+                    ):
+                        default_val = node.args[2].value
+                    elif (
+                        func_name == "ui.input_slider"
+                        and len(node.args) >= 5
+                        and isinstance(node.args[4], ast.Constant)
+                    ):
+                        default_val = node.args[4].value
+                if default_val is not None:
+                    self.input_defaults[input_id] = default_val
 
         is_isolate_call = func_name in (
             "reactive.isolate",
@@ -359,6 +365,7 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
         "success": True,
         "nodes": nodes,
         "edges": edges,
+        "input_defaults": visitor.input_defaults,
         "summary": f"{len(all_inputs)} inputs (sources), {len(visitor.calcs)} reactives (conductors), {total_observers} outputs & effects (observers)",
     }
 
@@ -404,10 +411,37 @@ def _make_event(
         else:
             act = event
 
+    if provenance == "observed" and event in (
+        "inputChange",
+        "userClick",
+        "userAction",
+        "recalculate",
+        "output",
+        "render",
+        "outputUpdated",
+        "valueChange",
+    ):
+        semantic_state = "observed_execution"
+    elif event in ("wouldEvaluate", "inferred"):
+        semantic_state = "inferred_execution"
+    elif event in ("propagate", "invalidate"):
+        semantic_state = "invalidated"
+    elif event in (
+        "define",
+        "dependsOn",
+        "createContext",
+        "sessionInit",
+        "analysisInit",
+    ):
+        semantic_state = "dependency_only"
+    else:
+        semantic_state = "idle"
+
     item: Dict[str, Any] = {
         "step": step,
         "action": act,
         "event": event,
+        "semantic_state": semantic_state,
         "id": node_id,
         "reactId": node_id,
         "node_id": node_id,
@@ -577,6 +611,26 @@ def generate_reactlog(
         return cur_step
 
     unmatched_inputs: List[str] = []
+    action_waves: List[Dict[str, Any]] = [
+        {
+            "action_id": "burst-init",
+            "index": 0,
+            "is_init": True,
+            "start_time": 0.0,
+            "end_time": 0.0,
+            "start_step": 0,
+            "end_step": step - 1,
+            "trigger": "Init",
+            "trigger_label": "Init",
+            "human_action": "Init",
+            "trigger_node_id": "",
+            "trigger_value": None,
+            "invalidated_nodes": [],
+            "inferred_executions": [n["id"] for n in nodes if n["role"] != "source"],
+            "observed_executions": [],
+            "observed_outputs": [],
+        }
+    ]
 
     if recorded_actions:
         deduped_actions: List[Dict[str, Any]] = []
@@ -593,8 +647,12 @@ def generate_reactlog(
                 last_input_action[aname] = (aval, ats)
             deduped_actions.append(act)
 
+        last_known_vals: Dict[str, Any] = {
+            n.get("name", n["id"]): n.get("value") for n in nodes
+        }
         last_ts = 0
         for action in deduped_actions:
+            action_start_step = step
             action_type = action.get("type", "action")
             raw_name = str(action.get("name") or action.get("target") or "unknown")
             action_val = action.get("value")
@@ -699,6 +757,41 @@ def generate_reactlog(
                             )
                         )
                         step += 1
+
+                    prev_v = last_known_vals.get(raw_name)
+                    if (
+                        prev_v is not None
+                        and action_val is not None
+                        and str(prev_v) != str(action_val)
+                    ):
+                        human_trigger = f"{raw_name}: {prev_v} → {action_val}"
+                    elif action_val is not None:
+                        human_trigger = f"{raw_name}: {action_val}"
+                    else:
+                        human_trigger = f"{raw_name} changed"
+                    if action_val is not None:
+                        last_known_vals[raw_name] = action_val
+
+                    action_waves.append(
+                        {
+                            "action_id": f"burst-{len(action_waves)}",
+                            "index": len(action_waves),
+                            "is_init": False,
+                            "start_time": ts_sec,
+                            "end_time": ts_sec,
+                            "start_step": action_start_step,
+                            "end_step": step - 1,
+                            "trigger": human_trigger,
+                            "trigger_label": human_trigger,
+                            "human_action": human_trigger,
+                            "trigger_node_id": node_id,
+                            "trigger_value": str(action_val) if action_val is not None else None,
+                            "invalidated_nodes": sorted(list(invalidated_nodes)),
+                            "inferred_executions": [t["id"] for t in eval_order],
+                            "observed_executions": [node_id],
+                            "observed_outputs": [t["id"] for t in eval_order if t["role"] == "observer"],
+                        }
+                    )
                 else:
                     unmatched_inputs.append(raw_name)
                     events.append(
@@ -768,6 +861,27 @@ def generate_reactlog(
                 )
                 step += 1
 
+                action_waves.append(
+                    {
+                        "action_id": f"burst-{len(action_waves)}",
+                        "index": len(action_waves),
+                        "is_init": False,
+                        "start_time": ts_sec,
+                        "end_time": ts_sec,
+                        "start_step": action_start_step,
+                        "end_step": step - 1,
+                        "trigger": f"Click: {action.get('text', raw_name)}",
+                        "trigger_label": f"Click: {action.get('text', raw_name)}",
+                        "human_action": f"Click: {action.get('text', raw_name)}",
+                        "trigger_node_id": "",
+                        "trigger_value": None,
+                        "invalidated_nodes": [],
+                        "inferred_executions": [],
+                        "observed_executions": [],
+                        "observed_outputs": [],
+                    }
+                )
+
         events.append(
             _make_event(
                 step=step,
@@ -807,6 +921,7 @@ def generate_reactlog(
             "edges": edges,
             "events": events,
             "log": events,
+            "action_waves": action_waves,
             "steps_total": len(events),
             "init_steps_count": init_count,
             "interaction_steps_count": interact_count,
@@ -999,6 +1114,7 @@ def generate_reactlog(
         "edges": edges,
         "events": events,
         "log": events,
+        "action_waves": action_waves,
         "steps_total": len(events),
         "init_steps_count": init_count,
         "interaction_steps_count": interact_count,
@@ -1296,6 +1412,8 @@ def _record_session_sync(
     headless: bool = False,
     record_script: Optional[Callable[[Any], None]] = None,
     timeout_secs: float = 60.0,
+    auto_interact: bool = False,
+    redact_inputs: bool = False,
 ) -> Dict[str, Any]:
     try:
         from playwright.sync_api import sync_playwright
@@ -1363,82 +1481,96 @@ def _record_session_sync(
             )
             page = context.new_page()
 
-            recorder_init_script = """
+            redact_all_js = "true" if redact_inputs else "false"
+            recorder_init_script = f"""
             window.__recordedActions = [];
             window.__recordStartTime = Date.now();
             const recentInputs = new Map();
             let lastClickTime = 0;
             let lastClickTarget = '';
+            const shouldRedactAll = {redact_all_js};
 
-            function trackAction(item) {
+            function isSensitiveInput(name, el) {{
+                if (shouldRedactAll) return true;
+                if (el && (el.type === 'password' || el.getAttribute('type') === 'password')) return true;
+                const lower = (name || '').toLowerCase();
+                return lower.includes('password') || lower.includes('secret') || lower.includes('token') || lower.includes('api_key') || lower.includes('apikey');
+            }}
+
+            function trackAction(item) {{
                 item.timestamp = Date.now() - window.__recordStartTime;
                 window.__recordedActions.push(item);
-            }
+            }}
 
-            function attachShinyListeners() {
-                if (window.$ && window.Shiny) {
+            function attachShinyListeners() {{
+                if (window.$ && window.Shiny) {{
                     $(document).off('.shinyRecorder');
-                    $(document).on('shiny:inputchanged.shinyRecorder', (e) => {
-                        const valKey = typeof e.value === 'object' ? JSON.stringify(e.value) : String(e.value);
-                        recentInputs.set(e.name, { val: valKey, t: Date.now() });
-                        trackAction({
+                    $(document).on('shiny:inputchanged.shinyRecorder', (e) => {{
+                        const el = document.getElementById(e.name) || document.querySelector('[name="' + e.name + '"]');
+                        const sensitive = isSensitiveInput(e.name, el);
+                        const safeVal = sensitive ? '[REDACTED]' : e.value;
+                        const valKey = typeof safeVal === 'object' ? JSON.stringify(safeVal) : String(safeVal);
+                        recentInputs.set(e.name, {{ val: valKey, t: Date.now() }});
+                        trackAction({{
                             type: 'input',
                             name: e.name,
-                            value: e.value,
+                            value: safeVal,
                             inputType: e.inputType || 'shiny'
-                        });
-                    });
-                    $(document).on('shiny:value.shinyRecorder', (e) => {
-                        trackAction({
+                        }});
+                    }});
+                    $(document).on('shiny:value.shinyRecorder', (e) => {{
+                        trackAction({{
                             type: 'output',
                             name: e.name
-                        });
-                    });
-                }
-            }
+                        }});
+                    }});
+                }}
+            }}
 
             document.addEventListener('DOMContentLoaded', attachShinyListeners);
             window.addEventListener('load', attachShinyListeners);
             document.addEventListener('shiny:connected', attachShinyListeners);
 
-            document.addEventListener('change', (e) => {
+            document.addEventListener('change', (e) => {{
                 const target = e.target;
                 if (!target || !target.id || target.id.startsWith('.')) return;
                 const id = target.id;
-                const val = target.value !== undefined ? target.value : target.checked;
+                const sensitive = isSensitiveInput(id, target);
+                const rawVal = target.value !== undefined ? target.value : target.checked;
+                const val = sensitive ? '[REDACTED]' : rawVal;
                 const valKey = String(val);
                 const rec = recentInputs.get(id);
-                if (rec && (Date.now() - rec.t < 350) && rec.val === valKey) {
+                if (rec && (Date.now() - rec.t < 350) && rec.val === valKey) {{
                     return;
-                }
-                if (window.Shiny && window.Shiny.setInputValue && target.closest('.shiny-input-container')) {
+                }}
+                if (window.Shiny && window.Shiny.setInputValue && target.closest('.shiny-input-container')) {{
                     return;
-                }
-                recentInputs.set(id, { val: valKey, t: Date.now() });
-                trackAction({
+                }}
+                recentInputs.set(id, {{ val: valKey, t: Date.now() }});
+                trackAction({{
                     type: 'input',
                     name: id,
                     value: val,
                     inputType: target.type || target.tagName.toLowerCase()
-                });
-            }, true);
+                }});
+            }}, true);
 
-            document.addEventListener('click', (e) => {
+            document.addEventListener('click', (e) => {{
                 const target = e.target.closest('button, input, select, textarea, a, .btn');
                 if (!target) return;
                 const tgtName = target.id || target.name || target.tagName.toLowerCase();
                 const now = Date.now();
-                if (tgtName === lastClickTarget && (now - lastClickTime < 200)) {
+                if (tgtName === lastClickTarget && (now - lastClickTime < 200)) {{
                     return;
-                }
+                }}
                 lastClickTime = now;
                 lastClickTarget = tgtName;
-                trackAction({
+                trackAction({{
                     type: 'click',
                     target: tgtName,
                     text: (target.innerText || target.value || '').trim().slice(0, 50)
-                });
-            }, true);
+                }});
+            }}, true);
             """
             page.add_init_script(recorder_init_script)
 
@@ -1469,7 +1601,7 @@ def _record_session_sync(
                             break
                 except Exception:
                     time.sleep(2.0)
-            else:
+            elif auto_interact:
                 try:
                     time.sleep(0.8)
                     input_locators = page.locator("input.shiny-input-number, input.shiny-input-text, input[type='number'], input[type='text']").all()
@@ -1493,6 +1625,8 @@ def _record_session_sync(
                             pass
                 except Exception:
                     time.sleep(1.0)
+            else:
+                time.sleep(1.0)
 
             try:
                 if not page.is_closed():
@@ -1556,6 +1690,8 @@ def record_shiny_session(
     headless: bool = False,
     record_script: Optional[Callable[[Any], None]] = None,
     timeout_secs: float = 60.0,
+    auto_interact: bool = False,
+    redact_inputs: bool = False,
 ) -> Dict[str, Any]:
     try:
         asyncio.get_running_loop()
@@ -1572,10 +1708,18 @@ def record_shiny_session(
                 headless,
                 record_script,
                 timeout_secs,
+                auto_interact,
+                redact_inputs,
             )
             return future.result()
     return _record_session_sync(
-        app_path, video_path, headless, record_script, timeout_secs
+        app_path,
+        video_path,
+        headless,
+        record_script,
+        timeout_secs,
+        auto_interact,
+        redact_inputs,
     )
 
 
@@ -2768,6 +2912,55 @@ def format_reactlog_html(
     }}
 
     function buildActionWaves() {{
+      if (reactlogData.action_waves && reactlogData.action_waves.length > 0) {{
+        const mapped = reactlogData.action_waves.map((w, idx) => {{
+          const inputs = [];
+          if (w.trigger_node_id) {{
+            inputs.push({{
+              name: cleanName(w.trigger_node_id),
+              nodeId: w.trigger_node_id,
+              step: w.start_step,
+              isClick: !w.trigger_value,
+              details: w.trigger || w.human_action,
+              value: w.trigger_value
+            }});
+          }}
+          const calcs = (w.inferred_executions || [])
+            .filter(id => id.startsWith('calc:'))
+            .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
+          const outputs = (w.inferred_executions || [])
+            .filter(id => id.startsWith('output:'))
+            .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
+
+          return {{
+            id: w.action_id || `burst-${{idx}}`,
+            index: w.index !== undefined ? w.index : idx,
+            isInit: Boolean(w.is_init),
+            startTime: w.start_time || 0.0,
+            endTime: w.end_time || 0.0,
+            time: w.start_time || 0.0,
+            startStep: w.start_step || 0,
+            endStep: w.end_step || 0,
+            triggerLabel: w.trigger_label || w.trigger || 'Action',
+            humanAction: w.human_action || w.trigger || 'Action',
+            triggerNodeId: w.trigger_node_id || '',
+            triggerValue: w.trigger_value,
+            inputs: inputs,
+            calcs: calcs,
+            outputs: outputs,
+            invalidatedNodes: new Set(w.invalidated_nodes || []),
+            inferredExecutions: new Set(w.inferred_executions || []),
+            observedExecutions: new Set(w.observed_executions || []),
+            observedOutputs: new Set(w.observed_outputs || []),
+            totalEvents: (w.end_step - w.start_step + 1),
+            userChanges: inputs.length,
+            details: w.trigger || 'Action'
+          }};
+        }});
+        allBursts = mapped;
+        actionWaves = mapped.filter(w => !w.isInit);
+        return;
+      }}
       actionWaves = [];
       allBursts = [];
       const events = reactlogData.events || reactlogData.log || [];
@@ -3086,7 +3279,7 @@ def format_reactlog_html(
       laneCalcs.innerHTML = '';
       laneOutputs.innerHTML = '';
 
-      const displayWaves = actionWaves.length > 0 ? actionWaves : allBursts;
+      const displayWaves = allBursts;
       displayWaves.forEach(wave => {{
         const wavePct = calculateTimePct(wave.time);
 
@@ -3312,11 +3505,11 @@ def format_reactlog_html(
 
       let summaryHtml = `<strong>${{escapeHTML(actionDesc)}}.</strong>`;
       if (causalCalcs.length > 0) {{
-        const calcPills = causalCalcs.map(c => `<button type="button" class="causal-step-pill" onclick="selectNode('${{c.nodeId || 'calc:' + c.name}}')">${{escapeHTML(cleanName(c.name))}}</button>`).join(' and ');
+        const calcPills = causalCalcs.map(c => `<button type="button" class="causal-step-pill" data-node-id="${{escapeHTML(c.nodeId || 'calc:' + c.name)}}">${{escapeHTML(cleanName(c.name))}}</button>`).join(' and ');
         summaryHtml += ` This recalculated ${{calcPills}}`;
       }}
       if (causalOutputs.length > 0) {{
-        const outPills = causalOutputs.map(o => `<button type="button" class="causal-step-pill" onclick="selectNode('${{o.nodeId || 'output:' + o.name}}')">${{escapeHTML(cleanName(o.name))}}</button>`).join(' and ');
+        const outPills = causalOutputs.map(o => `<button type="button" class="causal-step-pill" data-node-id="${{escapeHTML(o.nodeId || 'output:' + o.name)}}">${{escapeHTML(cleanName(o.name))}}</button>`).join(' and ');
         summaryHtml += (causalCalcs.length > 0 ? ', then rendered ' : ' This rendered ') + `${{outPills}}.`;
       }} else if (causalCalcs.length > 0) {{
         summaryHtml += '.';
@@ -3397,6 +3590,18 @@ def format_reactlog_html(
     }}
 
     function init() {{
+      document.addEventListener('click', (e) => {{
+        const nodeBtn = e.target.closest('[data-node-id]');
+        if (nodeBtn && nodeBtn.dataset.nodeId) {{
+          selectNode(nodeBtn.dataset.nodeId);
+          return;
+        }}
+        const jumpBtn = e.target.closest('[data-seek-step]');
+        if (jumpBtn && jumpBtn.dataset.seekStep) {{
+          seekTo(parseInt(jumpBtn.dataset.seekStep, 10));
+          return;
+        }}
+      }});
       initTheme();
       prepareEventTimings();
       buildGraphIndices();
@@ -3748,10 +3953,17 @@ def format_reactlog_html(
           }}
         }}
 
-        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">None of its upstream dependencies were invalidated in this action.</div></div>`;
+        let upstreamNote = 'No upstream dependencies were invalidated in this action.';
+        if (curWave && curWave.invalidatedNodes && curWave.invalidatedNodes.size > 0) {{
+          const invParents = directParents.filter(p => curWave.invalidatedNodes.has(p.id));
+          if (invParents.length > 0) {{
+            upstreamNote = `Upstream dependencies invalidated: ${{invParents.map(p => escapeHTML(p.label)).join(', ')}}`;
+          }}
+        }}
+        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was observed or inferred during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
         if (lastExec) {{
           const lastTime = lastExec.time_sec !== undefined ? lastExec.time_sec : (lastExec.time || 0);
-          narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${{escapeHTML(formatTime(lastTime))}}</span><button type="button" class="btn mini" onclick="seekTo(${{lastExec.step}})">Jump to run</button></div>`;
+          narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${{escapeHTML(formatTime(lastTime))}}</span><button type="button" class="btn mini" data-seek-step="${{lastExec.step}}">Jump to run</button></div>`;
         }}
         if (directParents.length > 0) {{
           narrative += `<div class="why-section-title" style="margin-top:0.5rem">Potential dependencies:</div><div style="font:500 0.68rem var(--mono);color:var(--text-muted)">${{directParents.map(p => escapeHTML(p.label)).join(', ')}}</div>`;
@@ -3933,7 +4145,7 @@ def format_reactlog_html(
             const cNode = nodeIndex.get(c);
             const lbl = cNode ? cNode.label : c;
             const lineStr = cNode && cNode.line ? ` · line ${{cNode.line}}` : '';
-            return `<button type="button" class="conn-pill" onclick="selectNode('${{c}}')">${{escapeHTML(lbl)}}${{lineStr}}</button>`;
+            return `<button type="button" class="conn-pill" data-node-id="${{escapeHTML(c)}}">${{escapeHTML(lbl)}}${{lineStr}}</button>`;
           }}).join(' ');
           refsBlock.innerHTML = `<span>Referenced by:</span> ${{refButtons}}`;
         }} else {{
