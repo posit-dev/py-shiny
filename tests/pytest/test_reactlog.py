@@ -1087,7 +1087,12 @@ def summary():
 """
     actions = [
         {"type": "input", "name": "price", "value": 30, "timestamp": 200},
-        {"type": "click", "name": "recalc_btn", "text": "Recalculate", "timestamp": 500},
+        {
+            "type": "click",
+            "name": "recalc_btn",
+            "text": "Recalculate",
+            "timestamp": 500,
+        },
     ]
     reactlog = generate_reactlog(code, recorded_actions=actions)
     assert reactlog["success"] is True
