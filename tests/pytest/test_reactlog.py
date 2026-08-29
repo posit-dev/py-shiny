@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple, cast
 
 import pytest
 from click.testing import CliRunner
@@ -641,13 +641,17 @@ def txt():
     assert "session" in reactlog
     assert "log" in reactlog
     assert isinstance(reactlog["log"], list)
-    assert len(reactlog["log"]) > 0
+    raw_log = cast(List[Any], reactlog["log"])
+    log_events: List[Dict[str, Any]] = [
+        cast(Dict[str, Any], e) for e in raw_log if isinstance(e, dict)
+    ]
+    assert len(log_events) > 0
 
-    actions = {ev["action"] for ev in reactlog["log"]}
+    actions: set[str] = {str(ev["action"]) for ev in log_events}
     assert "define" in actions
     assert "dependsOn" in actions
 
-    for ev in reactlog["log"]:
+    for ev in log_events:
         assert "action" in ev
         assert "id" in ev
         assert "label" in ev
@@ -742,7 +746,7 @@ def out():
     html_light = format_reactlog_html(reactlog, source_code=code, theme="light")
     assert 'data-theme="light"' in html_light
     assert '[data-theme="light"]' in html_light
-    assert '--bg: #f8fafc;' in html_light
+    assert "--bg: #f8fafc;" in html_light
 
 
 def test_cli_inspect_theme_and_json_file(tmp_path: Path):
@@ -750,9 +754,26 @@ def test_cli_inspect_theme_and_json_file(tmp_path: Path):
         "version": "1.0",
         "session": "s1",
         "log": [
-            {"action": "define", "id": "input:x", "label": "x", "type": "observable", "time": 0.1},
-            {"action": "define", "id": "output:y", "label": "y", "type": "observer", "time": 0.2},
-            {"action": "dependsOn", "id": "output:y", "dependsOn": "input:x", "time": 0.3},
+            {
+                "action": "define",
+                "id": "input:x",
+                "label": "x",
+                "type": "observable",
+                "time": 0.1,
+            },
+            {
+                "action": "define",
+                "id": "output:y",
+                "label": "y",
+                "type": "observer",
+                "time": 0.2,
+            },
+            {
+                "action": "dependsOn",
+                "id": "output:y",
+                "dependsOn": "input:x",
+                "time": 0.3,
+            },
         ],
     }
     json_file = tmp_path / "legacy.json"

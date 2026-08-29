@@ -324,13 +324,14 @@ def inspect(
                     err=is_machine_output,
                 )
 
+        reactlog_data: Dict[str, Any] = {}
         is_json_input = False
         if target_desc.endswith(".json") or source_code.strip().startswith(("{", "[")):
             try:
-                parsed_json = json.loads(source_code)
+                parsed_json: Any = json.loads(source_code)
                 if isinstance(parsed_json, (dict, list)):
                     is_json_input = True
-                    reactlog_data = load_reactlog_json(parsed_json)
+                    reactlog_data = load_reactlog_json(cast(Any, parsed_json))
             except Exception:
                 is_json_input = False
 
@@ -358,7 +359,9 @@ def inspect(
             html_content = format_reactlog_html(
                 reactlog_data,
                 title=f"Reactive Log: {target_desc}",
-                source_code=source_code if not is_json_input else "# Loaded from Reactlog JSON",
+                source_code=(
+                    source_code if not is_json_input else "# Loaded from Reactlog JSON"
+                ),
                 video_path=actual_video_path,
                 html_path=out_file_path,
                 theme=theme,
@@ -387,9 +390,9 @@ def inspect(
 
         elif output_format == "reactlog":
             click.echo(cli_bold(f"Reactive Event Log for {target_desc}"))
-            click.echo(cli_info(str(reactlog_data["summary"])) + "\n")
+            click.echo(cli_info(str(reactlog_data.get("summary", ""))) + "\n")
 
-            events = reactlog_data.get("events", [])
+            events = cast(List[Dict[str, Any]], reactlog_data.get("events", []))
             click.echo(
                 f"  {'Step':<6} {'Event':<18} {'Node':<26} {'Status':<14} {'Details'}"
             )
@@ -419,14 +422,15 @@ def inspect(
 
         else:
             click.echo(cli_bold(f"Reactive Dependency Graph for {target_desc}"))
-            click.echo(cli_info(str(reactlog_data["summary"])) + "\n")
+            click.echo(cli_info(str(reactlog_data.get("summary", ""))) + "\n")
 
             nodes_by_type: Dict[str, List[Dict[str, Any]]] = {
                 "source": [],
                 "conductor": [],
                 "observer": [],
             }
-            for n in reactlog_data.get("nodes", []):
+            nodes_list = cast(List[Dict[str, Any]], reactlog_data.get("nodes", []))
+            for n in nodes_list:
                 role: str = str(n.get("role", "conductor"))
                 nodes_by_type.setdefault(role, []).append(n)
 
@@ -448,7 +452,7 @@ def inspect(
                     click.echo(f"  📊 {out_node.get('label', out_node['id'])}")
                 click.echo("")
 
-            edges = reactlog_data.get("edges", [])
+            edges = cast(List[Dict[str, Any]], reactlog_data.get("edges", []))
             if edges:
                 click.echo(cli_bold("Dependency Flow:"))
                 for e in edges:
