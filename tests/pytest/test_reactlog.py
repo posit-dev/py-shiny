@@ -1051,3 +1051,120 @@ def out():
     assert "setTimelineMode" in html
     assert "calculateTimePct" in html
     assert "renderSeismographLines" in html
+
+
+def test_password_and_secret_inputs_redacted_at_ast_visitor():
+    code = """from shiny.express import input, render, ui
+ui.input_password("user_pass", "Password", value="super_secret_123")
+ui.input_text("api_key_token", "API Key", value="sk-123456789")
+ui.input_text("normal_user", "Username", value="admin")
+@render.text
+def out():
+    return f"User: {input.normal_user()}"
+"""
+    graph = inspect_reactive_graph(code)
+    assert graph["success"] is True
+    defaults = graph.get("input_defaults", {})
+    assert defaults.get("user_pass") == "[REDACTED]"
+    assert defaults.get("api_key_token") == "[REDACTED]"
+    assert defaults.get("normal_user") == "admin"
+
+
+def test_authoritative_action_waves_in_reactlog():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("price", "Price", 25)
+ui.input_numeric("units", "Units", 10)
+
+@reactive.calc
+def subtotal():
+    return input.price() * input.units()
+
+@render.text
+def summary():
+    return f"Subtotal: {subtotal()}"
+"""
+    actions = [
+        {"type": "input", "name": "price", "value": 30, "timestamp": 200},
+        {"type": "click", "name": "recalc_btn", "text": "Recalculate", "timestamp": 500},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=actions)
+    assert reactlog["success"] is True
+    waves = reactlog.get("action_waves", [])
+    assert len(waves) == 3
+
+    init_w = waves[0]
+    assert init_w["is_init"] is True
+    assert init_w["trigger"] == "Init"
+
+    price_w = waves[1]
+    assert price_w["is_init"] is False
+    assert "price" in price_w["trigger"]
+    assert price_w["trigger_node_id"] == "input:price"
+    assert "calc:subtotal" in price_w["invalidated_nodes"]
+    assert "output:summary" in price_w["invalidated_nodes"]
+    assert "calc:subtotal" in price_w["inferred_executions"]
+    assert "output:summary" in price_w["observed_outputs"]
+
+    click_w = waves[2]
+    assert click_w["is_init"] is False
+    assert "Click" in click_w["trigger"]
+
+
+def test_semantic_states_in_events():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("x", "X", 5)
+
+@reactive.calc
+def doubled():
+    return input.x() * 2
+
+@render.text
+def out():
+    return str(doubled())
+"""
+    actions = [
+        {"type": "input", "name": "x", "value": 10, "timestamp": 100},
+        {"type": "output", "name": "out", "timestamp": 200},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=actions)
+    events = reactlog["events"]
+
+    define_evs = [e for e in events if e["event"] == "define"]
+    for e in define_evs:
+        assert e["semantic_state"] == "dependency_only"
+
+    input_evs = [e for e in events if e["event"] == "inputChange"]
+    for e in input_evs:
+        assert e["semantic_state"] == "observed_execution"
+
+    prop_evs = [e for e in events if e["event"] == "propagate"]
+    for e in prop_evs:
+        assert e["semantic_state"] == "invalidated"
+
+    eval_evs = [e for e in events if e["event"] == "wouldEvaluate"]
+    for e in eval_evs:
+        assert e["semantic_state"] == "inferred_execution"
+
+
+def test_record_session_options_passive_by_default():
+    import inspect as py_inspect
+
+    from shiny._inspect import record_shiny_session
+    from shiny._main._inspect import inspect as inspect_cli_fn
+
+    sig_rec = py_inspect.signature(record_shiny_session)
+    assert sig_rec.parameters["auto_interact"].default is False
+    assert sig_rec.parameters["redact_inputs"].default is False
+
+    cli_params = {p.name: p.default for p in inspect_cli_fn.params}
+    assert cli_params["auto_interact"] is False
+    assert cli_params["redact_inputs"] is False
+
+    if inspect_cli_fn.callback:
+        sig_cb = py_inspect.signature(inspect_cli_fn.callback)
+        assert sig_cb.parameters["auto_interact"].default is False
+        assert sig_cb.parameters["redact_inputs"].default is False
