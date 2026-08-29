@@ -1535,13 +1535,13 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
         ntype = node.get("type", "")
         label = str(node.get("label", raw_id)).replace('"', '\\"')
         if ntype == "input":
-            lines.append(f'    {syn_id}["📥 {label}"]:::inputClass')
+            lines.append(f'    {syn_id}["{label}"]:::inputClass')
         elif ntype == "calc":
-            lines.append(f'    {syn_id}["⚡ {label}"]:::calcClass')
+            lines.append(f'    {syn_id}["{label}"]:::calcClass')
         elif ntype == "effect":
-            lines.append(f'    {syn_id}["🔔 {label}"]:::effectClass')
+            lines.append(f'    {syn_id}["{label}"]:::effectClass')
         else:
-            lines.append(f'    {syn_id}["📊 {label}"]:::outputClass')
+            lines.append(f'    {syn_id}["{label}"]:::outputClass')
 
     for edge in graph.get("edges", []):
         f = node_id_map.get(str(edge["from"]))
@@ -1985,10 +1985,11 @@ def format_reactlog_html(
     .trace-playhead {{ position: absolute; top: -5px; bottom: -3px; left: 0%; width: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); pointer-events: none; z-index: 15; transition: left 40ms linear; }}
     .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 8px; height: 8px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 6px var(--accent); }}
     .playhead-line {{ width: 100%; height: 100%; }}
-    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 0.4rem 0.65rem; font: 600 0.68rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 25; display: flex; flex-direction: column; gap: 0.15rem; }}
-    .tooltip-time {{ color: var(--accent); font-weight: 800; font-size: 0.72rem; }}
-    .tooltip-title {{ color: var(--text); font-weight: 700; }}
-    .tooltip-desc {{ color: var(--text-muted); font-size: 0.62rem; }}
+    .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 0.4rem 0.65rem; font: 600 0.68rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 25; display: flex; flex-direction: column; gap: 0.2rem; }}
+    .tooltip-time {{ color: var(--accent); font-weight: 800; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.3rem; }}
+    .tooltip-title {{ color: var(--text); font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }}
+    .tooltip-desc {{ color: var(--text-muted); font-size: 0.64rem; display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }}
+    .tooltip-desc .inline-icon, .tooltip-title .inline-icon, .tooltip-time .inline-icon {{ margin-right: 0.15rem; vertical-align: -0.12em; }}
   </style>
 </head>
 <body>
@@ -2171,7 +2172,13 @@ def format_reactlog_html(
       pause: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
       video: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>',
       eye: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
-      zap: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+      zap: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+      clock: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      input: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>',
+      click: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></svg>',
+      calc: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+      output: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>',
+      arrowRight: '<svg class="inline-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'
     }};
     let currentStep = 0;
     let isPlaying = false;
@@ -2567,18 +2574,18 @@ def format_reactlog_html(
             }}
           }}
 
-          let tooltipHtml = `<span class="tooltip-time">⏱ ${{escapeHTML(formatTime(targetSec))}}</span>`;
+          let tooltipHtml = `<span class="tooltip-time">${{ICONS.clock}} ${{escapeHTML(formatTime(targetSec))}}</span>`;
           if (nearestWave && minDiff < 0.8) {{
-            const inList = nearestWave.inputs.map(i => (i.isClick ? `👆 click on ${{escapeHTML(i.name)}}` : `📥 ${{escapeHTML(i.name)}}`)).join(', ');
-            const outList = nearestWave.outputs.map(o => escapeHTML(o.name)).join(', ');
-            const calcList = nearestWave.calcs.map(c => escapeHTML(c.name)).join(', ');
+            const inList = nearestWave.inputs.map(i => (i.isClick ? `${{ICONS.click}} click on ${{escapeHTML(i.name)}}` : `${{ICONS.input}} ${{escapeHTML(i.name)}}`)).join(', ');
+            const outList = nearestWave.outputs.map(o => `${{ICONS.output}} ${{escapeHTML(o.name)}}`).join(', ');
+            const calcList = nearestWave.calcs.map(c => `${{ICONS.calc}} ${{escapeHTML(c.name)}}`).join(', ');
 
             if (inList) tooltipHtml += `<span class="tooltip-title">${{inList}}</span>`;
             if (calcList || outList) {{
               const dependencyParts = [];
               if (calcList) dependencyParts.push(calcList);
               if (outList) dependencyParts.push(outList);
-              tooltipHtml += `<span class="tooltip-desc">↳ ${{dependencyParts.join(' → ')}}</span>`;
+              tooltipHtml += `<span class="tooltip-desc">${{dependencyParts.join(' ' + ICONS.arrowRight + ' ')}}</span>`;
             }}
           }}
           tooltip.innerHTML = tooltipHtml;
@@ -2802,7 +2809,7 @@ def format_reactlog_html(
         const provBadge = document.createElement('span');
         const prov = ev.provenance || 'inferred';
         provBadge.className = `event-badge provenance-${{prov}}`;
-        provBadge.textContent = prov === 'observed' ? '👁️ OBSERVED' : '⚡ INFERRED';
+        provBadge.innerHTML = `${{prov === 'observed' ? ICONS.eye : ICONS.zap}} ${{prov.toUpperCase()}}`;
         badgesWrap.appendChild(provBadge);
 
         const badge = document.createElement('span');
