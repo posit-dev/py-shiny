@@ -2213,6 +2213,7 @@ def format_reactlog_html(
     .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 7px; height: 7px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 5px var(--accent); }}
     .playhead-line {{ width: 100%; height: 100%; }}
     .trace-tooltip {{ position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 0.35rem 0.6rem; font: 600 0.66rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 25; display: flex; flex-direction: column; gap: 0.15rem; }}
+    .trace-tooltip[hidden] {{ display: none; }}
     .tooltip-time {{ color: var(--accent); font-weight: 800; font-size: 0.7rem; display: inline-flex; align-items: center; gap: 0.25rem; }}
     .tooltip-title {{ color: var(--text); font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }}
 
