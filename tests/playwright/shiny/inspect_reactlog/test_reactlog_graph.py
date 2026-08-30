@@ -741,6 +741,39 @@ def out():
     expect(mode_select).to_have_value("activity")
 
 
+def test_trace_tooltip_is_hidden_until_timeline_drag(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("value", "Value", 1)
+@render.text
+def result():
+    return str(input.value())
+"""
+    recorded_actions = [
+        {"type": "input", "name": "value", "value": 2, "timestamp": 1000},
+    ]
+    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    tooltip = page.locator("#trace-tooltip")
+    expect(tooltip).to_be_hidden()
+
+    track = page.locator("#trace-track-wrap")
+    track_box = track.bounding_box()
+    assert track_box is not None
+    start_x = track_box["x"] + track_box["width"] * 0.75
+    drag_y = track_box["y"] + 2
+    page.mouse.move(start_x, drag_y)
+    page.mouse.down()
+    page.mouse.move(start_x + 10, drag_y)
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text("s")
+    page.mouse.up()
+    expect(tooltip).to_be_hidden()
+
+
 def test_timeline_seismograph_and_burst_anchors(page: Page) -> None:
     code = """from shiny.express import input, render, ui
 from shiny import reactive
