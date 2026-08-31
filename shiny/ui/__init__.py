@@ -69,7 +69,6 @@ from ._card import (
 )
 from ._chat import Chat, chat_ui
 from ._download_button import download_button, download_link
-from ._page_document import PageDocument
 from ._include_helpers import include_css, include_js
 from ._input_action_button import input_action_button, input_action_link
 from ._input_check_radio import (
@@ -161,6 +160,7 @@ from ._page import (
     page_output,
     page_sidebar,
 )
+from ._page_html import page_html
 from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
 from ._offcanvas import (
     Offcanvas,
@@ -369,7 +369,7 @@ __all__ = (
     "page_bootstrap",
     "page_auto",
     "page_output",
-    "PageDocument",
+    "page_html",
     # _popover
     "popover",
     # _valuebox

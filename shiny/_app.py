@@ -53,7 +53,7 @@ from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
-from .ui._page_document import PageDocument
+from .ui._page_html import DEPS_PLACEHOLDER, PageHtmlDocument, page_html
 
 T = TypeVar("T")
 
@@ -79,17 +79,17 @@ class App:
         returns a UI definition, if you need the UI definition to be created dynamically
         for each pageview -- which is also what bookmarking requires. Finally, it can
         be a complete HTML document that you own: either a :class:`~pathlib.Path` to an
-        HTML file, or a :class:`~shiny.ui.PageDocument`, which additionally lets
+        HTML file, or a call to :func:`~shiny.ui.page_html`, which additionally lets
         you attach your own :class:`~htmltools.HTMLDependency` objects. Such a document
         is served as-is, and must contain
         ``<meta name="shiny-dependency-placeholder" content="">`` (or the
-        ``deps_replace_pattern=`` the ``PageDocument`` was created with) to
+        ``deps_replace_pattern=`` passed to ``ui.page_html()``) to
         mark where Shiny's HTML dependencies are inserted.
 
-        A ``Tag``, ``TagList``, or ``PageDocument`` may equally be *returned
+        A ``Tag``, ``TagList``, or ``ui.page_html()`` result may equally be *returned
         by* the function above, for a UI that varies per pageview. A ``Path`` may not:
         it names a file to read once at startup, so a function that wants to serve a
-        file should read it and return a ``PageDocument``.
+        file should return ``ui.page_html(path)``, which reads it per call.
     server
         A function which is called once for each session, ensuring that each session is
         independent.
@@ -154,7 +154,7 @@ class App:
     ``SafeException`` messages bypass sanitization regardless of this setting.
     """
 
-    ui: RenderedHTML | Callable[[Request], Tag | TagList | PageDocument]
+    ui: RenderedHTML | Callable[[Request], Tag | TagList | PageHtmlDocument]
     server: Callable[[Inputs, Outputs, Session], None]
 
     _bookmark_save_dir_fn: BookmarkSaveDirFn | None | MISSING_TYPE
@@ -167,9 +167,9 @@ class App:
             Tag
             | TagList
             | Tagified
-            | Callable[[Request], Tag | TagList | Tagified | PageDocument]
+            | Callable[[Request], Tag | TagList | Tagified | PageHtmlDocument]
             | Path
-            | PageDocument
+            | PageHtmlDocument
         ),
         server: (
             Callable[[Inputs], None] | Callable[[Inputs, Outputs, Session], None] | None
@@ -258,21 +258,19 @@ class App:
             if is_async_callable(cast(Callable[[Request], Any], ui)):
                 raise TypeError("App UI cannot be a coroutine function")
             # Dynamic UI: just store the function for later
-            self.ui = cast("Callable[[Request], Tag | TagList | PageDocument]", ui)
+            self.ui = cast("Callable[[Request], Tag | TagList | PageHtmlDocument]", ui)
         elif isinstance(ui, Path):
             if not ui.is_absolute():
                 raise ValueError("Path to UI must be absolute")
 
             # Read once, here: a `Path` names a file to serve, not a per-pageview UI
             # value, so it is not something a UI function may return.
-            self.ui = self._render_page(
-                PageDocument(ui.read_text(encoding="utf-8")), lib_prefix=self.lib_prefix
-            )
+            self.ui = self._render_page(page_html(ui), lib_prefix=self.lib_prefix)
 
         else:
             # Static UI: render the UI now and save the results
             self.ui = self._render_page(
-                cast("Tag | TagList | PageDocument", ui),
+                cast("Tag | TagList | PageHtmlDocument", ui),
                 lib_prefix=self.lib_prefix,
             )
 
@@ -521,7 +519,7 @@ class App:
 
     def _render_page(
         self,
-        ui: Tag | TagList | PageDocument,
+        ui: Tag | TagList | PageHtmlDocument,
         lib_prefix: str,
     ) -> RenderedHTML:
         # Every UI *value* type must be handled here, and nowhere else. This is the one
@@ -533,9 +531,8 @@ class App:
         # read once at startup, not a UI value, so a UI function may not return one.
         if isinstance(ui, Path):
             raise TypeError(
-                "A UI function cannot return a `Path`. Read the file and return a"
-                " `ui.PageDocument` instead, so it is clear when the file is"
-                " read."
+                "A UI function cannot return a `Path`. Return `ui.page_html(path)`"
+                " instead, which makes it clear the file is read on every call."
             )
 
         if isinstance(ui, HTMLDocument):
@@ -547,15 +544,14 @@ class App:
             raise TypeError(
                 "An `HTMLDocument` cannot be used as a UI. Pass its contents (a `Tag`"
                 " or `TagList`) instead, and Shiny will build the document -- or, for"
-                " a complete HTML document of your own, use a"
-                " `ui.PageDocument`."
+                " a complete HTML document of your own, use `ui.page_html()`."
             )
 
         if isinstance(ui, HTMLTextDocument):
-            if not isinstance(ui, PageDocument):
+            if not isinstance(ui, PageHtmlDocument):
                 raise TypeError(
-                    "A complete HTML document used as a UI must be a"
-                    " `ui.PageDocument`, which is what prefixes Shiny's own"
+                    "A complete HTML document used as a UI must be created with"
+                    " `ui.page_html()`, which is what prefixes Shiny's own"
                     " HTML dependencies onto the app author's."
                 )
 
@@ -571,9 +567,9 @@ class App:
                 raise ValueError(
                     "The UI document does not contain the string that marks where"
                     " Shiny's HTML dependencies are inserted, so they could not be"
-                    " inserted. Add the `deps_replace_pattern=` the `ui.PageDocument`"
-                    " was created with (by default,"
-                    f" `{PageDocument.DEPS_PLACEHOLDER}`) to the document."
+                    " inserted. Add the `deps_replace_pattern=` passed to"
+                    " `ui.page_html()` (by default,"
+                    f" `{DEPS_PLACEHOLDER}`) to the document."
                 )
         else:
             # Use presence of the Bootstrap dependency as a signal that the UI uses a
@@ -622,8 +618,8 @@ def is_uifunc(
         | Tag
         | TagList
         | Tagified
-        | Callable[[Request], Tag | TagList | Tagified | PageDocument]
-        | PageDocument
+        | Callable[[Request], Tag | TagList | Tagified | PageHtmlDocument]
+        | PageHtmlDocument
     ),
 ) -> bool:
     if (

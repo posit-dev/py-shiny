@@ -360,7 +360,7 @@ _known_missing_express_ui = {
         "page_auto",
         "page_output",
         # The whole page is an author-owned document, so Express has nothing to build
-        "PageDocument",
+        "page_html",
         "showcase_bottom",
         "showcase_left_center",
         "showcase_top_right",
