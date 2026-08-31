@@ -4,7 +4,7 @@ from pathlib import Path
 
 from htmltools import HTMLDependency, HTMLTextDocument
 
-from .._docstring import add_example
+from .._docstring import add_example, no_example
 from ..html_dependencies import _page_deps
 from ..types import ListOrTuple
 
@@ -40,6 +40,7 @@ class PageHtmlDocument(HTMLTextDocument):
 
 
 @add_example()
+@no_example("express")
 def page_html(
     html: str | Path,
     *,
