@@ -29,7 +29,7 @@ class PageDocument(HTMLTextDocument):
         Additional HTML dependencies to include, alongside Shiny's own. These are
         inserted after Shiny's, and their files are served by the app.
     deps_replace_pattern
-        The string in ``html`` to replace with the dependencies. The first instance is
+        The string in ``html`` to replace with Shiny's dependencies. The first instance is
         replaced. Defaults to :attr:`DEPS_PLACEHOLDER`.
 
     Examples
