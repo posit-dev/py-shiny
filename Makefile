@@ -58,16 +58,16 @@ clean-test: FORCE
 
 typings/folium:
 	@echo "Creating folium stubs"
-	pyrefly stubgen "$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('folium').origin))")" \
-		-o typings/folium --include-private
+	dir="$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('folium').origin))")" && \
+		pyrefly stubgen "$$dir" -o typings/folium --include-private
 typings/uvicorn:
 	@echo "Creating uvicorn stubs"
-	pyrefly stubgen "$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('uvicorn').origin))")" \
-		-o typings/uvicorn --include-private
+	dir="$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('uvicorn').origin))")" && \
+		pyrefly stubgen "$$dir" -o typings/uvicorn --include-private
 typings/seaborn:
 	@echo "Creating seaborn stubs"
-	pyrefly stubgen "$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('seaborn').origin))")" \
-		-o typings/seaborn --include-private
+	dir="$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('seaborn').origin))")" && \
+		pyrefly stubgen "$$dir" -o typings/seaborn --include-private
 typings/matplotlib/__init__.pyi:
 	@echo "Creating matplotlib stubs"
 	mkdir -p typings
@@ -75,7 +75,7 @@ typings/matplotlib/__init__.pyi:
 	mv typings/python-type-stubs/stubs/matplotlib typings/
 	rm -rf typings/python-type-stubs
 
-pyrefly-typings: typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
+typings: FORCE typings/folium typings/uvicorn typings/seaborn typings/matplotlib/__init__.pyi
 
 check: check-format check-lint check-types check-tests  ## check code, style, types, and test (basic CI)
 check-fix: format check-lint check-types check-tests ## check and format code, style, types, and test
@@ -93,13 +93,13 @@ check-black: FORCE
 check-isort: FORCE
 	@echo "-------- Sorting imports with isort ---------"
 	isort --check-only --diff .
-check-pyright: pyrefly-typings
+check-pyright: typings
 	@echo "-------- Checking types with pyright --------"
 	pyright
-check-pyrefly: pyrefly-typings
+check-pyrefly: typings
 	@echo "-------- Checking types with pyrefly --------"
 	pyrefly check
-update-pyrefly-baseline: pyrefly-typings ## Accept current Pyrefly errors as the baseline
+update-pyrefly-baseline: typings ## Accept current Pyrefly errors as the baseline
 	pyrefly check --baseline pyrefly-baseline.json --update-baseline
 check-pytest: FORCE
 	@echo "-------- Running tests with pytest ----------"
