@@ -53,7 +53,7 @@ from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
-from .ui._page_html import DEPS_PLACEHOLDER, PageHtmlDocument, page_html
+from .ui._page import DEPS_PLACEHOLDER, PageHtmlDocument, page_html
 
 T = TypeVar("T")
 

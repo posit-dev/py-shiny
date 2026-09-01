@@ -9,7 +9,7 @@ from starlette.testclient import TestClient
 
 from shiny import App
 from shiny.ui import page_html
-from shiny.ui._page_html import DEPS_PLACEHOLDER, PageHtmlDocument
+from shiny.ui._page import DEPS_PLACEHOLDER, PageHtmlDocument
 
 PLACEHOLDER = DEPS_PLACEHOLDER
 HTML = f"<html><head>{PLACEHOLDER}</head><body>hello</body></html>"

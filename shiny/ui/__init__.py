@@ -157,10 +157,10 @@ from ._page import (
     page_fixed,
     page_fluid,
     page_navbar,
+    page_html,
     page_output,
     page_sidebar,
 )
-from ._page_html import page_html
 from ._plot_output_opts import brush_opts, click_opts, dblclick_opts, hover_opts
 from ._offcanvas import (
     Offcanvas,
