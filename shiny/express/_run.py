@@ -133,8 +133,7 @@ def create_express_app(file: Path, package_name: str) -> App:
             # specifically catches AttributeErrors and prints an error message that is
             # misleading for Shiny Express. https://github.com/posit-dev/py-shiny/issues/937
             ui_res = run_express(file, package_name)
-            # A `PageHtmlDocument` (from `ui.page_opts(html=)`) is a complete document
-            # that `App` renders as-is; it has no `.tagify()`.
+            # A `PageHtmlDocument` (from `ui.page_opts(html=)`) has no `.tagify()`.
             app_ui = ui_res if isinstance(ui_res, PageHtmlDocument) else ui_res.tagify()
 
     except AttributeError as e:
@@ -184,7 +183,8 @@ def create_express_app(file: Path, package_name: str) -> App:
 
 
 def run_express(
-    file: Path, package_name: str | None = None
+    file: Path,
+    package_name: str | None = None,
 ) -> Tag | TagList | PageHtmlDocument:
     """
     Run the code in a Shiny Express app file and return the UI. This is to be run in

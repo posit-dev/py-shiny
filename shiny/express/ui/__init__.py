@@ -50,6 +50,7 @@ from ...ui import (
     hover_opts,
     include_css,
     include_js,
+    page_html,
     hide_offcanvas,
     input_action_button,
     input_action_link,
@@ -246,6 +247,7 @@ __all__ = (
     "bind_task_button",
     "input_task_button",
     "input_text",
+    "page_html",
     "panel_title",
     "input_text_area",
     "insert_accordion_panel",
@@ -359,9 +361,6 @@ _known_missing_express_ui = {
         "page_fluid",
         "page_auto",
         "page_output",
-        # The whole page is an author-owned document; in Express, use
-        # `ui.page_opts(html=)` instead
-        "page_html",
         "showcase_bottom",
         "showcase_left_center",
         "showcase_top_right",
