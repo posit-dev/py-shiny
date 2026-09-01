@@ -359,7 +359,8 @@ _known_missing_express_ui = {
         "page_fluid",
         "page_auto",
         "page_output",
-        # The whole page is an author-owned document, so Express has nothing to build
+        # The whole page is an author-owned document; in Express, use
+        # `ui.page_opts(html=)` instead
         "page_html",
         "showcase_bottom",
         "showcase_left_center",

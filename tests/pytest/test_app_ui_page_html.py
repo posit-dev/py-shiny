@@ -131,3 +131,49 @@ def test_document_ui_from_a_ui_function():
     assert body.count("<html>") == 1
     assert body.count('type="application/html-dependencies"') == 1
     assert "shiny.js" in body
+
+
+# ---------------------------------------------------------------------------
+# Express: `ui.page_opts(html=)` routes the whole app through `page_html()`
+# ---------------------------------------------------------------------------
+
+
+def test_express_page_opts_html(tmp_path: pathlib.Path):
+    from shiny.express._run import run_express
+
+    app_file = tmp_path / "app.py"
+    app_file.write_text(f"""
+from htmltools import HTMLDependency, span
+from shiny.express import ui
+
+ui.page_opts(html={HTML!r})
+
+# Top-level markup is dropped (the document already is the page), but its
+# dependencies must be harvested.
+span("dropped markup", HTMLDependency("harvested-dep", "1.0.0", script={{"src": "h.js"}}))
+""")
+
+    ui_res = run_express(app_file)
+    assert isinstance(ui_res, PageHtmlDocument)
+
+    app = App(ui_res, None)
+    assert not callable(app.ui)
+    html = app.ui["html"]
+    assert html.count("<html>") == 1
+    assert "shiny.js" in html
+    assert "harvested-dep" in html
+    assert "dropped markup" not in html
+
+
+def test_page_auto_html_rejects_page_fn():
+    from shiny import ui
+
+    with pytest.raises(ValueError, match="cannot be combined with `page_fn=`"):
+        ui.page_auto(html=HTML, page_fn=ui.page_fixed)
+
+
+def test_page_auto_html_rejects_page_options():
+    from shiny import ui
+
+    with pytest.raises(ValueError, match=r"Received: \['full_width', 'title'\]"):
+        ui.page_auto(html=HTML, title="nope", full_width=True)

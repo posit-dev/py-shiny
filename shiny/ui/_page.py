@@ -15,7 +15,7 @@ __all__ = (
 )
 
 from copy import copy
-from typing import Any, Callable, Literal, Optional, Sequence
+from typing import Any, Callable, Literal, Optional, Sequence, cast
 
 from htmltools import (
     HTMLDependency,
@@ -642,9 +642,10 @@ def page_auto(
     theme: str | Path | Theme | ThemeProvider | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool = False,
-    page_fn: Callable[..., Tag] | None = None,
+    html: str | Path | None = None,
+    page_fn: Callable[..., Tag | PageHtmlDocument] | None = None,
     **kwargs: object,
-) -> Tag:
+) -> Tag | PageHtmlDocument:
     """
     A page container which automatically decides which page function to use.
 
@@ -694,6 +695,14 @@ def page_auto(
         This has an effect only if there are no sidebars or top-level navs, and
         ``fillable`` is ``False``. If this is ``False`` (the default), use use
         :func:`~shiny.ui.page_fixed`; if ``True``, use :func:`~shiny.ui.page_fillable`.
+    html
+        A complete HTML document that you own, passed to
+        :func:`~shiny.ui.page_html` and served as-is: a document string, or a
+        :class:`~pathlib.Path` to an HTML file. The markup of any UI elements in
+        ``*args`` is dropped (the document already contains the page), but their HTML
+        dependencies are kept. This cannot be combined with ``page_fn`` or with page
+        options like ``title`` or ``theme``, which cannot be applied to a document
+        that is served as-is.
     page_fn
         The page function to use. If ``None`` (the default), will automatically choose
         one based on the arguments provided. If not ``None``, this will override all
@@ -714,6 +723,29 @@ def page_auto(
         kwargs["lang"] = lang
     if not isinstance(theme, MISSING_TYPE):
         kwargs["theme"] = theme
+
+    if html is not None:
+        if page_fn is not None:
+            raise ValueError("`html=` cannot be combined with `page_fn=`.")
+        page_options = sorted(kwargs)
+        if not isinstance(fillable, MISSING_TYPE):
+            page_options.append("fillable")
+        if full_width:
+            page_options.append("full_width")
+        if page_options:
+            raise ValueError(
+                "`html=` serves the document as-is, so page options cannot be applied"
+                f" to it. Received: {sorted(page_options)}"
+            )
+        return page_html(
+            html,
+            # The document already contains the page, so the markup of any UI elements
+            # in `args` is dropped -- but their HTML dependencies (e.g. from
+            # `ui.include_css()`, or an output widget's assets) must be kept.
+            extra_deps=TagList(
+                *(x for x in args if not isinstance(x, dict))
+            ).get_dependencies(),
+        )
 
     # Presence of a top-level nav items and/or sidebar determines the page function
     navs = [x for x in args if isinstance(x, (NavPanel, NavMenu))]
@@ -772,7 +804,7 @@ def page_auto(
 
     # If we got here, page_fn is not None, but the type checker needs a little help to
     # avoid narrowing `page_fn` to a union of the concrete page function signatures.
-    resolved_page_fn: Callable[..., Tag] = page_fn
+    resolved_page_fn = cast("Callable[..., Tag | PageHtmlDocument]", page_fn)
     return resolved_page_fn(*args, **kwargs)
 
 
@@ -890,7 +922,6 @@ class PageHtmlDocument(HTMLTextDocument):
 
 
 @add_example()
-@no_example("express")
 def page_html(
     html: str | Path,
     *,

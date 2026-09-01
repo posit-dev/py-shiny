@@ -19,6 +19,7 @@ from .._utils import import_module_from_path
 from ..bookmark._types import BookmarkStore
 from ..session import Inputs, Outputs, Session, get_current_session, session_context
 from ..types import MISSING, MISSING_TYPE
+from ..ui._page import PageHtmlDocument
 from ._is_express import find_magic_comment_mode
 from ._recall_context import RecallContextManager
 from ._stub_session import ExpressStubSession
@@ -131,7 +132,10 @@ def create_express_app(file: Path, package_name: str) -> App:
             # catch them here and convert them to a different type of error, because uvicorn
             # specifically catches AttributeErrors and prints an error message that is
             # misleading for Shiny Express. https://github.com/posit-dev/py-shiny/issues/937
-            app_ui = run_express(file, package_name).tagify()
+            ui_res = run_express(file, package_name)
+            # A `PageHtmlDocument` (from `ui.page_opts(html=)`) is a complete document
+            # that `App` renders as-is; it has no `.tagify()`.
+            app_ui = ui_res if isinstance(ui_res, PageHtmlDocument) else ui_res.tagify()
 
     except AttributeError as e:
         raise RuntimeError(e) from e
@@ -143,7 +147,10 @@ def create_express_app(file: Path, package_name: str) -> App:
         def app_ui_wrapper(request: Request):
             # Stub session used to pass `app_opts()` checks.
             with session_context(ExpressStubSession()):
-                return run_express(file, package_name).tagify()
+                wrapper_ui_res = run_express(file, package_name)
+                if isinstance(wrapper_ui_res, PageHtmlDocument):
+                    return wrapper_ui_res
+                return wrapper_ui_res.tagify()
 
         app_ui = app_ui_wrapper
 
@@ -176,7 +183,9 @@ def create_express_app(file: Path, package_name: str) -> App:
     return app
 
 
-def run_express(file: Path, package_name: str | None = None) -> Tag | TagList:
+def run_express(
+    file: Path, package_name: str | None = None
+) -> Tag | TagList | PageHtmlDocument:
     """
     Run the code in a Shiny Express app file and return the UI. This is to be run in
     both the UI-rendering phase and the server-rendering phase of a Shiny Express app.
@@ -198,7 +207,7 @@ def run_express(file: Path, package_name: str | None = None) -> Tag | TagList:
     tree = DisplayFuncsTransformer().visit(tree)
     tree = ast.fix_missing_locations(tree)
 
-    ui_result: Tag | TagList = TagList()
+    ui_result: Tag | TagList | PageHtmlDocument = TagList()
 
     def set_result(x: object):
         nonlocal ui_result
@@ -271,7 +280,9 @@ def run_express(file: Path, package_name: str | None = None) -> Tag | TagList:
         sys.displayhook = prev_displayhook
 
 
-_top_level_recall_context_manager: RecallContextManager[Tag] | None = None
+_top_level_recall_context_manager: (
+    RecallContextManager[Tag | PageHtmlDocument] | None
+) = None
 
 
 def reset_top_level_recall_context_manager() -> None:
@@ -281,7 +292,9 @@ def reset_top_level_recall_context_manager() -> None:
     _top_level_recall_context_manager = page_auto_cm()
 
 
-def get_top_level_recall_context_manager() -> RecallContextManager[Tag]:
+def get_top_level_recall_context_manager() -> (
+    RecallContextManager[Tag | PageHtmlDocument]
+):
     if _top_level_recall_context_manager is None:
         raise RuntimeError("No top-level recall context manager has been set.")
 
