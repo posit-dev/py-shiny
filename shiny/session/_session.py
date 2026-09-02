@@ -1482,30 +1482,37 @@ class AppSession(Session):
         # returns all three blocks as a convenience. R instead responds 400
         # ("None of export, input, or output requested.").
         want = {block: request.query_params.get(block) for block in _SNAPSHOT_BLOCKS}
-        select_all = all(spec is None for spec in want.values())
+        payload = await self._build_test_snapshot(
+            want_input=want["input"],
+            want_output=want["output"],
+            want_export=want["export"],
+        )
+        body = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
+        return Response(content=body, media_type="application/json")
 
-        payload: dict[str, Any] = {}
+    async def _build_test_snapshot(
+        self,
+        want_input: str | None = None,
+        want_output: str | None = None,
+        want_export: str | None = None,
+    ) -> dict[str, dict[str, Any]]:
+        select_all = want_input is None and want_output is None and want_export is None
+        payload: dict[str, dict[str, Any]] = {}
         with session_context(self):
             with isolate():
-                if select_all or want["input"] is not None:
+                if select_all or want_input is not None:
                     inputs = {
                         str(key): _snapshot_safe_value(val)
                         for key, val in (
                             await self.input._serialize_test_mode()
                         ).items()
                     }
-                    payload["input"] = _filter_snapshot_block(inputs, want["input"])
+                    payload["input"] = _filter_snapshot_block(inputs, want_input)
 
-                if select_all or want["output"] is not None:
+                if select_all or want_output is not None:
                     omq = self._outbound_message_queues
                     outputs: dict[str, Any] = {}
-                    # Materialize the items: an async preprocessor may yield to
-                    # the event loop mid-iteration, during which a rendering
-                    # output can mutate `test_values`.
                     for key, val in list(omq.test_values.items()):
-                        # Apply the renderer's snapshot preprocessor, if any.
-                        # (`_outputs` and `test_values` are both keyed by the
-                        # namespaced output name.)
                         info = self.output._outputs.get(key)
                         preprocess = (
                             info.renderer._snapshot_preprocess_fn
@@ -1524,19 +1531,18 @@ class AppSession(Session):
                         else:
                             message = str(err)
                         outputs[str(key)] = {"__shiny_output_error__": message}
-                    payload["output"] = _filter_snapshot_block(outputs, want["output"])
+                    payload["output"] = _filter_snapshot_block(outputs, want_output)
 
-                if select_all or want["export"] is not None:
+                if select_all or want_export is not None:
                     exports: dict[str, Any] = {}
                     for name, fn in self._test_value_exports.items():
                         try:
                             exports[name] = _snapshot_safe_value(fn())
                         except Exception as e:
                             exports[name] = {"__shiny_serialization_error__": str(e)}
-                    payload["export"] = _filter_snapshot_block(exports, want["export"])
+                    payload["export"] = _filter_snapshot_block(exports, want_export)
 
-        body = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
-        return Response(content=body, media_type="application/json")
+        return payload
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
         self._outbound_message_queues.add_input_message(id, message)
