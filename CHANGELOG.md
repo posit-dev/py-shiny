@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+* Stub files for `folium`, `uvicorn`, and `seaborn` are now generated with Pyrefly instead of Pyright. (Thanks, @ChidiebereNjoku!) (#2478)
+
 * The README and the `shiny skills` CLI help now explain that [`library-skills`](https://library-skills.io) must be run from your own project directory, since it installs the bundled Agent Skills of the packages that project has installed. The previous wording left that precondition implicit, so running the command from an empty directory or from a clone of py-shiny silently installed nothing. (#2447)
 
 * Navsets created with an `id` (e.g. `ui.navset_tab(id="tabs")`) now use that `id` as their `data-tabsetid`, so their tab panes get stable `tab-tabs-0` style DOM ids instead of ones built from a random integer. This makes the rendered markup reproducible across renders and easier to target from custom CSS and JavaScript. Navsets without an `id`, and `ui.nav_menu()` dropdowns, keep the random ID. (Thanks, @pevolution-ahmed!) (#2410)
