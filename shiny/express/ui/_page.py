@@ -9,13 +9,14 @@ from ... import ui
 from ..._docstring import add_example
 from ...types import MISSING, MISSING_TYPE
 from ...ui._html_deps_external import ThemeProvider
+from ...ui._page import PageHtmlDocument
 from .._recall_context import RecallContextManager
 from .._run import get_top_level_recall_context_manager
 
 __all__ = ("page_opts",)
 
 
-def page_auto_cm() -> RecallContextManager[Tag]:
+def page_auto_cm() -> RecallContextManager[Tag | PageHtmlDocument]:
     return RecallContextManager(ui.page_auto)
 
 
@@ -26,7 +27,8 @@ def page_opts(
     window_title: str | MISSING_TYPE = MISSING,
     lang: str | MISSING_TYPE = MISSING,
     theme: str | Path | ui.Theme | ThemeProvider | MISSING_TYPE = MISSING,
-    page_fn: Callable[..., Tag] | None | MISSING_TYPE = MISSING,
+    html: str | Path | MISSING_TYPE = MISSING,
+    page_fn: Callable[..., Tag | PageHtmlDocument] | None | MISSING_TYPE = MISSING,
     fillable: bool | MISSING_TYPE = MISSING,
     full_width: bool | MISSING_TYPE = MISSING,
     **kwargs: object,
@@ -81,6 +83,14 @@ def page_opts(
         This has an effect only if there are no sidebars or top-level navs, and
         ``fillable`` is ``False``. If this is ``False`` (the default), use use
         :func:`~shiny.ui.page_fixed`; if ``True``, use :func:`~shiny.ui.page_fillable`.
+    html
+        A complete HTML document that you own, passed to
+        :func:`~shiny.ui.page_html` and served as-is: a document string, or a
+        :class:`~pathlib.Path` to an HTML file. The markup of the app's top-level UI
+        elements is dropped (the document already contains the page), but their HTML
+        dependencies are kept. This cannot be combined with ``page_fn`` or with page
+        options like ``title`` or ``theme``, which cannot be applied to a document
+        that is served as-is.
     page_fn
         The page function to use. If ``None`` (the default), will automatically choose
         one based on the arguments provided. If not ``None``, this will override all
@@ -106,6 +116,8 @@ def page_opts(
         cm.kwargs["lang"] = lang
     if not isinstance(theme, MISSING_TYPE):
         cm.kwargs["theme"] = theme
+    if not isinstance(html, MISSING_TYPE):
+        cm.kwargs["html"] = html
     if not isinstance(page_fn, MISSING_TYPE):
         cm.kwargs["page_fn"] = page_fn
     if not isinstance(fillable, MISSING_TYPE):
