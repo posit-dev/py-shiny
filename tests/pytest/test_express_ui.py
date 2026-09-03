@@ -11,6 +11,7 @@ from shiny import render, ui
 from shiny.express import output_args
 from shiny.express import ui as xui
 from shiny.express._run import run_express
+from shiny.ui._page import PageHtmlDocument
 
 
 def test_express_ui_is_complete():
@@ -226,6 +227,8 @@ with ui.card():
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_file = Path(temp_dir, "temp.file")
         temp_file.write_text(card_app_express_text)
-        res = run_express(temp_file).tagify()
+        ui_res = run_express(temp_file)
+        assert not isinstance(ui_res, PageHtmlDocument)
+        res = ui_res.tagify()
 
     assert str(res) == str(card_app_core)
