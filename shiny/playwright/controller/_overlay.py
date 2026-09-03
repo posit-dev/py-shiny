@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from typing import Literal
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import expect as playwright_expect
@@ -11,6 +12,15 @@ from ..expect._internal import (
 )
 from ..expect._internal import expect_class_to_have_value as _expect_class_to_have_value
 from ._base import InitLocator, UiBase
+
+_PLACEMENT_BS: dict[str, str] = {
+    "right": "end",
+    "end": "end",
+    "left": "start",
+    "start": "start",
+    "top": "top",
+    "bottom": "bottom",
+}
 
 
 class _OverlayBase(UiBase):
@@ -333,6 +343,14 @@ class Offcanvas(UiBase):
     """
     Playwright `Locator` for the offcanvas root element (`bslib-offcanvas#{id}`).
     """
+    loc_trigger: Locator
+    """
+    Playwright `Locator` for the trigger element(s) targeting this offcanvas panel.
+    """
+    loc_title: Locator
+    """
+    Playwright `Locator` for the title inside the offcanvas header.
+    """
     loc_close: Locator
     """
     Playwright `Locator` for the close button inside the offcanvas header.
@@ -340,6 +358,10 @@ class Offcanvas(UiBase):
     loc_body: Locator
     """
     Playwright `Locator` for the offcanvas body.
+    """
+    loc_footer: Locator
+    """
+    Playwright `Locator` for the offcanvas footer.
     """
 
     def __init__(self, page: Page, id: str) -> None:
@@ -354,10 +376,28 @@ class Offcanvas(UiBase):
             The ID of the offcanvas.
         """
         super().__init__(page, id=id, loc=f"bslib-offcanvas#{id}")
+        self.loc_trigger = self.page.locator(
+            f"[data-bs-toggle='offcanvas'][data-bs-target='#{id}'], "
+            f"[data-bs-toggle='offcanvas'][href='#{id}'], "
+            f"[data-bs-toggle='offcanvas'][aria-controls='{id}']"
+        )
+        self.loc_title = self.loc.locator("header.offcanvas-header .offcanvas-title")
         self.loc_close = self.loc.locator(
             "header.offcanvas-header button.btn-close[data-bs-dismiss='offcanvas']"
         )
         self.loc_body = self.loc.locator("div.offcanvas-body")
+        self.loc_footer = self.loc.locator("footer.offcanvas-footer")
+
+    def open(self, *, timeout: Timeout = None) -> None:
+        """
+        Opens the offcanvas panel.
+
+        Parameters
+        ----------
+        timeout
+            The maximum time to wait for the offcanvas to open. Defaults to `None`.
+        """
+        self.set(open=True, timeout=timeout)
 
     def close(self, *, timeout: Timeout = None) -> None:
         """
@@ -374,21 +414,24 @@ class Offcanvas(UiBase):
         """
         Sets the offcanvas panel to open or closed.
 
-        Opening an offcanvas panel requires an external trigger element in the app
-        (e.g. an action button wired to ``toggle_offcanvas()``). Only closing
-        (``open=False``) is supported programmatically by this controller.
-
         Parameters
         ----------
         open
-            ``False`` to close the offcanvas. ``True`` is accepted but has no effect
-            since the panel can only be opened via an app-level trigger.
+            `True` to open the offcanvas, `False` to close it.
         timeout
             The maximum time to wait for the offcanvas to change state. Defaults to `None`.
         """
         is_open = "show" in (self.loc.get_attribute("class") or "")
-        if not open and is_open:
+        if open and not is_open:
+            self._open(timeout=timeout)
+        elif not open and is_open:
             self._close(timeout=timeout)
+
+    def _open(self, *, timeout: Timeout = None) -> None:
+        """Opens the panel by clicking the trigger element."""
+        self.loc_trigger.wait_for(state="visible", timeout=timeout)
+        self.loc_trigger.scroll_into_view_if_needed(timeout=timeout)
+        self.loc_trigger.click(timeout=timeout)
 
     def _close(self, *, timeout: Timeout = None) -> None:
         """Closes the panel by clicking the close button."""
@@ -414,6 +457,19 @@ class Offcanvas(UiBase):
             timeout=timeout,
         )
 
+    def expect_title(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the offcanvas title to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the title to appear. Defaults to `None`.
+        """
+        playwright_expect(self.loc_title).to_have_text(value, timeout=timeout)
+
     def expect_body(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
         """
         Expects the offcanvas body to have the specified text.
@@ -426,3 +482,40 @@ class Offcanvas(UiBase):
             The maximum time to wait for the offcanvas body to appear. Defaults to `None`.
         """
         playwright_expect(self.loc_body).to_have_text(value, timeout=timeout)
+
+    def expect_footer(self, value: PatternOrStr, *, timeout: Timeout = None) -> None:
+        """
+        Expects the offcanvas footer to have the specified text.
+
+        Parameters
+        ----------
+        value
+            The expected text pattern or string.
+        timeout
+            The maximum time to wait for the footer to appear. Defaults to `None`.
+        """
+        playwright_expect(self.loc_footer).to_have_text(value, timeout=timeout)
+
+    def expect_placement(
+        self,
+        value: Literal["start", "end", "top", "bottom", "left", "right"],
+        *,
+        timeout: Timeout = None,
+    ) -> None:
+        """
+        Expects the offcanvas panel to have the specified placement.
+
+        Parameters
+        ----------
+        value
+            The expected placement ("start", "end", "top", "bottom", "left", "right").
+        timeout
+            The maximum time to wait for the expectation to pass. Defaults to `None`.
+        """
+        bs_val = _PLACEMENT_BS.get(value, value)
+        _expect_class_to_have_value(
+            self.loc,
+            f"offcanvas-{bs_val}",
+            has_class=True,
+            timeout=timeout,
+        )
