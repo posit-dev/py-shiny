@@ -245,7 +245,7 @@ def greeting():
     assert "https://" not in html
     assert 'src="http' not in html
     assert 'href="http' not in html
-    assert 'aria-label="Filter reactive nodes by name or type"' in html
+    assert 'aria-label="Filter reactive nodes by name, type, or id"' in html
     assert 'aria-label="Fit graph to view"' in html
     assert 'aria-label="Zoom in"' in html
     assert 'aria-label="Zoom out"' in html
@@ -1184,3 +1184,38 @@ def test_source_code_html_includes_line_numbers():
     assert '<span class="source-line-num" aria-hidden="true">1</span>' in html
     assert 'class="source-line" data-line="3"' in html
     assert '<span class="source-line-num" aria-hidden="true">3</span>' in html
+
+
+def test_r_reactlog_types_and_late_definitions():
+    events = [
+        {"action": "invalidateStart", "reactId": "r2"},
+        {
+            "action": "define",
+            "reactId": "r1$x",
+            "type": "reactiveValuesKey",
+            "label": "input$x",
+        },
+        {"action": "define", "reactId": "r2", "type": "observable", "label": "doubled"},
+        {
+            "action": "define",
+            "reactId": "r3",
+            "type": "observer",
+            "label": "output$result",
+        },
+        {
+            "action": "define",
+            "reactId": "r4",
+            "type": "reactiveVal",
+            "label": "counter",
+        },
+        {"action": "dependsOn", "reactId": "r2", "depOnReactId": "r1$x"},
+        {"action": "dependsOn", "reactId": "r3", "depOnReactId": "r2"},
+    ]
+    result = load_reactlog_json(events)
+    nodes = {n["id"]: n for n in result["nodes"]}
+    assert nodes["r1$x"]["role"] == "source"
+    assert nodes["r2"]["role"] == "conductor"
+    assert nodes["r2"]["label"] == "doubled"
+    assert nodes["r3"]["role"] == "observer"
+    assert nodes["r4"]["role"] == "source"
+    assert result["edges"] == [{"from": "r1$x", "to": "r2"}, {"from": "r2", "to": "r3"}]

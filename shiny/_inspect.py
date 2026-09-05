@@ -1313,10 +1313,16 @@ def load_reactlog_json(
         if action == "dependsOn" and dep_from and dep_to:
             edges_set.add((str(dep_from), str(dep_to)))
 
-        if nid and str(nid) not in nodes_map:
+        if nid and (str(nid) not in nodes_map or action == "define"):
             role = "conductor"
             clean_type = str(ntype).lower()
-            if clean_type in ("observable", "input") or str(nid).startswith("input:"):
+            if clean_type in (
+                "input",
+                "reactiveval",
+                "reactivevalueskey",
+                "reactivevaluesnames",
+                "reactivevaluesaslist",
+            ) or str(nid).startswith("input:"):
                 role = "source"
                 clean_type = "input"
             elif (
@@ -1326,7 +1332,7 @@ def load_reactlog_json(
             ):
                 role = "observer"
                 clean_type = "output"
-            elif clean_type in ("calc", "reactive"):
+            elif clean_type in ("calc", "reactive", "observable"):
                 role = "conductor"
                 clean_type = "calc"
 
@@ -2109,7 +2115,7 @@ def format_reactlog_html(
     .summary-meta-note {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }}
 
     /* Streamlined Toolbar */
-    .toolbar {{ min-height: 44px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.35rem 0.9rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }}
+    .toolbar {{ position: relative; z-index: 19; min-height: 44px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.35rem 0.9rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }}
     .toolbar-group {{ display: flex; align-items: center; gap: 0.35rem; }}
     .toolbar-divider {{ width: 1px; height: 22px; background: var(--border); margin: 0 0.15rem; }}
     .btn {{ min-height: 28px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.28rem 0.55rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; font-size: 0.72rem; font-weight: 700; }}
@@ -2123,7 +2129,10 @@ def format_reactlog_html(
     .btn.icon svg {{ display: block; margin: auto; }}
     .filter-select {{ height: 28px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0 0.55rem; font: 650 0.72rem var(--sans); cursor: pointer; }}
     .filter-select:hover {{ border-color: var(--border-strong); }}
-    .search-wrap {{ position: relative; width: 160px; }}
+    .search-wrap {{ position: relative; width: 200px; }}
+    .search-results {{ position: absolute; top: 100%; right: 12px; width: min(480px, 90vw); max-height: 320px; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 100; box-shadow: 0 8px 24px #0003; }}
+    .search-results button {{ display: block; width: 100%; text-align: left; padding: 8px; background: var(--surface-2); color: var(--text); border: 0; cursor: pointer; overflow-wrap: anywhere; }}
+    .search-results button:hover, .search-results button:focus {{ background: var(--surface-3); outline: 1px solid var(--accent); }}
     .search-icon {{ position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
     .search-input {{ width: 100%; height: 28px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 0.55rem 0 1.75rem; font-size: 0.72rem; }}
     .search-input::placeholder {{ color: var(--text-muted); }}
@@ -2478,12 +2487,15 @@ def format_reactlog_html(
 
       <div class="search-wrap">
         <svg class="search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Filter nodes…" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name or type" />
+        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Search names or id:r12" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name, type, or id" aria-controls="search-results" onkeydown="if(event.key === 'Escape') {{ this.value = ''; handleSearch(''); }}" />
       </div>
+
+      <div id="search-results" class="search-results" aria-label="Node search results" hidden></div>
 
       <div class="path-controls" role="group" aria-label="Path focus">
         <button class="path-btn is-active" id="btn-focus-upstream" aria-pressed="true" onclick="setFocusMode('upstream')" title="Show causal path leading to this node">← Causes</button>
         <button class="path-btn" id="btn-focus-downstream" aria-pressed="false" onclick="setFocusMode('downstream')" title="Show effects caused by this node">Effects →</button>
+        <button class="path-btn" id="btn-focus-connected" aria-pressed="false" onclick="setFocusMode('connected'); fitGraph()" title="Show only ancestors and descendants">Ancestors + descendants</button>
         <button class="path-btn" id="btn-focus-all" aria-pressed="false" onclick="setFocusMode('all')" title="Show all nodes">All</button>
       </div>
     </div>
@@ -3727,6 +3739,7 @@ def format_reactlog_html(
       initTraceTimeline();
       seekTo(0);
       setupPanZoom();
+      fitGraph();
       setupVideoSync();
       initSplitResizer();
     }}
@@ -3772,8 +3785,9 @@ def format_reactlog_html(
     }}
 
     function setFocusMode(mode) {{
+      const refit = currentFocusMode === 'connected' || mode === 'connected';
       currentFocusMode = mode;
-      ['upstream', 'downstream', 'all'].forEach(m => {{
+      ['upstream', 'downstream', 'connected', 'all'].forEach(m => {{
         const btn = document.getElementById(`btn-focus-${{m}}`);
         if (btn) {{
           const isActive = m === mode;
@@ -3782,6 +3796,7 @@ def format_reactlog_html(
         }}
       }});
       renderGraph();
+      if (refit) fitGraph();
     }}
 
     function focusCausalPath() {{
@@ -4268,9 +4283,12 @@ def format_reactlog_html(
       const rawNodes = reactlogData.nodes || [];
       const nodes = [];
 
+      const connected = currentFocusMode === 'connected' && selectedNodeId
+        ? new Set([selectedNodeId, ...getUpstreamNodes(selectedNodeId), ...getDownstreamNodes(selectedNodeId)]) : null;
       rawNodes.forEach(n => {{
         if (!activeRoles.has(n.role)) return;
-        if (searchQuery && !n.id.toLowerCase().includes(searchQuery) && !(n.label || '').toLowerCase().includes(searchQuery)) return;
+        if (connected && !connected.has(n.id)) return;
+        if (searchQuery && nodeSearchScore(n, searchQuery) === Infinity) return;
         nodes.push(n);
       }});
 
@@ -4282,22 +4300,10 @@ def format_reactlog_html(
         }}
       }});
 
-      const inDegree = {{}};
-      nodes.forEach(n => inDegree[n.id] = 0);
-      edges.forEach(e => inDegree[e.to] = (inDegree[e.to] || 0) + 1);
-
-      const ranks = {{}};
-      nodes.forEach(n => ranks[n.id] = n.role === 'source' ? 0 : 1);
-      edges.forEach(e => {{
-        ranks[e.to] = Math.max(ranks[e.to] || 1, (ranks[e.from] || 0) + 1);
-      }});
-
-      const maxRank = Math.max(1, ...Object.values(ranks));
-      const columns = Array.from({{ length: maxRank + 1 }}, () => []);
-      nodes.forEach(n => {{
-        const r = ranks[n.id] || 0;
-        columns[r].push(n);
-      }});
+      // Stable role lanes also handle cycles and dependencies reported out of order.
+      const maxRank = 2;
+      const columns = [[], [], []];
+      nodes.forEach(n => columns[n.role === 'source' ? 0 : n.role === 'observer' ? 2 : 1].push(n));
 
       const colWidth = 280;
       const rowHeight = 88;
@@ -4341,7 +4347,10 @@ def format_reactlog_html(
       const focusTarget = (currentFocusMode !== 'all') ? (selectedNodeId || activeNodeId) : null;
       if (focusTarget) {{
         causalNodeIds.add(focusTarget);
-        if (currentFocusMode === 'upstream') {{
+        if (currentFocusMode === 'connected') {{
+          getUpstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
+          getDownstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
+        }} else if (currentFocusMode === 'upstream') {{
           getUpstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
         }} else if (currentFocusMode === 'downstream') {{
           getDownstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
@@ -4452,7 +4461,11 @@ def format_reactlog_html(
         text.setAttribute('font-family', 'var(--mono)');
         text.setAttribute('font-size', '12px');
         text.setAttribute('font-weight', '700');
-        text.textContent = n.label || n.id;
+        const label = String(n.label || n.id);
+        text.textContent = label.length > 25 ? label.slice(0, 24) + '…' : label;
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `${{n.id}}: ${{label}}`;
+        g.appendChild(title);
         g.appendChild(text);
 
         const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -4729,9 +4742,57 @@ def format_reactlog_html(
     function stepBack() {{ seekTo(currentStep - 1); }}
     function resetTimeline() {{ seekTo(0); }}
 
+    function nodeSearchScore(node, query) {{
+      const idOnly = query.startsWith('id:');
+      const needle = (idOnly ? query.slice(3) : query).trim();
+      if (!needle) return 0;
+      const fields = idOnly ? [node.id] : [node.id, node.label, node.name, node.type, node.role];
+      let best = Infinity;
+      fields.forEach(field => {{
+        const value = String(field || '').toLowerCase();
+        if (value === needle) best = Math.min(best, 0);
+        else if (value.includes(needle)) best = Math.min(best, 1 + value.indexOf(needle) / Math.max(1, value.length));
+        else {{
+          let pos = 0;
+          for (const char of value) if (char === needle[pos]) pos++;
+          if (pos === needle.length) best = Math.min(best, 3 + value.length / 1000);
+        }}
+      }});
+      return best;
+    }}
+
     function handleSearch(q) {{
       searchQuery = (q || '').trim().toLowerCase();
+      const results = document.getElementById('search-results');
+      results.replaceChildren();
+      results.hidden = !searchQuery;
+      if (searchQuery) {{
+        const matches = (reactlogData.nodes || []).map(n => ({{ node: n, score: nodeSearchScore(n, searchQuery) }}))
+          .filter(m => Number.isFinite(m.score)).sort((a, b) => a.score - b.score);
+        const summary = document.createElement('div');
+        summary.textContent = `${{matches.length}} matches${{matches.length > 50 ? ' · showing first 50' : ''}}`;
+        results.appendChild(summary);
+        matches.slice(0, 50).forEach(({{node}}) => {{
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = `${{node.id}} · ${{node.label || node.name || ''}}`;
+          button.onclick = () => {{
+            searchQuery = '';
+            document.getElementById('search-input').value = '';
+            results.hidden = true;
+            selectedNodeId = node.id;
+            activeRoles = new Set(['source', 'conductor', 'observer']);
+            document.getElementById('role-filter-dropdown').value = 'all';
+            setFocusMode('connected');
+            renderInspector();
+            updateTraceTimelineScrubber(getCurrentStepTime());
+            fitGraph();
+          }};
+          results.appendChild(button);
+        }});
+      }}
       renderGraph();
+      fitGraph();
     }}
 
     function handleRoleDropdownChange(val) {{
@@ -4750,6 +4811,8 @@ def format_reactlog_html(
     function setupPanZoom() {{
       const svg = document.getElementById('reactlog-svg');
       if (!svg) return;
+      if (svg.dataset.panZoomBound) return;
+      svg.dataset.panZoomBound = 'true';
       svg.addEventListener('mousedown', e => {{
         if (e.target.closest('.graph-node')) return;
         isPanning = true;
@@ -4764,8 +4827,8 @@ def format_reactlog_html(
       svg.addEventListener('wheel', e => {{
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        zoomLevel = Math.max(0.4, Math.min(2.5, zoomLevel * delta));
-        applyZoom();
+        const rect = svg.getBoundingClientRect();
+        zoomAt(delta, e.clientX - rect.left, e.clientY - rect.top);
       }});
     }}
 
@@ -4774,16 +4837,37 @@ def format_reactlog_html(
       if (g) g.setAttribute('transform', `translate(${{panOffset.x}}, ${{panOffset.y}}) scale(${{zoomLevel}})`);
     }}
 
-    function zoomIn() {{ zoomLevel = Math.min(2.5, zoomLevel * 1.2); applyZoom(); }}
-    function zoomOut() {{ zoomLevel = Math.max(0.4, zoomLevel * 0.8); applyZoom(); }}
+    function zoomAt(factor, x, y) {{
+      const svg = document.getElementById('reactlog-svg');
+      x = x ?? svg.clientWidth / 2;
+      y = y ?? svg.clientHeight / 2;
+      const next = Math.max(Math.min(0.001, zoomLevel), Math.min(2.5, zoomLevel * factor));
+      const ratio = next / zoomLevel;
+      panOffset = {{ x: x - (x - panOffset.x) * ratio, y: y - (y - panOffset.y) * ratio }};
+      zoomLevel = next;
+      applyZoom();
+    }}
+    function zoomIn() {{ zoomAt(1.2); }}
+    function zoomOut() {{ zoomAt(0.8); }}
     function resetZoom() {{ zoomLevel = 1; panOffset = {{ x: 0, y: 0 }}; applyZoom(); }}
-    function fitGraph() {{ resetZoom(); }}
+    function fitGraph() {{
+      const svg = document.getElementById('reactlog-svg');
+      const g = document.getElementById('viewport-g');
+      if (!svg || !g || !g.childElementCount) return;
+      const box = g.getBBox();
+      const width = svg.clientWidth, height = svg.clientHeight;
+      if (!width || !height || !box.width || !box.height) return;
+      zoomLevel = Math.min(1, Math.max(1, width - 48) / box.width, Math.max(1, height - 96) / box.height);
+      panOffset = {{ x: (width - box.width * zoomLevel) / 2 - box.x * zoomLevel,
+                     y: (height - box.height * zoomLevel) / 2 - box.y * zoomLevel }};
+      applyZoom();
+    }}
 
     function loadReactlogObject(loadedData) {{
       let normalized = loadedData;
       if (Array.isArray(loadedData) || (loadedData && (!loadedData.nodes || !loadedData.events))) {{
         const rawEvents = Array.isArray(loadedData) ? loadedData : (loadedData.log || loadedData.events || loadedData.entries || []);
-        const nodesMap = {{}};
+        const nodesMap = Object.create(null);
         const edgesSet = new Set();
         const normEvents = [];
         let sIdx = 0;
@@ -4814,10 +4898,11 @@ def format_reactlog_html(
             edgesSet.add(`${{depFrom}}==>${{depTo}}`);
           }}
 
-          if (nid && !nodesMap[nid]) {{
+          if (nid && (!nodesMap[nid] || act === 'define')) {{
             let role = 'conductor';
             let ctype = String(ntype).toLowerCase();
-            if (['observable', 'input'].includes(ctype) || String(nid).startsWith('input:') || String(nid).startsWith('input$')) {{
+            if (['observable', 'reactive'].includes(ctype)) ctype = 'calc';
+            if (['input', 'reactiveval', 'reactivevalueskey', 'reactivevaluesnames', 'reactivevaluesaslist'].includes(ctype) || String(nid).startsWith('input:') || String(nid).startsWith('input$')) {{
               role = 'source'; ctype = 'input';
             }} else if (['observer', 'output', 'effect'].includes(ctype) || String(nid).startsWith('output:') || String(nid).startsWith('output$') || String(nid).startsWith('effect:')) {{
               role = 'observer'; ctype = 'output';
@@ -4879,7 +4964,14 @@ def format_reactlog_html(
       Object.assign(reactlogData, normalized);
       selectedNodeId = null;
       currentStep = 0;
+      searchQuery = '';
+      currentFocusMode = 'all';
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-results').hidden = true;
+      activeRoles = new Set(['source', 'conductor', 'observer']);
+      document.getElementById('role-filter-dropdown').value = 'all';
       init();
+      setFocusMode('all');
     }}
 
     function handleReactlogFileUpload(e) {{
