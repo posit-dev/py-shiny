@@ -1,10 +1,13 @@
+import palmerpenguins
+import pandas as pd
 from htmltools import TagAttrs
-from palmerpenguins import load_penguins
 
 from shiny import reactive
 from shiny.express import input, render, ui
 
-penguins = load_penguins()
+penguins: pd.DataFrame = (
+    palmerpenguins.load_penguins()  # pyright: ignore[reportUnknownMemberType]
+)
 
 ui.input_action_button("update_filters", "Update filters")
 ui.input_action_button("reset_filters", "Reset filters")
