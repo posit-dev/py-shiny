@@ -28,7 +28,7 @@ _UVICORN_STARTUP_FAILURE = 3
 
 class ShinyConfig(Config):
     # uvicorn's Config assigns these in __init__, but the generated stubs
-    # (`make pyright-typings`) omit instance attributes, so declare them here.
+    # (`make typings`) omit instance attributes, so declare them here.
     reload: bool
     workers: int
     uds: str | None

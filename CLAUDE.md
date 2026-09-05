@@ -131,7 +131,7 @@ steps.
 ### Type Checking Notes
 
 - Pyright is the primary type checker (not mypy)
-- Some packages require manual stubs: run `make pyright-typings` to generate
+- Some packages require manual stubs: run `make typings` to generate
 - Stubs are placed in `typings/` (gitignored)
 - Parameter types: prefer `T | None` over `Optional[T]` when no default `None` value is provided
 - Use `Literal` instead of `Enum` for string options

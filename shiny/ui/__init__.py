@@ -157,6 +157,7 @@ from ._page import (
     page_fixed,
     page_fluid,
     page_navbar,
+    page_html,
     page_output,
     page_sidebar,
 )
@@ -368,6 +369,7 @@ __all__ = (
     "page_bootstrap",
     "page_auto",
     "page_output",
+    "page_html",
     # _popover
     "popover",
     # _valuebox

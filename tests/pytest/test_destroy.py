@@ -1955,3 +1955,40 @@ async def test_extended_task_in_module_settling_after_close_completes():
     with isolate():
         assert task.status() == "success"
         assert task.result() == "streamed"
+
+
+@pytest.mark.asyncio
+async def test_extended_task_completion_survives_gc():
+    """The task that settles an `ExtendedTask` must outlive a collection pass.
+
+    The event loop only holds weak references to running tasks, so the completion
+    task created in `_done_callback()` needs a strong reference of its own or the
+    status update and flush can be dropped.
+    """
+    root = _make_real_app_session()
+    finish: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+
+    with session_context(root):
+
+        @extended_task
+        async def task() -> int:
+            return await finish
+
+        task()
+        await flush()
+
+    finish.set_result(42)
+    # Let the task finish so `_done_callback()` schedules the completion task, then
+    # collect while that task is still pending.
+    for _ in range(3):
+        await asyncio.sleep(0)
+    assert len(task._done_tasks) == 1
+    gc.collect()
+
+    for _ in range(10):
+        await asyncio.sleep(0)
+
+    with isolate():
+        assert task.status() == "success"
+        assert task.result() == 42
+    assert task._done_tasks == set(), "Completion task was not released once done"
