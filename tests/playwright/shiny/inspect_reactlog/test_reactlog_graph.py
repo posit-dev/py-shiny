@@ -1119,3 +1119,81 @@ def out():
 
     drawer_line_nums = page.locator("#insp-source-code .source-line-num")
     expect(drawer_line_nums.first).to_have_text("7")
+
+
+def test_r_import_search_and_connected_focus(page: Page) -> None:
+    from shiny._inspect import load_reactlog_json
+
+    raw = [
+        {"action": "invalidateStart", "reactId": "r2"},
+        {
+            "action": "define",
+            "reactId": "r1$x",
+            "type": "reactiveValuesKey",
+            "label": "input$x",
+        },
+        {
+            "action": "define",
+            "reactId": "r2",
+            "type": "observable",
+            "label": "doubled_value",
+        },
+        {
+            "action": "define",
+            "reactId": "r3",
+            "type": "observer",
+            "label": "output$result",
+        },
+        {"action": "define", "reactId": "r4", "type": "observer", "label": "unrelated"},
+        {"action": "dependsOn", "reactId": "r2", "depOnReactId": "r1$x"},
+        {"action": "dependsOn", "reactId": "r3", "depOnReactId": "r2"},
+        {"action": "dependsOn", "reactId": "r4", "depOnReactId": "r1$x"},
+    ]
+    page.set_content(format_reactlog_html(load_reactlog_json(raw), source_code=""))
+    # Exercise the separate browser file-import normalizer as well.
+    page.evaluate("raw => loadReactlogObject(raw)", raw)
+    expect(page.locator('.graph-node[data-id="r1$x"]')).to_have_attribute(
+        "data-role", "source"
+    )
+    expect(page.locator('.graph-node[data-id="r2"]')).to_have_attribute(
+        "data-role", "conductor"
+    )
+    expect(page.locator('.graph-node[data-id="r3"]')).to_have_attribute(
+        "data-role", "observer"
+    )
+    page.locator("#search-input").fill("dblvl")
+    expect(page.locator("#search-results button")).to_have_count(1)
+    page.locator("#search-input").fill("id:r2")
+    page.locator("#search-results button").click()
+    expect(page.locator(".graph-node")).to_have_count(3)
+    expect(page.locator('.graph-node[data-id="r4"]')).to_have_count(0)
+    expect(page.locator("#search-results")).to_be_hidden()
+    page.locator("#btn-focus-all").click()
+    expect(page.locator(".graph-node")).to_have_count(4)
+    page.locator("#search-input").fill("no match xyz")
+    expect(page.locator("#search-results")).to_contain_text("0 matches")
+    page.locator("#search-input").press("Escape")
+    expect(page.locator(".graph-node")).to_have_count(4)
+
+
+def test_fit_large_graph(page: Page) -> None:
+    from shiny._inspect import load_reactlog_json
+
+    raw = [
+        {
+            "action": "define",
+            "reactId": f"r{i}",
+            "type": "observable",
+            "label": f"reactive {i}",
+        }
+        for i in range(200)
+    ]
+    page.set_content(format_reactlog_html(load_reactlog_json(raw), source_code=""))
+    page.get_by_role("button", name="Fit graph to view", exact=True).click()
+    bounds = page.evaluate("""() => {
+        const svg = document.getElementById('reactlog-svg').getBoundingClientRect();
+        const graph = document.getElementById('viewport-g').getBoundingClientRect();
+        return {fits: graph.top >= svg.top && graph.bottom <= svg.bottom && graph.left >= svg.left && graph.right <= svg.right, zoom: zoomLevel};
+    }""")
+    assert bounds["fits"]
+    assert bounds["zoom"] < 0.4
