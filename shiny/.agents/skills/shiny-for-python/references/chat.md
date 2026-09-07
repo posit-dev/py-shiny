@@ -19,7 +19,7 @@ from shiny.express import ui
 ui.page_opts(title="Hello Chat", fillable=True)
 
 chat = ui.Chat(id="chat")
-chat.ui(messages=["Hi! Send a message and I'll echo it."])
+chat.ui(greeting="Hi! Send a message and I'll echo it.")
 
 
 @chat.on_user_submit
@@ -90,9 +90,9 @@ async def handle(user_input: str):
 
 ## Seed and read message history
 
-- **Startup messages:** pass `messages=` to `chat.ui(...)` (Express) or
-  `ui.chat_ui(...)` (Core). Use `greeting=` for a welcome shown before any
-  conversation.
+- **Startup message:** pass `greeting=` to `chat.ui(...)` (Express) or
+  `ui.chat_ui(...)` (Core). To replay a stored conversation, `await
+  chat.append_message()` from the server instead.
 - **Read the transcript reactively:** `chat.messages()` returns a tuple of
   `{"content", "role"}` dicts, oldest first (last item is the newest user
   message). Call it inside a reactive context / callback:
@@ -131,7 +131,7 @@ separate `ui.MarkdownStream` / `ui.output_markdown_stream` component instead.
 | Need | API |
 |---|---|
 | Create chat | `ui.Chat(id, client=None, greeting=None)` |
-| Render (Express / Core) | `chat.ui(messages=..., greeting=...)` / `ui.chat_ui(id, ...)` |
+| Render (Express / Core) | `chat.ui(greeting=...)` / `ui.chat_ui(id, greeting=...)` |
 | Handle submissions | `@chat.on_user_submit` (callback takes `user_input: str`, optional `attachments`) |
 | Append full message | `await chat.append_message(msg)` |
 | Stream a message | `await chat.append_message_stream(async_iterable)` |
@@ -150,7 +150,9 @@ separate `ui.MarkdownStream` / `ui.output_markdown_stream` component instead.
   `append_message_stream()`; reserve `append_message()` for a complete string.
 - Sync callback or forgetting `await` -> responses never appear. Callbacks are
   async and every append/stream call must be awaited.
-- Passing `messages=` to `ui.Chat(...)` -> deprecated; pass it to `chat.ui(...)`.
+- Passing `messages=` anywhere -> deprecated as of shinychat 0.7.0, and on
+  `ui.Chat(...)` it now raises unless you also pass `history=False`. Use
+  `greeting=` for a startup message, `append_message()` to replay a stored one.
 - Expecting `client=` and a manual `on_user_submit` to conflict -> they don't;
   your handler runs *in addition* to the auto-wired streaming handler.
 - Reaching for `transform_user_input` / `transform_assistant_response` -> both
