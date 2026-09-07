@@ -21,7 +21,7 @@ ui.page_opts(
 # Create and display a Shiny chat component
 chat = ui.Chat(
     id="chat",
-    messages=["Hello! How can I help you today?"],
+    greeting="Hello! How can I help you today?",
 )
 chat.ui()
 
