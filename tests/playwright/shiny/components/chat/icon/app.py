@@ -16,8 +16,11 @@ with ui.layout_columns():
     with ui.div():
         ui.h2("Default Bot")
         chat_default.ui(
-            messages=["Hello! I'm Default Bot. How can I help you today?"],
-            icon_assistant=None,
+            greeting="Hello! I'm Default Bot. How can I help you today?",
+            # `True`, not `None`: as of shinychat 0.7.0 `None`/`False` omit the
+            # assistant icon and `True` opts into the built-in robot, which is what
+            # this chat is here to cover.
+            icon_assistant=True,
         )
 
     @chat_default.on_user_submit
@@ -31,7 +34,7 @@ with ui.layout_columns():
     with ui.div():
         ui.h2("Animal Bot")
         chat_animal.ui(
-            messages=["Hello! I'm Animal Bot. How can I help you today?"],
+            greeting="Hello! I'm Animal Bot. How can I help you today?",
             icon_assistant=faicons.icon_svg("otter").add_class("icon-otter"),
         )
         ui.input_select("animal", "Animal", choices=["Otter", "Hippo", "Frog", "Dove"])
@@ -63,7 +66,7 @@ with ui.layout_columns():
     with ui.div():
         ui.h2("SVG Bot")
         chat_svg.ui(
-            messages=["Hello! I'm SVG Bot. How can I help you today?"],
+            greeting="Hello! I'm SVG Bot. How can I help you today?",
             icon_assistant=ui.HTML(bs_icon_info_circle_fill),
         )
 
@@ -77,7 +80,7 @@ with ui.layout_columns():
     with ui.div():
         ui.h2("Image Bot")
         chat_image.ui(
-            messages=["Hello! I'm Image Bot. How can I help you today?"],
+            greeting="Hello! I'm Image Bot. How can I help you today?",
             icon_assistant=ui.img(
                 src="img/grace-hopper.jpg",
                 class_="icon-image grace-hopper",
