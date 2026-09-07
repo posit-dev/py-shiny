@@ -906,7 +906,8 @@ async def test_snapshot_preprocess_output_namespaced(
     assert body["output"]["mod1-out1"] == "HELLO"
 
 
-def test_file_restore_handler_registers_snapshot_preprocess(
+@pytest.mark.asyncio
+async def test_file_restore_handler_registers_snapshot_preprocess(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -942,5 +943,8 @@ def test_file_restore_handler_registers_snapshot_preprocess(
     }
     restored = cast("list[Any]", handler(value, ResolvedId("file1"), session))
 
-    assert isinstance(restored, list) and len(restored) == 1
-    assert ResolvedId("file1") in session.input._snapshot_preprocessors
+    try:
+        assert isinstance(restored, list) and len(restored) == 1
+        assert ResolvedId("file1") in session.input._snapshot_preprocessors
+    finally:
+        await session._run_session_ended_tasks()
