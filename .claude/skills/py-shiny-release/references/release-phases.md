@@ -516,9 +516,10 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 - [ ] While in a feedstock, **confirm bot automerge is on and that the team has maintainer
       coverage** (below) — both are cheap to check and both silently cost a whole cycle
 
-### Feedstock inventory (verified 2026-08-25)
+### Feedstock inventory (verified 2026-09-06)
 
-Feedstock names are all under the `conda-forge/` org.
+Feedstock names are all under the `conda-forge/` org. Note the conda package name is not
+always the PyPI/feedstock name — `shinylive` is packaged as `py-shinylive`.
 
 | conda package | Feedstock | Phase | Automerge | `recipe-maintainers` |
 |---|---|---|---|---|
@@ -526,19 +527,25 @@ Feedstock names are all under the `conda-forge/` org.
 | `shiny` | `py-shiny-feedstock` | 3 | yes | cpsievert, schloerke, wch, sugatoray |
 | `shinyswatch` | `shinyswatch-feedstock` | 4 | yes | schloerke |
 | `shinywidgets` | `shinywidgets-feedstock` | 5 | yes | cpsievert, schloerke, daylinmorgan |
+| `py-shinylive` | `py-shinylive-feedstock` | 7 | yes | schloerke |
 | `shinychat` | `shinychat-feedstock` | — (own cadence) | yes | schloerke |
-| `faicons` | `faicons-feedstock` | — (own cadence) | **no** | daylinmorgan (+ schloerke pending) |
-| `shiny-validate` | `shiny-validate-feedstock` | — (own cadence) | **no** | julibeg (+ schloerke pending) |
+| `faicons` | `faicons-feedstock` | — (own cadence) | yes | schloerke, daylinmorgan |
+| `shiny-validate` | `shiny-validate-feedstock` | — (own cadence) | yes | schloerke, julibeg |
+| `chatlas` | `chatlas-feedstock` | — (own cadence) | yes | schloerke |
+| `brand-yml` | `brand-yml-feedstock` | — (own cadence) | yes | schloerke |
+| `querychat` | `querychat-feedstock` | — (own cadence) | yes | schloerke |
 
-`faicons` and `shiny-validate` came from outside contributors and are the two gaps.
-`@conda-forge-admin, please add user @schloerke` PRs are open on both —
-[faicons#3](https://github.com/conda-forge/faicons-feedstock/pull/3),
-[shiny-validate#2](https://github.com/conda-forge/shiny-validate-feedstock/pull/2) — and need
-the existing maintainer to merge them. Automerge is still off on both; that is a separate
-issue to file (see below).
+Re-derive those `Automerge` and `recipe-maintainer` columns each cycle (below) rather than trusting the
+table; a newly created feedstock starts with automerge off.
 
-`shinychat`, `faicons`, and `shiny-validate` are not part of the release train, but if one of
-them happened to be released alongside py-shiny or have an outdated feedstock, check its bot PR too.
+`querychat-feedstock` was created 2026-09-04 and has no package on anaconda.org yet — its
+first build is still landing. Re-check before assuming something is broken.
+
+`r-shinylive` has no conda-forge feedstock at all; it is R-side only and out of scope here.
+
+Only the packages with a Phase number are part of the release train. The others have their own
+cadence, but if one was released alongside py-shiny or its feedstock has drifted behind PyPI,
+check its bot PR too.
 
 Bump the feedstocks in dependency order — `htmltools` → `shiny` → (`shinyswatch`,
 `shinywidgets`, `shinychat`) — because the downstream recipes' test phase imports `shiny`. A
@@ -559,9 +566,11 @@ Re-derive the last two columns of the inventory rather than trusting them — re
 both v0 (`recipe/meta.yaml`) and v1 (`recipe/recipe.yaml`) layouts, so check both paths:
 
 ```bash
-for f in py-htmltools py-shiny shinyswatch shinywidgets shinychat faicons shiny-validate; do
+for f in py-htmltools py-shiny shinyswatch shinywidgets py-shinylive shinychat faicons \
+         shiny-validate chatlas brand-yml querychat; do
   base="https://raw.githubusercontent.com/conda-forge/$f-feedstock/main"
-  am=$(curl -s "$base/conda-forge.yml" | grep -c automerge)
+  # match the value, not just the key — `automerge: false` also contains "automerge"
+  am=$(curl -s "$base/conda-forge.yml" | grep -A1 '^bot:' | grep -c 'automerge: true')
   m=""
   for rf in recipe/recipe.yaml recipe/meta.yaml; do
     m=$(curl -sf "$base/$rf" | grep -A8 recipe-maintainers | grep -E '^ +- ' | tr -d ' -' | paste -sd, -)
@@ -579,26 +588,38 @@ these — `conda-forge-webservices` reads the title and opens the PR itself:
 | Automerge not enabled | `@conda-forge-admin, please add bot automerge` |
 | Maintainer missing | `@conda-forge-admin, please add user @username` |
 
+The title must match exactly; the body is ignored and can be empty:
+
+```bash
+gh issue create --repo conda-forge/<name>-feedstock \
+  --title "@conda-forge-admin, please add bot automerge" --body ""
+```
+
+The bot opens its PR within a minute or two — sequentially, so with several issues filed at
+once the last one can lag the first by a couple of minutes. Those PRs are titled
+`[ci skip] [cf admin skip] ***NO_CI*** adding bot automerge`, carry **no checks**, and the bot
+does **not** merge them: a maintainer has to. Filing without merging accomplishes nothing.
+
 Adding a maintainer only opens a PR against `recipe-maintainers`; the person still has to
 accept the conda-forge GitHub invitation before they can actually push. So do this ahead of a
 release, not in the middle of one.
 
+Automerge also only fires when CI is green *and* the PR carries the bot's `[bot-automerge]`
+marker, so a bump that needs a hand-added dependency still stalls — that is the `run:`-sync
+trap below, not an automerge problem.
+
 ### Feedstocks pending creation (staged-recipes)
 
-Until a `staged-recipes` PR merges there is no feedstock and no bot PR to check. Verify the
-current state rather than trusting this list, then move anything that has landed into the
-table above:
+Nothing is currently pending. 
 
-| conda package | staged-recipes PR |
-|---------------|-------------------|
-| `shinylive` | https://github.com/conda-forge/staged-recipes/pull/34628 |
-| `querychat`, `chatlas` | https://github.com/conda-forge/staged-recipes/pull/34629 |
-| `brand-yml` | https://github.com/conda-forge/staged-recipes/pull/34630 |
+If a new package joins the train, confirm whether it is on conda-forge before assuming a bot
+PR exists; a missing package means a `staged-recipes` PR, not a bump:
 
 ```bash
-# 200 = on conda-forge, 404 = still pending
-for p in shinylive querychat chatlas brand-yml; do
-  printf "%-12s %s\n" "$p" \
+# 200 = on conda-forge, 404 = no package (needs staged-recipes, or first build not yet landed)
+for p in htmltools shiny shinyswatch shinywidgets py-shinylive shinychat faicons \
+         shiny-validate chatlas brand-yml querychat; do
+  printf "%-16s %s\n" "$p" \
     "$(curl -s -o /dev/null -w '%{http_code}' https://api.anaconda.org/package/conda-forge/$p)"
 done
 ```
