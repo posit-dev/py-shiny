@@ -118,6 +118,12 @@ Before implementing a UI component or output renderer, read
 (file layout, exports, examples, controllers, tests) and the rules for pairing
 output components with renderers.
 
+### Playwright Controllers for UI Components
+
+Every UI component (inputs, containers/layouts, overlays, outputs) must have a companion Playwright controller in `shiny/playwright/controller/`.
+- **New features**: When adding a new UI component, implement its controller class with locators for all sub-elements (trigger, header, title, body, footer, close buttons, etc.), interaction methods (`set`, `open`, `close`, `show`, `click`), and expectation methods (`expect_*`). Export it from `shiny/playwright/controller/__init__.py` and register it in `docs/_quartodoc-testing.yml`.
+- **Altered features**: When altering or extending existing UI components (adding parameters, new sub-elements, new states, or server-side actions like show/hide/toggle), update the companion Playwright controller in the same PR to keep it in sync.
+
 ### Bundled Agent Skills
 
 The shiny package ships Agent Skills under `shiny/.agents/skills/` — reference
@@ -189,5 +195,6 @@ CI then rejects.
 - **Reactive graph debugging**: Use `reactive.flush()` to force synchronous execution in tests
 - **Playwright timing**: Use `.expect_*()` methods which auto-wait; avoid manual `sleep()`
 - **Asset updates**: After running `make upgrade-html-deps`, verify theme preset files were updated
+- **Out-of-sync Playwright controllers**: When adding or altering UI components, always create or update their companion Playwright controller in `shiny/playwright/controller/` with matching locators, action methods, and expectation methods, and export them from `shiny/playwright/controller/__init__.py`
 - **Stale bundled skills**: When changing a public API, grep `shiny/.agents/skills/` for it — bundled Agent Skills document public APIs and must be updated in the same PR
 - **Narwhals column access**: Never subscript a narwhals frame with a column *name* — use `.get_column(name)`. Subscripts are positional, and pandas allows non-string column names, so `data[0]` returns row `0`, not the column named `0`. Keep `[...]` for genuinely positional access (`data[rows, :]`, `data[:, col_indexes]`), resolving names to positions first
