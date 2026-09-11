@@ -105,6 +105,14 @@ quartodoc:
       contents:
         - pytest.create_app_fixture
         - pytest.ScopeName
+    - title: "Test server"
+      desc: "Run a Shiny app's server function in memory, without a browser."
+      contents:
+        - pytest.test_server
+        - pytest.test_server_async
+        - pytest.TestServerSession
+        - pytest.AsyncTestServerSession
+        - pytest.TestServerResult
     - title: "Run"
       desc: "Methods for starting a local Shiny app in the background"
       contents:

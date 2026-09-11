@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import Callable
 
 import pytest
 
@@ -33,22 +34,6 @@ def test_interactive_context_manager():
         assert s.outputs["doubled"] == "Result: 50"
 
 
-def test_interactive_callback_syntax():
-    def server(input: Inputs, output: Outputs, session: Session):
-        @render.text
-        def doubled():
-            return f"Result: {input.n() * 2}"
-
-    def test_logic(s: TestServerSession):
-        s.set_inputs(n=5)
-        assert s.outputs["doubled"] == "Result: 10"
-
-        s.set_inputs(n=15)
-        assert s.outputs["doubled"] == "Result: 30"
-
-    test_server(server, test_logic)
-
-
 @pytest.mark.asyncio
 async def test_interactive_async_context_manager():
     def server(input: Inputs, output: Outputs, session: Session):
@@ -63,25 +48,6 @@ async def test_interactive_async_context_manager():
 
         await s.set_inputs(x=7)
         assert s.outputs["squared"] == "49"
-
-
-@pytest.mark.asyncio
-async def test_interactive_async_callback_syntax():
-    def server(input: Inputs, output: Outputs, session: Session):
-        @render.text
-        def doubled():
-            return f"Result: {input.n() * 2}"
-
-    called = False
-
-    async def async_test_logic(s: AsyncTestServerSession):
-        nonlocal called
-        called = True
-        await s.set_inputs(n=8)
-        assert s.outputs["doubled"] == "Result: 16"
-
-    await test_server_async(server, async_test_logic)
-    assert called is True
 
 
 def test_interactive_exports():
@@ -108,10 +74,11 @@ def test_test_server_direct_server_function():
         def doubled():
             return f"Result: {input.n() * 2}"
 
-    res = test_server(server).set_inputs({"n": 25})
-    assert res.success is True
-    assert res.outputs["doubled"] == "Result: 50"
-    assert res.elapsed_ms > 0
+    with test_server(server) as ts:
+        ts.set_inputs({"n": 25})
+        assert ts.success is True
+        assert ts.outputs["doubled"] == "Result: 50"
+        assert ts.elapsed_ms > 0
 
 
 def test_test_server_direct_app_instance():
@@ -127,10 +94,11 @@ def test_test_server_direct_app_instance():
 
     app = App(app_ui, server)
 
-    res = test_server(app).set_inputs({"n": 25})
-    assert res.success is True
-    assert res.outputs["doubled"] == "Result: 50"
-    assert res.elapsed_ms > 0
+    with test_server(app) as ts:
+        ts.set_inputs({"n": 25})
+        assert ts.success is True
+        assert ts.outputs["doubled"] == "Result: 50"
+        assert ts.elapsed_ms > 0
 
 
 def test_test_server_express_code():
@@ -140,9 +108,10 @@ ui.input_slider("n", "N", 1, 100, 20)
 def doubled():
     return f"Result: {input.n() * 2}"
 """
-    res = test_server(code=code).set_inputs({"n": 30})
-    assert res.success is True
-    assert res.outputs["doubled"] == "Result: 60"
+    with test_server(code=code) as ts:
+        ts.set_inputs({"n": 30})
+        assert ts.success is True
+        assert ts.outputs["doubled"] == "Result: 60"
 
 
 def test_test_server_file_path(tmp_path: Path):
@@ -159,9 +128,10 @@ app = App(app_ui, server)
         encoding="utf-8",
     )
 
-    res = test_server(app_file).set_inputs({"txt": "pytest-sim"})
-    assert res.success is True
-    assert res.outputs["out"] == "Echo: pytest-sim"
+    with test_server(app_file) as ts:
+        ts.set_inputs({"txt": "pytest-sim"})
+        assert ts.success is True
+        assert ts.outputs["out"] == "Echo: pytest-sim"
 
 
 def test_test_server_reactive_errors():
@@ -175,10 +145,10 @@ def test_test_server_reactive_errors():
             raise ValueError("Custom calculation error")
 
     app = App(app_ui, server)
-    res = test_server(app)
-    assert res.success is False
-    assert "err_out" in res.errors
-    assert "Custom calculation error" in str(res.errors["err_out"])
+    with test_server(app) as ts:
+        assert ts.success is False
+        assert "err_out" in ts.errors
+        assert "Custom calculation error" in str(ts.errors["err_out"])
 
 
 def test_test_server_initialization_error_is_failure():
@@ -188,10 +158,9 @@ def test_test_server_initialization_error_is_failure():
         raise RuntimeError("Fatal server init crash")
 
     app = App(app_ui, server)
-    res = test_server(app)
-
-    assert res.success is False
-    assert "Fatal server init crash" in str(res.error)
+    with test_server(app) as ts:
+        assert ts.success is False
+        assert "Fatal server init crash" in str(ts.error)
 
 
 def test_test_server_reactive_effect_error_is_failure():
@@ -203,10 +172,9 @@ def test_test_server_reactive_effect_error_is_failure():
             raise RuntimeError("Fatal effect crash")
 
     app = App(app_ui, server)
-    res = test_server(app)
-
-    assert res.success is False
-    assert "Fatal effect crash" in str(res.error)
+    with test_server(app) as ts:
+        assert ts.success is False
+        assert "Fatal effect crash" in str(ts.error)
 
 
 def test_test_server_restores_app_test_mode_and_server():
@@ -221,13 +189,14 @@ def test_test_server_restores_app_test_mode_and_server():
     original_server = app.server
     assert app._test_mode is False
 
-    res = test_server(app)
-    assert res.success is True
+    with test_server(app) as ts:
+        assert ts.success is True
+
     assert app._test_mode is False
     assert app.server is original_server
 
 
-def test_test_server_mapping_interface():
+def test_test_server_result_mapping_interface():
     app_ui = ui.page_fluid(ui.output_text("out"))
 
     def server(input: Inputs, output: Outputs, session: Session):
@@ -236,8 +205,10 @@ def test_test_server_mapping_interface():
             return "simulated"
 
     app = App(app_ui, server)
-    res = test_server(app)
+    with test_server(app) as ts:
+        res = ts.to_result()
 
+    # The captured result outlives the `with` block.
     assert res["outputs"]["out"] == "simulated"
     assert "outputs" in res
     assert len(res) == 7
@@ -300,11 +271,11 @@ app = App(app_ui, server)
         encoding="utf-8",
     )
 
-    res_a = test_server(dir_a / "app.py")
-    assert res_a.outputs["txt"] == "from_A"
+    with test_server(dir_a / "app.py") as ts:
+        assert ts.outputs["txt"] == "from_A"
 
-    res_b = test_server(dir_b / "app.py")
-    assert res_b.outputs["txt"] == "from_B"
+    with test_server(dir_b / "app.py") as ts:
+        assert ts.outputs["txt"] == "from_B"
 
 
 def test_test_server_set_inputs_timeout():
@@ -330,54 +301,72 @@ async def test_test_server_inside_running_loop_points_at_async_variant():
             return "hi"
 
     with pytest.raises(RuntimeError, match="test_server_async"):
-        with test_server(server) as s:
-            s.set_inputs(x=1)
-
-    # Single-shot mode reaches `start()` lazily, via a property access.
-    with pytest.raises(RuntimeError, match="test_server_async"):
-        test_server(server).outputs
+        with test_server(server):
+            pass
 
 
-def test_test_server_set_inputs_chains_and_closes_when_not_in_a_with_block():
-    app_ui = ui.page_fluid(ui.output_text("out"))
+USES_OF_A_RUNNING_SESSION: list[Callable[[TestServerSession], object]] = [
+    lambda ts: ts.set_inputs(x=1),
+    lambda ts: ts.flush(),
+    lambda ts: ts.outputs,
+    lambda ts: ts.exports,
+    lambda ts: ts.errors,
+    lambda ts: ts.success,
+    lambda ts: ts.error,
+    lambda ts: ts.traceback,
+    lambda ts: ts.elapsed_ms,
+    lambda ts: ts.get_output("out"),
+    lambda ts: ts.get_export("out"),
+    lambda ts: ts.to_result(),
+    lambda ts: ts.to_dict(),
+]
+"""Every member that needs a started session, to check each one refuses to autostart."""
 
+
+@pytest.mark.parametrize("use_session", USES_OF_A_RUNNING_SESSION)
+def test_test_server_requires_a_context_manager(
+    use_session: Callable[[TestServerSession], object],
+):
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
         def out():
-            return f"Echo: {input.txt()}"
+            return "ok"
 
-    app = App(app_ui, server, test_mode=False)
-    original_server = app.server
-
-    s = test_server(app)
-    assert s.set_inputs(txt="hello") is s
-    assert s.outputs["out"] == "Echo: hello"
-
-    # Reading a result attribute outside a `with` block closes the session, so
-    # the global state `start()` mutated is restored.
-    assert s._is_running is False
-    assert "SHINY_TESTMODE" not in os.environ
-    assert app._test_mode is False
-    assert app.server is original_server
-
-    # Post-close reads come from the cached result rather than re-running.
-    assert s.outputs["out"] == "Echo: hello"
+    ts = test_server(server)
+    with pytest.raises(RuntimeError, match="with test_server"):
+        use_session(ts)
 
 
-def test_test_server_with_block_caches_final_result_on_exit():
+def test_test_server_set_inputs_chains_within_a_with_block():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
         def doubled():
             return f"{input.n() * 2}"
 
-    with test_server(server) as s:
-        s.set_inputs(n=10).set_inputs(n=21)
-        assert s.outputs["doubled"] == "42"
-        # Inside the block the session stays open across result reads.
-        assert s._is_running is True
+    with test_server(server) as ts:
+        assert ts.set_inputs(n=10).set_inputs(n=21) is ts
+        assert ts.get_output("doubled") == "42"
 
-    assert s._is_running is False
-    assert s.outputs["doubled"] == "42"
+
+def test_test_server_cleans_up_when_the_body_raises():
+    app_ui = ui.page_fluid(ui.output_text("out"))
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def out():
+            return "ok"
+
+    app = App(app_ui, server, test_mode=False)
+    original_server = app.server
+
+    with pytest.raises(AssertionError, match="boom"):
+        with test_server(app) as ts:
+            assert ts.get_output("out") == "ok"
+            raise AssertionError("boom")
+
+    assert "SHINY_TESTMODE" not in os.environ
+    assert app._test_mode is False
+    assert app.server is original_server
 
 
 @pytest.mark.asyncio
