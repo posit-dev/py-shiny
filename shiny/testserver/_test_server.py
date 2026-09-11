@@ -39,11 +39,28 @@ T = TypeVar("T")
 VALUE_FIELDS = ("success", "error", "traceback", "inputs", "outputs", "exports")
 """The fields of `TestServerValues`, and the keys of `dict(session)`."""
 
-DEFAULT_OUTPUT_WIDTH = 960
-"""Stand-in for the width a browser would report, so sized outputs can render."""
+DEFAULT_CLIENT_DATA: Dict[str, Any] = {
+    "output_hidden": False,
+    "output_width": 960,
+    "output_height": 600,
+    "pixelratio": 1,
+    "url_protocol": "http:",
+    "url_hostname": "localhost",
+    "url_port": 0,
+    "url_pathname": "/",
+    "url_search": "",
+    "url_hash": "",
+    "url_hash_initial": "",
+}
+"""
+Stand-ins for what a browser would report, sent when the session starts.
 
-DEFAULT_OUTPUT_HEIGHT = 600
-"""Stand-in for the height a browser would report, so sized outputs can render."""
+Keys are named after the readers on :class:`~shiny.session.ClientData`. An
+`output_*` key applies to every output, so `output_width` becomes each output's
+`.clientdata_output_<id>_width`; every other key is session-wide. Without these
+a size-aware renderer such as `render.plot` raises a silent exception and
+produces nothing, and `session.clientdata.url_pathname()` never resolves.
+"""
 
 ValueKind = Literal["input", "output", "export"]
 ValueStatus = Literal["ok", "error", "silent", "missing"]
@@ -233,9 +250,11 @@ class AsyncTestServerSession:
         self,
         app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
         *,
+        client_data: Optional[Mapping[str, Any]] = None,
         timeout_secs: float = 5.0,
     ) -> None:
         self._target_app = app
+        self._client_data = dict(client_data or {})
         self._timeout_secs = timeout_secs
 
         self._app_obj: Optional[App] = None
@@ -381,20 +400,20 @@ class AsyncTestServerSession:
                 unhide_flush_done.set()
                 return
 
+            client_data = {**DEFAULT_CLIENT_DATA, **self._client_data}
+            per_output = {
+                key[len("output_") :]: value
+                for key, value in client_data.items()
+                if key.startswith("output_")
+            }
             unhide_data: Dict[str, Any] = {
-                ".clientdata_pixelratio": 1,
+                f".clientdata_{key}": value
+                for key, value in client_data.items()
+                if not key.startswith("output_")
             }
             for out_name in self._session.output._outputs.keys():
-                unhide_data[f".clientdata_output_{out_name}_hidden"] = False
-                # A browser reports each output's size; without one, size-aware
-                # renderers such as `render.plot` would raise a silent exception
-                # and produce nothing. Non-sizing renderers ignore these.
-                unhide_data[f".clientdata_output_{out_name}_width"] = (
-                    DEFAULT_OUTPUT_WIDTH
-                )
-                unhide_data[f".clientdata_output_{out_name}_height"] = (
-                    DEFAULT_OUTPUT_HEIGHT
-                )
+                for suffix, value in per_output.items():
+                    unhide_data[f".clientdata_output_{out_name}_{suffix}"] = value
 
             if unhide_data:
 
@@ -763,10 +782,12 @@ class TestServerSession:
         self,
         app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
         *,
+        client_data: Optional[Mapping[str, Any]] = None,
         timeout_secs: float = 5.0,
     ) -> None:
         self._async_session = AsyncTestServerSession(
             app=app,
+            client_data=client_data,
             timeout_secs=timeout_secs,
         )
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -1065,6 +1086,7 @@ def _resolve_target(
 def test_server(
     app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     *,
+    client_data: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> TestServerSession:
     """
@@ -1093,6 +1115,13 @@ def test_server(
         * A path to an app file, Core or Express. A `str`, or a `Path` that is not
           already a file, is resolved relative to the directory of the file
           calling `test_server()`. Pass a `str` to be sure a path stays relative.
+    client_data
+        Stand-ins for what a browser would report, merged over
+        `DEFAULT_CLIENT_DATA`. Keys are named after the readers on
+        :class:`~shiny.session.ClientData`: an `output_*` key applies to every
+        output, and every other key is session-wide. Pass
+        `{"output_width": 300}` to render every sized output 300px wide, or set
+        one output's size later with `set_inputs`.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1136,6 +1165,7 @@ def test_server(
     """
     return TestServerSession(
         _resolve_target(app, _caller_dir()),
+        client_data=client_data,
         timeout_secs=timeout_secs,
     )
 
@@ -1144,6 +1174,7 @@ def test_server(
 def test_server_async(
     app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     *,
+    client_data: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> AsyncTestServerSession:
     """
@@ -1165,6 +1196,13 @@ def test_server_async(
           already a file, is resolved relative to the directory of the file
           calling `test_server_async()`. Pass a `str` to be sure a path stays
           relative.
+    client_data
+        Stand-ins for what a browser would report, merged over
+        `DEFAULT_CLIENT_DATA`. Keys are named after the readers on
+        :class:`~shiny.session.ClientData`: an `output_*` key applies to every
+        output, and every other key is session-wide. Pass
+        `{"output_width": 300}` to render every sized output 300px wide, or set
+        one output's size later with `set_inputs`.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1211,6 +1249,7 @@ def test_server_async(
     """
     return AsyncTestServerSession(
         _resolve_target(app, _caller_dir()),
+        client_data=client_data,
         timeout_secs=timeout_secs,
     )
 

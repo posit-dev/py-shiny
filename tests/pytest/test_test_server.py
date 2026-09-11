@@ -19,7 +19,7 @@ from shiny.pytest import (
     test_server_async,
 )
 from shiny.testmode import export_test_values
-from shiny.testserver._test_server import VALUE_FIELDS
+from shiny.testserver._test_server import DEFAULT_CLIENT_DATA, VALUE_FIELDS
 
 
 def test_interactive_context_manager():
@@ -716,3 +716,49 @@ def test_test_server_plot_renders_without_a_browser():
         resized = ts.get_output("a_plot")
         assert resized.status == "ok"
         assert resized.value["src"] != rendered.value["src"]
+
+
+def test_test_server_client_data_defaults_resolve():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def url():
+            return session.clientdata.url_pathname()
+
+        @render.text
+        def ratio():
+            return str(session.clientdata.pixelratio())
+
+        @render.text
+        def size():
+            cd = session.clientdata
+            return f"{cd.output_width('size')}x{cd.output_height('size')}"
+
+    with test_server(server) as ts:
+        # Without stand-ins each of these reads an unset input and goes silent.
+        assert ts.get_output("url") == DEFAULT_CLIENT_DATA["url_pathname"]
+        assert ts.get_output("ratio") == str(DEFAULT_CLIENT_DATA["pixelratio"])
+        assert ts.get_output("size") == "{}x{}".format(
+            DEFAULT_CLIENT_DATA["output_width"], DEFAULT_CLIENT_DATA["output_height"]
+        )
+
+
+def test_test_server_client_data_param_overrides_defaults():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def url():
+            return session.clientdata.url_pathname()
+
+        @render.text
+        def size():
+            cd = session.clientdata
+            return f"{cd.output_width('size')}x{cd.output_height('size')}"
+
+    with test_server(
+        server,
+        client_data={"url_pathname": "/dashboard", "output_width": 300},
+    ) as ts:
+        assert ts.get_output("url") == "/dashboard"
+        # `output_*` applies to every output, and unset keys keep their default.
+        assert ts.get_output("size") == "300x{}".format(
+            DEFAULT_CLIENT_DATA["output_height"]
+        )
