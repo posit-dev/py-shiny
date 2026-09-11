@@ -1281,10 +1281,8 @@ def test_server(
         Stand-ins for what a browser would report, merged over
         `DEFAULT_CLIENT_DATA`. Keys are named after the readers on
         :class:`~shiny.session.ClientData`: an `output_*` key applies to every
-        output, and every other key is session-wide. Pass
-        `{"output_width": 300}` to render every sized output 300px wide, or set
-        one output's size later with `set_inputs`. `None` means the same as
-        `{}`: every default is used.
+        output, and every other key is session-wide. See the note below. `None`
+        means the same as `{}`: every default is used.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1293,6 +1291,25 @@ def test_server(
     -------
     :
         An unstarted `TestServerSession`, to be used with `with`.
+
+
+    Notes
+    -----
+    ::: {.callout-note title="Client data"}
+    A real browser reports values back to the server: how big each output is, the
+    device pixel ratio, and the parts of the URL. Your app reads them through
+    `session.clientdata`, and renderers read them too — `render.plot` needs a
+    width and height before it can draw anything.
+
+    There is no browser here, so those inputs would never arrive. A plot would
+    render nothing and `session.clientdata.url_pathname()` would never resolve,
+    both *silently*: the output would simply be `"silent"` and the session would
+    still report success.
+
+    The session therefore sends the stand-ins in `DEFAULT_CLIENT_DATA` as soon as
+    it starts, so these work out of the box. Override any of them with
+    `client_data=`, and change one output's size mid-test with `set_inputs`.
+    :::
 
     Examples
     --------
@@ -1305,18 +1322,126 @@ def test_server(
     test_server(my_mod_server)    # server function, or a shiny.App
     ```
 
-    Setting inputs and asserting on outputs, across several interactions:
+    Set inputs to simulate a user interacting, and read outputs between them.
+    `get_output` compares equal to the value itself, so assertions need no
+    unwrapping:
 
     ```python
     from shiny.pytest import test_server
 
 
-    def test_app():
+    def test_doubling_app():
         with test_server("myapp.py") as ts:
-            ts.set_inputs(a=1, b=2)
-            assert ts.get_output("name") == "foo"
-            ts.set_inputs(a=3, b=4)
-            assert ts.get_output("name") == "bar"
+            # Several inputs at once. A dictionary handles ids that are not
+            # valid Python identifiers; keyword arguments are the common case.
+            ts.set_inputs({"first-name": "Ada"}, n=10)
+
+            assert ts.success
+            assert ts.get_output("greeting") == "Hello, Ada!"
+            assert ts.get_output("doubled") == "20"
+
+            # Values registered with `export_test_values()` are read the same way.
+            assert ts.get_export("running_total") == 20
+
+            # A later interaction re-renders. Inputs you do not name keep their
+            # values, so `first-name` is still "Ada" here.
+            ts.set_inputs(n=21)
+            assert ts.get_output("doubled") == "42"
+    ```
+
+    Each value also says how it turned out, which is what to inspect when an
+    assertion is not simply about equality:
+
+    ```python
+    def test_reports_a_bad_value():
+        with test_server("myapp.py") as ts:
+            ts.set_inputs(n=-1)
+
+            assert ts.success is False
+            failed = ts.get_output("doubled")
+            assert failed.status == "error"
+            assert "must be positive" in failed.error
+            assert "raise ValueError" in failed.traceback
+    ```
+
+    Client data has defaults, so a plot renders without a browser. Override them
+    when a test cares about the size:
+
+    ```python
+    def test_plot_at_a_given_size():
+        with test_server("myapp.py", client_data={"output_width": 300}) as ts:
+            plot = ts.get_output("plot")
+            assert plot.status == "ok"
+
+        # Or change one output's size partway through a test.
+        with test_server("myapp.py") as ts:
+            ts.set_inputs({".clientdata_output_plot_width": 300})
+            assert ts.get_output("plot").status == "ok"
+    ```
+
+    A Shiny module namespaces its ids, so reach them through the id the module
+    was given:
+
+    ```python
+    from shiny import Inputs, Outputs, Session, module, render
+
+
+    @module.server
+    def counter_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return f"n={input.n()}"
+
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        counter_server("counter")
+
+
+    def test_counter_module():
+        with test_server(app_server) as ts:
+            ts.set_inputs({"counter-n": 7})
+            assert ts.get_output("counter-label") == "n=7"
+    ```
+
+    A fixture keeps the `with` block out of every test body, and pytest handles
+    the teardown. Leave it function-scoped -- the default -- because a session
+    holds the inputs set so far, and sharing one across tests would let them
+    affect each other:
+
+    ```python
+    import pytest
+
+    from shiny.pytest import test_server
+
+
+    @pytest.fixture
+    def ts():
+        with test_server("myapp.py") as session:
+            yield session
+
+
+    def test_doubles(ts):
+        ts.set_inputs(n=10)
+        assert ts.get_output("doubled") == "20"
+
+
+    def test_squares(ts):
+        ts.set_inputs(n=10)
+        assert ts.get_output("squared") == "100"
+    ```
+
+    To assert after the block has closed, capture the values first. Both forms
+    hold copies, so they stay valid once the app is gone:
+
+    ```python
+    def test_reports_everything():
+        with test_server("myapp.py") as ts:
+            ts.set_inputs(n=10)
+            values = ts.to_values()  # rich `TestServerValue`s
+            as_dict = dict(ts)  # the same, as plain JSON-ready data
+
+        assert values.outputs["doubled"].value == "20"
+        assert as_dict["outputs"]["doubled"]["value"] == "20"
     ```
 
     See Also
@@ -1363,10 +1488,8 @@ def test_server_async(
         Stand-ins for what a browser would report, merged over
         `DEFAULT_CLIENT_DATA`. Keys are named after the readers on
         :class:`~shiny.session.ClientData`: an `output_*` key applies to every
-        output, and every other key is session-wide. Pass
-        `{"output_width": 300}` to render every sized output 300px wide, or set
-        one output's size later with `set_inputs`. `None` means the same as
-        `{}`: every default is used.
+        output, and every other key is session-wide. See the note below. `None`
+        means the same as `{}`: every default is used.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1375,6 +1498,25 @@ def test_server_async(
     -------
     :
         An unstarted `AsyncTestServerSession`, to be used with `async with`.
+
+
+    Notes
+    -----
+    ::: {.callout-note title="Client data"}
+    A real browser reports values back to the server: how big each output is, the
+    device pixel ratio, and the parts of the URL. Your app reads them through
+    `session.clientdata`, and renderers read them too — `render.plot` needs a
+    width and height before it can draw anything.
+
+    There is no browser here, so those inputs would never arrive. A plot would
+    render nothing and `session.clientdata.url_pathname()` would never resolve,
+    both *silently*: the output would simply be `"silent"` and the session would
+    still report success.
+
+    The session therefore sends the stand-ins in `DEFAULT_CLIENT_DATA` as soon as
+    it starts, so these work out of the box. Override any of them with
+    `client_data=`, and change one output's size mid-test with `set_inputs`.
+    :::
 
     Examples
     --------
@@ -1387,7 +1529,8 @@ def test_server_async(
     test_server_async(my_mod_server)    # server function, or a shiny.App
     ```
 
-    Setting inputs and asserting on outputs, across several interactions:
+    Set inputs to simulate a user interacting, and read outputs between them.
+    Only `set_inputs` is awaited; reading a value is not:
 
     ```python
     import pytest
@@ -1396,13 +1539,56 @@ def test_server_async(
 
 
     @pytest.mark.asyncio
-    async def test_app():
+    async def test_doubling_app():
         async with test_server_async("myapp.py") as ts:
-            await ts.set_inputs(a=1, b=2)
-            assert ts.get_output("name") == "foo"
-            await ts.set_inputs(a=3, b=4)
-            assert ts.get_output("name") == "bar"
+            # A dictionary handles ids that are not valid Python identifiers;
+            # keyword arguments are the common case.
+            await ts.set_inputs({"first-name": "Ada"}, n=10)
+
+            assert ts.success
+            assert ts.get_output("greeting") == "Hello, Ada!"
+            assert ts.get_output("doubled") == "20"
+
+            # Values registered with `export_test_values()` are read the same way.
+            assert ts.get_export("running_total") == 20
+
+            # A later interaction re-renders. Inputs you do not name keep their
+            # values, so `first-name` is still "Ada" here.
+            await ts.set_inputs(n=21)
+            assert ts.get_output("doubled") == "42"
     ```
+
+    Each value also says how it turned out, which is what to inspect when an
+    assertion is not simply about equality:
+
+    ```python
+    @pytest.mark.asyncio
+    async def test_reports_a_bad_value():
+        async with test_server_async("myapp.py") as ts:
+            await ts.set_inputs(n=-1)
+
+            assert ts.success is False
+            failed = ts.get_output("doubled")
+            assert failed.status == "error"
+            assert "must be positive" in failed.error
+            assert "raise ValueError" in failed.traceback
+    ```
+
+    Client data has defaults, so a plot renders without a browser. Override them
+    when a test cares about the size:
+
+    ```python
+    @pytest.mark.asyncio
+    async def test_plot_at_a_given_size():
+        async with test_server_async(
+            "myapp.py", client_data={"output_width": 300}
+        ) as ts:
+            assert ts.get_output("plot").status == "ok"
+    ```
+
+    The remaining patterns are the same as for `test_server` -- testing a module
+    through its namespaced ids, wrapping the session in a fixture, and capturing
+    values that outlive the block -- except that `set_inputs` is awaited.
 
     See Also
     --------

@@ -9,7 +9,7 @@ from typing import Callable
 
 import pytest
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny.pytest import (
     MISSING,
     AsyncTestServerSession,
@@ -914,3 +914,56 @@ def test_test_server_client_data_param_overrides_defaults():
         assert ts.get_output("size") == "300x{}".format(
             DEFAULT_CLIENT_DATA["output_height"]
         )
+
+
+def test_test_server_reaches_a_module_through_its_namespaced_ids():
+    """The `"counter-n"` id form is what the docstring example documents."""
+
+    @module.server
+    def counter_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return f"n={input.n()}"
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        counter_server("counter")
+
+    with test_server(app_server) as ts:
+        ts.set_inputs({"counter-n": 7})
+        assert ts.get_output("counter-label") == "n=7"
+
+
+def _fixture_server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def doubled():
+        return f"{input.n() * 2}"
+
+
+@pytest.fixture
+def documented_fixture():
+    """The fixture pattern the docstring recommends, function-scoped."""
+    with test_server(_fixture_server) as session:
+        yield session
+
+
+def test_fixture_pattern_works(documented_fixture: TestServerSession):
+    documented_fixture.set_inputs(n=10)
+    assert documented_fixture.get_output("doubled") == "20"
+
+
+def test_fixture_pattern_is_isolated_between_tests(
+    documented_fixture: TestServerSession,
+):
+    # A fresh session per test: `n` from the test above did not carry over.
+    with pytest.raises(KeyError, match="No input named 'n'"):
+        documented_fixture.get_input("n")
+
+
+def test_captured_values_outlive_the_block():
+    with test_server(_fixture_server) as ts:
+        ts.set_inputs(n=10)
+        values = ts.to_values()
+        as_dict = dict(ts)
+
+    assert values.outputs["doubled"].value == "20"
+    assert as_dict["outputs"]["doubled"]["value"] == "20"
