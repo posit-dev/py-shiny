@@ -470,18 +470,14 @@ def test_test_server_requires_a_context_manager(
         use_session(ts)
 
 
-def test_test_server_set_inputs_returns_nothing():
+def test_test_server_set_inputs_chains_within_a_with_block():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
         def doubled():
             return f"{input.n() * 2}"
 
     with test_server(server) as ts:
-        # Setting inputs is an action, not a value, and returning `self` only
-        # reads well in the sync flavor -- `(await ts.set_inputs(...)).get_output`
-        # does not.
-        assert ts.set_inputs(n=10) is None
-        ts.set_inputs(n=21)
+        assert ts.set_inputs(n=10).flush().set_inputs(n=21) is ts
         assert ts.get_output("doubled") == "42"
 
 
@@ -507,14 +503,14 @@ def test_test_server_cleans_up_when_the_body_raises():
 
 
 @pytest.mark.asyncio
-async def test_async_set_inputs_returns_nothing():
+async def test_async_set_inputs_returns_self():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
         def squared():
             return f"{input.x() ** 2}"
 
     async with test_server_async(server) as s:
-        assert await s.set_inputs(x=6) is None
+        assert await s.set_inputs(x=6) is s
         assert s.get_output("squared") == "36"
 
 
@@ -1064,9 +1060,10 @@ _SESSION_API = frozenset(
         "to_values",
         "keys",
         "make_scope",
+        "root_scope",
     }
 )
-_SCOPE_API = _SESSION_API | {"root_scope"}
+_SCOPE_API = _SESSION_API
 
 # Everything except `set_inputs`/`flush`, whose async flavors are coroutines,
 # and `make_scope`/`root_scope`, whose return types differ by flavor.
@@ -1107,13 +1104,16 @@ def test_test_server_flavors_present_the_same_api():
             for obj in (ts, scope):
                 assert not inspect.iscoroutinefunction(getattr(obj, name)), (obj, name)
 
-        # Setting inputs is an action in every flavor, not a chainable value.
+        # `set_inputs` and `flush` return the object they were called on, so a
+        # test can chain them. The async flavors need a running session, so they
+        # are checked in their own tests.
+        for obj in (ts, scope):
+            assert obj.set_inputs(n=1) is obj
+            assert obj.flush() is obj
         for obj in (ts, async_ts, scope, async_scope):
-            assert inspect.signature(obj.set_inputs).return_annotation == "None"
-        # ...and really returns nothing, not just per the annotation. The async
-        # flavors need a running session, so they are checked in their own tests.
-        assert ts.set_inputs(n=1) is None
-        assert scope.set_inputs(n=1) is None
+            for name in ("set_inputs", "flush"):
+                annotation = inspect.signature(getattr(obj, name)).return_annotation
+                assert annotation == type(obj).__name__, (obj, name, annotation)
 
         # The read half takes the same arguments everywhere.
         for name in _SHARED_SIGNATURES:
@@ -1165,7 +1165,7 @@ def test_test_server_make_scope_reads_a_module_with_bare_ids():
         assert counter.root_scope() is ts
 
         # Bare ids in, bare ids out -- just like the module's own server code.
-        assert counter.set_inputs(n=7) is None
+        assert counter.set_inputs(n=7) is counter
         assert counter.get_input("n") == 7
         assert counter.get_output("label") == "n=7"
         assert counter.get_export("doubled") == 14
@@ -1318,7 +1318,7 @@ async def test_test_server_async_make_scope():
         assert isinstance(counter, AsyncTestServerScope)
         assert counter.root_scope() is ts
 
-        assert await counter.set_inputs(n=7) is None
+        assert await counter.set_inputs(n=7) is counter
         assert counter.get_output("label") == "n=7"
         assert ts.get_output("counter-label") == "n=7"
 

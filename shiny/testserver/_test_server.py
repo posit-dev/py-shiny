@@ -672,7 +672,7 @@ class AsyncTestServerSession:
                 else TestServerValue(name, "export", "ok", value)
             )
 
-    async def set_inputs(self, /, **kwargs: Any) -> None:
+    async def set_inputs(self, /, **kwargs: Any) -> AsyncTestServerSession:
         """
         Set input values and wait for the resulting reactive flush.
 
@@ -687,6 +687,11 @@ class AsyncTestServerSession:
             Input values keyed by input id. Ids that are not valid Python
             identifiers -- a module's namespaced `"counter-n"`, say -- go
             through an unpacked dictionary: `set_inputs(**{"counter-n": 7})`.
+
+        Returns
+        -------
+        :
+            This session, so calls can be chained.
 
         Raises
         ------
@@ -733,16 +738,23 @@ class AsyncTestServerSession:
 
         await asyncio.sleep(0.01)
         await self._refresh_snapshots()
+        return self
 
-    async def flush(self) -> None:
+    async def flush(self) -> AsyncTestServerSession:
         """
         Re-read the session's output, export, and error values.
 
         `set_inputs` already does this, so an explicit call is only needed after
         something outside the test changes reactive state (for example an effect
         driven by a timer).
+
+        Returns
+        -------
+        :
+            This session, so calls can be chained.
         """
         await self._refresh_snapshots()
+        return self
 
     @property
     def is_ok(self) -> bool:
@@ -782,6 +794,15 @@ class AsyncTestServerSession:
         * :class:`~shiny.testserver.AsyncTestServerScope`
         """
         return AsyncTestServerScope(self, self.ns(id))
+
+    def root_scope(self) -> AsyncTestServerSession:
+        """
+        Return this session, which is already the root.
+
+        Mirrors `shiny.Session.root_scope`, so code handed either a session or an
+        `AsyncTestServerScope` can reach the session without a type check.
+        """
+        return self
 
     def get_input(self, name: str) -> TestServerValue:
         """
@@ -991,7 +1012,7 @@ class TestServerSession:
             )
         return self._async_session
 
-    def set_inputs(self, /, **kwargs: Any) -> None:
+    def set_inputs(self, /, **kwargs: Any) -> TestServerSession:
         """
         Set input values and wait for the resulting reactive flush.
 
@@ -1007,6 +1028,11 @@ class TestServerSession:
             identifiers -- a module's namespaced `"counter-n"`, say -- go
             through an unpacked dictionary: `set_inputs(**{"counter-n": 7})`.
 
+        Returns
+        -------
+        :
+            This session, so calls can be chained.
+
         Raises
         ------
         TimeoutError
@@ -1015,8 +1041,9 @@ class TestServerSession:
             If the session is not running.
         """
         self._run(self._require_running().set_inputs(**kwargs))
+        return self
 
-    def flush(self) -> None:
+    def flush(self) -> TestServerSession:
         """
         Re-read the session's output, export, and error values.
 
@@ -1024,12 +1051,18 @@ class TestServerSession:
         something outside the test changes reactive state (for example an effect
         driven by a timer).
 
+        Returns
+        -------
+        :
+            This session, so calls can be chained.
+
         Raises
         ------
         RuntimeError
             If the session is not running.
         """
         self._run(self._require_running().flush())
+        return self
 
     @property
     def is_ok(self) -> bool:
@@ -1064,6 +1097,15 @@ class TestServerSession:
         * :class:`~shiny.testserver.TestServerScope`
         """
         return TestServerScope(self, self.ns(id))
+
+    def root_scope(self) -> TestServerSession:
+        """
+        Return this session, which is already the root.
+
+        Mirrors `shiny.Session.root_scope`, so code handed either a session or a
+        `TestServerScope` can reach the session without a type check.
+        """
+        return self
 
     def get_input(self, name: str) -> TestServerValue:
         """
@@ -1413,7 +1455,7 @@ class AsyncTestServerScope(_TestServerScopeBase):
         """Return a view of a module nested inside this one."""
         return AsyncTestServerScope(self._root, self.ns(id))
 
-    async def set_inputs(self, /, **kwargs: Any) -> None:
+    async def set_inputs(self, /, **kwargs: Any) -> AsyncTestServerScope:
         """
         Set input values in this namespace and wait for the reactive flush.
 
@@ -1421,6 +1463,11 @@ class AsyncTestServerScope(_TestServerScopeBase):
         ----------
         **kwargs
             Input values keyed by the bare id the module's own code uses.
+
+        Returns
+        -------
+        :
+            This scope, so calls can be chained.
 
         Raises
         ------
@@ -1430,10 +1477,12 @@ class AsyncTestServerScope(_TestServerScopeBase):
         await self._root.set_inputs(
             **{self._resolve(name): value for name, value in kwargs.items()}
         )
+        return self
 
-    async def flush(self) -> None:
-        """Re-read the session's values. See `AsyncTestServerSession.flush`."""
+    async def flush(self) -> AsyncTestServerScope:
+        """Re-read the session's values, and return this scope for chaining."""
         await self._root.flush()
+        return self
 
     async def __aenter__(self) -> AsyncTestServerScope:
         """
@@ -1491,7 +1540,7 @@ class TestServerScope(_TestServerScopeBase):
         """Return a view of a module nested inside this one."""
         return TestServerScope(self._root, self.ns(id))
 
-    def set_inputs(self, /, **kwargs: Any) -> None:
+    def set_inputs(self, /, **kwargs: Any) -> TestServerScope:
         """
         Set input values in this namespace and wait for the reactive flush.
 
@@ -1499,6 +1548,11 @@ class TestServerScope(_TestServerScopeBase):
         ----------
         **kwargs
             Input values keyed by the bare id the module's own code uses.
+
+        Returns
+        -------
+        :
+            This scope, so calls can be chained.
 
         Raises
         ------
@@ -1508,10 +1562,12 @@ class TestServerScope(_TestServerScopeBase):
         self._root.set_inputs(
             **{self._resolve(name): value for name, value in kwargs.items()}
         )
+        return self
 
-    def flush(self) -> None:
-        """Re-read the session's values. See `TestServerSession.flush`."""
+    def flush(self) -> TestServerScope:
+        """Re-read the session's values, and return this scope for chaining."""
         self._root.flush()
+        return self
 
     def __enter__(self) -> TestServerScope:
         """
@@ -1698,6 +1754,18 @@ def test_server(
             # values, so `name` is still "Ada" here.
             ts.set_inputs(n=21)
             assert ts.get_output("doubled") == "42"
+    ```
+
+    `set_inputs` and `flush` both return what they were called on, so a sequence
+    of interactions can be written as one chain:
+
+    ```python
+    def test_a_sequence_of_interactions():
+        with test_server("myapp.py") as ts:
+            assert (
+                ts.set_inputs(name="Ada").set_inputs(n=10).get_output("doubled")
+                == "20"
+            )
     ```
 
     Each value also says how it turned out, which is what to inspect when an
