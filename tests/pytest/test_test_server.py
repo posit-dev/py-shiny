@@ -379,3 +379,76 @@ async def test_async_set_inputs_returns_self():
     async with test_server_async(server) as s:
         assert await s.set_inputs(x=6) is s
         assert s.outputs["squared"] == "36"
+
+
+def test_set_inputs_merges_across_calls_and_never_stalls():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def both():
+            return f"a={input.a()} b={input.b()}"
+
+    with test_server(server) as ts:
+        ts.set_inputs(a=1, b=2)
+        assert ts.get_output("both") == "a=1 b=2"
+
+        # A later call updates only the ids it names; `b` keeps its value.
+        ts.set_inputs(a=9)
+        assert ts.get_output("both") == "a=9 b=2"
+
+        # Re-sending an unchanged value invalidates nothing, and setting an id no
+        # output reads invalidates nothing either. Both must still flush, or
+        # `set_inputs` would block until `timeout_secs`.
+        ts.set_inputs(a=9)
+        ts.set_inputs(unrelated=100)
+        assert ts.get_output("both") == "a=9 b=2"
+
+        # Falsy values are values, not "unset".
+        ts.set_inputs(a=0, b=0)
+        assert ts.get_output("both") == "a=0 b=0"
+
+        # The degenerate calls must flush too, for the same reason.
+        ts.set_inputs()
+        ts.flush()
+        ts.flush()
+        assert ts.get_output("both") == "a=0 b=0"
+
+
+def test_set_inputs_clears_errors_once_a_later_flush_succeeds():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def checked():
+            if input.val() < 0:
+                raise ValueError("must be non-negative")
+            return f"ok {input.val()}"
+
+        export_test_values(tripled=lambda: input.val() * 3)
+
+    with test_server(server) as ts:
+        ts.set_inputs(val=5)
+        assert ts.success is True
+        assert ts.get_export("tripled") == 15
+
+        ts.set_inputs(val=-1)
+        assert ts.success is False
+        assert "must be non-negative" in str(ts.errors["checked"])
+
+        # The snapshot is rebuilt per flush, so a recovered output stops reporting
+        # the stale error.
+        ts.set_inputs(val=7)
+        assert ts.success is True
+        assert ts.errors == {}
+        assert ts.get_output("checked") == "ok 7"
+        assert ts.get_export("tripled") == 21
+
+
+@pytest.mark.asyncio
+async def test_async_set_inputs_repeats_within_one_session():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def squared():
+            return f"{input.x() ** 2}"
+
+    async with test_server_async(server) as ts:
+        for i in range(5):
+            await ts.set_inputs(x=i)
+            assert ts.get_output("squared") == str(i**2)
