@@ -39,6 +39,12 @@ T = TypeVar("T")
 VALUE_FIELDS = ("success", "error", "traceback", "inputs", "outputs", "exports")
 """The fields of `TestServerValues`, and the keys of `dict(session)`."""
 
+DEFAULT_OUTPUT_WIDTH = 960
+"""Stand-in for the width a browser would report, so sized outputs can render."""
+
+DEFAULT_OUTPUT_HEIGHT = 600
+"""Stand-in for the height a browser would report, so sized outputs can render."""
+
 ValueKind = Literal["input", "output", "export"]
 ValueStatus = Literal["ok", "error", "silent", "missing"]
 
@@ -57,6 +63,11 @@ class TestServerValue:
     ```python
     assert ts.get_output("name") == "foo"   # same as `.value == "foo"`
     ```
+
+    Unless `status` is `"ok"` there is no value, and the comparison is `False`
+    against everything -- including `None`, so that an output which never
+    rendered, or an id with a typo in it, cannot quietly satisfy `== None`. The
+    `repr` names the status, so a failed assertion says which it was.
 
     Comparing against another `TestServerValue` compares every field instead.
     Because equality is against arbitrary values, instances are not hashable.
@@ -106,6 +117,11 @@ class TestServerValue:
     def __eq__(self, other: object) -> bool:
         if isinstance(other, TestServerValue):
             return dataclasses.astuple(self) == dataclasses.astuple(other)
+        # Only a value that exists can equal anything. `value` is `None` for every
+        # other status, so without this an output that never rendered -- or an id
+        # with a typo in it -- would quietly satisfy `== None`.
+        if self.status != "ok":
+            return False
         return self.value == other
 
     def __repr__(self) -> str:
@@ -365,9 +381,20 @@ class AsyncTestServerSession:
                 unhide_flush_done.set()
                 return
 
-            unhide_data: Dict[str, Any] = {}
+            unhide_data: Dict[str, Any] = {
+                ".clientdata_pixelratio": 1,
+            }
             for out_name in self._session.output._outputs.keys():
                 unhide_data[f".clientdata_output_{out_name}_hidden"] = False
+                # A browser reports each output's size; without one, size-aware
+                # renderers such as `render.plot` would raise a silent exception
+                # and produce nothing. Non-sizing renderers ignore these.
+                unhide_data[f".clientdata_output_{out_name}_width"] = (
+                    DEFAULT_OUTPUT_WIDTH
+                )
+                unhide_data[f".clientdata_output_{out_name}_height"] = (
+                    DEFAULT_OUTPUT_HEIGHT
+                )
 
             if unhide_data:
 

@@ -595,6 +595,34 @@ def test_test_server_value_compares_against_the_raw_value():
             hash(got)
 
 
+def test_test_server_value_without_a_value_never_compares_equal():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def needs_input():
+            return f"{input.n()}"
+
+    with test_server(server) as ts:
+        silent = ts.get_output("needs_input")
+        missing = ts.get_output("typo")
+        assert silent.status == "silent"
+        assert missing.status == "missing"
+
+        # `value` is `None` for both, but neither may satisfy `== None`: an
+        # output that never rendered, and an id with a typo in it, would
+        # otherwise quietly pass an assertion meant to check a real value.
+        for item in (silent, missing):
+            assert not item == None  # noqa: E711
+            assert item != None  # noqa: E711
+            assert item not in [None]
+            assert not item == ""
+            assert not item == 0
+
+        # An output that really did render `None` still compares equal to it.
+        ts.set_inputs(n=None)
+        assert ts.get_output("needs_input").status == "ok"
+        assert ts.get_output("needs_input") == "None"
+
+
 def test_test_server_value_statuses():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
@@ -658,7 +686,7 @@ def test_test_server_exposes_inputs():
         assert sorted(ts.to_values().inputs) == ["a", "b"]
 
 
-def test_test_server_plot_is_silent_until_the_client_size_is_known():
+def test_test_server_plot_renders_without_a_browser():
     plt = pytest.importorskip("matplotlib.pyplot")
 
     def server(input: Inputs, output: Outputs, session: Session):
@@ -669,18 +697,22 @@ def test_test_server_plot_is_silent_until_the_client_size_is_known():
             return fig
 
     with test_server(server) as ts:
-        # No browser means no width/height, so the plot renders nothing -- and
-        # this is reported as "silent" rather than looking like a success.
-        assert ts.get_output("a_plot").status == "silent"
-        assert ts.success is True
-
-        ts.set_inputs(
-            {
-                ".clientdata_output_a_plot_width": 600,
-                ".clientdata_output_a_plot_height": 400,
-                ".clientdata_pixelratio": 1,
-            }
-        )
+        # `render.plot` needs the size a browser would report. The session sends
+        # stand-in values at startup, so a plot renders rather than going silent.
         rendered = ts.get_output("a_plot")
         assert rendered.status == "ok"
         assert sorted(rendered.value) == ["coordmap", "height", "src", "width"]
+        # `width`/`height` here are the CSS sizes the client applies; the pixel
+        # size the stand-ins drove is baked into the rendered `src` image.
+        assert rendered.value["src"].startswith("data:image/png;base64,")
+
+        # A test that cares about the size can still set it, which re-renders.
+        ts.set_inputs(
+            {
+                ".clientdata_output_a_plot_width": 300,
+                ".clientdata_output_a_plot_height": 200,
+            }
+        )
+        resized = ts.get_output("a_plot")
+        assert resized.status == "ok"
+        assert resized.value["src"] != rendered.value["src"]
