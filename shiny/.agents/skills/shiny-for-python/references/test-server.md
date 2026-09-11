@@ -163,8 +163,6 @@ and `await ts.set_inputs(...)` / `await ts.flush()`.
   `test_server_async()`.
 - Output is `"silent"` → an input it reads was never set, or a `req()` failed.
   Set the input, then read again.
-- Plot output is `"silent"` and you disabled client data → pass
-  `client_data=` with `output_width`/`output_height`.
 - `KeyError` for a module's output → the id is namespaced
   (`"counter-label"`), or use `make_scope("counter")`.
 - Tests interfere with each other → the fixture is module- or session-scoped;
