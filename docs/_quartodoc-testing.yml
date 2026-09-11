@@ -112,6 +112,8 @@ quartodoc:
         - testserver.test_server_async
         - testserver.TestServerSession
         - testserver.AsyncTestServerSession
+        - testserver.TestServerScope
+        - testserver.AsyncTestServerScope
         - testserver.TestServerValue
         - testserver.TestServerValues
         - testserver.DEFAULT_CLIENT_DATA

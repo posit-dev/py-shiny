@@ -14,7 +14,9 @@ import pytest
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny.testmode import export_test_values
 from shiny.testserver import (
+    AsyncTestServerScope,
     AsyncTestServerSession,
+    TestServerScope,
     TestServerSession,
     TestServerValue,
     TestServerValues,
@@ -1039,6 +1041,142 @@ def counter(input, output, session):
 
 counter("counter")
 """
+
+
+def test_test_server_make_scope_reads_a_module_with_bare_ids():
+    @module.server
+    def counter_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return f"n={input.n()}"
+
+        export_test_values(doubled=lambda: input.n() * 2)
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        counter_server("counter")
+
+        @render.text
+        def app_level():
+            return "outside the module"
+
+    with test_server(app_server) as ts:
+        counter = ts.make_scope("counter")
+        assert isinstance(counter, TestServerScope)
+        assert counter.ns == "counter"
+        assert counter.root_scope() is ts
+
+        # Bare ids in, bare ids out -- just like the module's own server code.
+        assert counter.set_inputs(n=7) is counter
+        assert counter.get_input("n") == 7
+        assert counter.get_output("label") == "n=7"
+        assert counter.get_export("doubled") == 14
+
+        # The session still sees the namespaced form.
+        assert ts.get_output("counter-label") == "n=7"
+
+        # `to_values()` is scoped, and re-keyed by the bare id.
+        values = counter.to_values()
+        assert set(values.outputs) == {"label"}
+        assert values.outputs["label"].name == "label"
+        assert set(values.exports) == {"doubled"}
+        assert "n" in values.inputs
+        assert dict(counter)["outputs"]["label"]["value"] == "n=7"
+
+        # The app-level output is outside the scope entirely.
+        assert ts.get_output("app_level") == "outside the module"
+        with pytest.raises(KeyError, match="No output named 'app_level'"):
+            counter.get_output("app_level")
+
+
+def test_test_server_scope_is_ok_covers_only_its_namespace():
+    @module.server
+    def boom_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            raise ValueError("kaboom")
+
+    @module.server
+    def fine_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return "fine"
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        boom_server("bad")
+        fine_server("good")
+
+    with test_server(app_server) as ts:
+        assert ts.is_ok is False
+
+        assert ts.make_scope("bad").is_ok is False
+        assert "label" in str(ts.make_scope("bad").error)
+
+        # A sibling module's failure is not this module's problem.
+        assert ts.make_scope("good").is_ok is True
+        assert ts.make_scope("good").error is None
+
+
+def test_test_server_scope_nests():
+    @module.server
+    def inner_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return f"n={input.n()}"
+
+    @module.server
+    def outer_server(input: Inputs, output: Outputs, session: Session):
+        inner_server("inner")
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        outer_server("outer")
+
+    with test_server(app_server) as ts:
+        inner = ts.make_scope("outer").make_scope("inner")
+        assert inner.ns == "outer-inner"
+        inner.set_inputs(n=3)
+        assert inner.get_output("label") == "n=3"
+        assert ts.get_output("outer-inner-label") == "n=3"
+
+        # An intermediate scope sees the nested id, minus its own prefix.
+        assert ts.make_scope("outer").get_output("inner-label") == "n=3"
+
+
+def test_test_server_scope_rejects_session_wide_ids():
+    @module.server
+    def counter_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return f"n={input.n()}"
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        counter_server("counter")
+
+    with test_server(app_server) as ts:
+        # Client data belongs to the session, not to any one module, so
+        # namespacing it would quietly produce an id nothing reads.
+        with pytest.raises(ValueError, match="is session-wide"):
+            ts.make_scope("counter").set_inputs(**{".clientdata_pixelratio": 2})
+
+
+@pytest.mark.asyncio
+async def test_test_server_async_make_scope():
+    @module.server
+    def counter_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return f"n={input.n()}"
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        counter_server("counter")
+
+    async with test_server_async(app_server) as ts:
+        counter = ts.make_scope("counter")
+        assert isinstance(counter, AsyncTestServerScope)
+        assert counter.root_scope() is ts
+
+        assert await counter.set_inputs(n=7) is counter
+        assert counter.get_output("label") == "n=7"
+        assert ts.get_output("counter-label") == "n=7"
 
 
 def test_test_server_reaches_an_express_module(tmp_path: Path):

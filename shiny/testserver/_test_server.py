@@ -29,6 +29,7 @@ from typing import (
 from .._app import App
 from .._connection import MockConnection
 from .._docstring import no_example
+from .._namespaces import ResolvedId, Root
 from ..express import is_express_app
 from ..express._run import wrap_express_app
 from ..session._session import AppSession
@@ -298,6 +299,32 @@ class TestServerValues:
         return field
 
 
+def _failures(
+    outputs: Dict[str, TestServerValue], exports: Dict[str, TestServerValue]
+) -> Dict[str, TestServerValue]:
+    """Every output and export that errored, keyed by name."""
+    return {
+        name: item
+        for name, item in (*outputs.items(), *exports.items())
+        if item.status == "error"
+    }
+
+
+def _error_summary(
+    outputs: Dict[str, TestServerValue],
+    exports: Dict[str, TestServerValue],
+    fatal_errors: List[Tuple[Exception, str]],
+) -> Optional[str]:
+    """A summary of the first error, or `None` when nothing errored."""
+    if fatal_errors:
+        first_exc, _ = fatal_errors[0]
+        return f"Session fatal error: {type(first_exc).__name__}: {first_exc}"
+    failures = _failures(outputs, exports)
+    if failures:
+        return f"{len(failures)} error(s): {', '.join(sorted(failures))}"
+    return None
+
+
 def _snapshot_error(value: Any) -> Optional[str]:
     """
     Return the error a test-snapshot value carries, or `None` if it is a value.
@@ -374,6 +401,9 @@ class AsyncTestServerSession:
         self._target_app = app
         self._client_data = dict(client_data or {})
         self._timeout_secs = timeout_secs
+
+        self.ns: ResolvedId = Root
+        """The namespace these ids are read in; `Root` (`""`) for a session."""
 
         self._app_obj: Optional[App] = None
         self._session: Optional[AppSession] = None
@@ -720,32 +750,44 @@ class AsyncTestServerSession:
         """
         await self._refresh_snapshots()
 
-    def _failures(self) -> Dict[str, TestServerValue]:
-        """Every output and export that errored, keyed by name."""
-        return {
-            name: item
-            for name, item in (
-                *self._current_outputs.items(),
-                *self._current_exports.items(),
-            )
-            if item.status == "error"
-        }
-
     @property
     def is_ok(self) -> bool:
         """`True` when nothing errored and no fatal error occurred."""
-        return not self._failures() and not self._fatal_errors
+        return (
+            not _failures(self._current_outputs, self._current_exports)
+            and not self._fatal_errors
+        )
 
     @property
     def error(self) -> Optional[str]:
         """A summary of the first error, or `None` when `is_ok` is `True`."""
-        if self._fatal_errors:
-            first_exc, _ = self._fatal_errors[0]
-            return f"Session fatal error: {type(first_exc).__name__}: {first_exc}"
-        failures = self._failures()
-        if failures:
-            return f"{len(failures)} error(s): {', '.join(sorted(failures))}"
-        return None
+        return _error_summary(
+            self._current_outputs, self._current_exports, self._fatal_errors
+        )
+
+    def make_scope(self, id: str) -> AsyncTestServerScope:
+        """
+        Return a view of this session namespaced to a module instance.
+
+        Mirrors `shiny.Session.make_scope`: inside a module the app's server code
+        uses bare ids, and so does the returned view, while the session underneath
+        keeps the namespaced ones.
+
+        Parameters
+        ----------
+        id
+            The id the module instance was given, as in `counter_server("counter")`.
+
+        Returns
+        -------
+        :
+            An `AsyncTestServerScope` reading and writing the same live session.
+
+        See Also
+        --------
+        * :class:`~shiny.testserver.AsyncTestServerScope`
+        """
+        return AsyncTestServerScope(self, self.ns(id))
 
     def get_input(self, name: str) -> TestServerValue:
         """
@@ -938,6 +980,9 @@ class TestServerSession:
         self._timeout_secs = timeout_secs
         self._is_running = False
 
+        self.ns: ResolvedId = Root
+        """The namespace these ids are read in; `Root` (`""`) for a session."""
+
     def _run(self, coro: Coroutine[Any, Any, T]) -> T:
         if self._loop is None:
             coro.close()
@@ -1007,6 +1052,30 @@ class TestServerSession:
     def error(self) -> Optional[str]:
         """A summary of the first error, or `None` when `is_ok` is `True`."""
         return self._require_running().error
+
+    def make_scope(self, id: str) -> TestServerScope:
+        """
+        Return a view of this session namespaced to a module instance.
+
+        Mirrors `shiny.Session.make_scope`: inside a module the app's server code
+        uses bare ids, and so does the returned view, while the session underneath
+        keeps the namespaced ones.
+
+        Parameters
+        ----------
+        id
+            The id the module instance was given, as in `counter_server("counter")`.
+
+        Returns
+        -------
+        :
+            A `TestServerScope` reading and writing the same live session.
+
+        See Also
+        --------
+        * :class:`~shiny.testserver.TestServerScope`
+        """
+        return TestServerScope(self, self.ns(id))
 
     def get_input(self, name: str) -> TestServerValue:
         """
@@ -1170,6 +1239,289 @@ class TestServerSession:
             self._run(self._async_session._close())
         finally:
             self._close_loop()
+
+
+class _TestServerScopeBase:
+    """
+    The half of a scope that only reads, shared by the sync and async flavors.
+
+    A scope holds no state of its own beyond `ns`: every read goes to the live
+    session, so a scope taken early keeps working across later `set_inputs`.
+    """
+
+    __test__ = False
+
+    def __init__(self, ns: ResolvedId) -> None:
+        self.ns = ns
+        """The namespace these ids are read in, such as `"counter"`."""
+
+    @property
+    def _session(self) -> AsyncTestServerSession:
+        raise NotImplementedError  # pragma: no cover
+
+    def _resolve(self, name: str) -> str:
+        """Namespace one id the way the module's own server code would."""
+        if name.startswith("."):
+            # `.clientdata_*` is session-wide in Shiny -- a `SessionProxy` reads
+            # it from the root -- so namespacing it here would quietly produce an
+            # id nothing reads.
+            raise ValueError(
+                f"{name!r} is session-wide, so it cannot be set on the"
+                f" {str(self.ns)!r} scope. Set it on the session instead, via"
+                " `scope.root_scope()`."
+            )
+        return str(self.ns(name))
+
+    def _in_scope(
+        self, items: Dict[str, TestServerValue]
+    ) -> Dict[str, TestServerValue]:
+        """Keep only this namespace's items, re-keyed by the bare id."""
+        prefix = f"{str(self.ns)}{ResolvedId._sep}"
+        scoped: Dict[str, TestServerValue] = {}
+        for name, item in items.items():
+            if name.startswith(prefix):
+                bare = name[len(prefix) :]
+                scoped[bare] = dataclasses.replace(item, name=bare)
+        return scoped
+
+    @property
+    def _scoped_outputs(self) -> Dict[str, TestServerValue]:
+        return self._in_scope(self._session._current_outputs)
+
+    @property
+    def _scoped_exports(self) -> Dict[str, TestServerValue]:
+        return self._in_scope(self._session._current_exports)
+
+    @property
+    def is_ok(self) -> bool:
+        """
+        `True` when nothing in this namespace errored.
+
+        A *fatal* session error counts against every scope: it is not
+        attributable to one module, and a scope reporting `True` while the app
+        failed to start would be worse than noise.
+        """
+        return (
+            not _failures(self._scoped_outputs, self._scoped_exports)
+            and not self._session._fatal_errors
+        )
+
+    @property
+    def error(self) -> Optional[str]:
+        """A summary of the first error in this namespace, or `None`."""
+        return _error_summary(
+            self._scoped_outputs, self._scoped_exports, self._session._fatal_errors
+        )
+
+    def get_input(self, name: str) -> TestServerValue:
+        """
+        Return one input value, named as the module's own code names it.
+
+        Raises
+        ------
+        KeyError
+            If the session has not received that input in this namespace.
+        """
+        return _require_item(
+            self._in_scope(self._session._current_inputs), name, "input"
+        )
+
+    def get_output(self, name: str) -> TestServerValue:
+        """
+        Return one output value, named as the module's own code names it.
+
+        Raises
+        ------
+        KeyError
+            If this namespace has no such output.
+        """
+        return _require_item(self._scoped_outputs, name, "output")
+
+    def get_export(self, name: str) -> TestServerValue:
+        """
+        Return one exported test value, named as the module exported it.
+
+        Raises
+        ------
+        KeyError
+            If this namespace exported no such name.
+        """
+        return _require_item(self._scoped_exports, name, "export")
+
+    def to_values(self) -> TestServerValues:
+        """
+        Capture this namespace's current state.
+
+        Returns
+        -------
+        :
+            A `TestServerValues` holding only this namespace's items, keyed by
+            bare id -- the same shape a test of the module server on its own
+            would produce.
+        """
+        return TestServerValues(
+            is_ok=self.is_ok,
+            error=self.error,
+            traceback=(
+                self._session._fatal_errors[0][1]
+                if self._session._fatal_errors
+                else None
+            ),
+            inputs=self._in_scope(self._session._current_inputs),
+            outputs=self._scoped_outputs,
+            exports=self._scoped_exports,
+        )
+
+    def keys(self) -> Tuple[str, ...]:
+        """Return the keys `dict(scope)` produces. See `TestServerValues`."""
+        return VALUE_FIELDS
+
+    def __getitem__(self, key: str) -> Any:
+        """Return one `TestServerValues` field, so that `dict(scope)` works."""
+        return self.to_values()[key]
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(ns={str(self.ns)!r})"
+
+
+class AsyncTestServerScope(_TestServerScopeBase):
+    """
+    A namespaced view of an `AsyncTestServerSession`.
+
+    Construct one with `AsyncTestServerSession.make_scope` rather than directly.
+    It is the test-side counterpart of the `shiny.Session` proxy a module's
+    server function receives: ids go in and come out bare, and the session
+    underneath sees them namespaced.
+
+    ```python
+    async with test_server_async("app.py") as ts:
+        counter = ts.make_scope("counter")
+        await counter.set_inputs(n=7)
+        assert counter.get_output("label") == "n=7"
+
+        # The session still sees the namespaced ids.
+        assert ts.get_output("counter-label") == "n=7"
+    ```
+
+    See Also
+    --------
+    * :class:`~shiny.testserver.AsyncTestServerSession`
+    * :class:`~shiny.testserver.TestServerScope`
+    """
+
+    def __init__(self, session: AsyncTestServerSession, ns: ResolvedId) -> None:
+        super().__init__(ns)
+        self._root = session
+
+    @property
+    def _session(self) -> AsyncTestServerSession:
+        return self._root
+
+    def root_scope(self) -> AsyncTestServerSession:
+        """Return the session this scope is a view of."""
+        return self._root
+
+    def make_scope(self, id: str) -> AsyncTestServerScope:
+        """Return a view of a module nested inside this one."""
+        return AsyncTestServerScope(self._root, self.ns(id))
+
+    async def set_inputs(self, /, **kwargs: Any) -> AsyncTestServerScope:
+        """
+        Set input values in this namespace and wait for the reactive flush.
+
+        Parameters
+        ----------
+        **kwargs
+            Input values keyed by the bare id the module's own code uses.
+
+        Returns
+        -------
+        :
+            This scope, so calls can be chained.
+
+        Raises
+        ------
+        ValueError
+            If an id is session-wide (`.clientdata_*`), which no namespace owns.
+        """
+        await self._root.set_inputs(
+            **{self._resolve(name): value for name, value in kwargs.items()}
+        )
+        return self
+
+    async def flush(self) -> None:
+        """Re-read the session's values. See `AsyncTestServerSession.flush`."""
+        await self._root.flush()
+
+
+class TestServerScope(_TestServerScopeBase):
+    """
+    A namespaced view of a `TestServerSession`.
+
+    Construct one with `TestServerSession.make_scope` rather than directly. It is
+    the test-side counterpart of the `shiny.Session` proxy a module's server
+    function receives: ids go in and come out bare, and the session underneath
+    sees them namespaced.
+
+    ```python
+    with test_server("app.py") as ts:
+        counter = ts.make_scope("counter")
+        counter.set_inputs(n=7)
+        assert counter.get_output("label") == "n=7"
+
+        # The session still sees the namespaced ids.
+        assert ts.get_output("counter-label") == "n=7"
+    ```
+
+    See Also
+    --------
+    * :class:`~shiny.testserver.TestServerSession`
+    * :class:`~shiny.testserver.AsyncTestServerScope`
+    """
+
+    def __init__(self, session: TestServerSession, ns: ResolvedId) -> None:
+        super().__init__(ns)
+        self._root = session
+
+    @property
+    def _session(self) -> AsyncTestServerSession:
+        return self._root._require_running()
+
+    def root_scope(self) -> TestServerSession:
+        """Return the session this scope is a view of."""
+        return self._root
+
+    def make_scope(self, id: str) -> TestServerScope:
+        """Return a view of a module nested inside this one."""
+        return TestServerScope(self._root, self.ns(id))
+
+    def set_inputs(self, /, **kwargs: Any) -> TestServerScope:
+        """
+        Set input values in this namespace and wait for the reactive flush.
+
+        Parameters
+        ----------
+        **kwargs
+            Input values keyed by the bare id the module's own code uses.
+
+        Returns
+        -------
+        :
+            This scope, so calls can be chained.
+
+        Raises
+        ------
+        ValueError
+            If an id is session-wide (`.clientdata_*`), which no namespace owns.
+        """
+        self._root.set_inputs(
+            **{self._resolve(name): value for name, value in kwargs.items()}
+        )
+        return self
+
+    def flush(self) -> None:
+        """Re-read the session's values. See `TestServerSession.flush`."""
+        self._root.flush()
 
 
 def _load_app_from_file(target_path: Path) -> Optional[App]:
@@ -1398,18 +1750,27 @@ def test_server(
             assert ts.get_output("counter-label") == "n=7"
     ```
 
-    Express modules namespace their ids the same way, so an Express app holding
-    `counter("counter")` is reached with the very same ids:
+    Or take a scope and use the bare ids the module's own code uses, the way
+    `shiny.Session.make_scope` hands a module its namespaced session:
 
     ```python
-    def test_express_counter_module():
-        with test_server("express_app.py") as ts:
-            ts.set_inputs(**{"counter-n": 7})
-            assert ts.get_output("counter-label") == "n=7"
+    def test_counter_module_in_scope():
+        with test_server(app_server) as ts:
+            counter = ts.make_scope("counter")
+            counter.set_inputs(n=7)
+            assert counter.get_output("label") == "n=7"
+
+            # Scoped all the way down: only this module's items, keyed bare.
+            assert set(counter.to_values().outputs) == {"label"}
     ```
 
+    Express modules namespace their ids the same way, so an Express app holding
+    `counter("counter")` is reached with the very same ids, and by the same
+    scope.
+
     Nested modules compose their namespaces, so the id is every ancestor id
-    joined by `-`: `ts.get_output("outer-inner-label")`.
+    joined by `-` -- `ts.get_output("outer-inner-label")` -- or, as scopes,
+    `ts.make_scope("outer").make_scope("inner").get_output("label")`.
 
     A fixture keeps the `with` block out of every test body, and pytest handles
     the teardown. Leave it function-scoped -- the default -- because a session
