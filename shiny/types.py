@@ -41,7 +41,17 @@ T = TypeVar("T")
 
 # Sentinel value - indicates a missing value in a function call.
 class MISSING_TYPE:
-    pass
+    def __repr__(self) -> str:
+        return "DEPRECATED" if self is DEPRECATED else "MISSING"
+
+    # A sentinel is identified by identity, so copying must not mint a second
+    # one. `copy.deepcopy` (used by `dataclasses.asdict`/`astuple`) would
+    # otherwise produce a copy that stops comparing equal to `MISSING`.
+    def __copy__(self) -> MISSING_TYPE:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> MISSING_TYPE:
+        return self
 
 
 MISSING: MISSING_TYPE = MISSING_TYPE()
