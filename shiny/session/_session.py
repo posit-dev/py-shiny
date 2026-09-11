@@ -178,6 +178,16 @@ class OutBoundMessageQueues:
         is served over HTTP, and neither should carry a stack trace. Read
         in-process by `shiny.pytest.test_server`.
         """
+        self.test_silent: set[str] = set()
+        """
+        Outputs whose most recent render produced nothing (a `req()` failure), in
+        test mode only.
+
+        `test_values`/`test_errors` keep the *last* value an output computed, so
+        without this there is no way to tell that the latest render sent `None`
+        to the client and blanked the output. Cleared for an output as soon as it
+        computes a value or errors again.
+        """
 
     def reset(self) -> None:
         self.values.clear()
@@ -193,19 +203,23 @@ class OutBoundMessageQueues:
             self.test_values[id] = value
             self.test_errors.pop(id, None)
             self.test_tracebacks.pop(id, None)
+            self.test_silent.discard(id)
 
     def set_silent(self, id: str) -> None:
         """
         Record that computing `id`'s value was silently suppressed (e.g. via
-        `req()`), without touching the persistent test-mode record.
+        `req()`).
 
         Unlike `set_value(id, None)`, this leaves `test_values`/`test_errors`
         untouched, so the test-mode snapshot retains the output's last
         computed value or error (matching Shiny for R) instead of reporting
-        `None`.
+        `None`. The suppression itself is recorded in `test_silent`, which is
+        what tells a test that the latest render produced nothing.
         """
         self.values[id] = None
         self.errors.pop(id, None)
+        if self._record_test_values:
+            self.test_silent.add(id)
 
     def set_error(self, id: str, error: Any, traceback_text: str = "") -> None:
         self.errors[id] = error
@@ -216,6 +230,7 @@ class OutBoundMessageQueues:
             self.test_errors[id] = error
             self.test_tracebacks[id] = traceback_text
             self.test_values.pop(id, None)
+            self.test_silent.discard(id)
 
     def add_input_message(self, id: str, message: dict[str, Any]) -> None:
         self.input_messages.append({"id": id, "message": message})

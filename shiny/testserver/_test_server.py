@@ -73,7 +73,7 @@ _TIMEOUT_HINT = (
 """Appended to every timeout message; the knob is not obvious from the error."""
 
 ValueKind = Literal["input", "output", "export"]
-ValueStatus = Literal["ok", "error", "silent"]
+ValueStatus = Literal["ok", "error", "silent", "never-rendered"]
 
 
 @dataclass(frozen=True, eq=False)
@@ -109,9 +109,15 @@ class TestServerValue:
     status
         * `"ok"` — produced a value, available as `value`.
         * `"error"` — raised; see `error` and `traceback`.
-        * `"silent"` — never rendered, because a dependency was unavailable. An
-          output reading an input that has not been set is silent, and so is a
-          `render.plot` until the client's width and height are supplied.
+        * `"silent"` — the most recent render produced nothing, because a
+          `req()` failed (any `SilentException`). The browser blanks such an
+          output, so it has no `value` here either, even if an earlier render
+          produced one. An output reading an input that has not been set is
+          silent, and so is a `render.plot` until the client's width and height
+          are supplied.
+        * `"never-rendered"` — has not run at all yet, so it has produced
+          neither a value, nor an error, nor a silent render. An output that is
+          hidden (and so suspended) is never-rendered until it becomes visible.
 
         There is no status for "does not exist": a `TestServerValue` always
         describes something real, and asking for a name that is not there raises
@@ -186,10 +192,18 @@ class TestServerValue:
         # would let `!=` pass while hiding why.
         if self.status == "silent":
             raise ValueError(
+                f"{self.kind.capitalize()} {self.name!r} rendered nothing, so"
+                " there is no value to compare against: a `req()` failed, which"
+                " blanks the output. A dependency was unavailable: an input that"
+                " was never set, or a size the client never reported. Set what it"
+                " needs first, or check `.status`."
+            )
+        if self.status == "never-rendered":
+            raise ValueError(
                 f"{self.kind.capitalize()} {self.name!r} never rendered, so there"
-                " is no value to compare against. A dependency was unavailable:"
-                " an input that was never set, or a size the client never"
-                " reported. Set what it needs first, or check `.status`."
+                " is no value to compare against. It has not run at all -- a"
+                " hidden output stays suspended until it becomes visible. Check"
+                " `.status`."
             )
         if self.status == "error":
             raise ValueError(
@@ -662,13 +676,17 @@ class AsyncTestServerSession:
             for name, value in snapshot.get("input", {}).items()
         }
 
-        # `set_silent()` deliberately records nothing, so a registered output with
-        # no recorded value and no recorded error never rendered.
+        # The snapshot keeps each output's last computed value even when the
+        # latest render was silenced (Shiny for R parity), so `test_silent` --
+        # which only holds outputs whose latest render produced nothing -- is
+        # what distinguishes "blank now" from "never ran".
         raw_outputs: Dict[str, Any] = snapshot.get("output", {})
         self._current_outputs = {}
         for name in self._session.output._outputs.keys():
             error = _snapshot_error(raw_outputs.get(name))
-            if error is not None:
+            if name in queues.test_silent:
+                self._current_outputs[name] = TestServerValue(name, "output", "silent")
+            elif error is not None:
                 self._current_outputs[name] = TestServerValue(
                     name,
                     "output",
@@ -681,7 +699,9 @@ class AsyncTestServerSession:
                     name, "output", "ok", raw_outputs[name]
                 )
             else:
-                self._current_outputs[name] = TestServerValue(name, "output", "silent")
+                self._current_outputs[name] = TestServerValue(
+                    name, "output", "never-rendered"
+                )
 
         self._current_exports = {}
         for name, value in snapshot.get("export", {}).items():
@@ -863,8 +883,8 @@ class AsyncTestServerSession:
         Returns
         -------
         :
-            A `TestServerValue`, with `status` `"silent"` if the output never
-            rendered. It compares equal to the value itself, so
+            A `TestServerValue`, with `status` `"silent"` if the output's latest
+            render produced nothing. It compares equal to the value itself, so
             `session.get_output("txt") == "hi"` works.
 
         Raises
@@ -1166,8 +1186,8 @@ class TestServerSession:
         Returns
         -------
         :
-            A `TestServerValue`, with `status` `"silent"` if the output never
-            rendered. It compares equal to the value itself, so
+            A `TestServerValue`, with `status` `"silent"` if the output's latest
+            render produced nothing. It compares equal to the value itself, so
             `session.get_output("txt") == "hi"` works.
 
         Raises

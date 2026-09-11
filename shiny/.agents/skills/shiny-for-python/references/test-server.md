@@ -88,11 +88,16 @@ unwrapping. Each has `.status`, `.value`, `.error`, `.traceback`:
 |---|---|
 | `"ok"` | Rendered; `.value` is the JSON-round-tripped value the browser would receive |
 | `"error"` | The render function raised; see `.error` and `.traceback` |
-| `"silent"` | Never rendered — a dependency was unavailable (an unset input, or `req()` failed) |
+| `"silent"` | The latest render produced nothing, so the browser blanks it — a dependency was unavailable (an unset input, or `req()` failed) |
+| `"never-rendered"` | Has not run at all yet, so it has produced no value, error, or silent render |
 
 Comparing a non-`"ok"` value with `==` raises `ValueError` rather than
 returning `False`, so a broken output cannot pass a `!=` assertion by
 accident. Asking for an id that does not exist raises `KeyError`.
+
+`"silent"` describes the *latest* render: an output that rendered once and is
+then silenced by a failing `req()` reports `"silent"` with no value, matching
+the blank the browser shows rather than the stale value.
 
 `ts.get_export("name")` reads values registered with
 `shiny.testmode.export_test_values()` — internal reactives that have no output
@@ -163,6 +168,9 @@ and `await ts.set_inputs(...)` / `await ts.flush()`.
   `test_server_async()`.
 - Output is `"silent"` → an input it reads was never set, or a `req()` failed.
   Set the input, then read again.
+- Output is `"never-rendered"` → it has not run at all, usually because it is
+  hidden and so suspended. Make it visible (e.g. drop `output_hidden` from
+  `client_data=`).
 - `KeyError` for a module's output → the id is namespaced
   (`"counter-label"`), or use `make_scope("counter")`.
 - Tests interfere with each other → the fixture is module- or session-scoped;
