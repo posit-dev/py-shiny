@@ -1,3 +1,5 @@
+"""In-memory server testing (see `test_server`)."""
+
 from __future__ import annotations
 
 from ._test_server import (

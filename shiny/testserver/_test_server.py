@@ -39,6 +39,42 @@ T = TypeVar("T")
 
 @dataclass
 class TestServerResult(Mapping[str, Any]):
+    """
+    A point-in-time snapshot of a test session's outputs, exports, and errors.
+
+    Returned by `TestServerSession.to_result` and
+    `AsyncTestServerSession.to_result`. The values are copies, so a result stays
+    valid after the session it came from is closed.
+
+    Also usable as a read-only mapping keyed by attribute name, so
+    `result["outputs"]` and `result.outputs` are equivalent.
+
+    Attributes
+    ----------
+    success
+        `True` when the session produced no reactive errors and no fatal errors.
+    error
+        A summary of the first fatal error, or a count of reactive errors, or
+        `None` when `success` is `True`.
+    traceback
+        The formatted traceback of the first fatal error; `""` if there was none.
+    outputs
+        Rendered output values, keyed by output id.
+    errors
+        Errors keyed by the output id that raised them. Errors from values
+        registered with `shiny.testmode.export_test_values` are keyed
+        `"export:<name>"`, and a fatal session error is keyed `"__fatal__"`.
+    exports
+        Values registered with `shiny.testmode.export_test_values`, keyed by name.
+    elapsed_ms
+        Milliseconds elapsed between session start and this snapshot.
+
+    See Also
+    --------
+    * :func:`~shiny.pytest.test_server`
+    * :func:`~shiny.pytest.test_server_async`
+    """
+
     __test__ = False
 
     success: bool
@@ -76,6 +112,14 @@ class TestServerResult(Mapping[str, Any]):
         return default
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Return the result as a plain dictionary.
+
+        Returns
+        -------
+        :
+            A dictionary with one entry per attribute of this class.
+        """
         return {
             "success": self.success,
             "error": self.error,
@@ -102,6 +146,33 @@ def _error_result(
 
 
 class AsyncTestServerSession:
+    """
+    An in-memory Shiny session driven from async test code.
+
+    Construct one with `test_server_async` rather than directly. The session runs
+    the app's server function against a mock connection — no browser and no
+    network server — so inputs can be set and outputs asserted in process.
+
+    Use it as an async context manager to keep the session alive across several
+    user interactions:
+
+    ```python
+    async with test_server_async(server) as session:
+        await session.set_inputs(x=10)
+        assert session.outputs["doubled"] == "20"
+    ```
+
+    The session is started by `start` and torn down by `close`; entering and
+    exiting the context manager does both for you. Values registered with
+    `shiny.testmode.export_test_values` are available under `exports`.
+
+    See Also
+    --------
+    * :func:`~shiny.pytest.test_server_async`
+    * :class:`~shiny.pytest.TestServerSession`
+    * :class:`~shiny.pytest.TestServerResult`
+    """
+
     __test__ = False
 
     def __init__(
@@ -175,6 +246,29 @@ class AsyncTestServerSession:
                 self._old_app_server = None
 
     async def start(self) -> AsyncTestServerSession:
+        """
+        Load the app, start the session, and wait for the initial reactive flush.
+
+        Called automatically by `__aenter__`. On failure the partially started
+        session is cleaned up before the error propagates.
+
+        Returns
+        -------
+        :
+            This session, so the call can be chained.
+
+        Raises
+        ------
+        TimeoutError
+            If the session does not finish its initial flush within
+            `timeout_secs`.
+        FileNotFoundError
+            If the app was given as a path that does not exist.
+        ValueError
+            If none of `app`, `code`, or `file_path` was provided.
+        RuntimeError
+            If the target does not yield a `shiny.App` instance.
+        """
         try:
             return await self._start_impl()
         except Exception:
@@ -381,6 +475,29 @@ class AsyncTestServerSession:
     async def set_inputs(
         self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
     ) -> None:
+        """
+        Set input values and wait for the resulting reactive flush.
+
+        Simulates a user interaction: the values are sent to the session as an
+        input update, and the call returns once the reactive graph has settled and
+        `outputs`, `exports`, and `errors` have been refreshed.
+
+        Parameters
+        ----------
+        inputs
+            Input values keyed by input id. Useful for ids that are not valid
+            Python identifiers.
+        **kwargs
+            Input values given as keyword arguments. These take precedence over
+            same-named keys in `inputs`.
+
+        Raises
+        ------
+        TimeoutError
+            If the flush does not complete within `timeout_secs`.
+        RuntimeError
+            If the session is not running.
+        """
         all_inputs: Dict[str, Any] = {}
         if inputs:
             for k, v in inputs.items():
@@ -416,26 +533,38 @@ class AsyncTestServerSession:
         await self._refresh_snapshots()
 
     async def flush(self) -> None:
+        """
+        Re-read the session's outputs, exports, and errors.
+
+        `set_inputs` already does this, so an explicit call is only needed after
+        something outside the test changes reactive state (for example an effect
+        driven by a timer).
+        """
         await self._refresh_snapshots()
 
     @property
     def outputs(self) -> Dict[str, Any]:
+        """Rendered output values, keyed by output id."""
         return dict(self._current_outputs)
 
     @property
     def exports(self) -> Dict[str, Any]:
+        """Values registered with `shiny.testmode.export_test_values`, keyed by name."""
         return dict(self._current_exports)
 
     @property
     def errors(self) -> Dict[str, Any]:
+        """Errors keyed by the output id that raised them. See `TestServerResult`."""
         return dict(self._current_errors)
 
     @property
     def success(self) -> bool:
+        """`True` when no reactive errors and no fatal errors have occurred."""
         return len(self._current_errors) == 0 and len(self._fatal_errors) == 0
 
     @property
     def error(self) -> Optional[str]:
+        """A summary of the first error, or `None` when `success` is `True`."""
         if self._fatal_errors:
             first_exc, _ = self._fatal_errors[0]
             return f"Session fatal error: {type(first_exc).__name__}: {first_exc}"
@@ -445,15 +574,55 @@ class AsyncTestServerSession:
 
     @property
     def elapsed_ms(self) -> float:
+        """Milliseconds elapsed since the session started."""
         return (time.perf_counter() - self._start_time) * 1000.0
 
     def get_output(self, name: str, default: Any = None) -> Any:
+        """
+        Return one output value.
+
+        Parameters
+        ----------
+        name
+            An output id.
+        default
+            The value to return when `name` has no output.
+
+        Returns
+        -------
+        :
+            The rendered output value, or `default`.
+        """
         return self._current_outputs.get(name, default)
 
     def get_export(self, name: str, default: Any = None) -> Any:
+        """
+        Return one exported test value.
+
+        Parameters
+        ----------
+        name
+            A name passed to `shiny.testmode.export_test_values`.
+        default
+            The value to return when `name` was not exported.
+
+        Returns
+        -------
+        :
+            The exported value, or `default`.
+        """
         return self._current_exports.get(name, default)
 
     def to_result(self) -> TestServerResult:
+        """
+        Capture the session's current state.
+
+        Returns
+        -------
+        :
+            A `TestServerResult` snapshot that stays valid after the session is
+            closed.
+        """
         first_tb = self._fatal_errors[0][1] if self._fatal_errors else ""
         return TestServerResult(
             success=self.success,
@@ -466,6 +635,13 @@ class AsyncTestServerSession:
         )
 
     async def close(self) -> None:
+        """
+        Disconnect the session and undo everything `start` set up.
+
+        Restores `sys.path`, `sys.modules`, the `SHINY_TESTMODE` environment
+        variable, and the app object's test-mode state, and removes any temporary
+        directory created for `code=`. Called automatically by `__aexit__`.
+        """
         self._is_started = False
         await self._cleanup()
 
@@ -477,6 +653,46 @@ class AsyncTestServerSession:
 
 
 class TestServerSession(Mapping[str, Any]):
+    """
+    An in-memory Shiny session driven from ordinary (non-async) test code.
+
+    Construct one with `test_server` rather than directly. The session runs the
+    app's server function against a mock connection — no browser and no network
+    server — so inputs can be set and outputs asserted in process.
+
+    Use it as a context manager to keep the session alive across several user
+    interactions:
+
+    ```python
+    with test_server(server) as session:
+        session.set_inputs(x=10)
+        assert session.outputs["doubled"] == "20"
+    ```
+
+    Outside a context manager it runs once, lazily: the first access to
+    `outputs`, `success`, or any other result attribute starts the session,
+    captures a `TestServerResult`, and closes it again. That makes single-shot
+    assertions work without any setup:
+
+    ```python
+    res = test_server(server, inputs={"x": 10})
+    assert res.outputs["doubled"] == "20"
+    ```
+
+    For the same reason the session is also a read-only mapping over that result,
+    so `session["outputs"]` is equivalent to `session.outputs`.
+
+    This class drives its own event loop on the calling thread, so it cannot be
+    used from inside a running event loop — in an `async` test, use
+    `test_server_async` instead.
+
+    See Also
+    --------
+    * :func:`~shiny.pytest.test_server`
+    * :class:`~shiny.pytest.AsyncTestServerSession`
+    * :class:`~shiny.pytest.TestServerResult`
+    """
+
     __test__ = False
 
     def __init__(
@@ -507,6 +723,30 @@ class TestServerSession(Mapping[str, Any]):
         return self._loop.run_until_complete(coro)
 
     def start(self) -> TestServerSession:
+        """
+        Load the app, start the session, and wait for the initial reactive flush.
+
+        Called automatically by `__enter__` and, in single-shot mode, by the first
+        result attribute access. Starting an already-running session is a no-op.
+
+        Returns
+        -------
+        :
+            This session, so the call can be chained.
+
+        Raises
+        ------
+        RuntimeError
+            If called from inside a running event loop — use `test_server_async`
+            there — or if the target does not yield a `shiny.App` instance.
+        TimeoutError
+            If the session does not finish its initial flush within
+            `timeout_secs`.
+        FileNotFoundError
+            If the app was given as a path that does not exist.
+        ValueError
+            If none of `app`, `code`, or `file_path` was provided.
+        """
         if self._is_running:
             return self
         try:
@@ -533,11 +773,40 @@ class TestServerSession(Mapping[str, Any]):
     def set_inputs(
         self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
     ) -> None:
+        """
+        Set input values and wait for the resulting reactive flush.
+
+        Simulates a user interaction: the values are sent to the session as an
+        input update, and the call returns once the reactive graph has settled and
+        `outputs`, `exports`, and `errors` have been refreshed. Starts the session
+        first if it is not already running.
+
+        Parameters
+        ----------
+        inputs
+            Input values keyed by input id. Useful for ids that are not valid
+            Python identifiers.
+        **kwargs
+            Input values given as keyword arguments. These take precedence over
+            same-named keys in `inputs`.
+
+        Raises
+        ------
+        TimeoutError
+            If the flush does not complete within `timeout_secs`.
+        """
         if not self._is_running:
             self.start()
         self._run(self._async_session.set_inputs(inputs=inputs, **kwargs))
 
     def flush(self) -> None:
+        """
+        Re-read the session's outputs, exports, and errors.
+
+        `set_inputs` already does this, so an explicit call is only needed after
+        something outside the test changes reactive state (for example an effect
+        driven by a timer). Does nothing if the session is not running.
+        """
         if self._is_running:
             self._run(self._async_session.flush())
 
@@ -556,42 +825,96 @@ class TestServerSession(Mapping[str, Any]):
 
     @property
     def outputs(self) -> Dict[str, Any]:
+        """Rendered output values, keyed by output id."""
         return self._result().outputs
 
     @property
     def exports(self) -> Dict[str, Any]:
+        """Values registered with `shiny.testmode.export_test_values`, keyed by name."""
         return self._result().exports
 
     @property
     def errors(self) -> Dict[str, Any]:
+        """Errors keyed by the output id that raised them. See `TestServerResult`."""
         return self._result().errors
 
     @property
     def success(self) -> bool:
+        """`True` when no reactive errors and no fatal errors have occurred."""
         return self._result().success
 
     @property
     def error(self) -> Optional[str]:
+        """A summary of the first error, or `None` when `success` is `True`."""
         return self._result().error
 
     @property
     def traceback(self) -> str:
+        """The traceback of the first fatal error; `""` if there was none."""
         return self._result().traceback
 
     @property
     def elapsed_ms(self) -> float:
+        """Milliseconds elapsed since the session started."""
         return self._result().elapsed_ms
 
     def get_output(self, name: str, default: Any = None) -> Any:
+        """
+        Return one output value.
+
+        Parameters
+        ----------
+        name
+            An output id.
+        default
+            The value to return when `name` has no output.
+
+        Returns
+        -------
+        :
+            The rendered output value, or `default`.
+        """
         return self.outputs.get(name, default)
 
     def get_export(self, name: str, default: Any = None) -> Any:
+        """
+        Return one exported test value.
+
+        Parameters
+        ----------
+        name
+            A name passed to `shiny.testmode.export_test_values`.
+        default
+            The value to return when `name` was not exported.
+
+        Returns
+        -------
+        :
+            The exported value, or `default`.
+        """
         return self.exports.get(name, default)
 
     def to_result(self) -> TestServerResult:
+        """
+        Capture the session's current state.
+
+        Returns
+        -------
+        :
+            A `TestServerResult` snapshot that stays valid after the session is
+            closed.
+        """
         return self._result()
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Capture the session's current state as a plain dictionary.
+
+        Returns
+        -------
+        :
+            `to_result` converted with `TestServerResult.to_dict`.
+        """
         return self.to_result().to_dict()
 
     def __getitem__(self, key: str) -> Any:
@@ -631,6 +954,14 @@ class TestServerSession(Mapping[str, Any]):
         loop.close()
 
     def close(self) -> None:
+        """
+        Disconnect the session, undo everything `start` set up, and close the loop.
+
+        Restores `sys.path`, `sys.modules`, the `SHINY_TESTMODE` environment
+        variable, and the app object's test-mode state, and removes any temporary
+        directory created for `code=`. Called automatically by `__exit__`. Closing
+        a session that is not running is a no-op.
+        """
         if not self._is_running:
             return
         self._is_running = False
@@ -706,6 +1037,79 @@ def test_server(
     inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> TestServerSession:
+    """
+    Run a Shiny server function, Express app, or `shiny.App` in memory for testing.
+
+    The Python counterpart to R Shiny's `testServer()`. The app's server function
+    runs against a mock connection, so there is no browser and no network server:
+    set inputs, let the reactive graph settle, and assert on outputs — all in
+    process, in an ordinary (non-async) test.
+
+    Exactly one of `app`, `code`, or `file_path` identifies what to run.
+
+    There are three ways to use the return value:
+
+    ```python
+    # 1. As a context manager, for several sequential interactions.
+    with test_server(server) as session:
+        session.set_inputs(x=10)
+        assert session.outputs["doubled"] == "20"
+        session.set_inputs(x=25)
+        assert session.outputs["doubled"] == "50"
+
+
+    # 2. With a callback, in the style of R's `testServer()`.
+    def check(session):
+        session.set_inputs(x=10)
+        assert session.outputs["doubled"] == "20"
+
+
+    test_server(server, check)
+
+    # 3. Single-shot, for one set of inputs. The session runs lazily on the
+    #    first attribute access and closes itself again.
+    res = test_server(server, inputs={"x": 10})
+    assert res.outputs["doubled"] == "20"
+    ```
+
+    In an `async` test, use `test_server_async` instead — this function drives its
+    own event loop and cannot run inside a loop that is already running.
+
+    Parameters
+    ----------
+    app
+        What to test: a server function, a `shiny.App` instance, or a path to an
+        app file (Core or Express). A server function is wrapped in an app with an
+        empty UI.
+    fn
+        A callback to run against the started session. When given, the session is
+        started, passed to `fn`, and closed before this function returns.
+    code
+        Shiny Express or Core source code to run, as a string. Written to a
+        temporary `app.py` that is removed when the session closes.
+    file_path
+        A path to an app file to run. Equivalent to passing the path as `app`.
+    inputs
+        Input values to send with the session's `init` message, before the first
+        flush.
+    timeout_secs
+        How long to wait for any single reactive flush, including the initial one,
+        before raising `TimeoutError`.
+
+    Returns
+    -------
+    :
+        A `TestServerSession`. It has not been started yet unless `fn` was given,
+        in which case it has already been started and closed and holds the final
+        result.
+
+    See Also
+    --------
+    * :func:`~shiny.pytest.test_server_async`
+    * :class:`~shiny.pytest.TestServerSession`
+    * :class:`~shiny.pytest.TestServerResult`
+    * :func:`~shiny.testmode.export_test_values`
+    """
     session = TestServerSession(
         app=app,
         code=code,
@@ -752,6 +1156,60 @@ def test_server_async(
     inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> Union[AsyncTestServerSession, Coroutine[Any, Any, AsyncTestServerSession]]:
+    """
+    The `async` counterpart to `test_server`, for use in `async` tests.
+
+    Behaves like `test_server` but yields an `AsyncTestServerSession`, whose
+    `set_inputs` must be awaited. Use this whenever the test itself is `async`
+    (for example under `@pytest.mark.asyncio`) — the synchronous `test_server`
+    drives its own event loop and will raise if one is already running.
+
+    Exactly one of `app`, `code`, or `file_path` identifies what to run.
+
+    ```python
+    @pytest.mark.asyncio
+    async def test_doubled():
+        async with test_server_async(server) as session:
+            await session.set_inputs(x=10)
+            assert session.outputs["doubled"] == "20"
+    ```
+
+    Parameters
+    ----------
+    app
+        What to test: a server function, a `shiny.App` instance, or a path to an
+        app file (Core or Express). A server function is wrapped in an app with an
+        empty UI.
+    fn
+        A callback to run against the started session; it may be a coroutine
+        function. When given, this function returns an awaitable that starts the
+        session, runs `fn`, and closes the session.
+    code
+        Shiny Express or Core source code to run, as a string. Written to a
+        temporary `app.py` that is removed when the session closes.
+    file_path
+        A path to an app file to run. Equivalent to passing the path as `app`.
+    inputs
+        Input values to send with the session's `init` message, before the first
+        flush.
+    timeout_secs
+        How long to wait for any single reactive flush, including the initial one,
+        before raising `TimeoutError`.
+
+    Returns
+    -------
+    :
+        An unstarted `AsyncTestServerSession`, to be used with `async with`. If
+        `fn` was given, a coroutine that runs `fn` against the session and returns
+        it.
+
+    See Also
+    --------
+    * :func:`~shiny.pytest.test_server`
+    * :class:`~shiny.pytest.AsyncTestServerSession`
+    * :class:`~shiny.pytest.TestServerResult`
+    * :func:`~shiny.testmode.export_test_values`
+    """
     session = AsyncTestServerSession(
         app=app,
         code=code,
