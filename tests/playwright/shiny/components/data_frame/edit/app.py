@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pkgutil
+from typing import Any
 
 # pyright: reportUnknownMemberType = false
 # pyright: reportMissingTypeStubs = false
@@ -267,9 +268,8 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
     from shinywidgets import render_widget
 
     # shinywidgets does not statically know plotly's Figure is renderable
-    # pyrefly: ignore[bad-argument-type]
     @render_widget
-    def country_detail_pop():  # pyright: ignore[reportUnknownParameterType]
+    def country_detail_pop() -> Any:  # pyright: ignore[reportUnknownParameterType]
         import plotly.express as px
 
         # Create the figure explicitly

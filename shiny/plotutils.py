@@ -310,12 +310,11 @@ def near_points(
     if all_rows:
         # Add selected_ column if needed
         new_df["selected_"] = False
-        new_df.iloc[  # pyright: ignore[reportArgumentType,reportCallIssue]
-            keep_idx,
-            new_df.columns.get_loc(  # pyright: ignore[reportUnknownMemberType]
-                "selected_"
-            ),
-        ] = True
+        selected_row_idxs = [int(idx) for idx in keep_idx]
+        selected_col_idxs = [
+            idx for idx, name in enumerate(new_df.columns) if name == "selected_"
+        ]
+        new_df.iloc[selected_row_idxs, selected_col_idxs] = True
     else:
         new_df = new_df.iloc[keep_idx]
 
@@ -390,8 +389,12 @@ def map_linear(
     clip: bool = True,
 ) -> pd.Series[float]:
     factor = (range_max - range_min) / (domain_max - domain_min)
-    val: pd.Series[float] = x - domain_min
-    newval: pd.Series[float] = (val * factor) + range_min
+    val = cast(  # pyright: ignore[reportUnnecessaryCast]
+        "pd.Series[float]", x - domain_min
+    )
+    newval = cast(  # pyright: ignore[reportUnnecessaryCast]
+        "pd.Series[float]", (val * factor) + range_min
+    )
 
     if clip:
         maxval = max(range_max, range_min)
