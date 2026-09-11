@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `shiny docs` CLI command to inspect signatures, types, parameters, and docstrings for functions, classes, Playwright controllers, and methods with AST parsing, JSON output mode, and shell tab completion.
+
 * Added `session.allow_reconnect()`, the Python counterpart to Shiny for R's `session$allowReconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
 
 * Added `ui.page_html()`, for apps whose UI is a complete HTML document they own (e.g. the `index.html` a JS bundler emits) rather than one built from `ui.page_*()` components. It takes the document as a string or a `Path`, plus optional `extra_deps=`. Pass the result as `App(ui=)`, or return it from a UI function (`App(ui=lambda request: ...)`, which is what bookmarking requires): the document is served as-is, with Shiny's own HTML dependencies -- plus any in `extra_deps=` -- inserted at `<meta name="shiny-dependency-placeholder" content="">` (or a custom `deps_replace_pattern=`), and their files served by the app. In Express, use `ui.page_opts(html=)`, which routes the whole app through `ui.page_html()`: top-level UI markup is dropped (the document already is the page) but its HTML dependencies are kept. This is the Python counterpart to Shiny for R's `shinyApp(ui = htmlTemplate("index.html", document_ = TRUE))` with `attachDependencies()`. (#2462)

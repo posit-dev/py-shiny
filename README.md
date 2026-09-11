@@ -56,7 +56,57 @@ Run this from your own project rather than a clone of this repository: [`library
 
 To see what's bundled without installing anything, run `shiny skills list`.
 
+### CLI Documentation Tool
+
+Look up Shiny documentation and function signatures directly from your terminal with `shiny docs`:
+
+```sh
+shiny docs ui.value_box
+```
+
+<details>
+<summary><b>Examples & Features</b></summary>
+
+#### Inspect a component or function
+`shiny.` is implied, so you can write `ui.value_box` directly:
+```sh
+shiny docs ui.value_box
+```
+
+#### Inspect a test controller or method
+```sh
+shiny docs playwright.controller.Accordion.expect_height
+```
+
+#### Look up multiple items at once
+If any item has an error, the error is shown first before the valid documentation:
+```sh
+shiny docs ui.card non_existent_name ui.value_box
+```
+
+#### Typo & "Did you mean" suggestions
+If you mistype a name or omit the module path, `shiny docs` suggests close matches:
+```sh
+shiny docs ui.value_bx
+# Error: Could not find documentation for 'ui.value_bx'. Did you mean 'ui.value_box'?
+```
+
+#### JSON output
+Get machine-readable documentation:
+```sh
+shiny docs --json ui.card
+```
+
+#### Autocomplete symbol names
+```sh
+shiny docs --complete playwright.controller.Accordion.expect
+```
+
+</details>
+
+
 ## Development
+
 
 * Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/
 * API documentation for the `main` branch:
