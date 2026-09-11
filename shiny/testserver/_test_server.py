@@ -23,6 +23,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    get_args,
 )
 
 from .._app import App
@@ -63,7 +64,7 @@ produces nothing, and `session.clientdata.url_pathname()` never resolves.
 """
 
 ValueKind = Literal["input", "output", "export"]
-ValueStatus = Literal["ok", "error", "silent", "missing"]
+ValueStatus = Literal["ok", "error", "silent"]
 
 
 @dataclass(frozen=True, eq=False)
@@ -83,8 +84,8 @@ class TestServerValue:
 
     Unless `status` is `"ok"` there is no value, and the comparison is `False`
     against everything -- including `None`, so that an output which never
-    rendered, or an id with a typo in it, cannot quietly satisfy `== None`. The
-    `repr` names the status, so a failed assertion says which it was.
+    rendered cannot quietly satisfy `== None`. The `repr` names the status, so a
+    failed assertion says which it was.
 
     Comparing against another `TestServerValue` compares every field instead.
     Because equality is against arbitrary values, instances are not hashable.
@@ -101,7 +102,10 @@ class TestServerValue:
         * `"silent"` — never rendered, because a dependency was unavailable. An
           output reading an input that has not been set is silent, and so is a
           `render.plot` until the client's width and height are supplied.
-        * `"missing"` — no such input, output, or export.
+
+        There is no status for "does not exist": a `TestServerValue` always
+        describes something real, and asking for a name that is not there raises
+        `KeyError` instead.
     value
         The value, JSON round-tripped as it would be sent to the browser, so its
         shape depends on the renderer. `None` unless `status` is `"ok"`.
@@ -121,10 +125,29 @@ class TestServerValue:
 
     name: str
     kind: ValueKind
-    status: ValueStatus = "missing"
+    status: ValueStatus
     value: Any = None
     error: Optional[str] = None
     traceback: str = ""
+
+    def __post_init__(self) -> None:
+        # Frozen, so an instance that starts out incoherent stays that way. The
+        # states below cannot arise from a real session, and silently tolerating
+        # them would mean `error` and `status` could disagree about what happened.
+        if self.status not in get_args(ValueStatus):
+            raise ValueError(
+                f"`status` must be one of {get_args(ValueStatus)}; got"
+                f" {self.status!r}."
+            )
+        if self.status == "error" and self.error is None:
+            raise ValueError(
+                "A `TestServerValue` with status 'error' needs an `error`."
+            )
+        if self.status != "error" and self.error is not None:
+            raise ValueError(
+                f"Only a `TestServerValue` with status 'error' may carry an"
+                f" `error`; got status {self.status!r}."
+            )
 
     @property
     def success(self) -> bool:
@@ -220,6 +243,22 @@ def _snapshot_error(value: Any) -> Optional[str]:
         if marker in value:
             return str(cast(Dict[str, Any], value)[marker])
     return None
+
+
+def _require_item(
+    items: Dict[str, TestServerValue], name: str, kind: ValueKind
+) -> TestServerValue:
+    """
+    Return `name`'s value, or raise naming what is actually there.
+
+    A name that does not exist is a mistake in the test, not a state a value can
+    be in, so it fails at the lookup rather than returning something that
+    compares unequal to everything later on.
+    """
+    if name in items:
+        return items[name]
+    known = ", ".join(repr(key) for key in sorted(items)) or "none"
+    raise KeyError(f"No {kind} named {name!r}. Available: {known}.")
 
 
 class AsyncTestServerSession:
@@ -638,11 +677,15 @@ class AsyncTestServerSession:
         Returns
         -------
         :
-            A `TestServerValue`, with `status` `"missing"` if the session has not
-            received that input. It compares equal to the value itself, so
+            A `TestServerValue`. It compares equal to the value itself, so
             `session.get_input("n") == 10` works.
+
+        Raises
+        ------
+        KeyError
+            If the session has not received that input.
         """
-        return self._current_inputs.get(name, TestServerValue(name, "input"))
+        return _require_item(self._current_inputs, name, "input")
 
     def get_output(self, name: str) -> TestServerValue:
         """
@@ -656,11 +699,16 @@ class AsyncTestServerSession:
         Returns
         -------
         :
-            A `TestServerValue`, with `status` `"missing"` if there is no such
-            output and `"silent"` if it never rendered. It compares equal to the
-            value itself, so `session.get_output("txt") == "hi"` works.
+            A `TestServerValue`, with `status` `"silent"` if the output never
+            rendered. It compares equal to the value itself, so
+            `session.get_output("txt") == "hi"` works.
+
+        Raises
+        ------
+        KeyError
+            If the app has no such output.
         """
-        return self._current_outputs.get(name, TestServerValue(name, "output"))
+        return _require_item(self._current_outputs, name, "output")
 
     def get_export(self, name: str) -> TestServerValue:
         """
@@ -674,11 +722,15 @@ class AsyncTestServerSession:
         Returns
         -------
         :
-            A `TestServerValue`, with `status` `"missing"` if that name was not
-            exported. It compares equal to the value itself, so
+            A `TestServerValue`. It compares equal to the value itself, so
             `session.get_export("doubled") == 40` works.
+
+        Raises
+        ------
+        KeyError
+            If that name was not exported.
         """
-        return self._current_exports.get(name, TestServerValue(name, "export"))
+        return _require_item(self._current_exports, name, "export")
 
     def to_values(self) -> TestServerValues:
         """
@@ -887,9 +939,13 @@ class TestServerSession:
         Returns
         -------
         :
-            A `TestServerValue`, with `status` `"missing"` if the session has not
-            received that input. It compares equal to the value itself, so
+            A `TestServerValue`. It compares equal to the value itself, so
             `session.get_input("n") == 10` works.
+
+        Raises
+        ------
+        KeyError
+            If the session has not received that input.
         """
         return self._require_running().get_input(name)
 
@@ -905,9 +961,14 @@ class TestServerSession:
         Returns
         -------
         :
-            A `TestServerValue`, with `status` `"missing"` if there is no such
-            output and `"silent"` if it never rendered. It compares equal to the
-            value itself, so `session.get_output("txt") == "hi"` works.
+            A `TestServerValue`, with `status` `"silent"` if the output never
+            rendered. It compares equal to the value itself, so
+            `session.get_output("txt") == "hi"` works.
+
+        Raises
+        ------
+        KeyError
+            If the app has no such output.
         """
         return self._require_running().get_output(name)
 
@@ -923,9 +984,13 @@ class TestServerSession:
         Returns
         -------
         :
-            A `TestServerValue`, with `status` `"missing"` if that name was not
-            exported. It compares equal to the value itself, so
+            A `TestServerValue`. It compares equal to the value itself, so
             `session.get_export("doubled") == 40` works.
+
+        Raises
+        ------
+        KeyError
+            If that name was not exported.
         """
         return self._require_running().get_export(name)
 

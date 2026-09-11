@@ -595,6 +595,41 @@ def test_test_server_value_compares_against_the_raw_value():
             hash(got)
 
 
+def test_test_server_value_rejects_incoherent_construction():
+    # Frozen, so an instance that starts out incoherent stays that way.
+    with pytest.raises(ValueError, match="`status` must be one of"):
+        TestServerValue("x", "output", "missing")  # pyright: ignore[reportArgumentType]
+
+    with pytest.raises(ValueError, match="status 'error' needs an `error`"):
+        TestServerValue("x", "output", "error")
+
+    with pytest.raises(ValueError, match="may carry an `error`"):
+        TestServerValue("x", "output", "ok", "v", error="bad")
+
+    # An output that really did render `None` is still coherent.
+    assert TestServerValue("x", "output", "ok").value is None
+
+
+def test_test_server_unknown_names_raise_rather_than_compare_unequal():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def real():
+            return "hi"
+
+    with test_server(server) as ts:
+        # Without this, `!=` on a typo would quietly pass: a valueless item
+        # compares unequal to everything.
+        with pytest.raises(KeyError, match="No output named 'typo'"):
+            assert ts.get_output("typo") != "hi"
+
+        # The message names what is actually available.
+        with pytest.raises(KeyError, match="Available: 'real'"):
+            ts.get_output("typo")
+
+        with pytest.raises(KeyError, match="No export named 'nope'. Available: none"):
+            ts.get_export("nope")
+
+
 def test_test_server_value_repr_shows_only_the_meaningful_field():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
@@ -620,8 +655,8 @@ def test_test_server_value_repr_shows_only_the_meaningful_field():
         assert repr(ts.get_output("needs_input")) == (
             "TestServerValue('needs_input', kind='output', status='silent')"
         )
-        assert repr(ts.get_output("typo")) == (
-            "TestServerValue('typo', kind='output', status='missing')"
+        assert repr(TestServerValue("x", "output", "error", error="bad")) == (
+            "TestServerValue('x', kind='output', status='error', error='bad')"
         )
 
 
@@ -633,19 +668,16 @@ def test_test_server_value_without_a_value_never_compares_equal():
 
     with test_server(server) as ts:
         silent = ts.get_output("needs_input")
-        missing = ts.get_output("typo")
         assert silent.status == "silent"
-        assert missing.status == "missing"
 
-        # `value` is `None` for both, but neither may satisfy `== None`: an
-        # output that never rendered, and an id with a typo in it, would
-        # otherwise quietly pass an assertion meant to check a real value.
-        for item in (silent, missing):
-            assert not item == None  # noqa: E711
-            assert item != None  # noqa: E711
-            assert item not in [None]
-            assert not item == ""
-            assert not item == 0
+        # `value` is `None`, but it may not satisfy `== None`: an output that
+        # never rendered would otherwise quietly pass an assertion meant to
+        # check a real value.
+        assert not silent == None  # noqa: E711
+        assert silent != None  # noqa: E711
+        assert silent not in [None]
+        assert not silent == ""
+        assert not silent == 0
 
         # An output that really did render `None` still compares equal to it.
         ts.set_inputs(n=None)
@@ -672,7 +704,10 @@ def test_test_server_value_statuses():
         # Never rendered: `input.n()` is unset, so it raised a silent exception.
         assert ts.get_output("needs_input").status == "silent"
         assert ts.get_output("boom").status == "error"
-        assert ts.get_output("no_such_output").status == "missing"
+        # There is no status for "does not exist"; the lookup fails instead, and
+        # says what is actually there.
+        with pytest.raises(KeyError, match="No output named 'no_such_output'"):
+            ts.get_output("no_such_output")
 
         # A silent output is not a failure; an errored one is.
         assert ts.success is False
@@ -707,7 +742,8 @@ def test_test_server_exposes_inputs():
             return f"{input.a()}"
 
     with test_server(server) as ts:
-        assert ts.get_input("a").status == "missing"
+        with pytest.raises(KeyError, match="No input named 'a'"):
+            ts.get_input("a")
 
         ts.set_inputs(a=1, b="two")
         assert ts.get_input("a") == 1
