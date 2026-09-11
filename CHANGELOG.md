@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Enhanced `playwright.controller.Offcanvas` to support `open()`, `loc_trigger`, `loc_title`, `loc_footer`, and expectation methods `expect_title()`, `expect_footer()`, and `expect_placement()`. (#2451)
 
-* The bundled `shiny-for-python` Agent Skill now documents `shiny.testserver.test_server()` in a new `test-server` topic, so coding agents reach for in-memory server tests instead of hand-built sessions or a browser when only server logic needs checking. (#PR_NUMBER)
+* The bundled `shiny-for-python` Agent Skill now documents `shiny.testserver.test_server()` in a new `test-server` topic, so coding agents reach for in-memory server tests instead of hand-built sessions or a browser when only server logic needs checking. (#2491)
 
 * Stub files for `folium`, `uvicorn`, and `seaborn` are now generated with Pyrefly instead of Pyright. (Thanks, @ChidiebereNjoku!) (#2478)
 
