@@ -320,3 +320,19 @@ def test_test_server_set_inputs_timeout():
     with test_server(server, timeout_secs=0.2) as s:
         with pytest.raises(TimeoutError):
             s.set_inputs(hang=1)
+
+
+@pytest.mark.asyncio
+async def test_test_server_inside_running_loop_points_at_async_variant():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def txt():
+            return "hi"
+
+    with pytest.raises(RuntimeError, match="test_server_async"):
+        with test_server(server) as s:
+            s.set_inputs(x=1)
+
+    # Single-shot mode reaches `start()` lazily, via a property access.
+    with pytest.raises(RuntimeError, match="test_server_async"):
+        test_server(server).outputs

@@ -6,7 +6,6 @@ import json
 import os
 import sys
 import tempfile
-import threading
 import time
 import traceback
 from collections.abc import Mapping
@@ -497,97 +496,50 @@ class TestServerSession(Mapping[str, Any]):
             timeout_secs=timeout_secs,
         )
         self._loop: Optional[asyncio.AbstractEventLoop] = None
-        self._thread: Optional[threading.Thread] = None
-        self._stop_event: Optional[asyncio.Event] = None
         self._timeout_secs = timeout_secs
         self._is_running = False
-        self._entered = False
         self._cached_result: Optional[TestServerResult] = None
+
+    def _run(self, coro: Coroutine[Any, Any, T]) -> T:
+        if self._loop is None:
+            coro.close()
+            raise RuntimeError("Event loop not initialized.")
+        return self._loop.run_until_complete(coro)
 
     def start(self) -> TestServerSession:
         if self._is_running:
             return self
-        ready_event = threading.Event()
-        start_error: List[Exception] = []
-
-        def runner():
-            self._loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._loop)
-            self._stop_event = asyncio.Event()
-
-            async def _init_and_run():
-                try:
-                    await self._async_session.start()
-                    ready_event.set()
-                except Exception as e:
-                    start_error.append(e)
-                    ready_event.set()
-                    return
-
-                if self._stop_event is not None:
-                    await self._stop_event.wait()
-                await self._async_session.close()
-
-            try:
-                self._loop.run_until_complete(_init_and_run())
-            finally:
-                pending = [t for t in asyncio.all_tasks(self._loop) if not t.done()]
-                for t in pending:
-                    t.cancel()
-                if pending:
-                    self._loop.run_until_complete(
-                        asyncio.gather(*pending, return_exceptions=True)
-                    )
-                self._loop.close()
-
-        self._is_running = True
-        self._thread = threading.Thread(target=runner, daemon=True)
-        self._thread.start()
-
-        if not ready_event.wait(timeout=self._timeout_secs):
-            self.close()
-            raise TimeoutError(
-                f"test_server timed out after {self._timeout_secs}s during startup."
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            raise RuntimeError(
+                "test_server() cannot be used from within a running event loop. "
+                "Use `async with test_server_async(...)` instead."
             )
-        if start_error:
-            self.close()
-            raise start_error[0]
+
+        self._loop = asyncio.new_event_loop()
+        try:
+            self._run(self._async_session.start())
+        except BaseException:
+            # `AsyncTestServerSession.start()` cleans up after itself on failure, so
+            # only the loop needs tearing down here.
+            self._close_loop()
+            raise
+        self._is_running = True
         return self
 
     def set_inputs(
         self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
     ) -> None:
-        if not self._is_running or self._loop is None:
+        if not self._is_running:
             self.start()
-        if self._loop is None:
-            raise RuntimeError("Event loop not initialized.")
-        future = asyncio.run_coroutine_threadsafe(
-            self._async_session.set_inputs(inputs=inputs, **kwargs),
-            self._loop,
-        )
-        try:
-            future.result(timeout=self._timeout_secs)
-        except (asyncio.TimeoutError, Exception) as e:
-            if isinstance(e, TimeoutError) or type(e).__name__ == "TimeoutError":
-                raise TimeoutError(
-                    f"test_server timed out after {self._timeout_secs}s waiting for reactive flush following set_inputs()."
-                ) from e
-            raise
+        self._run(self._async_session.set_inputs(inputs=inputs, **kwargs))
 
     def flush(self) -> None:
-        if self._loop is not None and self._is_running:
-            future = asyncio.run_coroutine_threadsafe(
-                self._async_session.flush(),
-                self._loop,
-            )
-            try:
-                future.result(timeout=self._timeout_secs)
-            except (asyncio.TimeoutError, Exception) as e:
-                if isinstance(e, TimeoutError) or type(e).__name__ == "TimeoutError":
-                    raise TimeoutError(
-                        f"test_server timed out after {self._timeout_secs}s during flush."
-                    ) from e
-                raise
+        if self._is_running:
+            self._run(self._async_session.flush())
 
     def _ensure_run_once(self) -> None:
         if not self._is_running and self._cached_result is None:
@@ -595,58 +547,40 @@ class TestServerSession(Mapping[str, Any]):
             self._cached_result = self._async_session.to_result()
             self.close()
 
+    def _result(self) -> TestServerResult:
+        """Current session state, running the session once if it hasn't been started."""
+        if self._is_running:
+            return self._async_session.to_result()
+        self._ensure_run_once()
+        return self._cached_result or _error_result("No result")
+
     @property
     def outputs(self) -> Dict[str, Any]:
-        if self._is_running:
-            return self._async_session.outputs
-        self._ensure_run_once()
-        return self._cached_result.outputs if self._cached_result else {}
+        return self._result().outputs
 
     @property
     def exports(self) -> Dict[str, Any]:
-        if self._is_running:
-            return self._async_session.exports
-        self._ensure_run_once()
-        return self._cached_result.exports if self._cached_result else {}
+        return self._result().exports
 
     @property
     def errors(self) -> Dict[str, Any]:
-        if self._is_running:
-            return self._async_session.errors
-        self._ensure_run_once()
-        return self._cached_result.errors if self._cached_result else {}
+        return self._result().errors
 
     @property
     def success(self) -> bool:
-        if self._is_running:
-            return self._async_session.success
-        self._ensure_run_once()
-        return self._cached_result.success if self._cached_result else False
+        return self._result().success
 
     @property
     def error(self) -> Optional[str]:
-        if self._is_running:
-            return self._async_session.error
-        self._ensure_run_once()
-        return self._cached_result.error if self._cached_result else None
+        return self._result().error
 
     @property
     def traceback(self) -> str:
-        if self._is_running:
-            return (
-                self._async_session._fatal_errors[0][1]
-                if self._async_session._fatal_errors
-                else ""
-            )
-        self._ensure_run_once()
-        return self._cached_result.traceback if self._cached_result else ""
+        return self._result().traceback
 
     @property
     def elapsed_ms(self) -> float:
-        if self._is_running:
-            return self._async_session.elapsed_ms
-        self._ensure_run_once()
-        return self._cached_result.elapsed_ms if self._cached_result else 0.0
+        return self._result().elapsed_ms
 
     def get_output(self, name: str, default: Any = None) -> Any:
         return self.outputs.get(name, default)
@@ -655,10 +589,7 @@ class TestServerSession(Mapping[str, Any]):
         return self.exports.get(name, default)
 
     def to_result(self) -> TestServerResult:
-        if self._is_running:
-            return self._async_session.to_result()
-        self._ensure_run_once()
-        return self._cached_result or _error_result("No result")
+        return self._result()
 
     def to_dict(self) -> Dict[str, Any]:
         return self.to_result().to_dict()
@@ -687,22 +618,28 @@ class TestServerSession(Mapping[str, Any]):
         res = self.to_result()
         return res.get(key, default)
 
+    def _close_loop(self) -> None:
+        loop = self._loop
+        self._loop = None
+        if loop is None:
+            return
+        pending = [t for t in asyncio.all_tasks(loop) if not t.done()]
+        for t in pending:
+            t.cancel()
+        if pending:
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        loop.close()
+
     def close(self) -> None:
         if not self._is_running:
             return
         self._is_running = False
-        if (
-            self._loop is not None
-            and self._loop.is_running()
-            and self._stop_event is not None
-        ):
-            self._loop.call_soon_threadsafe(self._stop_event.set)
-        if self._thread is not None:
-            self._thread.join(timeout=self._timeout_secs + 2.0)
-            self._thread = None
+        try:
+            self._run(self._async_session.close())
+        finally:
+            self._close_loop()
 
     def __enter__(self) -> TestServerSession:
-        self._entered = True
         return self.start()
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
