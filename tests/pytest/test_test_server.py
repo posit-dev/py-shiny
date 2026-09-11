@@ -511,6 +511,35 @@ async def test_async_set_inputs_returns_self():
         assert s.get_output("squared") == "36"
 
 
+def test_set_inputs_accepts_ids_that_shadow_its_own_parameter():
+    """`inputs` is positional-only, so it is still usable as an input id."""
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def echo():
+            return f"{input.inputs()}|{input.kwargs()}"
+
+    with test_server(server) as ts:
+        ts.set_inputs(inputs=5, kwargs=6)
+        assert ts.get_output("echo") == "5|6"
+
+        # The positional dictionary still works alongside keyword arguments.
+        ts.set_inputs({"inputs": 9}, kwargs=7)
+        assert ts.get_output("echo") == "9|7"
+
+
+@pytest.mark.asyncio
+async def test_async_set_inputs_accepts_ids_that_shadow_its_own_parameter():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def echo():
+            return f"{input.inputs()}"
+
+    async with test_server_async(server) as ts:
+        await ts.set_inputs(inputs=5)
+        assert ts.get_output("echo") == "5"
+
+
 def test_set_inputs_merges_across_calls_and_never_stalls():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text

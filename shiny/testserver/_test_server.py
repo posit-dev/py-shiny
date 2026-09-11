@@ -669,7 +669,7 @@ class AsyncTestServerSession:
             )
 
     async def set_inputs(
-        self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
+        self, inputs: Optional[Mapping[str, Any]] = None, /, **kwargs: Any
     ) -> AsyncTestServerSession:
         """
                 Set input values and wait for the resulting reactive flush.
@@ -988,7 +988,7 @@ class TestServerSession:
         return self._async_session
 
     def set_inputs(
-        self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
+        self, inputs: Optional[Mapping[str, Any]] = None, /, **kwargs: Any
     ) -> TestServerSession:
         """
                 Set input values and wait for the resulting reactive flush.
@@ -1019,7 +1019,7 @@ class TestServerSession:
                 RuntimeError
                     If the session is not running.
         """
-        self._run(self._require_running().set_inputs(inputs=inputs, **kwargs))
+        self._run(self._require_running().set_inputs(inputs, **kwargs))
         return self
 
     def flush(self) -> None:
