@@ -1007,25 +1007,9 @@ def test_server(
     process, in an ordinary (non-async) test.
 
     `app` accepts every way of naming what to test, and defaults to `"app.py"`
-    next to the test file, like the `local_app` fixture:
-
-    ```python
-    test_server()                 # `app.py` beside the test file
-    test_server("myapp.py")       # another file beside the test file
-    test_server(path_to_app)      # an absolute `Path`, used as-is
-    test_server(my_mod_server)    # a server function, or a `shiny.App`
-    ```
-
-    The returned session must be used as a context manager, which guarantees the
-    app is torn down even when an assertion fails:
-
-    ```python
-    with test_server("myapp.py") as ts:
-        ts.set_inputs(a=1, b=2)
-        assert ts.get_output("name") == "foo"
-        ts.set_inputs(a=3, b=4)
-        assert ts.get_output("name") == "bar"
-    ```
+    next to the test file, like the `local_app` fixture. The returned session must
+    be used as a context manager, which guarantees the app is torn down even when
+    an assertion fails.
 
     In an `async` test, use `test_server_async` instead — this function drives its
     own event loop and cannot run inside a loop that is already running.
@@ -1052,6 +1036,31 @@ def test_server(
     -------
     :
         An unstarted `TestServerSession`, to be used with `with`.
+
+    Examples
+    --------
+    Every way of naming what to test:
+
+    ```python
+    test_server()                 # app.py beside the test file
+    test_server("myapp.py")       # another file beside the test file
+    test_server(path_to_app)      # absolute Path, used as-is
+    test_server(my_mod_server)    # server function, or a shiny.App
+    ```
+
+    Setting inputs and asserting on outputs, across several interactions:
+
+    ```python
+    from shiny.pytest import test_server
+
+
+    def test_app():
+        with test_server("myapp.py") as ts:
+            ts.set_inputs(a=1, b=2)
+            assert ts.get_output("name") == "foo"
+            ts.set_inputs(a=3, b=4)
+            assert ts.get_output("name") == "bar"
+    ```
 
     See Also
     --------
@@ -1082,14 +1091,6 @@ def test_server_async(
     (for example under `@pytest.mark.asyncio`) — the synchronous `test_server`
     drives its own event loop and will raise if one is already running.
 
-    ```python
-    @pytest.mark.asyncio
-    async def test_doubled():
-        async with test_server_async("myapp.py") as ts:
-            await ts.set_inputs(x=10)
-            assert ts.get_output("doubled") == "20"
-    ```
-
     Parameters
     ----------
     app
@@ -1113,6 +1114,34 @@ def test_server_async(
     -------
     :
         An unstarted `AsyncTestServerSession`, to be used with `async with`.
+
+    Examples
+    --------
+    Every way of naming what to test:
+
+    ```python
+    test_server_async()                 # app.py beside the test file
+    test_server_async("myapp.py")       # another file beside the test file
+    test_server_async(path_to_app)      # absolute Path, used as-is
+    test_server_async(my_mod_server)    # server function, or a shiny.App
+    ```
+
+    Setting inputs and asserting on outputs, across several interactions:
+
+    ```python
+    import pytest
+
+    from shiny.pytest import test_server_async
+
+
+    @pytest.mark.asyncio
+    async def test_app():
+        async with test_server_async("myapp.py") as ts:
+            await ts.set_inputs(a=1, b=2)
+            assert ts.get_output("name") == "foo"
+            await ts.set_inputs(a=3, b=4)
+            assert ts.get_output("name") == "bar"
+    ```
 
     See Also
     --------
