@@ -201,6 +201,38 @@ def test_test_server_initialization_error_is_failure():
         assert ts.is_ok is False
         assert "Fatal server init crash" in str(ts.error)
 
+        # The session is gone, so this must fail at once naming the cause,
+        # not sit out `timeout_secs` and report a flush timeout.
+        with pytest.raises(RuntimeError, match="has ended.*Fatal server init crash"):
+            ts.set_inputs(x=1)
+
+
+def test_test_server_only_forgets_modules_from_the_app_dir(tmp_path: Path):
+    (tmp_path / "helpers.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "app.py").write_text(
+        """from shiny import App, Inputs, Outputs, Session, render, ui
+import helpers
+import json.tool  # stdlib module first imported during the session
+app_ui = ui.page_fluid(ui.output_text("txt"))
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def txt():
+        return str(helpers.VALUE)
+app = App(app_ui, server)
+""",
+        encoding="utf-8",
+    )
+    sys.modules.pop("json.tool", None)
+
+    with test_server(tmp_path / "app.py") as ts:
+        assert ts.get_output("txt") == "1"
+        assert "helpers" in sys.modules
+        assert "json.tool" in sys.modules
+
+    assert "helpers" not in sys.modules
+    assert "json.tool" in sys.modules
+    sys.modules.pop("json.tool", None)
+
 
 def test_test_server_reactive_effect_error_is_failure():
     app_ui = ui.page_fluid(ui.output_text("out"))

@@ -417,6 +417,7 @@ class AsyncTestServerSession:
         self._session_task: Optional[asyncio.Task[None]] = None
         self._saved_sys_path: Optional[List[str]] = None
         self._saved_modules: Optional[Set[str]] = None
+        self._app_dir: Optional[Path] = None
         self._old_testmode: Optional[str] = None
         self._old_app_test_mode: Optional[bool] = None
         self._old_app_server: Optional[Callable[..., Any]] = None
@@ -441,10 +442,18 @@ class AsyncTestServerSession:
             self._saved_sys_path = None
 
         if self._saved_modules is not None:
-            new_modules = set(sys.modules.keys()) - self._saved_modules
-            for mod_name in new_modules:
-                sys.modules.pop(mod_name, None)
+            # Only forget modules loaded from the app's own directory, so a
+            # sibling `helpers.py` in another app can load fresh next time.
+            # Anything else imported meanwhile (matplotlib, pandas, shiny's own
+            # lazy submodules) must stay: re-executing those breaks C extensions
+            # and duplicates registries.
+            if self._app_dir is not None:
+                for mod_name in set(sys.modules) - self._saved_modules:
+                    origin = getattr(sys.modules.get(mod_name), "__file__", None)
+                    if origin and Path(origin).resolve().is_relative_to(self._app_dir):
+                        sys.modules.pop(mod_name, None)
             self._saved_modules = None
+            self._app_dir = None
 
         if self._old_testmode is not None:
             os.environ["SHINY_TESTMODE"] = self._old_testmode
@@ -472,6 +481,7 @@ class AsyncTestServerSession:
         target_path = target_path.resolve()
         if not target_path.exists():
             raise FileNotFoundError(f"File not found: {target_path}")
+        self._app_dir = target_path.parent
         sys.path.insert(0, str(target_path.parent))
         if is_express_app(str(target_path), app_dir=None):
             return wrap_express_app(target_path)
@@ -708,12 +718,17 @@ class AsyncTestServerSession:
         TimeoutError
             If the flush does not complete within `timeout_secs`.
         RuntimeError
-            If the session is not running.
+            If the session is not running, or has already ended because of a
+            fatal error.
         """
         all_inputs: Dict[str, Any] = dict(kwargs)
 
         if self._conn is None or self._session is None:
             raise RuntimeError("Session is not running.")
+        if self._session_task is not None and self._session_task.done():
+            # Nothing reads the connection any more, so waiting on a flush
+            # would only time out and hide the error that ended the session.
+            raise RuntimeError(f"The session has ended. {self.error}")
 
         flush_done = asyncio.Event()
         unreg: Optional[Callable[[], None]] = None
