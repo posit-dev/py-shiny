@@ -1,6 +1,6 @@
 ---
 name: shiny-for-python
-description: "Building, styling, testing, debugging, or observing a Shiny for Python (py-shiny) reactive web app - `from shiny import ...`, `shiny run app.py`. Index skill: read this, then open the linked reference for the task. Covers dashboard design and visual QA; card toolbars and accessible icons; interactive Plotly charts and maps; reactivity (calc/effect/value/event/req/isolate); Express vs Core; modules; layout, navigation, dynamic UI, and theming; plots, data frames, files, and custom renderers; LLM chat and Markdown streaming; notifications, modals, progress, and background tasks; bookmarking; custom JS components; session lifecycle; Playwright testing; debugging; and OpenTelemetry. Use when writing or changing any Shiny for Python app, especially an analytical dashboard, or when tempted to hand-roll what the framework provides - custom HTML tables, fake tabs, DOM manipulation, blocking reactive work, polling loops, or print-debugging server state."
+description: "Building, styling, testing, debugging, or observing a Shiny for Python (py-shiny) reactive web app - `from shiny import ...`, `shiny run app.py`. Index skill: read this, then open the linked reference for the task. Covers dashboard design and visual QA; card toolbars and accessible icons; interactive Plotly charts and maps; reactivity (calc/effect/value/event/req/isolate); Express vs Core; modules; layout, navigation, dynamic UI, and theming; plots, data frames, files, and custom renderers; LLM chat and Markdown streaming; notifications, modals, progress, and background tasks; bookmarking; custom JS components; session lifecycle; in-memory server testing (`test_server`) and Playwright testing; debugging; and OpenTelemetry. Use when writing or changing any Shiny for Python app, especially an analytical dashboard, or when tempted to hand-roll what the framework provides - custom HTML tables, fake tabs, DOM manipulation, blocking reactive work, polling loops, or print-debugging server state."
 ---
 
 # Shiny for Python
@@ -78,6 +78,7 @@ reference file before writing code** for that area.
 
 | Topic | Use when | Reference |
 |---|---|---|
+| Test server | Testing server logic in memory with `test_server()` — set inputs, assert on outputs/exports, module scopes; no browser | `references/test-server.md` |
 | Testing | End-to-end Playwright tests — launching an app under pytest, locating and asserting on UI | `references/testing.md` |
 | Debugging | Inspecting server-side reactive/input/output state; exposing values to a test harness | `references/debugging.md` |
 | OpenTelemetry | OTel tracing/profiling of reactive execution; exporting spans to a backend | `references/otel.md` |
