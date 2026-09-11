@@ -668,9 +668,7 @@ class AsyncTestServerSession:
                 else TestServerValue(name, "export", "ok", value)
             )
 
-    async def set_inputs(
-        self, inputs: Optional[Mapping[str, Any]] = None, /, **kwargs: Any
-    ) -> AsyncTestServerSession:
+    async def set_inputs(self, /, **kwargs: Any) -> AsyncTestServerSession:
         """
                 Set input values and wait for the resulting reactive flush.
 
@@ -700,12 +698,7 @@ class AsyncTestServerSession:
                 RuntimeError
                     If the session is not running.
         """
-        all_inputs: Dict[str, Any] = {}
-        if inputs:
-            for k, v in inputs.items():
-                all_inputs[str(k)] = v
-        for k, v in kwargs.items():
-            all_inputs[k] = v
+        all_inputs: Dict[str, Any] = dict(kwargs)
 
         if self._conn is None or self._session is None:
             raise RuntimeError("Session is not running.")
@@ -987,9 +980,7 @@ class TestServerSession:
             )
         return self._async_session
 
-    def set_inputs(
-        self, inputs: Optional[Mapping[str, Any]] = None, /, **kwargs: Any
-    ) -> TestServerSession:
+    def set_inputs(self, /, **kwargs: Any) -> TestServerSession:
         """
                 Set input values and wait for the resulting reactive flush.
 
@@ -1019,7 +1010,7 @@ class TestServerSession:
                 RuntimeError
                     If the session is not running.
         """
-        self._run(self._require_running().set_inputs(inputs, **kwargs))
+        self._run(self._require_running().set_inputs(**kwargs))
         return self
 
     def flush(self) -> None:
@@ -1367,9 +1358,8 @@ def test_server(
 
     def test_doubling_app():
         with test_server("myapp.py") as ts:
-            # Several inputs at once. A dictionary handles ids that are not
-            # valid Python identifiers; keyword arguments are the common case.
-            ts.set_inputs({"first-name": "Ada"}, n=10)
+            # Several inputs at once.
+            ts.set_inputs(name="Ada", n=10)
 
             assert ts.success
             assert ts.get_output("greeting") == "Hello, Ada!"
@@ -1379,7 +1369,7 @@ def test_server(
             assert ts.get_export("running_total") == 20
 
             # A later interaction re-renders. Inputs you do not name keep their
-            # values, so `first-name` is still "Ada" here.
+            # values, so `name` is still "Ada" here.
             ts.set_inputs(n=21)
             assert ts.get_output("doubled") == "42"
     ```
@@ -1410,7 +1400,7 @@ def test_server(
 
         # Or change one output's size partway through a test.
         with test_server("myapp.py") as ts:
-            ts.set_inputs({".clientdata_output_plot_width": 300})
+            ts.set_inputs(**{".clientdata_output_plot_width": 300})
             assert ts.get_output("plot").status == "ok"
     ```
 
@@ -1434,7 +1424,7 @@ def test_server(
 
     def test_counter_module():
         with test_server(app_server) as ts:
-            ts.set_inputs({"counter-n": 7})
+            ts.set_inputs(**{"counter-n": 7})
             assert ts.get_output("counter-label") == "n=7"
     ```
 
@@ -1578,9 +1568,8 @@ def test_server_async(
     @pytest.mark.asyncio
     async def test_doubling_app():
         async with test_server_async("myapp.py") as ts:
-            # A dictionary handles ids that are not valid Python identifiers;
-            # keyword arguments are the common case.
-            await ts.set_inputs({"first-name": "Ada"}, n=10)
+            # Several inputs at once.
+            await ts.set_inputs(name="Ada", n=10)
 
             assert ts.success
             assert ts.get_output("greeting") == "Hello, Ada!"
@@ -1590,7 +1579,7 @@ def test_server_async(
             assert ts.get_export("running_total") == 20
 
             # A later interaction re-renders. Inputs you do not name keep their
-            # values, so `first-name` is still "Ada" here.
+            # values, so `name` is still "Ada" here.
             await ts.set_inputs(n=21)
             assert ts.get_output("doubled") == "42"
     ```

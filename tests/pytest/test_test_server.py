@@ -83,7 +83,7 @@ def test_test_server_direct_server_function():
             return f"Result: {input.n() * 2}"
 
     with test_server(server) as ts:
-        ts.set_inputs({"n": 25})
+        ts.set_inputs(n=25)
         assert ts.success is True
         assert ts.get_output("doubled") == "Result: 50"
 
@@ -102,7 +102,7 @@ def test_test_server_direct_app_instance():
     app = App(app_ui, server)
 
     with test_server(app) as ts:
-        ts.set_inputs({"n": 25})
+        ts.set_inputs(n=25)
         assert ts.success is True
         assert ts.get_output("doubled") == "Result: 50"
 
@@ -165,7 +165,7 @@ app = App(app_ui, server)
     )
 
     with test_server(app_file) as ts:
-        ts.set_inputs({"txt": "pytest-sim"})
+        ts.set_inputs(txt="pytest-sim")
         assert ts.success is True
         assert ts.get_output("out") == "Echo: pytest-sim"
 
@@ -511,21 +511,34 @@ async def test_async_set_inputs_returns_self():
         assert s.get_output("squared") == "36"
 
 
-def test_set_inputs_accepts_ids_that_shadow_its_own_parameter():
-    """`inputs` is positional-only, so it is still usable as an input id."""
+def test_set_inputs_accepts_any_id():
+    """
+    `**kwargs` is the only channel, and it can carry any id.
+
+    CPython does not require identifier keys when unpacking into `**kwargs`, and
+    `self` is positional-only, so no id is unreachable.
+    """
 
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
         def echo():
-            return f"{input.inputs()}|{input.kwargs()}"
+            values = (input.self(), input.kwargs(), input.n())
+            return "|".join(str(v) for v in values)
+
+        @render.text
+        def ratio():
+            return str(session.clientdata.pixelratio())
 
     with test_server(server) as ts:
-        ts.set_inputs(inputs=5, kwargs=6)
-        assert ts.get_output("echo") == "5|6"
+        # `self` and `kwargs` would collide with the signature if not for `/`.
+        ts.set_inputs(**{"self": 1, "kwargs": 2}, n=3)
+        assert ts.get_output("echo") == "1|2|3"
 
-        # The positional dictionary still works alongside keyword arguments.
-        ts.set_inputs({"inputs": 9}, kwargs=7)
-        assert ts.get_output("echo") == "9|7"
+        # Ids that are not valid identifiers -- client data starts with ".",
+        # and a module namespaces with "-" -- go through the same channel. See
+        # `test_test_server_reaches_a_module_through_its_namespaced_ids`.
+        ts.set_inputs(**{".clientdata_pixelratio": 2})
+        assert ts.get_output("ratio") == "2"
 
 
 @pytest.mark.asyncio
@@ -533,10 +546,10 @@ async def test_async_set_inputs_accepts_ids_that_shadow_its_own_parameter():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
         def echo():
-            return f"{input.inputs()}"
+            return f"{input.self()}"
 
     async with test_server_async(server) as ts:
-        await ts.set_inputs(inputs=5)
+        await ts.set_inputs(**{"self": 5})
         assert ts.get_output("echo") == "5"
 
 
@@ -923,7 +936,7 @@ def test_test_server_plot_renders_without_a_browser():
 
         # A test that cares about the size can still set it, which re-renders.
         ts.set_inputs(
-            {
+            **{
                 ".clientdata_output_a_plot_width": 300,
                 ".clientdata_output_a_plot_height": 200,
             }
@@ -1007,7 +1020,7 @@ def test_test_server_reaches_a_module_through_its_namespaced_ids():
         counter_server("counter")
 
     with test_server(app_server) as ts:
-        ts.set_inputs({"counter-n": 7})
+        ts.set_inputs(**{"counter-n": 7})
         assert ts.get_output("counter-label") == "n=7"
 
 
