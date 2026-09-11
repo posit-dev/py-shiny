@@ -614,6 +614,15 @@ class AsyncTestServerSession:
                     f"test_server timed out after {self._timeout_secs}s waiting for output initialization."
                 )
 
+        # A server function that blocks without awaiting holds the event loop, so
+        # the waits above cannot fire while it runs and may instead return late.
+        # Checking the clock reports the overrun either way. See `set_inputs`.
+        if time.monotonic() > deadline:
+            raise TimeoutError(
+                f"test_server timed out after {self._timeout_secs}s during session"
+                " initialization."
+            )
+
         await asyncio.sleep(0.01)
         await self._refresh_snapshots()
         return self
@@ -709,18 +718,28 @@ class AsyncTestServerSession:
 
         unreg = self._session.on_flushed(on_set_inputs_flushed, once=False)
         self._conn.cause_receive(json.dumps({"method": "update", "data": all_inputs}))
+        started = time.monotonic()
+        timed_out = False
         try:
             await asyncio.wait_for(flush_done.wait(), timeout=self._timeout_secs)
         except asyncio.TimeoutError:
-            raise TimeoutError(
-                f"test_server timed out after {self._timeout_secs}s waiting for reactive flush following set_inputs()."
-            )
+            timed_out = True
         finally:
             if unreg is not None:
                 try:
                     unreg()
                 except Exception:
                     pass
+
+        # Reactive code that blocks without awaiting holds the event loop, so
+        # `wait_for` cannot fire while it runs and the flush may instead finish
+        # late. Checking the clock as well reports the overrun either way, rather
+        # than leaving it to a race between the timeout and the flush.
+        if timed_out or time.monotonic() - started > self._timeout_secs:
+            raise TimeoutError(
+                f"test_server timed out after {self._timeout_secs}s waiting for"
+                " the reactive flush following set_inputs()."
+            )
 
         await asyncio.sleep(0.01)
         await self._refresh_snapshots()
@@ -1299,7 +1318,9 @@ def test_server(
         means the same as `{}`: every default is used.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
-        before raising `TimeoutError`.
+        before raising `TimeoutError`. Reactive code that blocks without awaiting
+        holds the event loop and cannot be interrupted, so an overrun caused that
+        way is reported once the flush finishes rather than partway through.
 
     Returns
     -------
@@ -1506,7 +1527,9 @@ def test_server_async(
         means the same as `{}`: every default is used.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
-        before raising `TimeoutError`.
+        before raising `TimeoutError`. Reactive code that blocks without awaiting
+        holds the event loop and cannot be interrupted, so an overrun caused that
+        way is reported once the flush finishes rather than partway through.
 
     Returns
     -------

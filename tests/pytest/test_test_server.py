@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Callable
 
@@ -391,8 +393,12 @@ app = App(app_ui, server)
         assert ts.get_output("txt") == "from_B"
 
 
-def test_test_server_set_inputs_timeout():
-    import time
+def test_test_server_set_inputs_timeout_when_blocking():
+    """
+    A blocking effect holds the event loop, so `wait_for` cannot fire while it
+    runs. The overrun is reported from the clock instead -- without that, whether
+    the timeout or the completed flush won was a race, and CI lost it.
+    """
 
     def server(input: Inputs, output: Outputs, session: Session):
         @reactive.effect
@@ -402,7 +408,22 @@ def test_test_server_set_inputs_timeout():
                 time.sleep(1.0)
 
     with test_server(server, timeout_secs=0.2) as s:
-        with pytest.raises(TimeoutError):
+        with pytest.raises(TimeoutError, match="0.2s waiting for the reactive flush"):
+            s.set_inputs(hang=1)
+
+
+def test_test_server_set_inputs_timeout_when_awaiting():
+    """An effect that awaits yields the loop, so `wait_for` fires normally."""
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @reactive.effect
+        async def _():
+            val = input.hang()
+            if val is not None and val > 0:
+                await asyncio.sleep(1.0)
+
+    with test_server(server, timeout_secs=0.2) as s:
+        with pytest.raises(TimeoutError, match="0.2s waiting for the reactive flush"):
             s.set_inputs(hang=1)
 
 
