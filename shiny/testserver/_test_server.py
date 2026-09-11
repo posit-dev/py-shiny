@@ -181,13 +181,11 @@ class AsyncTestServerSession:
         *,
         code: Optional[str] = None,
         file_path: Optional[Union[str, Path]] = None,
-        inputs: Optional[Mapping[str, Any]] = None,
         timeout_secs: float = 5.0,
     ) -> None:
         self._target_app = app
         self._target_code = code
         self._target_path = file_path
-        self._initial_inputs = dict(inputs or {})
         self._timeout_secs = timeout_secs
 
         self._app_obj: Optional[App] = None
@@ -405,9 +403,7 @@ class AsyncTestServerSession:
 
         self._session_task.add_done_callback(on_session_task_done)
 
-        self._conn.cause_receive(
-            json.dumps({"method": "init", "data": self._initial_inputs})
-        )
+        self._conn.cause_receive(json.dumps({"method": "init", "data": {}}))
 
         self._is_started = True
 
@@ -474,7 +470,7 @@ class AsyncTestServerSession:
 
     async def set_inputs(
         self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
-    ) -> None:
+    ) -> AsyncTestServerSession:
         """
         Set input values and wait for the resulting reactive flush.
 
@@ -490,6 +486,11 @@ class AsyncTestServerSession:
         **kwargs
             Input values given as keyword arguments. These take precedence over
             same-named keys in `inputs`.
+
+        Returns
+        -------
+        :
+            This session, so calls can be chained.
 
         Raises
         ------
@@ -531,6 +532,7 @@ class AsyncTestServerSession:
 
         await asyncio.sleep(0.01)
         await self._refresh_snapshots()
+        return self
 
     async def flush(self) -> None:
         """
@@ -669,14 +671,13 @@ class TestServerSession(Mapping[str, Any]):
         assert session.outputs["doubled"] == "20"
     ```
 
-    Outside a context manager it runs once, lazily: the first access to
-    `outputs`, `success`, or any other result attribute starts the session,
-    captures a `TestServerResult`, and closes it again. That makes single-shot
-    assertions work without any setup:
+    Outside a context manager it is single-shot: the first access to `outputs`,
+    `success`, or any other result attribute starts the session if needed,
+    captures a `TestServerResult`, and closes it again. Since `set_inputs` returns
+    the session, that supports a one-line assertion with no teardown to remember:
 
     ```python
-    res = test_server(server, inputs={"x": 10})
-    assert res.outputs["doubled"] == "20"
+    assert test_server(server).set_inputs(x=10).outputs["doubled"] == "20"
     ```
 
     For the same reason the session is also a read-only mapping over that result,
@@ -701,19 +702,18 @@ class TestServerSession(Mapping[str, Any]):
         *,
         code: Optional[str] = None,
         file_path: Optional[Union[str, Path]] = None,
-        inputs: Optional[Mapping[str, Any]] = None,
         timeout_secs: float = 5.0,
     ) -> None:
         self._async_session = AsyncTestServerSession(
             app=app,
             code=code,
             file_path=file_path,
-            inputs=inputs,
             timeout_secs=timeout_secs,
         )
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._timeout_secs = timeout_secs
         self._is_running = False
+        self._entered = False
         self._cached_result: Optional[TestServerResult] = None
 
     def _run(self, coro: Coroutine[Any, Any, T]) -> T:
@@ -772,7 +772,7 @@ class TestServerSession(Mapping[str, Any]):
 
     def set_inputs(
         self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
-    ) -> None:
+    ) -> TestServerSession:
         """
         Set input values and wait for the resulting reactive flush.
 
@@ -790,6 +790,11 @@ class TestServerSession(Mapping[str, Any]):
             Input values given as keyword arguments. These take precedence over
             same-named keys in `inputs`.
 
+        Returns
+        -------
+        :
+            This session, so calls can be chained.
+
         Raises
         ------
         TimeoutError
@@ -798,6 +803,7 @@ class TestServerSession(Mapping[str, Any]):
         if not self._is_running:
             self.start()
         self._run(self._async_session.set_inputs(inputs=inputs, **kwargs))
+        return self
 
     def flush(self) -> None:
         """
@@ -810,18 +816,27 @@ class TestServerSession(Mapping[str, Any]):
         if self._is_running:
             self._run(self._async_session.flush())
 
-    def _ensure_run_once(self) -> None:
-        if not self._is_running and self._cached_result is None:
+    def _result(self) -> TestServerResult:
+        """
+        Current session state.
+
+        Inside a `with` block the caller owns the session's lifetime, so this just
+        reads it. Outside one the session is single-shot: it is started if needed,
+        snapshotted, and closed again, so that a chained
+        `test_server(app).set_inputs(...).outputs` does not leave a session running.
+        """
+        if self._is_running:
+            result = self._async_session.to_result()
+            if not self._entered:
+                self._cached_result = result
+                self.close()
+            return result
+
+        if self._cached_result is None:
             self.start()
             self._cached_result = self._async_session.to_result()
             self.close()
-
-    def _result(self) -> TestServerResult:
-        """Current session state, running the session once if it hasn't been started."""
-        if self._is_running:
-            return self._async_session.to_result()
-        self._ensure_run_once()
-        return self._cached_result or _error_result("No result")
+        return self._cached_result
 
     @property
     def outputs(self) -> Dict[str, Any]:
@@ -971,9 +986,15 @@ class TestServerSession(Mapping[str, Any]):
             self._close_loop()
 
     def __enter__(self) -> TestServerSession:
+        self._entered = True
         return self.start()
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        # Snapshot before closing, so reads after the block see the final state
+        # rather than silently re-running the app.
+        if self._is_running:
+            self._cached_result = self._async_session.to_result()
+        self._entered = False
         self.close()
 
 
@@ -1011,7 +1032,6 @@ def test_server(
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
-    inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> TestServerSession: ...
 
@@ -1023,7 +1043,6 @@ def test_server(
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
-    inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> TestServerSession: ...
 
@@ -1034,7 +1053,6 @@ def test_server(
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
-    inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> TestServerSession:
     """
@@ -1066,10 +1084,9 @@ def test_server(
 
     test_server(server, check)
 
-    # 3. Single-shot, for one set of inputs. The session runs lazily on the
-    #    first attribute access and closes itself again.
-    res = test_server(server, inputs={"x": 10})
-    assert res.outputs["doubled"] == "20"
+    # 3. Chained, for a single assertion. `set_inputs` returns the session, and
+    #    reading a result attribute outside a `with` block closes it again.
+    assert test_server(server).set_inputs(x=10).outputs["doubled"] == "20"
     ```
 
     In an `async` test, use `test_server_async` instead — this function drives its
@@ -1089,9 +1106,6 @@ def test_server(
         temporary `app.py` that is removed when the session closes.
     file_path
         A path to an app file to run. Equivalent to passing the path as `app`.
-    inputs
-        Input values to send with the session's `init` message, before the first
-        flush.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1114,7 +1128,6 @@ def test_server(
         app=app,
         code=code,
         file_path=file_path,
-        inputs=inputs,
         timeout_secs=timeout_secs,
     )
     if fn is not None:
@@ -1130,7 +1143,6 @@ def test_server_async(
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
-    inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> Coroutine[Any, Any, AsyncTestServerSession]: ...
 
@@ -1142,7 +1154,6 @@ def test_server_async(
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
-    inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> AsyncTestServerSession: ...
 
@@ -1153,7 +1164,6 @@ def test_server_async(
     *,
     code: Optional[str] = None,
     file_path: Optional[Union[str, Path]] = None,
-    inputs: Optional[Mapping[str, Any]] = None,
     timeout_secs: float = 5.0,
 ) -> Union[AsyncTestServerSession, Coroutine[Any, Any, AsyncTestServerSession]]:
     """
@@ -1189,9 +1199,6 @@ def test_server_async(
         temporary `app.py` that is removed when the session closes.
     file_path
         A path to an app file to run. Equivalent to passing the path as `app`.
-    inputs
-        Input values to send with the session's `init` message, before the first
-        flush.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1214,7 +1221,6 @@ def test_server_async(
         app=app,
         code=code,
         file_path=file_path,
-        inputs=inputs,
         timeout_secs=timeout_secs,
     )
     if fn is not None:

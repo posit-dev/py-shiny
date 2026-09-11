@@ -108,7 +108,7 @@ def test_test_server_direct_server_function():
         def doubled():
             return f"Result: {input.n() * 2}"
 
-    res = test_server(server, inputs={"n": 25})
+    res = test_server(server).set_inputs({"n": 25})
     assert res.success is True
     assert res.outputs["doubled"] == "Result: 50"
     assert res.elapsed_ms > 0
@@ -127,7 +127,7 @@ def test_test_server_direct_app_instance():
 
     app = App(app_ui, server)
 
-    res = test_server(app, inputs={"n": 25})
+    res = test_server(app).set_inputs({"n": 25})
     assert res.success is True
     assert res.outputs["doubled"] == "Result: 50"
     assert res.elapsed_ms > 0
@@ -140,7 +140,7 @@ ui.input_slider("n", "N", 1, 100, 20)
 def doubled():
     return f"Result: {input.n() * 2}"
 """
-    res = test_server(code=code, inputs={"n": 30})
+    res = test_server(code=code).set_inputs({"n": 30})
     assert res.success is True
     assert res.outputs["doubled"] == "Result: 60"
 
@@ -159,7 +159,7 @@ app = App(app_ui, server)
         encoding="utf-8",
     )
 
-    res = test_server(app_file, inputs={"txt": "pytest-sim"})
+    res = test_server(app_file).set_inputs({"txt": "pytest-sim"})
     assert res.success is True
     assert res.outputs["out"] == "Echo: pytest-sim"
 
@@ -336,3 +336,57 @@ async def test_test_server_inside_running_loop_points_at_async_variant():
     # Single-shot mode reaches `start()` lazily, via a property access.
     with pytest.raises(RuntimeError, match="test_server_async"):
         test_server(server).outputs
+
+
+def test_test_server_set_inputs_chains_and_closes_when_not_in_a_with_block():
+    app_ui = ui.page_fluid(ui.output_text("out"))
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def out():
+            return f"Echo: {input.txt()}"
+
+    app = App(app_ui, server, test_mode=False)
+    original_server = app.server
+
+    s = test_server(app)
+    assert s.set_inputs(txt="hello") is s
+    assert s.outputs["out"] == "Echo: hello"
+
+    # Reading a result attribute outside a `with` block closes the session, so
+    # the global state `start()` mutated is restored.
+    assert s._is_running is False
+    assert "SHINY_TESTMODE" not in os.environ
+    assert app._test_mode is False
+    assert app.server is original_server
+
+    # Post-close reads come from the cached result rather than re-running.
+    assert s.outputs["out"] == "Echo: hello"
+
+
+def test_test_server_with_block_caches_final_result_on_exit():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def doubled():
+            return f"{input.n() * 2}"
+
+    with test_server(server) as s:
+        s.set_inputs(n=10).set_inputs(n=21)
+        assert s.outputs["doubled"] == "42"
+        # Inside the block the session stays open across result reads.
+        assert s._is_running is True
+
+    assert s._is_running is False
+    assert s.outputs["doubled"] == "42"
+
+
+@pytest.mark.asyncio
+async def test_async_set_inputs_returns_self():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def squared():
+            return f"{input.x() ** 2}"
+
+    async with test_server_async(server) as s:
+        assert await s.set_inputs(x=6) is s
+        assert s.outputs["squared"] == "36"
