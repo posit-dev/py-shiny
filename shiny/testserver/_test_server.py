@@ -263,8 +263,13 @@ class TestServerValues:
     `AsyncTestServerSession.to_values`. The values are copies, so a snapshot stays
     valid after the session it came from is closed.
 
-    This is a plain dataclass, so `dataclasses.asdict()` converts it. To go
-    straight from a session to a dictionary, use `dict(session)`.
+    `dict(values)` converts it to plain data, all the way down: each
+    `TestServerValue` becomes a dictionary carrying only the keys its `status`
+    makes meaningful, so the result is JSON-serializable. `dict(session)` is the
+    same thing without capturing a snapshot first.
+
+    `dataclasses.asdict()` also works, but keeps every field of every value --
+    including `MISSING`, which JSON cannot encode.
 
     Attributes
     ----------
@@ -298,6 +303,25 @@ class TestServerValues:
     inputs: Dict[str, TestServerValue]
     outputs: Dict[str, TestServerValue]
     exports: Dict[str, TestServerValue]
+
+    def keys(self) -> Tuple[str, ...]:
+        """Return the keys `dict(values)` produces."""
+        return VALUE_FIELDS
+
+    def __getitem__(self, key: str) -> Any:
+        """
+        Return one field, so that `dict(values)` works.
+
+        The three value blocks are converted all the way down, so the result is
+        plain data. Read the attributes instead to keep the rich
+        `TestServerValue`s.
+        """
+        if key not in VALUE_FIELDS:
+            raise KeyError(key)
+        field = getattr(self, key)
+        if key in ("inputs", "outputs", "exports"):
+            return {name: dict(item) for name, item in field.items()}
+        return field
 
 
 def _snapshot_error(value: Any) -> Optional[str]:
@@ -833,15 +857,10 @@ class AsyncTestServerSession:
         """
         Return one `TestServerValues` field, so that `dict(session)` works.
 
-        The three value blocks are converted all the way down, so `dict(session)`
-        is plain data. Use `to_values()` to keep the rich `TestServerValue`s.
+        Equivalent to `dict(session.to_values())`: plain data all the way down.
+        Use `to_values()` to keep the rich `TestServerValue`s.
         """
-        if key not in VALUE_FIELDS:
-            raise KeyError(key)
-        field = getattr(self.to_values(), key)
-        if key in ("inputs", "outputs", "exports"):
-            return {name: dict(item) for name, item in field.items()}
-        return field
+        return self.to_values()[key]
 
     async def _close(self) -> None:
         self._is_started = False
@@ -1096,15 +1115,10 @@ class TestServerSession:
         """
         Return one `TestServerValues` field, so that `dict(session)` works.
 
-        The three value blocks are converted all the way down, so `dict(session)`
-        is plain data. Use `to_values()` to keep the rich `TestServerValue`s.
+        Equivalent to `dict(session.to_values())`: plain data all the way down.
+        Use `to_values()` to keep the rich `TestServerValue`s.
         """
-        if key not in VALUE_FIELDS:
-            raise KeyError(key)
-        field = getattr(self.to_values(), key)
-        if key in ("inputs", "outputs", "exports"):
-            return {name: dict(item) for name, item in field.items()}
-        return field
+        return self.to_values()[key]
 
     def _close_loop(self) -> None:
         loop = self._loop

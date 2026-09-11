@@ -262,6 +262,34 @@ def test_test_server_values_snapshot_and_dict_conversion():
     assert json.loads(json.dumps(as_dict)) == as_dict
 
 
+def test_test_server_values_convert_to_a_dict_like_the_session():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def fine():
+            return "hi"
+
+        @render.text
+        def never():
+            return f"{input.n()}"
+
+    with test_server(server) as ts:
+        values = ts.to_values()
+
+        # `dict(values)` is the snapshot equivalent of `dict(session)`.
+        assert dict(values) == dict(ts)
+        assert sorted(dict(values)) == sorted(VALUE_FIELDS)
+        assert dict(values)["outputs"]["fine"]["value"] == "hi"
+        assert "value" not in dict(values)["outputs"]["never"]
+
+        with pytest.raises(KeyError):
+            values["nope"]
+
+    # The snapshot converts after the block too, since it holds copies.
+    assert json.loads(json.dumps(dict(values))) == dict(values)
+    # Reading the attribute keeps the rich value.
+    assert isinstance(values.outputs["fine"], TestServerValue)
+
+
 def test_test_server_dict_form_keys_on_status():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
