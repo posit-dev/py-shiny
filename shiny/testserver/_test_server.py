@@ -4,7 +4,6 @@ import asyncio
 import json
 import os
 import sys
-import tempfile
 import time
 import traceback
 from collections.abc import Mapping
@@ -178,18 +177,15 @@ class AsyncTestServerSession:
         self,
         app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
         *,
-        code: Optional[str] = None,
         timeout_secs: float = 5.0,
     ) -> None:
         self._target_app = app
-        self._target_code = code
         self._timeout_secs = timeout_secs
 
         self._app_obj: Optional[App] = None
         self._session: Optional[AppSession] = None
         self._conn: Optional[MockConnection] = None
         self._session_task: Optional[asyncio.Task[None]] = None
-        self._temp_dir: Optional[tempfile.TemporaryDirectory[str]] = None
         self._saved_sys_path: Optional[List[str]] = None
         self._saved_modules: Optional[Set[str]] = None
         self._old_testmode: Optional[str] = None
@@ -228,10 +224,6 @@ class AsyncTestServerSession:
         else:
             os.environ.pop("SHINY_TESTMODE", None)
 
-        if self._temp_dir is not None:
-            self._temp_dir.cleanup()
-            self._temp_dir = None
-
         if self._app_obj is not None:
             if self._old_app_test_mode is not None:
                 self._app_obj._test_mode = self._old_app_test_mode
@@ -264,25 +256,19 @@ class AsyncTestServerSession:
         self._saved_sys_path = list(sys.path)
         self._saved_modules = set(sys.modules.keys())
 
-        if self._target_app is not None:
-            if isinstance(self._target_app, App):
-                self._app_obj = self._target_app
-            elif callable(self._target_app):
-                self._app_obj = App(page_fluid(), self._target_app)
-            elif isinstance(self._target_app, (str, Path)):
-                self._app_obj = self._load_app_path(Path(self._target_app))
-            else:
-                raise TypeError(
-                    "`app` must be a server function, a `shiny.App`, or a path to"
-                    f" an app file; got {type(self._target_app).__name__}."
-                )
-        elif self._target_code is not None:
-            self._temp_dir = tempfile.TemporaryDirectory()
-            temp_path = Path(self._temp_dir.name) / "app.py"
-            temp_path.write_text(self._target_code, encoding="utf-8")
-            self._app_obj = self._load_app_path(temp_path)
+        if self._target_app is None:
+            raise ValueError("`app` must be provided.")
+        if isinstance(self._target_app, App):
+            self._app_obj = self._target_app
+        elif callable(self._target_app):
+            self._app_obj = App(page_fluid(), self._target_app)
+        elif isinstance(self._target_app, (str, Path)):
+            self._app_obj = self._load_app_path(Path(self._target_app))
         else:
-            raise ValueError("Either `app` or `code` must be provided.")
+            raise TypeError(
+                "`app` must be a server function, a `shiny.App`, or a path to"
+                f" an app file; got {type(self._target_app).__name__}."
+            )
 
         if self._app_obj is None:
             raise RuntimeError("No Shiny 'App' instance found.")
@@ -623,7 +609,7 @@ class AsyncTestServerSession:
         FileNotFoundError
             If the app was given as a path that does not exist.
         ValueError
-            If neither `app` nor `code` was provided.
+            If `app` was not provided.
         RuntimeError
             If the target does not yield a `shiny.App` instance.
         """
@@ -634,8 +620,8 @@ class AsyncTestServerSession:
         Disconnect the session and undo everything entering it set up.
 
         Restores `sys.path`, `sys.modules`, the `SHINY_TESTMODE` environment
-        variable, and the app object's test-mode state, and removes any temporary
-        directory created for `code=`. Runs even when the body raised.
+        variable, and the app object's test-mode state. Runs even when the body
+        raised.
         """
         await self._close()
 
@@ -681,12 +667,10 @@ class TestServerSession:
         self,
         app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
         *,
-        code: Optional[str] = None,
         timeout_secs: float = 5.0,
     ) -> None:
         self._async_session = AsyncTestServerSession(
             app=app,
-            code=code,
             timeout_secs=timeout_secs,
         )
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -882,7 +866,7 @@ class TestServerSession:
         FileNotFoundError
             If the app was given as a path that does not exist.
         ValueError
-            If neither `app` nor `code` was provided.
+            If `app` was not provided.
         """
         try:
             asyncio.get_running_loop()
@@ -910,8 +894,8 @@ class TestServerSession:
         Disconnect the session, undo everything entering it set up, close the loop.
 
         Restores `sys.path`, `sys.modules`, the `SHINY_TESTMODE` environment
-        variable, and the app object's test-mode state, and removes any temporary
-        directory created for `code=`. Runs even when the body raised.
+        variable, and the app object's test-mode state. Runs even when the body
+        raised.
         """
         if not self._is_running:
             return
@@ -970,9 +954,8 @@ def _caller_dir() -> Path:
 
 def _resolve_target(
     app: Optional[Union[App, Callable[..., Any], str, Path]],
-    code: Optional[str],
     caller_dir: Path,
-) -> Optional[Union[App, Callable[..., Any], str, Path]]:
+) -> Union[App, Callable[..., Any], str, Path]:
     """
     Apply the `app.py` default and make path targets caller-relative.
 
@@ -980,8 +963,6 @@ def _resolve_target(
     as relative to `caller_dir`. Passing a `str` therefore always means "relative
     to the test file", matching `create_app_fixture`.
     """
-    if code is not None:
-        return app
     if app is None:
         app = DEFAULT_APP_FILE
     if isinstance(app, Path) and app.is_file():
@@ -995,7 +976,6 @@ def _resolve_target(
 def test_server(
     app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     *,
-    code: Optional[str] = None,
     timeout_secs: float = 5.0,
 ) -> TestServerSession:
     """
@@ -1024,10 +1004,6 @@ def test_server(
         * A path to an app file, Core or Express. A `str`, or a `Path` that is not
           already a file, is resolved relative to the directory of the file
           calling `test_server()`. Pass a `str` to be sure a path stays relative.
-    code
-        Shiny Express or Core source code to run, as a string, instead of loading
-        `app`. Written to a temporary `app.py` that is removed when the session
-        closes.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1070,8 +1046,7 @@ def test_server(
     * :func:`~shiny.testmode.export_test_values`
     """
     return TestServerSession(
-        _resolve_target(app, code, _caller_dir()),
-        code=code,
+        _resolve_target(app, _caller_dir()),
         timeout_secs=timeout_secs,
     )
 
@@ -1080,7 +1055,6 @@ def test_server(
 def test_server_async(
     app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     *,
-    code: Optional[str] = None,
     timeout_secs: float = 5.0,
 ) -> AsyncTestServerSession:
     """
@@ -1102,10 +1076,6 @@ def test_server_async(
           already a file, is resolved relative to the directory of the file
           calling `test_server_async()`. Pass a `str` to be sure a path stays
           relative.
-    code
-        Shiny Express or Core source code to run, as a string, instead of loading
-        `app`. Written to a temporary `app.py` that is removed when the session
-        closes.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1151,8 +1121,7 @@ def test_server_async(
     * :func:`~shiny.testmode.export_test_values`
     """
     return AsyncTestServerSession(
-        _resolve_target(app, code, _caller_dir()),
-        code=code,
+        _resolve_target(app, _caller_dir()),
         timeout_secs=timeout_secs,
     )
 

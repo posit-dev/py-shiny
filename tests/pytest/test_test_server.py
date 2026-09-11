@@ -102,17 +102,46 @@ def test_test_server_direct_app_instance():
         assert ts.elapsed_ms > 0
 
 
-def test_test_server_express_code():
-    code = """from shiny.express import input, render, ui
+EXPRESS_APP_SRC = """from shiny.express import input, render, ui
+
 ui.input_slider("n", "N", 1, 100, 20)
+
+
+@render.text
+def greeting():
+    return "express loaded"
+
+
 @render.text
 def doubled():
     return f"Result: {input.n() * 2}"
 """
-    with test_server(code=code) as ts:
-        ts.set_inputs({"n": 30})
+
+
+def test_test_server_express_app_file(tmp_path: Path):
+    """Express apps are module-level code, so they can only be loaded from a file."""
+    app_file = tmp_path / "express_app.py"
+    app_file.write_text(EXPRESS_APP_SRC, encoding="utf-8")
+
+    with test_server(app_file) as ts:
         assert ts.success is True
-        assert ts.outputs["doubled"] == "Result: 60"
+        # An output with no input dependency renders straight away.
+        assert ts.get_output("greeting") == "express loaded"
+        # There is no browser to report the slider's value, so `input.n()` raises
+        # a silent exception and `doubled` renders nothing -- without failing.
+        assert ts.get_output("doubled") is None
+        assert ts.errors == {}
+
+        ts.set_inputs(n=30)
+        assert ts.success is True
+        assert ts.get_output("doubled") == "Result: 60"
+
+
+def test_test_server_express_app_via_default_app_py(tmp_path: Path):
+    """An Express `app.py` is found by the same caller-relative default as Core."""
+    (tmp_path / "app.py").write_text(EXPRESS_APP_SRC, encoding="utf-8")
+    call = _call_from_module(tmp_path, "test_server()", output="greeting")
+    assert call == "express loaded"
 
 
 def test_test_server_file_path(tmp_path: Path):
@@ -465,7 +494,7 @@ app = App(app_ui, server)
 """
 
 
-def _call_from_module(tmp_path: Path, call_src: str) -> str:
+def _call_from_module(tmp_path: Path, call_src: str, output: str = "out") -> str:
     """
     Run `with <call_src> as ts: ...` from a module living in `tmp_path`.
 
@@ -480,7 +509,7 @@ def _call_from_module(tmp_path: Path, call_src: str) -> str:
         "\n"
         "def run():\n"
         f"    with {call_src} as ts:\n"
-        "        return ts.get_output('out')\n",
+        f"        return ts.get_output({output!r})\n",
         encoding="utf-8",
     )
     spec = importlib.util.spec_from_file_location("caller_module", mod_path)
