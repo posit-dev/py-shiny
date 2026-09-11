@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import dataclasses
 import importlib.util
+import json
 import os
 import sys
 from pathlib import Path
@@ -11,6 +11,7 @@ import pytest
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.pytest import (
+    MISSING,
     AsyncTestServerSession,
     TestServerSession,
     TestServerValue,
@@ -247,18 +248,57 @@ def test_test_server_values_snapshot_and_dict_conversion():
     assert values.success is True
     assert values.traceback == ""
 
-    # `dict(session)` unpacks the snapshot's fields but keeps each rich value,
-    # while `dataclasses.asdict` recurses all the way down to plain data.
+    # `to_values()` keeps the rich values; `dict(session)` converts all the way
+    # down to plain data.
     assert sorted(as_dict) == sorted(VALUE_FIELDS)
-    assert as_dict["outputs"]["out"] is values.outputs["out"]
-    assert dataclasses.asdict(values)["outputs"]["out"] == {
+    assert isinstance(values.outputs["out"], TestServerValue)
+    assert as_dict["outputs"]["out"] == {
         "name": "out",
         "kind": "output",
         "status": "ok",
         "value": "simulated",
-        "error": None,
-        "traceback": "",
     }
+    # Plain data all the way down means it survives a JSON round-trip.
+    assert json.loads(json.dumps(as_dict)) == as_dict
+
+
+def test_test_server_dict_form_keys_on_status():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def fine():
+            return "hi"
+
+        @render.text
+        def never():
+            return f"{input.n()}"
+
+        @render.text
+        def boom():
+            raise ValueError("kaboom")
+
+    with test_server(server) as ts:
+        outputs = dict(ts)["outputs"]
+
+        # An item that produced no value has no `value` key at all, rather than
+        # one holding `MISSING`.
+        assert outputs["never"] == {
+            "name": "never",
+            "kind": "output",
+            "status": "silent",
+        }
+        assert "value" not in outputs["never"]
+
+        assert outputs["fine"]["value"] == "hi"
+        assert "error" not in outputs["fine"]
+
+        # An error carries what explains it, and still no `value`.
+        assert outputs["boom"]["error"] == "kaboom"
+        assert "ValueError: kaboom" in outputs["boom"]["traceback"]
+        assert "value" not in outputs["boom"]
+
+        # Asking a value for a key its status does not include is a KeyError.
+        with pytest.raises(KeyError):
+            ts.get_output("never")["value"]
 
 
 def test_test_server_startup_failure_cleans_up_environment(tmp_path: Path):
@@ -606,8 +646,16 @@ def test_test_server_value_rejects_incoherent_construction():
     with pytest.raises(ValueError, match="may carry an `error`"):
         TestServerValue("x", "output", "ok", "v", error="bad")
 
-    # An output that really did render `None` is still coherent.
-    assert TestServerValue("x", "output", "ok").value is None
+    with pytest.raises(ValueError, match="status 'ok' needs a `value`"):
+        TestServerValue("x", "output", "ok")
+
+    with pytest.raises(ValueError, match="may carry a `value`"):
+        TestServerValue("x", "output", "silent", "v")
+
+    # An output that really did render `None` is still coherent, and is distinct
+    # from one that produced nothing at all.
+    assert TestServerValue("x", "output", "ok", None).value is None
+    assert TestServerValue("x", "output", "silent").value is MISSING
 
 
 def test_test_server_unknown_names_raise_rather_than_compare_unequal():
@@ -660,24 +708,47 @@ def test_test_server_value_repr_shows_only_the_meaningful_field():
         )
 
 
-def test_test_server_value_without_a_value_never_compares_equal():
+def test_test_server_value_without_a_value_refuses_to_compare():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
         def needs_input():
             return f"{input.n()}"
 
+        @render.text
+        def boom():
+            raise ValueError("kaboom")
+
     with test_server(server) as ts:
         silent = ts.get_output("needs_input")
+        failed = ts.get_output("boom")
         assert silent.status == "silent"
+        assert failed.status == "error"
 
-        # `value` is `None`, but it may not satisfy `== None`: an output that
-        # never rendered would otherwise quietly pass an assertion meant to
-        # check a real value.
-        assert not silent == None  # noqa: E711
-        assert silent != None  # noqa: E711
-        assert silent not in [None]
-        assert not silent == ""
-        assert not silent == 0
+        # Comparing against a value presumes there is one. Returning `False`
+        # would answer a different question than the test is asking, and would
+        # let every `!=` below pass while hiding why.
+        for comparison in (
+            lambda: silent == "5",
+            lambda: silent != "5",
+            lambda: silent == None,  # noqa: E711
+            lambda: silent != None,  # noqa: E711
+            lambda: silent in [None],  # pyright: ignore[reportUnnecessaryContains]
+        ):
+            with pytest.raises(ValueError, match="never rendered"):
+                comparison()
+
+        with pytest.raises(ValueError, match="raised, so there is no value"):
+            assert failed != "anything"
+        with pytest.raises(ValueError, match="kaboom"):
+            assert failed == "anything"
+
+        # Two rich values still compare structurally, without raising.
+        assert silent == TestServerValue("needs_input", "output", "silent")
+        assert silent != failed
+
+        # And once it renders, the comparison answers normally.
+        ts.set_inputs(n=5)
+        assert ts.get_output("needs_input") == "5"
 
         # An output that really did render `None` still compares equal to it.
         ts.set_inputs(n=None)

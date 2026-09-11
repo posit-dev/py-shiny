@@ -112,6 +112,7 @@ quartodoc:
         - pytest.test_server_async
         - pytest.TestServerSession
         - pytest.AsyncTestServerSession
+        - pytest.MISSING
         - pytest.TestServerValue
         - pytest.TestServerValues
     - title: "Run"

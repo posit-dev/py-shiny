@@ -63,6 +63,36 @@ a size-aware renderer such as `render.plot` raises a silent exception and
 produces nothing, and `session.clientdata.url_pathname()` never resolves.
 """
 
+
+class MissingType:
+    """The type of `MISSING`."""
+
+    def __repr__(self) -> str:
+        return "MISSING"
+
+    # A sentinel is identified by identity, so copying must not mint a second
+    # one. `dataclasses.astuple`/`asdict` deep-copy, and a copied sentinel would
+    # stop comparing equal to `MISSING`.
+    def __copy__(self) -> MissingType:
+        return self
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> MissingType:
+        return self
+
+
+MISSING = MissingType()
+"""
+`TestServerValue.value` when the item produced no value.
+
+Distinct from `None`, which a renderer can legitimately produce: an output that
+returned `None` has `value is None`, while one that never rendered, or that
+raised, has `value is MISSING`. Keeping them apart is what lets a
+`TestServerValue` reject a `status` and `value` that disagree.
+
+`MISSING` is not JSON-serializable, so `json.dumps(dataclasses.asdict(values))`
+needs `default=str`.
+"""
+
 ValueKind = Literal["input", "output", "export"]
 ValueStatus = Literal["ok", "error", "silent"]
 
@@ -82,13 +112,14 @@ class TestServerValue:
     assert ts.get_output("name") == "foo"   # same as `.value == "foo"`
     ```
 
-    Unless `status` is `"ok"` there is no value, and the comparison is `False`
-    against everything -- including `None`, so that an output which never
-    rendered cannot quietly satisfy `== None`. The `repr` names the status, so a
-    failed assertion says which it was.
+    Unless `status` is `"ok"` there is no value to compare against, and the
+    comparison raises `ValueError` saying why. Returning `False` would let
+    `!= "hi"` pass for an output that never rendered or that raised, hiding the
+    real problem behind an assertion that appears to succeed.
 
-    Comparing against another `TestServerValue` compares every field instead.
-    Because equality is against arbitrary values, instances are not hashable.
+    Comparing against another `TestServerValue` compares every field instead,
+    and never raises. Because equality is against arbitrary values, instances
+    are not hashable.
 
     Attributes
     ----------
@@ -108,7 +139,8 @@ class TestServerValue:
         `KeyError` instead.
     value
         The value, JSON round-tripped as it would be sent to the browser, so its
-        shape depends on the renderer. `None` unless `status` is `"ok"`.
+        shape depends on the renderer. `MISSING` unless `status` is `"ok"` --
+        not `None`, which a renderer can legitimately produce.
     error
         The error message, or `None` unless `status` is `"error"`.
     traceback
@@ -126,7 +158,7 @@ class TestServerValue:
     name: str
     kind: ValueKind
     status: ValueStatus
-    value: Any = None
+    value: Any = MISSING
     error: Optional[str] = None
     traceback: str = ""
 
@@ -148,6 +180,16 @@ class TestServerValue:
                 f"Only a `TestServerValue` with status 'error' may carry an"
                 f" `error`; got status {self.status!r}."
             )
+        if self.status == "ok" and self.value is MISSING:
+            raise ValueError(
+                "A `TestServerValue` with status 'ok' needs a `value`; pass"
+                " `None` if that is what the renderer produced."
+            )
+        if self.status != "ok" and self.value is not MISSING:
+            raise ValueError(
+                f"Only a `TestServerValue` with status 'ok' may carry a `value`;"
+                f" got status {self.status!r}."
+            )
 
     @property
     def success(self) -> bool:
@@ -157,12 +199,44 @@ class TestServerValue:
     def __eq__(self, other: object) -> bool:
         if isinstance(other, TestServerValue):
             return dataclasses.astuple(self) == dataclasses.astuple(other)
-        # Only a value that exists can equal anything. `value` is `None` for every
-        # other status, so without this an output that never rendered -- or an id
-        # with a typo in it -- would quietly satisfy `== None`.
-        if self.status != "ok":
-            return False
+        # Comparing against a raw value is a convenience this class adds, so it
+        # answers the question the test is really asking. Unless the item
+        # produced a value there is nothing to answer with, and returning `False`
+        # would let `!=` pass while hiding why.
+        if self.status == "silent":
+            raise ValueError(
+                f"{self.kind.capitalize()} {self.name!r} never rendered, so there"
+                " is no value to compare against. A dependency was unavailable:"
+                " an input that was never set, or a size the client never"
+                " reported. Set what it needs first, or check `.status`."
+            )
+        if self.status == "error":
+            raise ValueError(
+                f"{self.kind.capitalize()} {self.name!r} raised, so there is no"
+                f" value to compare against: {self.error}. Compare `.error`, or"
+                " read `.traceback` for where it came from."
+            )
         return self.value == other
+
+    def keys(self) -> Tuple[str, ...]:
+        """
+        Return the keys `dict(value)` produces.
+
+        Keyed on `status`, not on inspecting `value`: an item that produced no
+        value has no `value` key at all, rather than one holding `MISSING`. That
+        also keeps the dictionary form JSON-serializable.
+        """
+        if self.status == "ok":
+            return ("name", "kind", "status", "value")
+        if self.status == "error":
+            return ("name", "kind", "status", "error", "traceback")
+        return ("name", "kind", "status")
+
+    def __getitem__(self, key: str) -> Any:
+        """Return one field, so that `dict(value)` works."""
+        if key not in self.keys():
+            raise KeyError(key)
+        return getattr(self, key)
 
     def __repr__(self) -> str:
         # Keeps pytest's assertion output readable when a comparison fails. Only
@@ -756,10 +830,18 @@ class AsyncTestServerSession:
         return VALUE_FIELDS
 
     def __getitem__(self, key: str) -> Any:
-        """Return one `TestServerValues` field, so that `dict(session)` works."""
+        """
+        Return one `TestServerValues` field, so that `dict(session)` works.
+
+        The three value blocks are converted all the way down, so `dict(session)`
+        is plain data. Use `to_values()` to keep the rich `TestServerValue`s.
+        """
         if key not in VALUE_FIELDS:
             raise KeyError(key)
-        return getattr(self.to_values(), key)
+        field = getattr(self.to_values(), key)
+        if key in ("inputs", "outputs", "exports"):
+            return {name: dict(item) for name, item in field.items()}
+        return field
 
     async def _close(self) -> None:
         self._is_started = False
@@ -1011,10 +1093,18 @@ class TestServerSession:
         return VALUE_FIELDS
 
     def __getitem__(self, key: str) -> Any:
-        """Return one `TestServerValues` field, so that `dict(session)` works."""
+        """
+        Return one `TestServerValues` field, so that `dict(session)` works.
+
+        The three value blocks are converted all the way down, so `dict(session)`
+        is plain data. Use `to_values()` to keep the rich `TestServerValue`s.
+        """
         if key not in VALUE_FIELDS:
             raise KeyError(key)
-        return getattr(self.to_values(), key)
+        field = getattr(self.to_values(), key)
+        if key in ("inputs", "outputs", "exports"):
+            return {name: dict(item) for name, item in field.items()}
+        return field
 
     def _close_loop(self) -> None:
         loop = self._loop

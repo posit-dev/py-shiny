@@ -10,6 +10,7 @@ except ImportError:
 from ..testserver import (
     AsyncTestServerSession,
     TestServerSession,
+    MISSING,
     TestServerValue,
     TestServerValues,
     test_server,
@@ -21,6 +22,7 @@ __all__ = (
     "create_app_fixture",
     "ScopeName",
     "AsyncTestServerSession",
+    "MISSING",
     "TestServerValue",
     "TestServerValues",
     "TestServerSession",
