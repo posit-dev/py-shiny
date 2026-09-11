@@ -142,11 +142,18 @@ class TestServerValue:
         return self.value == other
 
     def __repr__(self) -> str:
-        # Keeps pytest's assertion output readable when a comparison fails.
-        extra = f", error={self.error!r}" if self.error is not None else ""
+        # Keeps pytest's assertion output readable when a comparison fails. Only
+        # the field that `status` makes meaningful is shown: there is no value
+        # unless the item rendered, and no error unless it raised.
+        if self.status == "ok":
+            extra = f", value={self.value!r}"
+        elif self.status == "error":
+            extra = f", error={self.error!r}"
+        else:
+            extra = ""
         return (
             f"{type(self).__name__}({self.name!r}, kind={self.kind!r},"
-            f" status={self.status!r}, value={self.value!r}{extra})"
+            f" status={self.status!r}{extra})"
         )
 
 

@@ -595,6 +595,36 @@ def test_test_server_value_compares_against_the_raw_value():
             hash(got)
 
 
+def test_test_server_value_repr_shows_only_the_meaningful_field():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def fine():
+            return "hi"
+
+        @render.text
+        def needs_input():
+            return f"{input.n()}"
+
+        @render.text
+        def boom():
+            raise ValueError("kaboom")
+
+    with test_server(server) as ts:
+        assert repr(ts.get_output("fine")) == (
+            "TestServerValue('fine', kind='output', status='ok', value='hi')"
+        )
+        assert repr(ts.get_output("boom")) == (
+            "TestServerValue('boom', kind='output', status='error', error='kaboom')"
+        )
+        # Neither field means anything for these, so neither is shown.
+        assert repr(ts.get_output("needs_input")) == (
+            "TestServerValue('needs_input', kind='output', status='silent')"
+        )
+        assert repr(ts.get_output("typo")) == (
+            "TestServerValue('typo', kind='output', status='missing')"
+        )
+
+
 def test_test_server_value_without_a_value_never_compares_equal():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
