@@ -112,7 +112,7 @@ quartodoc:
         - pytest.test_server_async
         - pytest.TestServerSession
         - pytest.AsyncTestServerSession
-        - pytest.TestServerResult
+        - pytest.TestServerValues
     - title: "Run"
       desc: "Methods for starting a local Shiny app in the background"
       contents:

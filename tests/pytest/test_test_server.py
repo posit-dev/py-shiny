@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
 import os
 import sys
@@ -12,10 +13,12 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.pytest import (
     AsyncTestServerSession,
     TestServerSession,
+    TestServerValues,
     test_server,
     test_server_async,
 )
 from shiny.testmode import export_test_values
+from shiny.testserver._test_server import VALUE_FIELDS
 
 
 def test_interactive_context_manager():
@@ -28,11 +31,11 @@ def test_interactive_context_manager():
         assert isinstance(s, TestServerSession)
         s.set_inputs(n=10)
         assert s.get_output("doubled") == "Result: 20"
-        assert s.outputs["doubled"] == "Result: 20"
+        assert s.get_output("doubled") == "Result: 20"
 
         s.set_inputs(n=25)
         assert s.get_output("doubled") == "Result: 50"
-        assert s.outputs["doubled"] == "Result: 50"
+        assert s.get_output("doubled") == "Result: 50"
 
 
 @pytest.mark.asyncio
@@ -45,10 +48,10 @@ async def test_interactive_async_context_manager():
     async with test_server_async(server) as s:
         assert isinstance(s, AsyncTestServerSession)
         await s.set_inputs(x=3)
-        assert s.outputs["squared"] == "9"
+        assert s.get_output("squared") == "9"
 
         await s.set_inputs(x=7)
-        assert s.outputs["squared"] == "49"
+        assert s.get_output("squared") == "49"
 
 
 def test_interactive_exports():
@@ -61,11 +64,11 @@ def test_interactive_exports():
 
     with test_server(server) as s:
         s.set_inputs(val=10)
-        assert s.exports["doubled"] == 20
+        assert s.get_export("doubled") == 20
         assert s.get_export("doubled") == 20
 
         s.set_inputs(val=40)
-        assert s.exports["doubled"] == 80
+        assert s.get_export("doubled") == 80
         assert s.get_export("doubled") == 80
 
 
@@ -78,8 +81,7 @@ def test_test_server_direct_server_function():
     with test_server(server) as ts:
         ts.set_inputs({"n": 25})
         assert ts.success is True
-        assert ts.outputs["doubled"] == "Result: 50"
-        assert ts.elapsed_ms > 0
+        assert ts.get_output("doubled") == "Result: 50"
 
 
 def test_test_server_direct_app_instance():
@@ -98,8 +100,7 @@ def test_test_server_direct_app_instance():
     with test_server(app) as ts:
         ts.set_inputs({"n": 25})
         assert ts.success is True
-        assert ts.outputs["doubled"] == "Result: 50"
-        assert ts.elapsed_ms > 0
+        assert ts.get_output("doubled") == "Result: 50"
 
 
 EXPRESS_APP_SRC = """from shiny.express import input, render, ui
@@ -130,7 +131,7 @@ def test_test_server_express_app_file(tmp_path: Path):
         # There is no browser to report the slider's value, so `input.n()` raises
         # a silent exception and `doubled` renders nothing -- without failing.
         assert ts.get_output("doubled") is None
-        assert ts.errors == {}
+        assert ts.get_error("doubled") is None
 
         ts.set_inputs(n=30)
         assert ts.success is True
@@ -161,7 +162,7 @@ app = App(app_ui, server)
     with test_server(app_file) as ts:
         ts.set_inputs({"txt": "pytest-sim"})
         assert ts.success is True
-        assert ts.outputs["out"] == "Echo: pytest-sim"
+        assert ts.get_output("out") == "Echo: pytest-sim"
 
 
 def test_test_server_reactive_errors():
@@ -177,8 +178,7 @@ def test_test_server_reactive_errors():
     app = App(app_ui, server)
     with test_server(app) as ts:
         assert ts.success is False
-        assert "err_out" in ts.errors
-        assert "Custom calculation error" in str(ts.errors["err_out"])
+        assert "Custom calculation error" in str(ts.get_error("err_out"))
 
 
 def test_test_server_initialization_error_is_failure():
@@ -226,7 +226,7 @@ def test_test_server_restores_app_test_mode_and_server():
     assert app.server is original_server
 
 
-def test_test_server_result_mapping_interface():
+def test_test_server_values_snapshot_and_dict_conversion():
     app_ui = ui.page_fluid(ui.output_text("out"))
 
     def server(input: Inputs, output: Outputs, session: Session):
@@ -236,14 +236,20 @@ def test_test_server_result_mapping_interface():
 
     app = App(app_ui, server)
     with test_server(app) as ts:
-        res = ts.to_result()
+        values = ts.to_values()
+        as_dict = dict(ts)
 
-    # The captured result outlives the `with` block.
-    assert res["outputs"]["out"] == "simulated"
-    assert "outputs" in res
-    assert len(res) == 7
-    assert res.get("outputs") == {"out": "simulated"}
-    assert res.to_dict()["success"] is True
+    # Both hold copies, so they outlive the `with` block.
+    assert isinstance(values, TestServerValues)
+    assert values.outputs == {"out": "simulated"}
+    assert values.success is True
+    assert values.traceback == ""
+
+    # `dict(session)` is the plain-dictionary form, and a dataclass converts the
+    # same way via `dataclasses.asdict`.
+    assert as_dict == dataclasses.asdict(values)
+    assert sorted(as_dict) == sorted(VALUE_FIELDS)
+    assert as_dict["outputs"] == {"out": "simulated"}
 
 
 def test_test_server_startup_failure_cleans_up_environment(tmp_path: Path):
@@ -302,10 +308,10 @@ app = App(app_ui, server)
     )
 
     with test_server(dir_a / "app.py") as ts:
-        assert ts.outputs["txt"] == "from_A"
+        assert ts.get_output("txt") == "from_A"
 
     with test_server(dir_b / "app.py") as ts:
-        assert ts.outputs["txt"] == "from_B"
+        assert ts.get_output("txt") == "from_B"
 
 
 def test_test_server_set_inputs_timeout():
@@ -338,17 +344,13 @@ async def test_test_server_inside_running_loop_points_at_async_variant():
 USES_OF_A_RUNNING_SESSION: list[Callable[[TestServerSession], object]] = [
     lambda ts: ts.set_inputs(x=1),
     lambda ts: ts.flush(),
-    lambda ts: ts.outputs,
-    lambda ts: ts.exports,
-    lambda ts: ts.errors,
     lambda ts: ts.success,
     lambda ts: ts.error,
-    lambda ts: ts.traceback,
-    lambda ts: ts.elapsed_ms,
     lambda ts: ts.get_output("out"),
     lambda ts: ts.get_export("out"),
-    lambda ts: ts.to_result(),
-    lambda ts: ts.to_dict(),
+    lambda ts: ts.get_error("out"),
+    lambda ts: ts.to_values(),
+    lambda ts: dict(ts),
 ]
 """Every member that needs a started session, to check each one refuses to autostart."""
 
@@ -408,7 +410,7 @@ async def test_async_set_inputs_returns_self():
 
     async with test_server_async(server) as s:
         assert await s.set_inputs(x=6) is s
-        assert s.outputs["squared"] == "36"
+        assert s.get_output("squared") == "36"
 
 
 def test_set_inputs_merges_across_calls_and_never_stalls():
@@ -460,13 +462,13 @@ def test_set_inputs_clears_errors_once_a_later_flush_succeeds():
 
         ts.set_inputs(val=-1)
         assert ts.success is False
-        assert "must be non-negative" in str(ts.errors["checked"])
+        assert "must be non-negative" in str(ts.get_error("checked"))
 
         # The snapshot is rebuilt per flush, so a recovered output stops reporting
         # the stale error.
         ts.set_inputs(val=7)
         assert ts.success is True
-        assert ts.errors == {}
+        assert ts.get_error("doubled") is None
         assert ts.get_output("checked") == "ok 7"
         assert ts.get_export("tripled") == 21
 

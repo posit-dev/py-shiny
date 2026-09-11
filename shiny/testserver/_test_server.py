@@ -34,17 +34,21 @@ from ..ui import page_fluid
 T = TypeVar("T")
 
 
-@dataclass
-class TestServerResult(Mapping[str, Any]):
-    """
-    A point-in-time snapshot of a test session's outputs, exports, and errors.
+VALUE_FIELDS = ("success", "error", "traceback", "outputs", "errors", "exports")
+"""The fields of `TestServerValues`, and the keys of `dict(session)`."""
 
-    Returned by `TestServerSession.to_result` and
-    `AsyncTestServerSession.to_result`. The values are copies, so a result stays
+
+@dataclass(frozen=True)
+class TestServerValues:
+    """
+    A point-in-time snapshot of a test session's output, export, and error values.
+
+    Returned by `TestServerSession.to_values` and
+    `AsyncTestServerSession.to_values`. The values are copies, so a snapshot stays
     valid after the session it came from is closed.
 
-    Also usable as a read-only mapping keyed by attribute name, so
-    `result["outputs"]` and `result.outputs` are equivalent.
+    This is a plain dataclass, so `dataclasses.asdict()` converts it. To go
+    straight from a session to a dictionary, use `dict(session)`.
 
     Attributes
     ----------
@@ -55,6 +59,8 @@ class TestServerResult(Mapping[str, Any]):
         `None` when `success` is `True`.
     traceback
         The formatted traceback of the first fatal error; `""` if there was none.
+        A fatal error is recorded rather than re-raised, so this is the only place
+        its origin is reported.
     outputs
         Rendered output values, keyed by output id.
     errors
@@ -63,8 +69,6 @@ class TestServerResult(Mapping[str, Any]):
         `"export:<name>"`, and a fatal session error is keyed `"__fatal__"`.
     exports
         Values registered with `shiny.testmode.export_test_values`, keyed by name.
-    elapsed_ms
-        Milliseconds elapsed between session start and this snapshot.
 
     See Also
     --------
@@ -80,66 +84,6 @@ class TestServerResult(Mapping[str, Any]):
     outputs: Dict[str, Any]
     errors: Dict[str, Any]
     exports: Dict[str, Any]
-    elapsed_ms: float = 0.0
-
-    def __getitem__(self, key: str) -> Any:
-        if hasattr(self, key):
-            return getattr(self, key)
-        raise KeyError(key)
-
-    def __iter__(self):
-        return iter(
-            (
-                "success",
-                "error",
-                "traceback",
-                "outputs",
-                "errors",
-                "exports",
-                "elapsed_ms",
-            )
-        )
-
-    def __len__(self) -> int:
-        return 7
-
-    def get(self, key: str, default: Any = None) -> Any:
-        if hasattr(self, key):
-            return getattr(self, key)
-        return default
-
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        Return the result as a plain dictionary.
-
-        Returns
-        -------
-        :
-            A dictionary with one entry per attribute of this class.
-        """
-        return {
-            "success": self.success,
-            "error": self.error,
-            "traceback": self.traceback,
-            "outputs": self.outputs,
-            "errors": self.errors,
-            "exports": self.exports,
-            "elapsed_ms": self.elapsed_ms,
-        }
-
-
-def _error_result(
-    message: str, traceback_text: str = "", elapsed_ms: float = 0.0
-) -> TestServerResult:
-    return TestServerResult(
-        success=False,
-        error=message,
-        traceback=traceback_text,
-        outputs={},
-        errors={"__fatal__": message},
-        exports={},
-        elapsed_ms=elapsed_ms,
-    )
 
 
 class AsyncTestServerSession:
@@ -161,14 +105,14 @@ class AsyncTestServerSession:
 
     `async with` is the only supported way to run a session: it starts the app on
     entry and always tears it down on exit, including when the test fails. Values
-    registered with `shiny.testmode.export_test_values` are available under
-    `exports`.
+    registered with `shiny.testmode.export_test_values` are read with
+    `get_export`.
 
     See Also
     --------
     * :func:`~shiny.pytest.test_server_async`
     * :class:`~shiny.pytest.TestServerSession`
-    * :class:`~shiny.pytest.TestServerResult`
+    * :class:`~shiny.pytest.TestServerValues`
     """
 
     __test__ = False
@@ -196,7 +140,6 @@ class AsyncTestServerSession:
         self._current_exports: Dict[str, Any] = {}
         self._current_errors: Dict[str, Any] = {}
         self._is_started: bool = False
-        self._start_time: float = 0.0
 
     async def _cleanup(self) -> None:
         if self._conn is not None:
@@ -250,7 +193,6 @@ class AsyncTestServerSession:
         return _load_app_from_file(target_path)
 
     async def _start_impl(self) -> AsyncTestServerSession:
-        self._start_time = time.perf_counter()
         self._old_testmode = os.environ.get("SHINY_TESTMODE")
         os.environ["SHINY_TESTMODE"] = "1"
         self._saved_sys_path = list(sys.path)
@@ -424,32 +366,33 @@ class AsyncTestServerSession:
         self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
     ) -> AsyncTestServerSession:
         """
-        Set input values and wait for the resulting reactive flush.
+                Set input values and wait for the resulting reactive flush.
 
-        Simulates a user interaction: the values are sent to the session as an
-        input update, and the call returns once the reactive graph has settled and
-        `outputs`, `exports`, and `errors` have been refreshed.
+                Simulates a user interaction: the values are sent to the session as an
+                input update, and the call returns once the reactive graph has settled and
+        the values read by `get_output`, `get_export`, and `get_error` have been
+                refreshed.
 
-        Parameters
-        ----------
-        inputs
-            Input values keyed by input id. Useful for ids that are not valid
-            Python identifiers.
-        **kwargs
-            Input values given as keyword arguments. These take precedence over
-            same-named keys in `inputs`.
+                Parameters
+                ----------
+                inputs
+                    Input values keyed by input id. Useful for ids that are not valid
+                    Python identifiers.
+                **kwargs
+                    Input values given as keyword arguments. These take precedence over
+                    same-named keys in `inputs`.
 
-        Returns
-        -------
-        :
-            This session, so calls can be chained.
+                Returns
+                -------
+                :
+                    This session, so calls can be chained.
 
-        Raises
-        ------
-        TimeoutError
-            If the flush does not complete within `timeout_secs`.
-        RuntimeError
-            If the session is not running.
+                Raises
+                ------
+                TimeoutError
+                    If the flush does not complete within `timeout_secs`.
+                RuntimeError
+                    If the session is not running.
         """
         all_inputs: Dict[str, Any] = {}
         if inputs:
@@ -488,28 +431,13 @@ class AsyncTestServerSession:
 
     async def flush(self) -> None:
         """
-        Re-read the session's outputs, exports, and errors.
+        Re-read the session's output, export, and error values.
 
         `set_inputs` already does this, so an explicit call is only needed after
         something outside the test changes reactive state (for example an effect
         driven by a timer).
         """
         await self._refresh_snapshots()
-
-    @property
-    def outputs(self) -> Dict[str, Any]:
-        """Rendered output values, keyed by output id."""
-        return dict(self._current_outputs)
-
-    @property
-    def exports(self) -> Dict[str, Any]:
-        """Values registered with `shiny.testmode.export_test_values`, keyed by name."""
-        return dict(self._current_exports)
-
-    @property
-    def errors(self) -> Dict[str, Any]:
-        """Errors keyed by the output id that raised them. See `TestServerResult`."""
-        return dict(self._current_errors)
 
     @property
     def success(self) -> bool:
@@ -525,11 +453,6 @@ class AsyncTestServerSession:
         if len(self._current_errors) > 0:
             return f"{len(self._current_errors)} reactive error(s) occurred"
         return None
-
-    @property
-    def elapsed_ms(self) -> float:
-        """Milliseconds elapsed since the session started."""
-        return (time.perf_counter() - self._start_time) * 1000.0
 
     def get_output(self, name: str, default: Any = None) -> Any:
         """
@@ -567,26 +490,53 @@ class AsyncTestServerSession:
         """
         return self._current_exports.get(name, default)
 
-    def to_result(self) -> TestServerResult:
+    def get_error(self, name: str, default: Any = None) -> Any:
+        """
+        Return the error raised by one output.
+
+        Parameters
+        ----------
+        name
+            An output id. Errors from exported values are keyed `"export:<name>"`,
+            and a fatal session error is keyed `"__fatal__"`.
+        default
+            The value to return when `name` did not raise.
+
+        Returns
+        -------
+        :
+            The error, or `default`.
+        """
+        return self._current_errors.get(name, default)
+
+    def to_values(self) -> TestServerValues:
         """
         Capture the session's current state.
 
         Returns
         -------
         :
-            A `TestServerResult` snapshot that stays valid after the session is
-            closed.
+            A `TestServerValues` snapshot of copies, which stays valid after the
+            session is closed.
         """
-        first_tb = self._fatal_errors[0][1] if self._fatal_errors else ""
-        return TestServerResult(
+        return TestServerValues(
             success=self.success,
             error=self.error,
-            traceback=first_tb,
-            outputs=self.outputs,
-            errors=self.errors,
-            exports=self.exports,
-            elapsed_ms=self.elapsed_ms,
+            traceback=self._fatal_errors[0][1] if self._fatal_errors else "",
+            outputs=dict(self._current_outputs),
+            errors=dict(self._current_errors),
+            exports=dict(self._current_exports),
         )
+
+    def keys(self) -> Tuple[str, ...]:
+        """Return the keys `dict(session)` produces. See `TestServerValues`."""
+        return VALUE_FIELDS
+
+    def __getitem__(self, key: str) -> Any:
+        """Return one `TestServerValues` field, so that `dict(session)` works."""
+        if key not in VALUE_FIELDS:
+            raise KeyError(key)
+        return getattr(self.to_values(), key)
 
     async def _close(self) -> None:
         self._is_started = False
@@ -646,9 +596,10 @@ class TestServerSession:
         assert ts.get_output("name") == "bar"
     ```
 
-    Values registered with `shiny.testmode.export_test_values` are available under
-    `exports`. To keep results for assertions after the block, capture a
-    `TestServerResult` with `to_result` while the session is still open.
+    Values registered with `shiny.testmode.export_test_values` are read with
+    `get_export`. To keep values for assertions after the block, capture a
+    `TestServerValues` with `to_values`, or a plain dictionary with
+    `dict(session)`, while the session is still open.
 
     This class drives its own event loop on the calling thread, so it cannot be
     used from inside a running event loop — in an `async` test, use
@@ -658,7 +609,7 @@ class TestServerSession:
     --------
     * :func:`~shiny.pytest.test_server`
     * :class:`~shiny.pytest.AsyncTestServerSession`
-    * :class:`~shiny.pytest.TestServerResult`
+    * :class:`~shiny.pytest.TestServerValues`
     """
 
     __test__ = False
@@ -695,39 +646,40 @@ class TestServerSession:
         self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
     ) -> TestServerSession:
         """
-        Set input values and wait for the resulting reactive flush.
+                Set input values and wait for the resulting reactive flush.
 
-        Simulates a user interaction: the values are sent to the session as an
-        input update, and the call returns once the reactive graph has settled and
-        `outputs`, `exports`, and `errors` have been refreshed.
+                Simulates a user interaction: the values are sent to the session as an
+                input update, and the call returns once the reactive graph has settled and
+        the values read by `get_output`, `get_export`, and `get_error` have been
+                refreshed.
 
-        Parameters
-        ----------
-        inputs
-            Input values keyed by input id. Useful for ids that are not valid
-            Python identifiers.
-        **kwargs
-            Input values given as keyword arguments. These take precedence over
-            same-named keys in `inputs`.
+                Parameters
+                ----------
+                inputs
+                    Input values keyed by input id. Useful for ids that are not valid
+                    Python identifiers.
+                **kwargs
+                    Input values given as keyword arguments. These take precedence over
+                    same-named keys in `inputs`.
 
-        Returns
-        -------
-        :
-            This session, so calls can be chained.
+                Returns
+                -------
+                :
+                    This session, so calls can be chained.
 
-        Raises
-        ------
-        TimeoutError
-            If the flush does not complete within `timeout_secs`.
-        RuntimeError
-            If the session is not running.
+                Raises
+                ------
+                TimeoutError
+                    If the flush does not complete within `timeout_secs`.
+                RuntimeError
+                    If the session is not running.
         """
         self._run(self._require_running().set_inputs(inputs=inputs, **kwargs))
         return self
 
     def flush(self) -> None:
         """
-        Re-read the session's outputs, exports, and errors.
+        Re-read the session's output, export, and error values.
 
         `set_inputs` already does this, so an explicit call is only needed after
         something outside the test changes reactive state (for example an effect
@@ -741,21 +693,6 @@ class TestServerSession:
         self._run(self._require_running().flush())
 
     @property
-    def outputs(self) -> Dict[str, Any]:
-        """Rendered output values, keyed by output id."""
-        return self._require_running().outputs
-
-    @property
-    def exports(self) -> Dict[str, Any]:
-        """Values registered with `shiny.testmode.export_test_values`, keyed by name."""
-        return self._require_running().exports
-
-    @property
-    def errors(self) -> Dict[str, Any]:
-        """Errors keyed by the output id that raised them. See `TestServerResult`."""
-        return self._require_running().errors
-
-    @property
     def success(self) -> bool:
         """`True` when no reactive errors and no fatal errors have occurred."""
         return self._require_running().success
@@ -764,16 +701,6 @@ class TestServerSession:
     def error(self) -> Optional[str]:
         """A summary of the first error, or `None` when `success` is `True`."""
         return self._require_running().error
-
-    @property
-    def traceback(self) -> str:
-        """The traceback of the first fatal error; `""` if there was none."""
-        return self.to_result().traceback
-
-    @property
-    def elapsed_ms(self) -> float:
-        """Milliseconds elapsed since the session started."""
-        return self._require_running().elapsed_ms
 
     def get_output(self, name: str, default: Any = None) -> Any:
         """
@@ -811,28 +738,46 @@ class TestServerSession:
         """
         return self._require_running().get_export(name, default)
 
-    def to_result(self) -> TestServerResult:
+    def get_error(self, name: str, default: Any = None) -> Any:
+        """
+        Return the error raised by one output.
+
+        Parameters
+        ----------
+        name
+            An output id. Errors from exported values are keyed `"export:<name>"`,
+            and a fatal session error is keyed `"__fatal__"`.
+        default
+            The value to return when `name` did not raise.
+
+        Returns
+        -------
+        :
+            The error, or `default`.
+        """
+        return self._require_running().get_error(name, default)
+
+    def to_values(self) -> TestServerValues:
         """
         Capture the session's current state.
 
         Returns
         -------
         :
-            A `TestServerResult` snapshot of copies, so it stays valid after the
+            A `TestServerValues` snapshot of copies, so it stays valid after the
             `with` block ends.
         """
-        return self._require_running().to_result()
+        return self._require_running().to_values()
 
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        Capture the session's current state as a plain dictionary.
+    def keys(self) -> Tuple[str, ...]:
+        """Return the keys `dict(session)` produces. See `TestServerValues`."""
+        return VALUE_FIELDS
 
-        Returns
-        -------
-        :
-            `to_result` converted with `TestServerResult.to_dict`.
-        """
-        return self.to_result().to_dict()
+    def __getitem__(self, key: str) -> Any:
+        """Return one `TestServerValues` field, so that `dict(session)` works."""
+        if key not in VALUE_FIELDS:
+            raise KeyError(key)
+        return getattr(self.to_values(), key)
 
     def _close_loop(self) -> None:
         loop = self._loop
@@ -1042,7 +987,7 @@ def test_server(
     --------
     * :func:`~shiny.pytest.test_server_async`
     * :class:`~shiny.pytest.TestServerSession`
-    * :class:`~shiny.pytest.TestServerResult`
+    * :class:`~shiny.pytest.TestServerValues`
     * :func:`~shiny.testmode.export_test_values`
     """
     return TestServerSession(
@@ -1117,7 +1062,7 @@ def test_server_async(
     --------
     * :func:`~shiny.pytest.test_server`
     * :class:`~shiny.pytest.AsyncTestServerSession`
-    * :class:`~shiny.pytest.TestServerResult`
+    * :class:`~shiny.pytest.TestServerValues`
     * :func:`~shiny.testmode.export_test_values`
     """
     return AsyncTestServerSession(
