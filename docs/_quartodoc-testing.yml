@@ -112,10 +112,9 @@ quartodoc:
         - testserver.test_server_async
         - testserver.TestServerSession
         - testserver.AsyncTestServerSession
-        - testserver.DEFAULT_CLIENT_DATA
-        - testserver.MISSING
         - testserver.TestServerValue
         - testserver.TestServerValues
+        - testserver.DEFAULT_CLIENT_DATA
     - title: "Run"
       desc: "Methods for starting a local Shiny app in the background"
       contents:

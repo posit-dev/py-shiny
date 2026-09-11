@@ -32,12 +32,13 @@ from .._docstring import no_example
 from ..express import is_express_app
 from ..express._run import wrap_express_app
 from ..session._session import AppSession
+from ..types import MISSING
 from ..ui import page_fluid
 
 T = TypeVar("T")
 
 
-VALUE_FIELDS = ("success", "error", "traceback", "inputs", "outputs", "exports")
+VALUE_FIELDS = ("is_ok", "error", "traceback", "inputs", "outputs", "exports")
 """The fields of `TestServerValues`, and the keys of `dict(session)`."""
 
 DEFAULT_CLIENT_DATA: Dict[str, Any] = {
@@ -63,35 +64,6 @@ a size-aware renderer such as `render.plot` raises a silent exception and
 produces nothing, and `session.clientdata.url_pathname()` never resolves.
 """
 
-
-class MissingType:
-    """The type of `MISSING`."""
-
-    def __repr__(self) -> str:
-        return "MISSING"
-
-    # A sentinel is identified by identity, so copying must not mint a second
-    # one. `dataclasses.astuple`/`asdict` deep-copy, and a copied sentinel would
-    # stop comparing equal to `MISSING`.
-    def __copy__(self) -> MissingType:
-        return self
-
-    def __deepcopy__(self, memo: Dict[int, Any]) -> MissingType:
-        return self
-
-
-MISSING = MissingType()
-"""
-`TestServerValue.value` when the item produced no value.
-
-Distinct from `None`, which a renderer can legitimately produce: an output that
-returned `None` has `value is None`, while one that never rendered, or that
-raised, has `value is MISSING`. Keeping them apart is what lets a
-`TestServerValue` reject a `status` and `value` that disagree.
-
-`MISSING` is not JSON-serializable, so `json.dumps(dataclasses.asdict(values))`
-needs `default=str`.
-"""
 
 ValueKind = Literal["input", "output", "export"]
 ValueStatus = Literal["ok", "error", "silent"]
@@ -139,13 +111,16 @@ class TestServerValue:
         `KeyError` instead.
     value
         The value, JSON round-tripped as it would be sent to the browser, so its
-        shape depends on the renderer. `MISSING` unless `status` is `"ok"` --
-        not `None`, which a renderer can legitimately produce.
+        shape depends on the renderer. :data:`~shiny.types.MISSING` unless
+        `status` is `"ok"` -- not `None`, which a renderer can legitimately
+        produce. (`MISSING` is not JSON-serializable, so
+        `json.dumps(dataclasses.asdict(values))` needs `default=str`; `dict()`
+        omits the key instead.)
     error
         The error message, or `None` unless `status` is `"error"`.
     traceback
-        The formatted traceback of `error`; `""` when there was none. Recorded
-        only in test mode, and never sent to the browser.
+        The formatted traceback of `error`, or `None` when there is no `error`.
+        Recorded only in test mode, and never sent to the browser.
 
     See Also
     --------
@@ -160,7 +135,7 @@ class TestServerValue:
     status: ValueStatus
     value: Any = MISSING
     error: Optional[str] = None
-    traceback: str = ""
+    traceback: Optional[str] = None
 
     def __post_init__(self) -> None:
         # Frozen, so an instance that starts out incoherent stays that way. The
@@ -180,6 +155,10 @@ class TestServerValue:
                 f"Only a `TestServerValue` with status 'error' may carry an"
                 f" `error`; got status {self.status!r}."
             )
+        if self.error is None and self.traceback is not None:
+            raise ValueError(
+                "A `TestServerValue` with no `error` cannot carry a `traceback`."
+            )
         if self.status == "ok" and self.value is MISSING:
             raise ValueError(
                 "A `TestServerValue` with status 'ok' needs a `value`; pass"
@@ -192,8 +171,8 @@ class TestServerValue:
             )
 
     @property
-    def success(self) -> bool:
-        """`True` when `status` is `"ok"`."""
+    def is_ok(self) -> bool:
+        """`True` when `status` is `"ok"`, so `value` holds what was produced."""
         return self.status == "ok"
 
     def __eq__(self, other: object) -> bool:
@@ -273,14 +252,14 @@ class TestServerValues:
 
     Attributes
     ----------
-    success
+    is_ok
         `True` when no output or export errored and no fatal error occurred.
     error
         A summary of the first fatal error, or a count of item errors, or `None`
-        when `success` is `True`.
+        when `is_ok` is `True`.
     traceback
-        The formatted traceback of the first *fatal* error; `""` if there was
-        none. Per-item tracebacks live on each `TestServerValue`.
+        The formatted traceback of the first *fatal* error, or `None` when there
+        is no `error`. Per-item tracebacks live on each `TestServerValue`.
     inputs
         Every input the session has received, keyed by input id.
     outputs
@@ -297,9 +276,9 @@ class TestServerValues:
 
     __test__ = False
 
-    success: bool
+    is_ok: bool
     error: Optional[str]
-    traceback: str
+    traceback: Optional[str]
     inputs: Dict[str, TestServerValue]
     outputs: Dict[str, TestServerValue]
     exports: Dict[str, TestServerValue]
@@ -650,7 +629,7 @@ class AsyncTestServerSession:
                     "output",
                     "error",
                     error=error,
-                    traceback=queues.test_tracebacks.get(name, ""),
+                    traceback=queues.test_tracebacks.get(name),
                 )
             elif name in raw_outputs:
                 self._current_outputs[name] = TestServerValue(
@@ -670,33 +649,31 @@ class AsyncTestServerSession:
 
     async def set_inputs(self, /, **kwargs: Any) -> AsyncTestServerSession:
         """
-                Set input values and wait for the resulting reactive flush.
+        Set input values and wait for the resulting reactive flush.
 
-                Simulates a user interaction: the values are sent to the session as an
-                input update, and the call returns once the reactive graph has settled and
-        the values read by `get_output`, `get_export`, and `get_error` have been
-                refreshed.
+        Simulates a user interaction: the values are sent to the session as an
+        input update, and the call returns once the reactive graph has settled
+        and the values read by `get_input`, `get_output`, and `get_export` have
+        been refreshed.
 
-                Parameters
-                ----------
-                inputs
-                    Input values keyed by input id. Useful for ids that are not valid
-                    Python identifiers.
-                **kwargs
-                    Input values given as keyword arguments. These take precedence over
-                    same-named keys in `inputs`.
+        Parameters
+        ----------
+        **kwargs
+            Input values keyed by input id. Ids that are not valid Python
+            identifiers -- a module's namespaced `"counter-n"`, say -- go
+            through an unpacked dictionary: `set_inputs(**{"counter-n": 7})`.
 
-                Returns
-                -------
-                :
-                    This session, so calls can be chained.
+        Returns
+        -------
+        :
+            This session, so calls can be chained.
 
-                Raises
-                ------
-                TimeoutError
-                    If the flush does not complete within `timeout_secs`.
-                RuntimeError
-                    If the session is not running.
+        Raises
+        ------
+        TimeoutError
+            If the flush does not complete within `timeout_secs`.
+        RuntimeError
+            If the session is not running.
         """
         all_inputs: Dict[str, Any] = dict(kwargs)
 
@@ -760,13 +737,13 @@ class AsyncTestServerSession:
         }
 
     @property
-    def success(self) -> bool:
+    def is_ok(self) -> bool:
         """`True` when nothing errored and no fatal error occurred."""
         return not self._failures() and not self._fatal_errors
 
     @property
     def error(self) -> Optional[str]:
-        """A summary of the first error, or `None` when `success` is `True`."""
+        """A summary of the first error, or `None` when `is_ok` is `True`."""
         if self._fatal_errors:
             first_exc, _ = self._fatal_errors[0]
             return f"Session fatal error: {type(first_exc).__name__}: {first_exc}"
@@ -853,9 +830,9 @@ class AsyncTestServerSession:
             session is closed.
         """
         return TestServerValues(
-            success=self.success,
+            is_ok=self.is_ok,
             error=self.error,
-            traceback=self._fatal_errors[0][1] if self._fatal_errors else "",
+            traceback=self._fatal_errors[0][1] if self._fatal_errors else None,
             inputs=dict(self._current_inputs),
             outputs=dict(self._current_outputs),
             exports=dict(self._current_exports),
@@ -982,33 +959,31 @@ class TestServerSession:
 
     def set_inputs(self, /, **kwargs: Any) -> TestServerSession:
         """
-                Set input values and wait for the resulting reactive flush.
+        Set input values and wait for the resulting reactive flush.
 
-                Simulates a user interaction: the values are sent to the session as an
-                input update, and the call returns once the reactive graph has settled and
-        the values read by `get_output`, `get_export`, and `get_error` have been
-                refreshed.
+        Simulates a user interaction: the values are sent to the session as an
+        input update, and the call returns once the reactive graph has settled
+        and the values read by `get_input`, `get_output`, and `get_export` have
+        been refreshed.
 
-                Parameters
-                ----------
-                inputs
-                    Input values keyed by input id. Useful for ids that are not valid
-                    Python identifiers.
-                **kwargs
-                    Input values given as keyword arguments. These take precedence over
-                    same-named keys in `inputs`.
+        Parameters
+        ----------
+        **kwargs
+            Input values keyed by input id. Ids that are not valid Python
+            identifiers -- a module's namespaced `"counter-n"`, say -- go
+            through an unpacked dictionary: `set_inputs(**{"counter-n": 7})`.
 
-                Returns
-                -------
-                :
-                    This session, so calls can be chained.
+        Returns
+        -------
+        :
+            This session, so calls can be chained.
 
-                Raises
-                ------
-                TimeoutError
-                    If the flush does not complete within `timeout_secs`.
-                RuntimeError
-                    If the session is not running.
+        Raises
+        ------
+        TimeoutError
+            If the flush does not complete within `timeout_secs`.
+        RuntimeError
+            If the session is not running.
         """
         self._run(self._require_running().set_inputs(**kwargs))
         return self
@@ -1029,13 +1004,13 @@ class TestServerSession:
         self._run(self._require_running().flush())
 
     @property
-    def success(self) -> bool:
+    def is_ok(self) -> bool:
         """`True` when no reactive errors and no fatal errors have occurred."""
-        return self._require_running().success
+        return self._require_running().is_ok
 
     @property
     def error(self) -> Optional[str]:
-        """A summary of the first error, or `None` when `success` is `True`."""
+        """A summary of the first error, or `None` when `is_ok` is `True`."""
         return self._require_running().error
 
     def get_input(self, name: str) -> TestServerValue:
@@ -1361,7 +1336,7 @@ def test_server(
             # Several inputs at once.
             ts.set_inputs(name="Ada", n=10)
 
-            assert ts.success
+            assert ts.is_ok
             assert ts.get_output("greeting") == "Hello, Ada!"
             assert ts.get_output("doubled") == "20"
 
@@ -1382,7 +1357,7 @@ def test_server(
         with test_server("myapp.py") as ts:
             ts.set_inputs(n=-1)
 
-            assert ts.success is False
+            assert ts.is_ok is False
             failed = ts.get_output("doubled")
             assert failed.status == "error"
             assert "must be positive" in failed.error
@@ -1427,6 +1402,19 @@ def test_server(
             ts.set_inputs(**{"counter-n": 7})
             assert ts.get_output("counter-label") == "n=7"
     ```
+
+    Express modules namespace their ids the same way, so an Express app holding
+    `counter("counter")` is reached with the very same ids:
+
+    ```python
+    def test_express_counter_module():
+        with test_server("express_app.py") as ts:
+            ts.set_inputs(**{"counter-n": 7})
+            assert ts.get_output("counter-label") == "n=7"
+    ```
+
+    Nested modules compose their namespaces, so the id is every ancestor id
+    joined by `-`: `ts.get_output("outer-inner-label")`.
 
     A fixture keeps the `with` block out of every test body, and pytest handles
     the teardown. Leave it function-scoped -- the default -- because a session
@@ -1571,7 +1559,7 @@ def test_server_async(
             # Several inputs at once.
             await ts.set_inputs(name="Ada", n=10)
 
-            assert ts.success
+            assert ts.is_ok
             assert ts.get_output("greeting") == "Hello, Ada!"
             assert ts.get_output("doubled") == "20"
 
@@ -1593,7 +1581,7 @@ def test_server_async(
         async with test_server_async("myapp.py") as ts:
             await ts.set_inputs(n=-1)
 
-            assert ts.success is False
+            assert ts.is_ok is False
             failed = ts.get_output("doubled")
             assert failed.status == "error"
             assert "must be positive" in failed.error

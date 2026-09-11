@@ -14,7 +14,6 @@ import pytest
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny.testmode import export_test_values
 from shiny.testserver import (
-    MISSING,
     AsyncTestServerSession,
     TestServerSession,
     TestServerValue,
@@ -23,6 +22,7 @@ from shiny.testserver import (
     test_server_async,
 )
 from shiny.testserver._test_server import DEFAULT_CLIENT_DATA, VALUE_FIELDS
+from shiny.types import MISSING
 
 
 def test_interactive_context_manager():
@@ -84,7 +84,7 @@ def test_test_server_direct_server_function():
 
     with test_server(server) as ts:
         ts.set_inputs(n=25)
-        assert ts.success is True
+        assert ts.is_ok is True
         assert ts.get_output("doubled") == "Result: 50"
 
 
@@ -103,7 +103,7 @@ def test_test_server_direct_app_instance():
 
     with test_server(app) as ts:
         ts.set_inputs(n=25)
-        assert ts.success is True
+        assert ts.is_ok is True
         assert ts.get_output("doubled") == "Result: 50"
 
 
@@ -129,7 +129,7 @@ def test_test_server_express_app_file(tmp_path: Path):
     app_file.write_text(EXPRESS_APP_SRC, encoding="utf-8")
 
     with test_server(app_file) as ts:
-        assert ts.success is True
+        assert ts.is_ok is True
         # An output with no input dependency renders straight away.
         assert ts.get_output("greeting") == "express loaded"
         # There is no browser to report the slider's value, so `input.n()` raises
@@ -139,7 +139,7 @@ def test_test_server_express_app_file(tmp_path: Path):
         assert ts.get_output("doubled").error is None
 
         ts.set_inputs(n=30)
-        assert ts.success is True
+        assert ts.is_ok is True
         assert ts.get_output("doubled") == "Result: 60"
 
 
@@ -166,7 +166,7 @@ app = App(app_ui, server)
 
     with test_server(app_file) as ts:
         ts.set_inputs(txt="pytest-sim")
-        assert ts.success is True
+        assert ts.is_ok is True
         assert ts.get_output("out") == "Echo: pytest-sim"
 
 
@@ -182,7 +182,7 @@ def test_test_server_reactive_errors():
 
     app = App(app_ui, server)
     with test_server(app) as ts:
-        assert ts.success is False
+        assert ts.is_ok is False
         assert "Custom calculation error" in str(ts.get_output("err_out").error)
 
 
@@ -194,7 +194,7 @@ def test_test_server_initialization_error_is_failure():
 
     app = App(app_ui, server)
     with test_server(app) as ts:
-        assert ts.success is False
+        assert ts.is_ok is False
         assert "Fatal server init crash" in str(ts.error)
 
 
@@ -208,7 +208,7 @@ def test_test_server_reactive_effect_error_is_failure():
 
     app = App(app_ui, server)
     with test_server(app) as ts:
-        assert ts.success is False
+        assert ts.is_ok is False
         assert "Fatal effect crash" in str(ts.error)
 
 
@@ -225,7 +225,7 @@ def test_test_server_restores_app_test_mode_and_server():
     assert app._test_mode is False
 
     with test_server(app) as ts:
-        assert ts.success is True
+        assert ts.is_ok is True
 
     assert app._test_mode is False
     assert app.server is original_server
@@ -247,8 +247,8 @@ def test_test_server_values_snapshot_and_dict_conversion():
     # Both hold copies, so they outlive the `with` block.
     assert isinstance(values, TestServerValues)
     assert values.outputs["out"] == "simulated"
-    assert values.success is True
-    assert values.traceback == ""
+    assert values.is_ok is True
+    assert values.traceback is None
 
     # `to_values()` keeps the rich values; `dict(session)` converts all the way
     # down to plain data.
@@ -442,7 +442,7 @@ async def test_test_server_inside_running_loop_points_at_async_variant():
 USES_OF_A_RUNNING_SESSION: list[Callable[[TestServerSession], object]] = [
     lambda ts: ts.set_inputs(x=1),
     lambda ts: ts.flush(),
-    lambda ts: ts.success,
+    lambda ts: ts.is_ok,
     lambda ts: ts.error,
     lambda ts: ts.get_output("out"),
     lambda ts: ts.get_export("out"),
@@ -597,19 +597,19 @@ def test_set_inputs_clears_errors_once_a_later_flush_succeeds():
 
     with test_server(server) as ts:
         ts.set_inputs(val=5)
-        assert ts.success is True
+        assert ts.is_ok is True
         assert ts.get_export("tripled") == 15
 
         ts.set_inputs(val=-1)
-        assert ts.success is False
+        assert ts.is_ok is False
         assert "must be non-negative" in str(ts.get_output("checked").error)
 
         # The snapshot is rebuilt per flush, so a recovered output stops reporting
         # the stale error.
         ts.set_inputs(val=7)
-        assert ts.success is True
+        assert ts.is_ok is True
         assert ts.get_output("checked").error is None
-        assert ts.get_output("checked").traceback == ""
+        assert ts.get_output("checked").traceback is None
         assert ts.get_output("checked") == "ok 7"
         assert ts.get_export("tripled") == 21
 
@@ -743,10 +743,19 @@ def test_test_server_value_rejects_incoherent_construction():
     with pytest.raises(ValueError, match="may carry a `value`"):
         TestServerValue("x", "output", "silent", "v")
 
+    with pytest.raises(ValueError, match="no `error` cannot carry a `traceback`"):
+        TestServerValue("x", "output", "silent", traceback="Traceback...")
+
     # An output that really did render `None` is still coherent, and is distinct
     # from one that produced nothing at all.
     assert TestServerValue("x", "output", "ok", None).value is None
     assert TestServerValue("x", "output", "silent").value is MISSING
+
+
+def test_test_server_value_is_ok_tracks_status():
+    assert TestServerValue("x", "output", "ok", None).is_ok is True
+    assert TestServerValue("x", "output", "silent").is_ok is False
+    assert TestServerValue("x", "output", "error", error="boom").is_ok is False
 
 
 def test_test_server_unknown_names_raise_rather_than_compare_unequal():
@@ -872,7 +881,7 @@ def test_test_server_value_statuses():
             ts.get_output("no_such_output")
 
         # A silent output is not a failure; an errored one is.
-        assert ts.success is False
+        assert ts.is_ok is False
         assert "boom" in str(ts.error)
 
         ts.set_inputs(n=5)
@@ -890,11 +899,9 @@ def test_test_server_value_records_a_per_item_traceback():
         failed = ts.get_output("boom")
         assert failed.error == "kaboom"
         # The traceback names the raising line, which the message alone does not.
+        assert failed.traceback is not None
         assert "ValueError: kaboom" in failed.traceback
         assert "raise ValueError" in failed.traceback
-
-        # It is cleared once the output succeeds again.
-        assert ts.get_output("boom").traceback != ""
 
 
 def test_test_server_exposes_inputs():
@@ -1020,6 +1027,32 @@ def test_test_server_reaches_a_module_through_its_namespaced_ids():
         counter_server("counter")
 
     with test_server(app_server) as ts:
+        ts.set_inputs(**{"counter-n": 7})
+        assert ts.get_output("counter-label") == "n=7"
+
+
+EXPRESS_MODULE_APP_SRC = """from shiny.express import module, render, ui
+
+
+@module
+def counter(input, output, session):
+    ui.input_numeric("n", "N", 0)
+
+    @render.text
+    def label():
+        return f"n={input.n()}"
+
+
+counter("counter")
+"""
+
+
+def test_test_server_reaches_an_express_module(tmp_path: Path):
+    """Express namespaces module ids the same way Core does."""
+    app_file = tmp_path / "app.py"
+    app_file.write_text(EXPRESS_MODULE_APP_SRC, encoding="utf-8")
+
+    with test_server(app_file) as ts:
         ts.set_inputs(**{"counter-n": 7})
         assert ts.get_output("counter-label") == "n=7"
 
