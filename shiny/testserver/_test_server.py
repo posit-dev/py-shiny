@@ -66,6 +66,12 @@ produces nothing, and `session.clientdata.url_pathname()` never resolves.
 """
 
 
+_TIMEOUT_HINT = (
+    " Raise `timeout_secs=` if the app is simply slow to start -- a cold"
+    " matplotlib font cache, say."
+)
+"""Appended to every timeout message; the knob is not obvious from the error."""
+
 ValueKind = Literal["input", "output", "export"]
 ValueStatus = Literal["ok", "error", "silent"]
 
@@ -596,26 +602,30 @@ class AsyncTestServerSession:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError(
-                f"test_server timed out after {self._timeout_secs}s during session initialization."
+                f"test_server timed out after {self._timeout_secs}s during session"
+                f" initialization.{_TIMEOUT_HINT}"
             )
         try:
             await asyncio.wait_for(initial_flush_done.wait(), timeout=remaining)
         except asyncio.TimeoutError:
             raise TimeoutError(
-                f"test_server timed out after {self._timeout_secs}s waiting for initial flush."
+                f"test_server timed out after {self._timeout_secs}s waiting for"
+                f" initial flush.{_TIMEOUT_HINT}"
             )
 
         if not self._fatal_errors and not self._session_task.done():
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError(
-                    f"test_server timed out after {self._timeout_secs}s during session initialization."
+                    f"test_server timed out after {self._timeout_secs}s during session"
+                    f" initialization.{_TIMEOUT_HINT}"
                 )
             try:
                 await asyncio.wait_for(unhide_flush_done.wait(), timeout=remaining)
             except asyncio.TimeoutError:
                 raise TimeoutError(
-                    f"test_server timed out after {self._timeout_secs}s waiting for output initialization."
+                    f"test_server timed out after {self._timeout_secs}s waiting for"
+                    f" output initialization.{_TIMEOUT_HINT}"
                 )
 
         # A server function that blocks without awaiting holds the event loop, so
@@ -624,7 +634,7 @@ class AsyncTestServerSession:
         if time.monotonic() > deadline:
             raise TimeoutError(
                 f"test_server timed out after {self._timeout_secs}s during session"
-                " initialization."
+                f" initialization.{_TIMEOUT_HINT}"
             )
 
         await asyncio.sleep(0.01)
@@ -732,8 +742,8 @@ class AsyncTestServerSession:
         # than leaving it to a race between the timeout and the flush.
         if timed_out or time.monotonic() - started > self._timeout_secs:
             raise TimeoutError(
-                f"test_server timed out after {self._timeout_secs}s waiting for"
-                " the reactive flush following set_inputs()."
+                f"test_server timed out after {self._timeout_secs}s waiting for the"
+                f" reactive flush following set_inputs().{_TIMEOUT_HINT}"
             )
 
         await asyncio.sleep(0.01)

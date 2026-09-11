@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import inspect
+import io
 import json
 import os
 import sys
@@ -920,6 +921,15 @@ def test_test_server_exposes_inputs():
 
 def test_test_server_plot_renders_without_a_browser():
     plt = pytest.importorskip("matplotlib.pyplot")
+
+    # Importing pyplot is not the expensive part -- matplotlib builds its font
+    # cache on the first *draw*, which on a cold runner takes longer than the
+    # session's whole timeout budget. Pay that here, so the timeout measures
+    # shiny rather than matplotlib's startup.
+    warmup_fig, warmup_ax = plt.subplots()
+    warmup_ax.plot([1, 2, 3])
+    warmup_fig.savefig(io.BytesIO(), format="png")
+    plt.close(warmup_fig)
 
     def server(input: Inputs, output: Outputs, session: Session):
         @render.plot
