@@ -772,6 +772,21 @@ def test_test_server_client_data_defaults_resolve():
         )
 
 
+@pytest.mark.parametrize("client_data", [None, {}])
+def test_test_server_client_data_none_means_the_same_as_empty(
+    client_data: dict[str, object] | None,
+):
+    """Neither suppresses the defaults; both mean "use all of them"."""
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def url():
+            return session.clientdata.url_pathname()
+
+    with test_server(server, client_data=client_data) as ts:
+        assert ts.get_output("url") == DEFAULT_CLIENT_DATA["url_pathname"]
+
+
 def test_test_server_client_data_param_overrides_defaults():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text

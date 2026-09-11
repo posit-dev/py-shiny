@@ -1128,7 +1128,8 @@ def test_server(
         :class:`~shiny.session.ClientData`: an `output_*` key applies to every
         output, and every other key is session-wide. Pass
         `{"output_width": 300}` to render every sized output 300px wide, or set
-        one output's size later with `set_inputs`.
+        one output's size later with `set_inputs`. `None` means the same as
+        `{}`: every default is used.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1209,7 +1210,8 @@ def test_server_async(
         :class:`~shiny.session.ClientData`: an `output_*` key applies to every
         output, and every other key is session-wide. Pass
         `{"output_width": 300}` to render every sized output 300px wide, or set
-        one output's size later with `set_inputs`.
+        one output's size later with `set_inputs`. `None` means the same as
+        `{}`: every default is used.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
