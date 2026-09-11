@@ -170,11 +170,6 @@ class TestServerValue:
                 f" got status {self.status!r}."
             )
 
-    @property
-    def is_ok(self) -> bool:
-        """`True` when `status` is `"ok"`, so `value` holds what was produced."""
-        return self.status == "ok"
-
     def __eq__(self, other: object) -> bool:
         if isinstance(other, TestServerValue):
             return dataclasses.astuple(self) == dataclasses.astuple(other)

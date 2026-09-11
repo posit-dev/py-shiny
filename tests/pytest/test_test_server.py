@@ -752,12 +752,6 @@ def test_test_server_value_rejects_incoherent_construction():
     assert TestServerValue("x", "output", "silent").value is MISSING
 
 
-def test_test_server_value_is_ok_tracks_status():
-    assert TestServerValue("x", "output", "ok", None).is_ok is True
-    assert TestServerValue("x", "output", "silent").is_ok is False
-    assert TestServerValue("x", "output", "error", error="boom").is_ok is False
-
-
 def test_test_server_unknown_names_raise_rather_than_compare_unequal():
     def server(input: Inputs, output: Outputs, session: Session):
         @render.text
