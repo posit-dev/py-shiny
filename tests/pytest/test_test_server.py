@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 from pathlib import Path
@@ -452,3 +453,80 @@ async def test_async_set_inputs_repeats_within_one_session():
         for i in range(5):
             await ts.set_inputs(x=i)
             assert ts.get_output("squared") == str(i**2)
+
+
+APP_SRC = """from shiny import App, Inputs, Outputs, Session, render, ui
+app_ui = ui.page_fluid(ui.output_text("out"))
+def server(input: Inputs, output: Outputs, session: Session):
+    @render.text
+    def out():
+        return "loaded {name}"
+app = App(app_ui, server)
+"""
+
+
+def _call_from_module(tmp_path: Path, call_src: str) -> str:
+    """
+    Run `with <call_src> as ts: ...` from a module living in `tmp_path`.
+
+    `test_server()` resolves relative paths against its *caller's* directory, so
+    the call has to happen from a file in `tmp_path` for the resolution to be
+    exercised at all. Importing a throwaway module is the only way to move the
+    calling frame.
+    """
+    mod_path = tmp_path / "caller_module.py"
+    mod_path.write_text(
+        "from shiny.pytest import test_server\n"
+        "\n"
+        "def run():\n"
+        f"    with {call_src} as ts:\n"
+        "        return ts.get_output('out')\n",
+        encoding="utf-8",
+    )
+    spec = importlib.util.spec_from_file_location("caller_module", mod_path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["caller_module"] = mod
+    try:
+        spec.loader.exec_module(mod)
+        return mod.run()
+    finally:
+        sys.modules.pop("caller_module", None)
+
+
+def test_test_server_defaults_to_app_py_beside_the_caller(tmp_path: Path):
+    (tmp_path / "app.py").write_text(APP_SRC.format(name="app.py"), encoding="utf-8")
+    assert _call_from_module(tmp_path, "test_server()") == "loaded app.py"
+
+
+def test_test_server_resolves_a_relative_str_against_the_caller(tmp_path: Path):
+    (tmp_path / "myapp.py").write_text(
+        APP_SRC.format(name="myapp.py"), encoding="utf-8"
+    )
+    # Not the process working directory: pytest runs from the repo root, where
+    # `myapp.py` does not exist.
+    assert not (Path.cwd() / "myapp.py").exists()
+    assert _call_from_module(tmp_path, "test_server('myapp.py')") == "loaded myapp.py"
+
+
+def test_test_server_uses_an_existing_path_as_is(tmp_path: Path):
+    nested = tmp_path / "elsewhere"
+    nested.mkdir()
+    (nested / "app.py").write_text(APP_SRC.format(name="absolute"), encoding="utf-8")
+
+    # An absolute `Path` that is already a file is never made caller-relative,
+    # even though the caller's directory holds a different `app.py`.
+    (tmp_path / "app.py").write_text(APP_SRC.format(name="app.py"), encoding="utf-8")
+    call = f"test_server(__import__('pathlib').Path({str(nested / 'app.py')!r}))"
+    assert _call_from_module(tmp_path, call) == "loaded absolute"
+
+
+def test_test_server_missing_default_app_reports_the_resolved_path(tmp_path: Path):
+    with pytest.raises(FileNotFoundError, match="app.py"):
+        _call_from_module(tmp_path, "test_server()")
+
+
+def test_test_server_rejects_an_unusable_target():
+    with pytest.raises(TypeError, match="must be a server function"):
+        with test_server(123):  # pyright: ignore[reportArgumentType]
+            pass

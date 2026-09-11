@@ -179,12 +179,10 @@ class AsyncTestServerSession:
         app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
         *,
         code: Optional[str] = None,
-        file_path: Optional[Union[str, Path]] = None,
         timeout_secs: float = 5.0,
     ) -> None:
         self._target_app = app
         self._target_code = code
-        self._target_path = file_path
         self._timeout_secs = timeout_secs
 
         self._app_obj: Optional[App] = None
@@ -249,6 +247,16 @@ class AsyncTestServerSession:
             await self._cleanup()
             raise
 
+    def _load_app_path(self, target_path: Path) -> Optional[App]:
+        """Import an app file (Core or Express), with its directory on `sys.path`."""
+        target_path = target_path.resolve()
+        if not target_path.exists():
+            raise FileNotFoundError(f"File not found: {target_path}")
+        sys.path.insert(0, str(target_path.parent))
+        if is_express_app(str(target_path), app_dir=None):
+            return wrap_express_app(target_path)
+        return _load_app_from_file(target_path)
+
     async def _start_impl(self) -> AsyncTestServerSession:
         self._start_time = time.perf_counter()
         self._old_testmode = os.environ.get("SHINY_TESTMODE")
@@ -262,37 +270,19 @@ class AsyncTestServerSession:
             elif callable(self._target_app):
                 self._app_obj = App(page_fluid(), self._target_app)
             elif isinstance(self._target_app, (str, Path)):
-                target_path = Path(self._target_app).resolve()
-                if not target_path.exists():
-                    raise FileNotFoundError(f"File not found: {self._target_app}")
-                app_dir = str(target_path.parent)
-                sys.path.insert(0, app_dir)
-                if is_express_app(str(target_path), app_dir=None):
-                    self._app_obj = wrap_express_app(target_path)
-                else:
-                    self._app_obj = _load_app_from_file(target_path)
+                self._app_obj = self._load_app_path(Path(self._target_app))
+            else:
+                raise TypeError(
+                    "`app` must be a server function, a `shiny.App`, or a path to"
+                    f" an app file; got {type(self._target_app).__name__}."
+                )
         elif self._target_code is not None:
             self._temp_dir = tempfile.TemporaryDirectory()
             temp_path = Path(self._temp_dir.name) / "app.py"
             temp_path.write_text(self._target_code, encoding="utf-8")
-            app_dir = str(temp_path.parent)
-            sys.path.insert(0, app_dir)
-            if is_express_app(str(temp_path), app_dir=None):
-                self._app_obj = wrap_express_app(temp_path)
-            else:
-                self._app_obj = _load_app_from_file(temp_path)
-        elif self._target_path is not None:
-            target_path = Path(self._target_path).resolve()
-            if not target_path.exists():
-                raise FileNotFoundError(f"File not found: {self._target_path}")
-            app_dir = str(target_path.parent)
-            sys.path.insert(0, app_dir)
-            if is_express_app(str(target_path), app_dir=None):
-                self._app_obj = wrap_express_app(target_path)
-            else:
-                self._app_obj = _load_app_from_file(target_path)
+            self._app_obj = self._load_app_path(temp_path)
         else:
-            raise ValueError("Either 'app', 'code', or 'file_path' must be provided.")
+            raise ValueError("Either `app` or `code` must be provided.")
 
         if self._app_obj is None:
             raise RuntimeError("No Shiny 'App' instance found.")
@@ -633,7 +623,7 @@ class AsyncTestServerSession:
         FileNotFoundError
             If the app was given as a path that does not exist.
         ValueError
-            If none of `app`, `code`, or `file_path` was provided.
+            If neither `app` nor `code` was provided.
         RuntimeError
             If the target does not yield a `shiny.App` instance.
         """
@@ -692,13 +682,11 @@ class TestServerSession:
         app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
         *,
         code: Optional[str] = None,
-        file_path: Optional[Union[str, Path]] = None,
         timeout_secs: float = 5.0,
     ) -> None:
         self._async_session = AsyncTestServerSession(
             app=app,
             code=code,
-            file_path=file_path,
             timeout_secs=timeout_secs,
         )
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -894,7 +882,7 @@ class TestServerSession:
         FileNotFoundError
             If the app was given as a path that does not exist.
         ValueError
-            If none of `app`, `code`, or `file_path` was provided.
+            If neither `app` nor `code` was provided.
         """
         try:
             asyncio.get_running_loop()
@@ -961,12 +949,53 @@ def _load_app_from_file(target_path: Path) -> Optional[App]:
     return None
 
 
+DEFAULT_APP_FILE = "app.py"
+"""The app file `test_server()` loads when called with no target, like `local_app`."""
+
+
+def _caller_dir() -> Path:
+    """
+    Return the directory of the file that called into this module.
+
+    Frame 0 is this function and frame 1 is `test_server`/`test_server_async`, so
+    frame 2 is the test module. Resolving relative paths against it (rather than
+    the working directory, which pytest sets to the rootdir) matches how
+    `local_app` and `create_app_fixture` find an app next to the test file.
+    """
+    frame = sys._getframe(2)
+    caller_file = frame.f_globals.get("__file__")
+    # No `__file__` in a REPL or `exec()`; the working directory is the best guess.
+    return Path(caller_file).parent.resolve() if caller_file else Path.cwd()
+
+
+def _resolve_target(
+    app: Optional[Union[App, Callable[..., Any], str, Path]],
+    code: Optional[str],
+    caller_dir: Path,
+) -> Optional[Union[App, Callable[..., Any], str, Path]]:
+    """
+    Apply the `app.py` default and make path targets caller-relative.
+
+    A `Path` that already points at a file is used as-is; anything else is taken
+    as relative to `caller_dir`. Passing a `str` therefore always means "relative
+    to the test file", matching `create_app_fixture`.
+    """
+    if code is not None:
+        return app
+    if app is None:
+        app = DEFAULT_APP_FILE
+    if isinstance(app, Path) and app.is_file():
+        return app
+    if isinstance(app, (str, Path)):
+        return caller_dir / app
+    return app
+
+
 @no_example()
 def test_server(
     app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     *,
     code: Optional[str] = None,
-    file_path: Optional[Union[str, Path]] = None,
     timeout_secs: float = 5.0,
 ) -> TestServerSession:
     """
@@ -977,13 +1006,21 @@ def test_server(
     set inputs, let the reactive graph settle, and assert on outputs — all in
     process, in an ordinary (non-async) test.
 
-    Exactly one of `app`, `code`, or `file_path` identifies what to run.
+    `app` accepts every way of naming what to test, and defaults to `"app.py"`
+    next to the test file, like the `local_app` fixture:
+
+    ```python
+    test_server()                 # `app.py` beside the test file
+    test_server("myapp.py")       # another file beside the test file
+    test_server(path_to_app)      # an absolute `Path`, used as-is
+    test_server(my_mod_server)    # a server function, or a `shiny.App`
+    ```
 
     The returned session must be used as a context manager, which guarantees the
     app is torn down even when an assertion fails:
 
     ```python
-    with test_server(app_path) as ts:
+    with test_server("myapp.py") as ts:
         ts.set_inputs(a=1, b=2)
         assert ts.get_output("name") == "foo"
         ts.set_inputs(a=3, b=4)
@@ -996,14 +1033,17 @@ def test_server(
     Parameters
     ----------
     app
-        What to test: a server function, a `shiny.App` instance, or a path to an
-        app file (Core or Express). A server function is wrapped in an app with an
-        empty UI.
+        What to test, defaulting to `"app.py"`:
+
+        * A server function, which is wrapped in an app with an empty UI.
+        * A `shiny.App` instance.
+        * A path to an app file, Core or Express. A `str`, or a `Path` that is not
+          already a file, is resolved relative to the directory of the file
+          calling `test_server()`. Pass a `str` to be sure a path stays relative.
     code
-        Shiny Express or Core source code to run, as a string. Written to a
-        temporary `app.py` that is removed when the session closes.
-    file_path
-        A path to an app file to run. Equivalent to passing the path as `app`.
+        Shiny Express or Core source code to run, as a string, instead of loading
+        `app`. Written to a temporary `app.py` that is removed when the session
+        closes.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1021,9 +1061,8 @@ def test_server(
     * :func:`~shiny.testmode.export_test_values`
     """
     return TestServerSession(
-        app=app,
+        _resolve_target(app, code, _caller_dir()),
         code=code,
-        file_path=file_path,
         timeout_secs=timeout_secs,
     )
 
@@ -1033,7 +1072,6 @@ def test_server_async(
     app: Optional[Union[App, Callable[..., Any], str, Path]] = None,
     *,
     code: Optional[str] = None,
-    file_path: Optional[Union[str, Path]] = None,
     timeout_secs: float = 5.0,
 ) -> AsyncTestServerSession:
     """
@@ -1044,12 +1082,10 @@ def test_server_async(
     (for example under `@pytest.mark.asyncio`) — the synchronous `test_server`
     drives its own event loop and will raise if one is already running.
 
-    Exactly one of `app`, `code`, or `file_path` identifies what to run.
-
     ```python
     @pytest.mark.asyncio
     async def test_doubled():
-        async with test_server_async(server) as ts:
+        async with test_server_async("myapp.py") as ts:
             await ts.set_inputs(x=10)
             assert ts.get_output("doubled") == "20"
     ```
@@ -1057,14 +1093,18 @@ def test_server_async(
     Parameters
     ----------
     app
-        What to test: a server function, a `shiny.App` instance, or a path to an
-        app file (Core or Express). A server function is wrapped in an app with an
-        empty UI.
+        What to test, defaulting to `"app.py"`:
+
+        * A server function, which is wrapped in an app with an empty UI.
+        * A `shiny.App` instance.
+        * A path to an app file, Core or Express. A `str`, or a `Path` that is not
+          already a file, is resolved relative to the directory of the file
+          calling `test_server_async()`. Pass a `str` to be sure a path stays
+          relative.
     code
-        Shiny Express or Core source code to run, as a string. Written to a
-        temporary `app.py` that is removed when the session closes.
-    file_path
-        A path to an app file to run. Equivalent to passing the path as `app`.
+        Shiny Express or Core source code to run, as a string, instead of loading
+        `app`. Written to a temporary `app.py` that is removed when the session
+        closes.
     timeout_secs
         How long to wait for any single reactive flush, including the initial one,
         before raising `TimeoutError`.
@@ -1082,9 +1122,8 @@ def test_server_async(
     * :func:`~shiny.testmode.export_test_values`
     """
     return AsyncTestServerSession(
-        app=app,
+        _resolve_target(app, code, _caller_dir()),
         code=code,
-        file_path=file_path,
         timeout_secs=timeout_secs,
     )
 
