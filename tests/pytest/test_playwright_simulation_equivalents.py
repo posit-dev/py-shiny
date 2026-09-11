@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from shiny.pytest import test_server
+from shiny.testserver import test_server
 
 HERE = Path(__file__).parent.parent
 REPO_ROOT = HERE.parent

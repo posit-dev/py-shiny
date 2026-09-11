@@ -149,8 +149,8 @@ class TestServerValue:
 
     See Also
     --------
-    * :class:`~shiny.pytest.TestServerValues`
-    * :func:`~shiny.pytest.test_server`
+    * :class:`~shiny.testserver.TestServerValues`
+    * :func:`~shiny.testserver.test_server`
     """
 
     __test__ = False
@@ -291,8 +291,8 @@ class TestServerValues:
 
     See Also
     --------
-    * :class:`~shiny.pytest.TestServerValue`
-    * :func:`~shiny.pytest.test_server`
+    * :class:`~shiny.testserver.TestServerValue`
+    * :func:`~shiny.testserver.test_server`
     """
 
     __test__ = False
@@ -383,9 +383,9 @@ class AsyncTestServerSession:
 
     See Also
     --------
-    * :func:`~shiny.pytest.test_server_async`
-    * :class:`~shiny.pytest.TestServerSession`
-    * :class:`~shiny.pytest.TestServerValues`
+    * :func:`~shiny.testserver.test_server_async`
+    * :class:`~shiny.testserver.TestServerSession`
+    * :class:`~shiny.testserver.TestServerValues`
     """
 
     __test__ = False
@@ -931,9 +931,9 @@ class TestServerSession:
 
     See Also
     --------
-    * :func:`~shiny.pytest.test_server`
-    * :class:`~shiny.pytest.AsyncTestServerSession`
-    * :class:`~shiny.pytest.TestServerValues`
+    * :func:`~shiny.testserver.test_server`
+    * :class:`~shiny.testserver.AsyncTestServerSession`
+    * :class:`~shiny.testserver.TestServerValues`
     """
 
     __test__ = False
@@ -1341,7 +1341,7 @@ def test_server(
     unwrapping:
 
     ```python
-    from shiny.pytest import test_server
+    from shiny.testserver import test_server
 
 
     def test_doubling_app():
@@ -1425,7 +1425,7 @@ def test_server(
     ```python
     import pytest
 
-    from shiny.pytest import test_server
+    from shiny.testserver import test_server
 
 
     @pytest.fixture
@@ -1460,9 +1460,9 @@ def test_server(
 
     See Also
     --------
-    * :func:`~shiny.pytest.test_server_async`
-    * :class:`~shiny.pytest.TestServerSession`
-    * :class:`~shiny.pytest.TestServerValues`
+    * :func:`~shiny.testserver.test_server_async`
+    * :class:`~shiny.testserver.TestServerSession`
+    * :class:`~shiny.testserver.TestServerValues`
     * :func:`~shiny.testmode.export_test_values`
     """
     return TestServerSession(
@@ -1549,7 +1549,7 @@ def test_server_async(
     ```python
     import pytest
 
-    from shiny.pytest import test_server_async
+    from shiny.testserver import test_server_async
 
 
     @pytest.mark.asyncio
@@ -1606,9 +1606,9 @@ def test_server_async(
 
     See Also
     --------
-    * :func:`~shiny.pytest.test_server`
-    * :class:`~shiny.pytest.AsyncTestServerSession`
-    * :class:`~shiny.pytest.TestServerValues`
+    * :func:`~shiny.testserver.test_server`
+    * :class:`~shiny.testserver.AsyncTestServerSession`
+    * :class:`~shiny.testserver.TestServerValues`
     * :func:`~shiny.testmode.export_test_values`
     """
     return AsyncTestServerSession(

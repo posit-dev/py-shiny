@@ -108,14 +108,14 @@ quartodoc:
     - title: "Test server"
       desc: "Run a Shiny app's server function in memory, without a browser."
       contents:
-        - pytest.test_server
-        - pytest.test_server_async
-        - pytest.TestServerSession
-        - pytest.AsyncTestServerSession
-        - pytest.DEFAULT_CLIENT_DATA
-        - pytest.MISSING
-        - pytest.TestServerValue
-        - pytest.TestServerValues
+        - testserver.test_server
+        - testserver.test_server_async
+        - testserver.TestServerSession
+        - testserver.AsyncTestServerSession
+        - testserver.DEFAULT_CLIENT_DATA
+        - testserver.MISSING
+        - testserver.TestServerValue
+        - testserver.TestServerValues
     - title: "Run"
       desc: "Methods for starting a local Shiny app in the background"
       contents:

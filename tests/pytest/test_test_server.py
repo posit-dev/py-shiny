@@ -10,7 +10,8 @@ from typing import Callable
 import pytest
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
-from shiny.pytest import (
+from shiny.testmode import export_test_values
+from shiny.testserver import (
     MISSING,
     AsyncTestServerSession,
     TestServerSession,
@@ -19,7 +20,6 @@ from shiny.pytest import (
     test_server,
     test_server_async,
 )
-from shiny.testmode import export_test_values
 from shiny.testserver._test_server import DEFAULT_CLIENT_DATA, VALUE_FIELDS
 
 
@@ -585,7 +585,7 @@ def _call_from_module(tmp_path: Path, call_src: str, output: str = "out") -> str
     """
     mod_path = tmp_path / "caller_module.py"
     mod_path.write_text(
-        "from shiny.pytest import test_server\n"
+        "from shiny.testserver import test_server\n"
         "\n"
         "def run():\n"
         f"    with {call_src} as ts:\n"
