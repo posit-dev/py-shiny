@@ -169,6 +169,15 @@ class OutBoundMessageQueues:
         self._record_test_values = record_test_values
         self.test_values: dict[str, Any] = {}
         self.test_errors: dict[str, Any] = {}
+        self.test_tracebacks: dict[str, str] = {}
+        """
+        Formatted traceback of the last error for each output, in test mode only.
+
+        Deliberately kept out of the outbound error message and out of
+        `_build_test_snapshot()`: the former is sent to the browser and the latter
+        is served over HTTP, and neither should carry a stack trace. Read
+        in-process by `shiny.pytest.test_server`.
+        """
 
     def reset(self) -> None:
         self.values.clear()
@@ -183,6 +192,7 @@ class OutBoundMessageQueues:
         if self._record_test_values:
             self.test_values[id] = value
             self.test_errors.pop(id, None)
+            self.test_tracebacks.pop(id, None)
 
     def set_silent(self, id: str) -> None:
         """
@@ -197,13 +207,14 @@ class OutBoundMessageQueues:
         self.values[id] = None
         self.errors.pop(id, None)
 
-    def set_error(self, id: str, error: Any) -> None:
+    def set_error(self, id: str, error: Any, traceback_text: str = "") -> None:
         self.errors[id] = error
         # remove from self.values
         if id in self.values:
             del self.values[id]
         if self._record_test_values:
             self.test_errors[id] = error
+            self.test_tracebacks[id] = traceback_text
             self.test_values.pop(id, None)
 
     def add_input_message(self, id: str, message: dict[str, Any]) -> None:
@@ -2737,7 +2748,12 @@ class Outputs:
                         # TODO: I don't think we actually use this for anything client-side
                         "type": None,
                     }
-                    session._outbound_message_queues.set_error(output_name, err_message)
+                    session._outbound_message_queues.set_error(
+                        output_name,
+                        err_message,
+                        # Recorded only in test mode; never sent to the client.
+                        traceback_text=traceback.format_exc(),
+                    )
 
                 await session._send_message(
                     {

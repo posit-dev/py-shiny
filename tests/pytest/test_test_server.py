@@ -13,6 +13,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.pytest import (
     AsyncTestServerSession,
     TestServerSession,
+    TestServerValue,
     TestServerValues,
     test_server,
     test_server_async,
@@ -130,8 +131,9 @@ def test_test_server_express_app_file(tmp_path: Path):
         assert ts.get_output("greeting") == "express loaded"
         # There is no browser to report the slider's value, so `input.n()` raises
         # a silent exception and `doubled` renders nothing -- without failing.
-        assert ts.get_output("doubled") is None
-        assert ts.get_error("doubled") is None
+        assert ts.get_output("doubled").status == "silent"
+        # Silent is not an error: nothing rendered, nothing failed.
+        assert ts.get_output("doubled").error is None
 
         ts.set_inputs(n=30)
         assert ts.success is True
@@ -178,7 +180,7 @@ def test_test_server_reactive_errors():
     app = App(app_ui, server)
     with test_server(app) as ts:
         assert ts.success is False
-        assert "Custom calculation error" in str(ts.get_error("err_out"))
+        assert "Custom calculation error" in str(ts.get_output("err_out").error)
 
 
 def test_test_server_initialization_error_is_failure():
@@ -241,15 +243,22 @@ def test_test_server_values_snapshot_and_dict_conversion():
 
     # Both hold copies, so they outlive the `with` block.
     assert isinstance(values, TestServerValues)
-    assert values.outputs == {"out": "simulated"}
+    assert values.outputs["out"] == "simulated"
     assert values.success is True
     assert values.traceback == ""
 
-    # `dict(session)` is the plain-dictionary form, and a dataclass converts the
-    # same way via `dataclasses.asdict`.
-    assert as_dict == dataclasses.asdict(values)
+    # `dict(session)` unpacks the snapshot's fields but keeps each rich value,
+    # while `dataclasses.asdict` recurses all the way down to plain data.
     assert sorted(as_dict) == sorted(VALUE_FIELDS)
-    assert as_dict["outputs"] == {"out": "simulated"}
+    assert as_dict["outputs"]["out"] is values.outputs["out"]
+    assert dataclasses.asdict(values)["outputs"]["out"] == {
+        "name": "out",
+        "kind": "output",
+        "status": "ok",
+        "value": "simulated",
+        "error": None,
+        "traceback": "",
+    }
 
 
 def test_test_server_startup_failure_cleans_up_environment(tmp_path: Path):
@@ -348,7 +357,7 @@ USES_OF_A_RUNNING_SESSION: list[Callable[[TestServerSession], object]] = [
     lambda ts: ts.error,
     lambda ts: ts.get_output("out"),
     lambda ts: ts.get_export("out"),
-    lambda ts: ts.get_error("out"),
+    lambda ts: ts.get_input("a"),
     lambda ts: ts.to_values(),
     lambda ts: dict(ts),
 ]
@@ -462,13 +471,14 @@ def test_set_inputs_clears_errors_once_a_later_flush_succeeds():
 
         ts.set_inputs(val=-1)
         assert ts.success is False
-        assert "must be non-negative" in str(ts.get_error("checked"))
+        assert "must be non-negative" in str(ts.get_output("checked").error)
 
         # The snapshot is rebuilt per flush, so a recovered output stops reporting
         # the stale error.
         ts.set_inputs(val=7)
         assert ts.success is True
-        assert ts.get_error("doubled") is None
+        assert ts.get_output("checked").error is None
+        assert ts.get_output("checked").traceback == ""
         assert ts.get_output("checked") == "ok 7"
         assert ts.get_export("tripled") == 21
 
@@ -561,3 +571,116 @@ def test_test_server_rejects_an_unusable_target():
     with pytest.raises(TypeError, match="must be a server function"):
         with test_server(123):  # pyright: ignore[reportArgumentType]
             pass
+
+
+def test_test_server_value_compares_against_the_raw_value():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def txt():
+            return "hi"
+
+    with test_server(server) as ts:
+        got = ts.get_output("txt")
+        assert isinstance(got, TestServerValue)
+        assert got == "hi"
+        assert got != "bye"
+        assert got.value == "hi"
+
+        # Comparing two rich values compares every field, not just the value.
+        assert got == TestServerValue("txt", "output", "ok", "hi")
+        assert got != TestServerValue("other", "output", "ok", "hi")
+
+        # Equality is against arbitrary values, so instances are unhashable.
+        with pytest.raises(TypeError):
+            hash(got)
+
+
+def test_test_server_value_statuses():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def fine():
+            return "ok"
+
+        @render.text
+        def needs_input():
+            return f"{input.n()}"
+
+        @render.text
+        def boom():
+            raise ValueError("kaboom")
+
+    with test_server(server) as ts:
+        assert ts.get_output("fine").status == "ok"
+        # Never rendered: `input.n()` is unset, so it raised a silent exception.
+        assert ts.get_output("needs_input").status == "silent"
+        assert ts.get_output("boom").status == "error"
+        assert ts.get_output("no_such_output").status == "missing"
+
+        # A silent output is not a failure; an errored one is.
+        assert ts.success is False
+        assert "boom" in str(ts.error)
+
+        ts.set_inputs(n=5)
+        assert ts.get_output("needs_input") == "5"
+        assert ts.get_output("needs_input").status == "ok"
+
+
+def test_test_server_value_records_a_per_item_traceback():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def boom():
+            raise ValueError("kaboom")
+
+    with test_server(server) as ts:
+        failed = ts.get_output("boom")
+        assert failed.error == "kaboom"
+        # The traceback names the raising line, which the message alone does not.
+        assert "ValueError: kaboom" in failed.traceback
+        assert "raise ValueError" in failed.traceback
+
+        # It is cleared once the output succeeds again.
+        assert ts.get_output("boom").traceback != ""
+
+
+def test_test_server_exposes_inputs():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def echo():
+            return f"{input.a()}"
+
+    with test_server(server) as ts:
+        assert ts.get_input("a").status == "missing"
+
+        ts.set_inputs(a=1, b="two")
+        assert ts.get_input("a") == 1
+        assert ts.get_input("b") == "two"
+        assert ts.get_input("b").kind == "input"
+        assert sorted(ts.to_values().inputs) == ["a", "b"]
+
+
+def test_test_server_plot_is_silent_until_the_client_size_is_known():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.plot
+        def a_plot():
+            fig, ax = plt.subplots()
+            ax.plot([1, 2, 3])
+            return fig
+
+    with test_server(server) as ts:
+        # No browser means no width/height, so the plot renders nothing -- and
+        # this is reported as "silent" rather than looking like a success.
+        assert ts.get_output("a_plot").status == "silent"
+        assert ts.success is True
+
+        ts.set_inputs(
+            {
+                ".clientdata_output_a_plot_width": 600,
+                ".clientdata_output_a_plot_height": 400,
+                ".clientdata_pixelratio": 1,
+            }
+        )
+        rendered = ts.get_output("a_plot")
+        assert rendered.status == "ok"
+        assert sorted(rendered.value) == ["coordmap", "height", "src", "width"]

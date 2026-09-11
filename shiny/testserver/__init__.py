@@ -5,6 +5,7 @@ from __future__ import annotations
 from ._test_server import (
     AsyncTestServerSession,
     TestServerSession,
+    TestServerValue,
     TestServerValues,
     test_server,
     test_server_async,
@@ -12,6 +13,7 @@ from ._test_server import (
 
 __all__ = (
     "AsyncTestServerSession",
+    "TestServerValue",
     "TestServerValues",
     "TestServerSession",
     "test_server",

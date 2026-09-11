@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import os
 import sys
@@ -15,6 +16,7 @@ from typing import (
     Coroutine,
     Dict,
     List,
+    Literal,
     Optional,
     Set,
     Tuple,
@@ -34,14 +36,91 @@ from ..ui import page_fluid
 T = TypeVar("T")
 
 
-VALUE_FIELDS = ("success", "error", "traceback", "outputs", "errors", "exports")
+VALUE_FIELDS = ("success", "error", "traceback", "inputs", "outputs", "exports")
 """The fields of `TestServerValues`, and the keys of `dict(session)`."""
+
+ValueKind = Literal["input", "output", "export"]
+ValueStatus = Literal["ok", "error", "silent", "missing"]
+
+
+@dataclass(frozen=True, eq=False)
+class TestServerValue:
+    """
+    One input, output, or exported value, and how it turned out.
+
+    Returned by `TestServerSession.get_input`, `get_output`, and `get_export`, and
+    held by `TestServerValues`.
+
+    Compares equal to the underlying `value`, so the common assertion needs no
+    unwrapping:
+
+    ```python
+    assert ts.get_output("name") == "foo"   # same as `.value == "foo"`
+    ```
+
+    Comparing against another `TestServerValue` compares every field instead.
+    Because equality is against arbitrary values, instances are not hashable.
+
+    Attributes
+    ----------
+    name
+        The input id, output id, or export name.
+    kind
+        Which of the three this is.
+    status
+        * `"ok"` — produced a value, available as `value`.
+        * `"error"` — raised; see `error` and `traceback`.
+        * `"silent"` — never rendered, because a dependency was unavailable. An
+          output reading an input that has not been set is silent, and so is a
+          `render.plot` until the client's width and height are supplied.
+        * `"missing"` — no such input, output, or export.
+    value
+        The value, JSON round-tripped as it would be sent to the browser, so its
+        shape depends on the renderer. `None` unless `status` is `"ok"`.
+    error
+        The error message, or `None` unless `status` is `"error"`.
+    traceback
+        The formatted traceback of `error`; `""` when there was none. Recorded
+        only in test mode, and never sent to the browser.
+
+    See Also
+    --------
+    * :class:`~shiny.pytest.TestServerValues`
+    * :func:`~shiny.pytest.test_server`
+    """
+
+    __test__ = False
+
+    name: str
+    kind: ValueKind
+    status: ValueStatus = "missing"
+    value: Any = None
+    error: Optional[str] = None
+    traceback: str = ""
+
+    @property
+    def success(self) -> bool:
+        """`True` when `status` is `"ok"`."""
+        return self.status == "ok"
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, TestServerValue):
+            return dataclasses.astuple(self) == dataclasses.astuple(other)
+        return self.value == other
+
+    def __repr__(self) -> str:
+        # Keeps pytest's assertion output readable when a comparison fails.
+        extra = f", error={self.error!r}" if self.error is not None else ""
+        return (
+            f"{type(self).__name__}({self.name!r}, kind={self.kind!r},"
+            f" status={self.status!r}, value={self.value!r}{extra})"
+        )
 
 
 @dataclass(frozen=True)
 class TestServerValues:
     """
-    A point-in-time snapshot of a test session's output, export, and error values.
+    A point-in-time snapshot of a test session's input, output, and export values.
 
     Returned by `TestServerSession.to_values` and
     `AsyncTestServerSession.to_values`. The values are copies, so a snapshot stays
@@ -53,27 +132,25 @@ class TestServerValues:
     Attributes
     ----------
     success
-        `True` when the session produced no reactive errors and no fatal errors.
+        `True` when no output or export errored and no fatal error occurred.
     error
-        A summary of the first fatal error, or a count of reactive errors, or
-        `None` when `success` is `True`.
+        A summary of the first fatal error, or a count of item errors, or `None`
+        when `success` is `True`.
     traceback
-        The formatted traceback of the first fatal error; `""` if there was none.
-        A fatal error is recorded rather than re-raised, so this is the only place
-        its origin is reported.
+        The formatted traceback of the first *fatal* error; `""` if there was
+        none. Per-item tracebacks live on each `TestServerValue`.
+    inputs
+        Every input the session has received, keyed by input id.
     outputs
-        Rendered output values, keyed by output id.
-    errors
-        Errors keyed by the output id that raised them. Errors from values
-        registered with `shiny.testmode.export_test_values` are keyed
-        `"export:<name>"`, and a fatal session error is keyed `"__fatal__"`.
+        Every registered output, keyed by output id, including ones that errored
+        or never rendered.
     exports
         Values registered with `shiny.testmode.export_test_values`, keyed by name.
 
     See Also
     --------
+    * :class:`~shiny.pytest.TestServerValue`
     * :func:`~shiny.pytest.test_server`
-    * :func:`~shiny.pytest.test_server_async`
     """
 
     __test__ = False
@@ -81,9 +158,28 @@ class TestServerValues:
     success: bool
     error: Optional[str]
     traceback: str
-    outputs: Dict[str, Any]
-    errors: Dict[str, Any]
-    exports: Dict[str, Any]
+    inputs: Dict[str, TestServerValue]
+    outputs: Dict[str, TestServerValue]
+    exports: Dict[str, TestServerValue]
+
+
+def _snapshot_error(value: Any) -> Optional[str]:
+    """
+    Return the error a test-snapshot value carries, or `None` if it is a value.
+
+    `_build_test_snapshot()` reports failures as single-key marker dictionaries
+    rather than raising, so that one bad item never fails the whole snapshot.
+    """
+    if not isinstance(value, dict):
+        return None
+    for marker in (
+        "__shiny_output_error__",
+        "__shiny_snapshot_preprocess_error__",
+        "__shiny_serialization_error__",
+    ):
+        if marker in value:
+            return str(cast(Dict[str, Any], value)[marker])
+    return None
 
 
 class AsyncTestServerSession:
@@ -136,9 +232,9 @@ class AsyncTestServerSession:
         self._old_app_test_mode: Optional[bool] = None
         self._old_app_server: Optional[Callable[..., Any]] = None
         self._fatal_errors: List[Tuple[Exception, str]] = []
-        self._current_outputs: Dict[str, Any] = {}
-        self._current_exports: Dict[str, Any] = {}
-        self._current_errors: Dict[str, Any] = {}
+        self._current_inputs: Dict[str, TestServerValue] = {}
+        self._current_outputs: Dict[str, TestServerValue] = {}
+        self._current_exports: Dict[str, TestServerValue] = {}
         self._is_started: bool = False
 
     async def _cleanup(self) -> None:
@@ -336,31 +432,42 @@ class AsyncTestServerSession:
         if self._session is None:
             return
         snapshot = await self._session._build_test_snapshot()
-        self._current_outputs = snapshot.get("output", {})
-        self._current_exports = snapshot.get("export", {})
-        self._current_errors = dict(self._session._outbound_message_queues.test_errors)
+        queues = self._session._outbound_message_queues
 
-        for key, val in list(self._current_outputs.items()):
-            if isinstance(val, dict):
-                val_dict = cast(Dict[str, Any], val)
-                if "__shiny_output_error__" in val_dict:
-                    self._current_errors[key] = val_dict["__shiny_output_error__"]
-                elif "__shiny_snapshot_preprocess_error__" in val_dict:
-                    self._current_errors[key] = val_dict[
-                        "__shiny_snapshot_preprocess_error__"
-                    ]
+        self._current_inputs = {
+            name: TestServerValue(name, "input", "ok", value)
+            for name, value in snapshot.get("input", {}).items()
+        }
 
-        for key, val in list(self._current_exports.items()):
-            if isinstance(val, dict):
-                val_dict = cast(Dict[str, Any], val)
-                if "__shiny_serialization_error__" in val_dict:
-                    self._current_errors[f"export:{key}"] = val_dict[
-                        "__shiny_serialization_error__"
-                    ]
+        # `set_silent()` deliberately records nothing, so a registered output with
+        # no recorded value and no recorded error never rendered.
+        raw_outputs: Dict[str, Any] = snapshot.get("output", {})
+        self._current_outputs = {}
+        for name in self._session.output._outputs.keys():
+            error = _snapshot_error(raw_outputs.get(name))
+            if error is not None:
+                self._current_outputs[name] = TestServerValue(
+                    name,
+                    "output",
+                    "error",
+                    error=error,
+                    traceback=queues.test_tracebacks.get(name, ""),
+                )
+            elif name in raw_outputs:
+                self._current_outputs[name] = TestServerValue(
+                    name, "output", "ok", raw_outputs[name]
+                )
+            else:
+                self._current_outputs[name] = TestServerValue(name, "output", "silent")
 
-        if self._fatal_errors:
-            first_exc, _ = self._fatal_errors[0]
-            self._current_errors["__fatal__"] = str(first_exc)
+        self._current_exports = {}
+        for name, value in snapshot.get("export", {}).items():
+            error = _snapshot_error(value)
+            self._current_exports[name] = (
+                TestServerValue(name, "export", "error", error=error)
+                if error is not None
+                else TestServerValue(name, "export", "ok", value)
+            )
 
     async def set_inputs(
         self, inputs: Optional[Mapping[str, Any]] = None, **kwargs: Any
@@ -439,10 +546,21 @@ class AsyncTestServerSession:
         """
         await self._refresh_snapshots()
 
+    def _failures(self) -> Dict[str, TestServerValue]:
+        """Every output and export that errored, keyed by name."""
+        return {
+            name: item
+            for name, item in (
+                *self._current_outputs.items(),
+                *self._current_exports.items(),
+            )
+            if item.status == "error"
+        }
+
     @property
     def success(self) -> bool:
-        """`True` when no reactive errors and no fatal errors have occurred."""
-        return len(self._current_errors) == 0 and len(self._fatal_errors) == 0
+        """`True` when nothing errored and no fatal error occurred."""
+        return not self._failures() and not self._fatal_errors
 
     @property
     def error(self) -> Optional[str]:
@@ -450,11 +568,30 @@ class AsyncTestServerSession:
         if self._fatal_errors:
             first_exc, _ = self._fatal_errors[0]
             return f"Session fatal error: {type(first_exc).__name__}: {first_exc}"
-        if len(self._current_errors) > 0:
-            return f"{len(self._current_errors)} reactive error(s) occurred"
+        failures = self._failures()
+        if failures:
+            return f"{len(failures)} error(s): {', '.join(sorted(failures))}"
         return None
 
-    def get_output(self, name: str, default: Any = None) -> Any:
+    def get_input(self, name: str) -> TestServerValue:
+        """
+        Return one input value.
+
+        Parameters
+        ----------
+        name
+            An input id.
+
+        Returns
+        -------
+        :
+            A `TestServerValue`, with `status` `"missing"` if the session has not
+            received that input. It compares equal to the value itself, so
+            `session.get_input("n") == 10` works.
+        """
+        return self._current_inputs.get(name, TestServerValue(name, "input"))
+
+    def get_output(self, name: str) -> TestServerValue:
         """
         Return one output value.
 
@@ -462,17 +599,17 @@ class AsyncTestServerSession:
         ----------
         name
             An output id.
-        default
-            The value to return when `name` has no output.
 
         Returns
         -------
         :
-            The rendered output value, or `default`.
+            A `TestServerValue`, with `status` `"missing"` if there is no such
+            output and `"silent"` if it never rendered. It compares equal to the
+            value itself, so `session.get_output("txt") == "hi"` works.
         """
-        return self._current_outputs.get(name, default)
+        return self._current_outputs.get(name, TestServerValue(name, "output"))
 
-    def get_export(self, name: str, default: Any = None) -> Any:
+    def get_export(self, name: str) -> TestServerValue:
         """
         Return one exported test value.
 
@@ -480,34 +617,15 @@ class AsyncTestServerSession:
         ----------
         name
             A name passed to `shiny.testmode.export_test_values`.
-        default
-            The value to return when `name` was not exported.
 
         Returns
         -------
         :
-            The exported value, or `default`.
+            A `TestServerValue`, with `status` `"missing"` if that name was not
+            exported. It compares equal to the value itself, so
+            `session.get_export("doubled") == 40` works.
         """
-        return self._current_exports.get(name, default)
-
-    def get_error(self, name: str, default: Any = None) -> Any:
-        """
-        Return the error raised by one output.
-
-        Parameters
-        ----------
-        name
-            An output id. Errors from exported values are keyed `"export:<name>"`,
-            and a fatal session error is keyed `"__fatal__"`.
-        default
-            The value to return when `name` did not raise.
-
-        Returns
-        -------
-        :
-            The error, or `default`.
-        """
-        return self._current_errors.get(name, default)
+        return self._current_exports.get(name, TestServerValue(name, "export"))
 
     def to_values(self) -> TestServerValues:
         """
@@ -523,8 +641,8 @@ class AsyncTestServerSession:
             success=self.success,
             error=self.error,
             traceback=self._fatal_errors[0][1] if self._fatal_errors else "",
+            inputs=dict(self._current_inputs),
             outputs=dict(self._current_outputs),
-            errors=dict(self._current_errors),
             exports=dict(self._current_exports),
         )
 
@@ -702,7 +820,25 @@ class TestServerSession:
         """A summary of the first error, or `None` when `success` is `True`."""
         return self._require_running().error
 
-    def get_output(self, name: str, default: Any = None) -> Any:
+    def get_input(self, name: str) -> TestServerValue:
+        """
+        Return one input value.
+
+        Parameters
+        ----------
+        name
+            An input id.
+
+        Returns
+        -------
+        :
+            A `TestServerValue`, with `status` `"missing"` if the session has not
+            received that input. It compares equal to the value itself, so
+            `session.get_input("n") == 10` works.
+        """
+        return self._require_running().get_input(name)
+
+    def get_output(self, name: str) -> TestServerValue:
         """
         Return one output value.
 
@@ -710,17 +846,17 @@ class TestServerSession:
         ----------
         name
             An output id.
-        default
-            The value to return when `name` has no output.
 
         Returns
         -------
         :
-            The rendered output value, or `default`.
+            A `TestServerValue`, with `status` `"missing"` if there is no such
+            output and `"silent"` if it never rendered. It compares equal to the
+            value itself, so `session.get_output("txt") == "hi"` works.
         """
-        return self._require_running().get_output(name, default)
+        return self._require_running().get_output(name)
 
-    def get_export(self, name: str, default: Any = None) -> Any:
+    def get_export(self, name: str) -> TestServerValue:
         """
         Return one exported test value.
 
@@ -728,34 +864,15 @@ class TestServerSession:
         ----------
         name
             A name passed to `shiny.testmode.export_test_values`.
-        default
-            The value to return when `name` was not exported.
 
         Returns
         -------
         :
-            The exported value, or `default`.
+            A `TestServerValue`, with `status` `"missing"` if that name was not
+            exported. It compares equal to the value itself, so
+            `session.get_export("doubled") == 40` works.
         """
-        return self._require_running().get_export(name, default)
-
-    def get_error(self, name: str, default: Any = None) -> Any:
-        """
-        Return the error raised by one output.
-
-        Parameters
-        ----------
-        name
-            An output id. Errors from exported values are keyed `"export:<name>"`,
-            and a fatal session error is keyed `"__fatal__"`.
-        default
-            The value to return when `name` did not raise.
-
-        Returns
-        -------
-        :
-            The error, or `default`.
-        """
-        return self._require_running().get_error(name, default)
+        return self._require_running().get_export(name)
 
     def to_values(self) -> TestServerValues:
         """
