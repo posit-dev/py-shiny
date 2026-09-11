@@ -672,7 +672,7 @@ class AsyncTestServerSession:
                 else TestServerValue(name, "export", "ok", value)
             )
 
-    async def set_inputs(self, /, **kwargs: Any) -> AsyncTestServerSession:
+    async def set_inputs(self, /, **kwargs: Any) -> None:
         """
         Set input values and wait for the resulting reactive flush.
 
@@ -687,11 +687,6 @@ class AsyncTestServerSession:
             Input values keyed by input id. Ids that are not valid Python
             identifiers -- a module's namespaced `"counter-n"`, say -- go
             through an unpacked dictionary: `set_inputs(**{"counter-n": 7})`.
-
-        Returns
-        -------
-        :
-            This session, so calls can be chained.
 
         Raises
         ------
@@ -738,7 +733,6 @@ class AsyncTestServerSession:
 
         await asyncio.sleep(0.01)
         await self._refresh_snapshots()
-        return self
 
     async def flush(self) -> None:
         """
@@ -997,7 +991,7 @@ class TestServerSession:
             )
         return self._async_session
 
-    def set_inputs(self, /, **kwargs: Any) -> TestServerSession:
+    def set_inputs(self, /, **kwargs: Any) -> None:
         """
         Set input values and wait for the resulting reactive flush.
 
@@ -1013,11 +1007,6 @@ class TestServerSession:
             identifiers -- a module's namespaced `"counter-n"`, say -- go
             through an unpacked dictionary: `set_inputs(**{"counter-n": 7})`.
 
-        Returns
-        -------
-        :
-            This session, so calls can be chained.
-
         Raises
         ------
         TimeoutError
@@ -1026,7 +1015,6 @@ class TestServerSession:
             If the session is not running.
         """
         self._run(self._require_running().set_inputs(**kwargs))
-        return self
 
     def flush(self) -> None:
         """
@@ -1425,7 +1413,7 @@ class AsyncTestServerScope(_TestServerScopeBase):
         """Return a view of a module nested inside this one."""
         return AsyncTestServerScope(self._root, self.ns(id))
 
-    async def set_inputs(self, /, **kwargs: Any) -> AsyncTestServerScope:
+    async def set_inputs(self, /, **kwargs: Any) -> None:
         """
         Set input values in this namespace and wait for the reactive flush.
 
@@ -1433,11 +1421,6 @@ class AsyncTestServerScope(_TestServerScopeBase):
         ----------
         **kwargs
             Input values keyed by the bare id the module's own code uses.
-
-        Returns
-        -------
-        :
-            This scope, so calls can be chained.
 
         Raises
         ------
@@ -1447,7 +1430,6 @@ class AsyncTestServerScope(_TestServerScopeBase):
         await self._root.set_inputs(
             **{self._resolve(name): value for name, value in kwargs.items()}
         )
-        return self
 
     async def flush(self) -> None:
         """Re-read the session's values. See `AsyncTestServerSession.flush`."""
@@ -1509,7 +1491,7 @@ class TestServerScope(_TestServerScopeBase):
         """Return a view of a module nested inside this one."""
         return TestServerScope(self._root, self.ns(id))
 
-    def set_inputs(self, /, **kwargs: Any) -> TestServerScope:
+    def set_inputs(self, /, **kwargs: Any) -> None:
         """
         Set input values in this namespace and wait for the reactive flush.
 
@@ -1517,11 +1499,6 @@ class TestServerScope(_TestServerScopeBase):
         ----------
         **kwargs
             Input values keyed by the bare id the module's own code uses.
-
-        Returns
-        -------
-        :
-            This scope, so calls can be chained.
 
         Raises
         ------
@@ -1531,7 +1508,6 @@ class TestServerScope(_TestServerScopeBase):
         self._root.set_inputs(
             **{self._resolve(name): value for name, value in kwargs.items()}
         )
-        return self
 
     def flush(self) -> None:
         """Re-read the session's values. See `TestServerSession.flush`."""
