@@ -1088,6 +1088,51 @@ def test_test_server_make_scope_reads_a_module_with_bare_ids():
             counter.get_output("app_level")
 
 
+def test_test_server_scope_works_as_a_context_manager():
+    """Entering a scope is a no-op; it only lets a module's block be indented."""
+
+    @module.server
+    def counter_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return f"n={input.n()}"
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        counter_server("counter")
+
+    with test_server(app_server) as ts:
+        with ts.make_scope("counter") as counter:
+            counter.set_inputs(n=7)
+            assert counter.get_output("label") == "n=7"
+
+        # Leaving the scope leaves the session -- and the scope -- untouched.
+        assert ts.get_output("counter-label") == "n=7"
+        assert counter.get_output("label") == "n=7"
+        counter.set_inputs(n=8)
+        assert ts.get_output("counter-label") == "n=8"
+
+
+@pytest.mark.asyncio
+async def test_test_server_async_scope_works_as_a_context_manager():
+    @module.server
+    def counter_server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def label():
+            return f"n={input.n()}"
+
+    def app_server(input: Inputs, output: Outputs, session: Session):
+        counter_server("counter")
+
+    async with test_server_async(app_server) as ts:
+        async with ts.make_scope("counter") as counter:
+            await counter.set_inputs(n=7)
+            assert counter.get_output("label") == "n=7"
+
+        assert ts.get_output("counter-label") == "n=7"
+        await counter.set_inputs(n=8)
+        assert ts.get_output("counter-label") == "n=8"
+
+
 def test_test_server_scope_is_ok_covers_only_its_namespace():
     @module.server
     def boom_server(input: Inputs, output: Outputs, session: Session):

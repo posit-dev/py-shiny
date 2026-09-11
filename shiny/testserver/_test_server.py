@@ -1453,6 +1453,20 @@ class AsyncTestServerScope(_TestServerScopeBase):
         """Re-read the session's values. See `AsyncTestServerSession.flush`."""
         await self._root.flush()
 
+    async def __aenter__(self) -> AsyncTestServerScope:
+        """
+        Return this scope, so a module's block can read like the session's.
+
+        A scope owns nothing -- the session it views is already running, and
+        outlives it -- so entering and exiting are both no-ops. They exist only
+        so a test can indent a module's assertions under the module they belong
+        to.
+        """
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Do nothing. The session, not the scope, owns the app's lifetime."""
+
 
 class TestServerScope(_TestServerScopeBase):
     """
@@ -1522,6 +1536,20 @@ class TestServerScope(_TestServerScopeBase):
     def flush(self) -> None:
         """Re-read the session's values. See `TestServerSession.flush`."""
         self._root.flush()
+
+    def __enter__(self) -> TestServerScope:
+        """
+        Return this scope, so a module's block can read like the session's.
+
+        A scope owns nothing -- the session it views is already running, and
+        outlives it -- so entering and exiting are both no-ops. They exist only
+        so a test can indent a module's assertions under the module they belong
+        to.
+        """
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Do nothing. The session, not the scope, owns the app's lifetime."""
 
 
 def _load_app_from_file(target_path: Path) -> Optional[App]:
@@ -1762,6 +1790,22 @@ def test_server(
 
             # Scoped all the way down: only this module's items, keyed bare.
             assert set(counter.to_values().outputs) == {"label"}
+    ```
+
+    A scope also works as a context manager, purely so a module's assertions can
+    be indented under the module they belong to -- entering and leaving it do
+    nothing, since the session owns the app's lifetime:
+
+    ```python
+    def test_two_counters():
+        with test_server(app_server) as ts:
+            with ts.make_scope("first") as counter:
+                counter.set_inputs(n=1)
+                assert counter.get_output("label") == "n=1"
+
+            with ts.make_scope("second") as counter:
+                counter.set_inputs(n=2)
+                assert counter.get_output("label") == "n=2"
     ```
 
     Express modules namespace their ids the same way, so an Express app holding
