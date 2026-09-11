@@ -168,6 +168,9 @@ and `await ts.set_inputs(...)` / `await ts.flush()`.
   `test_server_async()`.
 - Output is `"silent"` → an input it reads was never set, or a `req()` failed.
   Set the input, then read again.
+- Output is `"never-rendered"` → it has not run at all, usually because it is
+  hidden and so suspended. Make it visible (e.g. drop `output_hidden` from
+  `client_data=`).
 - `KeyError` for a module's output → the id is namespaced
   (`"counter-label"`), or use `make_scope("counter")`.
 - Tests interfere with each other → the fixture is module- or session-scoped;
