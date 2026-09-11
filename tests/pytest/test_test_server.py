@@ -13,7 +13,7 @@ from typing import Callable
 
 import pytest
 
-from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
 from shiny.testmode import export_test_values
 from shiny.testserver import (
     AsyncTestServerScope,
@@ -864,7 +864,7 @@ def test_test_server_value_without_a_value_refuses_to_compare():
             lambda: silent != None,  # noqa: E711
             lambda: silent in [None],  # pyright: ignore[reportUnnecessaryContains]
         ):
-            with pytest.raises(ValueError, match="never rendered"):
+            with pytest.raises(ValueError, match="rendered nothing"):
                 comparison()
 
         with pytest.raises(ValueError, match="raised, so there is no value"):
@@ -902,7 +902,7 @@ def test_test_server_value_statuses():
 
     with test_server(server) as ts:
         assert ts.get_output("fine").status == "ok"
-        # Never rendered: `input.n()` is unset, so it raised a silent exception.
+        # Silent: `input.n()` is unset, so it raised a silent exception.
         assert ts.get_output("needs_input").status == "silent"
         assert ts.get_output("boom").status == "error"
         # There is no status for "does not exist"; the lookup fails instead, and
@@ -917,6 +917,52 @@ def test_test_server_value_statuses():
         ts.set_inputs(n=5)
         assert ts.get_output("needs_input") == "5"
         assert ts.get_output("needs_input").status == "ok"
+
+
+def test_test_server_reports_an_output_that_was_just_silenced():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def txt():
+            req(input.n() is not None and input.n() >= 0)
+            return f"ok: {input.n()}"
+
+    with test_server(server) as ts:
+        ts.set_inputs(n=1)
+        assert ts.get_output("txt") == "ok: 1"
+
+        # The browser blanks the output when `req()` fails, so reporting the
+        # previous render's value here would let a test assert something the
+        # user cannot see.
+        ts.set_inputs(n=-1)
+        silenced = ts.get_output("txt")
+        assert silenced.status == "silent"
+        assert silenced.value is MISSING
+        assert dict(silenced) == {"name": "txt", "kind": "output", "status": "silent"}
+
+        # And it recovers once the requirement is met again.
+        ts.set_inputs(n=2)
+        assert ts.get_output("txt") == "ok: 2"
+
+
+def test_test_server_output_that_never_ran_is_never_rendered():
+    def server(input: Inputs, output: Outputs, session: Session):
+        @render.text
+        def hidden():
+            return "never asked for"
+
+    # A hidden output's effect stays suspended, so it produces nothing at all --
+    # which is a different fact from a render that was silenced.
+    with test_server(server, client_data={"output_hidden": True}) as ts:
+        never = ts.get_output("hidden")
+        assert never.status == "never-rendered"
+        assert never.value is MISSING
+        assert repr(never) == (
+            "TestServerValue('hidden', kind='output', status='never-rendered')"
+        )
+        with pytest.raises(ValueError, match="never rendered"):
+            assert never == "never asked for"
+        # Not a failure: nothing went wrong, it simply was not shown.
+        assert ts.is_ok is True
 
 
 def test_test_server_value_records_a_per_item_traceback():
