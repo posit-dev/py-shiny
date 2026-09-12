@@ -463,6 +463,36 @@ def test_test_server_set_inputs_timeout_when_awaiting():
             s.set_inputs(hang=1)
 
 
+def test_test_server_set_inputs_timeout_on_reactive_cycle():
+    """
+    Two effects that each write what the other reads re-queue each other forever,
+    so the flush never finishes. The effects yield the loop between runs, so this
+    times out rather than hanging the test process.
+    """
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        a = reactive.value(0)
+        b = reactive.value(0)
+
+        @reactive.effect
+        def _():
+            val = input.go()
+            if val is not None and val > 0:
+                a.set(b() + 1)
+
+        @reactive.effect
+        def _():
+            if a() > 0:
+                b.set(a() + 1)
+
+    # The cycle never terminates, so the timeout only decides how long the test
+    # waits, not whether it fails. Keep enough headroom that a loaded runner
+    # cannot trip the same timeout during session startup instead.
+    with test_server(server, timeout_secs=1.0) as s:
+        with pytest.raises(TimeoutError, match="reactive cycle"):
+            s.set_inputs(go=1)
+
+
 @pytest.mark.asyncio
 async def test_test_server_inside_running_loop_points_at_async_variant():
     def server(input: Inputs, output: Outputs, session: Session):

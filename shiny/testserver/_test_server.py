@@ -68,7 +68,9 @@ produces nothing, and `session.clientdata.url_pathname()` never resolves.
 
 _TIMEOUT_HINT = (
     " Raise `timeout_secs=` if the app is simply slow to start -- a cold"
-    " matplotlib font cache, say."
+    " matplotlib font cache, say. A flush that never finishes no matter how"
+    " long you wait is usually a reactive cycle: two effects that each write a"
+    " value the other reads keep re-queueing each other forever."
 )
 """Appended to every timeout message; the knob is not obvious from the error."""
 
