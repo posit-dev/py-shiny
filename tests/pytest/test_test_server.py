@@ -1217,11 +1217,13 @@ def test_test_server_flavors_present_the_same_api():
         assert ts.keys() == async_ts.keys() == scope.keys() == async_scope.keys()
         assert set(dict(ts)) == set(dict(scope)) == set(VALUE_FIELDS)
 
-        # Each flavor supports the context-manager protocol its tests use.
-        for obj in (ts, scope):
-            assert hasattr(obj, "__enter__") and hasattr(obj, "__exit__")
-        for obj in (async_ts, async_scope):
-            assert hasattr(obj, "__aenter__") and hasattr(obj, "__aexit__")
+        # Only the sessions own the app's lifetime, so only they are context
+        # managers -- a scope is a plain view, used without a `with`.
+        assert hasattr(ts, "__enter__") and hasattr(ts, "__exit__")
+        assert hasattr(async_ts, "__aenter__") and hasattr(async_ts, "__aexit__")
+        for obj in (scope, async_scope):
+            for name in ("__enter__", "__exit__", "__aenter__", "__aexit__"):
+                assert not hasattr(obj, name), (obj, name)
 
         # Scopes point back at the session they view; sessions are already root.
         assert scope.root_scope() is ts
@@ -1275,8 +1277,8 @@ def test_test_server_make_scope_reads_a_module_with_bare_ids():
             counter.get_output("app_level")
 
 
-def test_test_server_scope_works_as_a_context_manager():
-    """Entering a scope is a no-op; it only lets a module's block be indented."""
+def test_test_server_scope_stays_live_across_set_inputs():
+    """A scope holds no state of its own, so one taken early keeps working."""
 
     @module.server
     def counter_server(input: Inputs, output: Outputs, session: Session):
@@ -1288,36 +1290,15 @@ def test_test_server_scope_works_as_a_context_manager():
         counter_server("counter")
 
     with test_server(app_server) as ts:
-        with ts.make_scope("counter") as counter:
-            counter.set_inputs(n=7)
-            assert counter.get_output("label") == "n=7"
-
-        # Leaving the scope leaves the session -- and the scope -- untouched.
-        assert ts.get_output("counter-label") == "n=7"
+        counter = ts.make_scope("counter")
+        counter.set_inputs(n=7)
         assert counter.get_output("label") == "n=7"
-        counter.set_inputs(n=8)
-        assert ts.get_output("counter-label") == "n=8"
 
-
-@pytest.mark.asyncio
-async def test_test_server_async_scope_works_as_a_context_manager():
-    @module.server
-    def counter_server(input: Inputs, output: Outputs, session: Session):
-        @render.text
-        def label():
-            return f"n={input.n()}"
-
-    def app_server(input: Inputs, output: Outputs, session: Session):
-        counter_server("counter")
-
-    async with test_server_async(app_server) as ts:
-        async with ts.make_scope("counter") as counter:
-            await counter.set_inputs(n=7)
-            assert counter.get_output("label") == "n=7"
-
-        assert ts.get_output("counter-label") == "n=7"
-        await counter.set_inputs(n=8)
-        assert ts.get_output("counter-label") == "n=8"
+        # Setting an input on the session is seen by the scope, and vice versa.
+        ts.set_inputs(**{"counter-n": 8})
+        assert counter.get_output("label") == "n=8"
+        counter.set_inputs(n=9)
+        assert ts.get_output("counter-label") == "n=9"
 
 
 def test_test_server_scope_is_ok_covers_only_its_namespace():

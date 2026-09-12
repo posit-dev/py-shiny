@@ -1529,20 +1529,6 @@ class AsyncTestServerScope(_TestServerScopeBase):
         await self._root.flush()
         return self
 
-    async def __aenter__(self) -> AsyncTestServerScope:
-        """
-        Return this scope, so a module's block can read like the session's.
-
-        A scope owns nothing -- the session it views is already running, and
-        outlives it -- so entering and exiting are both no-ops. They exist only
-        so a test can indent a module's assertions under the module they belong
-        to.
-        """
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Do nothing. The session, not the scope, owns the app's lifetime."""
-
 
 class TestServerScope(_TestServerScopeBase):
     """
@@ -1613,20 +1599,6 @@ class TestServerScope(_TestServerScopeBase):
         """Re-read the session's values, and return this scope for chaining."""
         self._root.flush()
         return self
-
-    def __enter__(self) -> TestServerScope:
-        """
-        Return this scope, so a module's block can read like the session's.
-
-        A scope owns nothing -- the session it views is already running, and
-        outlives it -- so entering and exiting are both no-ops. They exist only
-        so a test can indent a module's assertions under the module they belong
-        to.
-        """
-        return self
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Do nothing. The session, not the scope, owns the app's lifetime."""
 
 
 def _load_app_from_file(target_path: Path) -> Optional[App]:
@@ -1775,9 +1747,8 @@ def test_server(
     test_server(my_mod_server)    # server function, or a shiny.App
     ```
 
-    Set inputs to simulate a user interacting, and read outputs between them.
-    `get_output` compares equal to the value itself, so assertions need no
-    unwrapping:
+    The `with` block guarantees the app is torn down even when an assertion
+    fails:
 
     ```python
     from shiny.testserver import test_server
@@ -1785,61 +1756,87 @@ def test_server(
 
     def test_doubling_app():
         with test_server("myapp.py") as ts:
-            # Several inputs at once.
-            ts.set_inputs(name="Ada", n=10)
-
-            assert ts.is_ok
-            assert ts.get_output("greeting") == "Hello, Ada!"
+            ts.set_inputs(n=10)
             assert ts.get_output("doubled") == "20"
+    ```
 
-            # Values registered with `export_test_values()` are read the same way.
-            assert ts.get_export("running_total") == 20
+    For the common case -- `app.py` next to the test file -- the built-in
+    `local_server` pytest fixture is that block already entered, so a test body
+    is nothing but interactions and assertions. It is what the rest of these
+    examples use. Set inputs to simulate a user interacting, and read outputs
+    between them. `get_output` compares equal to the value itself, so assertions
+    need no unwrapping:
 
-            # A later interaction re-renders. Inputs you do not name keep their
-            # values, so `name` is still "Ada" here.
-            ts.set_inputs(n=21)
-            assert ts.get_output("doubled") == "42"
+    ```python
+    def test_doubling_app(local_server):
+        # Several inputs at once.
+        local_server.set_inputs(name="Ada", n=10)
+
+        assert local_server.is_ok
+        assert local_server.get_output("greeting") == "Hello, Ada!"
+        assert local_server.get_output("doubled") == "20"
+
+        # Values registered with `export_test_values()` are read the same way.
+        assert local_server.get_export("running_total") == 20
+
+        # A later interaction re-renders. Inputs you do not name keep their
+        # values, so `name` is still "Ada" here.
+        local_server.set_inputs(n=21)
+        assert local_server.get_output("doubled") == "42"
+    ```
+
+    `local_server` is function-scoped -- each test gets a fresh session, since a
+    session holds the inputs set so far -- and it takes another app file through
+    an indirect parametrization:
+
+    ```python
+    import pytest
+
+
+    @pytest.mark.parametrize("local_server", ["other_app.py"], indirect=True)
+    def test_the_other_app(local_server):
+        local_server.set_inputs(n=10)
+        assert local_server.get_output("tripled") == "30"
     ```
 
     `set_inputs` and `flush` both return what they were called on, so a sequence
     of interactions can be written as one chain:
 
     ```python
-    def test_a_sequence_of_interactions():
-        with test_server("myapp.py") as ts:
-            assert (
-                ts.set_inputs(name="Ada").set_inputs(n=10).get_output("doubled")
-                == "20"
-            )
+    def test_a_sequence_of_interactions(local_server):
+        assert (
+            local_server.set_inputs(name="Ada").set_inputs(n=10).get_output("doubled")
+            == "20"
+        )
     ```
 
     Each value also says how it turned out, which is what to inspect when an
     assertion is not simply about equality:
 
     ```python
-    def test_reports_a_bad_value():
-        with test_server("myapp.py") as ts:
-            ts.set_inputs(n=-1)
+    def test_reports_a_bad_value(local_server):
+        local_server.set_inputs(n=-1)
 
-            assert ts.is_ok is False
-            failed = ts.get_output("doubled")
-            assert failed.status == "error"
-            assert "must be positive" in failed.error
-            assert "raise ValueError" in failed.traceback
+        assert local_server.is_ok is False
+        failed = local_server.get_output("doubled")
+        assert failed.status == "error"
+        assert "must be positive" in failed.error
+        assert "raise ValueError" in failed.traceback
     ```
 
-    Client data has defaults, so a plot renders without a browser. Override them
-    when a test cares about the size:
+    Client data has defaults, so a plot renders without a browser. Change one
+    output's size partway through a test by setting its `.clientdata_*` input,
+    or set every output's size up front with `client_data=` -- an argument only
+    `test_server()` takes, so that one is written with the `with` block:
 
     ```python
-    def test_plot_at_a_given_size():
-        with test_server("myapp.py", client_data={"output_width": 300}) as ts:
-            plot = ts.get_output("plot")
-            assert plot.status == "ok"
+    def test_plot_at_a_given_size(local_server):
+        local_server.set_inputs(**{".clientdata_output_plot_width": 300})
+        assert local_server.get_output("plot").status == "ok"
 
-        # Or change one output's size partway through a test.
-        with test_server("myapp.py") as ts:
-            ts.set_inputs(**{".clientdata_output_plot_width": 300})
+
+    def test_every_plot_at_a_given_size():
+        with test_server("myapp.py", client_data={"output_width": 300}) as ts:
             assert ts.get_output("plot").status == "ok"
     ```
 
@@ -1847,7 +1844,55 @@ def test_server(
     was given:
 
     ```python
+    def test_counter_module(local_server):
+        local_server.set_inputs(**{"counter-n": 7})
+        assert local_server.get_output("counter-label") == "n=7"
+    ```
+
+    Or take a scope and use the bare ids the module's own code uses, the way
+    `shiny.Session.make_scope` hands a module its namespaced session:
+
+    ```python
+    def test_counter_module_in_scope(local_server):
+        counter = local_server.make_scope("counter")
+        counter.set_inputs(n=7)
+        assert counter.get_output("label") == "n=7"
+
+        # Scoped all the way down: only this module's items, keyed bare.
+        assert set(counter.to_values().outputs) == {"label"}
+    ```
+
+    A scope holds no state of its own, so take as many as the test needs:
+
+    ```python
+    def test_two_counters(local_server):
+        first = local_server.make_scope("first")
+        first.set_inputs(n=1)
+        assert first.get_output("label") == "n=1"
+
+        second = local_server.make_scope("second")
+        second.set_inputs(n=2)
+        assert second.get_output("label") == "n=2"
+    ```
+
+    Express modules namespace their ids the same way, so an Express app holding
+    `counter("counter")` is reached with the very same ids, and by the same
+    scope.
+
+    Nested modules compose their namespaces, so the id is every ancestor id
+    joined by `-` -- `local_server.get_output("outer-inner-label")` -- or, as
+    scopes, `local_server.make_scope("outer").make_scope("inner").get_output("label")`.
+
+    A module's server function can be tested on its own, with no app file at
+    all: `test_server()` wraps it in an app with an empty UI. Here the fixture
+    is one you write, since `local_server` only loads files. Keep it
+    function-scoped -- the default -- for the same reason `local_server` is:
+
+    ```python
+    import pytest
+
     from shiny import Inputs, Outputs, Session, module, render
+    from shiny.testserver import test_server
 
 
     @module.server
@@ -1861,79 +1906,19 @@ def test_server(
         counter_server("counter")
 
 
-    def test_counter_module():
-        with test_server(app_server) as ts:
-            ts.set_inputs(**{"counter-n": 7})
-            assert ts.get_output("counter-label") == "n=7"
-    ```
-
-    Or take a scope and use the bare ids the module's own code uses, the way
-    `shiny.Session.make_scope` hands a module its namespaced session:
-
-    ```python
-    def test_counter_module_in_scope():
-        with test_server(app_server) as ts:
-            counter = ts.make_scope("counter")
-            counter.set_inputs(n=7)
-            assert counter.get_output("label") == "n=7"
-
-            # Scoped all the way down: only this module's items, keyed bare.
-            assert set(counter.to_values().outputs) == {"label"}
-    ```
-
-    A scope also works as a context manager, purely so a module's assertions can
-    be indented under the module they belong to -- entering and leaving it do
-    nothing, since the session owns the app's lifetime:
-
-    ```python
-    def test_two_counters():
-        with test_server(app_server) as ts:
-            with ts.make_scope("first") as counter:
-                counter.set_inputs(n=1)
-                assert counter.get_output("label") == "n=1"
-
-            with ts.make_scope("second") as counter:
-                counter.set_inputs(n=2)
-                assert counter.get_output("label") == "n=2"
-    ```
-
-    Express modules namespace their ids the same way, so an Express app holding
-    `counter("counter")` is reached with the very same ids, and by the same
-    scope.
-
-    Nested modules compose their namespaces, so the id is every ancestor id
-    joined by `-` -- `ts.get_output("outer-inner-label")` -- or, as scopes,
-    `ts.make_scope("outer").make_scope("inner").get_output("label")`.
-
-    A fixture keeps the `with` block out of every test body, and pytest handles
-    the teardown. Leave it function-scoped -- the default -- because a session
-    holds the inputs set so far, and sharing one across tests would let them
-    affect each other:
-
-    ```python
-    import pytest
-
-    from shiny.testserver import test_server
-
-
     @pytest.fixture
     def ts():
-        with test_server("myapp.py") as session:
+        with test_server(app_server) as session:
             yield session
 
 
-    def test_doubles(ts):
-        ts.set_inputs(n=10)
-        assert ts.get_output("doubled") == "20"
-
-
-    def test_squares(ts):
-        ts.set_inputs(n=10)
-        assert ts.get_output("squared") == "100"
+    def test_counter_module(ts):
+        ts.set_inputs(**{"counter-n": 7})
+        assert ts.get_output("counter-label") == "n=7"
     ```
 
-    To assert after the block has closed, capture the values first. Both forms
-    hold copies, so they stay valid once the app is gone:
+    To assert after the app is gone, capture the values first. Both forms hold
+    copies, so they stay valid once the `with` block has closed:
 
     ```python
     def test_reports_everything():
