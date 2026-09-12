@@ -485,7 +485,10 @@ def test_test_server_set_inputs_timeout_on_reactive_cycle():
             if a() > 0:
                 b.set(a() + 1)
 
-    with test_server(server, timeout_secs=0.2) as s:
+    # The cycle never terminates, so the timeout only decides how long the test
+    # waits, not whether it fails. Keep enough headroom that a loaded runner
+    # cannot trip the same timeout during session startup instead.
+    with test_server(server, timeout_secs=1.0) as s:
         with pytest.raises(TimeoutError, match="reactive cycle"):
             s.set_inputs(go=1)
 
