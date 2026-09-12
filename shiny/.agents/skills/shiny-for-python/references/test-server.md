@@ -39,30 +39,43 @@ app = App(app_ui, server)
 ```
 
 ```python
-# test_app.py
+# test_app.py -- `local_server` is a built-in pytest fixture; nothing to import
+def test_doubles(local_server):        # app.py beside this test file
+    local_server.set_inputs(n=10)
+    assert local_server.is_ok
+    assert local_server.get_output("doubled") == "20"
+
+    local_server.set_inputs(n=21)      # unnamed inputs keep their values
+    assert local_server.get_output("doubled") == "42"
+
+def test_reports_error(local_server):
+    local_server.set_inputs(n=-1)
+    assert local_server.is_ok is False
+    failed = local_server.get_output("doubled")
+    assert failed.status == "error"
+    assert "must be positive" in failed.error
+```
+
+`local_server` is an already-started `test_server()` session for the `app.py`
+next to the test file, torn down by pytest. It is function-scoped — every test
+gets a fresh session — and takes another file via
+`@pytest.mark.parametrize("local_server", ["other_app.py"], indirect=True)`.
+`set_inputs()` flushes the reactive graph before returning, so outputs are
+already current — no waiting or retrying.
+
+Call `test_server()` directly when the fixture cannot express what you need:
+a server function or `App` object, `client_data=`, `timeout_secs=`. The
+session **must** then be used as a context manager; `with` tears the app down
+even when an assertion fails:
+
+```python
 from shiny.testserver import test_server
 
 def test_doubles():
-    with test_server() as ts:          # app.py beside this test file
+    with test_server("myapp.py") as ts:
         ts.set_inputs(n=10)
-        assert ts.is_ok
         assert ts.get_output("doubled") == "20"
-
-        ts.set_inputs(n=21)            # unnamed inputs keep their values
-        assert ts.get_output("doubled") == "42"
-
-def test_reports_error():
-    with test_server() as ts:
-        ts.set_inputs(n=-1)
-        assert ts.is_ok is False
-        failed = ts.get_output("doubled")
-        assert failed.status == "error"
-        assert "must be positive" in failed.error
 ```
-
-The session **must** be used as a context manager; `with` tears the app down
-even when an assertion fails. `set_inputs()` flushes the reactive graph before
-returning, so outputs are already current — no waiting or retrying.
 
 ## What `test_server()` accepts
 
@@ -108,18 +121,21 @@ the blank the browser shows rather than the stale value.
 Module ids are namespaced, so either use the full id or take a scope:
 
 ```python
-def test_counter_module():
-    with test_server(app_server) as ts:
-        ts.set_inputs(**{"counter-n": 7})
-        assert ts.get_output("counter-label") == "n=7"
+def test_counter_module(local_server):
+    local_server.set_inputs(**{"counter-n": 7})
+    assert local_server.get_output("counter-label") == "n=7"
 
-        with ts.make_scope("counter") as counter:   # bare ids inside the module
-            counter.set_inputs(n=8)
-            assert counter.get_output("label") == "n=8"
+    counter = local_server.make_scope("counter")   # bare ids inside the module
+    counter.set_inputs(n=8)
+    assert counter.get_output("label") == "n=8"
 ```
 
-Nested modules chain: `ts.make_scope("outer").make_scope("inner")`. Express
-modules use the same ids.
+Nested modules chain: `local_server.make_scope("outer").make_scope("inner")`.
+Express modules use the same ids.
+
+A module server can be tested without any app file — `test_server(app_server)`
+wraps the bare server function in an empty-UI app. See "Snapshots and
+fixtures" for the fixture shape.
 
 ## Client data (plots and URL readers)
 
@@ -129,14 +145,20 @@ them `render.plot` and `session.clientdata.url_*()` would be `"silent"`.
 when a test cares:
 
 ```python
-with test_server(client_data={"output_width": 300}) as ts:   # every output
-    assert ts.get_output("plot").status == "ok"
+def test_plot_size(local_server):                        # one output, mid-test
+    local_server.set_inputs(**{".clientdata_output_plot_width": 300})
+    assert local_server.get_output("plot").status == "ok"
 
-with test_server() as ts:                                     # one output, mid-test
-    ts.set_inputs(**{".clientdata_output_plot_width": 300})
+def test_every_plot_size():                              # every output, up front
+    with test_server(client_data={"output_width": 300}) as ts:
+        assert ts.get_output("plot").status == "ok"
 ```
 
 ## Snapshots and fixtures
+
+`local_server` covers an `app.py` beside the test file. For anything else
+(`client_data=`, `timeout_secs=`, a server function or `App` object), write a
+fixture of your own around `test_server()`:
 
 ```python
 import pytest
@@ -144,7 +166,7 @@ from shiny.testserver import test_server
 
 @pytest.fixture            # keep function-scoped: a session remembers its inputs
 def ts():
-    with test_server("myapp.py") as session:
+    with test_server(app_server) as session:
         yield session
 
 def test_everything(ts):
@@ -154,7 +176,7 @@ def test_everything(ts):
     assert values.outputs["doubled"].value == "20"
 ```
 
-Both forms are copies and stay valid after the `with` block closes.
+Both forms are copies and stay valid after the session is torn down.
 
 ## Async tests
 
@@ -177,4 +199,5 @@ and `await ts.set_inputs(...)` / `await ts.flush()`.
   make it function-scoped.
 - `TimeoutError` on startup → the app is slow to import; raise `timeout_secs=`.
 - Forgot the `with` → the session never starts. `test_server()` returns an
-  unstarted session; always enter it.
+  unstarted session; always enter it — or use `local_server`, which is already
+  started.

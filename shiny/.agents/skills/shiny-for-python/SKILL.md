@@ -78,7 +78,7 @@ reference file before writing code** for that area.
 
 | Topic | Use when | Reference |
 |---|---|---|
-| Test server | Testing server logic in memory with `test_server()` — set inputs, assert on outputs/exports, module scopes; no browser | `references/test-server.md` |
+| Test server | Testing server logic in memory with the `local_server` fixture / `test_server()` — set inputs, assert on outputs/exports, module scopes; no browser | `references/test-server.md` |
 | Testing | End-to-end Playwright tests — launching an app under pytest, locating and asserting on UI | `references/testing.md` |
 | Debugging | Inspecting server-side reactive/input/output state; exposing values to a test harness | `references/debugging.md` |
 | OpenTelemetry | OTel tracing/profiling of reactive execution; exporting spans to a backend | `references/otel.md` |
