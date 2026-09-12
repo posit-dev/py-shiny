@@ -5,6 +5,8 @@ A scope is read off the registered fixture definition, not inferred from state
 left behind by an earlier test, so these hold under xdist and any test order.
 """
 
+from typing import cast
+
 import pytest
 
 from shiny.pytest import create_app_fixture
@@ -18,9 +20,11 @@ app_session_scope = create_app_fixture("apps/local_server1/app.py", scope="sessi
 
 
 def _fixture_scope(request: pytest.FixtureRequest, name: str) -> str:
+    # pytest leaves `request.node` unannotated.
+    node = cast(pytest.Item, request.node)  # pyright: ignore[reportUnknownMemberType]
     fixture_defs = (
         request._fixturemanager.getfixturedefs(  # pyright: ignore[reportPrivateUsage]
-            name, request.node
+            name, node
         )
     )
     assert fixture_defs is not None, f"no fixture named {name!r}"
