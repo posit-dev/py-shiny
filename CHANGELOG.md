@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `shiny.testserver.test_server()`, an in-memory server testing API for testing reactive server functions and Shiny apps headlessly, without a browser. (#2470)
 
-* Added the `local_server` pytest fixture, an already-started `test_server()` session for the `app.py` next to the test file -- the in-memory counterpart of `local_app`. It is function-scoped, since a session holds the inputs set so far, and takes another app file via `@pytest.mark.parametrize("local_server", ["other_app.py"], indirect=True)`. (#2495)
+* Added the `local_server` pytest fixture, the in-memory counterpart of `local_app`: a function-scoped `test_server()` session for the `app.py` next to the test file. (#2495)
 
 * Added `session.allow_reconnect()`, the Python counterpart to Shiny for R's `session$allowReconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
 
