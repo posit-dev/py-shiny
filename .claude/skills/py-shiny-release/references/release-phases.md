@@ -206,9 +206,9 @@ Repo: `posit-dev/shinylive`
 ### Deprecations break the bundled examples
 
 A py-shiny release that deprecates a renderer or UI function will make any shinylive example
-still using it print a `ShinyDeprecationWarning` on load, and `examples-smoke-test` fails on
-that: `SUSPECT_PATTERNS` in `playwright/examples-smoke-helpers.ts` matches `/Warning\b/` and
-`/Deprecat/i` in the shinylive terminal.
+still using it print a `ShinyDeprecationWarning` on load, and `test-examples-smoke` fails on
+that: `_SUSPECT_PATTERNS` in `tests/shinylive_app.py` matches `Warning\b` and `Deprecat`
+(case-insensitive) in the shinylive terminal.
 
 So for every entry in the new release's **Deprecations** changelog section:
 
@@ -276,12 +276,16 @@ land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likew
 - [ ] **DEPLOY GATE 1 (github.io)**: Wait for the `main` branch deploy to github.io to finish. Then bust all browser caches and verify apps work on github.io using the Playwright-based example testing procedure. **Important**: When testing, always append a cache-busting query parameter (e.g., `?v={timestamp}`) to URLs or use a fresh incognito/private browser context to ensure you're testing the newly deployed version, not a cached old version. **Do NOT push to `deploy` until github.io is verified.**
 - [ ] **Confirm the deployed bundle is actually the new one** before reading the sweep results.
       A stale CDN response passes the sweep while proving nothing, so check the served
-      lockfile rather than assuming:
+      bundle rather than assuming. Note `shinylive_lock.json` is a build input at the repo
+      root and is **never published** — the deploy uploads `_shinylive/`, so the served
+      artifact to check is `pyodide-lock.json`:
 
       ```bash
-      curl -s "https://posit-dev.github.io/shinylive/shinylive/shinylive_lock.json?v=$(date +%s)" \
-        | python -c "import json,sys; d=json.load(sys.stdin); print(d['shiny']['version'], d['shinyswatch']['version'])"
+      curl -s "https://posit-dev.github.io/shinylive/py/shinylive/pyodide/pyodide-lock.json?v=$(date +%s)" \
+        | python -c "import json,sys; d=json.load(sys.stdin)['packages']; m={k.lower():v for k,v in d.items()}; print(m['shiny']['version'], m['shinyswatch']['version'])"
       ```
+
+      Same path on `https://shinylive.io/...` for deploy gate 2.
 
       Tell the user which surface is live and which is not at this point — github.io is
       staging; shinylive.io is untouched and still serving the previous release.
@@ -302,25 +306,34 @@ land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likew
 
 **Run the repo's own smoke suite — `test_shinylive_site.py` is not a substitute for it.**
 
+This suite moved from Playwright/TS to pytest. The old
+`make examples-smoke-test` / `playwright-examples.config.ts` / `--project=py` invocations no
+longer exist — they fail with `playwright-examples.config.ts does not exist`.
+
 ```bash
-make examples-smoke-test                       # everything
-npx playwright test --config playwright-examples.config.ts --project=py
-npx playwright test --config playwright-examples.config.ts --project=py -g "File download"
+make test-examples-smoke                       # smoke + intent, both engines
+make test-examples-smoke EXAMPLES_ENGINE=py    # one engine
+make test-examples-intent EXAMPLES_ENGINE=py   # intent tests only
 ```
 
-`examples-smoke.spec.ts` asserts three things per example: no suspect lines in the shinylive
-**terminal**, no `.shiny-output-error` in the app frame, and no browser console errors. The
-release skill's `test_shinylive_site.py` only covers console errors plus tracebacks in the app
-iframe — it has no notion of the terminal pane, so it will happily pass a bundle whose
-examples emit deprecation warnings on load. That exact gap let a broken bundle look clean
-during the v1.7.0 train; only `examples-smoke-test` caught it.
+`EXAMPLES_SHARD` (as in `1/3`) splits the suite the way CI does. `test-deps` installs
+`requirements-test.txt` plus the local `packages/py-shiny` submodule, so the suite runs
+against the shiny being released.
+
+`tests/test_examples_smoke.py` asserts three things per example: no suspect lines in the
+shinylive **terminal**, no `.shiny-output-error` in the app frame, and no browser console
+errors. The release skill's `test_shinylive_site.py` only covers console errors plus
+tracebacks in the app iframe — it has no notion of the terminal pane, so it will happily pass
+a bundle whose examples emit deprecation warnings on load. That exact gap let a broken bundle
+look clean during the v1.7.0 train; only the repo's own suite caught it.
 
 Expect one fewer test than there are examples: the `Non-Apps` category holds entries that load
 a plain script into the editor and never start an app, and `exampleAppTitles()` filters them
-out (`NON_APP_CATEGORIES`). In v1.7.0 that was 27 tests for 28 examples.
+out (`NON_APP_CATEGORIES` in `tests/shinylive_app.py`). In v1.8.0 that was 27 smoke tests
+for 28 examples (54 total, counting the intent tests).
 
-**The smoke test reads `_shinylive/`, not `build/`.** `readExamplesJson()` loads
-`_shinylive/<engine>/shinylive/examples.json` and the config serves that directory on port
+**The smoke test reads `_shinylive/`, not `build/`.** `tests/shinylive_app.py` loads
+`_shinylive/<engine>/shinylive/examples.json` and the fixtures serve that directory on port
 8100. So after editing an example, `make all` is not enough — run `make _shinylive`
 (`rm -rf _shinylive/py _shinylive/r` first for a clean rebuild) or the suite will keep testing
 the old copy and appear not to have fixed anything.
