@@ -199,17 +199,18 @@ def value():
 - [ ] Created `shiny/api-examples/[component]/app-express.py` (unless not warranted)
 - [ ] Tested examples locally
 
-### Step 2.5: Add Playwright controller (if input component)
+### Step 2.5: Add or update Playwright controller
 
-If the component is an input component, create a Playwright controller for end-to-end testing.
+Every UI component (inputs, containers, layouts, overlays) should have a Playwright controller for end-to-end testing. When porting a new component or altering an existing one, create or update its controller.
 
-**Location**: `shiny/playwright/controller/_input_fields.py` (or create new file if needed)
+**Location**: `shiny/playwright/controller/` (e.g. `_input_fields.py`, `_overlay.py`, `_layout.py`, etc.)
 
 **Implementation**:
-1. Create a new class inheriting from appropriate mixins
-2. Implement required methods: `__init__`, `set`, interaction methods
-3. Add expectation methods for testing (e.g., `expect_value`, `expect_placeholder`)
-4. Follow existing patterns for locator initialization
+1. Create a new class inheriting from `UiBase` or appropriate mixins
+2. Set up locators for all sub-elements (trigger, header, title, body, footer, close buttons, etc.)
+3. Implement action and interaction methods: `__init__`, `set`, `open`, `close`, `show`, `click`, etc.
+4. Add expectation methods for testing (e.g., `expect_value`, `expect_title`, `expect_body`, `expect_open`, `expect_placement`)
+5. Follow existing patterns for locator initialization and auto-waiting expectations
 
 **Example pattern**:
 ```python
@@ -238,14 +239,16 @@ class InputSubmitTextarea(
         pass
 ```
 
-**Don't forget to export**: Update `shiny/playwright/controller/__init__.py` to export the new controller class.
+**Don't forget to export**: Update `shiny/playwright/controller/__init__.py` to export the controller class and add it to `docs/_quartodoc-testing.yml`.
 
 **Checklist:**
-- [ ] Created Playwright controller class
-- [ ] Implemented core interaction methods
+- [ ] Created or updated Playwright controller class
+- [ ] Added locators for relevant sub-elements
+- [ ] Implemented core interaction and action methods
 - [ ] Implemented expectation methods for testing
 - [ ] Exported from `shiny/playwright/controller/__init__.py`
-- [ ] Added to `__all__` in the same file
+- [ ] Added to `__all__` in `shiny/playwright/controller/__init__.py`
+- [ ] Added entry to `docs/_quartodoc-testing.yml`
 
 ## Phase 3: Testing and Documentation
 
@@ -484,7 +487,7 @@ Use this high-level checklist to track your progress through the porting process
 - [ ] Exported from `shiny/ui/__init__.py` (and express if applicable)
 - [ ] Ran `make upgrade-html-deps` to vendor assets from bslib (SCSS, CSS, JavaScript)
 - [ ] Created API examples (core and express)
-- [ ] Created Playwright controller (if input component)
+- [ ] Created or updated Playwright controller (locators, actions, expectations)
 
 ### Testing
 - [ ] Ported unit tests from bslib

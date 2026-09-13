@@ -29,7 +29,7 @@ ui.page_opts(
 # Create a chat instance, with an initial message
 chat = ui.Chat(
     id="chat",
-    messages=["Hello! How can I help you today?"],
+    greeting="Hello! How can I help you today?",
 )
 chat.ui()
 
