@@ -5,7 +5,7 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.8.0] - 2026-09-12
 
 ### Deprecations
 
@@ -15,61 +15,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `shiny.testserver.test_server()`, an in-memory server testing API for testing reactive server functions and Shiny apps headlessly, without a browser. (#2470)
-
-* Added the `local_server` pytest fixture, the in-memory counterpart of `local_app`: a function-scoped `test_server()` session for the `app.py` next to the test file. (#2495)
+* Added `local_server`, a pytest fixture that is the in-memory counterpart of `local_app`: a function-scoped `test_server()` session for the `app.py` next to the test file. (#2495)
 
 * Added `session.allow_reconnect()`, the Python counterpart to Shiny for R's `session$allowReconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
+
+* Added `shiny.testserver.test_server()`, an in-memory server testing API for testing reactive server functions and Shiny apps headlessly, without a browser. (#2470)
 
 * Added `ui.page_html()`, for apps whose UI is a complete HTML document they own (e.g. the `index.html` a JS bundler emits) rather than one built from `ui.page_*()` components. It takes the document as a string or a `Path`, plus optional `extra_deps=`. Pass the result as `App(ui=)`, or return it from a UI function (`App(ui=lambda request: ...)`, which is what bookmarking requires): the document is served as-is, with Shiny's own HTML dependencies -- plus any in `extra_deps=` -- inserted at `<meta name="shiny-dependency-placeholder" content="">` (or a custom `deps_replace_pattern=`), and their files served by the app. In Express, use `ui.page_opts(html=)`, which routes the whole app through `ui.page_html()`: top-level UI markup is dropped (the document already is the page) but its HTML dependencies are kept. This is the Python counterpart to Shiny for R's `shinyApp(ui = htmlTemplate("index.html", document_ = TRUE))` with `attachDependencies()`. (#2462)
 
 ### Improvements
 
-* Enhanced `playwright.controller.Offcanvas` to support `open()`, `loc_trigger`, `loc_title`, `loc_footer`, and expectation methods `expect_title()`, `expect_footer()`, and `expect_placement()`. (#2451)
-
-* The bundled `shiny-for-python` Agent Skill now documents `shiny.testserver.test_server()` in a new `test-server` topic, so coding agents reach for in-memory server tests instead of hand-built sessions or a browser when only server logic needs checking. (#2491)
-
 * Stub files for `folium`, `uvicorn`, and `seaborn` are now generated with Pyrefly instead of Pyright. (Thanks, @ChidiebereNjoku!) (#2478)
 
-* The README and the `shiny skills` CLI help now explain that [`library-skills`](https://library-skills.io) must be run from your own project directory, since it installs the bundled Agent Skills of the packages that project has installed. The previous wording left that precondition implicit, so running the command from an empty directory or from a clone of py-shiny silently installed nothing. (#2447)
+* `playwright.controller.Offcanvas` now supports `open()`, `loc_trigger`, `loc_title`, `loc_footer`, and the expectation methods `expect_title()`, `expect_footer()`, and `expect_placement()`. (#2451)
 
-* Navsets created with an `id` (e.g. `ui.navset_tab(id="tabs")`) now use that `id` as their `data-tabsetid`, so their tab panes get stable `tab-tabs-0` style DOM ids instead of ones built from a random integer. This makes the rendered markup reproducible across renders and easier to target from custom CSS and JavaScript. Navsets without an `id`, and `ui.nav_menu()` dropdowns, keep the random ID. (Thanks, @pevolution-ahmed!) (#2410)
+* `shiny skills` CLI help and the README now explain that [`library-skills`](https://library-skills.io) must be run from your own project directory, since it installs the bundled Agent Skills of the packages that project has installed. The previous wording left that precondition implicit, so running the command from an empty directory or from a clone of py-shiny silently installed nothing. (#2447)
+
+* `shiny.testserver.test_server()` is now documented in the bundled `shiny-for-python` Agent Skill, in a new `test-server` topic, so coding agents reach for in-memory server tests instead of hand-built sessions or a browser when only server logic needs checking. (#2491)
+
+* `ui.navset_tab()` and the other navsets created with an `id` now use that `id` as their `data-tabsetid`, so their tab panes get stable `tab-tabs-0` style DOM ids instead of ones built from a random integer. This makes the rendered markup reproducible across renders and easier to target from custom CSS and JavaScript. Navsets without an `id`, and `ui.nav_menu()` dropdowns, keep the random ID. (Thanks, @pevolution-ahmed!) (#2410)
 
 ### Bug fixes
 
-* `ui.input_slider()` and `ui.update_slider()` no longer shift `datetime.date` values by a day when the server runs in a timezone ahead of UTC. Dates were encoded as local midnight, but the client formats and reads slider dates back in UTC, so on e.g. `Europe/Amsterdam` an update to `2025-01-01` landed on `2024-12-31`. Dates are now encoded as UTC midnight, matching Shiny for R. (#2398)
+* Closing a session no longer destroys the reactive values and calcs created in it, so async work that outlives the connection does not error. Since v1.6.1, refreshing the page while an `@reactive.extended_task` (or any `asyncio` task) was in flight could raise `DestroyedReactiveError: Reactive value '<name>' has been destroyed.` once it settled, leaving the task in neither `"success"` nor `"error"`. Values and calcs are now left readable at their last value on close and reclaimed by garbage collection, while an explicit `session.destroy(id)` on a live session still tears them down. Effects are still destroyed on close. (#2428)
 
-* `ui.input_slider()` and `ui.update_slider()` no longer shift naive (timezone-less) `datetime.datetime` values by the server's UTC offset. Such a value was encoded as if it named a local time, but the client sends it back to be decoded as UTC, so a slider set to `12:00` reported `11:00` on a server in `Europe/Amsterdam`. Naive datetimes are now anchored to UTC, so they round-trip unchanged; timezone-aware datetimes name an absolute instant and are unaffected. (#2398)
-
-* `ui.show_offcanvas()` now accepts the `id` (a string) of an `ui.offcanvas()` panel already in the UI and reveals it, matching its sibling functions `ui.hide_offcanvas()` / `ui.toggle_offcanvas()`. Previously, passing a string raised an unhandled `AttributeError` from deep inside the implementation. `show_offcanvas()` also now accepts bare tag content (wrapping it into a new anonymous panel), in addition to an `ui.offcanvas()` object; a string that looks like body text instead of an id (empty, or containing whitespace) raises an actionable `ValueError`. (#2445)
-
-* A dynamically-rendered output (e.g. `@render.ui`) inside a `ui.popover()` or `ui.tooltip()` without a `title=` no longer gets stuck showing "recalculating". The container collapsed to 0 width, so the output's `ResizeObserver` never fired; vendored bslib CSS now gives it a non-zero minimum width. (#2446)
+* `@expressify` and `@render.express` no longer fail with `RuntimeError: Failed to find function '...' in AST` when another decorator has changed the function's `__name__`. The AST lookup matched on `__name__`, which a decorator can rewrite; it now matches on the function's code object name, which always reflects the name at the `def` site. This pattern is commonly used to give each `@render.express` function in a loop a unique output id. When `@expressify` cannot locate a function's definition, the error now names the function as it appears in the source (rather than a `__name__` a decorator may have rewritten), points at the file and line it looked at, and lists the likely causes — an `async def`, a decorator below `expressify()` that returns a wrapper instead of the original function, or a source file modified after import. (#2016)
 
 * `playwright.controller.InputSelectize` no longer clicks the page body to close the selectize dropdown. `expect_choices()`, `expect_choice_labels()`, and `expect_choice_groups()` open the dropdown, because selectize renders its choices into the DOM only after the first open. The click that closed the dropdown again landed on app content and fired the app's own click handlers, so a test could record an interaction that it never made. The controller now calls `close()` on the selectize instance instead, which touches no app content. (#2426)
 
-* Closing a session no longer destroys the reactive values and calcs created in it, so async work that outlives the connection does not error. Since v1.6.1, refreshing the page while an `@reactive.extended_task` (or any `asyncio` task) was in flight could raise `DestroyedReactiveError: Reactive value '<name>' has been destroyed.` once it settled, leaving the task in neither `"success"` nor `"error"`. Values and calcs are now left readable at their last value on close and reclaimed by garbage collection, while an explicit `session.destroy(id)` on a live session still tears them down. Effects are still destroyed on close. (#2428)
+* `@render.data_frame` now renders data frames whose column names are empty (`""`) or are not strings: column ids are positional and are never derived from the column name, and a column named `0` no longer renders a blank header. Its `.update_sort()` also now honors its documented default for bare column indices, so `desc` follows the column dtype: number-like columns sort descending and everything else sorts ascending. (#2421)
 
-* The `ui.Theme` API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`. The example directory now declares `libsass` in a `requirements.txt`. (#2387)
+* `@render.download_button`, `@render.download_link`, and the deprecated `@render.download` now honor `@output(id=)`. The download handler was registered under the decorated function's name, but the URL rendered by the control used the `@output(id=)` value, so clicking the control returned a 404. (#2415)
 
-* Fixed the error message raised when a package required for theme compilation is missing: it interpolated the package name into the first sentence but printed a literal `pip install {pkg}` in the second. (#2387)
-
-* Download renderers (`@render.download_button`, `@render.download_link`, and the deprecated `@render.download`) now honor `@output(id=)`. The download handler was registered under the decorated function's name, but the URL rendered by the control used the `@output(id=)` value, so clicking the control returned a 404. (#2415)
-
-* `@render.data_frame` is now able to render data frames whose column names are empty (`""`) or are not strings. Column ids are now positional and are never derived from the column name. A column named `0` also no longer renders a blank header. (#2421)
-
-* `@render.data_frame`'s `.update_sort()` now honors its documented default for bare column indices: `desc` follows the column dtype, so number-like columns sort descending and everything else sorts ascending. (#2421)
-
-* `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
-
-* `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
-
-* `ui.input_bookmark_button()` was added to the Express API reference. (#2418)
+* `@render.ui` and other dynamically-rendered outputs inside a `ui.popover()` or `ui.tooltip()` without a `title=` no longer get stuck showing "recalculating". The container collapsed to 0 width, so the output's `ResizeObserver` never fired; vendored bslib CSS now gives it a non-zero minimum width. (#2446)
 
 * `shiny run --app-dir <dir> <app>` now honors `--app-dir` for Shiny Express apps. Express detection looked for the app file relative to `--app-dir`, but the entrypoint that gets handed to uvicorn was then built by resolving the app path against the current working directory instead, so running an Express app from outside its directory failed with a `FileNotFoundError` for a path that never existed. (#2419)
 
-* `@expressify` and `@render.express` no longer fail with `RuntimeError: Failed to find function '...' in AST` when another decorator has changed the function's `__name__`. The AST lookup matched on `__name__`, which a decorator can rewrite; it now matches on the function's code object name, which always reflects the name at the `def` site. This pattern is commonly used to give each `@render.express` function in a loop a unique output id. (#2016)
+* `ui.input_bookmark_button()` is now included in the Express API reference. (#2418)
 
-* When `@expressify` cannot locate a function's definition, the error now names the function as it appears in the source (rather than a `__name__` a decorator may have rewritten), points at the file and line it looked at, and lists the likely causes — an `async def`, a decorator below `expressify()` that returns a wrapper instead of the original function, or a source file modified after import. (#2016)
+* `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
+
+* `ui.input_slider()` and `ui.update_slider()` now encode `datetime.date` values as UTC midnight, matching Shiny for R, so they no longer shift by a day when the server runs in a timezone ahead of UTC. Dates were encoded as local midnight, but the client formats and reads slider dates back in UTC, so on e.g. `Europe/Amsterdam` an update to `2025-01-01` landed on `2024-12-31`. Naive (timezone-less) `datetime.datetime` values are likewise anchored to UTC and round-trip unchanged, instead of shifting by the server's UTC offset: such a value was encoded as if it named a local time, but the client sends it back to be decoded as UTC, so a slider set to `12:00` reported `11:00` on a server in `Europe/Amsterdam`. Timezone-aware datetimes name an absolute instant and are unaffected. (#2398)
+
+* `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
+
+* `ui.show_offcanvas()` now accepts the `id` (a string) of a `ui.offcanvas()` panel already in the UI and reveals it, matching its sibling functions `ui.hide_offcanvas()` / `ui.toggle_offcanvas()`. Previously, passing a string raised an unhandled `AttributeError` from deep inside the implementation. `ui.show_offcanvas()` also now accepts bare tag content (wrapping it into a new anonymous panel), in addition to a `ui.offcanvas()` object; a string that looks like body text instead of an id (empty, or containing whitespace) raises an actionable `ValueError`. (#2445)
+
+* `ui.Theme`'s API reference examples now run in Shinylive. Compiling a customized theme requires `libsass`, but Shinylive only auto-loads packages it finds in an app's top-level imports and `Theme.to_css()` imports `sass` lazily, so the examples died with an `ImportError`; the example directory now declares `libsass` in a `requirements.txt`. The error raised when a package required for theme compilation is missing is also fixed: it interpolated the package name into the first sentence but printed a literal `pip install {pkg}` in the second. (#2387)
 
 ## [1.7.0] - 2026-07-28
 
