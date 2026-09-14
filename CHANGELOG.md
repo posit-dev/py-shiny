@@ -5,6 +5,12 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### New features
+
+* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, Playwright session recording with synchronized video playback, and interactive HTML Reactlog export with action-scoped execution causality and "Why did this run?" root-cause inspection. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
+
 ## [1.8.0] - 2026-09-12
 
 ### Deprecations
