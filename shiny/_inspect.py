@@ -5071,7 +5071,7 @@ def format_reactlog_html(
 
     window.addEventListener('DOMContentLoaded', () => {{
       init();
-      new ResizeObserver(() => fitGraph()).observe(document.getElementById('graph-container'));
+      new ResizeObserver(() => fitGraph()).observe(document.getElementById('reactlog-svg'));
     }});
   </script>
 </body>
