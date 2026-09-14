@@ -1197,3 +1197,63 @@ def test_fit_large_graph(page: Page) -> None:
     }""")
     assert bounds["fits"]
     assert bounds["zoom"] < 0.4
+
+
+def test_search_keyboard_and_reset_view(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("x", "X", 1)
+@render.text
+def result():
+    return str(input.x())
+"""
+    page.set_content(format_reactlog_html(generate_reactlog(code), code))
+    search = page.locator("#search-input")
+    search.fill("id:output:result")
+    search.press("ArrowDown")
+    expect(page.locator("#search-results button")).to_be_focused()
+    page.keyboard.press("Enter")
+    expect(page.locator("#search-results")).to_be_hidden()
+    page.locator("#role-filter-dropdown").select_option("source")
+    expect(page.locator(".graph-node")).to_have_count(1)
+    page.get_by_role("button", name="Reset view", exact=True).click()
+    expect(page.locator(".graph-node")).to_have_count(2)
+    expect(page.locator("#role-filter-dropdown")).to_have_value("all")
+    search.fill("unfindablenode")
+    expect(page.locator("#search-results")).to_contain_text(
+        "0 matches. Try a node name"
+    )
+    search.press("Escape")
+    expect(search).to_be_focused()
+    expect(page.locator(".graph-node")).to_have_count(2)
+
+
+def test_narrow_report_keeps_graph_and_controls_accessible(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("x", "X", 1)
+@render.text
+def result():
+    return str(input.x())
+"""
+    original_viewport = page.viewport_size
+    try:
+        for width in (390, 768):
+            page.set_viewport_size({"width": width, "height": 844})
+            page.set_content(format_reactlog_html(generate_reactlog(code), code))
+            bounds = page.evaluate("""() => {
+                const graph = document.getElementById('graph-container').getBoundingClientRect();
+                const sidebar = document.getElementById('sidebar').getBoundingClientRect();
+                const controls = document.querySelector('.toolbar').getBoundingClientRect();
+                return {width: document.documentElement.scrollWidth,
+                    viewport: innerWidth, graphWidth: graph.width,
+                    stacked: sidebar.top >= graph.bottom,
+                    controlsFit: controls.right <= innerWidth};
+            }""")
+            assert bounds["width"] <= bounds["viewport"]
+            assert bounds["graphWidth"] == width
+            assert bounds["stacked"]
+            assert bounds["controlsFit"]
+            page.locator("#search-input").fill("result")
+            expect(page.locator("#search-results button")).to_have_count(1)
+    finally:
+        if original_viewport:
+            page.set_viewport_size(original_viewport)
