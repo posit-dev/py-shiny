@@ -2116,7 +2116,7 @@ def format_reactlog_html(
 
     /* Streamlined Toolbar */
     .toolbar {{ position: relative; z-index: 19; min-height: 44px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.35rem 0.9rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }}
-    .toolbar-group {{ display: flex; align-items: center; gap: 0.35rem; }}
+    .toolbar-group {{ display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; min-width: 0; }}
     .toolbar-divider {{ width: 1px; height: 22px; background: var(--border); margin: 0 0.15rem; }}
     .btn {{ min-height: 28px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.28rem 0.55rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; font-size: 0.72rem; font-weight: 700; }}
     .btn:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
@@ -2130,7 +2130,7 @@ def format_reactlog_html(
     .filter-select {{ height: 28px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0 0.55rem; font: 650 0.72rem var(--sans); cursor: pointer; }}
     .filter-select:hover {{ border-color: var(--border-strong); }}
     .search-wrap {{ position: relative; width: 200px; }}
-    .search-results {{ position: absolute; top: 100%; right: 12px; width: min(480px, 90vw); max-height: 320px; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 100; box-shadow: 0 8px 24px #0003; }}
+    .search-results {{ position: absolute; top: 100%; left: 0; width: min(480px, 90vw); max-height: 320px; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 100; box-shadow: 0 8px 24px #0003; }}
     .search-results button {{ display: block; width: 100%; text-align: left; padding: 8px; background: var(--surface-2); color: var(--text); border: 0; cursor: pointer; overflow-wrap: anywhere; }}
     .search-results button:hover, .search-results button:focus {{ background: var(--surface-3); outline: 1px solid var(--accent); }}
     .search-icon {{ position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
@@ -2138,7 +2138,7 @@ def format_reactlog_html(
     .search-input::placeholder {{ color: var(--text-muted); }}
     .scrubber {{ display: flex; align-items: center; gap: 0.5rem; min-width: 180px; }}
     .scrubber input[type="range"] {{ width: 100%; accent-color: var(--accent); cursor: pointer; }}
-    .step-display {{ font: 700 0.7rem var(--mono); color: var(--accent); min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; }}
+    .step-display {{ white-space: nowrap; flex-shrink: 0; font: 700 0.7rem var(--mono); color: var(--accent); min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; }}
     .path-controls {{ display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 2px; gap: 2px; }}
     .path-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.2rem 0.45rem; border-radius: 4px; font: 700 0.66rem var(--mono); cursor: pointer; transition: color 120ms, background 120ms; }}
     .path-btn:hover {{ color: var(--text); }}
@@ -2246,6 +2246,7 @@ def format_reactlog_html(
     .legend-item {{ display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.1rem 0.2rem; }}
     .legend-dot {{ width: 7px; height: 7px; border-radius: 50%; background: var(--role-color); }}
     .zoom-controls {{ display: flex; gap: 0.25rem; pointer-events: auto; }}
+    .action-toast[hidden] {{ display: none; }}
     .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 0.4rem 1rem; color: var(--text); font: 650 0.74rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.5rem; pointer-events: none; }}
 
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
@@ -2257,7 +2258,8 @@ def format_reactlog_html(
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
       .graph-edge[data-active="true"], .graph-edge.is-causal-edge {{ animation: none; }}
-      .action-toast {{ animation: none; }}
+      .action-toast[hidden] {{ display: none; }}
+    .action-toast {{ animation: none; }}
     }}
     .graph-node {{ cursor: pointer; }}
     .graph-node.is-dimmed {{ opacity: 0.40; }}
@@ -2377,6 +2379,44 @@ def format_reactlog_html(
     .event-badge.idle {{ background: var(--surface-3); color: var(--text-muted); }}
     .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
     .event-details {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
+
+    /* Keep controls readable and reserve the canvas for the graph. */
+    .app-header, .toolbar, .trace-timeline-bar {{ flex-shrink: 0; }}
+    .btn, .filter-select, .search-input {{ min-height: 32px; }}
+    .btn.icon {{ width: 32px; flex-shrink: 0; }}
+    .path-btn {{ white-space: nowrap; min-height: 28px; }}
+    .search-wrap {{ flex: 1 1 200px; max-width: 320px; }}
+    .search-results {{ top: calc(100% + 6px); padding: 8px; }}
+    .search-results button {{ border-radius: 5px; margin-top: 4px; line-height: 1.5; }}
+    .search-summary {{ padding: 6px; color: var(--text-muted); font-size: 0.75rem; }}
+    .graph-container {{ display: flex; flex-direction: column; }}
+    .graph-topbar {{ position: relative; top: auto; left: auto; right: auto; padding: 12px; flex-shrink: 0; }}
+    .graph-top-row {{ display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }}
+    .causal-summary-banner {{ grid-column: 1 / -1; line-height: 1.5; border-color: var(--border-strong); box-shadow: none; }}
+    .legend {{ flex-wrap: wrap; }}
+    .zoom-controls {{ align-items: center; }}
+    #reactlog-svg {{ flex: 1; min-height: 0; height: 0; }}
+    @media (max-width: 1000px) {{
+      body {{ height: auto; min-height: 100vh; overflow: auto; }}
+      .main-view {{ display: flex; flex-direction: column; overflow: visible; flex: none; }}
+      .graph-container {{ height: 520px; flex: none; }}
+      .split-resizer {{ display: none; }}
+      .sidebar {{ width: 100%; height: 560px; border-top: 1px solid var(--border); }}
+      .toolbar-group {{ width: 100%; }}
+      .scrubber {{ flex: 1; min-width: 140px; }}
+    }}
+    @media (max-width: 520px) {{
+      .app-header {{ flex-wrap: wrap; padding: 12px; gap: 10px; }}
+      .brand {{ width: 100%; }}
+      .header-actions {{ width: 100%; justify-content: flex-end; }}
+      .summary-popover {{ width: min(360px, calc(100vw - 24px)); }}
+      .search-wrap {{ flex-basis: 100%; max-width: none; }}
+      .path-controls {{ width: 100%; justify-content: space-between; }}
+      .graph-container {{ height: 440px; }}
+      .graph-top-row {{ grid-template-columns: 1fr; }}
+      .zoom-controls {{ justify-content: flex-end; }}
+      .trace-controls {{ flex-wrap: wrap; }}
+    }}
   </style>
 </head>
 <body>
@@ -2487,10 +2527,9 @@ def format_reactlog_html(
 
       <div class="search-wrap">
         <svg class="search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Search names or id:r12" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name, type, or id" aria-controls="search-results" onkeydown="if(event.key === 'Escape') {{ this.value = ''; handleSearch(''); }}" />
+        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Search names or id:r12" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name, type, or id" aria-controls="search-results" onkeydown="handleSearchKey(event)" />
+        <div id="search-results" class="search-results" aria-label="Node search results" onkeydown="handleSearchKey(event)" hidden></div>
       </div>
-
-      <div id="search-results" class="search-results" aria-label="Node search results" hidden></div>
 
       <div class="path-controls" role="group" aria-label="Path focus">
         <button class="path-btn is-active" id="btn-focus-upstream" aria-pressed="true" onclick="setFocusMode('upstream')" title="Show causal path leading to this node">← Causes</button>
@@ -2574,6 +2613,7 @@ def format_reactlog_html(
             <div class="legend-item"><span class="legend-dot" style="--role-color: var(--effect)"></span> Effects</div>
           </div>
           <div class="zoom-controls">
+            <button class="btn mini" onclick="resetGraphView()" title="Clear node selection and filters, then fit the full graph">Reset view</button>
             <button class="btn icon mini" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
             <button class="btn icon mini" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/></svg></button>
             <button class="btn icon mini" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
@@ -4772,7 +4812,11 @@ def format_reactlog_html(
           m => Number.isFinite(m.score)
         ).sort((a, b) => a.score - b.score);
         const summary = document.createElement('div');
-        summary.textContent = `${{matches.length}} matches${{matches.length > 50 ? ' · showing first 50' : ''}}`;
+        summary.className = 'search-summary';
+        summary.setAttribute('role', 'status');
+        summary.textContent = matches.length
+          ? `${{matches.length}} matches${{matches.length > 50 ? ' · showing first 50' : ''}} · ↓ to select`
+          : '0 matches. Try a node name or id:r12. Press Escape to clear.';
         results.appendChild(summary);
         matches.slice(0, 50).forEach(({{node}}) => {{
           const button = document.createElement('button');
@@ -4795,6 +4839,40 @@ def format_reactlog_html(
       }}
       renderGraph();
       fitGraph();
+    }}
+
+    function resetGraphView() {{
+      selectedNodeId = null;
+      searchQuery = '';
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-results').hidden = true;
+      activeRoles = new Set(['source', 'conductor', 'observer']);
+      document.getElementById('role-filter-dropdown').value = 'all';
+      setFocusMode('all');
+      renderInspector();
+      updateTraceTimelineScrubber(getCurrentStepTime());
+      fitGraph();
+    }}
+
+    function handleSearchKey(event) {{
+      const input = document.getElementById('search-input');
+      const results = document.getElementById('search-results');
+      const buttons = Array.from(results.querySelectorAll('button'));
+      if (event.key === 'Escape') {{
+        event.preventDefault();
+        input.value = '';
+        handleSearch('');
+        input.focus();
+      }} else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {{
+        if (results.hidden || !buttons.length) return;
+        event.preventDefault();
+        const index = buttons.indexOf(document.activeElement);
+        const next = event.key === 'ArrowDown' ? (index + 1) % buttons.length : (index <= 0 ? buttons.length - 1 : index - 1);
+        buttons[next].focus();
+      }} else if (event.key === 'Enter' && event.target === input && !results.hidden && buttons.length) {{
+        event.preventDefault();
+        buttons[0].click();
+      }}
     }}
 
     function handleRoleDropdownChange(val) {{
@@ -4991,7 +5069,10 @@ def format_reactlog_html(
       reader.readAsText(file);
     }}
 
-    window.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('DOMContentLoaded', () => {{
+      init();
+      new ResizeObserver(() => fitGraph()).observe(document.getElementById('graph-container'));
+    }});
   </script>
 </body>
 </html>
