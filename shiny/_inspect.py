@@ -4767,8 +4767,10 @@ def format_reactlog_html(
       results.replaceChildren();
       results.hidden = !searchQuery;
       if (searchQuery) {{
-        const matches = (reactlogData.nodes || []).map(n => ({{ node: n, score: nodeSearchScore(n, searchQuery) }}))
-          .filter(m => Number.isFinite(m.score)).sort((a, b) => a.score - b.score);
+        const matches = filterItems(
+          (reactlogData.nodes || []).map(n => ({{ node: n, score: nodeSearchScore(n, searchQuery) }})),
+          m => Number.isFinite(m.score)
+        ).sort((a, b) => a.score - b.score);
         const summary = document.createElement('div');
         summary.textContent = `${{matches.length}} matches${{matches.length > 50 ? ' · showing first 50' : ''}}`;
         results.appendChild(summary);
