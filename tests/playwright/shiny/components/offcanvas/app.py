@@ -4,7 +4,9 @@ app_ui = ui.page_fluid(
     ui.offcanvas(
         ui.p("Panel via trigger."),
         title="Trigger Panel",
+        footer=ui.p("Trigger Footer"),
         id="trigger_panel",
+        placement="left",
         trigger=ui.input_action_button("open_btn", "Open"),
     ),
     ui.br(),
