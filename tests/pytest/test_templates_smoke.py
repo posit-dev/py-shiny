@@ -16,6 +16,7 @@ import ast
 import importlib.util
 import re
 import sys
+import textwrap
 import traceback
 import types
 from collections.abc import Iterator
@@ -47,6 +48,23 @@ DUMMY_ENV_VARS = {
 # (`app_utils`, `shared`) share names across template directories, so a cached
 # copy from one template would leak into the next.
 _PURGED_HELPERS = {"app_utils", "shared", "globals"}
+
+# Third-party packages a template may import. A template that fails only
+# because one of these is missing is untestable here, so the test skips it.
+# Anything else missing (a typo'd helper name, a deleted sibling file) is a
+# template bug and must fail, so the allowlist stays exactly this set.
+_OPTIONAL_TEMPLATE_DEPS = frozenset(
+    {
+        "chatlas",
+        "dotenv",
+        "faicons",
+        "langchain_openai",
+        "pandas",
+        "plotly",
+        "seaborn",
+        "shinywidgets",
+    }
+)
 
 # Provider constructors are stubbed, not real. Their validation behavior changes
 # across chatlas releases (newer versions query the model server and require
@@ -166,13 +184,15 @@ def _iter_causes(exc: BaseException) -> Iterator[BaseException]:
 
 
 def _fails_at_template_import(path: Path, exc: BaseException) -> bool:
-    """Did the template fail while running one of its own `import` lines?
+    """Did the template fail inside a third-party import?
 
-    An error inside a third-party import (a version floor that no longer
-    imports cleanly, a missing optional package) says the dependency is
-    unusable in this environment, not that the template is wrong. Errors on
-    any other template line (a bad `Chat(...)` call, a missing `input`
-    import used later) are template bugs and must fail.
+    True when the template's own frame sits on an `import` line and no other
+    template-side file (a sibling helper such as `shared.py`) is on the
+    traceback. That combination says the dependency is unusable in this
+    environment -- a version floor that no longer imports cleanly, for
+    example -- not that the template is wrong. Anything else (a bad
+    `Chat(...)` call, a helper that raises while loading data) is a template
+    bug and must fail.
 
     Express wraps load errors in `RuntimeError`, so walk the whole cause
     chain instead of only the outer traceback.
@@ -182,11 +202,40 @@ def _fails_at_template_import(path: Path, exc: BaseException) -> bool:
     except SyntaxError:
         return False
     resolved = path.resolve()
+    template_dir = resolved.parent
+    saw_import_frame = False
     for cause in _iter_causes(exc):
         for frame in traceback.extract_tb(cause.__traceback__):
-            if Path(frame.filename).resolve() == resolved:
-                return frame.lineno in import_lines
-    return False
+            frame_path = Path(frame.filename).resolve()
+            if frame_path == resolved:
+                if frame.lineno not in import_lines:
+                    return False
+                saw_import_frame = True
+            elif template_dir in frame_path.parents and frame_path.suffix == ".py":
+                # A sibling helper raised: template-side bug, not an env issue.
+                return False
+    return saw_import_frame
+
+
+def _skip_reason(path: Path, exc: BaseException) -> str | None:
+    """Why this template failure is an environment issue, or `None` to fail.
+
+    Skips stay narrow on purpose: a missing allowlisted package, or an error
+    raised inside a third-party import. A typo'd helper name, a bad
+    from-import, or helper code that raises all return `None` and fail.
+    """
+    if isinstance(exc, ModuleNotFoundError):
+        missing_root = (exc.name or "").split(".")[0]
+        if missing_root in _OPTIONAL_TEMPLATE_DEPS:
+            return f"Template needs an optional dependency: {exc}"
+        return None
+    if isinstance(exc, ImportError) and "cannot import name" in str(exc):
+        # The source module resolved, so the imported name is wrong -- a typo
+        # in the template or a helper, not a missing package.
+        return None
+    if _fails_at_template_import(path, exc):
+        return f"Template dependency is unusable in this env: {exc}"
+    return None
 
 
 def _load_core_app(path: Path) -> App:
@@ -223,14 +272,91 @@ def test_template_loads_without_keys(
         else:
             app = wrap_express_app(path.resolve())
             assert isinstance(app, App), f"{path} did not build a shiny App"
-    except ModuleNotFoundError as e:
-        if e.name in _PURGED_HELPERS:
-            raise
-        pytest.skip(f"Template needs an optional dependency: {e}")
     except Exception as e:
-        if _fails_at_template_import(path, e):
-            pytest.skip(f"Template dependency is unusable in this env: {e}")
+        reason = _skip_reason(path, e)
+        if reason is not None:
+            pytest.skip(reason)
         raise
+
+
+def _write_app(tmp_path: Path, body: str) -> Path:
+    path = tmp_path / "app.py"
+    path.write_text(textwrap.dedent(body), encoding="utf-8")
+    return path
+
+
+def _exec_app(path: Path) -> BaseException:
+    try:
+        exec(
+            compile(path.read_text(encoding="utf-8"), str(path), "exec"),
+            {"__file__": str(path), "__name__": "__main__"},
+        )
+    except Exception as e:
+        return e
+    raise AssertionError(f"{path} did not raise")
+
+
+def test_skip_reason_unknown_module_fails(tmp_path: Path) -> None:
+    # A typo'd helper name must fail, not skip.
+    path = _write_app(tmp_path, "from app_util import load_dotenv\n")
+    exc = ModuleNotFoundError("No module named 'app_util'", name="app_util")
+    assert _skip_reason(path, exc) is None
+
+
+def test_skip_reason_allowlisted_module_skips(tmp_path: Path) -> None:
+    path = _write_app(tmp_path, "import seaborn\n")
+    exc = ModuleNotFoundError("No module named 'seaborn'", name="seaborn")
+    assert _skip_reason(path, exc) is not None
+
+
+def test_skip_reason_nameless_module_fails(tmp_path: Path) -> None:
+    path = _write_app(tmp_path, "import seaborn\n")
+    assert _skip_reason(path, ModuleNotFoundError("boom")) is None
+
+
+def test_skip_reason_bad_from_import_fails(tmp_path: Path) -> None:
+    # The source module resolved, so the name is wrong -- a template typo.
+    (tmp_path / "shared.py").write_text("x = 1\n", encoding="utf-8")
+    path = _write_app(tmp_path, "from shared import dff\n")
+    exc = _exec_app(path)
+    assert isinstance(exc, ImportError)
+    assert _skip_reason(path, exc) is None
+
+
+def test_skip_reason_broken_dependency_skips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The import itself raises deep inside third-party code: env issue.
+    # The broken package lives outside the template dir, like site-packages.
+    app_dir = tmp_path / "app"
+    app_dir.mkdir()
+    dep_dir = tmp_path / "deps"
+    dep_dir.mkdir()
+    (dep_dir / "brokenlib.py").write_text(
+        'raise AttributeError("old lib vs new numpy")\n', encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "path", [str(dep_dir), *sys.path])
+    path = _write_app(app_dir, "import brokenlib\n")
+    exc = _exec_app(path)
+    assert isinstance(exc, AttributeError)
+    assert _skip_reason(path, exc) is not None
+
+
+def test_skip_reason_helper_error_fails(tmp_path: Path) -> None:
+    # A sibling helper that raises (a missing data file, for example) is a
+    # template bug even though the template frame sits on an import line.
+    (tmp_path / "shared.py").write_text(
+        "raise RuntimeError('no data')\n", encoding="utf-8"
+    )
+    path = _write_app(tmp_path, "from shared import df\n")
+    exc = _exec_app(path)
+    assert _skip_reason(path, exc) is None
+
+
+def test_skip_reason_template_code_error_fails(tmp_path: Path) -> None:
+    path = _write_app(tmp_path, "import json\nundefined_name\n")
+    exc = _exec_app(path)
+    assert _skip_reason(path, exc) is None
 
 
 def _deprecated_messages_calls(tree: ast.AST) -> list[int]:
