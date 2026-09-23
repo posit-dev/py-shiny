@@ -18,6 +18,7 @@ import re
 import sys
 import traceback
 import types
+from collections.abc import Iterator
 from operator import attrgetter
 from pathlib import Path
 
@@ -149,6 +150,21 @@ def _template_import_lines(path: Path) -> set[int]:
     }
 
 
+def _iter_causes(exc: BaseException) -> Iterator[BaseException]:
+    """An exception and everything it was raised from (`__cause__`, `__context__`)."""
+    seen: set[int] = set()
+    stack: list[BaseException] = [exc]
+    while stack:
+        current = stack.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        yield current
+        for nxt in (current.__cause__, current.__context__):
+            if isinstance(nxt, BaseException):
+                stack.append(nxt)
+
+
 def _fails_at_template_import(path: Path, exc: BaseException) -> bool:
     """Did the template fail while running one of its own `import` lines?
 
@@ -157,15 +173,19 @@ def _fails_at_template_import(path: Path, exc: BaseException) -> bool:
     unusable in this environment, not that the template is wrong. Errors on
     any other template line (a bad `Chat(...)` call, a missing `input`
     import used later) are template bugs and must fail.
+
+    Express wraps load errors in `RuntimeError`, so walk the whole cause
+    chain instead of only the outer traceback.
     """
     try:
         import_lines = _template_import_lines(path)
     except SyntaxError:
         return False
     resolved = path.resolve()
-    for frame in traceback.extract_tb(exc.__traceback__):
-        if Path(frame.filename).resolve() == resolved:
-            return frame.lineno in import_lines
+    for cause in _iter_causes(exc):
+        for frame in traceback.extract_tb(cause.__traceback__):
+            if Path(frame.filename).resolve() == resolved:
+                return frame.lineno in import_lines
     return False
 
 

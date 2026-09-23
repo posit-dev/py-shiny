@@ -79,7 +79,10 @@ dependencies = [
     "setuptools;python_version>='3.12'",
     "narwhals>=1.10.0",
     "orjson>=3.10.7",
-    "shinychat>=0.1.0",
+    # 0.6.0+ required: the bundled `shiny create` chat templates pass
+    # `greeting=` to `ui.Chat`, which older shinychat releases do not accept
+    # (posit-dev/py-shiny#2488).
+    "shinychat>=0.6.0",
     # 1.24.0+ required: older SDKs formatted span exception stack traces from
     # the active exception instead of the sanitized one shiny passes to
     # `record_exception()`, leaking unsanitized error messages
