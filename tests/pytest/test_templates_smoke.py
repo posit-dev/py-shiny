@@ -20,7 +20,6 @@ import types
 from operator import attrgetter
 from pathlib import Path
 
-import chatlas
 import pytest
 
 from shiny._app import App
@@ -47,17 +46,32 @@ DUMMY_ENV_VARS = {
 # copy from one template would leak into the next.
 _PURGED_HELPERS = {"app_utils", "shared", "globals"}
 
+# Provider constructors are stubbed, not real. Their validation behavior changes
+# across chatlas releases (newer versions query the model server and require
+# provider packages at construction time), so real constructors make this test
+# depend on upstream behavior, installed packages, and local servers. The
+# Shiny side (`ui.Chat`, `chat.ui`, `enable_bookmarking`) stays real, which is
+# what caught the `Chat(messages=...)` startup failure in #2488.
+_LLM_CLIENT_NAMES = (
+    "ChatOpenAI",
+    "ChatAnthropic",
+    "ChatGoogle",
+    "ChatOllama",
+    "ChatAzureOpenAI",
+    "ChatBedrockAnthropic",
+)
+
 
 class _DummyChatClient:
-    """Stand-in for an LLM provider that is not installed here."""
+    """Stand-in for an LLM provider client (never called, only constructed)."""
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         pass
 
-    async def stream_async(self, *args: object, **kwargs: object):
+    async def stream_async(self, *args: object, **kwargs: object) -> None:
         raise NotImplementedError  # pragma: no cover
 
-    def stream(self, *args: object, **kwargs: object):
+    def stream(self, *args: object, **kwargs: object) -> None:
         raise NotImplementedError  # pragma: no cover
 
 
@@ -87,15 +101,20 @@ def _stub_llm_providers(monkeypatch: pytest.MonkeyPatch) -> None:
 
     if importlib.util.find_spec("langchain_openai") is None:
         stub = types.ModuleType("langchain_openai")
-        stub.ChatOpenAI = _DummyChatClient  # type: ignore[attr-defined]
+        # `__dict__` assignment: `stub.ChatOpenAI = ...` fails pyright
+        # (ModuleType has no such attribute) and `setattr` trips flake8-bugbear.
+        stub.__dict__["ChatOpenAI"] = _DummyChatClient
         monkeypatch.setitem(sys.modules, "langchain_openai", stub)
+    else:
+        langchain_openai = importlib.import_module("langchain_openai")
+        monkeypatch.setattr(langchain_openai, "ChatOpenAI", _DummyChatClient)
 
-    try:
-        chatlas.ChatGoogle()
-    except ImportError:
-        monkeypatch.setattr(chatlas, "ChatGoogle", _DummyChatClient)
-    except Exception:
-        pass
+    if importlib.util.find_spec("chatlas") is not None:
+        import chatlas
+
+        for client_name in _LLM_CLIENT_NAMES:
+            if hasattr(chatlas, client_name):
+                monkeypatch.setattr(chatlas, client_name, _DummyChatClient)
 
 
 @pytest.fixture
@@ -135,12 +154,17 @@ def test_template_loads_without_keys(
     _stub_llm_providers: None,
     _isolated_template_modules: None,
 ) -> None:
-    monkeypatch.syspath_prepend(str(path.parent))
-    if path.name == "app-core.py":
-        _load_core_app(path)
-    else:
-        app = wrap_express_app(path.resolve())
-        assert isinstance(app, App), f"{path} did not build a shiny App"
+    monkeypatch.setattr(sys, "path", [str(path.parent), *sys.path])
+    try:
+        if path.name == "app-core.py":
+            _load_core_app(path)
+        else:
+            app = wrap_express_app(path.resolve())
+            assert isinstance(app, App), f"{path} did not build a shiny App"
+    except ModuleNotFoundError as e:
+        if e.name in _PURGED_HELPERS:
+            raise
+        pytest.skip(f"Template needs an optional dependency: {e}")
 
 
 def _deprecated_messages_calls(tree: ast.AST) -> list[int]:
