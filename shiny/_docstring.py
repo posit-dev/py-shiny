@@ -1,9 +1,40 @@
 from __future__ import annotations
 
+import html
 import os
+import re
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar
+
+
+def html_escape_except_backticks(s: str) -> str:
+    """
+    HTML-escape a string, except for content inside of backticks.
+
+    Both single-backtick (`` `code` ``) and double-backtick (`` ``code`` ``)
+    code spans are preserved verbatim, since double backticks are the standard
+    RST inline-literal markup used throughout the docstrings.
+
+    Examples
+    --------
+        s = "This is a <b>test</b> string with `backticks <i>unescaped</i>`."
+        print(html_escape_except_backticks(s))
+        #> This is a &lt;b&gt;test&lt;/b&gt; string with `backticks <i>unescaped</i>`.
+    """
+    # Split the string using backtick code spans as delimiters. Triple and
+    # double backticks are matched first so that RST-style ``literals`` (which
+    # contain single backticks as part of the delimiter) are kept intact.
+    parts = re.split(r"(```.+?```|``.+?``|`[^`]*?`)", s, flags=re.DOTALL)
+
+    # Iterate over the parts, escaping the non-backtick parts, and preserving backticks in the backtick parts
+    escaped_parts = [
+        html.escape(part) if i % 2 == 0 else part for i, part in enumerate(parts)
+    ]
+
+    # Join the escaped parts back together
+    escaped_string = "".join(escaped_parts)
+    return escaped_string
 
 
 def find_api_examples_dir(start_dir: str) -> Optional[str]:
