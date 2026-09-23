@@ -16,6 +16,7 @@ import ast
 import importlib.util
 import re
 import sys
+import traceback
 import types
 from operator import attrgetter
 from pathlib import Path
@@ -75,6 +76,10 @@ class _DummyChatClient:
         raise NotImplementedError  # pragma: no cover
 
 
+def _noop_load_dotenv(*args: object, **kwargs: object) -> bool:
+    return False
+
+
 def _template_entrypoints() -> list[tuple[str, Path]]:
     """Every loadable app entrypoint as `(test id, path)` pairs."""
     cases: list[tuple[str, Path]] = []
@@ -116,6 +121,13 @@ def _stub_llm_providers(monkeypatch: pytest.MonkeyPatch) -> None:
             if hasattr(chatlas, client_name):
                 monkeypatch.setattr(chatlas, client_name, _DummyChatClient)
 
+    if importlib.util.find_spec("dotenv") is None:
+        dotenv_stub = types.ModuleType("dotenv")
+        # `app_utils.load_dotenv` calls `dotenv.load_dotenv(...)` and warns
+        # when the import fails. The stub keeps the call a no-op instead.
+        dotenv_stub.__dict__["load_dotenv"] = _noop_load_dotenv
+        monkeypatch.setitem(sys.modules, "dotenv", dotenv_stub)
+
 
 @pytest.fixture
 def _isolated_template_modules():
@@ -125,6 +137,36 @@ def _isolated_template_modules():
     yield
     for name in _PURGED_HELPERS:
         sys.modules.pop(name, None)
+
+
+def _template_import_lines(path: Path) -> set[int]:
+    """Line numbers of top-level `import` statements in a template file."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return {
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+    }
+
+
+def _fails_at_template_import(path: Path, exc: BaseException) -> bool:
+    """Did the template fail while running one of its own `import` lines?
+
+    An error inside a third-party import (a version floor that no longer
+    imports cleanly, a missing optional package) says the dependency is
+    unusable in this environment, not that the template is wrong. Errors on
+    any other template line (a bad `Chat(...)` call, a missing `input`
+    import used later) are template bugs and must fail.
+    """
+    try:
+        import_lines = _template_import_lines(path)
+    except SyntaxError:
+        return False
+    resolved = path.resolve()
+    for frame in traceback.extract_tb(exc.__traceback__):
+        if Path(frame.filename).resolve() == resolved:
+            return frame.lineno in import_lines
+    return False
 
 
 def _load_core_app(path: Path) -> App:
@@ -165,6 +207,10 @@ def test_template_loads_without_keys(
         if e.name in _PURGED_HELPERS:
             raise
         pytest.skip(f"Template needs an optional dependency: {e}")
+    except Exception as e:
+        if _fails_at_template_import(path, e):
+            pytest.skip(f"Template dependency is unusable in this env: {e}")
+        raise
 
 
 def _deprecated_messages_calls(tree: ast.AST) -> list[int]:
