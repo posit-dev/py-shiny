@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import html
 import os
 import re
 from importlib.resources import files
@@ -24,8 +25,6 @@ from plum import dispatch
 from quartodoc import MdRenderer
 from quartodoc.renderers.base import convert_rst_link_to_md, sanitize
 from quartodoc.renderers.md_renderer import ParamRow
-
-from shiny._docstring import html_escape_except_backticks
 
 SHINY_PATH = Path(files("shiny").joinpath())
 
@@ -209,10 +208,33 @@ class Renderer(MdRenderer):
         return super().signature(el, source)
 
 
-# Re-exported here so existing imports keep working; the implementation lives
-# in `shiny._docstring` (stdlib-only) so it can be unit tested without the
-# quartodoc dependency.
-__all__ = ("html_escape_except_backticks",)
+def html_escape_except_backticks(s: str) -> str:
+    """
+    HTML-escape a string, except for content inside of backticks.
+
+    Both single-backtick (`` `code` ``) and double-backtick (`` ``code`` ``)
+    code spans are preserved verbatim, since double backticks are the standard
+    RST inline-literal markup used throughout the docstrings.
+
+    Examples
+    --------
+        s = "This is a <b>test</b> string with `backticks <i>unescaped</i>`."
+        print(html_escape_except_backticks(s))
+        #> This is a &lt;b&gt;test&lt;/b&gt; string with `backticks <i>unescaped</i>`.
+    """
+    # Split the string using backtick code spans as delimiters. Triple and
+    # double backticks are matched first so that RST-style ``literals`` (which
+    # contain single backticks as part of the delimiter) are kept intact.
+    parts = re.split(r"(```.+?```|``.+?``|`[^`]*?`)", s, flags=re.DOTALL)
+
+    # Iterate over the parts, escaping the non-backtick parts, and preserving backticks in the backtick parts
+    escaped_parts = [
+        html.escape(part) if i % 2 == 0 else part for i, part in enumerate(parts)
+    ]
+
+    # Join the escaped parts back together
+    escaped_string = "".join(escaped_parts)
+    return escaped_string
 
 
 def prefix_bare_functions_with_func(s: str) -> str:

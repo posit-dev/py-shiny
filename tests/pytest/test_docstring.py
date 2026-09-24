@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 
-from shiny._docstring import html_escape_except_backticks
+import pytest
+
 from shiny.ui import input_task_button
 
 ENTITY_RE = re.compile(r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[a-zA-Z]+);")
@@ -18,6 +20,14 @@ CODE_SPAN_RE = re.compile(r"```.+?```|``.+?``|`[^`]*?`", flags=re.DOTALL)
 ALLOWED_ESCAPES_OUTSIDE_CODE = frozenset({"&amp;", "&lt;", "&gt;", "&quot;", "&#x27;"})
 
 
+@pytest.fixture
+def html_escape_except_backticks() -> Callable[[str], str]:
+    pytest.importorskip("quartodoc")
+    from docs._renderer import html_escape_except_backticks
+
+    return html_escape_except_backticks
+
+
 def _entities_outside_code(s: str) -> list[str]:
     without_code = CODE_SPAN_RE.sub("", s)
     return ENTITY_RE.findall(without_code)
@@ -30,12 +40,16 @@ def _entities_inside_code(s: str) -> list[str]:
     return entities
 
 
-def test_escape_preserves_single_backtick_spans():
+def test_escape_preserves_single_backtick_spans(
+    html_escape_except_backticks: Callable[[str], str],
+):
     rendered = html_escape_except_backticks('a `code "hi" <b>there</b>` b')
     assert rendered == 'a `code "hi" <b>there</b>` b'
 
 
-def test_escape_preserves_double_backtick_spans():
+def test_escape_preserves_double_backtick_spans(
+    html_escape_except_backticks: Callable[[str], str],
+):
     # Regression test for https://github.com/posit-dev/py-shiny/issues/2502:
     # RST-style ``literals`` containing quotes must not be escaped to `&quot;`.
     rendered = html_escape_except_backticks(
@@ -45,12 +59,16 @@ def test_escape_preserves_double_backtick_spans():
     assert "&quot;" not in rendered
 
 
-def test_escape_escapes_html_outside_code():
+def test_escape_escapes_html_outside_code(
+    html_escape_except_backticks: Callable[[str], str],
+):
     rendered = html_escape_except_backticks("a <b>hi</b> b `code <i>x</i>`")
     assert rendered == "a &lt;b&gt;hi&lt;/b&gt; b `code <i>x</i>`"
 
 
-def test_input_task_button_docs_have_no_unexpected_escaping():
+def test_input_task_button_docs_have_no_unexpected_escaping(
+    html_escape_except_backticks: Callable[[str], str],
+):
     rendered = html_escape_except_backticks(input_task_button.__doc__ or "")
 
     inside = _entities_inside_code(rendered)
