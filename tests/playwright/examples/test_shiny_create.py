@@ -9,6 +9,7 @@ from playwright.sync_api import Page
 
 from shiny._main._create import (
     GithubRepoLocation,
+    find_templates,
     parse_github_arg,
     shiny_internal_templates,
     template_by_name,
@@ -84,6 +85,39 @@ def assert_created_app_matches_template(
 @pytest.mark.parametrize("ex_app_path", get_apps("shiny/templates/app"))
 def test_template_examples(page: Page, ex_app_path: str) -> None:
     validate_example(page, ex_app_path)
+
+
+def template_entrypoints() -> list[str]:
+    """All runnable bundled templates, including nested chat templates."""
+    root = Path(__file__).parents[3]
+    cases = []
+    for template in find_templates(root / "shiny" / "templates"):
+        if template.type == "package" or template.path.parent.name == "app":
+            # The app templates already run in test_template_examples.
+            continue
+        for name in ("app.py", "app-core.py", "app-express.py"):
+            path = template.path / name
+            if path.is_file():
+                relative_path = str(path.relative_to(root))
+                cases.append(relative_path)
+    assert cases
+    return cases
+
+
+@pytest.mark.parametrize("ex_app_path", template_entrypoints())
+def test_bundled_template_starts_without_errors(page: Page, ex_app_path: str) -> None:
+    stubs = Path(__file__).parent / "template_provider_stubs"
+    pythonpath = os.pathsep.join(
+        filter(None, (str(stubs), os.environ.get("PYTHONPATH")))
+    )
+    env = {
+        "PYTHONPATH": pythonpath,
+        "OPENAI_API_KEY": "dummy",
+        "ANTHROPIC_API_KEY": "dummy",
+        "GOOGLE_API_KEY": "dummy",
+        "AZURE_OPENAI_API_KEY": "dummy",
+    }
+    validate_example(page, ex_app_path, env=env)
 
 
 app_templates = [t.id for t in shiny_internal_templates.apps]

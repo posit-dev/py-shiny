@@ -156,13 +156,6 @@ jobs:
           uv pip list
 
       - name: Run unit tests
-        # The template smoke test (tests/pytest/test_templates_smoke.py)
-        # needs the full test dependencies: templates import plotting and
-        # data packages whose version floors no longer import cleanly
-        # together (e.g. xarray floor under NumPy 2). Exempt it here rather
-        # than teaching the test to tell env breakage from template bugs.
-        env:
-          SHINY_SKIP_TEMPLATE_SMOKE: "1"
         run: |
           make check-tests
 
