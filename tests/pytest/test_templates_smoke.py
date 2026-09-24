@@ -26,10 +26,14 @@ from operator import attrgetter
 from pathlib import Path
 
 import pytest
+from htmltools import Tag
 
 from shiny._app import App
 from shiny._main._create import find_templates
-from shiny.express import wrap_express_app
+from shiny.express import ui, wrap_express_app
+from shiny.express._run import ExpressStubSession
+from shiny.session import session_context
+from shiny.types import Jsonifiable
 
 REPO_ROOT = Path(__file__).parents[2]
 TEMPLATE_ROOT = REPO_ROOT / "shiny" / "templates"
@@ -81,6 +85,16 @@ class _DummyChatClient:
 
     def stream(self, *args: object, **kwargs: object) -> None:
         raise NotImplementedError  # pragma: no cover
+
+
+class _StubBookmarkClient:
+    """Minimal `ClientWithState`, never touched under a stub session."""
+
+    async def get_state(self) -> Jsonifiable:
+        return {}
+
+    async def set_state(self, state: object) -> None:
+        pass
 
 
 def _template_entrypoints() -> list[tuple[str, Path]]:
@@ -176,11 +190,36 @@ def test_template_loads_without_keys(
     _isolated_template_modules: None,
 ) -> None:
     monkeypatch.setattr(sys, "path", [str(path.parent), *sys.path])
+    # Evict cached modules this template directory shadows, so a stale
+    # `shared` (or any future helper) from an earlier test cannot win.
+    for shadowed in path.parent.glob("*.py"):
+        sys.modules.pop(shadowed.stem, None)
     if path.name == "app-core.py":
         _load_core_app(path)
     else:
         app = wrap_express_app(path.resolve())
         assert isinstance(app, App), f"{path} did not build a shiny App"
+
+
+def test_minimum_shinychat_api() -> None:
+    """The shinychat API surface the chat templates rely on.
+
+    The template smoke test is exempt in oldest-deps, so this guard keeps
+    running there: it fails if the installed shinychat floor ever drops the
+    constructor `greeting=`, `bookmark_store=` bookmarking, or the
+    `on_user_submit` handler the templates use (the `shinychat>=0.5.0` floor
+    in `pyproject.toml`). It needs no API key: everything runs under a stub
+    session, so no callback ever executes.
+    """
+    with session_context(ExpressStubSession()):
+        chat = ui.Chat(id="chat", greeting="Hello")
+        chat.enable_bookmarking(_StubBookmarkClient(), bookmark_store="url")
+
+        @chat.on_user_submit
+        async def handle_user_input(user_input: str) -> None:
+            pass
+
+        assert isinstance(chat.ui(), Tag)
 
 
 def _deprecated_messages_calls(tree: ast.AST) -> list[int]:
