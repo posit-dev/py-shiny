@@ -1672,6 +1672,7 @@ def _record_session_sync(
     timeout_secs: float = 60.0,
     auto_interact: bool = False,
     redact_inputs: bool = False,
+    viewport_size: Optional[Dict[str, int]] = None,
 ) -> Dict[str, Any]:
     try:
         from playwright.sync_api import sync_playwright
@@ -1732,10 +1733,20 @@ def _record_session_sync(
                 browser = p.chromium.connect(**connect_kwargs)
             else:
                 browser = p.chromium.launch(headless=headless)
+            v_width = (
+                int(viewport_size["width"])
+                if viewport_size and "width" in viewport_size
+                else 1280
+            )
+            v_height = (
+                int(viewport_size["height"])
+                if viewport_size and "height" in viewport_size
+                else 1440
+            )
             context = browser.new_context(
                 record_video_dir=temp_dir,
-                record_video_size={"width": 1280, "height": 720},
-                viewport={"width": 1280, "height": 720},
+                record_video_size={"width": v_width, "height": v_height},
+                viewport={"width": v_width, "height": v_height},
             )
             page = context.new_page()
 
@@ -1957,6 +1968,7 @@ def record_shiny_session(
     timeout_secs: float = 60.0,
     auto_interact: bool = False,
     redact_inputs: bool = False,
+    viewport_size: Optional[Dict[str, int]] = None,
 ) -> Dict[str, Any]:
     try:
         asyncio.get_running_loop()
@@ -1975,6 +1987,7 @@ def record_shiny_session(
                 timeout_secs,
                 auto_interact,
                 redact_inputs,
+                viewport_size,
             )
             return future.result()
     return _record_session_sync(
@@ -1985,6 +1998,7 @@ def record_shiny_session(
         timeout_secs,
         auto_interact,
         redact_inputs,
+        viewport_size,
     )
 
 
@@ -2125,7 +2139,7 @@ def _format_python_source_html(source: str) -> str:
 def format_reactlog_html(
     reactlog: Dict[str, Any],
     source_code: str,
-    title: str = "Shiny Reactive Dependency Simulation",
+    title: str = "Reactlog report",
     video_path: Optional[str] = None,
     html_path: Optional[str] = None,
     theme: str = "dark",
@@ -2674,7 +2688,7 @@ def format_reactlog_html(
       </div>
       <div class="brand-copy">
         <h1 class="brand-title">{escaped_title}</h1>
-        <div class="brand-subtitle">Interactive Shiny Reactive Log & Execution Debugger</div>
+        <div class="brand-subtitle">Reactlog report</div>
       </div>
     </div>
     <div class="header-actions">
@@ -2764,13 +2778,6 @@ def format_reactlog_html(
         <option value="init">Phase: Init only</option>
       </select>
       <button class="btn mini" id="btn-skip-init" onclick="skipToInteractions()" title="Skip to user interaction actions">Skip to Actions</button>
-
-      <select class="filter-select" id="role-filter-dropdown" onchange="handleRoleDropdownChange(this.value)" aria-label="Filter nodes by type">
-        <option value="all">Show: All nodes</option>
-        <option value="source">Show: Inputs</option>
-        <option value="conductor">Show: Calcs</option>
-        <option value="observer">Show: Outputs</option>
-      </select>
 
       <div class="search-wrap">
         <svg class="search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -2909,6 +2916,7 @@ def format_reactlog_html(
             <div class="node-details-header">
               <div class="node-details-name" id="insp-title">session</div>
               <span class="node-details-meta" id="insp-meta-line">Line —</span>
+              <button class="btn mini" id="btn-filter-lineage" onclick="filterLineageForNode(selectedNodeId)" title="Filter graph to this node, its ancestors, and descendants" style="display:none;margin-left:auto;">Filter lineage</button>
               <span id="insp-type" style="display:none">Initialization event</span>
               <span id="insp-status" style="display:none">active</span>
             </div>
@@ -3195,6 +3203,45 @@ def format_reactlog_html(
         }}
       }}
       return descendants;
+    }}
+
+    function getActiveLineageSet() {{
+      if (!searchQuery || !searchQuery.startsWith('id:')) return null;
+      const needle = searchQuery.slice(3).trim().toLowerCase();
+      if (!needle) return null;
+      const rawNodes = reactlogData.nodes || [];
+      const matchingIds = [];
+      rawNodes.forEach(n => {{
+        const nid = String(n.id || '').toLowerCase();
+        const nlabel = String(n.label || '').toLowerCase();
+        const nname = String(n.name || '').toLowerCase();
+        if (
+          nid === needle ||
+          nid.endsWith(':' + needle) ||
+          nid.includes(needle) ||
+          nlabel === needle ||
+          nname === needle
+        ) {{
+          matchingIds.push(n.id);
+        }}
+      }});
+      if (matchingIds.length === 0) return null;
+      const lineage = new Set(matchingIds);
+      matchingIds.forEach(id => {{
+        getUpstreamNodes(id).forEach(ancestorId => lineage.add(ancestorId));
+        getDownstreamNodes(id).forEach(descendantId => lineage.add(descendantId));
+      }});
+      return lineage;
+    }}
+
+    function filterLineageForNode(nodeId) {{
+      if (!nodeId) return;
+      const filterVal = `id:${{nodeId}}`;
+      document.getElementById('search-input').value = filterVal;
+      searchQuery = filterVal.toLowerCase();
+      renderGraph();
+      renderInspector();
+      fitGraph();
     }}
 
     function prepareEventTimings() {{
@@ -4461,8 +4508,14 @@ def format_reactlog_html(
         const inspStatus = document.getElementById('insp-status');
         if (inspStatus) inspStatus.textContent = ev.status || 'active';
 
+        const filterBtn = document.getElementById('btn-filter-lineage');
+        if (filterBtn) filterBtn.style.display = 'inline-flex';
+
         renderInlineSource(node);
       }} else if (ev) {{
+        const filterBtn = document.getElementById('btn-filter-lineage');
+        if (filterBtn) filterBtn.style.display = 'none';
+
         whyTitle.textContent = ev.node_label || ev.label || ev.action || ev.event;
         whyStory.innerHTML = `<p>${{escapeHTML(ev.details || 'Step #' + currentStep)}}</p>`;
         whyFlow.innerHTML = '';
@@ -4665,9 +4718,14 @@ def format_reactlog_html(
       const visibleNodes = [];
       const representatives = new Map();
       const moduleNodes = new Map();
+      const lineageSet = getActiveLineageSet();
       rawNodes.forEach(n => {{
-        if (!activeRoles.has(n.role)) return;
-        if (searchQuery && nodeSearchScore(n, searchQuery) === Infinity) return;
+        if (lineageSet) {{
+          if (!lineageSet.has(n.id)) return;
+        }} else {{
+          if (!activeRoles.has(n.role)) return;
+          if (searchQuery && nodeSearchScore(n, searchQuery) === Infinity) return;
+        }}
         if (n.module && collapsedModules.has(n.module)) {{
           const id = `module:${{n.module}}`;
           representatives.set(n.id, id);
@@ -4905,7 +4963,11 @@ def format_reactlog_html(
 
       const ev = events[currentStep];
       if (ev && (ev.node_id || ev.id)) {{
-        selectedNodeId = ev.node_id || ev.id;
+        const evNodeId = ev.node_id || ev.id;
+        const lineageSet = getActiveLineageSet();
+        if (!lineageSet || lineageSet.has(evNodeId)) {{
+          selectedNodeId = evNodeId;
+        }}
       }}
       renderInspector();
       renderGraph();
@@ -5131,9 +5193,17 @@ def format_reactlog_html(
 
     function nodeSearchScore(node, query) {{
       const idOnly = query.startsWith('id:');
-      const needle = (idOnly ? query.slice(3) : query).trim();
+      const needle = (idOnly ? query.slice(3) : query).trim().toLowerCase();
       if (!needle) return 0;
-      const fields = idOnly ? [node.id] : [node.id, node.label, node.name, node.type, node.role];
+      if (idOnly) {{
+        const nid = String(node.id || '').toLowerCase();
+        const nlabel = String(node.label || '').toLowerCase();
+        const nname = String(node.name || '').toLowerCase();
+        if (nid === needle || nid.endsWith(':' + needle) || nlabel === needle || nname === needle) return 0;
+        if (nid.includes(needle) || nlabel.includes(needle) || nname.includes(needle)) return 1;
+        return Infinity;
+      }}
+      const fields = [node.id, node.label, node.name, node.type, node.role];
       let best = Infinity;
       fields.forEach(field => {{
         const value = String(field || '').toLowerCase();
@@ -5170,12 +5240,12 @@ def format_reactlog_html(
           button.type = 'button';
           button.textContent = `${{node.id}} · ${{node.label || node.name || ''}}`;
           button.onclick = () => {{
-            searchQuery = '';
-            document.getElementById('search-input').value = '';
+            const filterVal = `id:${{node.id}}`;
+            searchQuery = filterVal.toLowerCase();
+            document.getElementById('search-input').value = filterVal;
             results.hidden = true;
             selectedNodeId = node.id;
             activeRoles = new Set(['source', 'conductor', 'observer']);
-            document.getElementById('role-filter-dropdown').value = 'all';
             renderGraph();
             renderInspector();
             updateSourceHighlight();
@@ -5195,7 +5265,6 @@ def format_reactlog_html(
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
       activeRoles = new Set(['source', 'conductor', 'observer']);
-      document.getElementById('role-filter-dropdown').value = 'all';
       renderGraph();
       renderInspector();
       updateTraceTimelineScrubber(getCurrentStepTime());
@@ -5221,19 +5290,6 @@ def format_reactlog_html(
         event.preventDefault();
         buttons[0].click();
       }}
-    }}
-
-    function handleRoleDropdownChange(val) {{
-      if (val === 'all') {{
-        activeRoles = new Set(['source', 'conductor', 'observer']);
-      }} else if (val === 'source') {{
-        activeRoles = new Set(['source']);
-      }} else if (val === 'conductor') {{
-        activeRoles = new Set(['conductor']);
-      }} else if (val === 'observer') {{
-        activeRoles = new Set(['observer']);
-      }}
-      renderGraph();
     }}
 
     function setupPanZoom() {{
@@ -5398,7 +5454,6 @@ def format_reactlog_html(
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
       activeRoles = new Set(['source', 'conductor', 'observer']);
-      document.getElementById('role-filter-dropdown').value = 'all';
       init();
       renderGraph();
     }}

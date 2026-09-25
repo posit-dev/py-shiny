@@ -671,17 +671,21 @@ def out():
     expect(source_code).to_contain_text("def calc_b():")
 
 
-def test_role_filter_dropdown(page: Page) -> None:
+def test_id_lineage_filter_and_timeline_preservation(page: Page) -> None:
     code = """from shiny.express import input, render, ui
 from shiny import reactive
 
 ui.input_numeric("x", "X", 1)
+ui.input_numeric("y", "Y", 10)
 @reactive.calc
 def c():
     return input.x() * 2
 @render.text
 def o():
     return str(c())
+@render.text
+def separate_out():
+    return str(input.y())
 """
     reactlog = generate_reactlog(code)
     page.set_content(
@@ -689,19 +693,22 @@ def o():
         wait_until="domcontentloaded",
     )
 
-    expect(page.locator(".graph-node")).to_have_count(3)
+    expect(page.locator(".graph-node")).to_have_count(5)
 
-    dropdown = page.locator("#role-filter-dropdown")
-    dropdown.select_option("source")
-    expect(page.locator(".graph-node")).to_have_count(1)
+    search = page.locator("#search-input")
+    search.fill("id:calc:c")
+    expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator('.graph-node[data-id="input:x"]')).to_be_visible()
-
-    dropdown.select_option("conductor")
-    expect(page.locator(".graph-node")).to_have_count(1)
     expect(page.locator('.graph-node[data-id="calc:c"]')).to_be_visible()
+    expect(page.locator('.graph-node[data-id="output:o"]')).to_be_visible()
+    expect(page.locator('.graph-node[data-id="input:y"]')).to_have_count(0)
+    expect(page.locator('.graph-node[data-id="output:separate_out"]')).to_have_count(0)
 
-    dropdown.select_option("all")
+    page.get_by_role("button", name="Step forward").click()
     expect(page.locator(".graph-node")).to_have_count(3)
+
+    page.get_by_role("button", name="Reset view", exact=True).click()
+    expect(page.locator(".graph-node")).to_have_count(5)
 
 
 def test_timeline_activity_mode_and_realtime_toggle(page: Page) -> None:
@@ -1157,9 +1164,10 @@ def test_r_import_search_preserves_all_nodes(page: Page) -> None:
     expect(page.locator("#search-results button")).to_have_count(1)
     page.locator("#search-input").fill("id:r2")
     page.locator("#search-results button").click()
-    expect(page.locator(".graph-node")).to_have_count(4)
-    expect(page.locator('.graph-node[data-id="r4"]')).to_have_count(1)
+    expect(page.locator(".graph-node")).to_have_count(3)
+    expect(page.locator('.graph-node[data-id="r4"]')).to_have_count(0)
     expect(page.locator("#search-results")).to_be_hidden()
+    page.get_by_role("button", name="Reset view", exact=True).click()
     expect(page.locator(".graph-node")).to_have_count(4)
     page.locator("#search-input").fill("no match xyz")
     expect(page.locator("#search-results")).to_contain_text("0 matches")
@@ -1204,11 +1212,8 @@ def result():
     expect(page.locator("#search-results button")).to_be_focused()
     page.keyboard.press("Enter")
     expect(page.locator("#search-results")).to_be_hidden()
-    page.locator("#role-filter-dropdown").select_option("source")
-    expect(page.locator(".graph-node")).to_have_count(1)
     page.get_by_role("button", name="Reset view", exact=True).click()
     expect(page.locator(".graph-node")).to_have_count(2)
-    expect(page.locator("#role-filter-dropdown")).to_have_value("all")
     search.fill("unfindablenode")
     expect(page.locator("#search-results")).to_contain_text(
         "0 matches. Try a node name"

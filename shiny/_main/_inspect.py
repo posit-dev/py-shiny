@@ -403,9 +403,18 @@ def inspect(
             detected_title = title or (
                 _extract_page_title(source_code) if not is_json_input else None
             )
-            report_title = (
-                detected_title or f"Interactive Shiny Reactive Log: {target_desc}"
-            )
+            if detected_title:
+                report_title = (
+                    detected_title
+                    if "Reactlog report" in detected_title
+                    else f"{detected_title} · Reactlog report"
+                )
+            else:
+                report_title = (
+                    f"{target_desc} · Reactlog report"
+                    if target_desc
+                    else "Reactlog report"
+                )
             html_content = format_reactlog_html(
                 reactlog_data,
                 title=report_title,
