@@ -191,6 +191,7 @@ class GraphVisitor(ast.NodeVisitor):
         self.current_output: Optional[str] = None
         self.current_effect: Optional[str] = None
         self.isolated_depth: int = 0
+        self.event_depth: int = 0
 
     def visit_With(self, node: ast.With) -> None:
         is_isolate_block = False
@@ -278,31 +279,35 @@ class GraphVisitor(ast.NodeVisitor):
             self.isolated_depth -= 1
             return
 
-        if self.isolated_depth == 0:
-            if (
-                isinstance(node.func, ast.Attribute)
-                and isinstance(node.func.value, ast.Name)
-                and node.func.value.id == "input"
-            ):
-                target_input = node.func.attr
-                self.input_files.setdefault(
-                    target_input, getattr(node, "source_file", "")
-                )
-                if self.current_output and self.current_output in self.outputs:
-                    self.outputs[self.current_output]["deps"].add(target_input)
-                elif self.current_effect and self.current_effect in self.effects:
-                    self.effects[self.current_effect]["deps"].add(target_input)
-                elif self.current_calc and self.current_calc in self.calcs:
-                    self.calcs[self.current_calc]["deps"].add(target_input)
+        if self.event_depth > 0:
+            self.generic_visit(node)
+            return
 
-            if isinstance(node.func, ast.Name):
-                called_name = node.func.id
-                if self.current_output and self.current_output in self.outputs:
-                    self.outputs[self.current_output]["calc_deps"].add(called_name)
-                elif self.current_effect and self.current_effect in self.effects:
-                    self.effects[self.current_effect]["calc_deps"].add(called_name)
-                elif self.current_calc and self.current_calc in self.calcs:
-                    self.calcs[self.current_calc]["calc_deps"].add(called_name)
+        dep_key = "isolated_deps" if self.isolated_depth > 0 else "deps"
+        calc_key = "isolated_calc_deps" if self.isolated_depth > 0 else "calc_deps"
+
+        if (
+            isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "input"
+        ):
+            target_input = node.func.attr
+            self.input_files.setdefault(target_input, getattr(node, "source_file", ""))
+            if self.current_output and self.current_output in self.outputs:
+                self.outputs[self.current_output][dep_key].add(target_input)
+            elif self.current_effect and self.current_effect in self.effects:
+                self.effects[self.current_effect][dep_key].add(target_input)
+            elif self.current_calc and self.current_calc in self.calcs:
+                self.calcs[self.current_calc][dep_key].add(target_input)
+
+        if isinstance(node.func, ast.Name):
+            called_name = node.func.id
+            if self.current_output and self.current_output in self.outputs:
+                self.outputs[self.current_output][calc_key].add(called_name)
+            elif self.current_effect and self.current_effect in self.effects:
+                self.effects[self.current_effect][calc_key].add(called_name)
+            elif self.current_calc and self.current_calc in self.calcs:
+                self.calcs[self.current_calc][calc_key].add(called_name)
 
         self.generic_visit(node)
 
@@ -391,6 +396,8 @@ class GraphVisitor(ast.NodeVisitor):
                 "source_file": getattr(node, "source_file", ""),
                 "deps": set(event_input_deps),
                 "calc_deps": set(event_calc_deps),
+                "isolated_deps": set(),
+                "isolated_calc_deps": set(),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
             }
         elif is_effect:
@@ -400,6 +407,8 @@ class GraphVisitor(ast.NodeVisitor):
                 "source_file": getattr(node, "source_file", ""),
                 "deps": set(event_input_deps),
                 "calc_deps": set(event_calc_deps),
+                "isolated_deps": set(),
+                "isolated_calc_deps": set(),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
             }
         elif is_calc:
@@ -409,17 +418,19 @@ class GraphVisitor(ast.NodeVisitor):
                 "source_file": getattr(node, "source_file", ""),
                 "deps": set(event_input_deps),
                 "calc_deps": set(event_calc_deps),
+                "isolated_deps": set(),
+                "isolated_calc_deps": set(),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
             }
 
         if has_event_decorator:
-            self.isolated_depth += 1
+            self.event_depth += 1
 
         for stmt in node.body:
             self.visit(stmt)
 
         if has_event_decorator:
-            self.isolated_depth -= 1
+            self.event_depth -= 1
 
         self.current_output = prev_out
         self.current_effect = prev_effect
@@ -462,10 +473,13 @@ def inspect_reactive_graph(
     referenced_inputs: Set[str] = set()
     for meta in visitor.outputs.values():
         referenced_inputs.update(meta["deps"])
+        referenced_inputs.update(meta.get("isolated_deps", set()))
     for meta in visitor.effects.values():
         referenced_inputs.update(meta["deps"])
+        referenced_inputs.update(meta.get("isolated_deps", set()))
     for meta in visitor.calcs.values():
         referenced_inputs.update(meta["deps"])
+        referenced_inputs.update(meta.get("isolated_deps", set()))
 
     all_inputs = set(visitor.inputs.keys()) | referenced_inputs
 
@@ -525,13 +539,31 @@ def inspect_reactive_graph(
             }
         )
 
-    edges: List[Dict[str, str]] = []
+    edges: List[Dict[str, Any]] = []
     for out_name, meta in visitor.outputs.items():
         for dep in sorted(meta["deps"]):
             edges.append({"from": f"input:{dep}", "to": f"output:{out_name}"})
         for cdep in sorted(meta["calc_deps"]):
             if cdep in known_calcs:
                 edges.append({"from": f"calc:{cdep}", "to": f"output:{out_name}"})
+        for dep in sorted(meta.get("isolated_deps", set())):
+            if dep not in meta["deps"]:
+                edges.append(
+                    {
+                        "from": f"input:{dep}",
+                        "to": f"output:{out_name}",
+                        "isolated": True,
+                    }
+                )
+        for cdep in sorted(meta.get("isolated_calc_deps", set())):
+            if cdep in known_calcs and cdep not in meta["calc_deps"]:
+                edges.append(
+                    {
+                        "from": f"calc:{cdep}",
+                        "to": f"output:{out_name}",
+                        "isolated": True,
+                    }
+                )
 
     for eff_name, meta in visitor.effects.items():
         for dep in sorted(meta["deps"]):
@@ -539,6 +571,24 @@ def inspect_reactive_graph(
         for cdep in sorted(meta["calc_deps"]):
             if cdep in known_calcs:
                 edges.append({"from": f"calc:{cdep}", "to": f"effect:{eff_name}"})
+        for dep in sorted(meta.get("isolated_deps", set())):
+            if dep not in meta["deps"]:
+                edges.append(
+                    {
+                        "from": f"input:{dep}",
+                        "to": f"effect:{eff_name}",
+                        "isolated": True,
+                    }
+                )
+        for cdep in sorted(meta.get("isolated_calc_deps", set())):
+            if cdep in known_calcs and cdep not in meta["calc_deps"]:
+                edges.append(
+                    {
+                        "from": f"calc:{cdep}",
+                        "to": f"effect:{eff_name}",
+                        "isolated": True,
+                    }
+                )
 
     for calc_name, meta in visitor.calcs.items():
         for dep in sorted(meta["deps"]):
@@ -546,6 +596,28 @@ def inspect_reactive_graph(
         for cdep in sorted(meta["calc_deps"]):
             if cdep in known_calcs and cdep != calc_name:
                 edges.append({"from": f"calc:{cdep}", "to": f"calc:{calc_name}"})
+        for dep in sorted(meta.get("isolated_deps", set())):
+            if dep not in meta["deps"]:
+                edges.append(
+                    {
+                        "from": f"input:{dep}",
+                        "to": f"calc:{calc_name}",
+                        "isolated": True,
+                    }
+                )
+        for cdep in sorted(meta.get("isolated_calc_deps", set())):
+            if (
+                cdep in known_calcs
+                and cdep != calc_name
+                and cdep not in meta["calc_deps"]
+            ):
+                edges.append(
+                    {
+                        "from": f"calc:{cdep}",
+                        "to": f"calc:{calc_name}",
+                        "isolated": True,
+                    }
+                )
 
     for node in nodes:
         if node["name"] in module_members:
@@ -681,7 +753,10 @@ def generate_reactlog(
     video_path: Optional[str] = None,
     session: str = "default",
     source_path: str | Path | None = None,
+    marks: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
+    user_marks = list(marks) if marks is not None else []
+
     graph = inspect_reactive_graph(code, source_path=source_path)
     if not graph.get("success"):
         return graph
@@ -837,6 +912,53 @@ def generate_reactlog(
             "observed_outputs": [],
         }
     ]
+
+    def append_user_marks(cur_step: int) -> int:
+        for m in user_marks:
+            mark_label = str(m.get("label", "Bookmark"))
+            mark_time = float(m.get("time") or 0.0)
+            mark_ms = int(m.get("timestamp") or (mark_time * 1000))
+            events.append(
+                _make_event(
+                    step=cur_step,
+                    event="userMark",
+                    action="userMark",
+                    phase="interaction",
+                    provenance="observed",
+                    node_id=None,
+                    node_label=f"🔖 {mark_label}",
+                    node_type="mark",
+                    status="active",
+                    timestamp=mark_ms,
+                    time_sec=mark_time,
+                    details=f"User mark: {mark_label}",
+                    session=session,
+                )
+            )
+            action_waves.append(
+                {
+                    "action_id": f"mark-{len(action_waves)}",
+                    "index": len(action_waves),
+                    "is_init": False,
+                    "is_mark": True,
+                    "start_time": mark_time,
+                    "end_time": mark_time,
+                    "start_step": cur_step,
+                    "end_step": cur_step,
+                    "trigger": f"Bookmark: {mark_label}",
+                    "trigger_label": f"🔖 {mark_label}",
+                    "short_label": f"🔖 {mark_label[:15]}",
+                    "human_action": f"Mark: {mark_label}",
+                    "trigger_node_id": "",
+                    "trigger_value": None,
+                    "invalidated_nodes": [],
+                    "inferred_executions": [],
+                    "observed_executions": [],
+                    "observed_outputs": [],
+                }
+            )
+            cur_step += 1
+        return cur_step
 
     if recorded_actions:
         deduped_actions: List[Dict[str, Any]] = []
@@ -1104,6 +1226,8 @@ def generate_reactlog(
                     }
                 )
 
+        step = append_user_marks(step)
+
         events.append(
             _make_event(
                 step=step,
@@ -1146,6 +1270,7 @@ def generate_reactlog(
             "events": events,
             "log": events,
             "action_waves": action_waves,
+            "marks": user_marks,
             "steps_total": len(events),
             "init_steps_count": init_count,
             "interaction_steps_count": interact_count,
@@ -1306,6 +1431,8 @@ def generate_reactlog(
         )
         step += 1
 
+    step = append_user_marks(step)
+
     events.append(
         _make_event(
             step=step,
@@ -1341,6 +1468,7 @@ def generate_reactlog(
         "events": events,
         "log": events,
         "action_waves": action_waves,
+        "marks": user_marks,
         "steps_total": len(events),
         "init_steps_count": init_count,
         "interaction_steps_count": interact_count,
@@ -2511,6 +2639,23 @@ def format_reactlog_html(
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
     .graph-node, .graph-edge {{ transition: opacity 180ms ease, filter 180ms ease, stroke 180ms ease, stroke-width 180ms ease; }}
     .graph-edge {{ opacity: 0.75; stroke: #527494; stroke-width: 1.8px; }}
+    .graph-edge.is-isolated {{ opacity: 0.65; stroke: #88a0b8; stroke-dasharray: 5 4; }}
+    .legend-line-isolated {{ display: inline-block; width: 16px; height: 0; border-top: 2px dashed #88a0b8; vertical-align: middle; margin-right: 4px; }}
+    .burst-anchor.is-mark {{ border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); color: #fbbf24; }}
+    .burst-anchor.is-mark .burst-anchor-dot {{ background: #f59e0b; }}
+    .node-exec-badge {{ pointer-events: none; }}
+    .hotspot-badge {{ display: inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: #f87171; font-weight: 700; font-size: 0.72rem; margin-left: 6px; }}
+    .node-meta-exec {{ font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }}
+    .modal-backdrop {{ position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; }}
+    .modal-backdrop[hidden] {{ display: none; }}
+    .modal-dialog {{ background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 1.25rem 1.5rem; max-width: 520px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }}
+    .modal-header {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }}
+    .modal-title {{ font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0; }}
+    .modal-close-btn {{ background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0.2rem 0.4rem; border-radius: 4px; }}
+    .modal-close-btn:hover {{ color: var(--text); background: var(--surface-2); }}
+    .shortcuts-table {{ width: 100%; border-collapse: collapse; font-size: 0.8rem; }}
+    .shortcuts-table td {{ padding: 0.4rem 0.2rem; border-bottom: 1px solid var(--border); color: var(--text); }}
+    .shortcut-key {{ display: inline-block; padding: 0.15rem 0.45rem; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 4px; font-family: var(--mono); font-size: 0.75rem; color: var(--accent); font-weight: 600; }}
     .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
     @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
@@ -2755,6 +2900,7 @@ def format_reactlog_html(
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
       <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
       <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open Reactlog JSON recording"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
+      <button class="btn" id="btn-shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)">⌨️ Shortcuts</button>
     </div>
   </header>
 
@@ -2860,6 +3006,7 @@ def format_reactlog_html(
             <div class="legend-item"><span class="legend-dot" style="--role-color: var(--calc)"></span> Calcs</div>
             <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Outputs</div>
             <div class="legend-item"><span class="legend-dot" style="--role-color: var(--effect)"></span> Effects</div>
+            <div class="legend-item"><span class="legend-line-isolated"></span> Isolated read</div>
           </div>
           <div class="zoom-controls">
             <button class="btn mini" onclick="resetGraphView()" title="Clear node selection and filters, then fit the full graph">Reset view</button>
@@ -2874,6 +3021,9 @@ def format_reactlog_html(
         <defs>
           <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6685a3" />
+          </marker>
+          <marker id="arrow-isolated" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#88a0b8" />
           </marker>
           <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
             <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
@@ -2916,6 +3066,7 @@ def format_reactlog_html(
             <div class="node-details-header">
               <div class="node-details-name" id="insp-title">session</div>
               <span class="node-details-meta" id="insp-meta-line">Line —</span>
+              <span class="node-details-meta" id="insp-runs-badge" style="margin-left: 6px; font-weight: 600;"></span>
               <button class="btn mini" id="btn-filter-lineage" onclick="filterLineageForNode(selectedNodeId)" title="Filter graph to this node, its ancestors, and descendants" style="display:none;margin-left:auto;">Filter lineage</button>
               <span id="insp-type" style="display:none">Initialization event</span>
               <span id="insp-status" style="display:none">active</span>
@@ -3345,6 +3496,7 @@ def format_reactlog_html(
             id: w.action_id || `burst-${{idx}}`,
             index: w.index !== undefined ? w.index : idx,
             isInit: Boolean(w.is_init),
+            isMark: Boolean(w.is_mark),
             startTime: w.start_time || 0.0,
             endTime: w.end_time || 0.0,
             time: w.start_time || 0.0,
@@ -3612,7 +3764,7 @@ def format_reactlog_html(
 
         const anchor = document.createElement('button');
         anchor.type = 'button';
-        anchor.className = 'burst-anchor' + (wave.isInit ? ' is-init' : '') + (wIdx === activeBurstIndex ? ' is-active' : '');
+        anchor.className = 'burst-anchor' + (wave.isInit ? ' is-init' : '') + (wave.isMark ? ' is-mark' : '') + (wIdx === activeBurstIndex ? ' is-active' : '');
         anchor.style.left = `${{wavePct}}%`;
         anchor.setAttribute('data-wave-idx', String(wIdx));
         anchor.setAttribute('data-step', String(wave.startStep));
@@ -4463,7 +4615,13 @@ def format_reactlog_html(
 
         const kind = nodeKind(node);
         document.getElementById('insp-title').textContent = `${{node.label || node.id}} (${{kind.label}})`;
+        const execCounts = getNodeExecutionCounts();
+        const execCount = execCounts.get(node.id) || 0;
         document.getElementById('insp-meta-line').textContent = filterItems([node.source_file, node.line ? `Line ${{node.line}}` : 'Unknown'], Boolean).join(' · ');
+        const runsEl = document.getElementById('insp-runs-badge');
+        if (runsEl) {{
+          runsEl.textContent = execCount > 0 ? `· Runs: ${{execCount}}×${{execCount >= 4 ? ' 🔥' : ''}}` : '';
+        }}
 
         const downstreamSec = document.getElementById('insp-downstream-section');
         const downstreamWrap = document.getElementById('insp-downstream-list');
@@ -4522,6 +4680,8 @@ def format_reactlog_html(
 
         document.getElementById('insp-title').textContent = ev.node_label || ev.label || ev.action || ev.event;
         document.getElementById('insp-meta-line').textContent = '—';
+        const runsEl = document.getElementById('insp-runs-badge');
+        if (runsEl) runsEl.textContent = '';
         const inspType = document.getElementById('insp-type');
         if (inspType) inspType.textContent = ev.phase === 'init' ? 'Initialization event' : (ev.action || 'Event');
         const inspStatus = document.getElementById('insp-status');
@@ -4709,6 +4869,29 @@ def format_reactlog_html(
       }}
     }}
 
+    function getNodeExecutionCounts() {{
+      const counts = new Map();
+      const events = reactlogData.events || reactlogData.log || [];
+      events.forEach(ev => {{
+        const nid = ev.node_id || ev.id;
+        if (!nid) return;
+        if (ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
+          counts.set(nid, (counts.get(nid) || 0) + 1);
+        }}
+      }});
+      return counts;
+    }}
+
+    function toggleShortcutsModal() {{
+      const modal = document.getElementById('shortcuts-modal');
+      if (!modal) return;
+      const isHidden = modal.hidden;
+      modal.hidden = !isHidden;
+      if (isHidden) {{
+        modal.querySelector('.modal-close-btn')?.focus();
+      }}
+    }}
+
     function renderGraph() {{
       const svg = document.getElementById('viewport-g');
       if (!svg) return;
@@ -4742,7 +4925,7 @@ def format_reactlog_html(
         const from = representatives.get(e.from), to = representatives.get(e.to);
         if (!from || !to || from === to) return;
         const key = JSON.stringify([from, to]);
-        if (!edgeKeys.has(key)) {{ edges.push({{ from, to }}); edgeKeys.add(key); }}
+        if (!edgeKeys.has(key)) {{ edges.push({{ from, to, isolated: Boolean(e.isolated) }}); edgeKeys.add(key); }}
       }});
 
       const ranks = dependencyRanks(nodes, edges);
@@ -4816,13 +4999,21 @@ def format_reactlog_html(
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
-          path.setAttribute('class', 'graph-edge');
-          path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : 'url(#arrow)');
+          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : ''));
+          if (e.isolated) {{
+            path.setAttribute('stroke-dasharray', '5 4');
+            path.setAttribute('data-isolated', 'true');
+            const edgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            edgeTitle.textContent = `Isolated read (reactive.isolate) from ${{e.from}} to ${{e.to}}`;
+            path.appendChild(edgeTitle);
+          }}
+          path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : (e.isolated ? 'url(#arrow-isolated)' : 'url(#arrow)'));
 
           svg.appendChild(path);
         }}
       }});
 
+      const execCounts = getNodeExecutionCounts();
       nodes.forEach(n => {{
         const p = pos[n.id] || {{ x: 200, y: 200 }};
         const isActive = activeNodeId === n.id || (n.members || []).includes(activeNodeId);
@@ -4913,6 +5104,46 @@ def format_reactlog_html(
         subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · double-click to expand` : `${{kind.label}}${{n.line ? ' · line ' + n.line : ''}}`;
         g.appendChild(subText);
 
+        const execCount = execCounts.get(n.id) || 0;
+        if (execCount > 1) {{
+          const isHotspot = execCount >= 4;
+          const badgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          badgeG.setAttribute('class', 'node-exec-badge' + (isHotspot ? ' is-hotspot' : ''));
+          const badgeWidth = isHotspot ? 52 : 36;
+          const badgeHeight = 18;
+          const badgeX = p.x + (nodeWidth / 2) - badgeWidth - 6;
+          const badgeY = p.y - (nodeHeight / 2) + 6;
+
+          const badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          badgeRect.setAttribute('x', badgeX);
+          badgeRect.setAttribute('y', badgeY);
+          badgeRect.setAttribute('width', badgeWidth);
+          badgeRect.setAttribute('height', badgeHeight);
+          badgeRect.setAttribute('rx', '9');
+          badgeRect.setAttribute('fill', isHotspot ? (isLight ? '#fef2f2' : '#451a1a') : (isLight ? '#f1f5f9' : '#1e293b'));
+          badgeRect.setAttribute('stroke', isHotspot ? (isLight ? '#ef4444' : '#f87171') : (isLight ? '#cbd5e1' : '#475569'));
+          badgeRect.setAttribute('stroke-width', '1');
+          badgeG.appendChild(badgeRect);
+
+          const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          badgeText.setAttribute('x', badgeX + (badgeWidth / 2));
+          badgeText.setAttribute('y', badgeY + 12);
+          badgeText.setAttribute('text-anchor', 'middle');
+          badgeText.setAttribute('fill', isHotspot ? (isLight ? '#dc2626' : '#fca5a5') : (isLight ? '#475569' : '#94a3b8'));
+          badgeText.setAttribute('font-size', '10px');
+          badgeText.setAttribute('font-weight', '700');
+          badgeText.textContent = isHotspot ? `🔥 ${{execCount}}×` : `${{execCount}}×`;
+          badgeG.appendChild(badgeText);
+
+          const badgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+          badgeTitle.textContent = isHotspot
+            ? `Reactive Hotspot: Executed ${{execCount}} times during session (frequent re-evaluations)`
+            : `Executed ${{execCount}} times during session`;
+          badgeG.appendChild(badgeTitle);
+
+          g.appendChild(badgeG);
+        }}
+
         svg.appendChild(g);
       }});
     }}
@@ -4933,9 +5164,10 @@ def format_reactlog_html(
 
     function resetHighlight() {{
       document.querySelectorAll('.graph-edge').forEach(edge => {{
-        edge.style.opacity = '0.75';
-        edge.style.stroke = '#527494';
-        edge.style.strokeWidth = '1.8px';
+        const isIsolated = edge.classList.contains('is-isolated') || edge.getAttribute('data-isolated') === 'true';
+        edge.style.opacity = isIsolated ? '0.65' : '0.75';
+        edge.style.stroke = isIsolated ? '#88a0b8' : '#527494';
+        edge.style.strokeWidth = isIsolated ? '1.6px' : '1.8px';
       }});
     }}
 
@@ -5473,11 +5705,90 @@ def format_reactlog_html(
       reader.readAsText(file);
     }}
 
+    document.addEventListener('keydown', (e) => {{
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable);
+
+      if (isInput) {{
+        if (e.key === 'Escape') {{
+          const modal = document.getElementById('shortcuts-modal');
+          if (modal && !modal.hidden) {{
+            toggleShortcutsModal();
+            e.preventDefault();
+          }}
+        }}
+        return;
+      }}
+
+      if (e.key === 'Escape') {{
+        const modal = document.getElementById('shortcuts-modal');
+        if (modal && !modal.hidden) {{
+          toggleShortcutsModal();
+          e.preventDefault();
+          return;
+        }}
+        if (selectedNodeId) {{
+          selectedNodeId = null;
+          renderInspector();
+          renderGraph();
+          e.preventDefault();
+          return;
+        }}
+      }}
+
+      if (e.key === 'ArrowLeft' || e.key === 'h') {{
+        e.preventDefault();
+        stepBack();
+      }} else if (e.key === 'ArrowRight' || e.key === 'l') {{
+        e.preventDefault();
+        stepForward();
+      }} else if (e.key === 'ArrowUp' || e.key === 'k') {{
+        e.preventDefault();
+        prevAction();
+      }} else if (e.key === 'ArrowDown' || e.key === 'j') {{
+        e.preventDefault();
+        nextAction();
+      }} else if (e.key === ' ' || e.code === 'Space') {{
+        e.preventDefault();
+        togglePlay();
+      }} else if (e.key === 'Home') {{
+        e.preventDefault();
+        seekTo(0);
+      }} else if (e.key === 'End') {{
+        e.preventDefault();
+        const evs = reactlogData.events || reactlogData.log || [];
+        seekTo(Math.max(0, evs.length - 1));
+      }} else if (e.key === '?') {{
+        e.preventDefault();
+        toggleShortcutsModal();
+      }}
+    }});
+
     window.addEventListener('DOMContentLoaded', () => {{
       init();
       new ResizeObserver(() => fitGraph()).observe(document.getElementById('reactlog-svg'));
     }});
   </script>
+  <div id="shortcuts-modal" class="modal-backdrop" hidden onclick="if(event.target===this)toggleShortcutsModal()">
+    <div class="modal-dialog" role="dialog" aria-labelledby="shortcuts-modal-title" aria-modal="true">
+      <div class="modal-header">
+        <h2 class="modal-title" id="shortcuts-modal-title">Keyboard Navigation Shortcuts</h2>
+        <button class="modal-close-btn" onclick="toggleShortcutsModal()" aria-label="Close shortcuts dialog">✕</button>
+      </div>
+      <table class="shortcuts-table">
+        <tbody>
+          <tr><td><span class="shortcut-key">←</span> or <span class="shortcut-key">h</span></td><td>Step backward one event</td></tr>
+          <tr><td><span class="shortcut-key">→</span> or <span class="shortcut-key">l</span></td><td>Step forward one event</td></tr>
+          <tr><td><span class="shortcut-key">↑</span> or <span class="shortcut-key">k</span></td><td>Jump to previous action burst</td></tr>
+          <tr><td><span class="shortcut-key">↓</span> or <span class="shortcut-key">j</span></td><td>Jump to next action burst</td></tr>
+          <tr><td><span class="shortcut-key">Space</span></td><td>Play / Pause timeline playback</td></tr>
+          <tr><td><span class="shortcut-key">Home</span> / <span class="shortcut-key">End</span></td><td>Jump to start / end of timeline</td></tr>
+          <tr><td><span class="shortcut-key">Esc</span></td><td>Close dialog / clear node selection</td></tr>
+          <tr><td><span class="shortcut-key">?</span></td><td>Toggle this shortcuts dialog</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </body>
 </html>
 """
