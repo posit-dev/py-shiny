@@ -50,8 +50,10 @@ class MockTime:
                 self._time = self._sleepers[0][0]
                 self._sleepers.pop(0)[2].set()
 
-                # Give just-awakened task a chance to run.
-                await yield_event_loop()
+                # Give the just-awakened task, and the reactive flush it requests
+                # (a few loop passes later), a chance to run.
+                for _ in range(10):
+                    await yield_event_loop()
             self._time = end_time
 
             await yield_event_loop()

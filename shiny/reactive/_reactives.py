@@ -1079,10 +1079,20 @@ class Effect_:
                 _continue()
 
         async def on_flush_cb() -> None:
-            if not self._destroyed:
-                await self._run()
-            if self._session:
-                self._session._decrement_busy_count()
+            try:
+                if not self._destroyed:
+                    await self._run()
+            except Exception as e:
+                # The effect runs in its own task, so nothing above it would see this;
+                # report it to the owning session, which is what the session loop
+                # did when flushes ran inline.
+                if not self._session:
+                    raise
+                await self._session._unhandled_error(e)
+            finally:
+                # Every exit path (raised, cancelled) must end the busy period.
+                if self._session:
+                    self._session._decrement_busy_count()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)

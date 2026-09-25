@@ -469,15 +469,6 @@ class App:
         return JSONResponse({"detail": "Not Found"}, status_code=404)
 
     # ==========================================================================
-    # Flush
-    # ==========================================================================
-    def _request_flush(self, session: AppSession) -> None:
-        # TODO: Until we have reactive domains, because we can't yet keep track
-        # of which sessions need a flush.
-        pass
-        # self._sessions_needing_flush[session.id] = session
-
-    # ==========================================================================
     # HTML Dependency stuff
     # ==========================================================================
     def _ensure_web_dependencies(self, deps: list[HTMLDependency]) -> None:

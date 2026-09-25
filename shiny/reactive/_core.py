@@ -13,8 +13,10 @@ __all__ = (
 
 import asyncio
 import contextlib
+import contextvars
 import time
 import traceback
+import types
 import typing
 import warnings
 from contextvars import ContextVar
@@ -24,7 +26,6 @@ from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
 from ..otel._collect import OtelCollectLevel, _get_env_level
-from ..otel._core import detached_otel_context
 from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
 
@@ -122,6 +123,16 @@ class Dependents:
             dep_ctx.invalidate()
 
 
+@types.coroutine
+def _yield_to_loop() -> Generator[None, None, None]:
+    # What `asyncio.sleep(0)` does, without going through a patchable function.
+    yield
+
+
+# True inside a flush and the effect tasks it starts, like R's `.inFlush`.
+_within_flush: ContextVar[bool] = ContextVar("within_flush", default=False)
+
+
 class ReactiveEnvironment:
     """The reactive environment"""
 
@@ -133,6 +144,13 @@ class ReactiveEnvironment:
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
+        self._flush_requested: bool = False
+        self._in_flush: bool = False
+        # Set when a flush is requested while one is active.
+        self._rerun_flush: bool = False
+        # Strong references to fire-and-forget tasks (flushes and effect runs); the
+        # event loop only keeps weak ones.
+        self._tasks: set[asyncio.Task[None]] = set()
 
     @property
     def lock(self) -> asyncio.Lock:
@@ -176,26 +194,101 @@ class ReactiveEnvironment:
         return self._flushed_callbacks.register(func, once=once)
 
     async def flush(self) -> None:
-        """Flush all pending operations"""
-        # Wrap entire flush cycle in reactive_update span (or no-op if not collecting)
-        async with shiny_otel_span(
-            "reactive_update",
-            infer_session_id=True,
-            required_level=OtelCollectLevel.REACTIVE_UPDATE,
-            collection_level=_get_env_level(),
-        ):
-            await self._flush_sequential()
-            await self._flushed_callbacks.invoke()
+        """
+        Start every pending context, then invoke the flushed callbacks.
 
-    async def _flush_sequential(self) -> None:
-        # Sequential flush: instead of storing the tasks in a list and calling gather()
-        # on them later, just run each effect in sequence.
-        while not self._pending_flush_queue.empty():
-            ctx = self._pending_flush_queue.get()
-            await ctx.execute_flush_callbacks()
+        This never waits for an effect's async part: each context runs in its own
+        task. Priority orders when effects start, not when they finish.
+
+        Like R's `flushReact()`, this doesn't start a second flush while one is
+        active; the active one runs again when it finishes.
+        """
+        if self._in_flush:
+            self._rerun_flush = True
+            return
+        self._in_flush = True
+        self._rerun_flush = False
+        self._flush_requested = False
+        # Inherited by the effect tasks spawned below.
+        token = _within_flush.set(True)
+        try:
+            # Wrap entire flush cycle in reactive_update span (or no-op if not collecting)
+            async with shiny_otel_span(
+                "reactive_update",
+                infer_session_id=True,
+                required_level=OtelCollectLevel.REACTIVE_UPDATE,
+                collection_level=_get_env_level(),
+            ):
+                while not self._pending_flush_queue.empty():
+                    ctx = self._pending_flush_queue.get()
+                    self._spawn(ctx.execute_flush_callbacks())
+                    # CPython runs ready callbacks FIFO, so the task's sync part runs
+                    # now, and anything it invalidates is queued before we take the
+                    # next ctx.
+                    await _yield_to_loop()
+                await self._flushed_callbacks.invoke()
+        finally:
+            _within_flush.reset(token)
+            self._in_flush = False
+            if self._rerun_flush or not self._pending_flush_queue.empty():
+                self._flush_requested = False
+                self.request_flush()
+
+    async def flush_settled(self) -> None:
+        """
+        Flush repeatedly until no flush or effect task is left running.
+
+        Returns right away, as R's `flushReact()` does, when called from within a
+        flush (an effect or a flushed callback), or when nothing is pending or
+        running.
+        """
+        if _within_flush.get():
+            return
+        current = asyncio.current_task()
+
+        def running() -> set[asyncio.Task[None]]:
+            return {t for t in self._tasks if t is not current and not t.done()}
+
+        while not self._pending_flush_queue.empty() or running():
+            await self.flush()
+            if tasks := running():
+                await asyncio.wait(tasks)
+
+    def request_flush(self) -> None:
+        """
+        Schedule a single flush on the next event-loop pass. Requests made before it
+        runs are merged into it.
+        """
+        if self._flush_requested:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No loop (e.g. building a reactive graph synchronously); whoever runs the
+            # graph will call flush() explicitly.
+            return
+        self._flush_requested = True
+        # A fresh context keeps the requester's session and OTel span out of the flush.
+        loop.call_soon(self._start_requested_flush, context=contextvars.Context())
+
+    def _start_requested_flush(self) -> None:
+        if self._flush_requested:
+            self._spawn(self.flush())
+
+    def _spawn(self, coro: Awaitable[None]) -> None:
+        task = asyncio.ensure_future(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._on_task_done)
+
+    def _on_task_done(self, task: asyncio.Task[None]) -> None:
+        self._tasks.discard(task)
+        if not task.cancelled() and (err := task.exception()) is not None:
+            # Effects report their own errors; this only catches bugs in the flush.
+            traceback.print_exception(type(err), err, err.__traceback__)
 
     def add_pending_flush(self, ctx: Context, priority: int) -> None:
         self._pending_flush_queue.put(priority, ctx)
+        self.request_flush()
 
     @contextlib.contextmanager
     def isolate(self) -> Generator[None, None, None]:
@@ -266,8 +359,10 @@ async def flush() -> None:
     -------
     You shouldn't ever need to call this function inside of a Shiny app. It's only
     useful for testing and running reactive code interactively in the console.
+
+    Returns once every started effect, including its async part, has finished.
     """
-    await _reactive_environment.flush()
+    await _reactive_environment.flush_settled()
 
 
 @no_example()
@@ -309,6 +404,9 @@ def lock() -> asyncio.Lock:
     :class:`~shiny.Session`.
     """
     return _reactive_environment.lock
+
+
+_timer_tasks: set[asyncio.Task[None]] = set()
 
 
 @add_example()
@@ -369,18 +467,18 @@ def invalidate_later(
                 # only be a no-op.
                 return
 
-            async with lock():
-                # Prevent the ctx.invalidate() from killing our own task. (Another way
-                # to accomplish this is to unregister our ctx.on_invalidate handler, but
-                # ctx.on_invalidate doesn't currently allow unregistration.)
-                cancellable = False
+            # Prevent the ctx.invalidate() from killing our own task. (Another way
+            # to accomplish this is to unregister our ctx.on_invalidate handler, but
+            # ctx.on_invalidate doesn't currently allow unregistration.)
+            cancellable = False
 
-                # Detach from any active OTel span so the flush's reactive_update
-                # span starts as a root span. The flush is timer-driven, not
-                # caused by a user action, so it should have no parent.
-                with detached_otel_context():
-                    ctx.invalidate()
-                    await flush()
+            # Like an input change, the invalidation waits until the session is idle.
+            # The resulting flush is requested with a fresh context, so its
+            # reactive_update span has no parent.
+            if session:
+                session._cycle_start_action(ctx.invalidate)
+            else:
+                ctx.invalidate()
 
         except BaseException:
             traceback.print_exc()
@@ -390,6 +488,10 @@ def invalidate_later(
                 unsub()
 
     task = asyncio.create_task(_task(ctx, deadline))
+    # Keep a strong reference; not in `_reactive_environment._tasks`, since a timer
+    # that re-arms itself would keep `flush_settled()` waiting forever.
+    _timer_tasks.add(task)
+    task.add_done_callback(_timer_tasks.discard)
 
     def cancel_task():
         if cancellable and not task.cancelled():
