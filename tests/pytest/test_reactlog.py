@@ -619,7 +619,7 @@ def out():
     assert res.exit_code == 0
     assert out_html.is_file()
     content = out_html.read_text(encoding="utf-8")
-    assert "Interactive Shiny Reactive Log" in content
+    assert "Reactlog report" in content
 
 
 def test_reactlog_json_contract_r_shiny_compatibility():
@@ -1041,7 +1041,9 @@ def out():
     assert "setFocusMode" not in html
     assert "renderInspector" in html
     assert "toggleSummaryPopover" in html
-    assert "handleRoleDropdownChange" in html
+    assert "role-filter-dropdown" not in html
+    assert "getActiveLineageSet" in html
+    assert "filterLineageForNode" in html
     assert "timeline-mode-select" in html
     assert "trace-burst-ribbon" in html
     assert "trace-burst-track" in html
