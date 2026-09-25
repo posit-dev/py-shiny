@@ -1431,3 +1431,29 @@ def test_multifile_reports_syntax_error_in_imported_file(tmp_path: Path):
     report = inspect_reactive_graph("import broken", source_path=tmp_path / "app.py")
     assert report["success"] is False
     assert "broken.py:1" in report["error"]
+
+
+def test_load_reactlog_json_with_plot_preview():
+    data = {
+        "version": "1.0",
+        "session": "test-session",
+        "entry_file": "app.py",
+        "sources": {"app.py": "from shiny import ui"},
+        "events": [
+            {
+                "action": "output",
+                "node_id": "output:plot",
+                "node_label": "output:plot",
+                "plot": {
+                    "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+                    "alt": "Test Plot",
+                },
+            }
+        ],
+    }
+    loaded = load_reactlog_json(data)
+    assert loaded["success"] is True
+    assert loaded["entry_file"] == "app.py"
+    assert "app.py" in loaded["sources"]
+    assert loaded["events"][0]["plot"]["alt"] == "Test Plot"
+    assert loaded["events"][0]["plot"]["src"].startswith("data:image/png;base64")

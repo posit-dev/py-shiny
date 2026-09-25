@@ -1052,11 +1052,15 @@ def generate_reactlog(
                     )
                 )
                 preview = action.get("plot")
-                if isinstance(preview, dict) and _is_plot_data_url(preview.get("src")):
-                    events[-1]["plot"] = {
-                        "src": preview["src"],
-                        "alt": str(preview.get("alt") or node_lbl),
-                    }
+                if isinstance(preview, dict):
+                    plot_dict = cast(Dict[str, Any], preview)
+                    plot_src = plot_dict.get("src")
+                    if _is_plot_data_url(plot_src):
+                        plot_alt = plot_dict.get("alt")
+                        events[-1]["plot"] = {
+                            "src": str(plot_src),
+                            "alt": str(plot_alt) if plot_alt else node_lbl,
+                        }
                 step += 1
 
             elif action_type == "click":
@@ -1586,11 +1590,15 @@ def load_reactlog_json(
             action=action,
         )
         preview = item.get("plot")
-        if isinstance(preview, dict) and _is_plot_data_url(preview.get("src")):
-            ev_dict["plot"] = {
-                "src": preview["src"],
-                "alt": str(preview.get("alt") or lbl),
-            }
+        if isinstance(preview, dict):
+            plot_dict = cast(Dict[str, Any], preview)
+            plot_src = plot_dict.get("src")
+            if _is_plot_data_url(plot_src):
+                plot_alt = plot_dict.get("alt")
+                ev_dict["plot"] = {
+                    "src": str(plot_src),
+                    "alt": str(plot_alt) if plot_alt else lbl,
+                }
         normalized_events.append(ev_dict)
         step_idx += 1
 
@@ -1624,13 +1632,21 @@ def load_reactlog_json(
     obs_count = len([e for e in normalized_events if e.get("provenance") == "observed"])
     inf_count = len([e for e in normalized_events if e.get("provenance") == "inferred"])
 
+    parsed_dict: Optional[Dict[str, Any]] = (
+        cast(Dict[str, Any], parsed) if isinstance(parsed, dict) else None
+    )
+    sources_val: Any = parsed_dict.get("sources", {}) if parsed_dict is not None else {}
+    entry_file_val: str = (
+        str(parsed_dict.get("entry_file", "")) if parsed_dict is not None else ""
+    )
+
     return {
         "success": True,
         "version": version,
         "session": session_name,
         "trace_kind": "loaded_reactlog_json",
-        "sources": parsed.get("sources", {}) if isinstance(parsed, dict) else {},
-        "entry_file": parsed.get("entry_file", "") if isinstance(parsed, dict) else "",
+        "sources": sources_val,
+        "entry_file": entry_file_val,
         "nodes": final_nodes,
         "edges": final_edges,
         "events": normalized_events,
@@ -4400,7 +4416,7 @@ def format_reactlog_html(
 
         const kind = nodeKind(node);
         document.getElementById('insp-title').textContent = `${{node.label || node.id}} (${{kind.label}})`;
-        document.getElementById('insp-meta-line').textContent = [node.source_file, node.line ? `Line ${{node.line}}` : 'Unknown'].filter(Boolean).join(' · ');
+        document.getElementById('insp-meta-line').textContent = filterItems([node.source_file, node.line ? `Line ${{node.line}}` : 'Unknown'], Boolean).join(' · ');
 
         const downstreamSec = document.getElementById('insp-downstream-section');
         const downstreamWrap = document.getElementById('insp-downstream-list');
@@ -4607,7 +4623,7 @@ def format_reactlog_html(
         const from = component.get(e.from), to = component.get(e.to);
         if (from !== to && !outgoing[from].has(to)) {{ outgoing[from].add(to); incoming[to]++; }}
       }});
-      const queue = incoming.map((count, i) => count === 0 ? i : -1).filter(i => i >= 0);
+      const queue = filterItems(incoming.map((count, i) => count === 0 ? i : -1), i => i >= 0);
       for (let i = 0; i < queue.length; i++) {{
         const from = queue[i];
         outgoing[from].forEach(to => {{ ranks[to] = Math.max(ranks[to], ranks[from] + 1); if (--incoming[to] === 0) queue.push(to); }});
