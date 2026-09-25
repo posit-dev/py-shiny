@@ -559,7 +559,7 @@ def result():
     expect(downstream_pills.first).to_have_text("output:result")
 
 
-def test_upstream_and_downstream_focus_isolation(page: Page) -> None:
+def test_selection_keeps_all_nodes_visible(page: Page) -> None:
     code = """from shiny.express import input, render, ui
 from shiny import reactive
 
@@ -588,21 +588,15 @@ def other():
 
     page.locator('.graph-node[data-id="calc:doubled"]').click()
 
-    focus_upstream = page.locator("#btn-focus-upstream")
-    focus_upstream.click()
-    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(2)
-    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_be_visible()
-    expect(page.locator('.graph-node[data-id="input:x"]')).to_be_visible()
-
-    focus_downstream = page.locator("#btn-focus-downstream")
-    focus_downstream.click()
-    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(2)
-    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_be_visible()
-    expect(page.locator('.graph-node[data-id="output:result"]')).to_be_visible()
-
-    focus_all = page.locator("#btn-focus-all")
-    focus_all.click()
+    expect(page.locator(".path-controls")).to_have_count(0)
     expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(5)
+    page.locator('.graph-node[data-id="input:x"]').click()
+    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(5)
+    page.locator('.graph-node[data-id="output:other"]').click()
+    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(5)
+    expect(page.locator('.graph-node[data-id="output:other"]')).to_have_class(
+        re.compile("is-selected")
+    )
 
 
 def test_recording_summary_popover_toggle(page: Page) -> None:
@@ -994,18 +988,16 @@ def client_badge():
     why_story = page.locator("#why-story")
     expect(why_story).to_contain_text("subtotal")
 
-    # 4. Contextual focus mode: output defaults to Causes
-    btn_causes = page.locator("#btn-focus-upstream")
-    expect(btn_causes).to_have_class("path-btn is-active")
+    # Selecting an output preserves the full graph.
+    expect(page.locator(".graph-node.is-dimmed")).to_have_count(0)
 
     # 5. Clicking unaffected node (client) shows did not change in this action
     page.locator('.graph-node[data-id="input:client"]').click()
     expect(why_title).to_contain_text("input.client did not change")
     expect(page.locator("#why-story")).to_contain_text("Did not change during")
 
-    # 6. Contextual focus mode: input defaults to Effects
-    btn_effects = page.locator("#btn-focus-downstream")
-    expect(btn_effects).to_have_class("path-btn is-active")
+    # Selecting an input also preserves the full graph.
+    expect(page.locator(".graph-node.is-dimmed")).to_have_count(0)
 
 
 def test_malicious_node_id_no_code_execution_xss_protection(page: Page) -> None:
@@ -1121,7 +1113,7 @@ def out():
     expect(drawer_line_nums.first).to_have_text("7")
 
 
-def test_r_import_search_and_connected_focus(page: Page) -> None:
+def test_r_import_search_preserves_all_nodes(page: Page) -> None:
     from shiny._inspect import load_reactlog_json
 
     raw = [
@@ -1165,10 +1157,9 @@ def test_r_import_search_and_connected_focus(page: Page) -> None:
     expect(page.locator("#search-results button")).to_have_count(1)
     page.locator("#search-input").fill("id:r2")
     page.locator("#search-results button").click()
-    expect(page.locator(".graph-node")).to_have_count(3)
-    expect(page.locator('.graph-node[data-id="r4"]')).to_have_count(0)
+    expect(page.locator(".graph-node")).to_have_count(4)
+    expect(page.locator('.graph-node[data-id="r4"]')).to_have_count(1)
     expect(page.locator("#search-results")).to_be_hidden()
-    page.locator("#btn-focus-all").click()
     expect(page.locator(".graph-node")).to_have_count(4)
     page.locator("#search-input").fill("no match xyz")
     expect(page.locator("#search-results")).to_contain_text("0 matches")
@@ -1257,3 +1248,245 @@ def result():
     finally:
         if original_viewport:
             page.set_viewport_size(original_viewport)
+
+
+def test_dependency_depth_and_cycles(page: Page) -> None:
+    code = """
+from shiny import reactive, render
+@reactive.calc
+def subtotal():
+    return input.units() * input.price()
+@reactive.calc
+def discount_multiplier():
+    return input.discount()
+@reactive.calc
+def total_revenue():
+    return subtotal() * discount_multiplier()
+@render.text
+def result():
+    return total_revenue()
+"""
+    report = generate_reactlog(code)
+    page.set_content(format_reactlog_html(report, code))
+    positions = page.locator(".graph-node").evaluate_all(
+        "nodes => Object.fromEntries(nodes.map(n => [n.dataset.id, +n.querySelector('rect').getAttribute('x')]))"
+    )
+    assert positions["calc:total_revenue"] > positions["calc:subtotal"]
+    assert positions["calc:total_revenue"] > positions["calc:discount_multiplier"]
+    assert positions["output:result"] > positions["calc:total_revenue"]
+    assert page.locator(".stage-label").count() == 0
+    ranks = page.evaluate(
+        "Object.fromEntries(dependencyRanks([{id:'a'}, {id:'b'}, {id:'c'}], [{from:'a',to:'b'}, {from:'b',to:'a'}, {from:'b',to:'c'}]))"
+    )
+    assert ranks["a"] == ranks["b"] < ranks["c"]
+
+
+def test_module_toggle_preserves_boundary_edges(page: Page) -> None:
+    code = """
+from shiny import module, reactive, render
+@module.server
+def sales(input, output, session):
+    @reactive.calc
+    def total():
+        return input.units()
+    return total
+def server(input, output, session):
+    west = sales("west")
+    east = sales("east")
+    @render.text
+    def combined():
+        return west() + east()
+"""
+    page.set_content(format_reactlog_html(generate_reactlog(code), code))
+    assert page.locator(".module-box").count() == 2
+    page.locator('.module-box[data-module="west"] text').dblclick()
+    expect(page.locator('.graph-node[data-id="module:west"]')).to_have_attribute(
+        "aria-expanded", "false"
+    )
+    assert page.locator('.graph-node[data-id="calc:west-total"]').count() == 0
+    assert (
+        page.locator(
+            '.graph-edge[data-from="module:west"][data-to="output:combined"]'
+        ).count()
+        == 1
+    )
+    assert page.locator('.graph-node[data-id="calc:east-total"]').count() == 1
+    page.locator('.graph-node[data-id="module:west"]').dblclick()
+    assert page.locator('.graph-node[data-id="calc:west-total"]').count() == 1
+    page.locator('.module-box[data-module="west"]').focus()
+    page.keyboard.press("Enter")
+    assert page.locator('.graph-node[data-id="module:west"]').count() == 1
+    page.locator('.graph-node[data-id="module:west"]').focus()
+    page.keyboard.press("Space")
+    assert page.locator('.module-box[data-module="west"]').count() == 1
+
+
+def test_plot_preview_follows_timeline_without_future_images(page: Page) -> None:
+    code = """
+from shiny import render
+@render.plot
+def chart():
+    return input.n()
+"""
+    src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7S8AAAAASUVORK5CYII="
+    report = generate_reactlog(
+        code,
+        recorded_actions=[
+            {
+                "type": "output",
+                "name": "chart",
+                "timestamp": 1000,
+                "plot": {"src": src, "alt": "First plot"},
+            },
+            {
+                "type": "output",
+                "name": "chart",
+                "timestamp": 2000,
+                "plot": {"src": src, "alt": "Updated plot"},
+            },
+        ],
+    )
+    steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
+    page.set_content(format_reactlog_html(report, code))
+    page.evaluate("selectNode('output:chart')")
+    expect(page.locator("#insp-plot-image")).to_be_hidden()
+    page.evaluate(f"seekTo({steps[0]})")
+    expect(page.locator("#insp-plot-image")).to_be_visible()
+    expect(page.locator("#insp-plot-image")).to_have_attribute("alt", "First plot")
+    page.evaluate(f"seekTo({steps[1]})")
+    expect(page.locator("#insp-plot-image")).to_have_attribute("alt", "Updated plot")
+    page.evaluate("seekTo(0); selectNode('output:chart')")
+    expect(page.locator("#insp-plot-image")).to_be_hidden()
+
+
+def test_paused_video_seek_keeps_selected_plot_event(page: Page) -> None:
+    code = """
+from shiny import render
+@render.plot
+def chart():
+    return input.n()
+@render.text
+def summary():
+    return input.n()
+"""
+    report = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "output", "name": "chart", "timestamp": 1000},
+            {"type": "output", "name": "summary", "timestamp": 1000},
+        ],
+        video_path="recording.webm",
+    )
+    step = next(
+        i for i, e in enumerate(report["events"]) if e["event"] == "outputUpdated"
+    )
+    page.set_content(format_reactlog_html(report, code))
+    page.evaluate(
+        f"seekTo({step}); document.getElementById('session-video').dispatchEvent(new Event('timeupdate'))"
+    )
+    expect(page.locator("#insp-title")).to_contain_text("output:chart")
+    page.evaluate(
+        "document.getElementById('session-video').dispatchEvent(new Event('seeked'))"
+    )
+    expect(page.locator("#insp-title")).to_contain_text("output:chart")
+
+
+def test_imported_module_source_navigation(page: Page, tmp_path: Path) -> None:
+    module_source = """from shiny import module, reactive
+@module.server
+def sales(input, output, session):
+    @reactive.calc
+    def revenue():
+        return input.units() * 25
+    return revenue
+"""
+    (tmp_path / "sales.py").write_text(module_source)
+    code = """from sales import sales
+from shiny import render
+revenue = sales("west")
+@render.text
+def result():
+    return revenue()
+"""
+    app = tmp_path / "app.py"
+    app.write_text(code)
+    report = generate_reactlog(code, source_path=app)
+    page.set_content(format_reactlog_html(report, code))
+    page.locator('.graph-node[data-id="calc:west-revenue"]').click()
+    expect(page.locator("#insp-meta-line")).to_have_text("sales.py · Line 5")
+    page.locator("#btn-toggle-source-drawer").click()
+    expect(page.locator("#insp-source-code")).to_contain_text(
+        "return input.units() * 25"
+    )
+    page.get_by_role("tab", name="App code").click()
+    expect(page.get_by_label("Source file")).to_have_value("sales.py")
+    expect(page.locator("#source-panel code")).to_contain_text(
+        module_source.splitlines()[-1]
+    )
+    expect(page.locator("#source-panel .source-line.is-active")).to_contain_text(
+        "def revenue():"
+    )
+    page.get_by_label("Source file").select_option("app.py")
+    expect(page.locator("#source-panel code")).to_contain_text(
+        "from sales import sales"
+    )
+    page.locator('.graph-node[data-id="output:result"]').click()
+    expect(page.get_by_label("Source file")).to_have_value("app.py")
+    expect(page.locator("#source-panel .source-line.is-active")).to_contain_text(
+        "def result():"
+    )
+    page.evaluate("data => loadReactlogObject(data)", report)
+    page.locator('.graph-node[data-id="calc:west-revenue"]').click()
+    expect(page.get_by_label("Source file")).to_have_value("sales.py")
+
+
+def test_source_highlighting_survives_file_switches_and_json_import(page: Page) -> None:
+    sources = {
+        "app.py": "from shiny import reactive\n# A comment\n@reactive.calc\ndef amount():\n    return 25 + 2\n",
+        "module.py": '"""Module docs\nMore docs <img src=x onerror=alert(1)>\n"""\ndef label():\n    return "Revenue"\n',
+    }
+    report = generate_reactlog(sources["app.py"])
+    report.update(sources=sources, entry_file="app.py")
+    page.set_content(format_reactlog_html(report, sources["app.py"]))
+    page.get_by_role("tab", name="App code").click()
+    source = page.locator("#source-panel code")
+    expect(source.locator(".syntax-keyword").first).to_have_text("from")
+    expect(source.locator(".syntax-number").first).to_have_text("25")
+    expect(source.locator(".syntax-comment")).to_have_text("# A comment")
+    for theme in ("light", "dark"):
+        page.locator("html").evaluate("(el, theme) => el.dataset.theme = theme", theme)
+        assert source.locator(".syntax-keyword").first.evaluate(
+            "(el) => getComputedStyle(el).color !== getComputedStyle(el.parentElement).color"
+        )
+    page.get_by_label("Source file").select_option("module.py")
+    expect(source.locator(".source-line")).to_have_count(5)
+    expect(source.locator('.source-line[data-line="2"] .syntax-string')).to_have_text(
+        "More docs <img src=x onerror=alert(1)>"
+    )
+    expect(source.locator("img")).to_have_count(0)
+    expect(source.locator('.source-line[data-line="4"] .syntax-keyword')).to_have_text(
+        "def"
+    )
+    page.get_by_label("Source file").select_option("app.py")
+    expect(source.locator(".syntax-keyword").first).to_have_text("from")
+    # New source arriving through Open JSON must also be highlighted locally.
+    replacement = dict(
+        report,
+        sources={"other.py": '# Imported\nvalue = "New file"\n'},
+        entry_file="other.py",
+    )
+    page.evaluate("report => loadReactlogObject(report)", replacement)
+    page.get_by_role("tab", name="App code").click()
+    expect(source.locator(".syntax-comment")).to_have_text("# Imported")
+    expect(source.locator(".syntax-string")).to_have_text('"New file"')
+
+
+def test_inline_source_snippet_has_syntax_highlighting(page: Page) -> None:
+    code = "from shiny import reactive\n@reactive.calc\ndef amount():\n    return input.units() * 25\n"
+    page.set_content(format_reactlog_html(generate_reactlog(code), code))
+    page.locator('.graph-node[data-id="calc:amount"]').click()
+    page.locator("#btn-toggle-source-drawer").click()
+    snippet = page.locator("#insp-source-code")
+    expect(snippet.locator(".syntax-keyword").first).to_have_text("def")
+    expect(snippet.locator(".syntax-number")).to_have_text("25")
+    expect(snippet.locator(".source-line.is-active")).to_contain_text("def amount():")

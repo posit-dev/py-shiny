@@ -250,7 +250,7 @@ def greeting():
     assert 'aria-label="Zoom in"' in html
     assert 'aria-label="Zoom out"' in html
     assert 'aria-label="Timeline step scrubber"' in html
-    assert "aria-pressed=" in html
+    assert 'aria-label="Source file"' in html
 
 
 def test_format_reactlog_html_escaping():
@@ -1023,9 +1023,9 @@ def out():
     assert "why-card" in html
     assert "why-story" in html
     assert "why-cascade-flow" in html
-    assert "btn-focus-upstream" in html
-    assert "btn-focus-downstream" in html
-    assert "btn-focus-all" in html
+    assert "btn-focus-upstream" not in html
+    assert "btn-focus-downstream" not in html
+    assert "btn-focus-all" not in html
     assert "btn-summary-toggle" in html
     assert "recording-summary-popover" in html
     assert "actions-tab" in html
@@ -1038,7 +1038,7 @@ def out():
     assert "buildGraphIndices" in html
     assert "getUpstreamNodes" in html
     assert "getDownstreamNodes" in html
-    assert "setFocusMode" in html
+    assert "setFocusMode" not in html
     assert "renderInspector" in html
     assert "toggleSummaryPopover" in html
     assert "handleRoleDropdownChange" in html
@@ -1219,3 +1219,215 @@ def test_r_reactlog_types_and_late_definitions():
     assert nodes["r3"]["role"] == "observer"
     assert nodes["r4"]["role"] == "source"
     assert result["edges"] == [{"from": "r1$x", "to": "r2"}, {"from": "r2", "to": "r3"}]
+
+
+def test_module_instances_and_cross_boundary_dependencies():
+    code = """
+from shiny import module, reactive, render, ui
+@module.ui
+def sales_ui():
+    return ui.input_numeric("units", "Units", 10)
+@module.server
+def sales_server(input, output, session, factor):
+    @reactive.calc
+    def subtotal():
+        return input.units() * factor()
+    @render.plot
+    def chart():
+        return subtotal()
+    return subtotal
+sales_ui("west")
+sales_ui("east")
+def server(input, output, session):
+    @reactive.calc
+    def factor():
+        return input.price()
+    west = sales_server("west", factor)
+    east = sales_server("east", factor=factor)
+    @render.text
+    def total():
+        return west() + east()
+"""
+    result = inspect_reactive_graph(code)
+    nodes = {n["id"]: n for n in result["nodes"]}
+    edges = {(e["from"], e["to"]) for e in result["edges"]}
+    for name in ("west", "east"):
+        assert nodes[f"input:{name}-units"]["module"] == name
+        assert nodes[f"input:{name}-units"]["value"] == 10
+        assert nodes[f"output:{name}-chart"]["render_type"] == "plot"
+        assert (f"input:{name}-units", f"calc:{name}-subtotal") in edges
+        assert ("calc:factor", f"calc:{name}-subtotal") in edges
+        assert (f"calc:{name}-subtotal", "output:total") in edges
+    assert "calc:subtotal" not in nodes
+
+
+def test_nested_modules_keep_distinct_namespaces():
+    code = """
+from shiny import module, reactive, render
+@module.server
+def child(input, output, session):
+    @reactive.calc
+    def value():
+        return input.n()
+    return value
+@module.server
+def parent(input, output, session):
+    inner = child("inner")
+    @render.text
+    def result():
+        return inner()
+parent("one")
+parent("two")
+"""
+    result = inspect_reactive_graph(code)
+    nodes = {n["id"]: n for n in result["nodes"]}
+    assert nodes["calc:one-inner-value"]["module"] == "one-inner"
+    assert nodes["output:one-result"]["module"] == "one"
+    assert {"from": "calc:two-inner-value", "to": "output:two-result"} in result[
+        "edges"
+    ]
+
+
+def test_plot_snapshots_and_module_metadata_survive_json_roundtrip():
+    code = """
+from shiny import module, render
+@module.server
+def chart(input, output, session):
+    @render.plot
+    def result():
+        return input.n()
+chart("sales")
+"""
+    plot = {"src": "data:image/png;base64,aGVsbG8=", "alt": "Revenue"}
+    report = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "output", "name": "sales-result", "timestamp": 100, "plot": plot}
+        ],
+    )
+    observed = next(e for e in report["events"] if e["event"] == "outputUpdated")
+    assert observed["plot"] == plot
+    loaded = load_reactlog_json(json.dumps(report))
+    node = next(n for n in loaded["nodes"] if n["id"] == "output:sales-result")
+    assert node["module"] == "sales"
+    assert node["render_type"] == "plot"
+    assert any(e.get("plot") == plot for e in loaded["events"])
+    unsafe = generate_reactlog(
+        code,
+        recorded_actions=[
+            {
+                "type": "output",
+                "name": "sales-result",
+                "plot": {"src": "https://example.com/tracker.png"},
+            }
+        ],
+    )
+    assert not any("plot" in e for e in unsafe["events"])
+
+
+def test_module_event_triggers_are_namespaced():
+    result = inspect_reactive_graph("""
+from shiny import module, reactive
+@module.server
+def controls(input, output, session):
+    @reactive.effect
+    @reactive.event(input.apply)
+    def save():
+        print(input.value())
+controls("filters")
+""")
+    assert {"from": "input:filters-apply", "to": "effect:filters-save"} in result[
+        "edges"
+    ]
+    assert not any(e["from"] == "input:filters-value" for e in result["edges"])
+
+
+def test_multifile_modules_aliases_packages_and_source_locations(tmp_path: Path):
+    package = tmp_path / "modules"
+    package.mkdir()
+    (package / "__init__.py").write_text("from .sales import panel as exported_panel\n")
+    module_source = """from shiny import module, reactive, render, ui
+raise RuntimeError("Inspection must never execute this module")
+@module.ui
+def panel():
+    return ui.input_numeric("units", "Units", 10)
+@module.server
+def sales(input, output, session, price):
+    @reactive.calc
+    def total():
+        return input.units() * price()
+    @render.plot
+    def chart():
+        return total()
+    return total
+"""
+    (package / "sales.py").write_text(module_source)
+    code = """from shiny import reactive, render
+from modules import exported_panel as panel
+import modules.sales as sales_module
+panel("west")
+panel("east")
+def server(input, output, session):
+    @reactive.calc
+    def price():
+        return input.price()
+    west = sales_module.sales("west", price)
+    east = sales_module.sales("east", price=price)
+    @render.text
+    def combined():
+        return west() + east()
+"""
+    app = tmp_path / "app.py"
+    app.write_text(code)
+    report = generate_reactlog(code, source_path=app)
+    nodes = {n["id"]: n for n in report["nodes"]}
+    assert nodes["input:west-units"]["source_file"] == "modules/sales.py"
+    assert nodes["calc:west-total"]["line"] == 9
+    assert nodes["output:west-chart"]["source_file"] == "modules/sales.py"
+    assert nodes["output:combined"]["source_file"] == "app.py"
+    assert {"from": "calc:east-total", "to": "output:combined"} in report["edges"]
+    assert {"from": "calc:price", "to": "calc:west-total"} in report["edges"]
+    assert report["sources"]["modules/sales.py"] == module_source
+    loaded = load_reactlog_json(json.dumps(report))
+    assert loaded["sources"] == report["sources"]
+    assert (
+        next(n for n in loaded["nodes"] if n["id"] == "calc:west-total")["source_file"]
+        == "modules/sales.py"
+    )
+    result = CliRunner().invoke(main, ["inspect", str(app), "--json"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["sources"] == report["sources"]
+
+
+def test_multifile_circular_imports_and_duplicate_function_names(tmp_path: Path):
+    code = """import first
+import second
+first.sales("one")
+second.sales("two")
+"""
+    module_code = """import {other}
+from shiny import module, reactive
+@module.server
+def sales(input, output, session):
+    @reactive.calc
+    def total():
+        return input.{input_name}()
+    return total
+"""
+    for name, other in (("first", "second"), ("second", "first")):
+        (tmp_path / f"{name}.py").write_text(
+            module_code.format(other=other, input_name=name)
+        )
+    app = tmp_path / "app.py"
+    app.write_text(code)
+    report = inspect_reactive_graph(code, source_path=app)
+    assert {"from": "input:one-first", "to": "calc:one-total"} in report["edges"]
+    assert {"from": "input:two-second", "to": "calc:two-total"} in report["edges"]
+    assert len(report["sources"]) == 3
+
+
+def test_multifile_reports_syntax_error_in_imported_file(tmp_path: Path):
+    (tmp_path / "broken.py").write_text("def invalid(:\n")
+    report = inspect_reactive_graph("import broken", source_path=tmp_path / "app.py")
+    assert report["success"] is False
+    assert "broken.py:1" in report["error"]
