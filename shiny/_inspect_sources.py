@@ -35,7 +35,8 @@ def read_app_sources(
         tree = ast.parse(text, filename=filename)
         trees[path] = tree  # Register first so circular imports terminate.
         sources[filename] = text
-        bindings = imports[path] = {}
+        bindings: dict[str, tuple[Path, str | None]] = {}
+        imports[path] = bindings
         for node in ast.walk(tree):
             node.source_file = filename  # type: ignore[attr-defined]
         for node in tree.body:
@@ -49,7 +50,7 @@ def read_app_sources(
                 base = path.parent if node.level else root
                 for _ in range(max(0, node.level - 1)):
                     base = base.parent
-                parts = node.module.split(".") if node.module else []
+                parts: list[str] = node.module.split(".") if node.module else []
                 target = locate(parts, base) if parts else locate(["__init__"], base)
                 if target:
                     read(target)
