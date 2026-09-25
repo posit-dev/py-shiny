@@ -1459,3 +1459,99 @@ def test_load_reactlog_json_with_plot_preview():
     assert "app.py" in loaded["sources"]
     assert loaded["events"][0]["plot"]["alt"] == "Test Plot"
     assert loaded["events"][0]["plot"]["src"].startswith("data:image/png;base64")
+
+
+def test_isolated_dependencies_marked_in_edges():
+    code = """from shiny import reactive
+from shiny.express import input, render
+
+@reactive.calc
+def isolated_calc():
+    with reactive.isolate():
+        val = input.untracked()
+    return val + input.tracked()
+
+@render.text
+def txt():
+    with reactive.isolate():
+        return f"{input.isolated_out()}"
+"""
+    res = inspect_reactive_graph(code)
+    assert res["success"] is True
+    edges = res["edges"]
+    assert {
+        "from": "input:untracked",
+        "to": "calc:isolated_calc",
+        "isolated": True,
+    } in edges
+    assert {"from": "input:tracked", "to": "calc:isolated_calc"} in edges
+    assert {
+        "from": "input:isolated_out",
+        "to": "output:txt",
+        "isolated": True,
+    } in edges
+
+
+def test_reactive_marks_api_and_generate_reactlog():
+    from shiny import reactive
+
+    reactive.clear_marks()
+    reactive.mark("checkpoint-1")
+    assert len(reactive.get_marks()) == 1
+    assert reactive.get_marks()[0]["label"] == "checkpoint-1"
+
+    code = "from shiny.express import input\ninput.x()"
+    rlog = generate_reactlog(code, marks=reactive.get_marks())
+    assert rlog["success"] is True
+    mark_events = [e for e in rlog["events"] if e.get("action") == "userMark"]
+    assert len(mark_events) == 1
+    assert mark_events[0]["details"] == "User mark: checkpoint-1"
+    reactive.clear_marks()
+
+
+def test_reactlog_html_features():
+    code = "from shiny.express import input, render\n@render.text\ndef out():\n    return f'{input.x()}'"
+    rlog = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "input", "name": "x", "value": 1, "timestamp": 10},
+            {"type": "input", "name": "x", "value": 2, "timestamp": 20},
+            {"type": "input", "name": "x", "value": 3, "timestamp": 30},
+            {"type": "input", "name": "x", "value": 4, "timestamp": 40},
+        ],
+    )
+    html = format_reactlog_html(rlog, code)
+    assert "shortcuts-modal" in html
+    assert "Isolated read" in html
+    assert "arrow-isolated" in html
+    assert "node-exec-badge" in html
+
+
+def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("SHINY_REACTLOG", "1")
+    from starlette.testclient import TestClient
+
+    from shiny import App, ui
+
+    app = App(ui.page_fluid("Hello"), None)
+    starlette_app = app.init_starlette_app()
+    client = TestClient(starlette_app)
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "/__reactlog__" in resp.text
+    assert "F3" in resp.text
+
+    rlog_resp = client.get("/__reactlog__")
+    assert rlog_resp.status_code == 200
+    assert "Reactlog report" in rlog_resp.text
+
+    mark_resp = client.post("/__reactlog__/mark", json={"label": "test-mark"})
+    assert mark_resp.status_code == 200
+    assert mark_resp.json()["status"] == "ok"
+
+
+def test_shiny_run_reactlog_flag():
+    runner = CliRunner()
+    result = runner.invoke(main, ["run", "--help"])
+    assert result.exit_code == 0
+    assert "--reactlog" in result.output

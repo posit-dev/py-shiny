@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import os
 import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -184,6 +185,7 @@ class App:
         # Used to store callbacks to be called when the app is shutting down (according
         # to the ASGI lifespan protocol)
         self._exit_stack = AsyncExitStack()
+        self._raw_server_fn = server
 
         if server is None:
             self.server = noop_server_fn
@@ -285,6 +287,23 @@ class App:
             ),
             starlette.routing.Mount("/", app=self._dependency_handler),
         ]
+        if os.getenv("SHINY_REACTLOG") == "1":
+            routes.insert(
+                0,
+                starlette.routing.Route(
+                    "/__reactlog__",
+                    self._on_reactlog_request_cb,
+                    methods=["GET"],
+                ),
+            )
+            routes.insert(
+                0,
+                starlette.routing.Route(
+                    "/__reactlog__/mark",
+                    self._on_reactlog_mark_cb,
+                    methods=["POST"],
+                ),
+            )
         middleware: list[starlette.middleware.Middleware] = []
         if autoreload_url():
             shared_dir = os.path.join(os.path.dirname(__file__), "www", "shared")
@@ -440,7 +459,86 @@ class App:
                 ui = self._render_page(self.ui(request), self.lib_prefix)
         else:
             ui = self.ui
-        return HTMLResponse(content=ui["html"])
+
+        html_content = ui["html"]
+        if os.getenv("SHINY_REACTLOG") == "1":
+            script = """<script>
+window.addEventListener('keydown', function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'F3') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      var label = prompt('Enter mark label:', 'Bookmark');
+      if (label) {
+        fetch('/__reactlog__/mark', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({label: label})
+        }).then(function() {
+          console.log('[Reactlog] Bookmark added: ' + label);
+        });
+      }
+    } else {
+      window.open('/__reactlog__', '_blank');
+    }
+  }
+});
+</script>"""
+            if "</head>" in html_content:
+                html_content = html_content.replace("</head>", f"{script}\n</head>", 1)
+            else:
+                html_content += script
+
+        return HTMLResponse(content=html_content)
+
+    async def _on_reactlog_request_cb(self, request: Request) -> Response:
+        from . import reactive
+        from ._inspect import format_reactlog_html, generate_reactlog
+
+        target_fn = getattr(self, "_raw_server_fn", None) or getattr(
+            self, "server", None
+        )
+        source_code = ""
+        app_file = None
+        if target_fn is not None:
+            try:
+                source_code = inspect.getsource(target_fn)
+            except Exception:
+                pass
+            try:
+                app_file = inspect.getfile(target_fn)
+            except Exception:
+                pass
+
+        if not source_code and app_file and os.path.exists(app_file):
+            try:
+                with open(app_file, "r") as f:
+                    source_code = f.read()
+            except Exception:
+                pass
+
+        reactlog_data = generate_reactlog(
+            source_code, source_path=app_file, marks=reactive.get_marks()
+        )
+        html = format_reactlog_html(reactlog_data, source_code, title="Reactlog report")
+        return HTMLResponse(content=html)
+
+    async def _on_reactlog_mark_cb(self, request: Request) -> Response:
+        from . import reactive
+
+        label = "User mark"
+        try:
+            body: object = await request.json()
+            if isinstance(body, dict):
+                body_dict = cast(dict[str, object], body)
+                raw_label = body_dict.get("label")
+                if isinstance(raw_label, str):
+                    label = raw_label
+                elif raw_label is not None:
+                    label = str(raw_label)
+        except Exception:
+            pass
+        reactive.mark(label)
+        return JSONResponse({"status": "ok", "marks_count": len(reactive.get_marks())})
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """

@@ -170,6 +170,13 @@ any of the following will work:
     help="Dev mode",
     show_default=True,
 )
+@click.option(
+    "--reactlog/--no-reactlog",
+    is_flag=True,
+    default=False,
+    help="Enable Reactlog visualizer (press Cmd+F3 / Ctrl+F3 in browser, or open /__reactlog__).",
+    show_default=True,
+)
 @no_example()
 def run(
     app: str | shiny.App,
@@ -187,6 +194,7 @@ def run(
     factory: bool,
     launch_browser: bool,
     dev_mode: bool,
+    reactlog: bool = False,
     **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
@@ -206,6 +214,7 @@ def run(
         factory=factory,
         launch_browser=launch_browser,
         dev_mode=dev_mode,
+        reactlog=reactlog,
         **kwargs,
     )
 
@@ -226,6 +235,7 @@ def run_app(
     factory: bool = False,
     launch_browser: bool = False,
     dev_mode: bool = True,
+    reactlog: bool = False,
     **kwargs: object,
 ) -> None:
     """
@@ -306,6 +316,9 @@ def run_app(
 
     if dev_mode:
         os.environ["SHINY_DEV_MODE"] = "1"
+
+    if reactlog:
+        os.environ["SHINY_REACTLOG"] = "1"
 
     if isinstance(app, str):
         # Remove ":app" suffix if present. Normally users would just pass in the

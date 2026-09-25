@@ -9,6 +9,9 @@ __all__ = (
     "lock",
     "on_flushed",
     "get_current_context",
+    "mark",
+    "get_marks",
+    "clear_marks",
 )
 
 import asyncio
@@ -398,3 +401,26 @@ def invalidate_later(
     ctx.on_invalidate(cancel_task)
     if session:
         unsub = session.on_ended(cancel_task)
+
+
+_reactive_marks: list[dict[str, typing.Any]] = []
+
+
+def mark(label: str = "User mark") -> None:
+    _reactive_marks.append(
+        {
+            "action": "userMark",
+            "label": label,
+            "details": label,
+            "time": time.time(),
+            "phase": "mark",
+        }
+    )
+
+
+def get_marks() -> list[dict[str, typing.Any]]:
+    return list(_reactive_marks)
+
+
+def clear_marks() -> None:
+    _reactive_marks.clear()

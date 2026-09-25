@@ -1495,3 +1495,83 @@ def test_inline_source_snippet_has_syntax_highlighting(page: Page) -> None:
     expect(snippet.locator(".syntax-keyword").first).to_have_text("def")
     expect(snippet.locator(".syntax-number")).to_have_text("25")
     expect(snippet.locator(".source-line.is-active")).to_contain_text("def amount():")
+
+
+def test_reactlog_keyboard_navigation_and_shortcuts_modal(page: Page) -> None:
+    code = "from shiny.express import input, render\n@render.text\ndef out():\n    return f'{input.x()}'"
+    rlog = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "input", "name": "x", "value": 1, "timestamp": 10},
+            {"type": "input", "name": "x", "value": 2, "timestamp": 20},
+        ],
+    )
+    page.set_content(format_reactlog_html(rlog, code))
+
+    modal = page.locator("#shortcuts-modal")
+    expect(modal).to_be_hidden()
+
+    page.keyboard.press("?")
+    expect(modal).to_be_visible()
+
+    page.keyboard.press("Escape")
+    expect(modal).to_be_hidden()
+
+    scrubber = page.locator("#scrubber-range")
+    init_val = int(scrubber.input_value())
+    page.keyboard.press("ArrowRight")
+    assert int(scrubber.input_value()) == init_val + 1
+
+
+def test_reactlog_isolated_edge_styling(page: Page) -> None:
+    code = """from shiny import reactive
+from shiny.express import input, render
+
+@reactive.calc
+def isolated_calc():
+    with reactive.isolate():
+        val = input.untracked()
+    return val + input.tracked()
+
+@render.text
+def txt():
+    return f"{isolated_calc()}"
+"""
+    rlog = generate_reactlog(code)
+    page.set_content(format_reactlog_html(rlog, code))
+
+    isolated_edges = page.locator(".graph-edge.is-isolated")
+    expect(isolated_edges).to_have_count(1)
+    expect(isolated_edges).to_have_attribute("stroke-dasharray", "5 4")
+    expect(page.locator(".legend")).to_contain_text("Isolated read")
+
+
+def test_reactlog_hotspot_badge(page: Page) -> None:
+    code = """from shiny import reactive
+from shiny.express import input, render
+
+@reactive.calc
+def compute():
+    return input.val() * 2
+
+@render.text
+def txt():
+    return f"{compute()}"
+"""
+    actions = [
+        {"type": "input", "name": "val", "value": 1, "timestamp": 10},
+        {"type": "input", "name": "val", "value": 2, "timestamp": 20},
+        {"type": "input", "name": "val", "value": 3, "timestamp": 30},
+        {"type": "input", "name": "val", "value": 4, "timestamp": 40},
+    ]
+    rlog = generate_reactlog(code, recorded_actions=actions)
+    page.set_content(format_reactlog_html(rlog, code))
+
+    badge = page.locator(
+        '.graph-node[data-id="calc:compute"] .node-exec-badge.is-hotspot'
+    )
+    expect(badge).to_be_visible()
+    expect(badge).to_contain_text("🔥 4×")
+
+    page.locator('.graph-node[data-id="calc:compute"]').click()
+    expect(page.locator("#insp-runs-badge")).to_contain_text("Runs: 4× 🔥")
