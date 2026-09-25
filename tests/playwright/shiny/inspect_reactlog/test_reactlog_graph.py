@@ -1571,7 +1571,9 @@ def txt():
         '.graph-node[data-id="calc:compute"] .node-exec-badge.is-hotspot'
     )
     expect(badge).to_be_visible()
-    expect(badge).to_contain_text("🔥 4×")
+    expect(badge).to_contain_text("4×")
+    expect(badge.locator("path")).to_be_visible()
 
     page.locator('.graph-node[data-id="calc:compute"]').click()
-    expect(page.locator("#insp-runs-badge")).to_contain_text("Runs: 4× 🔥")
+    expect(page.locator("#insp-runs-badge")).to_contain_text("Runs: 4×")
+    expect(page.locator("#insp-runs-badge svg.flame-icon")).to_be_visible()

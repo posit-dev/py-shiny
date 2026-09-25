@@ -2906,7 +2906,7 @@ def format_reactlog_html(
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
       <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
       <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open Reactlog JSON recording"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
-      <button class="btn" id="btn-shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)">⌨️ Shortcuts</button>
+      <button class="btn" id="btn-shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg>Shortcuts</button>
     </div>
   </header>
 
@@ -3122,7 +3122,8 @@ def format_reactlog_html(
       eye: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
       zap: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
       clock: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-      arrowRight: '<svg class="inline-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'
+      arrowRight: '<svg class="inline-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+      flame: '<svg class="inline-icon flame-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--danger, #ef4444);vertical-align:-1px;margin-left:4px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>'
     }};
 
     let currentStep = 0;
@@ -4626,7 +4627,7 @@ def format_reactlog_html(
         document.getElementById('insp-meta-line').textContent = filterItems([node.source_file, node.line ? `Line ${{node.line}}` : 'Unknown'], Boolean).join(' · ');
         const runsEl = document.getElementById('insp-runs-badge');
         if (runsEl) {{
-          runsEl.textContent = execCount > 0 ? `· Runs: ${{execCount}}×${{execCount >= 4 ? ' 🔥' : ''}}` : '';
+          runsEl.innerHTML = execCount > 0 ? `· Runs: <b>${{execCount}}×</b>${{execCount >= 4 ? ' ' + ICONS.flame : ''}}` : '';
         }}
 
         const downstreamSec = document.getElementById('insp-downstream-section');
@@ -5115,7 +5116,7 @@ def format_reactlog_html(
           const isHotspot = execCount >= 4;
           const badgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           badgeG.setAttribute('class', 'node-exec-badge' + (isHotspot ? ' is-hotspot' : ''));
-          const badgeWidth = isHotspot ? 52 : 36;
+          const badgeWidth = isHotspot ? 48 : 34;
           const badgeHeight = 18;
           const badgeX = p.x + (nodeWidth / 2) - badgeWidth - 6;
           const badgeY = p.y - (nodeHeight / 2) + 6;
@@ -5131,14 +5132,26 @@ def format_reactlog_html(
           badgeRect.setAttribute('stroke-width', '1');
           badgeG.appendChild(badgeRect);
 
+          if (isHotspot) {{
+            const flamePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            flamePath.setAttribute('d', 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z');
+            flamePath.setAttribute('fill', 'none');
+            flamePath.setAttribute('stroke', isLight ? '#ef4444' : '#f87171');
+            flamePath.setAttribute('stroke-width', '2');
+            flamePath.setAttribute('stroke-linecap', 'round');
+            flamePath.setAttribute('stroke-linejoin', 'round');
+            flamePath.setAttribute('transform', `translate(${{badgeX + 6}}, ${{badgeY + 3.5}}) scale(0.46)`);
+            badgeG.appendChild(flamePath);
+          }}
+
           const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          badgeText.setAttribute('x', badgeX + (badgeWidth / 2));
+          badgeText.setAttribute('x', isHotspot ? badgeX + 27 : badgeX + (badgeWidth / 2));
           badgeText.setAttribute('y', badgeY + 12);
           badgeText.setAttribute('text-anchor', 'middle');
           badgeText.setAttribute('fill', isHotspot ? (isLight ? '#dc2626' : '#fca5a5') : (isLight ? '#475569' : '#94a3b8'));
           badgeText.setAttribute('font-size', '10px');
           badgeText.setAttribute('font-weight', '700');
-          badgeText.textContent = isHotspot ? `🔥 ${{execCount}}×` : `${{execCount}}×`;
+          badgeText.textContent = `${{execCount}}×`;
           badgeG.appendChild(badgeText);
 
           const badgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
