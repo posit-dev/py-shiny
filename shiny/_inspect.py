@@ -2267,12 +2267,18 @@ def _format_python_source_html(source: str) -> str:
 def format_reactlog_html(
     reactlog: Dict[str, Any],
     source_code: str,
-    title: str = "Reactlog report",
+    title: str = "Shiny App",
     video_path: Optional[str] = None,
     html_path: Optional[str] = None,
     theme: str = "dark",
 ) -> str:
-    escaped_title = html_lib.escape(title)
+    clean_title = title
+    for suffix in (" · Reactlog report", " - Reactlog report", " : Reactlog report"):
+        if clean_title.endswith(suffix):
+            clean_title = clean_title[: -len(suffix)].strip()
+    if clean_title == "Reactlog report":
+        clean_title = "Shiny App"
+    escaped_title = html_lib.escape(clean_title)
     formatted_source = _format_python_source_html(source_code)
     actual_video = video_path or reactlog.get("video_path")
 

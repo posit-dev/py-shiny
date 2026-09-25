@@ -519,7 +519,8 @@ window.addEventListener('keydown', function(e) {
         reactlog_data = generate_reactlog(
             source_code, source_path=app_file, marks=reactive.get_marks()
         )
-        html = format_reactlog_html(reactlog_data, source_code, title="Reactlog report")
+        app_name = os.path.basename(app_file) if app_file else "Shiny App"
+        html = format_reactlog_html(reactlog_data, source_code, title=app_name)
         return HTMLResponse(content=html)
 
     async def _on_reactlog_mark_cb(self, request: Request) -> Response:

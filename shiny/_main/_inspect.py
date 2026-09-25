@@ -404,17 +404,17 @@ def inspect(
                 _extract_page_title(source_code) if not is_json_input else None
             )
             if detected_title:
-                report_title = (
-                    detected_title
-                    if "Reactlog report" in detected_title
-                    else f"{detected_title} · Reactlog report"
-                )
+                clean_title = re.sub(
+                    r"\s*[·\-:]\s*Reactlog report$", "", detected_title
+                ).strip()
+                report_title = clean_title or "Shiny App"
+            elif target_desc:
+                clean_desc = re.sub(
+                    r"\s*[·\-:]\s*Reactlog report$", "", target_desc
+                ).strip()
+                report_title = clean_desc or "Shiny App"
             else:
-                report_title = (
-                    f"{target_desc} · Reactlog report"
-                    if target_desc
-                    else "Reactlog report"
-                )
+                report_title = "Shiny App"
             html_content = format_reactlog_html(
                 reactlog_data,
                 title=report_title,
