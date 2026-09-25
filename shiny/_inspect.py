@@ -913,51 +913,68 @@ def generate_reactlog(
         }
     ]
 
+    epoch_marks = [
+        float(m.get("time") or 0.0)
+        for m in user_marks
+        if float(m.get("time") or 0.0) > 1_000_000_000
+    ]
+    if epoch_marks:
+        min_epoch = min(epoch_marks)
+        for m in user_marks:
+            t = float(m.get("time") or 0.0)
+            if t > 1_000_000_000:
+                rel_t = round(max(0.0, t - min_epoch), 2)
+                m["time"] = rel_t
+                m["timestamp"] = int(rel_t * 1000)
+
+    def append_single_mark(m: Dict[str, Any], cur_step: int) -> int:
+        mark_label = str(m.get("label", "Bookmark"))
+        mark_time = float(m.get("time") or 0.0)
+        mark_ms = int(m.get("timestamp") or (mark_time * 1000))
+        events.append(
+            _make_event(
+                step=cur_step,
+                event="userMark",
+                action="userMark",
+                phase="interaction",
+                provenance="observed",
+                node_id=None,
+                node_label=f"🔖 {mark_label}",
+                node_type="mark",
+                status="active",
+                timestamp=mark_ms,
+                time_sec=mark_time,
+                details=f"User mark: {mark_label}",
+                session=session,
+            )
+        )
+        action_waves.append(
+            {
+                "action_id": f"mark-{len(action_waves)}",
+                "index": len(action_waves),
+                "is_init": False,
+                "is_mark": True,
+                "start_time": mark_time,
+                "end_time": mark_time,
+                "start_step": cur_step,
+                "end_step": cur_step,
+                "trigger": f"Bookmark: {mark_label}",
+                "trigger_label": f"🔖 {mark_label}",
+                "short_label": f"🔖 {mark_label[:20]}",
+                "human_action": f"Mark: {mark_label}",
+                "trigger_node_id": "",
+                "trigger_value": None,
+                "invalidated_nodes": [],
+                "inferred_executions": [],
+                "observed_executions": [],
+                "observed_outputs": [],
+            }
+        )
+        return cur_step + 1
+
     def append_user_marks(cur_step: int) -> int:
         for m in user_marks:
-            mark_label = str(m.get("label", "Bookmark"))
-            mark_time = float(m.get("time") or 0.0)
-            mark_ms = int(m.get("timestamp") or (mark_time * 1000))
-            events.append(
-                _make_event(
-                    step=cur_step,
-                    event="userMark",
-                    action="userMark",
-                    phase="interaction",
-                    provenance="observed",
-                    node_id=None,
-                    node_label=f"🔖 {mark_label}",
-                    node_type="mark",
-                    status="active",
-                    timestamp=mark_ms,
-                    time_sec=mark_time,
-                    details=f"User mark: {mark_label}",
-                    session=session,
-                )
-            )
-            action_waves.append(
-                {
-                    "action_id": f"mark-{len(action_waves)}",
-                    "index": len(action_waves),
-                    "is_init": False,
-                    "is_mark": True,
-                    "start_time": mark_time,
-                    "end_time": mark_time,
-                    "start_step": cur_step,
-                    "end_step": cur_step,
-                    "trigger": f"Bookmark: {mark_label}",
-                    "trigger_label": f"🔖 {mark_label}",
-                    "short_label": f"🔖 {mark_label[:15]}",
-                    "human_action": f"Mark: {mark_label}",
-                    "trigger_node_id": "",
-                    "trigger_value": None,
-                    "invalidated_nodes": [],
-                    "inferred_executions": [],
-                    "observed_executions": [],
-                    "observed_outputs": [],
-                }
-            )
-            cur_step += 1
+            cur_step = append_single_mark(m, cur_step)
         return cur_step
 
     if recorded_actions:
@@ -978,17 +995,29 @@ def generate_reactlog(
         last_known_vals: Dict[str, Any] = {
             n.get("name", n["id"]): n.get("value") for n in nodes
         }
+        sorted_user_marks = sorted(
+            user_marks, key=lambda m: float(m.get("time") or 0.0)
+        )
+        mark_idx = 0
         last_ts = 0
         for action in deduped_actions:
-            action_start_step = step
-            action_type = action.get("type", "action")
-            raw_name = str(action.get("name") or action.get("target") or "unknown")
-            action_val = action.get("value")
             ts = action.get("timestamp")
             if ts is not None:
                 last_ts = int(ts)
             ts_ms = last_ts
             ts_sec = round(ts_ms / 1000.0, 2)
+
+            while (
+                mark_idx < len(sorted_user_marks)
+                and float(sorted_user_marks[mark_idx].get("time") or 0.0) <= ts_sec
+            ):
+                step = append_single_mark(sorted_user_marks[mark_idx], step)
+                mark_idx += 1
+
+            action_start_step = step
+            action_type = action.get("type", "action")
+            raw_name = str(action.get("name") or action.get("target") or "unknown")
+            action_val = action.get("value")
 
             if action_type == "input":
                 node_id = (
@@ -1226,7 +1255,9 @@ def generate_reactlog(
                     }
                 )
 
-        step = append_user_marks(step)
+        while mark_idx < len(sorted_user_marks):
+            step = append_single_mark(sorted_user_marks[mark_idx], step)
+            mark_idx += 1
 
         events.append(
             _make_event(
@@ -1829,7 +1860,7 @@ def _record_session_sync(
             app_target,
             wait_for_start=True,
             timeout_secs=min(timeout_secs, 30.0),
-            env={"SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1"},
+            env={"SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1", "SHINY_REACTLOG": "1"},
         )
     except Exception as err:
         return {
@@ -1877,6 +1908,7 @@ def _record_session_sync(
                 viewport={"width": v_width, "height": v_height},
             )
             page = context.new_page()
+            page_start_time = time.time()
 
             redact_all_js = "true" if redact_inputs else "false"
             recorder_init_script = f"""
@@ -2073,9 +2105,30 @@ def _record_session_sync(
             elif video_files:
                 saved_video_path = str(video_files[0])
 
+        app_marks: List[Dict[str, Any]] = []
+        try:
+            import urllib.request
+
+            req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
+            with urllib.request.urlopen(req, timeout=3.0) as resp:
+                mark_data = json.loads(resp.read().decode())
+                if isinstance(mark_data, dict) and "marks" in mark_data:
+                    raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
+                    for rm in raw_marks:
+                        item = dict(rm)
+                        raw_t = float(item.get("time") or 0.0)
+                        if raw_t > 1_000_000_000:
+                            rel_sec = max(0.0, round(raw_t - page_start_time, 2))
+                            item["time"] = rel_sec
+                            item["timestamp"] = int(rel_sec * 1000)
+                        app_marks.append(item)
+        except Exception:
+            pass
+
         return {
             "success": True,
             "actions": recorded_actions,
+            "marks": app_marks,
             "video_path": saved_video_path,
             "duration_secs": round(time.time() - start_time, 2),
         }
@@ -2647,7 +2700,8 @@ def format_reactlog_html(
     .graph-edge {{ opacity: 0.75; stroke: #527494; stroke-width: 1.8px; }}
     .graph-edge.is-isolated {{ opacity: 0.65; stroke: #88a0b8; stroke-dasharray: 5 4; }}
     .legend-line-isolated {{ display: inline-block; width: 16px; height: 0; border-top: 2px dashed #88a0b8; vertical-align: middle; margin-right: 4px; }}
-    .burst-anchor.is-mark {{ border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); color: #fbbf24; }}
+    .burst-anchor.is-mark {{ border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); color: #b45309; }}
+    [data-theme="dark"] .burst-anchor.is-mark {{ color: #fbbf24; }}
     .burst-anchor.is-mark .burst-anchor-dot {{ background: #f59e0b; }}
     .node-exec-badge {{ pointer-events: none; }}
     .hotspot-badge {{ display: inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: #f87171; font-weight: 700; font-size: 0.72rem; margin-left: 6px; }}
@@ -3787,7 +3841,7 @@ def format_reactlog_html(
 
         const countBadge = document.createElement('span');
         countBadge.className = 'burst-anchor-count';
-        countBadge.textContent = `${{wave.totalEvents}} ev`;
+        countBadge.textContent = wave.isMark ? 'mark' : `${{wave.totalEvents}} ev`;
         anchor.appendChild(countBadge);
 
         const eventSubtext = `${{wave.userChanges > 0 ? wave.userChanges + ' user change · ' : ''}}${{wave.totalEvents}} internal events`;
@@ -4056,6 +4110,12 @@ def format_reactlog_html(
         const cLen = curWave.calcs.length;
         const oLen = curWave.outputs.length;
         banner.innerHTML = `<strong>App Initialized.</strong> Evaluated ${{cLen}} calcs and rendered ${{oLen}} outputs.`;
+        return;
+      }}
+
+      if (curWave.isMark) {{
+        const markText = (curWave.humanAction || curWave.triggerLabel || '').replace(/^(Mark|Bookmark):\\s*/i, '').replace(/^[🔖🏷️]\\s*/, '');
+        banner.innerHTML = `<strong>Bookmark:</strong> ${{escapeHTML(markText)}}. Timeline milestone recorded.`;
         return;
       }}
 
