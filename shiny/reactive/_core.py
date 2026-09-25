@@ -129,7 +129,7 @@ def _yield_to_loop() -> Generator[None, None, None]:
     yield
 
 
-# True inside a flush and the effect tasks it starts, like R's `.inFlush`.
+# True inside a flush and the effect tasks it starts.
 _within_flush: ContextVar[bool] = ContextVar("within_flush", default=False)
 
 
@@ -199,10 +199,9 @@ class ReactiveEnvironment:
 
         This never waits for an effect's async part: each context runs in its own
         task. Priority orders when effects start, not when they finish.
-
-        Like R's `flushReact()`, this doesn't start a second flush while one is
-        active; the active one runs again when it finishes.
         """
+        # Don't start a second flush while one is active; the active one runs again
+        # when it finishes.
         if self._in_flush:
             self._rerun_flush = True
             return
@@ -238,9 +237,8 @@ class ReactiveEnvironment:
         """
         Flush repeatedly until no flush or effect task is left running.
 
-        Returns right away, as R's `flushReact()` does, when called from within a
-        flush (an effect or a flushed callback), or when nothing is pending or
-        running.
+        Returns right away when called from within a flush (an effect or a flushed
+        callback), or when nothing is pending or running.
         """
         if _within_flush.get():
             return
