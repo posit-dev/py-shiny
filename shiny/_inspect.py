@@ -2526,9 +2526,9 @@ def format_reactlog_html(
     .btn.icon svg {{ display: block; margin: auto; }}
     .filter-select {{ height: 28px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0 0.55rem; font: 650 0.72rem var(--sans); cursor: pointer; }}
     .filter-select:hover {{ border-color: var(--border-strong); }}
-    .search-wrap {{ position: relative; width: 200px; }}
-    .search-results {{ position: absolute; top: 100%; left: 0; width: min(480px, 90vw); max-height: 320px; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 100; box-shadow: 0 8px 24px #0003; }}
-    .search-results button {{ display: block; width: 100%; text-align: left; padding: 8px; background: var(--surface-2); color: var(--text); border: 0; cursor: pointer; overflow-wrap: anywhere; }}
+    .search-wrap {{ position: relative; width: 220px; }}
+    .search-results {{ position: absolute; top: 100%; right: 0; left: auto; min-width: 360px; max-width: min(540px, calc(100vw - 32px)); width: max-content; max-height: 340px; overflow-y: auto; overflow-x: hidden; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px; z-index: 1000; box-shadow: 0 10px 28px rgba(0,0,0,0.28); }}
+    .search-results button {{ display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 7px 10px; background: var(--surface-2); color: var(--text); border: 0; border-radius: 6px; cursor: pointer; word-break: break-word; font-family: var(--mono); font-size: 0.73rem; line-height: 1.4; white-space: normal; }}
     .search-results button:hover, .search-results button:focus {{ background: var(--surface-3); outline: 1px solid var(--accent); }}
     .search-icon {{ position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
     .search-input {{ width: 100%; height: 28px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 0.55rem 0 1.75rem; font-size: 0.72rem; }}
@@ -2799,7 +2799,7 @@ def format_reactlog_html(
     .btn, .filter-select, .search-input {{ min-height: 32px; }}
     .btn.icon {{ width: 32px; flex-shrink: 0; }}
     .search-wrap {{ flex: 1 1 200px; max-width: 320px; }}
-    .search-results {{ top: calc(100% + 6px); padding: 8px; }}
+    .search-results {{ top: calc(100% + 6px); right: 0; left: auto; padding: 8px; }}
     .search-results button {{ border-radius: 5px; margin-top: 4px; line-height: 1.5; }}
     .search-summary {{ padding: 6px; color: var(--text-muted); font-size: 0.75rem; }}
     .graph-container {{ display: flex; flex-direction: column; }}
@@ -4936,7 +4936,7 @@ def format_reactlog_html(
       }});
 
       const ranks = dependencyRanks(nodes, edges);
-      const colWidth = 280, rowHeight = 88, nodeWidth = 210, nodeHeight = 58;
+      const colWidth = 300, rowHeight = 92, nodeWidth = 230, nodeHeight = 58;
       const pos = {{}};
       // Module bands keep boxes disjoint while dependency rank sets horizontal position.
       const bands = new Map();
@@ -5097,7 +5097,8 @@ def format_reactlog_html(
         text.setAttribute('font-weight', '700');
         const fullLabel = String(n.label || n.id);
         const label = n.module && n.type !== 'module' ? fullLabel.replace(n.module + '-', '') : fullLabel;
-        text.textContent = label.length > 25 ? label.slice(0, 24) + '…' : label;
+        const maxChars = 28;
+        text.textContent = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
         title.textContent = `${{n.id}}: ${{label}}`;
         g.appendChild(title);
@@ -5118,8 +5119,8 @@ def format_reactlog_html(
           badgeG.setAttribute('class', 'node-exec-badge' + (isHotspot ? ' is-hotspot' : ''));
           const badgeWidth = isHotspot ? 48 : 34;
           const badgeHeight = 18;
-          const badgeX = p.x + (nodeWidth / 2) - badgeWidth - 6;
-          const badgeY = p.y - (nodeHeight / 2) + 6;
+          const badgeX = p.x + (nodeWidth / 2) - badgeWidth - 4;
+          const badgeY = p.y - (nodeHeight / 2) - 9;
 
           const badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           badgeRect.setAttribute('x', badgeX);
@@ -5129,7 +5130,8 @@ def format_reactlog_html(
           badgeRect.setAttribute('rx', '9');
           badgeRect.setAttribute('fill', isHotspot ? (isLight ? '#fef2f2' : '#451a1a') : (isLight ? '#f1f5f9' : '#1e293b'));
           badgeRect.setAttribute('stroke', isHotspot ? (isLight ? '#ef4444' : '#f87171') : (isLight ? '#cbd5e1' : '#475569'));
-          badgeRect.setAttribute('stroke-width', '1');
+          badgeRect.setAttribute('stroke-width', '1.2');
+          badgeRect.setAttribute('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.18))');
           badgeG.appendChild(badgeRect);
 
           if (isHotspot) {{
@@ -5489,7 +5491,12 @@ def format_reactlog_html(
         matches.slice(0, 50).forEach(({{node}}) => {{
           const button = document.createElement('button');
           button.type = 'button';
-          button.textContent = `${{node.id}} · ${{node.label || node.name || ''}}`;
+          const rawLabel = String(node.label || node.name || '');
+          const cleanId = cleanName(node.id);
+          const cleanLbl = cleanName(rawLabel);
+          const kind = nodeKind(node);
+          const metaText = (cleanLbl && cleanLbl !== cleanId && rawLabel !== node.id) ? rawLabel : kind.label;
+          button.innerHTML = `<span><b>${{escapeHTML(node.id)}}</b></span><span style="color:var(--text-muted);font-size:0.68rem;flex-shrink:0;">${{escapeHTML(metaText)}}</span>`;
           button.onclick = () => {{
             const filterVal = `id:${{node.id}}`;
             searchQuery = filterVal.toLowerCase();
