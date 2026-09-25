@@ -1549,6 +1549,49 @@ def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
     assert mark_resp.status_code == 200
     assert mark_resp.json()["status"] == "ok"
 
+    get_mark_resp = client.get("/__reactlog__/mark")
+    assert get_mark_resp.status_code == 200
+    assert get_mark_resp.json()["status"] == "ok"
+    assert any(m["label"] == "test-mark" for m in get_mark_resp.json()["marks"])
+
+
+def test_interleaved_timeline_bookmarks():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+
+ui.input_numeric("x", "X", 10)
+ui.input_numeric("y", "Y", 20)
+
+@render.text
+def out():
+    return f"val={input.x() + input.y()}"
+"""
+    recorded_actions = [
+        {"type": "input", "name": "x", "value": 15, "timestamp": 1000},
+        {"type": "input", "name": "y", "value": 25, "timestamp": 3000},
+    ]
+    marks = [
+        {"action": "userMark", "label": "Start Mark", "time": 0.5, "timestamp": 500},
+        {"action": "userMark", "label": "Middle Mark", "time": 2.0, "timestamp": 2000},
+        {"action": "userMark", "label": "End Mark", "time": 4.0, "timestamp": 4000},
+    ]
+
+    rlog = generate_reactlog(code, recorded_actions=recorded_actions, marks=marks)
+    assert rlog["success"] is True
+
+    waves = rlog.get("action_waves", [])
+    mark_waves = [w for w in waves if w.get("is_mark")]
+    assert len(mark_waves) == 3
+
+    labels = [w["trigger_label"] for w in waves]
+    start_idx = next(i for i, l in enumerate(labels) if "Start Mark" in l)
+    x_idx = next(i for i, l in enumerate(labels) if "x" in l)
+    mid_idx = next(i for i, l in enumerate(labels) if "Middle Mark" in l)
+    y_idx = next(i for i, l in enumerate(labels) if "y" in l)
+    end_idx = next(i for i, l in enumerate(labels) if "End Mark" in l)
+
+    assert start_idx < x_idx < mid_idx < y_idx < end_idx
+
 
 def test_shiny_run_reactlog_flag():
     runner = CliRunner()

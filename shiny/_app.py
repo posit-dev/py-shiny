@@ -301,7 +301,7 @@ class App:
                 starlette.routing.Route(
                     "/__reactlog__/mark",
                     self._on_reactlog_mark_cb,
-                    methods=["POST"],
+                    methods=["GET", "POST"],
                 ),
             )
         middleware: list[starlette.middleware.Middleware] = []
@@ -525,6 +525,9 @@ window.addEventListener('keydown', function(e) {
 
     async def _on_reactlog_mark_cb(self, request: Request) -> Response:
         from . import reactive
+
+        if request.method == "GET":
+            return JSONResponse({"status": "ok", "marks": reactive.get_marks()})
 
         label = "User mark"
         try:
