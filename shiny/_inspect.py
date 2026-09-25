@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import concurrent.futures
+import copy
 import html as html_lib
 import inspect
 import io
@@ -19,10 +20,170 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, cast
 
 
+def _expand_module_calls(tree: ast.Module) -> tuple[ast.Module, Dict[str, str]]:
+    """Expand same-file modules with literal IDs for static analysis, never execution.
+
+    Each call gets its own namespaced inputs/functions. Reactive parameters and a
+    directly returned reactive are aliases, preserving edges across the boundary.
+    Dynamic IDs cannot be resolved statically. Local imports are combined before expansion.
+    """
+    definitions = {
+        node.name: node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(
+            isinstance(d, ast.Attribute)
+            and isinstance(d.value, ast.Name)
+            and d.value.id == "module"
+            and d.attr in ("ui", "server")
+            for d in node.decorator_list
+        )
+    }
+    members: Dict[str, str] = {}
+    expanded: List[ast.stmt] = []
+    active: Set[str] = set()
+
+    class Expander(ast.NodeTransformer):
+        def __init__(
+            self, namespace: str = "", aliases: Optional[Dict[str, ast.expr]] = None
+        ):
+            self.namespace = namespace
+            self.aliases = dict(aliases or {})
+
+        def qualify(self, name: str) -> str:
+            qualified = f"{self.namespace}-{name}" if self.namespace else name
+            if self.namespace:
+                members[qualified] = self.namespace
+            return qualified
+
+        def visit_Name(self, node: ast.Name) -> ast.expr:
+            return copy.deepcopy(self.aliases.get(node.id, node))
+
+        def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
+            if isinstance(node.value, ast.Name) and node.value.id == "input":
+                node.attr = self.qualify(node.attr)
+                return node
+            return self.generic_visit(node)
+
+        def visit_FunctionDef(
+            self, node: ast.FunctionDef | ast.AsyncFunctionDef
+        ) -> Any:
+            if node.name in definitions:
+                return None
+            child = Expander(self.namespace, self.aliases)
+            # Register all reactive functions before visiting their bodies (forward references).
+            for stmt in node.body:
+                if (
+                    isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and stmt.decorator_list
+                ):
+                    child.aliases[stmt.name] = ast.Name(
+                        id=self.qualify(stmt.name), ctx=ast.Load()
+                    )
+            alias = self.aliases.get(node.name)
+            if isinstance(alias, ast.Name):
+                node.name = alias.id
+            node.decorator_list = [
+                cast(ast.expr, self.visit(d)) for d in node.decorator_list
+            ]
+            node.body = [
+                result
+                for stmt in node.body
+                if (result := child.visit(stmt)) is not None
+            ]
+            return node
+
+        visit_AsyncFunctionDef = visit_FunctionDef
+
+        def visit_Assign(self, node: ast.Assign) -> ast.AST:
+            is_module = (
+                isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Name)
+                and node.value.func.id in definitions
+            )
+            node.value = cast(ast.expr, self.visit(node.value))
+            if is_module and isinstance(node.value, ast.Name):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        self.aliases[target.id] = node.value
+            return node
+
+        def visit_Call(self, node: ast.Call) -> ast.AST:
+            name = node.func.id if isinstance(node.func, ast.Name) else ""
+            if name in definitions:
+                definition = definitions[name]
+                if (
+                    not node.args
+                    or not isinstance(node.args[0], ast.Constant)
+                    or not isinstance(node.args[0].value, str)
+                    or name in active
+                ):
+                    return ast.Constant(value=None)
+                namespace = self.qualify(node.args[0].value)
+                params = definition.args.args
+                is_server = any(
+                    isinstance(d, ast.Attribute) and d.attr == "server"
+                    for d in definition.decorator_list
+                )
+                params = params[3:] if is_server else params
+                aliases = {
+                    param.arg: cast(ast.expr, self.visit(copy.deepcopy(arg)))
+                    for param, arg in zip(params, node.args[1:])
+                }
+                aliases.update(
+                    {
+                        kw.arg: cast(ast.expr, self.visit(copy.deepcopy(kw.value)))
+                        for kw in node.keywords
+                        if kw.arg
+                    }
+                )
+                child = Expander(namespace, aliases)
+                for stmt in definition.body:
+                    if (
+                        isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and stmt.decorator_list
+                    ):
+                        child.aliases[stmt.name] = ast.Name(
+                            id=child.qualify(stmt.name), ctx=ast.Load()
+                        )
+                active.add(name)
+                result: ast.expr = ast.Constant(value=None)
+                for stmt in copy.deepcopy(definition.body):
+                    if isinstance(stmt, ast.Return):
+                        if is_server and stmt.value is not None:
+                            result = cast(ast.expr, child.visit(stmt.value))
+                        elif stmt.value is not None:
+                            expanded.append(
+                                ast.Expr(value=cast(ast.expr, child.visit(stmt.value)))
+                            )
+                    else:
+                        visited = child.visit(stmt)
+                        if visited is not None:
+                            expanded.append(visited)
+                active.remove(name)
+                return ast.copy_location(result, node)
+            if (
+                isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "ui"
+                and node.func.attr.startswith(("input_", "output_"))
+                and node.args
+                and isinstance(node.args[0], ast.Constant)
+                and isinstance(node.args[0].value, str)
+            ):
+                node.args[0].value = self.qualify(node.args[0].value)
+            return self.generic_visit(node)
+
+    transformed = cast(ast.Module, Expander().visit(copy.deepcopy(tree)))
+    transformed.body.extend(expanded)
+    return transformed, members
+
+
 class GraphVisitor(ast.NodeVisitor):
     def __init__(self) -> None:
         self.inputs: Dict[str, int] = {}
         self.input_defaults: Dict[str, Any] = {}
+        self.input_files: Dict[str, str] = {}
         self.calcs: Dict[str, Dict[str, Any]] = {}
         self.outputs: Dict[str, Dict[str, Any]] = {}
         self.effects: Dict[str, Dict[str, Any]] = {}
@@ -71,6 +232,7 @@ class GraphVisitor(ast.NodeVisitor):
             input_id = node.args[0].value
             if input_id not in self.inputs:
                 self.inputs[input_id] = node.lineno
+                self.input_files[input_id] = getattr(node, "source_file", "")
             is_password_input = func_name == "ui.input_password" or any(
                 s in input_id.lower()
                 for s in ("password", "secret", "token", "api_key", "apikey")
@@ -123,6 +285,9 @@ class GraphVisitor(ast.NodeVisitor):
                 and node.func.value.id == "input"
             ):
                 target_input = node.func.attr
+                self.input_files.setdefault(
+                    target_input, getattr(node, "source_file", "")
+                )
                 if self.current_output and self.current_output in self.outputs:
                     self.outputs[self.current_output]["deps"].add(target_input)
                 elif self.current_effect and self.current_effect in self.effects:
@@ -218,7 +383,12 @@ class GraphVisitor(ast.NodeVisitor):
         if is_render:
             self.current_output = node.name
             self.outputs[node.name] = {
+                "render_type": next(
+                    (d.split(".")[-1] for d in decorators if d.startswith("render.")),
+                    "output",
+                ),
                 "line": node.lineno,
+                "source_file": getattr(node, "source_file", ""),
                 "deps": set(event_input_deps),
                 "calc_deps": set(event_calc_deps),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
@@ -227,6 +397,7 @@ class GraphVisitor(ast.NodeVisitor):
             self.current_effect = node.name
             self.effects[node.name] = {
                 "line": node.lineno,
+                "source_file": getattr(node, "source_file", ""),
                 "deps": set(event_input_deps),
                 "calc_deps": set(event_calc_deps),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
@@ -235,6 +406,7 @@ class GraphVisitor(ast.NodeVisitor):
             self.current_calc = node.name
             self.calcs[node.name] = {
                 "line": node.lineno,
+                "source_file": getattr(node, "source_file", ""),
                 "deps": set(event_input_deps),
                 "calc_deps": set(event_calc_deps),
                 "is_async": isinstance(node, ast.AsyncFunctionDef),
@@ -260,18 +432,28 @@ class GraphVisitor(ast.NodeVisitor):
         self._handle_func_def(node)
 
 
-def inspect_reactive_graph(code: str) -> Dict[str, Any]:
+def inspect_reactive_graph(
+    code: str, source_path: str | Path | None = None
+) -> Dict[str, Any]:
+    sources: Dict[str, str] = {}
+    entry_file = ""
     try:
-        tree = ast.parse(code)
+        if source_path is not None:
+            from ._inspect_sources import read_app_sources
+
+            tree, sources, entry_file = read_app_sources(code, source_path)
+        else:
+            tree = ast.parse(code)
     except SyntaxError as e:
         return {
             "success": False,
-            "error": f"SyntaxError: {e.msg}",
+            "error": f"SyntaxError: {e.msg} ({e.filename}:{e.lineno})",
             "nodes": [],
             "edges": [],
             "summary": "Syntax error in source code",
         }
 
+    tree, module_members = _expand_module_calls(tree)
     visitor = GraphVisitor()
     visitor.visit(tree)
 
@@ -302,6 +484,7 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
                 "line": line,
                 "value": default_val,
                 "declaration": "declared" if is_declared else "unresolved",
+                "source_file": visitor.input_files.get(inp, ""),
             }
         )
     for c, meta in sorted(visitor.calcs.items()):
@@ -313,6 +496,7 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
                 "role": "conductor",
                 "label": f"calc:{c}",
                 "line": meta["line"],
+                "source_file": meta.get("source_file", ""),
             }
         )
     for eff, meta in sorted(visitor.effects.items()):
@@ -324,6 +508,7 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
                 "role": "observer",
                 "label": f"effect:{eff}",
                 "line": meta["line"],
+                "source_file": meta.get("source_file", ""),
             }
         )
     for out, meta in sorted(visitor.outputs.items()):
@@ -334,7 +519,9 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
                 "type": "output",
                 "role": "observer",
                 "label": f"output:{out}",
+                "render_type": meta["render_type"],
                 "line": meta["line"],
+                "source_file": meta.get("source_file", ""),
             }
         )
 
@@ -360,14 +547,31 @@ def inspect_reactive_graph(code: str) -> Dict[str, Any]:
             if cdep in known_calcs and cdep != calc_name:
                 edges.append({"from": f"calc:{cdep}", "to": f"calc:{calc_name}"})
 
+    for node in nodes:
+        if node["name"] in module_members:
+            node["module"] = module_members[node["name"]]
+
     total_observers = len(visitor.outputs) + len(visitor.effects)
     return {
         "success": True,
         "nodes": nodes,
         "edges": edges,
         "input_defaults": visitor.input_defaults,
+        "sources": sources,
+        "entry_file": entry_file,
         "summary": f"{len(all_inputs)} inputs (sources), {len(visitor.calcs)} reactives (conductors), {total_observers} outputs & effects (observers)",
     }
+
+
+def _is_plot_data_url(src: Any) -> bool:
+    return isinstance(src, str) and src.startswith(
+        (
+            "data:image/png;base64,",
+            "data:image/jpeg;base64,",
+            "data:image/gif;base64,",
+            "data:image/webp;base64,",
+        )
+    )
 
 
 def _make_event(
@@ -476,8 +680,9 @@ def generate_reactlog(
     recorded_actions: Optional[List[Dict[str, Any]]] = None,
     video_path: Optional[str] = None,
     session: str = "default",
+    source_path: str | Path | None = None,
 ) -> Dict[str, Any]:
-    graph = inspect_reactive_graph(code)
+    graph = inspect_reactive_graph(code, source_path=source_path)
     if not graph.get("success"):
         return graph
 
@@ -846,6 +1051,12 @@ def generate_reactlog(
                         session=session,
                     )
                 )
+                preview = action.get("plot")
+                if isinstance(preview, dict) and _is_plot_data_url(preview.get("src")):
+                    events[-1]["plot"] = {
+                        "src": preview["src"],
+                        "alt": str(preview.get("alt") or node_lbl),
+                    }
                 step += 1
 
             elif action_type == "click":
@@ -925,6 +1136,8 @@ def generate_reactlog(
             "session": session,
             "trace_kind": "inferred_simulation_with_recorded_browser_events",
             "nodes": nodes,
+            "sources": graph.get("sources", {}),
+            "entry_file": graph.get("entry_file", ""),
             "edges": edges,
             "events": events,
             "log": events,
@@ -1117,6 +1330,8 @@ def generate_reactlog(
         "version": "1.0",
         "session": session,
         "trace_kind": "static_inferred_simulation",
+        "sources": graph.get("sources", {}),
+        "entry_file": graph.get("entry_file", ""),
         "nodes": nodes,
         "edges": edges,
         "events": events,
@@ -1344,6 +1559,12 @@ def load_reactlog_json(
                 "role": role,
                 "label": str(lbl),
                 "line": item.get("line"),
+                **{
+                    key: value
+                    for key, value in nodes_map.get(str(nid), {}).items()
+                    if key in ("module", "render_type", "line", "source_file")
+                    and value is not None
+                },
             }
 
         ev_dict = _make_event(
@@ -1364,6 +1585,12 @@ def load_reactlog_json(
             session=str(item.get("session") or session_name),
             action=action,
         )
+        preview = item.get("plot")
+        if isinstance(preview, dict) and _is_plot_data_url(preview.get("src")):
+            ev_dict["plot"] = {
+                "src": preview["src"],
+                "alt": str(preview.get("alt") or lbl),
+            }
         normalized_events.append(ev_dict)
         step_idx += 1
 
@@ -1402,6 +1629,8 @@ def load_reactlog_json(
         "version": version,
         "session": session_name,
         "trace_kind": "loaded_reactlog_json",
+        "sources": parsed.get("sources", {}) if isinstance(parsed, dict) else {},
+        "entry_file": parsed.get("entry_file", "") if isinstance(parsed, dict) else "",
         "nodes": final_nodes,
         "edges": final_edges,
         "events": normalized_events,
@@ -1519,6 +1748,7 @@ def _record_session_sync(
                 if (window.$ && window.Shiny) {{
                     $(document).off('.shinyRecorder');
                     $(document).on('shiny:inputchanged.shinyRecorder', (e) => {{
+                        if (e.name.startsWith('.')) return;
                         const el = document.getElementById(e.name) || document.querySelector('[name="' + e.name + '"]');
                         const sensitive = isSensitiveInput(e.name, el);
                         const safeVal = sensitive ? '[REDACTED]' : e.value;
@@ -1534,7 +1764,9 @@ def _record_session_sync(
                     $(document).on('shiny:value.shinyRecorder', (e) => {{
                         trackAction({{
                             type: 'output',
-                            name: e.name
+                            name: e.name,
+                            plot: e.value && typeof e.value.src === 'string' && /^data:image\\/(png|jpeg|gif|webp);base64,/.test(e.value.src)
+                                ? {{ src: e.value.src, alt: e.value.alt || e.name }} : undefined
                         }});
                     }});
                 }}
@@ -1938,7 +2170,8 @@ def format_reactlog_html(
     source_panel = (
         '<pre class="source-panel sidebar-panel" id="source-panel" role="tabpanel" '
         'aria-labelledby="source-tab" hidden><mark class="source-line-highlight" '
-        'id="source-line-highlight" aria-hidden="true" hidden></mark><code>'
+        'id="source-line-highlight" aria-hidden="true" hidden></mark>'
+        '<select id="source-file-select" aria-label="Source file" onchange="showSourceFile(this.value)" hidden></select><code>'
         f"{formatted_source}</code></pre>"
     )
     escaped_json = (
@@ -2139,15 +2372,11 @@ def format_reactlog_html(
     .scrubber {{ display: flex; align-items: center; gap: 0.5rem; min-width: 180px; }}
     .scrubber input[type="range"] {{ width: 100%; accent-color: var(--accent); cursor: pointer; }}
     .step-display {{ white-space: nowrap; flex-shrink: 0; font: 700 0.7rem var(--mono); color: var(--accent); min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; }}
-    .path-controls {{ display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 2px; gap: 2px; }}
-    .path-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.2rem 0.45rem; border-radius: 4px; font: 700 0.66rem var(--mono); cursor: pointer; transition: color 120ms, background 120ms; }}
-    .path-btn:hover {{ color: var(--text); }}
-    .path-btn.is-active {{ background: var(--surface-3); color: var(--accent); }}
 
     /* Execution Timeline Bar */
     .trace-timeline-bar {{ display: flex; flex-direction: column; gap: 0.3rem; padding: 0.4rem 0.85rem 0.45rem 0.85rem; background: var(--trace-bg); border-bottom: 1px solid var(--border); user-select: none; }}
     .trace-header {{ display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }}
-    .trace-controls {{ display: flex; align-items: center; gap: 0.45rem; font: 700 0.72rem var(--mono); color: var(--text); }}
+    .trace-controls {{ flex-wrap: wrap; display: flex; align-items: center; gap: 0.45rem; font: 700 0.72rem var(--mono); color: var(--text); }}
     .trace-badge {{ background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.62rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }}
     .trace-clock {{ color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }}
     .trace-sep {{ color: var(--text-muted); opacity: 0.5; }}
@@ -2157,7 +2386,7 @@ def format_reactlog_html(
     .timeline-mode-select {{ height: 24px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 5px; padding: 0 0.45rem; font: 700 0.66rem var(--mono); cursor: pointer; }}
     .timeline-mode-select:hover {{ border-color: var(--border-strong); }}
     .btn.mini {{ padding: 0.16rem 0.38rem; font-size: 0.65rem; }}
-    .trace-legend-mini {{ display: flex; align-items: center; gap: 0.65rem; font: 600 0.62rem var(--mono); color: var(--text-muted); }}
+    .trace-legend-mini {{ flex-wrap: wrap; display: flex; align-items: center; gap: 0.65rem; font: 600 0.62rem var(--mono); color: var(--text-muted); }}
     .legend-chip {{ display: inline-flex; align-items: center; gap: 0.25rem; }}
     .chip-dot {{ width: 6px; height: 6px; border-radius: 50%; display: inline-block; }}
     .lane-input .chip-dot {{ background: var(--source); box-shadow: 0 0 4px var(--source); }}
@@ -2190,7 +2419,7 @@ def format_reactlog_html(
     .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 4px; background: var(--border-strong); }}
     .trace-ruler-tick.major {{ height: 7px; background: var(--text-muted); }}
     .trace-ruler-label {{ position: absolute; bottom: 2px; transform: translateX(-50%); font: 600 0.54rem var(--mono); color: var(--text-muted); pointer-events: none; }}
-    .trace-lanes {{ position: relative; height: 56px; background: var(--trace-lane-bg); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; overflow: visible; }}
+    .trace-lanes {{ position: relative; height: 56px; background: var(--trace-lane-bg); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; overflow-x: clip; overflow-y: visible; }}
     .trace-lane {{ position: relative; height: 18.5px; width: 100%; border-bottom: 1px dashed var(--border); z-index: 2; }}
     .trace-lane:last-of-type {{ border-bottom: none; }}
     .burst-region-column {{ position: absolute; top: 0; bottom: 0; transform: translateX(-50%); background: var(--burst-column-bg); pointer-events: auto; z-index: 0; transition: background 120ms ease; }}
@@ -2252,22 +2481,23 @@ def format_reactlog_html(
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
     .graph-node, .graph-edge {{ transition: opacity 180ms ease, filter 180ms ease, stroke 180ms ease, stroke-width 180ms ease; }}
     .graph-edge {{ opacity: 0.75; stroke: #527494; stroke-width: 1.8px; }}
-    .graph-edge.is-dimmed {{ opacity: 0.22 !important; }}
-    .graph-edge[data-active="true"], .graph-edge.is-causal-edge {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
+    .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
     @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
-      .graph-edge[data-active="true"], .graph-edge.is-causal-edge {{ animation: none; }}
+      .graph-edge[data-active="true"] {{ animation: none; }}
       .action-toast[hidden] {{ display: none; }}
     .action-toast {{ animation: none; }}
     }}
     .graph-node {{ cursor: pointer; }}
-    .graph-node.is-dimmed {{ opacity: 0.40; }}
     .graph-node:hover .node-card {{ filter: brightness(1.1); }}
     .graph-node.is-selected .node-card {{ stroke: var(--accent) !important; stroke-width: 2.8px !important; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 65%, transparent)); }}
     .graph-node.is-executed .node-card {{ stroke: var(--accent) !important; stroke-width: 2.2px !important; }}
-    .graph-node.is-reachable .node-card {{ stroke: var(--text-muted) !important; stroke-dasharray: 4 3; }}
-    .stage-label {{ font: 800 11px var(--mono); fill: var(--text); letter-spacing: 0.1em; }}
+    .module-box {{ cursor: pointer; }}
+    .module-box:focus rect {{ stroke: var(--accent); stroke-width: 3; }}
+    #insp-plot {{ margin: 12px 0; }}
+    #insp-plot-image {{ width: 100%; border-radius: 8px; background: white; }}
+    #insp-plot-caption {{ font-size: 12px; color: var(--text-muted); margin-top: 6px; }}
 
     /* Sidebar */
     .sidebar {{ min-width: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }}
@@ -2331,6 +2561,8 @@ def format_reactlog_html(
 
     .timeline-panel {{ display: flex; flex-direction: column; }}
     .source-panel {{ position: relative; overflow: auto; padding: 0.75rem 0; background: var(--source-panel-bg); color: var(--source-panel-text); font: 500 0.76rem/1.62 var(--mono); white-space: pre; tab-size: 4; }}
+    #source-file-select {{ display: block; position: sticky; top: 0; z-index: 2; margin: 0 1rem 0.5rem; max-width: calc(100% - 2rem); background: var(--surface); color: var(--text); }}
+    #source-file-select[hidden] {{ display: none; }}
     .source-panel code {{ position: relative; z-index: 1; font: inherit; display: block; min-width: 100%; }}
     .source-line {{ display: flex; padding: 0 1rem 0 0; min-height: 1.62em; line-height: 1.62em; transition: background 120ms ease; }}
     .source-line:hover {{ background: color-mix(in srgb, var(--surface-3) 40%, transparent); }}
@@ -2353,6 +2585,7 @@ def format_reactlog_html(
     [data-theme="light"] .syntax-string {{ color: #15803d; }}
     .syntax-number {{ color: #fbbf24; }}
     [data-theme="light"] .syntax-number {{ color: #b45309; }}
+    .syntax-operator {{ color: var(--text-muted); }}
     .syntax-comment {{ color: var(--text-muted); font-style: italic; }}
     .event-list {{ flex: 1; overflow-y: auto; padding: 0 0.6rem 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; overscroll-behavior: contain; }}
     .event-phase-label {{ position: sticky; top: 0; z-index: 2; margin: 0 -0.6rem; padding: 0.65rem 0.75rem 0.4rem; color: var(--text-muted); background: linear-gradient(var(--surface) 78%, transparent); font: 800 0.64rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }}
@@ -2384,7 +2617,6 @@ def format_reactlog_html(
     .app-header, .toolbar, .trace-timeline-bar {{ flex-shrink: 0; }}
     .btn, .filter-select, .search-input {{ min-height: 32px; }}
     .btn.icon {{ width: 32px; flex-shrink: 0; }}
-    .path-btn {{ white-space: nowrap; min-height: 28px; }}
     .search-wrap {{ flex: 1 1 200px; max-width: 320px; }}
     .search-results {{ top: calc(100% + 6px); padding: 8px; }}
     .search-results button {{ border-radius: 5px; margin-top: 4px; line-height: 1.5; }}
@@ -2411,7 +2643,6 @@ def format_reactlog_html(
       .header-actions {{ width: 100%; justify-content: flex-end; }}
       .summary-popover {{ width: min(360px, calc(100vw - 24px)); }}
       .search-wrap {{ flex-basis: 100%; max-width: none; }}
-      .path-controls {{ width: 100%; justify-content: space-between; }}
       .graph-container {{ height: 440px; }}
       .graph-top-row {{ grid-template-columns: 1fr; }}
       .zoom-controls {{ justify-content: flex-end; }}
@@ -2531,12 +2762,7 @@ def format_reactlog_html(
         <div id="search-results" class="search-results" aria-label="Node search results" onkeydown="handleSearchKey(event)" hidden></div>
       </div>
 
-      <div class="path-controls" role="group" aria-label="Path focus">
-        <button class="path-btn is-active" id="btn-focus-upstream" aria-pressed="true" onclick="setFocusMode('upstream')" title="Show causal path leading to this node">← Causes</button>
-        <button class="path-btn" id="btn-focus-downstream" aria-pressed="false" onclick="setFocusMode('downstream')" title="Show effects caused by this node">Effects →</button>
-        <button class="path-btn" id="btn-focus-connected" aria-pressed="false" onclick="setFocusMode('connected'); fitGraph()" title="Show only ancestors and descendants">Ancestors + descendants</button>
-        <button class="path-btn" id="btn-focus-all" aria-pressed="false" onclick="setFocusMode('all')" title="Show all nodes">All</button>
-      </div>
+
     </div>
   </main>
 
@@ -2656,7 +2882,6 @@ def format_reactlog_html(
           <div class="why-card" id="why-card">
             <div class="why-header">
               <div class="why-title" id="why-title">Select a node to inspect causality</div>
-              <button class="btn mini primary" id="btn-why-run" onclick="focusCausalPath()" title="Isolate and highlight causal path on the graph">Show causal path</button>
             </div>
             <div class="why-narrative" id="why-story">
               Click any node in the reactive graph or step through the timeline to see why it ran and what caused it.
@@ -2681,6 +2906,10 @@ def format_reactlog_html(
             </div>
           </div>
 
+          <figure id="insp-plot" hidden>
+            <img id="insp-plot-image" alt="Recorded plot" hidden />
+            <figcaption id="insp-plot-caption"></figcaption>
+          </figure>
           <div class="source-drawer" id="insp-source-drawer" hidden>
             <button class="source-drawer-toggle" id="btn-toggle-source-drawer" onclick="toggleSourceDrawer()" aria-expanded="false">
               <span id="source-drawer-label">Source code</span>
@@ -2722,7 +2951,6 @@ def format_reactlog_html(
     let searchQuery = "";
     let activeRoles = new Set(['source', 'conductor', 'observer']);
     let currentPhaseFilter = 'all';
-    let currentFocusMode = 'all';
     let timelineMode = 'activity';
     let activeBurstIndex = 0;
     let zoomLevel = 1;
@@ -2733,6 +2961,7 @@ def format_reactlog_html(
     let maxSessionDuration = 1.0;
     let isDraggingTrace = false;
     let videoFrameRequest = null;
+    let graphSeekTime = null;
     let videoFrameRequestKind = null;
     let isSourceDrawerOpen = false;
 
@@ -3659,7 +3888,7 @@ def format_reactlog_html(
       if (playheadPin) playheadPin.textContent = `${{curSec.toFixed(2)}}s`;
 
       const events = reactlogData.events || reactlogData.log || [];
-      let curWave = allBursts.find(w => currentStep >= w.startStep && currentStep <= w.endStep) || allBursts[0];
+      let curWave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
       activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
 
       updateCausalSummary(curWave);
@@ -3773,6 +4002,7 @@ def format_reactlog_html(
       scrubber.max = Math.max(0, events.length - 1);
       scrubber.value = 0;
 
+      showSourceFile(reactlogData.entry_file || Object.keys(reactlogData.sources || {{}})[0]);
       renderActionsList();
       renderEventList();
       renderGraph();
@@ -3785,6 +4015,8 @@ def format_reactlog_html(
     }}
 
     function nodeKind(n) {{
+      if (n.type === 'module') return {{ label: 'Module', color: '#6366f1', verb: 'run' }};
+      if (n.render_type === 'plot' || n.render_type === 'image') return {{ label: 'Plot', color: '#16a34a', verb: 'render' }};
       if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: '#0284c7', verb: 'change' }};
       if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: '#d97706', verb: 'run' }};
       if (n.type === 'effect') return {{ label: 'Effect', color: '#9333ea', verb: 'trigger' }};
@@ -3822,25 +4054,6 @@ def format_reactlog_html(
     function skipToInteractions() {{
       const target = reactlogData.first_interaction_step !== undefined ? reactlogData.first_interaction_step : (actionWaves[0] ? actionWaves[0].startStep : 0);
       seekTo(target);
-    }}
-
-    function setFocusMode(mode) {{
-      const refit = currentFocusMode === 'connected' || mode === 'connected';
-      currentFocusMode = mode;
-      ['upstream', 'downstream', 'connected', 'all'].forEach(m => {{
-        const btn = document.getElementById(`btn-focus-${{m}}`);
-        if (btn) {{
-          const isActive = m === mode;
-          btn.classList.toggle('is-active', isActive);
-          btn.setAttribute('aria-pressed', String(isActive));
-        }}
-      }});
-      renderGraph();
-      if (refit) fitGraph();
-    }}
-
-    function focusCausalPath() {{
-      setFocusMode('upstream');
     }}
 
     function escapeHTML(str) {{
@@ -4118,6 +4331,7 @@ def format_reactlog_html(
       const currentEventNodeId = ev.node_id || ev.id;
       const targetNodeId = selectedNodeId || currentEventNodeId;
       const node = targetNodeId ? nodeIndex.get(targetNodeId) : null;
+      renderPlotPreview(node);
 
       const whyTitle = document.getElementById('why-title');
       const whyStory = document.getElementById('why-story');
@@ -4186,7 +4400,7 @@ def format_reactlog_html(
 
         const kind = nodeKind(node);
         document.getElementById('insp-title').textContent = `${{node.label || node.id}} (${{kind.label}})`;
-        document.getElementById('insp-meta-line').textContent = node.line ? `Line ${{node.line}}` : 'Unknown';
+        document.getElementById('insp-meta-line').textContent = [node.source_file, node.line ? `Line ${{node.line}}` : 'Unknown'].filter(Boolean).join(' · ');
 
         const downstreamSec = document.getElementById('insp-downstream-section');
         const downstreamWrap = document.getElementById('insp-downstream-list');
@@ -4248,11 +4462,70 @@ def format_reactlog_html(
       }}
     }}
 
+    const pythonKeywords = new Set(["False", "None", "True", "and", "as", "assert", "async", "await", "break", "class", "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield"]);
+    const highlightedSourceCache = new Map();
+
+    function highlightedSourceLines(source) {{
+      if (highlightedSourceCache.has(source)) return highlightedSourceCache.get(source);
+      // Tokenize the whole file so triple-quoted strings keep their color across lines.
+      // Escape every token before adding our own spans; imported JSON contains raw code.
+      const tokens = /#[^\\r\\n]*|[rRuUbBfF]{{0,2}}(?:\"\"\"[\\s\\S]*?(?:\"\"\"|$)|'''[\\s\\S]*?(?:'''|$)|"(?:\\\\.|[^"\\\\\\r\\n])*"|'(?:\\\\.|[^'\\\\\\r\\n])*')|\\b(?:0[xX][\\da-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|\\d[\\d_]*(?:\\.[\\d_]*)?(?:[eE][+-]?[\\d_]+)?[jJ]?)|\\b[A-Za-z_]\\w*\\b|[-+*/%=<>!&|^~:@.,;()[\\]{{}}]/g;
+      let markup = '', cursor = 0;
+      for (const match of source.matchAll(tokens)) {{
+        const token = match[0];
+        markup += escapeHTML(source.slice(cursor, match.index));
+        let kind = '';
+        if (token.startsWith('#')) kind = 'comment';
+        else if (/^[rRuUbBfF]{{0,2}}["']/.test(token)) kind = 'string';
+        else if (/^\\d/.test(token)) kind = 'number';
+        else if (pythonKeywords.has(token)) kind = 'keyword';
+        else if (!/^\\w/.test(token)) kind = 'operator';
+        // Close spans on each line so snippets can be sliced without broken markup.
+        markup += token.split('\\n').map(part => kind && part
+          ? `<span class="syntax-${{kind}}">${{escapeHTML(part)}}</span>` : escapeHTML(part)).join('\\n');
+        cursor = match.index + token.length;
+      }}
+      markup += escapeHTML(source.slice(cursor));
+      const lines = markup.split('\\n');
+      if (lines.at(-1) === '') lines.pop();
+      highlightedSourceCache.set(source, lines);
+      return lines;
+    }}
+
+    function sourceLineHTML(content, lineNum, active = false) {{
+      return `<div class="source-line${{active ? ' is-active' : ''}}" data-line="${{lineNum}}"><span class="source-line-num" aria-hidden="true">${{lineNum}}</span><span class="source-line-content">${{content}}</span></div>`;
+    }}
+
+    let displayedSourceFile = '';
+
+    function nodeSource(node) {{
+      return (reactlogData.sources || {{}})[node?.source_file] || rawAppSource;
+    }}
+
+    function showSourceFile(filename) {{
+      const sources = reactlogData.sources || {{}};
+      if (!Object.prototype.hasOwnProperty.call(sources, filename)) return;
+      const selector = document.getElementById('source-file-select');
+      selector.replaceChildren();
+      Object.keys(sources).forEach(name => {{
+        const option = document.createElement('option');
+        option.value = name; option.textContent = name;
+        selector.appendChild(option);
+      }});
+      selector.hidden = false;
+      selector.value = filename;
+      displayedSourceFile = filename;
+      const code = document.querySelector('#source-panel code');
+      code.innerHTML = highlightedSourceLines(sources[filename]).map((line, i) => sourceLineHTML(line, i + 1)).join('');
+      document.getElementById('source-line-highlight').hidden = true;
+    }}
+
     function renderInlineSource(node) {{
       const drawer = document.getElementById('insp-source-drawer');
       const codeBlock = document.getElementById('insp-source-code');
       const refsBlock = document.getElementById('insp-source-refs');
-      if (!drawer || !codeBlock || !rawAppSource) return;
+      const source = nodeSource(node);
+      if (!drawer || !codeBlock || !source) return;
 
       if (!node.line) {{
         drawer.hidden = true;
@@ -4260,15 +4533,14 @@ def format_reactlog_html(
       }}
 
       drawer.hidden = false;
-      const lines = rawAppSource.split('\\n');
+      const lines = highlightedSourceLines(source);
       const startLine = Math.max(0, node.line - 1);
       let endLine = Math.min(lines.length, startLine + 4);
 
       let snippetHtml = '';
       for (let i = startLine; i < endLine; i++) {{
         const lineNum = i + 1;
-        const lineText = escapeHTML(lines[i]);
-        snippetHtml += `<div class="source-line${{lineNum === node.line ? ' is-active' : ''}}"><span class="source-line-num" aria-hidden="true">${{lineNum}}</span><span class="source-line-content">${{lineText}}</span></div>`;
+        snippetHtml += sourceLineHTML(lines[i], lineNum, lineNum === node.line);
       }}
       codeBlock.querySelector('code').innerHTML = snippetHtml;
 
@@ -4302,17 +4574,70 @@ def format_reactlog_html(
 
     function selectNode(nodeId) {{
       selectedNodeId = nodeId;
-      const targetNode = nodeIndex.get(nodeId);
-      if (targetNode) {{
-        if (targetNode.role === 'source' || targetNode.type === 'input') {{
-          setFocusMode('downstream');
-        }} else {{
-          setFocusMode('upstream');
-        }}
-      }}
       renderInspector();
       renderGraph();
+      updateSourceHighlight();
       updateTraceTimelineScrubber(getCurrentStepTime());
+    }}
+
+    const collapsedModules = new Set();
+
+    // Rank the condensed graph: cycles share a rank, every other edge goes right.
+    function dependencyRanks(nodes, edges) {{
+      const children = new Map(nodes.map(n => [n.id, []]));
+      edges.forEach(e => children.get(e.from)?.push(e.to));
+      let serial = 0;
+      const indices = new Map(), low = new Map(), stack = [], onStack = new Set();
+      const component = new Map(), components = [];
+      function visit(id) {{
+        indices.set(id, serial); low.set(id, serial++); stack.push(id); onStack.add(id);
+        for (const next of children.get(id) || []) {{
+          if (!indices.has(next)) {{ visit(next); low.set(id, Math.min(low.get(id), low.get(next))); }}
+          else if (onStack.has(next)) low.set(id, Math.min(low.get(id), indices.get(next)));
+        }}
+        if (low.get(id) === indices.get(id)) {{
+          const members = []; let next;
+          do {{ next = stack.pop(); onStack.delete(next); component.set(next, components.length); members.push(next); }} while (next !== id);
+          components.push(members);
+        }}
+      }}
+      nodes.forEach(n => {{ if (!indices.has(n.id)) visit(n.id); }});
+      const ranks = components.map(() => 0), incoming = components.map(() => 0), outgoing = components.map(() => new Set());
+      edges.forEach(e => {{
+        const from = component.get(e.from), to = component.get(e.to);
+        if (from !== to && !outgoing[from].has(to)) {{ outgoing[from].add(to); incoming[to]++; }}
+      }});
+      const queue = incoming.map((count, i) => count === 0 ? i : -1).filter(i => i >= 0);
+      for (let i = 0; i < queue.length; i++) {{
+        const from = queue[i];
+        outgoing[from].forEach(to => {{ ranks[to] = Math.max(ranks[to], ranks[from] + 1); if (--incoming[to] === 0) queue.push(to); }});
+      }}
+      return new Map(nodes.map(n => [n.id, ranks[component.get(n.id)]]));
+    }}
+
+    function toggleModule(name) {{
+      if (collapsedModules.has(name)) collapsedModules.delete(name);
+      else collapsedModules.add(name);
+      renderGraph(); fitGraph();
+    }}
+
+    function renderPlotPreview(node) {{
+      const panel = document.getElementById('insp-plot');
+      const img = document.getElementById('insp-plot-image');
+      const caption = document.getElementById('insp-plot-caption');
+      const events = reactlogData.events || reactlogData.log || [];
+      const preview = node && events.slice(0, currentStep + 1).reverse().find(e => e.node_id === node.id && e.plot);
+      panel.hidden = !node || (node.render_type !== 'plot' && node.render_type !== 'image' && !preview);
+      img.hidden = !preview;
+      img.removeAttribute('src');
+      if (preview && /^data:image\\/(png|jpeg|gif|webp);base64,/.test(preview.plot.src)) {{
+        img.src = preview.plot.src;
+        img.alt = preview.plot.alt || node.label;
+        caption.textContent = `Recorded plot · ${{Number(preview.time_sec || 0).toFixed(2)}}s`;
+      }} else {{
+        img.hidden = true;
+        caption.textContent = 'No plot captured at this step. Record the app to preview rendered plots here.';
+      }}
     }}
 
     function renderGraph() {{
@@ -4321,80 +4646,75 @@ def format_reactlog_html(
       svg.innerHTML = '';
       const isLight = getActiveTheme() === 'light';
       const rawNodes = reactlogData.nodes || [];
-      const nodes = [];
-
-      const connected = currentFocusMode === 'connected' && selectedNodeId
-        ? new Set([selectedNodeId, ...getUpstreamNodes(selectedNodeId), ...getDownstreamNodes(selectedNodeId)]) : null;
+      const visibleNodes = [];
+      const representatives = new Map();
+      const moduleNodes = new Map();
       rawNodes.forEach(n => {{
         if (!activeRoles.has(n.role)) return;
-        if (connected && !connected.has(n.id)) return;
         if (searchQuery && nodeSearchScore(n, searchQuery) === Infinity) return;
-        nodes.push(n);
+        if (n.module && collapsedModules.has(n.module)) {{
+          const id = `module:${{n.module}}`;
+          representatives.set(n.id, id);
+          if (!moduleNodes.has(id)) {{
+            const group = {{ id, label: n.module, type: 'module', role: 'conductor', module: n.module, members: [] }};
+            moduleNodes.set(id, group); visibleNodes.push(group);
+          }}
+          moduleNodes.get(id).members.push(n.id);
+        }} else {{ representatives.set(n.id, n.id); visibleNodes.push(n); }}
       }});
-
-      const nodeSet = new Set(nodes.map(n => n.id));
-      const edges = [];
+      const nodes = visibleNodes;
+      const edges = [], edgeKeys = new Set();
       (reactlogData.edges || []).forEach(e => {{
-        if (nodeSet.has(e.from) && nodeSet.has(e.to)) {{
-          edges.push(e);
-        }}
+        const from = representatives.get(e.from), to = representatives.get(e.to);
+        if (!from || !to || from === to) return;
+        const key = JSON.stringify([from, to]);
+        if (!edgeKeys.has(key)) {{ edges.push({{ from, to }}); edgeKeys.add(key); }}
       }});
 
-      // Stable role lanes also handle cycles and dependencies reported out of order.
-      const maxRank = 2;
-      const columns = [[], [], []];
-      nodes.forEach(n => columns[n.role === 'source' ? 0 : n.role === 'observer' ? 2 : 1].push(n));
-
-      const colWidth = 280;
-      const rowHeight = 88;
-      const nodeWidth = 210;
-      const nodeHeight = 58;
-      const maxInCol = Math.max(1, ...columns.map(c => c.length));
-      const svgHeight = Math.max(520, maxInCol * rowHeight + 140);
-
+      const ranks = dependencyRanks(nodes, edges);
+      const colWidth = 280, rowHeight = 88, nodeWidth = 210, nodeHeight = 58;
       const pos = {{}};
-      columns.forEach((colNodes, colIdx) => {{
-        const colX = 140 + colIdx * colWidth;
-        const totalH = (colNodes.length - 1) * rowHeight;
-        const startY = 100 + (svgHeight - 140 - totalH) / 2;
-
-        const stageHeader = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        stageHeader.setAttribute('x', colX);
-        stageHeader.setAttribute('y', 50);
-        stageHeader.setAttribute('class', 'stage-label');
-        stageHeader.setAttribute('text-anchor', 'middle');
-        stageHeader.textContent = colIdx === 0 ? 'INPUTS' : (colIdx === maxRank ? 'OUTPUTS & EFFECTS' : 'REACTIVE LOGIC');
-        svg.appendChild(stageHeader);
-
-        colNodes.forEach((n, rowIdx) => {{
-          pos[n.id] = {{ x: colX, y: startY + rowIdx * rowHeight }};
-        }});
-      }});
+      // Module bands keep boxes disjoint while dependency rank sets horizontal position.
+      const bands = new Map();
+      nodes.forEach(n => {{ const key = n.module || ''; if (!bands.has(key)) bands.set(key, []); bands.get(key).push(n); }});
+      let top = 70;
+      for (const [name, members] of bands) {{
+        const columns = new Map();
+        members.forEach(n => {{ const rank = ranks.get(n.id); if (!columns.has(rank)) columns.set(rank, []); columns.get(rank).push(n); }});
+        const rows = Math.max(...Array.from(columns.values(), col => col.length));
+        columns.forEach((col, rank) => col.forEach((n, i) => {{ pos[n.id] = {{ x: 150 + rank * colWidth, y: top + 40 + i * rowHeight }}; }}));
+        if (name && !collapsedModules.has(name)) {{
+          const left = Math.min(...members.map(n => pos[n.id].x)) - nodeWidth / 2 - 20;
+          const right = Math.max(...members.map(n => pos[n.id].x)) + nodeWidth / 2 + 20;
+          const box = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          box.setAttribute('class', 'module-box'); box.setAttribute('data-module', name);
+          box.setAttribute('tabindex', '0'); box.setAttribute('role', 'button'); box.setAttribute('aria-expanded', 'true');
+          box.setAttribute('aria-label', `Collapse module ${{name}}`);
+          box.ondblclick = e => {{ e.stopPropagation(); toggleModule(name); }};
+          box.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(name); }} }};
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', left); rect.setAttribute('y', top - 28); rect.setAttribute('width', Math.max(320, right - left));
+          rect.setAttribute('height', rows * rowHeight + 20); rect.setAttribute('rx', '12');
+          rect.setAttribute('fill', isLight ? '#e0f2fe55' : '#17314b55'); rect.setAttribute('stroke', isLight ? '#7ba6c9' : '#507291');
+          rect.setAttribute('stroke-dasharray', '5 4'); box.appendChild(rect);
+          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.setAttribute('x', left + 14); label.setAttribute('y', top - 8); label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
+          label.setAttribute('font-size', '12'); label.textContent = `${{name}} · ${{members.length}} nodes · double-click to collapse`;
+          box.appendChild(label); svg.appendChild(box);
+        }}
+        top += rows * rowHeight + 75;
+      }}
 
       const events = reactlogData.events || reactlogData.log || [];
       const activeEvent = events[currentStep] || {{}};
       const activeNodeId = activeEvent.node_id || activeEvent.id;
 
-      let curWave = allBursts.find(w => currentStep >= w.startStep && currentStep <= w.endStep) || allBursts[0];
+      let curWave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
       const executedInBurst = new Set();
       if (curWave) {{
         curWave.inputs.forEach(i => executedInBurst.add(i.nodeId));
         curWave.calcs.forEach(c => executedInBurst.add(c.nodeId));
         curWave.outputs.forEach(o => executedInBurst.add(o.nodeId));
-      }}
-
-      let causalNodeIds = new Set();
-      const focusTarget = (currentFocusMode !== 'all') ? (selectedNodeId || activeNodeId) : null;
-      if (focusTarget) {{
-        causalNodeIds.add(focusTarget);
-        if (currentFocusMode === 'connected') {{
-          getUpstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
-          getDownstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
-        }} else if (currentFocusMode === 'upstream') {{
-          getUpstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
-        }} else if (currentFocusMode === 'downstream') {{
-          getDownstreamNodes(focusTarget).forEach(id => causalNodeIds.add(id));
-        }}
       }}
 
       edges.forEach(e => {{
@@ -4407,14 +4727,13 @@ def format_reactlog_html(
           const y2 = p2.y;
           const midX = x1 + Math.max(35, (x2 - x1) * 0.5);
 
-          const fromMatch = activeEvent.edge_from || activeEvent.dependsOn;
-          const toMatch = activeEvent.edge_to || activeEvent.node_id || activeEvent.id;
+          const fromMatch = representatives.get(activeEvent.edge_from || activeEvent.dependsOn);
+          const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
           const isEdgeActive = (fromMatch && toMatch)
             ? (fromMatch === e.from && toMatch === e.to)
             : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate'));
 
-          const isCausalEdge = focusTarget && causalNodeIds.has(e.from) && causalNodeIds.has(e.to);
-          const isDimmed = focusTarget && !isCausalEdge && !isEdgeActive;
+
 
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{midX}} ${{y1}}, ${{midX}} ${{y2}}, ${{x2}} ${{y2}}`);
@@ -4423,8 +4742,8 @@ def format_reactlog_html(
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
-          path.setAttribute('class', 'graph-edge' + (isCausalEdge ? ' is-causal-edge' : '') + (isDimmed ? ' is-dimmed' : ''));
-          path.setAttribute('marker-end', (isEdgeActive || isCausalEdge) ? 'url(#arrow-active)' : 'url(#arrow)');
+          path.setAttribute('class', 'graph-edge');
+          path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : 'url(#arrow)');
 
           svg.appendChild(path);
         }}
@@ -4432,16 +4751,13 @@ def format_reactlog_html(
 
       nodes.forEach(n => {{
         const p = pos[n.id] || {{ x: 200, y: 200 }};
-        const isActive = activeNodeId === n.id;
-        const isSelected = selectedNodeId === n.id;
-        const isExecuted = executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
-        const isCausal = focusTarget && causalNodeIds.has(n.id);
-        const isReachable = isCausal && !isExecuted && !isSelected;
-        const isDimmed = focusTarget && !isCausal && !isActive && !isSelected;
+        const isActive = activeNodeId === n.id || (n.members || []).includes(activeNodeId);
+        const isSelected = selectedNodeId === n.id || (n.members || []).includes(selectedNodeId);
+        const isExecuted = (n.members || []).some(id => executedInBurst.has(id)) || executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
         const kind = nodeKind(n);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isReachable ? ' is-reachable' : '') + (isDimmed ? ' is-dimmed' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
         g.setAttribute('data-active', isActive ? 'true' : 'false');
@@ -4451,7 +4767,13 @@ def format_reactlog_html(
 
         g.onclick = (e) => {{
           e.stopPropagation();
-          selectNode(n.id);
+          if (n.type !== 'module') selectNode(n.id);
+        }};
+        if (n.type === 'module') {{
+          g.setAttribute('aria-expanded', 'false');
+          g.setAttribute('aria-label', `Expand module ${{n.module}}`);
+          g.ondblclick = e => {{ e.stopPropagation(); toggleModule(n.module); }};
+          g.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(n.module); }} }};
         }};
         g.onmouseenter = () => highlightDependencies(n.id);
         g.onmouseleave = () => resetHighlight();
@@ -4501,7 +4823,8 @@ def format_reactlog_html(
         text.setAttribute('font-family', 'var(--mono)');
         text.setAttribute('font-size', '12px');
         text.setAttribute('font-weight', '700');
-        const label = String(n.label || n.id);
+        const fullLabel = String(n.label || n.id);
+        const label = n.module && n.type !== 'module' ? fullLabel.replace(n.module + '-', '') : fullLabel;
         text.textContent = label.length > 25 ? label.slice(0, 24) + '…' : label;
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
         title.textContent = `${{n.id}}: ${{label}}`;
@@ -4513,7 +4836,7 @@ def format_reactlog_html(
         subText.setAttribute('y', p.y + 14);
         subText.setAttribute('fill', isLight ? '#64748b' : '#91a1b3');
         subText.setAttribute('font-size', '10px');
-        subText.textContent = `${{kind.label}}${{n.line ? ' · line ' + n.line : ''}}`;
+        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · double-click to expand` : `${{kind.label}}${{n.line ? ' · line ' + n.line : ''}}`;
         g.appendChild(subText);
 
         svg.appendChild(g);
@@ -4583,7 +4906,8 @@ def format_reactlog_html(
         const video = document.getElementById('session-video');
         if (video && evTime !== undefined && !isNaN(evTime)) {{
           try {{
-            video.currentTime = Math.max(0, evTime);
+            graphSeekTime = Math.max(0, evTime);
+            video.currentTime = graphSeekTime;
           }} catch (e) {{}}
         }}
       }}
@@ -4625,6 +4949,9 @@ def format_reactlog_html(
       }};
 
       const syncGraphToTime = (curSec) => {{
+        // Paused graph stepping must keep the exact event when timestamps coincide.
+        if (video.paused && graphSeekTime !== null && Math.abs(curSec - graphSeekTime) < 0.05) return;
+        graphSeekTime = null;
         updateTraceTimelineScrubber(curSec);
         let matchIdx = 0;
         const events = reactlogData.events || reactlogData.log || [];
@@ -4681,6 +5008,7 @@ def format_reactlog_html(
       }});
 
       video.addEventListener('play', () => {{
+        graphSeekTime = null;
         isPlaying = true;
         updatePlayButton(true);
         updateSyncStatus('Following recording');
@@ -4706,6 +5034,8 @@ def format_reactlog_html(
     }}
 
     function updateSourceHighlight() {{
+      const sourceNode = nodeIndex.get(selectedNodeId);
+      if (sourceNode?.source_file && sourceNode.source_file !== displayedSourceFile) showSourceFile(sourceNode.source_file);
       const events = reactlogData.events || reactlogData.log || [];
       const ev = events[currentStep];
       const highlight = document.getElementById('source-line-highlight');
@@ -4727,7 +5057,8 @@ def format_reactlog_html(
       if (targetLine !== null) {{
         highlight.hidden = false;
         highlight.setAttribute('data-line', String(targetLine));
-        highlight.style.top = `calc(0.75rem + ${{(targetLine - 1) * 1.62}}em)`;
+        const lineElement = document.querySelector(`.source-panel .source-line[data-line="${{targetLine}}"]`);
+        highlight.style.top = lineElement ? `${{lineElement.offsetTop}}px` : '0';
         highlight.style.height = '1.62em';
 
         const activeLineEl = document.querySelector(`.source-panel .source-line[data-line="${{targetLine}}"]`);
@@ -4829,8 +5160,9 @@ def format_reactlog_html(
             selectedNodeId = node.id;
             activeRoles = new Set(['source', 'conductor', 'observer']);
             document.getElementById('role-filter-dropdown').value = 'all';
-            setFocusMode('connected');
+            renderGraph();
             renderInspector();
+            updateSourceHighlight();
             updateTraceTimelineScrubber(getCurrentStepTime());
             fitGraph();
           }};
@@ -4848,7 +5180,7 @@ def format_reactlog_html(
       document.getElementById('search-results').hidden = true;
       activeRoles = new Set(['source', 'conductor', 'observer']);
       document.getElementById('role-filter-dropdown').value = 'all';
-      setFocusMode('all');
+      renderGraph();
       renderInspector();
       updateTraceTimelineScrubber(getCurrentStepTime());
       fitGraph();
@@ -4894,7 +5226,7 @@ def format_reactlog_html(
       if (svg.dataset.panZoomBound) return;
       svg.dataset.panZoomBound = 'true';
       svg.addEventListener('mousedown', e => {{
-        if (e.target.closest('.graph-node')) return;
+        if (e.target.closest('.graph-node, .module-box')) return;
         isPanning = true;
         startPan = {{ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y }};
       }});
@@ -5043,15 +5375,16 @@ def format_reactlog_html(
 
       Object.assign(reactlogData, normalized);
       selectedNodeId = null;
+      collapsedModules.clear();
+      graphSeekTime = null;
       currentStep = 0;
       searchQuery = '';
-      currentFocusMode = 'all';
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
       activeRoles = new Set(['source', 'conductor', 'observer']);
       document.getElementById('role-filter-dropdown').value = 'all';
       init();
-      setFocusMode('all');
+      renderGraph();
     }}
 
     function handleReactlogFileUpload(e) {{

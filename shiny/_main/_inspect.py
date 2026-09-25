@@ -48,6 +48,7 @@ def _parse_input_value(val_str: str) -> Any:
 
     Analyzes reactive dependencies, visualizes dataflow graphs, records Playwright
     interactions with video capture, and generates interactive Reactlog reports.
+    File inputs include local Python imports; app code is not executed for analysis.
 
     Examples:
 
@@ -383,6 +384,7 @@ def inspect(
                 inputs=sim_inputs if sim_inputs else None,
                 recorded_actions=recorded_actions,
                 video_path=actual_video_path,
+                source_path=app_file_to_run,
             )
 
         if not reactlog_data.get("success"):
