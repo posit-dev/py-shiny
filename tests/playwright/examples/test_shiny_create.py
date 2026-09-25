@@ -90,7 +90,7 @@ def test_template_examples(page: Page, ex_app_path: str) -> None:
 def template_entrypoints() -> list[str]:
     """All runnable bundled templates, including nested chat templates."""
     root = Path(__file__).parents[3]
-    cases = []
+    cases: list[str] = []
     for template in find_templates(root / "shiny" / "templates"):
         if template.type == "package" or template.path.parent.name == "app":
             # The app templates already run in test_template_examples.
