@@ -755,7 +755,7 @@ def generate_reactlog(
     source_path: str | Path | None = None,
     marks: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
-    user_marks = list(marks) if marks is not None else []
+    user_marks: List[Dict[str, Any]] = list(marks) if marks is not None else []
 
     graph = inspect_reactive_graph(code, source_path=source_path)
     if not graph.get("success"):
