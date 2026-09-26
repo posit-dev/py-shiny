@@ -9,4 +9,7 @@ except ImportError:
 
 from ._fixture import ScopeName, create_app_fixture
 
-__all__ = ("create_app_fixture", "ScopeName")
+__all__ = (
+    "create_app_fixture",
+    "ScopeName",
+)

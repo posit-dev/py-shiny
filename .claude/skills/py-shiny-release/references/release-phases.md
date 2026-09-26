@@ -162,8 +162,6 @@ installed shiny.
 - [ ] `CHANGELOG.md`: follow the established wording — "Update pre-built shinyswatch themes
       for use with Shiny vX.Y.Z." — plus a line noting the new shiny floor
 
-Note: py-shinyswatch has no conda-forge feedstock, so Phase 11 does not apply to it.
-
 Ask user: "Is py-shinyswatch being released? What version? Do we need to update docs after shinylive updates?"
 
 ---
@@ -208,9 +206,9 @@ Repo: `posit-dev/shinylive`
 ### Deprecations break the bundled examples
 
 A py-shiny release that deprecates a renderer or UI function will make any shinylive example
-still using it print a `ShinyDeprecationWarning` on load, and `examples-smoke-test` fails on
-that: `SUSPECT_PATTERNS` in `playwright/examples-smoke-helpers.ts` matches `/Warning\b/` and
-`/Deprecat/i` in the shinylive terminal.
+still using it print a `ShinyDeprecationWarning` on load, and `test-examples-smoke` fails on
+that: `_SUSPECT_PATTERNS` in `tests/shinylive_app.py` matches `Warning\b` and `Deprecat`
+(case-insensitive) in the shinylive terminal.
 
 So for every entry in the new release's **Deprecations** changelog section:
 
@@ -278,12 +276,16 @@ land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likew
 - [ ] **DEPLOY GATE 1 (github.io)**: Wait for the `main` branch deploy to github.io to finish. Then bust all browser caches and verify apps work on github.io using the Playwright-based example testing procedure. **Important**: When testing, always append a cache-busting query parameter (e.g., `?v={timestamp}`) to URLs or use a fresh incognito/private browser context to ensure you're testing the newly deployed version, not a cached old version. **Do NOT push to `deploy` until github.io is verified.**
 - [ ] **Confirm the deployed bundle is actually the new one** before reading the sweep results.
       A stale CDN response passes the sweep while proving nothing, so check the served
-      lockfile rather than assuming:
+      bundle rather than assuming. Note `shinylive_lock.json` is a build input at the repo
+      root and is **never published** — the deploy uploads `_shinylive/`, so the served
+      artifact to check is `pyodide-lock.json`:
 
       ```bash
-      curl -s "https://posit-dev.github.io/shinylive/shinylive/shinylive_lock.json?v=$(date +%s)" \
-        | python -c "import json,sys; d=json.load(sys.stdin); print(d['shiny']['version'], d['shinyswatch']['version'])"
+      curl -s "https://posit-dev.github.io/shinylive/py/shinylive/pyodide/pyodide-lock.json?v=$(date +%s)" \
+        | python -c "import json,sys; d=json.load(sys.stdin)['packages']; m={k.lower():v for k,v in d.items()}; print(m['shiny']['version'], m['shinyswatch']['version'])"
       ```
+
+      Same path on `https://shinylive.io/...` for deploy gate 2.
 
       Tell the user which surface is live and which is not at this point — github.io is
       staging; shinylive.io is untouched and still serving the previous release.
@@ -304,25 +306,34 @@ land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likew
 
 **Run the repo's own smoke suite — `test_shinylive_site.py` is not a substitute for it.**
 
+This suite moved from Playwright/TS to pytest. The old
+`make examples-smoke-test` / `playwright-examples.config.ts` / `--project=py` invocations no
+longer exist — they fail with `playwright-examples.config.ts does not exist`.
+
 ```bash
-make examples-smoke-test                       # everything
-npx playwright test --config playwright-examples.config.ts --project=py
-npx playwright test --config playwright-examples.config.ts --project=py -g "File download"
+make test-examples-smoke                       # smoke + intent, both engines
+make test-examples-smoke EXAMPLES_ENGINE=py    # one engine
+make test-examples-intent EXAMPLES_ENGINE=py   # intent tests only
 ```
 
-`examples-smoke.spec.ts` asserts three things per example: no suspect lines in the shinylive
-**terminal**, no `.shiny-output-error` in the app frame, and no browser console errors. The
-release skill's `test_shinylive_site.py` only covers console errors plus tracebacks in the app
-iframe — it has no notion of the terminal pane, so it will happily pass a bundle whose
-examples emit deprecation warnings on load. That exact gap let a broken bundle look clean
-during the v1.7.0 train; only `examples-smoke-test` caught it.
+`EXAMPLES_SHARD` (as in `1/3`) splits the suite the way CI does. `test-deps` installs
+`requirements-test.txt` plus the local `packages/py-shiny` submodule, so the suite runs
+against the shiny being released.
+
+`tests/test_examples_smoke.py` asserts three things per example: no suspect lines in the
+shinylive **terminal**, no `.shiny-output-error` in the app frame, and no browser console
+errors. The release skill's `test_shinylive_site.py` only covers console errors plus
+tracebacks in the app iframe — it has no notion of the terminal pane, so it will happily pass
+a bundle whose examples emit deprecation warnings on load. That exact gap let a broken bundle
+look clean during the v1.7.0 train; only the repo's own suite caught it.
 
 Expect one fewer test than there are examples: the `Non-Apps` category holds entries that load
 a plain script into the editor and never start an app, and `exampleAppTitles()` filters them
-out (`NON_APP_CATEGORIES`). In v1.7.0 that was 27 tests for 28 examples.
+out (`NON_APP_CATEGORIES` in `tests/shinylive_app.py`). In v1.8.0 that was 27 smoke tests
+for 28 examples (54 total, counting the intent tests).
 
-**The smoke test reads `_shinylive/`, not `build/`.** `readExamplesJson()` loads
-`_shinylive/<engine>/shinylive/examples.json` and the config serves that directory on port
+**The smoke test reads `_shinylive/`, not `build/`.** `tests/shinylive_app.py` loads
+`_shinylive/<engine>/shinylive/examples.json` and the fixtures serve that directory on port
 8100. So after editing an example, `make all` is not enough — run `make _shinylive`
 (`rm -rf _shinylive/py _shinylive/r` first for a clean rebuild) or the suite will keep testing
 the old copy and appear not to have fixed anything.
@@ -505,17 +516,126 @@ Ask user: "Ready to update the docs site? I'll help create the PR."
 
 ## Phase 11: Conda-forge
 
-- [ ] Check `conda-forge/py-shiny-feedstock` for an auto-created bot PR (and
-      `conda-forge/py-htmltools-feedstock`, only if py-htmltools was released)
+- [ ] Check each feedstock in the inventory below for an auto-created bot PR, for every
+      package that was actually released in this train
 - [ ] **Read the existing PRs' comments before investigating anything.** Prior cycles'
       analysis usually lives there, and re-deriving it wastes a lot of time.
 - [ ] **Sync `recipe/meta.yaml`'s `run:` section by hand** — see below. The bot does not do
       this, and it is the usual reason a bump fails.
+- [ ] **Do the editing in a fork** (`schloerke/py-shiny-feedstock`), never on a branch pushed
+      to `conda-forge/*-feedstock` — being a maintainer means the wrong thing also works
 - [ ] Verify `about/license_file` against the new sdist, in both directions (below)
 - [ ] If tests pass, `[bot-automerge]` lands it without help
-- [ ] Feedstocks: py-shiny and py-htmltools. py-shinyswatch and shinychat were submitted to
-      `staged-recipes` in July 2026 (#34339, #34338) — check whether they now have feedstocks
-      that also need bumping. py-shinywidgets and py-shinylive still do not.
+- [ ] While in a feedstock, **confirm bot automerge is on and that the team has maintainer
+      coverage** (below) — both are cheap to check and both silently cost a whole cycle
+
+### Feedstock inventory (verified 2026-09-06)
+
+Feedstock names are all under the `conda-forge/` org. Note the conda package name is not
+always the PyPI/feedstock name — `shinylive` is packaged as `py-shinylive`.
+
+| conda package | Feedstock | Phase | Automerge | `recipe-maintainers` |
+|---|---|---|---|---|
+| `htmltools` | `py-htmltools-feedstock` | 2 | yes | schloerke, wch, sugatoray |
+| `shiny` | `py-shiny-feedstock` | 3 | yes | cpsievert, schloerke, wch, sugatoray |
+| `shinyswatch` | `shinyswatch-feedstock` | 4 | yes | schloerke |
+| `shinywidgets` | `shinywidgets-feedstock` | 5 | yes | cpsievert, schloerke, daylinmorgan |
+| `py-shinylive` | `py-shinylive-feedstock` | 7 | yes | schloerke |
+| `shinychat` | `shinychat-feedstock` | — (own cadence) | yes | schloerke |
+| `faicons` | `faicons-feedstock` | — (own cadence) | yes | schloerke, daylinmorgan |
+| `shiny-validate` | `shiny-validate-feedstock` | — (own cadence) | yes | schloerke, julibeg |
+| `chatlas` | `chatlas-feedstock` | — (own cadence) | yes | schloerke |
+| `brand-yml` | `brand-yml-feedstock` | — (own cadence) | yes | schloerke |
+| `querychat` | `querychat-feedstock` | — (own cadence) | yes | schloerke |
+
+Re-derive those `Automerge` and `recipe-maintainer` columns each cycle (below) rather than trusting the
+table; a newly created feedstock starts with automerge off.
+
+`querychat-feedstock` was created 2026-09-04 and has no package on anaconda.org yet — its
+first build is still landing. Re-check before assuming something is broken.
+
+`r-shinylive` has no conda-forge feedstock at all; it is R-side only and out of scope here.
+
+Only the packages with a Phase number are part of the release train. The others have their own
+cadence, but if one was released alongside py-shiny or its feedstock has drifted behind PyPI,
+check its bot PR too.
+
+Bump the feedstocks in dependency order — `htmltools` → `shiny` → (`shinyswatch`,
+`shinywidgets`, `shinychat`) — because the downstream recipes' test phase imports `shiny`. A
+downstream bump opened before `shiny` has landed will fail to solve; that is expected, so
+leave it parked rather than trying to fix the recipe.
+
+### Confirm automerge and maintainer coverage
+
+Two settings turn a feedstock into a release bottleneck, and neither announces itself:
+
+- **Automerge off.** Every bump then waits on a human to notice and merge it, which is how a
+  feedstock quietly drifts versions behind.
+- **No overlap with the Shiny team.** Only `recipe-maintainers` can push to a bot PR's branch
+  or merge it. A feedstock maintained solely by an outside contributor cannot be unblocked
+  from inside the team, however urgent the release.
+
+Re-derive the last two columns of the inventory rather than trusting them — recipes come in
+both v0 (`recipe/meta.yaml`) and v1 (`recipe/recipe.yaml`) layouts, so check both paths:
+
+```bash
+for f in py-htmltools py-shiny shinyswatch shinywidgets py-shinylive shinychat faicons \
+         shiny-validate chatlas brand-yml querychat; do
+  base="https://raw.githubusercontent.com/conda-forge/$f-feedstock/main"
+  # match the value, not just the key — `automerge: false` also contains "automerge"
+  am=$(curl -s "$base/conda-forge.yml" | grep -A1 '^bot:' | grep -c 'automerge: true')
+  m=""
+  for rf in recipe/recipe.yaml recipe/meta.yaml; do
+    m=$(curl -sf "$base/$rf" | grep -A8 recipe-maintainers | grep -E '^ +- ' | tr -d ' -' | paste -sd, -)
+    [ -n "$m" ] && break
+  done
+  printf "%-16s automerge=%s maintainers=%s\n" "$f" "$am" "$m"
+done
+```
+
+Fix either gap by opening an **issue on the feedstock** with the title set exactly to one of
+these — `conda-forge-webservices` reads the title and opens the PR itself:
+
+| Gap | Issue title |
+|-----|-------------|
+| Automerge not enabled | `@conda-forge-admin, please add bot automerge` |
+| Maintainer missing | `@conda-forge-admin, please add user @username` |
+
+The title must match exactly; the body is ignored and can be empty:
+
+```bash
+gh issue create --repo conda-forge/<name>-feedstock \
+  --title "@conda-forge-admin, please add bot automerge" --body ""
+```
+
+The bot opens its PR within a minute or two — sequentially, so with several issues filed at
+once the last one can lag the first by a couple of minutes. Those PRs are titled
+`[ci skip] [cf admin skip] ***NO_CI*** adding bot automerge`, carry **no checks**, and the bot
+does **not** merge them: a maintainer has to. Filing without merging accomplishes nothing.
+
+Adding a maintainer only opens a PR against `recipe-maintainers`; the person still has to
+accept the conda-forge GitHub invitation before they can actually push. So do this ahead of a
+release, not in the middle of one.
+
+Automerge also only fires when CI is green *and* the PR carries the bot's `[bot-automerge]`
+marker, so a bump that needs a hand-added dependency still stalls — that is the `run:`-sync
+trap below, not an automerge problem.
+
+### Feedstocks pending creation (staged-recipes)
+
+Nothing is currently pending. 
+
+If a new package joins the train, confirm whether it is on conda-forge before assuming a bot
+PR exists; a missing package means a `staged-recipes` PR, not a bump:
+
+```bash
+# 200 = on conda-forge, 404 = no package (needs staged-recipes, or first build not yet landed)
+for p in htmltools shiny shinyswatch shinywidgets py-shinylive shinychat faicons \
+         shiny-validate chatlas brand-yml querychat; do
+  printf "%-16s %s\n" "$p" \
+    "$(curl -s -o /dev/null -w '%{http_code}' https://api.anaconda.org/package/conda-forge/$p)"
+done
+```
 
 ### The bot bumps the version; it does not add dependencies
 
@@ -567,6 +687,30 @@ touched `README.md`; wait for the second commit before concluding anything.
 The bot stops issuing PRs when more than 3 of its version-bump PRs are open, so close
 superseded ones.
 
+### Work in a fork, never on the feedstock itself
+
+`recipe-maintainers` have push access to `conda-forge/*-feedstock`, so pushing a branch
+straight there appears to work — that is the trap. Feedstock changes go through a **personal
+fork** (`schloerke/py-shiny-feedstock`), exactly like an outside contribution would. A branch
+on the upstream feedstock burns the feedstock's CI, shows up for every other maintainer, and
+has to be deleted by hand afterwards.
+
+```bash
+gh repo fork conda-forge/py-shiny-feedstock --clone --remote
+# origin -> schloerke/py-shiny-feedstock, upstream -> conda-forge/py-shiny-feedstock
+git checkout -b bump-1.7.0
+# ... edit recipe/meta.yaml ...
+git push origin bump-1.7.0
+gh pr create --repo conda-forge/py-shiny-feedstock --base main
+```
+
+If the fork already exists from a previous cycle, sync it first (`gh repo sync
+schloerke/py-shiny-feedstock`) — a stale fork is the usual source of a confusing diff.
+
+The one exception is amending an **existing bot PR**, below: that branch already lives on the
+bot's fork, so it is pushed there rather than to yours. Either way, never to
+`conda-forge/...`.
+
 ### Pushing to a bot PR's branch
 
 Bot branches live on the **bot's fork**, not the feedstock. Check `maintainerCanModify` (it is
@@ -585,9 +729,8 @@ The owner is `conda-forge-admin` for webservice PRs and `regro-cf-autotick-bot` 
 PRs. `git fetch origin <branch>` fails with `couldn't find remote ref` — that is the giveaway
 that you are looking at the wrong repo.
 
-Current `recipe-maintainers`: `cpsievert`, `schloerke`, `wch`, `sugatoray` — so both Carson
-and Barret can push directly. (Verify with the recipe's `extra/recipe-maintainers` rather
-than trusting this list.)
+Who can do this is per-feedstock — see the `recipe-maintainers` column of the inventory above,
+and verify against the recipe rather than trusting either list.
 
 ### Known issue: license_file references
 

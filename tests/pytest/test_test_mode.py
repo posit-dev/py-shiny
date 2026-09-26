@@ -88,8 +88,10 @@ def test_outbound_queue_no_record_when_off() -> None:
     omq = OutBoundMessageQueues(record_test_values=False)
     omq.set_value("out1", 42)
     omq.set_error("out2", {"message": "boom"})
+    omq.set_silent("out3")
     assert omq.test_values == {}
     assert omq.test_errors == {}
+    assert omq.test_silent == set()
 
 
 def test_outbound_queue_set_silent_retains_last_value() -> None:
@@ -104,6 +106,16 @@ def test_outbound_queue_set_silent_retains_last_value() -> None:
     # Persistent test-mode record: untouched, still reports the last value.
     assert omq.test_values == {"out1": 42}
     assert omq.test_errors == {}
+    # ...but the silencing itself is recorded, so a test can tell that the
+    # latest render produced nothing and the client went blank.
+    assert omq.test_silent == {"out1"}
+
+    # A later render supersedes the silence.
+    omq.set_value("out1", 43)
+    assert omq.test_silent == set()
+    omq.set_silent("out1")
+    omq.set_error("out1", {"message": "boom"})
+    assert omq.test_silent == set()
 
 
 def test_outbound_queue_set_silent_retains_last_error() -> None:
@@ -127,6 +139,7 @@ def test_outbound_queue_set_silent_on_first_run_leaves_absent() -> None:
     assert omq.values["out1"] is None
     assert "out1" not in omq.test_values
     assert "out1" not in omq.test_errors
+    assert omq.test_silent == {"out1"}
 
 
 def test_app_session_wires_record_flag(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -906,7 +919,8 @@ async def test_snapshot_preprocess_output_namespaced(
     assert body["output"]["mod1-out1"] == "HELLO"
 
 
-def test_file_restore_handler_registers_snapshot_preprocess(
+@pytest.mark.asyncio
+async def test_file_restore_handler_registers_snapshot_preprocess(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -942,5 +956,8 @@ def test_file_restore_handler_registers_snapshot_preprocess(
     }
     restored = cast("list[Any]", handler(value, ResolvedId("file1"), session))
 
-    assert isinstance(restored, list) and len(restored) == 1
-    assert ResolvedId("file1") in session.input._snapshot_preprocessors
+    try:
+        assert isinstance(restored, list) and len(restored) == 1
+        assert ResolvedId("file1") in session.input._snapshot_preprocessors
+    finally:
+        await session._run_session_ended_tasks()
