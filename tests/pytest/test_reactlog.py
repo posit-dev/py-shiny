@@ -1611,7 +1611,18 @@ def test_reactlog_remote_security_access_control():
     local_client = TestClient(client_app)
     assert local_client.get("/__reactlog__").status_code == 200
 
-    remote_client = TestClient(client_app, client=("192.168.1.100", 50000))
+    def make_remote(asgi_app: Any, host: str = "192.168.1.100") -> Any:
+        async def remote_app(scope: dict[str, Any], receive: Any, send: Any) -> None:
+            if scope.get("type") == "http":
+                scope = dict(scope)
+                scope["client"] = (host, 50000)
+            await asgi_app(scope, receive, send)
+
+        return remote_app
+
+    remote_client = TestClient(
+        make_remote(client_app)
+    )  # pyright: ignore[reportArgumentType]
     assert remote_client.get("/__reactlog__").status_code == 403
     assert remote_client.get("/__reactlog__/mark").status_code == 403
 
@@ -1631,6 +1642,9 @@ def test_reactive_marks_session_scoping_and_isolation():
     from shiny.session import session_context
 
     class MockSessionObj:
+        name: str
+        ns: object
+
         def __init__(self, name: str) -> None:
             self.name = name
             self.ns = None
