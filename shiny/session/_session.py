@@ -259,6 +259,14 @@ class Session(ABC):
 
     @property
     @abstractmethod
+    def _reactlog_marks(self) -> list[dict[str, Any]]: ...
+
+    @_reactlog_marks.setter
+    @abstractmethod
+    def _reactlog_marks(self, value: list[dict[str, Any]]) -> None: ...
+
+    @property
+    @abstractmethod
     def user(self) -> str | None: ...
 
     @property
@@ -936,6 +944,7 @@ class AppSession(Session):
         self.clientdata: ClientData = ClientData(self)
 
         self.bookmark: Bookmark = BookmarkApp(self)
+        self._reactlog_marks_list: list[dict[str, Any]] = []
 
         self._user: str | None = None
         self._groups: list[str] | None = None
@@ -1027,6 +1036,14 @@ class AppSession(Session):
     @property
     def groups(self) -> list[str] | None:
         return self._groups
+
+    @property
+    def _reactlog_marks(self) -> list[dict[str, Any]]:
+        return self._reactlog_marks_list
+
+    @_reactlog_marks.setter
+    def _reactlog_marks(self, value: list[dict[str, Any]]) -> None:
+        self._reactlog_marks_list = value
 
     async def close(self, code: int = 1001) -> None:
         await self._conn.close(code, None)
@@ -1860,6 +1877,14 @@ class SessionProxy(Session):
     @property
     def groups(self) -> list[str] | None:
         return self._root_session.groups
+
+    @property
+    def _reactlog_marks(self) -> list[dict[str, Any]]:
+        return self._root_session._reactlog_marks
+
+    @_reactlog_marks.setter
+    def _reactlog_marks(self, value: list[dict[str, Any]]) -> None:
+        self._root_session._reactlog_marks = value
 
     def _is_closed(self) -> bool:
         return self._root_session._is_closed()
