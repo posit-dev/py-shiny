@@ -188,7 +188,7 @@ def apply_frame_patches(
 
 
 # serialize_dtype ----------------------------------------------------------------------
-def serialize_dtype(col: nw.Series) -> FrameDtype:
+def serialize_dtype(col: nw.Series[Any] | Any) -> FrameDtype:
 
     from ._html import series_contains_htmltoolslike
 
