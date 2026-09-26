@@ -1,4 +1,4 @@
-"""Guard the chat API floor and deprecated calls used by bundled templates.
+"""Check the chat API and deprecated calls used by bundled templates.
 
 Template startup and browser errors are covered in the Playwright example suite.
 """
@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import ast
 import re
+from importlib.metadata import version
 from pathlib import Path
 
+import pytest
 from htmltools import Tag
+from packaging.version import Version
 
 from shiny.express import ui
 from shiny.express._run import ExpressStubSession
@@ -33,14 +36,15 @@ class _StubBookmarkClient:
         pass
 
 
-def test_minimum_shinychat_api() -> None:
+@pytest.mark.skipif(
+    Version(version("shinychat")) < Version("0.5.0"),
+    reason="Chat template APIs require shinychat>=0.5.0",
+)
+def test_template_shinychat_api() -> None:
     """The shinychat API surface the chat templates rely on.
 
-    This guard runs in oldest-deps: it fails if the installed shinychat floor drops the
-    constructor `greeting=`, `bookmark_store=` bookmarking, or the
-    `on_user_submit` handler the templates use (the `shinychat>=0.5.0` floor
-    in `pyproject.toml`). It needs no API key: everything runs under a stub
-    session, so no callback ever executes.
+    Constructor `greeting=` and `bookmark_store=` require shinychat 0.5.0.
+    Skip on older dependencies; no API key is needed under a stub session.
     """
     with session_context(ExpressStubSession()):
         chat = ui.Chat(id="chat", greeting="Hello")
