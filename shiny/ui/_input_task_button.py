@@ -52,20 +52,20 @@ def input_task_button(
 
     In some advanced use cases, it may be necessary to keep a task button in its busy
     state even after the normal reactive processing has completed. Calling
-    :func:`~shiny.ui.update_task_button(id, state = "busy")` from the server will opt
-    out of any currently pending reset for a specific task button. After doing so, the
-    button can be re-enabled by calling ``update_task_button(id, state = "ready")``
-    after each click's work is complete.
+    :func:`~shiny.ui.update_task_button` with ``state="busy"`` from the server will
+    opt out of any currently pending reset for a specific task button. After doing
+    so, the button can be re-enabled by calling
+    ``update_task_button(id, state="ready")`` after each click's work is complete.
 
-    You can also pass an explicit ``auto_reset = FALSE`` to ``input_task_button()``,
+    You can also pass an explicit ``auto_reset=False`` to ``input_task_button()``,
     which means that button will _never_ be automatically re-enabled and will require
-    ``update_task_button(id, state = "ready")`` to be called each time.
+    ``update_task_button(id, state="ready")`` to be called each time.
 
     Note that, as a general rule, Shiny's ``update`` family of functions do not take
     effect at the instant that they are called, but are held until the end of the
     current reactive cycle. So if you have many different reactive calculations and
     outputs, you don't have to be too careful about when you call
-    ``update_task_button(id, state = "ready")``, as the button on the client will not
+    ``update_task_button(id, state="ready")``, as the button on the client will not
     actually re-enable until the same moment that all of the updated outputs
     simultaneously sent to the client.
 
