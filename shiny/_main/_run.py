@@ -317,8 +317,14 @@ def run_app(
     if dev_mode:
         os.environ["SHINY_DEV_MODE"] = "1"
 
+    orig_reactlog = os.environ.get("SHINY_REACTLOG")
     if reactlog:
         os.environ["SHINY_REACTLOG"] = "1"
+    elif "SHINY_REACTLOG" in os.environ:
+        del os.environ["SHINY_REACTLOG"]
+
+    if not isinstance(app, str) and hasattr(app, "reactlog_enabled"):
+        app.reactlog_enabled = reactlog
 
     if isinstance(app, str):
         # Remove ":app" suffix if present. Normally users would just pass in the
@@ -431,23 +437,29 @@ def run_app(
 
     _set_workbench_kwargs(kwargs)
 
-    _run_uvicorn(
-        app,
-        host=host,
-        port=port,
-        ws_max_size=ws_max_size,
-        log_level=log_level,
-        log_config=log_config,
-        app_dir=app_dir,
-        on_started=on_started,
-        factory=factory,
-        lifespan="on",
-        # Don't allow shiny to use uvloop!
-        # https://github.com/posit-dev/py-shiny/issues/1373
-        loop="asyncio",
-        **reload_args,  # pyright: ignore[reportArgumentType]
-        **kwargs,
-    )
+    try:
+        _run_uvicorn(
+            app,
+            host=host,
+            port=port,
+            ws_max_size=ws_max_size,
+            log_level=log_level,
+            log_config=log_config,
+            app_dir=app_dir,
+            on_started=on_started,
+            factory=factory,
+            lifespan="on",
+            # Don't allow shiny to use uvloop!
+            # https://github.com/posit-dev/py-shiny/issues/1373
+            loop="asyncio",
+            **reload_args,  # pyright: ignore[reportArgumentType]
+            **kwargs,
+        )
+    finally:
+        if orig_reactlog is not None:
+            os.environ["SHINY_REACTLOG"] = orig_reactlog
+        elif "SHINY_REACTLOG" in os.environ:
+            del os.environ["SHINY_REACTLOG"]
 
 
 def is_file(app: str) -> bool:

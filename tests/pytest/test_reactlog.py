@@ -1598,3 +1598,75 @@ def test_shiny_run_reactlog_flag():
     result = runner.invoke(main, ["run", "--help"])
     assert result.exit_code == 0
     assert "--reactlog" in result.output
+
+
+def test_reactlog_remote_security_access_control():
+    from starlette.testclient import TestClient
+
+    from shiny import App, ui
+
+    app = App(ui.page_fluid("Security test"), None, reactlog=True)
+    client_app = app.init_starlette_app()
+
+    local_client = TestClient(client_app)
+    assert local_client.get("/__reactlog__").status_code == 200
+
+    remote_client = TestClient(client_app, client=("192.168.1.100", 50000))
+    assert remote_client.get("/__reactlog__").status_code == 403
+    assert remote_client.get("/__reactlog__/mark").status_code == 403
+
+    assert (
+        remote_client.get(f"/__reactlog__?token={app.reactlog_token}").status_code
+        == 200
+    )
+    assert (
+        remote_client.get(f"/__reactlog__/mark?token={app.reactlog_token}").status_code
+        == 200
+    )
+    assert remote_client.get("/__reactlog__?token=invalid_token").status_code == 403
+
+
+def test_reactive_marks_session_scoping_and_isolation():
+    from shiny import reactive
+    from shiny.session import session_context
+
+    class MockSessionObj:
+        def __init__(self, name: str) -> None:
+            self.name = name
+            self.ns = None
+
+    sess_a = MockSessionObj("a")
+    sess_b = MockSessionObj("b")
+
+    with session_context(sess_a):  # pyright: ignore[reportArgumentType]
+        reactive.mark("mark-a-1")
+        reactive.mark("mark-a-2")
+        marks_a = reactive.get_marks()
+
+    with session_context(sess_b):  # pyright: ignore[reportArgumentType]
+        reactive.mark("mark-b-1")
+        marks_b = reactive.get_marks()
+
+    assert len(marks_a) == 2
+    assert len(marks_b) == 1
+    assert marks_a[0]["label"] == "mark-a-1"
+    assert marks_b[0]["label"] == "mark-b-1"
+
+    with session_context(sess_a):  # pyright: ignore[reportArgumentType]
+        reactive.clear_marks()
+        assert len(reactive.get_marks()) == 0
+
+    with session_context(sess_b):  # pyright: ignore[reportArgumentType]
+        assert len(reactive.get_marks()) == 1
+
+
+def test_app_reactlog_explicit_config(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("SHINY_REACTLOG", raising=False)
+    from shiny import App, ui
+
+    app_disabled = App(ui.page_fluid("Off"), None, reactlog=False)
+    assert app_disabled.reactlog_enabled is False
+
+    app_enabled = App(ui.page_fluid("On"), None, reactlog=True)
+    assert app_enabled.reactlog_enabled is True
+    assert len(app_enabled.reactlog_token) > 10

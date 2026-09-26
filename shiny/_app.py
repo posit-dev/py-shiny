@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import os
 import secrets
+import time
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
@@ -181,6 +182,7 @@ class App:
         bookmark_store: Literal["url", "server", "disable"] = "disable",
         debug: bool = False,
         test_mode: bool | None = None,
+        reactlog: bool | None = None,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
         # to the ASGI lifespan protocol)
@@ -204,10 +206,10 @@ class App:
 
         self._debug: bool = debug
         self._test_mode: bool = is_test_mode() if test_mode is None else test_mode
-        """Whether Shiny test mode is enabled.
-
-        Defaults to the ``SHINY_TESTMODE`` env var when ``test_mode`` is ``None``.
-        """
+        self._reactlog_enabled: bool = (
+            reactlog if reactlog is not None else (os.getenv("SHINY_REACTLOG") == "1")
+        )
+        self._reactlog_token: str = secrets.token_urlsafe(16)
 
         # Settings that the user can change after creating the App object.
         self.lib_prefix: str = LIB_PREFIX
@@ -241,6 +243,7 @@ class App:
         self._static_assets: dict[str, Path] = static_assets_map
 
         self._sessions: dict[str, AppSession] = {}
+        self._app_marks: list[dict[str, Any]] = []
 
         # self._sessions_needing_flush: dict[int, AppSession] = {}
 
@@ -287,7 +290,7 @@ class App:
             ),
             starlette.routing.Mount("/", app=self._dependency_handler),
         ]
-        if os.getenv("SHINY_REACTLOG") == "1":
+        if self._reactlog_enabled:
             routes.insert(
                 0,
                 starlette.routing.Route(
@@ -461,27 +464,31 @@ class App:
             ui = self.ui
 
         html_content = ui["html"]
-        if os.getenv("SHINY_REACTLOG") == "1":
-            script = """<script>
-window.addEventListener('keydown', function(e) {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'F3') {
+        if self._reactlog_enabled:
+            token = self._reactlog_token
+            script = f"""<script>
+window.addEventListener('keydown', function(e) {{
+  if ((e.metaKey || e.ctrlKey) && e.key === 'F3') {{
     e.preventDefault();
-    if (e.shiftKey) {
+    var token = '{token}';
+    var sessId = (window.Shiny && window.Shiny.shinyapp && window.Shiny.shinyapp.config) ? window.Shiny.shinyapp.config.sessionId : '';
+    if (e.shiftKey) {{
       var label = prompt('Enter mark label:', 'Bookmark');
-      if (label) {
-        fetch('/__reactlog__/mark', {
+      if (label) {{
+        fetch('/__reactlog__/mark?token=' + encodeURIComponent(token), {{
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({label: label})
-        }).then(function() {
+          headers: {{'Content-Type': 'application/json'}},
+          body: JSON.stringify({{label: label, session_id: sessId}})
+        }}).then(function() {{
           console.log('[Reactlog] Bookmark added: ' + label);
-        });
-      }
-    } else {
-      window.open('/__reactlog__', '_blank');
-    }
-  }
-});
+        }});
+      }}
+    }} else {{
+      var url = '/__reactlog__?token=' + encodeURIComponent(token) + (sessId ? '&session_id=' + encodeURIComponent(sessId) : '');
+      window.open(url, '_blank');
+    }}
+  }}
+}});
 </script>"""
             if "</head>" in html_content:
                 html_content = html_content.replace("</head>", f"{script}\n</head>", 1)
@@ -490,34 +497,68 @@ window.addEventListener('keydown', function(e) {
 
         return HTMLResponse(content=html_content)
 
+    def _check_reactlog_access(self, request: Request) -> bool:
+        client_host = request.client.host if request.client else ""
+        is_loopback = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
+        token = (
+            request.query_params.get("token")
+            or request.headers.get("X-Reactlog-Token")
+            or ""
+        )
+        if self._reactlog_token and token == self._reactlog_token:
+            return True
+        return is_loopback
+
     async def _on_reactlog_request_cb(self, request: Request) -> Response:
         from . import reactive
         from ._inspect import format_reactlog_html, generate_reactlog
+
+        if not self._check_reactlog_access(request):
+            return Response(
+                "Forbidden: Reactlog endpoint is restricted to authenticated or loopback requests.",
+                status_code=403,
+            )
+
+        client_host = request.client.host if request.client else ""
+        is_loopback = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
 
         target_fn = getattr(self, "_raw_server_fn", None) or getattr(
             self, "server", None
         )
         source_code = ""
         app_file = None
-        if target_fn is not None:
-            try:
-                source_code = inspect.getsource(target_fn)
-            except Exception:
-                pass
-            try:
-                app_file = inspect.getfile(target_fn)
-            except Exception:
-                pass
+        if is_loopback:
+            if target_fn is not None:
+                try:
+                    source_code = inspect.getsource(target_fn)
+                except Exception:
+                    pass
+                try:
+                    app_file = inspect.getfile(target_fn)
+                except Exception:
+                    pass
 
-        if not source_code and app_file and os.path.exists(app_file):
-            try:
-                with open(app_file, "r") as f:
-                    source_code = f.read()
-            except Exception:
-                pass
+            if not source_code and app_file and os.path.exists(app_file):
+                try:
+                    with open(app_file, "r") as f:
+                        source_code = f.read()
+                except Exception:
+                    pass
+
+        session_id = request.query_params.get("session_id")
+        target_session = None
+        if session_id and session_id in self._sessions:
+            target_session = self._sessions[session_id]
+        elif len(self._sessions) == 1:
+            target_session = next(iter(self._sessions.values()))
+
+        if target_session:
+            marks = reactive.get_marks(target_session)
+        else:
+            marks = list(self._app_marks) + reactive.get_marks()
 
         reactlog_data = generate_reactlog(
-            source_code, source_path=app_file, marks=reactive.get_marks()
+            source_code, source_path=app_file, marks=marks
         )
         app_name = os.path.basename(app_file) if app_file else "Shiny App"
         html = format_reactlog_html(reactlog_data, source_code, title=app_name)
@@ -526,23 +567,61 @@ window.addEventListener('keydown', function(e) {
     async def _on_reactlog_mark_cb(self, request: Request) -> Response:
         from . import reactive
 
+        if not self._check_reactlog_access(request):
+            return Response(
+                "Forbidden: Reactlog endpoint is restricted to authenticated or loopback requests.",
+                status_code=403,
+            )
+
+        session_id = request.query_params.get("session_id")
+        body_dict: dict[str, object] = {}
+        if request.method == "POST":
+            try:
+                body = await request.json()
+                if isinstance(body, dict):
+                    body_dict = cast(dict[str, object], body)
+                    if not session_id and "session_id" in body_dict:
+                        session_id = str(body_dict["session_id"])
+            except Exception:
+                pass
+
+        target_session = None
+        if session_id and session_id in self._sessions:
+            target_session = self._sessions[session_id]
+        elif len(self._sessions) == 1:
+            target_session = next(iter(self._sessions.values()))
+
         if request.method == "GET":
-            return JSONResponse({"status": "ok", "marks": reactive.get_marks()})
+            if target_session:
+                marks = reactive.get_marks(target_session)
+            else:
+                marks = list(self._app_marks) + reactive.get_marks()
+            return JSONResponse({"status": "ok", "marks": marks})
 
         label = "User mark"
-        try:
-            body: object = await request.json()
-            if isinstance(body, dict):
-                body_dict = cast(dict[str, object], body)
-                raw_label = body_dict.get("label")
-                if isinstance(raw_label, str):
-                    label = raw_label
-                elif raw_label is not None:
-                    label = str(raw_label)
-        except Exception:
-            pass
-        reactive.mark(label)
-        return JSONResponse({"status": "ok", "marks_count": len(reactive.get_marks())})
+        raw_label = body_dict.get("label")
+        if isinstance(raw_label, str):
+            label = raw_label
+        elif raw_label is not None:
+            label = str(raw_label)
+
+        mark_entry = {
+            "action": "userMark",
+            "label": label,
+            "details": label,
+            "time": time.time(),
+            "phase": "mark",
+        }
+
+        if target_session is not None:
+            target_session._reactlog_marks.append(mark_entry)
+            count = len(target_session._reactlog_marks)
+        else:
+            self._app_marks.append(mark_entry)
+            reactive.mark(label)
+            count = len(self._app_marks)
+
+        return JSONResponse({"status": "ok", "marks_count": count})
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """
@@ -712,6 +791,18 @@ window.addEventListener('keydown', function(e) {
 
     def set_bookmark_restore_dir_fn(self, bookmark_restore_dir_fn: BookmarkDirFn):
         self._bookmark_restore_dir_fn = as_bookmark_dir_fn(bookmark_restore_dir_fn)
+
+    @property
+    def reactlog_enabled(self) -> bool:
+        return self._reactlog_enabled
+
+    @reactlog_enabled.setter
+    def reactlog_enabled(self, value: bool) -> None:
+        self._reactlog_enabled = bool(value)
+
+    @property
+    def reactlog_token(self) -> str:
+        return self._reactlog_token
 
 
 def is_uifunc(
