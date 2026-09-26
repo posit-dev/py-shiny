@@ -21,20 +21,38 @@ def test_validate_direct_input_assignment() -> None:
 def test_validate_uncalled_input() -> None:
     code = "from shiny import render, input\n@render.text\ndef txt():\n    return input.val"
     report = validate_shiny_code(code)
+    assert report["valid"] is False
     assert any(warn["code"] == "UNCALLED_INPUT" for warn in report["warnings"])
     assert any("parentheses" in warn["message"] for warn in report["warnings"])
+    assert (
+        "Code structure matches Python Shiny best practices."
+        not in report["suggestions"]
+    )
 
 
 def test_validate_duplicate_input_ids() -> None:
     code = 'from shiny import ui\nui.input_text("name", "Label 1")\nui.input_text("name", "Label 2")'
     report = validate_shiny_code(code)
+    assert report["valid"] is False
     assert any(warn["code"] == "DUPLICATE_ID" for warn in report["warnings"])
 
 
 def test_validate_duplicate_output_ids() -> None:
     code = 'from shiny import ui\nui.output_text("txt")\nui.output_text("txt")'
     report = validate_shiny_code(code)
+    assert report["valid"] is False
     assert any(warn["code"] == "DUPLICATE_ID" for warn in report["warnings"])
+
+
+def test_validate_assignment_does_not_report_uncalled_input() -> None:
+    code = """from shiny import reactive
+@reactive.effect
+def reset():
+    input.count = 0
+"""
+    report = validate_shiny_code(code)
+    assert [err["code"] for err in report["errors"]] == ["INPUT_ASSIGNMENT"]
+    assert not report["warnings"]
 
 
 def test_validate_multiple_renderers() -> None:

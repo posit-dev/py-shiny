@@ -42,8 +42,30 @@ def txt():
     return f"Value: {input.n}"
 """
     res = runner.invoke(main, ["validate", "--code", code])
-    assert res.exit_code == 0
+    assert res.exit_code == 1
     assert "UNCALLED_INPUT" in res.output
+
+
+def test_cli_validate_warning_only_json_fails() -> None:
+    runner = CliRunner()
+    code = """from shiny.express import input, render, ui
+ui.input_slider("n", "N", 1, 10, 5)
+ui.input_slider("n", "Second N", 1, 10, 5)
+@render.text
+def txt():
+    return input.n
+"""
+    res = runner.invoke(main, ["validate", "--code", code, "--json"])
+    assert res.exit_code == 1
+    data = json.loads(res.output)
+    assert data["valid"] is False
+    assert {warning["code"] for warning in data["warnings"]} == {
+        "DUPLICATE_ID",
+        "UNCALLED_INPUT",
+    }
+    assert (
+        "Code structure matches Python Shiny best practices." not in data["suggestions"]
+    )
 
 
 def test_cli_validate_file(tmp_path: Path):

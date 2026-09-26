@@ -17,6 +17,7 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
 
     Validates Shiny apps against common reactivity errors, duplicate widget IDs,
     missing reactive call parentheses, and R Shiny idioms.
+    Exits with status 1 when errors or warnings are found.
 
     Examples:
 

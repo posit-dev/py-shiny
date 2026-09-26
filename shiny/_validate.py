@@ -194,7 +194,11 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> None:
-        if isinstance(node.value, ast.Name) and node.value.id == "input":
+        if (
+            isinstance(node.value, ast.Name)
+            and node.value.id == "input"
+            and not isinstance(node.ctx, ast.Store)
+        ):
             parent = self._parent_map.get(node)
             is_func_call = isinstance(parent, ast.Call) and parent.func is node
             is_event_arg = False
@@ -272,11 +276,11 @@ def validate_shiny_code(code: str) -> dict[str, Any]:
         suggestions.append(
             "Ensure each UI component in Express mode has a unique string ID."
         )
-    if not validator.errors:
+    if not validator.errors and not validator.warnings:
         suggestions.append("Code structure matches Python Shiny best practices.")
 
     return {
-        "valid": len(validator.errors) == 0,
+        "valid": not validator.errors and not validator.warnings,
         "mode": validator.mode,
         "errors": validator.errors,
         "warnings": validator.warnings,

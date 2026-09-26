@@ -60,7 +60,7 @@ To see what's bundled without installing anything, run `shiny skills list`.
 
 Shiny includes built-in developer tools accessible directly from the terminal:
 
-- `shiny validate app.py`: Static AST analysis to detect reactivity errors and duplicate IDs.
+- `shiny validate app.py`: Static AST analysis to detect reactivity errors and duplicate IDs. Returns a nonzero exit status if it finds errors or warnings.
 
 
 ## Development
