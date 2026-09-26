@@ -476,6 +476,8 @@ def clear_marks(session: Optional[Any] = None) -> None:
         if isinstance(marks, list):
             marks.clear()
         else:
-            target._reactlog_marks = []
+            empty_target_marks: list[dict[str, typing.Any]] = []
+            target._reactlog_marks = empty_target_marks
     else:
-        _context_marks.set([])
+        empty_ctx_marks: list[dict[str, typing.Any]] = []
+        _context_marks.set(empty_ctx_marks)
