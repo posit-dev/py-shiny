@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import runpy
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
@@ -867,7 +868,49 @@ def out():
 
     edges = graph["edges"]
     assert {"from": "input:a", "to": "output:out"} in edges
-    assert {"from": "input:b", "to": "output:out"} not in edges
+    assert {"from": "input:b", "to": "output:out", "isolated": True} in edges
+
+
+@pytest.mark.parametrize("recorded", [False, True])
+@pytest.mark.parametrize("changed", ["a", "b", "c"])
+def test_isolated_reads_do_not_invalidate_downstream(recorded: bool, changed: str):
+    code = """from shiny import reactive, render
+@reactive.calc
+def cached():
+    return input.c()
+@render.text
+def out():
+    value = input.a()
+    with reactive.isolate():
+        value += input.b() + cached()
+    return str(value)
+"""
+    report = generate_reactlog(
+        code,
+        inputs={changed: 2},
+        recorded_actions=(
+            [{"type": "input", "name": changed, "value": 2, "timestamp": 1000}]
+            if recorded
+            else None
+        ),
+    )
+    expected = {"a": {"output:out"}, "b": set(), "c": {"calc:cached"}}[changed]
+    for kind in ("propagate", "wouldEvaluate"):
+        assert {
+            e["node_id"] for e in report["events"] if e["event"] == kind
+        } == expected
+    assert {"from": "input:b", "to": "output:out", "isolated": True} in report["edges"]
+    assert {"from": "calc:cached", "to": "output:out", "isolated": True} in report[
+        "edges"
+    ]
+    assert not any(
+        e["event"] == "dependsOn" and e["edge_from"] in ("input:b", "calc:cached")
+        for e in report["events"]
+    )
+    if recorded:
+        wave = report["action_waves"][-1]
+        assert set(wave["invalidated_nodes"]) == expected
+        assert set(wave["inferred_executions"]) == expected
 
 
 def test_real_shiny_for_r_reactlog_parsing_and_epoch_time_normalization():
@@ -1684,3 +1727,153 @@ def test_app_reactlog_explicit_config(monkeypatch: pytest.MonkeyPatch):
     app_enabled = App(ui.page_fluid("On"), None, reactlog=True)
     assert app_enabled.reactlog_enabled is True
     assert len(app_enabled.reactlog_token) > 10
+
+
+def test_in_app_reactlog_reads_complete_source_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    from starlette.testclient import TestClient
+
+    monkeypatch.syspath_prepend(str(tmp_path))
+    (tmp_path / "review_module.py").write_text("""from shiny import module, render
+@module.server
+def panel(input, output, session):
+    @render.text
+    def total():
+        return str(input.amount())
+""")
+    source = """from shiny import App, ui
+from review_module import panel
+app_ui = ui.page_fluid(ui.input_numeric("unused", "Unused", 7))
+def server(input, output, session):
+    panel("sales")
+app = App(app_ui, server, reactlog=True)
+"""
+    app_file = tmp_path / "app.py"
+    app_file.write_text(source)
+    app = runpy.run_path(str(app_file))["app"]
+    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
+    assert response.status_code == 200
+    report, _ = json.JSONDecoder().raw_decode(
+        response.text.split("const reactlogData = ", 1)[1]
+    )
+    nodes = {n["id"]: n for n in report["nodes"]}
+    assert "output:sales-total" in nodes
+    assert nodes["input:unused"]["line"] == 3
+    assert nodes["output:sales-total"]["source_file"] == "review_module.py"
+    assert report["sources"]["app.py"] == source
+
+
+def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch):
+    from starlette.testclient import TestClient
+
+    from shiny import App, _app, ui
+
+    def server(input: Any, output: Any, session: Any):
+        pass
+
+    def missing_file(fn: object) -> str:
+        return "/missing/app.py"
+
+    def available_source(fn: object) -> str:
+        return "    def server(input, output, session):\n        @render.text\n        def out():\n            return input.x()\n"
+
+    monkeypatch.setattr(_app.inspect, "getfile", missing_file)
+    monkeypatch.setattr(_app.inspect, "getsource", available_source)
+    app = App(ui.page_fluid(), server, reactlog=True)
+    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
+    report, _ = json.JSONDecoder().raw_decode(
+        response.text.split("const reactlogData = ", 1)[1]
+    )
+    assert report["success"] is True
+    assert {n["id"] for n in report["nodes"]} == {"input:x", "output:out"}
+    assert not report["entry_file"]
+
+
+def test_express_reactlog_reads_app_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    from starlette.testclient import TestClient
+
+    from shiny.express._run import wrap_express_app
+
+    monkeypatch.setenv("SHINY_REACTLOG", "1")
+    app_file = tmp_path / "app.py"
+    source = """from shiny.express import input, render, ui
+ui.input_numeric("amount", "Amount", 3)
+@render.text
+def total():
+    return str(input.amount())
+"""
+    app_file.write_text(source)
+    app = wrap_express_app(app_file)
+    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
+    report, _ = json.JSONDecoder().raw_decode(
+        response.text.split("const reactlogData = ", 1)[1]
+    )
+    assert {n["id"] for n in report["nodes"]} == {"input:amount", "output:total"}
+    assert report["sources"]["app.py"] == source
+
+
+def test_custom_session_inherits_private_reactlog_storage():
+    from shiny import reactive
+    from shiny._namespaces import Root
+    from shiny.session import Session, session_context
+
+    # A third-party implementation of the pre-reactlog abstract contract.
+    def stub(*args: Any, **kwargs: Any) -> None:
+        pass
+
+    custom_type = type(
+        "CustomSession",
+        (Session,),
+        {
+            name: stub
+            for name in Session.__abstractmethods__
+            if name != "_reactlog_marks"
+        },
+    )
+    first, second = custom_type(), custom_type()
+    first.ns = second.ns = Root
+    with session_context(first):
+        reactive.mark("first")
+    with session_context(second):
+        reactive.mark("second")
+    assert [m["label"] for m in reactive.get_marks(first)] == ["first"]
+    assert [m["label"] for m in reactive.get_marks(second)] == ["second"]
+    reactive.clear_marks(first)
+    assert reactive.get_marks(first) == []
+    assert [m["label"] for m in reactive.get_marks(second)] == ["second"]
+
+
+def test_inspect_fully_qualified_shiny_decorators():
+    code = """import shiny
+shiny.ui.input_numeric("unused", "Unused", 7)
+@shiny.reactive.calc
+def doubled():
+    return input.x() * 2
+@shiny.render.text
+def out():
+    with shiny.reactive.isolate():
+        extra = input.y()
+    return str(doubled() + extra)
+"""
+    graph = inspect_reactive_graph(code)
+    assert {n["id"] for n in graph["nodes"]} == {
+        "input:unused",
+        "input:x",
+        "input:y",
+        "calc:doubled",
+        "output:out",
+    }
+    assert {"from": "input:x", "to": "calc:doubled"} in graph["edges"]
+    assert {"from": "calc:doubled", "to": "output:out"} in graph["edges"]
+    assert {"from": "input:y", "to": "output:out", "isolated": True} in graph["edges"]
+
+
+@pytest.mark.parametrize("decorator", ["my_calculator", "side_effect", "prevent"])
+def test_inspect_ignores_unrelated_decorator_names(decorator: str):
+    graph = inspect_reactive_graph(
+        f"@{decorator}\ndef helper():\n    return input.x()\n"
+    )
+    assert graph["nodes"] == []

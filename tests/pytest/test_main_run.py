@@ -11,6 +11,82 @@ from shiny._main import _run, main
 from shiny.express._utils import escape_to_var_name
 
 
+@pytest.mark.parametrize(
+    "option,expected", [(None, True), (True, True), (False, False)]
+)
+@pytest.mark.parametrize("existing_app", [False, True])
+def test_reactlog_runner_preserves_config_unless_overridden(
+    monkeypatch: pytest.MonkeyPatch,
+    option: bool | None,
+    expected: bool,
+    existing_app: bool,
+) -> None:
+    from starlette.testclient import TestClient
+
+    from shiny import App, ui
+
+    monkeypatch.setenv("SHINY_REACTLOG", "1")
+    app = App(ui.page_fluid("test"), None)
+
+    def serve(target: Any, **kwargs: Any) -> None:
+        loaded = target if existing_app else App(ui.page_fluid("test"), None)
+        response = TestClient(loaded.init_starlette_app()).get("/__reactlog__")
+        assert (response.status_code == 200) is expected
+
+    monkeypatch.setattr(_run, "_run_uvicorn", serve)
+    target = app if existing_app else "test_app:app"
+    if option is None:
+        _run.run_app(target, dev_mode=False)
+    else:
+        _run.run_app(target, dev_mode=False, reactlog=option)
+    assert os.environ["SHINY_REACTLOG"] == "1"
+
+
+def test_reactlog_runner_preserves_explicit_app_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from starlette.testclient import TestClient
+
+    from shiny import App, ui
+
+    monkeypatch.delenv("SHINY_REACTLOG", raising=False)
+    app = App(ui.page_fluid("test"), None, reactlog=True)
+
+    def serve(target: Any, **kwargs: Any) -> None:
+        assert (
+            TestClient(target.init_starlette_app()).get("/__reactlog__").status_code
+            == 200
+        )
+
+    monkeypatch.setattr(_run, "_run_uvicorn", serve)
+    _run.run_app(app, dev_mode=False)
+    assert "SHINY_REACTLOG" not in os.environ
+
+
+@pytest.mark.parametrize(
+    "flags,expected", [([], True), (["--reactlog"], True), (["--no-reactlog"], False)]
+)
+def test_reactlog_cli_respects_environment(
+    monkeypatch: pytest.MonkeyPatch, flags: list[str], expected: bool
+) -> None:
+    from starlette.testclient import TestClient
+
+    from shiny import App, ui
+
+    monkeypatch.setenv("SHINY_REACTLOG", "1")
+
+    def serve(target: Any, **kwargs: Any) -> None:
+        app = App(ui.page_fluid("test"), None)
+        assert (
+            TestClient(app.init_starlette_app()).get("/__reactlog__").status_code == 200
+        ) is expected
+
+    monkeypatch.setattr(_run, "_run_uvicorn", serve)
+    result = CliRunner().invoke(main, ["run", "test_app:app", *flags])
+    assert result.exit_code == 0, result.exception
+    assert os.environ["SHINY_REACTLOG"] == "1"
+
+
 @pytest.fixture
 def captured_run_app(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """Replace run_app with a recorder so `shiny run` never starts a server."""

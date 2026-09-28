@@ -178,6 +178,7 @@ def create_express_app(file: Path, package_name: str) -> App:
         express_server,
         **app_opts,  # pyright: ignore[reportArgumentType]
     )
+    app._reactlog_source_path = file
 
     return app
 

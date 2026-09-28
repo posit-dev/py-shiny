@@ -217,12 +217,7 @@ class GraphVisitor(ast.NodeVisitor):
             self.isolated_depth -= 1
 
     def visit_Call(self, node: ast.Call) -> None:
-        func_name = ""
-        if isinstance(node.func, ast.Name):
-            func_name = node.func.id
-        elif isinstance(node.func, ast.Attribute):
-            if isinstance(node.func.value, ast.Name):
-                func_name = f"{node.func.value.id}.{node.func.attr}"
+        func_name = self._get_decorator_name(node.func)
 
         if (
             func_name.startswith("ui.input_")
@@ -314,10 +309,13 @@ class GraphVisitor(ast.NodeVisitor):
     def _get_decorator_name(self, d: ast.AST) -> str:
         if isinstance(d, ast.Call):
             d = d.func
+        parts: List[str] = []
+        while isinstance(d, ast.Attribute):
+            parts.append(d.attr)
+            d = d.value
         if isinstance(d, ast.Name):
-            return d.id
-        elif isinstance(d, ast.Attribute) and isinstance(d.value, ast.Name):
-            return f"{d.value.id}.{d.attr}"
+            parts.append(d.id)
+            return ".".join(reversed(parts)).removeprefix("shiny.")
         return ""
 
     def _extract_event_triggers(self, d: ast.AST) -> tuple[Set[str], Set[str]]:
@@ -365,18 +363,24 @@ class GraphVisitor(ast.NodeVisitor):
 
         for d in node.decorator_list:
             d_name = self._get_decorator_name(d)
-            if "event" in d_name:
+            if d_name in ("event", "reactive.event"):
                 has_event_decorator = True
                 inp_d, c_d = self._extract_event_triggers(d)
                 event_input_deps.update(inp_d)
                 event_calc_deps.update(c_d)
 
-        is_effect = any("effect" in d or "Effect" in d for d in decorators)
+        is_effect = any(
+            d in ("effect", "Effect", "reactive.effect", "reactive.Effect")
+            for d in decorators
+        )
         is_render = any(
             d.startswith("render.") or d.startswith("render_") for d in decorators
         )
         is_calc = (
-            any(("calc" in d or "Calc" in d or "event" in d) for d in decorators)
+            any(
+                d in ("calc", "Calc", "reactive.calc", "reactive.Calc")
+                for d in decorators
+            )
             and not is_effect
             and not is_render
         )
@@ -769,6 +773,9 @@ def generate_reactlog(
     adj_downstream: Dict[str, List[str]] = {}
     adj_upstream: Dict[str, List[str]] = {}
     for edge in edges:
+        # Isolated reads are visible relationships, not invalidation triggers.
+        if edge.get("isolated"):
+            continue
         f, t = edge["from"], edge["to"]
         adj_downstream.setdefault(f, []).append(t)
         adj_upstream.setdefault(t, []).append(f)
@@ -3377,6 +3384,7 @@ def format_reactlog_html(
       }});
 
       edges.forEach(e => {{
+        if (e.isolated) return;
         if (adjDownstream.has(e.from)) adjDownstream.get(e.from).add(e.to);
         if (adjUpstream.has(e.to)) adjUpstream.get(e.to).add(e.from);
       }});
