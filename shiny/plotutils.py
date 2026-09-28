@@ -225,7 +225,7 @@ def near_points(
     # For no current coordinfo
     if coordinfo is None:
         if add_dist:
-            new_df["dist"] = np.nan
+            new_df["dist_"] = np.nan
 
         if all_rows:
             new_df["selected_"] = False
@@ -278,7 +278,7 @@ def near_points(
     dists: pd.Series[float] = (dist_css["x"] ** 2 + dist_css["y"] ** 2) ** 0.5
 
     if add_dist:
-        new_df["dist"] = dists
+        new_df["dist_"] = dists
 
     keep_rows = dists <= threshold
 

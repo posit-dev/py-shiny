@@ -5,6 +5,12 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Bug fixes
+
+* `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
+
 ## [1.8.0] - 2026-09-12
 
 ### Deprecations
