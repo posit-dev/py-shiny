@@ -358,12 +358,12 @@ class InputTextArea(
                 None,
                 timeout=timeout,
             )
-            _expect_style_to_have_value(self.loc, "width", "100%", timeout=timeout)
+            _expect_style_to_have_value(self.loc, "width", None, timeout=timeout)
         else:
             _expect_style_to_have_value(
                 self.loc_container, "width", value, timeout=timeout
             )
-            _expect_style_to_have_value(self.loc, "width", None, timeout=timeout)
+            _expect_style_to_have_value(self.loc, "width", "100%", timeout=timeout)
 
     def expect_height(self, value: StyleValue, *, timeout: Timeout = None) -> None:
         """

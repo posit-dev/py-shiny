@@ -5,6 +5,12 @@ All notable changes to Shiny for Python will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Bug fixes
+
+* `ui.input_text_area()` now applies the `width:100%` rule to the `<textarea>` when `width=` is given, and leaves the field unstyled when it is not. The rule was being applied in the opposite case, so a `width=` reached the container but not the field itself, and `cols=` never took effect. This matches the `cols` documentation and Shiny for R. Apps that relied on the textarea filling its container without passing `width=` should now pass `width="100%"`. `playwright.controller.InputTextArea.expect_width()` follows the same change. (#2509)
+
 ## [1.8.0] - 2026-09-12
 
 ### Deprecations

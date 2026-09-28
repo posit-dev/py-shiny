@@ -183,7 +183,7 @@ def input_text_area(
         restore_input(resolved_id, value),
         id=resolved_id,
         class_=" ".join(classes),
-        style=css(width=None if width else "100%", height=height, resize=resize),
+        style=css(width="100%" if width else None, height=height, resize=resize),
         placeholder=placeholder,
         rows=rows,
         cols=cols,
