@@ -258,12 +258,14 @@ class Session(ABC):
     bookmark: Bookmark
 
     @property
-    @abstractmethod
-    def _reactlog_marks(self) -> list[dict[str, Any]]: ...
+    def _reactlog_marks(self) -> list[dict[str, Any]]:
+        if not hasattr(self, "_reactlog_marks_list"):
+            self._reactlog_marks_list: list[dict[str, Any]] = []
+        return self._reactlog_marks_list
 
     @_reactlog_marks.setter
-    @abstractmethod
-    def _reactlog_marks(self, value: list[dict[str, Any]]) -> None: ...
+    def _reactlog_marks(self, value: list[dict[str, Any]]) -> None:
+        self._reactlog_marks_list = value
 
     @property
     @abstractmethod

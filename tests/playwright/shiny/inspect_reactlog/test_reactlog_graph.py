@@ -1651,6 +1651,35 @@ def txt():
     expect(page.locator(".legend")).to_contain_text("Isolated read")
 
 
+def test_isolated_reads_are_not_reported_as_causes(page: Page) -> None:
+    code = """from shiny import reactive, render
+@render.text
+def out():
+    value = input.a()
+    with reactive.isolate():
+        value += input.b()
+    return str(value)
+"""
+    report = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "input", "name": "b", "value": 2, "timestamp": 1000},
+            {"type": "input", "name": "a", "value": 3, "timestamp": 2000},
+        ],
+    )
+    page.set_content(format_reactlog_html(report, code))
+    page.locator("#btn-skip-init").click()
+    page.locator('.graph-node[data-id="output:out"]').click()
+    expect(page.locator("#why-title")).to_contain_text("did not render")
+    expect(page.locator("#insp-upstream-list")).not_to_contain_text("input.b")
+    page.evaluate(f"seekTo({report['steps_total'] - 1})")
+    expect(page.locator("#why-story")).to_contain_text("input.a")
+    expect(page.locator("#why-story")).not_to_contain_text("input.b")
+    expect(page.locator('.graph-edge.is-isolated[data-from="input:b"]')).to_have_count(
+        1
+    )
+
+
 def test_reactlog_hotspot_badge(page: Page) -> None:
     code = """from shiny import reactive
 from shiny.express import input, render

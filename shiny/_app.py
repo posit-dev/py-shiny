@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import os
 import secrets
+import textwrap
 import time
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
@@ -188,6 +189,7 @@ class App:
         # to the ASGI lifespan protocol)
         self._exit_stack = AsyncExitStack()
         self._raw_server_fn = server
+        self._reactlog_source_path: Path | None = None
 
         if server is None:
             self.server = noop_server_fn
@@ -522,27 +524,29 @@ window.addEventListener('keydown', function(e) {{
         client_host = request.client.host if request.client else ""
         is_loopback = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
 
-        target_fn = getattr(self, "_raw_server_fn", None) or getattr(
-            self, "server", None
-        )
+        target_fn = self._raw_server_fn
         source_code = ""
-        app_file = None
+        app_file: Path | None = None
         if is_loopback:
-            if target_fn is not None:
+            app_file = self._reactlog_source_path
+            if app_file is None and target_fn is not None:
                 try:
-                    source_code = inspect.getsource(target_fn)
-                except Exception:
-                    pass
-                try:
-                    app_file = inspect.getfile(target_fn)
-                except Exception:
+                    app_file = Path(inspect.getfile(target_fn))
+                except (TypeError, OSError):
                     pass
 
-            if not source_code and app_file and os.path.exists(app_file):
+            if app_file is not None:
                 try:
-                    with open(app_file, "r") as f:
-                        source_code = f.read()
-                except Exception:
+                    source_code = app_file.read_text(encoding="utf-8")
+                except (OSError, UnicodeError):
+                    app_file = None
+
+            if not source_code and target_fn is not None:
+                # A snippet has its own line numbers and is not the file's contents.
+                app_file = None
+                try:
+                    source_code = textwrap.dedent(inspect.getsource(target_fn))
+                except (TypeError, OSError):
                     pass
 
         session_id = request.query_params.get("session_id")

@@ -60,6 +60,21 @@ To see what's bundled without installing anything, run `shiny skills list`.
 
 - `shiny inspect app.py --reactlog`: Static reactive dependency graph (DAG) with simulated invalidation ordering and interactive HTML export (`--html`). It does not execute app code.
 
+Reactlog analysis recognizes conventional `reactive.calc`, `reactive.effect`,
+`reactive.event`, and `render.*` decorators, their fully qualified `shiny.*` forms,
+and direct imports named `calc`/`effect` (including legacy `Calc`/`Effect`). Isolated
+reads remain visible but do not trigger simulated invalidation. Analysis is static:
+renamed Shiny imports (such as `reactive as r`), reassigned or shadowed API names,
+custom decorator wrappers, and dynamic module IDs are not resolved. Local module
+imports and literal module IDs are supported. Treat the graph as an inferred view,
+not a runtime execution trace.
+
+For the in-app report, use `SHINY_REACTLOG=1 shiny run app.py` or `shiny run
+--reactlog app.py`. With neither CLI flag, the runner respects the environment and
+the app's `reactlog` setting. `--no-reactlog` disables the environment-based default.
+Local in-app reports use the complete app source, including local imports; when
+that file is unavailable, analysis falls back to the server function's source.
+
 ## Development
 
 * Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/

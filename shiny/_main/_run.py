@@ -173,8 +173,8 @@ any of the following will work:
 @click.option(
     "--reactlog/--no-reactlog",
     is_flag=True,
-    default=False,
-    help="Enable Reactlog visualizer (press Cmd+F3 / Ctrl+F3 in browser, or open /__reactlog__).",
+    default=None,
+    help="Enable Reactlog visualizer (Cmd+F3 / Ctrl+F3, or /__reactlog__). By default, respect SHINY_REACTLOG and the app's configuration.",
     show_default=True,
 )
 @no_example()
@@ -194,7 +194,7 @@ def run(
     factory: bool,
     launch_browser: bool,
     dev_mode: bool,
-    reactlog: bool = False,
+    reactlog: bool | None = None,
     **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
@@ -235,7 +235,7 @@ def run_app(
     factory: bool = False,
     launch_browser: bool = False,
     dev_mode: bool = True,
-    reactlog: bool = False,
+    reactlog: bool | None = None,
     **kwargs: object,
 ) -> None:
     """
@@ -280,6 +280,10 @@ def run_app(
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    reactlog
+        Enable or disable the Reactlog visualizer. If ``None`` (the default), preserve
+        the app's configuration and ``SHINY_REACTLOG`` environment variable. An explicit
+        value overrides an existing App object or sets the environment for a loaded app.
     **kwargs
         Additional keyword arguments which are passed to ``uvicorn.run``. For more
         information see [Uvicorn documentation](https://www.uvicorn.org/).
@@ -316,15 +320,6 @@ def run_app(
 
     if dev_mode:
         os.environ["SHINY_DEV_MODE"] = "1"
-
-    orig_reactlog = os.environ.get("SHINY_REACTLOG")
-    if reactlog:
-        os.environ["SHINY_REACTLOG"] = "1"
-    elif "SHINY_REACTLOG" in os.environ:
-        del os.environ["SHINY_REACTLOG"]
-
-    if not isinstance(app, str) and hasattr(app, "reactlog_enabled"):
-        app.reactlog_enabled = reactlog
 
     if isinstance(app, str):
         # Remove ":app" suffix if present. Normally users would just pass in the
@@ -436,6 +431,12 @@ def run_app(
     maybe_setup_rsw_proxying(log_config)
 
     _set_workbench_kwargs(kwargs)
+
+    orig_reactlog = os.environ.get("SHINY_REACTLOG")
+    if reactlog is not None:
+        os.environ["SHINY_REACTLOG"] = "1" if reactlog else "0"
+        if not isinstance(app, str):
+            app.reactlog_enabled = reactlog
 
     try:
         _run_uvicorn(
