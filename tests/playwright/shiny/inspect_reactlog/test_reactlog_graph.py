@@ -84,6 +84,107 @@ def other():
     )
 
 
+def test_selected_lineage_stays_focused_during_hover_and_playback(page: Page) -> None:
+    code = """from shiny.express import input, render
+from shiny import reactive
+@reactive.calc
+def doubled():
+    return input.x() * 2
+@render.text
+def result():
+    return doubled()
+@render.text
+def sibling():
+    return input.x()
+@render.text
+def other():
+    return input.y()
+"""
+    report = generate_reactlog(code)
+    page.set_content(format_reactlog_html(report, code))
+    page.locator('.graph-node[data-id="calc:doubled"]').click()
+    page.locator(".toolbar").hover()
+    expect(page.locator(".graph-node.is-dimmed")).to_have_count(3)
+    expect(page.locator(".graph-edge.is-dimmed")).to_have_count(2)
+    expect(page.locator('.graph-node[data-id="input:x"]')).not_to_have_class(
+        re.compile("is-dimmed")
+    )
+    page.locator('.graph-node[data-id="output:other"]').hover()
+    expect(page.locator(".graph-node.is-dimmed")).to_have_count(3)
+    # An unrelated active edge must not override the selection's muted styling.
+    step = next(
+        i for i, e in enumerate(report["events"]) if e.get("edge_to") == "output:other"
+    )
+    page.evaluate(f"seekTo({step})")
+    expect(page.locator("#insp-title")).to_contain_text("doubled")
+    edge = page.locator('.graph-edge[data-to="output:other"]')
+    expect(edge).to_have_css("opacity", "0.15")
+    expect(edge).to_have_css("animation-name", "none")
+    page.locator('.graph-node[data-id="output:other"]').focus()
+    page.keyboard.press("Enter")
+    expect(page.locator("#insp-title")).to_contain_text("other")
+    page.keyboard.press("Escape")
+    expect(page.locator(".is-dimmed")).to_have_count(0)
+    page.locator('.graph-node[data-id="calc:doubled"]').click()
+    page.get_by_role("button", name="Clear node selection", exact=True).click()
+    expect(page.locator(".is-dimmed")).to_have_count(0)
+
+
+def test_root_and_module_plots_remain_distinct_and_follow_selected_time(
+    page: Page,
+) -> None:
+    code = """from shiny import module, render
+@module.server
+def panel(input, output, session):
+    @render.plot
+    def chart():
+        return input.n()
+panel("sales")
+@render.plot
+def chart():
+    return input.n()
+"""
+    src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7S8AAAAASUVORK5CYII="
+    report = generate_reactlog(
+        code,
+        recorded_actions=[
+            {
+                "type": "output",
+                "name": name,
+                "timestamp": time,
+                "plot": {"src": src, "alt": alt},
+            }
+            for name, time, alt in [
+                ("chart", 1000, "App plot"),
+                ("sales-chart", 2000, "Module plot"),
+                ("chart", 3000, "Updated app plot"),
+            ]
+        ],
+    )
+    steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
+    page.set_content(format_reactlog_html(report, code))
+    expect(page.locator(".app-box")).to_contain_text("App (no namespace)")
+    page.locator('.graph-node[data-id="output:chart"]').click()
+    expect(page.locator("#insp-plot-image")).to_be_hidden()
+    page.evaluate(f"seekTo({steps[1]})")
+    expect(page.locator("#insp-plot-image")).to_have_attribute("alt", "App plot")
+    page.locator('.module-box[data-module="sales"] text').dblclick()
+    expect(page.locator('.graph-node[data-id="module:sales"]')).to_have_class(
+        re.compile("is-dimmed")
+    )
+    expect(page.locator('.graph-node[data-id="output:chart"]')).to_be_visible()
+    page.evaluate(f"seekTo({steps[2]})")
+    expect(page.locator("#insp-plot-image")).to_have_attribute(
+        "alt", "Updated app plot"
+    )
+    page.evaluate("seekTo(0)")
+    expect(page.locator("#insp-plot-image")).to_be_hidden()
+    page.locator('.graph-node[data-id="module:sales"]').dblclick()
+    page.locator('.graph-node[data-id="output:sales-chart"]').click()
+    page.evaluate(f"seekTo({steps[1]})")
+    expect(page.locator("#insp-plot-image")).to_have_attribute("alt", "Module plot")
+
+
 def test_app_code_tab_and_scrubber(page: Page) -> None:
     code = """from shiny.express import input, render, ui
 ui.input_text("name", "Name")
@@ -589,11 +690,13 @@ def other():
     page.locator('.graph-node[data-id="calc:doubled"]').click()
 
     expect(page.locator(".path-controls")).to_have_count(0)
-    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(5)
+    expect(page.locator(".graph-node")).to_have_count(5)
+    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(3)
     page.locator('.graph-node[data-id="input:x"]').click()
-    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(5)
+    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(3)
     page.locator('.graph-node[data-id="output:other"]').click()
-    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(5)
+    expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(2)
+    expect(page.locator(".graph-node")).to_have_count(5)
     expect(page.locator('.graph-node[data-id="output:other"]')).to_have_class(
         re.compile("is-selected")
     )
@@ -995,16 +1098,18 @@ def client_badge():
     why_story = page.locator("#why-story")
     expect(why_story).to_contain_text("subtotal")
 
-    # Selecting an output preserves the full graph.
-    expect(page.locator(".graph-node.is-dimmed")).to_have_count(0)
+    # Selecting an output preserves the full graph but mutes the other branch.
+    expect(page.locator(".graph-node")).to_have_count(7)
+    expect(page.locator(".graph-node.is-dimmed")).to_have_count(3)
 
     # 5. Clicking unaffected node (client) shows did not change in this action
     page.locator('.graph-node[data-id="input:client"]').click()
     expect(why_title).to_contain_text("input.client did not change")
     expect(page.locator("#why-story")).to_contain_text("Did not change during")
 
-    # Selecting an input also preserves the full graph.
-    expect(page.locator(".graph-node.is-dimmed")).to_have_count(0)
+    # The muted input is still clickable and switches the focused branch.
+    expect(page.locator(".graph-node")).to_have_count(7)
+    expect(page.locator(".graph-node.is-dimmed")).to_have_count(4)
 
 
 def test_malicious_node_id_no_code_execution_xss_protection(page: Page) -> None:
