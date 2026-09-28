@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* `ui.input_text_area()` now applies the `width:100%` rule to the `<textarea>` when `width=` is given, and leaves the field unstyled when it is not. The rule was being applied in the opposite case, so a `width=` reached the container but not the field itself, and `cols=` never took effect. This matches the `cols` documentation and Shiny for R. Apps that relied on the textarea filling its container without passing `width=` should now pass `width="100%"`. `playwright.controller.InputTextArea.expect_width()` follows the same change. (#2509)
+* `ui.input_text_area()` now applies the `width:100%` rule to the `<textarea>` when `width=` is given, and leaves the field unstyled when it is not. The rule was being applied in the opposite case, so the width the caller asked for reached the container but never the field itself. This matches Shiny for R. `playwright.controller.InputTextArea.expect_width()` follows the same change, and the `cols` documentation now says what Bootstrap's `.form-control` rule leaves it able to do. (#2509)
 
 ## [1.8.0] - 2026-09-12
 

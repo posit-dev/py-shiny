@@ -26,8 +26,8 @@ class TestInputTextAreaWidth:
         # Arrange / Act
         area = ui.input_text_area("x", "Label", cols=20)
 
-        # Assert: without a CSS width rule, `cols` decides the width, which is
-        # what the `cols` documentation promises.
+        # Assert: no inline rule of its own, so the field is left to the
+        # stylesheet and to `cols`, instead of being forced to 100%.
         assert "width" not in _textarea_style(area)
         assert 'cols="20"' in _textarea_style(area)
 
