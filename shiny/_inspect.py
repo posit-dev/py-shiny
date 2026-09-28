@@ -1002,9 +1002,11 @@ def generate_reactlog(
         last_known_vals: Dict[str, Any] = {
             n.get("name", n["id"]): n.get("value") for n in nodes
         }
-        sorted_user_marks = sorted(
-            user_marks, key=lambda m: float(m.get("time") or 0.0)
-        )
+
+        def _mark_time(m: Dict[str, Any]) -> float:
+            return float(m.get("time") or 0.0)
+
+        sorted_user_marks = sorted(user_marks, key=_mark_time)
         mark_idx = 0
         last_ts = 0
         for action in deduped_actions:
@@ -2079,6 +2081,26 @@ def _record_session_sync(
             except Exception:
                 pass
 
+            app_marks: List[Dict[str, Any]] = []
+            try:
+                import urllib.request
+
+                req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
+                with urllib.request.urlopen(req, timeout=3.0) as resp:
+                    mark_data = json.loads(resp.read().decode())
+                    if isinstance(mark_data, dict) and "marks" in mark_data:
+                        raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
+                        for rm in raw_marks:
+                            item = dict(rm)
+                            raw_t = float(item.get("time") or 0.0)
+                            if raw_t > 1_000_000_000:
+                                rel_sec = max(0.0, round(raw_t - page_start_time, 2))
+                                item["time"] = rel_sec
+                                item["timestamp"] = int(rel_sec * 1000)
+                            app_marks.append(item)
+            except Exception:
+                pass
+
             page_video = page.video
 
             page.close()
@@ -2112,25 +2134,25 @@ def _record_session_sync(
             elif video_files:
                 saved_video_path = str(video_files[0])
 
-        app_marks: List[Dict[str, Any]] = []
-        try:
-            import urllib.request
+        if not app_marks:
+            try:
+                import urllib.request
 
-            req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
-            with urllib.request.urlopen(req, timeout=3.0) as resp:
-                mark_data = json.loads(resp.read().decode())
-                if isinstance(mark_data, dict) and "marks" in mark_data:
-                    raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
-                    for rm in raw_marks:
-                        item = dict(rm)
-                        raw_t = float(item.get("time") or 0.0)
-                        if raw_t > 1_000_000_000:
-                            rel_sec = max(0.0, round(raw_t - page_start_time, 2))
-                            item["time"] = rel_sec
-                            item["timestamp"] = int(rel_sec * 1000)
-                        app_marks.append(item)
-        except Exception:
-            pass
+                req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
+                with urllib.request.urlopen(req, timeout=3.0) as resp:
+                    mark_data = json.loads(resp.read().decode())
+                    if isinstance(mark_data, dict) and "marks" in mark_data:
+                        raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
+                        for rm in raw_marks:
+                            item = dict(rm)
+                            raw_t = float(item.get("time") or 0.0)
+                            if raw_t > 1_000_000_000:
+                                rel_sec = max(0.0, round(raw_t - page_start_time, 2))
+                                item["time"] = rel_sec
+                                item["timestamp"] = int(rel_sec * 1000)
+                            app_marks.append(item)
+            except Exception:
+                pass
 
         return {
             "success": True,
