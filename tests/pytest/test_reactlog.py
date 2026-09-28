@@ -894,7 +894,12 @@ def out():
             else None
         ),
     )
-    expected = {"a": {"output:out"}, "b": set(), "c": {"calc:cached"}}[changed]
+    expected_nodes: dict[str, set[str]] = {
+        "a": {"output:out"},
+        "b": set(),
+        "c": {"calc:cached"},
+    }
+    expected = expected_nodes[changed]
     for kind in ("propagate", "wouldEvaluate"):
         assert {
             e["node_id"] for e in report["events"] if e["event"] == kind
@@ -1734,7 +1739,9 @@ def test_in_app_reactlog_reads_complete_source_file(
 ):
     from starlette.testclient import TestClient
 
-    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.syspath_prepend(  # pyright: ignore[reportUnknownMemberType]
+        str(tmp_path)
+    )
     (tmp_path / "review_module.py").write_text("""from shiny import module, render
 @module.server
 def panel(input, output, session):
