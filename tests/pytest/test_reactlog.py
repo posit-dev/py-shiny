@@ -1884,3 +1884,19 @@ def test_inspect_ignores_unrelated_decorator_names(decorator: str):
         f"@{decorator}\ndef helper():\n    return input.x()\n"
     )
     assert graph["nodes"] == []
+
+
+def test_express_showcase_reactlog_features():
+    app_file = Path(__file__).resolve().parent.parent.parent / "dist2" / "app.py"
+    if not app_file.exists():
+        return
+    source = app_file.read_text(encoding="utf-8")
+    report = generate_reactlog(source, source_path=app_file)
+    assert report["success"] is True
+    node_types = {n["type"] for n in report["nodes"]}
+    assert {"input", "calc", "effect", "output"}.issubset(node_types)
+    modules = {n.get("module") for n in report["nodes"] if n.get("module")}
+    assert modules == {"solar", "wind"}
+    isolated = [e for e in report["edges"] if e.get("isolated")]
+    assert len(isolated) >= 1
+    assert set(report["sources"].keys()) == {"app.py", "zone_module.py"}

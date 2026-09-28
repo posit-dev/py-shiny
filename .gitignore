@@ -155,3 +155,4 @@ tests/inspect-ai/scripts/test_metadata.json
 !/.agents/skills/py-shiny-release/
 docs/plans/
 docs/superpowers/
+/dist2
