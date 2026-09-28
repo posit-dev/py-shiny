@@ -2717,6 +2717,9 @@ def format_reactlog_html(
     .shortcuts-table td {{ padding: 0.4rem 0.2rem; border-bottom: 1px solid var(--border); color: var(--text); }}
     .shortcut-key {{ display: inline-block; padding: 0.15rem 0.45rem; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 4px; font-family: var(--mono); font-size: 0.75rem; color: var(--accent); font-weight: 600; }}
     .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
+    .graph-node.is-dimmed, .module-box.is-dimmed, .app-box.is-dimmed {{ opacity: 0.3; filter: grayscale(1); }}
+    .graph-edge.is-dimmed {{ opacity: 0.15 !important; stroke: var(--text-muted) !important; stroke-width: 1.8px !important; filter: grayscale(1); animation: none; }}
+    #btn-clear-selection[hidden] {{ display: none; }}
     @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
@@ -3077,6 +3080,7 @@ def format_reactlog_html(
         </div>
       </div>
       <div id="live-action-toast" class="action-toast" role="status" aria-live="polite" hidden></div>
+      <button class="btn mini" id="btn-clear-selection" onclick="clearNodeSelection()" aria-label="Clear node selection" hidden style="position:absolute;right:1rem;bottom:1rem;z-index:5;">Clear selection · Esc</button>
       <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
@@ -3184,6 +3188,7 @@ def format_reactlog_html(
     let isPlaying = false;
     let playTimer = null;
     let selectedNodeId = null;
+    let focusedNodeId = null;
     let searchQuery = "";
     let activeRoles = new Set(['source', 'conductor', 'observer']);
     let currentPhaseFilter = 'all';
@@ -4870,6 +4875,16 @@ def format_reactlog_html(
 
     function selectNode(nodeId) {{
       selectedNodeId = nodeId;
+      focusedNodeId = nodeId;
+      renderInspector();
+      renderGraph();
+      updateSourceHighlight();
+      updateTraceTimelineScrubber(getCurrentStepTime());
+    }}
+
+    function clearNodeSelection() {{
+      focusedNodeId = null;
+      selectedNodeId = null;
       renderInspector();
       renderGraph();
       updateSourceHighlight();
@@ -4969,6 +4984,10 @@ def format_reactlog_html(
       const representatives = new Map();
       const moduleNodes = new Map();
       const lineageSet = getActiveLineageSet();
+      const focusedNodes = focusedNodeId ? new Set([
+        focusedNodeId, ...getUpstreamNodes(focusedNodeId), ...getDownstreamNodes(focusedNodeId)
+      ]) : null;
+      document.getElementById('btn-clear-selection').hidden = !focusedNodeId;
       rawNodes.forEach(n => {{
         if (lineageSet) {{
           if (!lineageSet.has(n.id)) return;
@@ -4987,12 +5006,16 @@ def format_reactlog_html(
         }} else {{ representatives.set(n.id, n.id); visibleNodes.push(n); }}
       }});
       const nodes = visibleNodes;
-      const edges = [], edgeKeys = new Set();
+      const edges = [], edgeKeys = new Map();
       (reactlogData.edges || []).forEach(e => {{
         const from = representatives.get(e.from), to = representatives.get(e.to);
         if (!from || !to || from === to) return;
         const key = JSON.stringify([from, to]);
-        if (!edgeKeys.has(key)) {{ edges.push({{ from, to, isolated: Boolean(e.isolated) }}); edgeKeys.add(key); }}
+        const related = !focusedNodes || (focusedNodes.has(e.from) && focusedNodes.has(e.to));
+        if (!edgeKeys.has(key)) {{
+          const edge = {{ from, to, isolated: Boolean(e.isolated), related }};
+          edges.push(edge); edgeKeys.set(key, edge);
+        }} else if (related) edgeKeys.get(key).related = true;
       }});
 
       const ranks = dependencyRanks(nodes, edges);
@@ -5007,15 +5030,19 @@ def format_reactlog_html(
         members.forEach(n => {{ const rank = ranks.get(n.id); if (!columns.has(rank)) columns.set(rank, []); columns.get(rank).push(n); }});
         const rows = Math.max(...Array.from(columns.values(), col => col.length));
         columns.forEach((col, rank) => col.forEach((n, i) => {{ pos[n.id] = {{ x: 150 + rank * colWidth, y: top + 40 + i * rowHeight }}; }}));
-        if (name && !collapsedModules.has(name)) {{
+        if (!name || !collapsedModules.has(name)) {{
           const left = Math.min(...members.map(n => pos[n.id].x)) - nodeWidth / 2 - 20;
           const right = Math.max(...members.map(n => pos[n.id].x)) + nodeWidth / 2 + 20;
           const box = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          box.setAttribute('class', 'module-box'); box.setAttribute('data-module', name);
-          box.setAttribute('tabindex', '0'); box.setAttribute('role', 'button'); box.setAttribute('aria-expanded', 'true');
-          box.setAttribute('aria-label', `Collapse module ${{name}}`);
-          box.ondblclick = e => {{ e.stopPropagation(); toggleModule(name); }};
-          box.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(name); }} }};
+          const dimmed = focusedNodes && !members.some(n => focusedNodes.has(n.id));
+          box.setAttribute('class', (name ? 'module-box' : 'app-box') + (dimmed ? ' is-dimmed' : ''));
+          if (name) {{
+            box.setAttribute('data-module', name);
+            box.setAttribute('tabindex', '0'); box.setAttribute('role', 'button'); box.setAttribute('aria-expanded', 'true');
+            box.setAttribute('aria-label', `Collapse module ${{name}}`);
+            box.ondblclick = e => {{ e.stopPropagation(); toggleModule(name); }};
+            box.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(name); }} }};
+          }}
           const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           rect.setAttribute('x', left); rect.setAttribute('y', top - 28); rect.setAttribute('width', Math.max(320, right - left));
           rect.setAttribute('height', rows * rowHeight + 20); rect.setAttribute('rx', '12');
@@ -5023,7 +5050,9 @@ def format_reactlog_html(
           rect.setAttribute('stroke-dasharray', '5 4'); box.appendChild(rect);
           const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           label.setAttribute('x', left + 14); label.setAttribute('y', top - 8); label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
-          label.setAttribute('font-size', '12'); label.textContent = `${{name}} · ${{members.length}} nodes · double-click to collapse`;
+          label.setAttribute('font-size', '12'); label.textContent = name
+            ? `${{name}} · ${{members.length}} nodes · double-click to collapse`
+            : `App (no namespace) · ${{members.length}} nodes`;
           box.appendChild(label); svg.appendChild(box);
         }}
         top += rows * rowHeight + 75;
@@ -5066,7 +5095,7 @@ def format_reactlog_html(
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
-          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : ''));
+          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (!e.related ? ' is-dimmed' : ''));
           if (e.isolated) {{
             path.setAttribute('stroke-dasharray', '5 4');
             path.setAttribute('data-isolated', 'true');
@@ -5087,9 +5116,10 @@ def format_reactlog_html(
         const isSelected = selectedNodeId === n.id || (n.members || []).includes(selectedNodeId);
         const isExecuted = (n.members || []).some(id => executedInBurst.has(id)) || executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
         const kind = nodeKind(n);
+        const isDimmed = focusedNodes && !(n.members || [n.id]).some(id => focusedNodes.has(id));
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
         g.setAttribute('data-active', isActive ? 'true' : 'false');
@@ -5100,6 +5130,12 @@ def format_reactlog_html(
         g.onclick = (e) => {{
           e.stopPropagation();
           if (n.type !== 'module') selectNode(n.id);
+        }};
+        g.onkeydown = e => {{
+          if (e.key === 'Enter' || e.key === ' ') {{
+            e.preventDefault(); e.stopPropagation(); selectNode(n.id);
+            document.querySelectorAll('.graph-node').forEach(el => {{ if (el.dataset.id === n.id) el.focus(); }});
+          }}
         }};
         if (n.type === 'module') {{
           g.setAttribute('aria-expanded', 'false');
@@ -5230,6 +5266,7 @@ def format_reactlog_html(
     }}
 
     function highlightDependencies(nodeId) {{
+      if (focusedNodeId) return;
       document.querySelectorAll('.graph-edge').forEach(edge => {{
         const from = edge.getAttribute('data-from');
         const to = edge.getAttribute('data-to');
@@ -5244,6 +5281,7 @@ def format_reactlog_html(
     }}
 
     function resetHighlight() {{
+      if (focusedNodeId) return;
       document.querySelectorAll('.graph-edge').forEach(edge => {{
         const isIsolated = edge.classList.contains('is-isolated') || edge.getAttribute('data-isolated') === 'true';
         edge.style.opacity = isIsolated ? '0.65' : '0.75';
@@ -5275,7 +5313,7 @@ def format_reactlog_html(
       }});
 
       const ev = events[currentStep];
-      if (ev && (ev.node_id || ev.id)) {{
+      if (!focusedNodeId && ev && (ev.node_id || ev.id)) {{
         const evNodeId = ev.node_id || ev.id;
         const lineageSet = getActiveLineageSet();
         if (!lineageSet || lineageSet.has(evNodeId)) {{
@@ -5563,6 +5601,7 @@ def format_reactlog_html(
             document.getElementById('search-input').value = filterVal;
             results.hidden = true;
             selectedNodeId = node.id;
+            focusedNodeId = node.id;
             activeRoles = new Set(['source', 'conductor', 'observer']);
             renderGraph();
             renderInspector();
@@ -5579,6 +5618,7 @@ def format_reactlog_html(
 
     function resetGraphView() {{
       selectedNodeId = null;
+      focusedNodeId = null;
       searchQuery = '';
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
@@ -5765,6 +5805,7 @@ def format_reactlog_html(
 
       Object.assign(reactlogData, normalized);
       selectedNodeId = null;
+      focusedNodeId = null;
       collapsedModules.clear();
       graphSeekTime = null;
       currentStep = 0;
@@ -5814,9 +5855,7 @@ def format_reactlog_html(
           return;
         }}
         if (selectedNodeId) {{
-          selectedNodeId = null;
-          renderInspector();
-          renderGraph();
+          clearNodeSelection();
           e.preventDefault();
           return;
         }}
