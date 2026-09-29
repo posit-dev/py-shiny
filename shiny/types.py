@@ -20,9 +20,11 @@ from typing import (
     Dict,
     List,
     Literal,
+    Mapping,
     NamedTuple,
     Optional,
     Protocol,
+    Sequence,
     Tuple,
     TypeVar,
     Union,
@@ -390,9 +392,8 @@ Jsonifiable = Union[
     float,
     bool,
     None,
-    List["Jsonifiable"],
-    Tuple["Jsonifiable", ...],
-    "JsonifiableDict",
+    Sequence["Jsonifiable"],
+    Mapping[str, "Jsonifiable"],
 ]
 
 JsonifiableDict = Dict[str, Jsonifiable]
