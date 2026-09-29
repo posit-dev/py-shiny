@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+* Added a WebMCP sales dashboard example showing how browser agents can share a live Shiny session with a person, with `local_server` and browser tests.
+
 ### Bug fixes
 
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
