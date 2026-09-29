@@ -1,133 +1,165 @@
-# Shiny + WebMCP: explore a dashboard together
+# Shiny + WebMCP
 
-This example lets a browser agent operate a Shiny sales dashboard through two
-named tools. The person and agent share the same controls, Python calculations,
-and visible results. It uses eight fictional orders and no extra dependencies.
+[WebMCP](https://developer.chrome.com/docs/ai/webmcp) lets a browser agent discover
+named tools with argument schemas and call them in a person's open page. This
+experimental integration exposes a live Shiny session through those tools. The
+person and agent see and update the same controls.
 
-Try asking an agent:
+## Enable it in an existing app
+
+With a Shiny version containing this feature, start an existing Core or Express
+app with:
+
+```sh
+SHINY_WEBMCP=1 shiny run app.py
+```
+
+No app-specific JavaScript is required. For Core apps, you can also opt in in code:
+
+```python
+app = App(app_ui, server, webmcp=True)
+```
+
+An explicit `webmcp=False` overrides the environment variable. The default is off:
+Shiny only loads the adapter and installs its session RPC handlers when enabled.
+Browsers without `document.modelContext.registerTool` still run the app normally.
+Consult Chrome's [setup instructions](https://developer.chrome.com/docs/ai/webmcp)
+for current browser support and feature flags. WebMCP is evolving; this adapter
+uses the imperative `document.modelContext` API.
+
+## Automatic tools
+
+| Tool | What an agent gets |
+| --- | --- |
+| `shiny_describe_app` | Visible supported inputs, labels, values, schemas, explicitly exposed actions, and output status. |
+| `shiny_set_inputs` | Updates a batch of inputs by ID; returns the dashboard after the server's reactive flush. |
+| `shiny_read_outputs` | Currently displayed text/code outputs, optionally selected by ID. |
+| `shiny_invoke_action` | Clicks an explicitly exposed action button and returns the dashboard after a flush. Only registered when an exposed button is available. |
+
+The adapter uses Shiny's input bindings to update both the widgets and the server.
+It discovers dynamic controls and refreshes schemas when choices or bounds change.
+Module IDs keep their namespaces. An agent can call, for example:
+
+```json
+{"values": {"region": "West", "channel": "Online"}}
+```
+
+Supported controls are text/textarea, numbers, checkboxes/groups, radio buttons,
+select/Selectize, numeric sliders/ranges, and dates/date ranges. Argument types,
+choices, numeric/date bounds, and range order are checked before changing any
+widget. Selectize exposes currently loaded choices; remote search and creating
+new choices need custom tools. Disabled controls cannot be set; groups containing
+disabled inputs are read-only to avoid changing them through a group setter. Hidden controls,
+passwords, file uploads, date/time sliders, navigation, and custom bindings are
+not exposed by the automatic input tools.
+
+Actions need an explicit marker because button clicks may have consequences:
+
+```python
+run_button = ui.input_action_button("run", "Run analysis")
+run_button.attrs["data-webmcp"] = "action"
+# Include run_button in the app's UI.
+```
+
+To omit an input, output, or subtree from automatic discovery, wrap it:
+
+```python
+ui.div(ui.input_text("notes", "Notes"), **{"data-webmcp": "exclude"})
+```
+
+These markers control discovery, not authorization. Keep application permission
+checks in server code. Changes to ordinary inputs may also trigger side effects.
+
+Text/code results are limited to 20,000 characters per output and include status
+and truncation information. Plots, tables, HTML, and data frames return metadata
+with `status: "unsupported"`; their underlying data is not extracted. Expose a
+custom tool when an agent needs structured data or a domain-specific operation.
+
+## Add Python tools
+
+Define tools in a Core server, an Express app, or a module server:
+
+```python
+from shiny import App, Inputs, Outputs, Session, ui, webmcp
+
+
+def server(input: Inputs, output: Outputs, session: Session):
+    @webmcp.tool(
+        description="Multiply the dashboard's current quantity by a factor.",
+        input_schema={
+            "type": "object",
+            "properties": {"factor": {"type": "number"}},
+            "required": ["factor"],
+            "additionalProperties": False,
+        },
+        read_only=True,
+    )
+    def multiply(factor: float):
+        return {"product": input.quantity() * factor}
+
+
+app = App(ui.page_fluid(ui.input_numeric("quantity", "Quantity", 2)), server, webmcp=True)
+```
+
+`@webmcp.tool` returns the original callable. Tools run in an isolated reactive
+context in their own session and can be synchronous or asynchronous. JSON Schema
+2020-12 validates arguments on the server; schemas must be self-contained object
+schemas. Return JSON-serializable data. Schema defaults do not supply arguments;
+use Python defaults for optional parameters. Tool names default to the function
+name, are module-namespaced, and cannot start with the reserved `shiny_` prefix.
+
+Registration ends with the session or module. Calls use the existing session's
+WebSocket and error-sanitization settings. `read_only` and `consequential` are
+agent hints, not enforced permission checks. Exposure is disabled unless the app
+opts in, even if it defines decorated functions.
+
+Calls are serialized in the browser and time out after 30 seconds. Cancellation
+or a timeout stops waiting; already-dispatched Python work may still finish.
+Results follow a reactive flush, which does not wait for background/extended
+tasks. Use app-specific status/result tools for those workflows.
+
+## Try the sales explorer
+
+```sh
+shiny run examples/webmcp/app.py
+```
+
+The example enables automatic tools and adds one semantic tool,
+`compare_channels`, which compares revenue without changing the dashboard. Ask a
+WebMCP-capable browser agent:
 
 > Compare West online sales with retail, and leave the dashboard showing online sales.
 
-The expected answer is **$600 online versus $300 retail**, with two orders in
-each channel. The final visible filters should be **West / Online**. This is a
-suggested agent evaluation, not a recorded model run.
+It can call `compare_channels({"region":"West"})` to get Online **$600**, Retail
+**$300**, and a **$300** difference, then call `shiny_set_inputs` to select West and
+Online. Or it can perform the comparison using automatic tools alone. The eight
+orders are fictional and small enough to verify by hand.
 
-## Run it
+Compared with Playwright, the benefit is a discoverable contract: named
+operations, allowed arguments, structured results, and a defined reactive flush
+boundary. Playwright remains useful for visual checks, unsupported controls, and
+end-to-end tests. WebMCP does not run an LLM or create a remote MCP server; an agent
+still needs a browser integration that discovers and invokes these tools.
 
-From a checkout with Shiny installed:
+## Tests
 
-```sh
-shiny run examples/webmcp/app.py --port 8000
-```
-
-Open `http://localhost:8000`. The filters work in ordinary browsers. To use native
-tools, follow Chrome's [WebMCP setup instructions](https://developer.chrome.com/docs/ai/webmcp)
-and enable `chrome://flags/#enable-webmcp-testing` in a supporting Chrome build.
-The sidebar says **Agent tools ready** when registration succeeds. Chrome's
-Model Context Tool Inspector extension, linked in those instructions, can list
-and invoke the tools and provide an agent chat for the prompt above.
-
-This example targets the current [imperative API](https://developer.chrome.com/docs/ai/webmcp/imperative-api),
-using `document.modelContext`. Older experimental builds
-using `navigator.modelContext` are not supported. WebMCP is evolving; follow the
-linked documentation for browser availability and deployment requirements.
-
-In a supporting browser, this DevTools snippet exercises native discovery and
-execution without a model or API key:
-
-```js
-const tools = await document.modelContext.getTools();
-const filter = tools.find((tool) => tool.name === "set_sales_filters");
-const result = await document.modelContext.executeTool(filter, {
-  region: "West",
-  channel: "Online",
-});
-console.log(JSON.parse(result)); // revenue: 600, orders: 2
-```
-
-The snippet uses Chrome 155+ object arguments. In Chrome 153/154, pass
-`JSON.stringify({ region: "West", channel: "Online" })` as the second argument
-to `executeTool` instead. This changes the caller, not the app's tool callbacks.
-
-## What the agent can do
-
-| Tool                | Arguments                                                         | Result                                                            |
-| ------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `set_sales_filters` | `region`: All, North, South, West; `channel`: All, Online, Retail | Updates both visible filters and returns the computed summary.    |
-| `get_sales_summary` | `{}`                                                              | Reads the current summary, including the person's filter changes. |
-
-Both return a JSON string containing the actual filters, order count, revenue,
-average order, and currency. Only the read tool is annotated `readOnlyHint`:
-filtering changes the shared dashboard. No arbitrary input setter or session
-inspection tool is exposed.
-
-## How the bridge works
-
-1. `webmcp.js` waits for Shiny initialization and registers tools if WebMCP exists.
-2. A filter call updates the plain select controls and uses `Shiny.setInputValue`
-   to send those values and a unique request token in the normal input batch.
-3. The server computes the same reactive `sales()` result used by the dashboard.
-   Its `summary` output includes the token.
-4. The tool waits for the matching `shiny:value` event and the next animation
-   frame, then returns the result. It ignores older responses; a new token also
-   makes repeated calls with identical filters complete.
-
-The browser validates tool arguments and Python validates input values again.
-Calls run one at a time. Disconnects, cancellation, and a ten-second deadline
-reject the pending call and remove its listeners. Cancelling stops the wait; it
-does not undo filters already applied. If a person edits during a call, the
-returned `filters` describe the server's computed result. The dashboard remains
-interactive throughout.
-
-This is an app-owned example, not a new Shiny API. It does not start an MCP
-server, enable test mode, expose Python objects, or require a hosted model.
-WebMCP supplies browser tool discovery and invocation; Shiny supplies the live
-session and reactive calculation.
-
-## Reusing #2495: two layers of tests
-
-[`local_server` from #2495](https://github.com/posit-dev/py-shiny/pull/2495)
-provides the fast server-side test harness. The tests select this example via
-indirect parametrization, set inputs, and inspect the resulting JSON:
-
-```python
-@pytest.mark.parametrize(
-    "local_server", ["../../examples/webmcp/app.py"], indirect=True
-)
-def test_sales(local_server):
-    local_server.set_inputs(
-        region="West", channel="Online", webmcp_request_id="one"
-    )
-    result = json.loads(local_server.get_output("summary").value)
-    assert result["request_id"] == "one"
-    assert result["revenue"] == 600
-```
-
-The relative path above is for a test in `tests/pytest/`. These tests exercise
-real reactive calculations, request correlation, and invalid-input recovery.
-`local_server` does **not** execute JavaScript or provide a browser agent session.
-
-The portable Playwright tests run a real app and execute its registered callbacks.
-They check visible controls, returned results, human edits, repeated requests,
-stale responses, overlapping calls, cancellation, disconnects, and the browser
-fallback. Only WebMCP registration is replaced with a test double so CI does not
-depend on an experimental browser feature. These tests establish the Shiny
-bridge's behavior independently of native browser API compatibility.
-
-A separate native smoke test enables WebMCP in a fresh Chromium browser, discovers
-the tools with `getTools()`, and invokes `executeTool()` for the comparison above.
-It skips on browsers without the API, and handles the Chrome 153/154 argument
-format. It was verified in Chrome 153.0.8010.53. None of these deterministic tests
-establishes whether a model will choose the right tools; use the agent prompt
-above for that evaluation.
+The `local_server` fixture introduced in [#2495](https://github.com/posit-dev/py-shiny/pull/2495)
+checks the example's server calculations and invalid-input recovery without a
+browser. WebSocket tests cover tool schemas, module/session isolation and error
+sanitization. Browser tests exercise the adapter against live Shiny apps,
+including unmodified Core and Express examples, dynamic controls, dates,
+cancellation and module teardown. A separate smoke test uses native WebMCP;
+it skips if the browser lacks the API. These tests verify tool behavior, not an
+LLM's ability to choose the right calls from a prompt.
 
 ```sh
-pytest tests/pytest/test_webmcp_example.py -n 0
-pytest -c tests/playwright/playwright-pytest.ini \
-  tests/playwright/examples/test_webmcp.py -o addopts='' \
-  -o asyncio_default_fixture_loop_scope=function --browser chromium -n 0
+uv run pytest tests/pytest/test_webmcp.py tests/pytest/test_webmcp_example.py
+uv run pytest -c tests/playwright/playwright-pytest.ini \
+  tests/playwright/examples/test_webmcp.py tests/playwright/shiny/webmcp \
+  -o addopts='' -o asyncio_default_fixture_loop_scope=function \
+  --browser chromium --browser-channel chrome -n 0
 ```
 
-Add `--browser-channel chrome` to use an installed Chrome with native WebMCP
-instead of Playwright's bundled Chromium. The native test enables the feature in
-its isolated browser process; it does not change your browser profile or flags.
+The native test enables `WebMCP` in an isolated Chrome process. It does not alter
+your browser profile. Omit `--browser-channel chrome` to use Playwright's bundled
+Chromium; the adapter tests also work with a captured registration interface.

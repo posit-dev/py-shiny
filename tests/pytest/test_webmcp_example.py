@@ -11,30 +11,27 @@ pytestmark = pytest.mark.parametrize(
 )
 
 
-def test_sales_summary_and_request_correlation(local_server: TestServerSession):
-    local_server.set_inputs(region="West", channel="Online", webmcp_request_id="one")
+def test_sales_summary(local_server: TestServerSession):
+    local_server.set_inputs(region="West", channel="Online")
     assert json.loads(local_server.get_output("summary").value) == {
-        "request_id": "one",
         "filters": {"region": "West", "channel": "Online"},
         "orders": 2,
         "revenue": 600,
         "average_order": 300,
         "currency": "USD",
     }
-    local_server.set_inputs(channel="Retail", webmcp_request_id="two")
+    local_server.set_inputs(channel="Retail")
     result = json.loads(local_server.get_output("summary").value)
-    assert result["request_id"] == "two"
     assert result["revenue"] == 300
     assert result["average_order"] == 150
 
 
 def test_all_sales_and_repeated_reads(local_server: TestServerSession):
-    local_server.set_inputs(region="All", channel="All", webmcp_request_id="one")
+    local_server.set_inputs(region="All", channel="All")
     result = json.loads(local_server.get_output("summary").value)
     assert result["orders"] == 8
     assert result["revenue"] == 1800
-    local_server.set_inputs(webmcp_request_id="two")
-    result["request_id"] = "two"
+    local_server.set_inputs(region="All", channel="All")
     assert json.loads(local_server.get_output("summary").value) == result
 
 
@@ -49,11 +46,10 @@ def test_all_sales_and_repeated_reads(local_server: TestServerSession):
 def test_invalid_filters_are_recoverable(
     local_server: TestServerSession, filters: dict[str, str | None]
 ):
-    local_server.set_inputs(**filters, webmcp_request_id="bad")
+    local_server.set_inputs(**filters)
     result = json.loads(local_server.get_output("summary").value)
-    assert result["request_id"] == "bad"
     assert "error" in result
-    local_server.set_inputs(region="North", channel="Retail", webmcp_request_id="ok")
+    local_server.set_inputs(region="North", channel="Retail")
     result = json.loads(local_server.get_output("summary").value)
     assert result["revenue"] == 100
     assert "error" not in result

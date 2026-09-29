@@ -1,7 +1,6 @@
 import json
-from pathlib import Path
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui, webmcp
 
 REGIONS = ["All", "North", "South", "West"]
 CHANNELS = ["All", "Online", "Retail"]
@@ -23,7 +22,6 @@ app_ui = ui.page_sidebar(
         ui.input_select("region", "Region", REGIONS),
         ui.input_select("channel", "Channel", CHANNELS),
         ui.p("Fictional sales data. All amounts are in USD."),
-        ui.p("Connecting…", id="webmcp-status", role="status"),
     ),
     ui.h2("Explore together"),
     ui.p(
@@ -39,12 +37,6 @@ app_ui = ui.page_sidebar(
         ui.card_header("Structured result shared with the agent"),
         ui.tags.pre(ui.output_text("summary", inline=True)),
     ),
-    ui.tags.script(
-        json.dumps({"regions": REGIONS, "channels": CHANNELS}),
-        id="sales-choices",
-        type="application/json",
-    ),
-    ui.include_js(Path(__file__).parent / "webmcp.js"),
     title="Shiny + WebMCP sales explorer",
 )
 
@@ -97,14 +89,35 @@ def server(input: Inputs, output: Outputs, session: Session):
             class_="table",
         )
 
-    # Keep the tool response live even if this output scrolls out of view.
-    @output(suspend_when_hidden=False)
     @render.text
     def summary():
-        request_id = (
-            input.webmcp_request_id() if input.webmcp_request_id.is_set() else None
-        )
-        return json.dumps({"request_id": request_id, **sales()}, indent=2)
+        return json.dumps(sales(), indent=2)
+
+    @webmcp.tool(
+        description="Compare online and retail revenue for a region using fictional sales data. Returns both totals in USD and their difference without changing the dashboard.",
+        input_schema={
+            "type": "object",
+            "properties": {"region": {"type": "string", "enum": REGIONS}},
+            "required": ["region"],
+            "additionalProperties": False,
+        },
+        read_only=True,
+    )
+    def compare_channels(region: str):
+        totals = {
+            channel: sum(
+                amount
+                for r, c, amount in ORDERS
+                if (region == "All" or region == r) and c == channel
+            )
+            for channel in ["Online", "Retail"]
+        }
+        return {
+            "region": region,
+            "currency": "USD",
+            **totals,
+            "online_minus_retail": totals["Online"] - totals["Retail"],
+        }
 
 
-app = App(app_ui, server)
+app = App(app_ui, server, webmcp=True)

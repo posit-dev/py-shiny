@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Documentation
+### New features
 
-* Added a WebMCP sales dashboard example showing how browser agents can share a live Shiny session with a person, with `local_server` and browser tests.
+* Added experimental WebMCP support for browser agents sharing a live Shiny session. Opt in with `App(..., webmcp=True)` or `SHINY_WEBMCP=1` to expose standard controls and text outputs, and use `@webmcp.tool` for session-scoped Python tools. Includes a sales explorer example, bundled agent guidance, and server/browser tests. (#2512)
 
 ### Bug fixes
 
