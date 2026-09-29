@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 from conftest import create_example_fixture
@@ -13,18 +13,17 @@ webmcp_app = create_example_fixture("webmcp")
 def test_native_webmcp(
     browser_type: BrowserType,
     browser_type_launch_args: dict[str, Any],
+    launch_browser: Callable[..., Browser],
     webmcp_app: ShinyAppProc,
 ):
     if browser_type.name != "chromium":
         pytest.skip("Native WebMCP requires a supporting Chromium build")
-    options: dict[str, Any] = {
-        **browser_type_launch_args,
-        "args": [
+    browser = launch_browser(
+        args=[
             *browser_type_launch_args.get("args", []),
             "--enable-blink-features=WebMCP",
         ],
-    }
-    browser = browser_type.launch(**options)
+    )
     try:
         page = browser.new_page()
         page.goto(webmcp_app.url)
