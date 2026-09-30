@@ -485,14 +485,17 @@ class App:
         _reactive_environment.request_flush()
 
     async def _flush_pending_sessions(self) -> None:
+        """
+        After each reactive flush, send each requesting session's outputs.
+
+        Each session sends in its own task (see `AppSession._start_flush()`), so a
+        slow client, or a slow `on_flush` callback, delays only its own session:
+        other sessions' output and the next reactive flush don't wait for it.
+        """
         sessions = list(self._sessions_needing_flush.values())
         self._sessions_needing_flush.clear()
         for session in sessions:
-            # One session's failure closes that session only; the rest still flush.
-            try:
-                await session._flush()
-            except Exception as e:
-                await session._unhandled_error(e)
+            session._start_flush()
 
     # ==========================================================================
     # HTML Dependency stuff

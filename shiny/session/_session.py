@@ -68,7 +68,7 @@ from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_label, create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
 from ..reactive import Effect_, Value, effect, isolate
-from ..reactive._core import _reactive_environment
+from ..reactive._core import _flush_owner, _reactive_environment
 from ..render.renderer import Renderer, RendererT
 from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
@@ -624,7 +624,13 @@ class Session(ABC):
         once: bool = True,
     ) -> Callable[[], None]:
         """
-        Register a function to call before the next reactive flush.
+        Register a function to call before this session next sends its outputs.
+
+        A session sends its outputs (values, errors, and input messages) in one
+        message once each cycle ends, i.e. once all of its effects have finished. It
+        sends them in a task of its own, so a slow callback here (or a slow client)
+        delays only this session. Anything the callback queues, such as a
+        `send_input_message()`, goes out in that same message.
 
         Parameters
         ----------
@@ -647,7 +653,9 @@ class Session(ABC):
         once: bool = True,
     ) -> Callable[[], None]:
         """
-        Register a function to call after the next reactive flush.
+        Register a function to call after this session next sends its outputs.
+
+        See :meth:`on_flush` for when a session sends its outputs.
 
         Parameters
         ----------
@@ -927,6 +935,9 @@ class AppSession(Session):
         self._flush_enabled: bool = False
         self._dispatch_tasks: set[asyncio.Task[None]] = set()
         self._running_flush_callbacks: bool = False
+        # The task sending this session's outputs, and whether to run it once more.
+        self._flush_task: Optional[asyncio.Task[None]] = None
+        self._flush_again: bool = False
         self._message_handlers: dict[
             str,
             tuple[Callable[..., Awaitable[Jsonifiable]], Session],
@@ -1675,6 +1686,33 @@ class AppSession(Session):
         self._flush_enabled = False
         self.app._sessions_needing_flush.pop(self.id, None)
 
+    def _start_flush(self) -> None:
+        """
+        Send this session's outputs in a task of its own.
+
+        At most one runs per session: if a flush is requested while one is still
+        sending, it runs once more when that one finishes, so messages stay in
+        order. An error closes this session only. `reactive.flush()` waits for these
+        tasks, so after it returns the messages have been sent.
+        """
+        if self._flush_task is not None and not self._flush_task.done():
+            self._flush_again = True
+            return
+        self._flush_task = _reactive_environment._spawn(self._run_flush())
+
+    async def _run_flush(self) -> None:
+        # `reactive.flush()` from this session's flush callbacks (or tasks they
+        # start) returns right away rather than waiting on this task.
+        _flush_owner.set(asyncio.current_task())
+        while self._flush_enabled:
+            self._flush_again = False
+            try:
+                await self._flush()
+            except Exception as e:
+                await self._unhandled_error(e)
+            if not self._flush_again:
+                return
+
     async def _flush(self) -> None:
         # Outputs go out once per cycle: while any of this session's effects are
         # still running, hold everything. The idle transition requests a flush.
@@ -1707,18 +1745,21 @@ class AppSession(Session):
 
         try:
             omq = self._outbound_message_queues
-            # Take the queued values before awaiting the send, so a value written
-            # during the send stays queued for the next message. The message is sent
-            # even when empty: the client uses it to settle outputs still showing
-            # progress (e.g. after `req(False, cancel_output=True)`).
-            message: dict[str, object] = {
-                "values": dict(omq.values),
-                "inputMessages": list(omq.input_messages),
-                "errors": dict(omq.errors),
-            }
-            omq.reset()
-            self._cycle_ended = False
-            await self._send_message(message)
+            # Send only when a cycle has ended or something is queued (R's
+            # `hasPendingUpdates()`). A cycle's message is sent even when empty: the
+            # client uses it to settle outputs still showing progress (e.g. after
+            # `req(False, cancel_output=True)`).
+            if self._cycle_ended or not omq.is_empty():
+                # Take the queued values before awaiting the send, so a value
+                # written during the send stays queued for the next message.
+                message: dict[str, object] = {
+                    "values": dict(omq.values),
+                    "inputMessages": list(omq.input_messages),
+                    "errors": dict(omq.errors),
+                }
+                omq.reset()
+                self._cycle_ended = False
+                await self._send_message(message)
         finally:
             with session_context(self):
                 await self._flushed_callbacks.invoke()
