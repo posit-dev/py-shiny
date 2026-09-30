@@ -85,13 +85,22 @@ function excluded(el: HTMLElement): boolean {
   return !!el.closest('[data-webmcp="exclude"]');
 }
 function label(el: HTMLElement): string {
-  return (
-    document
-      .querySelector(`label[for="${CSS.escape(el.id)}"]`)
-      ?.textContent?.trim() ||
-    el.getAttribute("aria-label") ||
-    el.id
-  );
+  const explicit = document.querySelector(
+    `label[for="${CSS.escape(el.id)}"]`
+  )?.textContent?.trim();
+  if (explicit) return explicit;
+  const implicit = el.closest("label")?.textContent?.trim();
+  if (implicit) return implicit;
+  const labelledBy = el.getAttribute("aria-labelledby");
+  if (labelledBy) {
+    const text = labelledBy
+      .split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent?.trim())
+      .filter(Boolean)
+      .join(" ");
+    if (text) return text;
+  }
+  return el.getAttribute("aria-label")?.trim() || el.id;
 }
 function slider(el: HTMLElement): {
   options: { min: number; max: number; disable?: boolean };
@@ -220,7 +229,12 @@ function actions() {
     document.querySelectorAll<HTMLElement>(
       '.action-button.shiny-bound-input[data-webmcp="action"]'
     )
-  ).filter((el) => !excluded(el) && visible(el) && !el.matches(":disabled"));
+  ).filter(
+    (el) =>
+      !excluded(el) &&
+      visible(el) &&
+      !el.matches(":disabled, [disabled], .disabled, [aria-disabled='true']")
+  );
 }
 function readOutputs(ids?: string[]) {
   const outputs: Record<

@@ -8,7 +8,7 @@ results that the automatic tools cannot infer.
 ## Enable an existing app
 
 Run a Core or Express app with `SHINY_WEBMCP=1 shiny run app.py`. In Core,
-`App(app_ui, server, webmcp=True)` also enables it; explicit `False` overrides the
+`App(app_ui, server, webmcp=True)` enables it; in Express, `app_opts(webmcp=True)`. Explicit `False` overrides the
 environment. The default is disabled. Apps work normally in browsers without the
 experimental `document.modelContext.registerTool` API. The agent needs a browser
 integration that supports WebMCP; Shiny does not supply an LLM or a remote MCP

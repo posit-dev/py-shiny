@@ -1,3 +1,7 @@
+from typing import cast
+
+from htmltools import Tag
+
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui, webmcp
 
 
@@ -20,7 +24,23 @@ def logic(input: Inputs, output: Outputs, session: Session):
 run_button = ui.input_action_button("run", "Run")
 run_button.attrs["data-webmcp"] = "action"
 
+disabled_link = ui.input_action_link("disabled_link", "Disabled link")
+disabled_link.attrs["data-webmcp"] = "action"
+disabled_link.attrs["disabled"] = ""
+
+aria_disabled_link = ui.input_action_link("aria_disabled_link", "Aria disabled")
+aria_disabled_link.attrs["data-webmcp"] = "action"
+aria_disabled_link.attrs["aria-disabled"] = "true"
+
+multi_input = ui.input_text("multi_label", "")
+cast(Tag, multi_input.children[1]).attrs["aria-labelledby"] = "first_part second_part"
+
 app_ui = ui.page_fluid(
+    ui.tags.span("First", id="first_part"),
+    ui.tags.span("Second", id="second_part"),
+    multi_input,
+    disabled_link,
+    aria_disabled_link,
     ui.input_numeric("n", "Quantity", 2, min=0, max=10),
     ui.input_text("name", "Name", "Ada"),
     ui.input_checkbox("enabled", "Enabled", True),

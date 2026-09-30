@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -78,6 +79,17 @@ def test_environment_opt_in(monkeypatch: pytest.MonkeyPatch):
     assert App(ui.page_fluid(), None)._webmcp_enabled
     monkeypatch.delenv("SHINY_WEBMCP")
     assert not App(ui.page_fluid(), None)._webmcp_enabled
+
+
+def test_express_app_opts_webmcp(tmp_path: Path):
+    from shiny.express._run import wrap_express_app
+
+    app_file = tmp_path / "app.py"
+    app_file.write_text("from shiny.express import app_opts\napp_opts(webmcp=True)\n")
+    assert wrap_express_app(app_file)._webmcp_enabled is True
+
+    app_file.write_text("from shiny.express import app_opts\napp_opts(webmcp=False)\n")
+    assert wrap_express_app(app_file)._webmcp_enabled is False
 
 
 def test_custom_tools_validation_modules_and_session_isolation():

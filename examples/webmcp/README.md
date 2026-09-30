@@ -14,10 +14,16 @@ app with:
 SHINY_WEBMCP=1 shiny run app.py
 ```
 
-No app-specific JavaScript is required. For Core apps, you can also opt in in code:
+No app-specific JavaScript is required. You can also opt in in code:
 
 ```python
+# Core
 app = App(app_ui, server, webmcp=True)
+
+# Express
+from shiny.express import app_opts
+
+app_opts(webmcp=True)
 ```
 
 An explicit `webmcp=False` overrides the environment variable. The default is off:

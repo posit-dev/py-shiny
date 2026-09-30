@@ -38,11 +38,18 @@ def call(page: Page, name: str, args: object) -> dict[str, Any]:
 def test_automatic_controls_and_custom_tools(agent_page: Page):
     page = agent_page
     state = call(page, "shiny_describe_app", {})
-    ids = [item["id"] for item in state["inputs"]]
+    inputs_by_id = {item["id"]: item for item in state["inputs"]}
+    ids = list(inputs_by_id.keys())
     assert "password" not in ids
     assert "private" not in ids
     assert "left-choice" in ids
+    assert inputs_by_id["enabled"]["label"] == "Enabled"
+    assert inputs_by_id["multi_label"]["label"] == "First Second"
     assert [a["id"] for a in state["actions"]] == ["run"]
+    result = page.evaluate(
+        "async () => { try { await tools.shiny_invoke_action.execute({id: 'disabled_link'}); } catch(e) { return e.message; } }"
+    )
+    assert "Action is unavailable" in result
     state = call(
         page,
         "shiny_set_inputs",

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* Added `@webmcp.tool` to the Shiny Express API reference documentation under an experimental section. (#2513)
+* Added `@webmcp.tool` to the Shiny Express API reference documentation under an experimental section and added `webmcp` option to `express.app_opts()`. (#2513)
 
 ### Bug fixes
 

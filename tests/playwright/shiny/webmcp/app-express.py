@@ -1,6 +1,7 @@
 from shiny import webmcp
-from shiny.express import input, ui
+from shiny.express import app_opts, input, ui
 
+app_opts(webmcp=True)
 ui.input_numeric("n", "Quantity", 2)
 
 
