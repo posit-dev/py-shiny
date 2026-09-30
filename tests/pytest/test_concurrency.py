@@ -1756,12 +1756,12 @@ def test_flush_request_after_the_loop_closed_is_ignored():
 
     asyncio.run(use())  # env now remembers a loop that is closed
     assert env._loop is not None and env._loop.is_closed()
-    errors: list[BaseException] = []
+    errors: list[Exception] = []
 
     def call() -> None:
         try:
             env.request_flush()
-        except BaseException as e:  # pragma: no cover
+        except Exception as e:  # pragma: no cover
             errors.append(e)
 
     in_thread(call)
