@@ -1,4 +1,4 @@
-"""Check the chat API and deprecated calls used by bundled templates.
+"""Guard the chat API floor and deprecated calls used by bundled templates.
 
 Template startup and browser errors are covered in the Playwright example suite.
 """
@@ -64,9 +64,9 @@ def _deprecated_messages_calls(tree: ast.AST) -> list[int]:
         if not isinstance(node, ast.Call):
             continue
         func = node.func
-        is_chat_constructor = (isinstance(func, ast.Name) and func.id == "Chat") or (
-            isinstance(func, ast.Attribute) and func.attr in ("Chat", "chat_ui")
-        )
+        is_chat_constructor = (
+            isinstance(func, ast.Name) and func.id in ("Chat", "chat_ui")
+        ) or (isinstance(func, ast.Attribute) and func.attr in ("Chat", "chat_ui"))
         is_chat_ui_method = (
             isinstance(func, ast.Attribute)
             and func.attr == "ui"
@@ -75,9 +75,13 @@ def _deprecated_messages_calls(tree: ast.AST) -> list[int]:
         )
         if not (is_chat_constructor or is_chat_ui_method):
             continue
-        keywords = {kw.arg for kw in node.keywords}
-        if "messages" in keywords and "history" not in keywords:
-            lines.append(node.lineno)
+        keywords = {kw.arg: kw.value for kw in node.keywords}
+        if "messages" in keywords:
+            history_val = keywords.get("history")
+            if not (
+                isinstance(history_val, ast.Constant) and history_val.value is False
+            ):
+                lines.append(node.lineno)
     return lines
 
 
@@ -106,3 +110,17 @@ def test_no_deprecated_chat_messages_kwarg() -> None:
         "`messages=` on a Chat call raises since shinychat 0.7.0 unless "
         f"`history=False` is also passed. Use `greeting=` instead: {offenders}"
     )
+
+
+def test_deprecated_messages_calls_helper() -> None:
+    code = """
+chat.ui(messages=["Hi"], history=True)
+Chat(messages=["Hi"], history=None)
+Chat(messages=["Hi"])
+Chat(messages=["Hi"], history=False)
+chat.ui(greeting="Hello")
+ui.chat_ui("chat", messages=["Hi"])
+ui.chat_ui("chat", messages=["Hi"], history=False)
+"""
+    lines = _deprecated_messages_calls(ast.parse(code))
+    assert lines == [2, 3, 4, 7]
