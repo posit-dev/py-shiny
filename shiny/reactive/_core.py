@@ -130,9 +130,8 @@ def _yield_to_loop() -> Generator[None, None, None]:
 
 
 # The task running the current flush or effect. Tasks created from it inherit this
-# value without being that task, which lets `flush_settled()` tell a call from inside
-# the flush or effect itself (return right away) from one in a task it started (don't
-# wait on the task that started it).
+# value, which lets `flush_settled()` tell whether it was called from within a flush
+# or effect run that is still going (directly or through a task it started).
 _flush_owner: ContextVar[Optional["asyncio.Task[object]"]] = ContextVar(
     "flush_owner", default=None
 )
@@ -266,20 +265,19 @@ class ReactiveEnvironment:
         """
         Flush until nothing is pending and no flush or effect task is running.
 
-        Returns right away when called from within a flush or effect run itself.
-        Called from a task that an effect started, it doesn't wait for that effect.
+        Returns right away when called from within a flush or effect run that is
+        still going, including from a task it started (e.g. via `asyncio.gather()`
+        or `asyncio.wait_for()`): that run may be waiting on the caller, so waiting
+        here could deadlock. A task started by an effect that has since finished
+        (e.g. an extended task's body) waits as usual.
         """
-        current = asyncio.current_task()
         owner = _flush_owner.get()
-        if owner is not None and owner is current:
+        if owner is not None and not owner.done():
             return
+        current = asyncio.current_task()
         while True:
             await self.flush_pass()
-            running = {
-                t
-                for t in self._tasks
-                if not t.done() and t is not current and t is not owner
-            }
+            running = {t for t in self._tasks if not t.done() and t is not current}
             if not running and self._pending_flush_queue.empty():
                 return
             if running:
