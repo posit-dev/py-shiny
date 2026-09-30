@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from typing import Callable
 
 import pytest
@@ -17,7 +18,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, ui
 from shiny._connection import MockConnection
 from shiny.bookmark._bookmark import BookmarkApp
 from shiny.bookmark._restore_state import RestoreContext
-from shiny.reactive._core import _reactive_environment
+from shiny.reactive._core import ReactiveEnvironment, _reactive_environment
 from shiny.session import get_current_session, session_context
 
 TIMEOUT = 1.0
@@ -577,13 +578,19 @@ async def test_every_cycle_ends_with_a_message_even_when_empty():
     try:
         c.send({"method": "init", "data": {"x": 0}})
 
-        def value_messages() -> int:
-            return sum("values" in m for m in c.sent)
-
-        assert await wait_until(lambda: value_messages() == 1)
+        await asyncio.sleep(0.05)
+        start = len(c.sent)
         c.update(x=1)
-        assert await wait_until(lambda: value_messages() == 2)
-        assert c.sent[-1] == {"values": {}, "inputMessages": [], "errors": {}}
+
+        def cycle_end_message() -> "dict[str, object] | None":
+            after = c.sent[start:]
+            if {"busy": "idle"} not in after:
+                return None
+            idle = after.index({"busy": "idle"})
+            return next((m for m in after[idle:] if "values" in m), None)
+
+        assert await wait_until(lambda: cycle_end_message() is not None)
+        assert cycle_end_message() == {"values": {}, "inputMessages": [], "errors": {}}
     finally:
         await c.close()
 
@@ -1330,4 +1337,466 @@ async def test_cycle_not_started_by_an_input_still_ends_with_a_message():
         assert any("values" in m for m in after[idle:busy])
     finally:
         release.set()
+        await c.close()
+
+
+# ----------------------------------------------------------------------------
+# Each session sends its outputs in its own task
+# ----------------------------------------------------------------------------
+
+
+class GatedConnection(RecordingConnection):
+    """
+    A connection whose output-message sends can be held open (a slow client) or
+    fail. Other messages (e.g. busy/idle status) go straight through.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.gate = asyncio.Event()
+        self.gate.set()
+        self.fail = False
+        self.sending = 0
+        self.most_sending = 0
+
+    async def send(self, message: str) -> None:
+        if '"values"' not in message:
+            await super().send(message)
+            return
+        self.sending += 1
+        self.most_sending = max(self.most_sending, self.sending)
+        try:
+            await self.gate.wait()
+            if self.fail:
+                raise RuntimeError("send failed")
+            await super().send(message)
+        finally:
+            self.sending -= 1
+
+
+class GatedClient(RecordingClient):
+    def __init__(self, server: Callable[[Inputs, Outputs, Session], None]) -> None:
+        self.gated = GatedConnection()
+        self.recording = self.gated
+        self.conn = self.gated
+        self.session = App(ui.TagList(), server)._create_session(self.conn)
+        self.recording.session = self.session
+        self.task = asyncio.create_task(self.session._run())
+
+
+def update_on(x_name: str = "x"):
+    """A server that sends an input message for every change of input `x_name`."""
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _():
+            ui.update_text("t", value=str(input[x_name]()))
+
+    return server
+
+
+async def started(*clients: RecordingClient) -> None:
+    for c in clients:
+        c.send({"method": "init", "data": {"x": 0}})
+    for c in clients:
+        assert await wait_until(lambda c=c: len(c.input_messages()) == 1)
+
+
+def texts(c: RecordingClient) -> list[object]:
+    return [m["message"]["value"] for m in c.input_messages()]  # type: ignore
+
+
+@pytest.mark.asyncio
+async def test_slow_client_does_not_delay_other_sessions_output():
+    a, b = GatedClient(update_on()), GatedClient(update_on())
+    try:
+        await started(a, b)
+        a.gated.gate.clear()  # A's client stops reading
+        a.update(x=1)
+        b.update(x=1)
+        assert await wait_until(lambda: texts(b) == ["0", "1"])
+        assert texts(a) == ["0"]
+        a.gated.gate.set()
+        assert await wait_until(lambda: texts(a) == ["0", "1"])
+    finally:
+        a.gated.gate.set()
+        await a.close()
+        await b.close()
+
+
+@pytest.mark.asyncio
+async def test_slow_client_does_not_block_the_next_reactive_flush():
+    shared = reactive.value(0)
+    seen: list[int] = []
+
+    @reactive.effect
+    def _no_session():
+        seen.append(shared())
+
+    a = GatedClient(update_on())
+    try:
+        await started(a)
+        await reactive.flush()
+        a.gated.gate.clear()
+        a.update(x=1)
+        assert await wait_until(lambda: a.gated.sending == 1)
+        # A's send is stuck; unrelated reactive work still runs.
+        shared.set(1)
+        assert await wait_until(lambda: seen[-1] == 1)
+    finally:
+        a.gated.gate.set()
+        _no_session.destroy()
+        await a.close()
+
+
+@pytest.mark.asyncio
+async def test_slow_on_flush_callback_delays_only_its_session():
+    gate = asyncio.Event()
+
+    def slow_server(input: Inputs, output: Outputs, session: Session) -> None:
+        update_on()(input, output, session)
+
+        async def slow() -> None:
+            await gate.wait()
+
+        session.on_flush(slow, once=False)
+
+    a, b = RecordingClient(slow_server), RecordingClient(update_on())
+    try:
+        a.send({"method": "init", "data": {"x": 0}})
+        b.send({"method": "init", "data": {"x": 0}})
+        assert await wait_until(lambda: len(b.input_messages()) == 1)
+        b.update(x=1)
+        assert await wait_until(lambda: texts(b) == ["0", "1"])
+        assert texts(a) == []
+        gate.set()
+        assert await wait_until(lambda: texts(a) == ["0"])
+    finally:
+        gate.set()
+        await a.close()
+        await b.close()
+
+
+@pytest.mark.asyncio
+async def test_a_sessions_sends_never_overlap_and_stay_in_order():
+    a = GatedClient(update_on())
+    try:
+        await started(a)
+        a.gated.gate.clear()
+        a.update(x=1)
+        assert await wait_until(lambda: a.gated.sending == 1)
+        # More output queued while the first send is stuck.
+        for i in range(2, 5):
+            a.session.send_input_message("t", {"value": str(i)})
+            await asyncio.sleep(0.01)
+        a.gated.gate.set()
+        assert await wait_until(lambda: texts(a) == ["0", "1", "2", "3", "4"])
+        assert a.gated.most_sending == 1
+        # The requests made while blocked were merged into one more flush.
+        assert sum("values" in m for m in a.sent[-3:]) <= 2
+    finally:
+        a.gated.gate.set()
+        await a.close()
+
+
+@pytest.mark.asyncio
+async def test_reactive_flush_waits_for_pending_sends():
+    a = GatedClient(update_on())
+    try:
+        await started(a)
+        a.gated.gate.clear()
+        a.session.send_input_message("t", {"value": "hi"})
+        flush = asyncio.create_task(reactive.flush())
+        assert await wait_until(lambda: a.gated.sending == 1)
+        await asyncio.sleep(0.05)
+        assert not flush.done()
+        a.gated.gate.set()
+        await asyncio.wait_for(flush, TIMEOUT)
+        assert texts(a)[-1] == "hi"
+    finally:
+        a.gated.gate.set()
+        await a.close()
+
+
+@pytest.mark.asyncio
+async def test_flush_callbacks_in_two_sessions_calling_reactive_flush_return():
+    # Both sessions flush at once, and each callback awaits reactive.flush(): they
+    # must not wait on each other's flush task.
+    done: list[str] = []
+    a, b = Client(lambda i, o, s: None), Client(lambda i, o, s: None)
+    try:
+        a.send({"method": "init", "data": {}})
+        b.send({"method": "init", "data": {}})
+        assert await wait_until(
+            lambda: a.session._flush_enabled and b.session._flush_enabled
+        )
+        await asyncio.sleep(0.02)
+
+        def callback(name: str):
+            async def cb() -> None:
+                await reactive.flush()
+                done.append(name)
+
+            return cb
+
+        for name, c in (("a", a), ("b", b)):
+            c.session.on_flush(callback(name), once=True)
+        assert await wait_until(lambda: sorted(done) == ["a", "b"])
+    finally:
+        await a.close()
+        await b.close()
+
+
+@pytest.mark.asyncio
+async def test_session_closed_while_its_send_is_stuck():
+    a = GatedClient(update_on())
+    await started(a)
+    a.gated.gate.clear()
+    a.update(x=1)
+    assert await wait_until(lambda: a.gated.sending == 1)
+    # Queued while the send is stuck, so a re-run is pending when the session ends.
+    a.session.send_input_message("t", {"value": "queued"})
+    a.conn.cause_disconnect()
+    assert await wait_until(lambda: not a.session._flush_enabled)
+    flush_task = a.session._flush_task
+    a.gated.gate.set()
+    assert flush_task is not None
+    await asyncio.wait_for(flush_task, TIMEOUT)
+    # The session is gone: the pending re-run doesn't send.
+    assert "queued" not in texts(a)
+    # ...and later requests don't start a flush at all.
+    a.session.send_input_message("t", {"value": "late"})
+    await asyncio.sleep(0.02)
+    assert "late" not in texts(a)
+
+
+@pytest.mark.asyncio
+async def test_failed_send_closes_only_that_session():
+    a, b = GatedClient(update_on()), GatedClient(update_on())
+    try:
+        await started(a, b)
+        a.gated.fail = True
+        a.update(x=1)
+        assert await wait_until(lambda: a.session._has_run_session_ended_tasks)
+        b.update(x=1)
+        assert await wait_until(lambda: texts(b) == ["0", "1"])
+        assert not b.session._has_run_session_ended_tasks
+    finally:
+        await a.close()
+        await b.close()
+
+
+@pytest.mark.asyncio
+async def test_outputs_stay_in_order_across_cycles_with_a_slow_client():
+    class SlowConnection(GatedConnection):
+        async def send(self, message: str) -> None:
+            if '"values"' in message:
+                await asyncio.sleep(0.005)
+            await super().send(message)
+
+    a = GatedClient(update_on())
+    a.gated.__class__ = SlowConnection
+    try:
+        await started(a)
+        for i in range(1, 6):
+            a.update(x=i)
+        assert await wait_until(lambda: texts(a)[-1:] == ["5"])
+        assert texts(a) == [str(i) for i in range(6)]
+        assert a.gated.most_sending == 1
+    finally:
+        await a.close()
+
+
+# ----------------------------------------------------------------------------
+# Flush requests from other threads
+# ----------------------------------------------------------------------------
+
+
+def in_thread(fn: Callable[[], object]) -> None:
+    t = threading.Thread(target=fn)
+    t.start()
+    t.join(TIMEOUT)
+
+
+@pytest.mark.asyncio
+async def test_value_set_from_another_thread_updates_session_output():
+    shared = reactive.value(0)
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _():
+            ui.update_text("t", value=str(shared()))
+
+    c = RecordingClient(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: texts(c) == ["0"])
+        loop = asyncio.get_running_loop()
+        # Changing reactive state isn't thread-safe; hand the set() to the loop.
+        in_thread(lambda: loop.call_soon_threadsafe(shared.set, 1))
+        assert await wait_until(lambda: texts(c) == ["0", "1"])
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_value_set_from_another_thread_runs_sessionless_effect():
+    # Not the recommended pattern (see `Value.set()`), but with no session involved
+    # it works, and the flush it requests must reach Shiny's loop.
+    v = reactive.value(0)
+    seen: list[int] = []
+
+    @reactive.effect
+    def _e():
+        seen.append(v())
+
+    await reactive.flush()
+    in_thread(lambda: v.set(1))
+    assert await wait_until(lambda: seen == [0, 1])
+    _e.destroy()
+
+
+@pytest.mark.asyncio
+async def test_call_soon_threadsafe_set_from_another_thread():
+    # The documented thread-safe pattern.
+    v = reactive.value(0)
+    seen: list[int] = []
+    loop = asyncio.get_running_loop()
+
+    @reactive.effect
+    def _e():
+        seen.append(v())
+
+    await reactive.flush()
+    in_thread(lambda: loop.call_soon_threadsafe(v.set, 1))
+    assert await wait_until(lambda: seen == [0, 1])
+    _e.destroy()
+
+
+@pytest.mark.asyncio
+async def test_flush_request_from_a_thread_with_its_own_loop_goes_to_shinys_loop():
+    main_loop = asyncio.get_running_loop()
+    loops: list[object] = []
+    v = reactive.value(0)
+
+    @reactive.effect
+    def _e():
+        v()
+        loops.append(asyncio.get_running_loop())
+
+    await reactive.flush()
+
+    async def other_loop() -> None:
+        v.set(1)
+
+    in_thread(lambda: asyncio.run(other_loop()))
+    assert await wait_until(lambda: len(loops) == 2)
+    assert loops[1] is main_loop
+    _e.destroy()
+
+
+@pytest.mark.asyncio
+async def test_many_flush_requests_from_threads_are_merged():
+    flushes = 0
+
+    async def count() -> None:
+        nonlocal flushes
+        flushes += 1
+
+    await reactive.flush()
+    unregister = reactive.on_flushed(count)
+    try:
+        threads = [
+            threading.Thread(target=_reactive_environment.request_flush)
+            for _ in range(20)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(TIMEOUT)
+        assert await wait_until(lambda: flushes >= 1)
+        await asyncio.sleep(0.05)
+        assert flushes <= 3
+    finally:
+        unregister()
+
+
+def test_flush_request_from_a_thread_with_no_loop_yet_is_ignored():
+    env = ReactiveEnvironment()
+    in_thread(env.request_flush)
+    assert env._loop is None and not env._flush_requested
+
+
+def test_flush_request_on_a_new_loop_after_the_old_one_closed():
+    # E.g. `asyncio.run()` twice: the new loop takes over.
+    env = ReactiveEnvironment()
+    flushed: list[bool] = []
+
+    async def mark() -> None:
+        flushed.append(True)
+
+    env.on_flushed(mark)
+
+    async def use() -> None:
+        env.request_flush()
+        await asyncio.sleep(0.01)
+
+    asyncio.run(use())
+    flushed.clear()
+    asyncio.run(use())
+    assert flushed == [True]
+
+
+def test_flush_request_after_the_loop_closed_is_ignored():
+    env = ReactiveEnvironment()
+
+    async def use() -> None:
+        env.request_flush()
+        await asyncio.sleep(0.01)
+
+    asyncio.run(use())  # env now remembers a loop that is closed
+    assert env._loop is not None and env._loop.is_closed()
+    errors: list[BaseException] = []
+
+    def call() -> None:
+        try:
+            env.request_flush()
+        except BaseException as e:  # pragma: no cover
+            errors.append(e)
+
+    in_thread(call)
+    assert errors == []
+
+
+@pytest.mark.asyncio
+async def test_one_output_message_per_input_update():
+    # No extra empty message when a flush finds nothing to send and no cycle ended.
+    c = RecordingClient(update_on())
+    try:
+        await started(c)
+        await asyncio.sleep(0.05)
+        start = len(c.sent)
+        for i in range(1, 4):
+            c.update(x=i)
+            assert await wait_until(lambda i=i: texts(c)[-1:] == [str(i)])
+            await asyncio.sleep(0.02)
+        assert sum("values" in m for m in c.sent[start:]) == 3
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_on_flush_outside_a_cycle_runs_without_sending_an_empty_message():
+    c = RecordingClient(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: c.session._flush_enabled)
+        await asyncio.sleep(0.05)
+        start = len(c.sent)
+        ran: list[bool] = []
+        c.session.on_flush(lambda: ran.append(True))
+        await reactive.flush()
+        assert ran == [True]
+        assert not any("values" in m for m in c.sent[start:])
+    finally:
         await c.close()
