@@ -3,15 +3,18 @@
 ## Overview
 
 A slow computation inside a `@reactive.calc`, `@reactive.effect`, or `@render.*`
-blocks the reactive flush - even an `async def` one - so the whole session (and,
-for shared resources, other sessions) freezes until it returns. Do NOT put a
-slow API call, model inference, or long loop directly in a calc/effect.
+keeps its session busy until it returns: that session applies no input changes
+and sends no outputs in the meantime. A sync one also blocks every session in the
+process, since it holds the event loop. (Other sessions keep running while an
+`async def` one awaits.) Do NOT put a slow API call, model inference, or long loop
+directly in a calc/effect.
 
 `@reactive.extended_task` runs an **async** function in a background asyncio
-task, off the reactive flush. Reactivity keeps processing while it runs; the
-result flows back into the reactive graph when it finishes.
+task, outside the session's reactive cycle. The session keeps processing inputs
+and outputs while it runs; the result flows back into the reactive graph when it
+finishes.
 
-Because it runs outside the reactive flush, the task **cannot read reactive
+Because it runs outside the reactive graph, the task **cannot read reactive
 sources** (`input.x()`, a `reactive.value`, a calc). Read those values *before*
 invoking and pass them in as arguments; reading one inside raises an error.
 
