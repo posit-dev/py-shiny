@@ -124,6 +124,9 @@ current one finishes.
 - Long synchronous work (a blocking library call) inside the async task still
   blocks the event loop - offload it with `asyncio.to_thread(...)` or an async
   client.
+- Calling `value.set(...)` from that worker thread -> the reactive graph isn't
+  thread-safe and it can raise. Return the result to the task instead, or hand the
+  call to the event loop: `loop.call_soon_threadsafe(value.set, new_value)`.
 - Calling `task.result()` outside a reactive context -> no dependency is tracked
   and it errors; read it inside a `@render.*`, calc, or effect.
 - Expecting a fresh `.invoke()` to interrupt the running task -> it queues

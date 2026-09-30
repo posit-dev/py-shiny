@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * Message handlers (`session.set_message_handler()`) run in their own task, so a slow handler no longer holds up other messages from the client.
 
+    * Each session sends its outputs in a task of its own, once all of its effects have finished. A slow client, or a slow `session.on_flush()` callback, delays only its own session's output, not other sessions' or the next reactive flush.
+
+    * Setting a `reactive.value` schedules a flush, including when `set()` is called from another thread. The reactive graph itself still isn't thread-safe, so from another thread use `loop.call_soon_threadsafe(value.set, new_value)`.
+
   (#2508)
 
 ### Bug fixes
