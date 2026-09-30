@@ -149,6 +149,8 @@ class ReactiveEnvironment:
         self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
         self._flush_requested: bool = False
+        # The event loop Shiny runs on, for requests made from other threads.
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._in_flush: bool = False
         # Resolved by the next flush to start (see `flush_pass()`).
         self._flush_pass_waiters: list[asyncio.Future[None]] = []
@@ -214,6 +216,7 @@ class ReactiveEnvironment:
         self._in_flush = True
         self._rerun_flush = False
         self._flush_requested = False
+        self._loop = asyncio.get_running_loop()
         waiters = self._flush_pass_waiters
         self._flush_pass_waiters = []
         token = _flush_owner.set(asyncio.current_task())
@@ -287,14 +290,31 @@ class ReactiveEnvironment:
         """
         Schedule a single flush on the next event-loop pass. Requests made before it
         runs are merged into it.
+
+        Safe to call from another thread: the request is handed to the event loop
+        Shiny runs on. (That makes only the *request* thread-safe. Reactive state
+        itself must be changed on the loop's thread, e.g. with
+        `loop.call_soon_threadsafe(value.set, x)`.)
         """
-        if self._flush_requested:
-            return
         try:
-            loop = asyncio.get_running_loop()
+            loop: Optional[asyncio.AbstractEventLoop] = asyncio.get_running_loop()
         except RuntimeError:
-            # No loop (e.g. building a reactive graph synchronously); whoever runs the
-            # graph will call flush() explicitly.
+            loop = None
+        home = self._loop
+        if home is not None and not home.is_closed() and loop is not home:
+            # Another thread: retry on the loop's own thread, so only that thread
+            # touches `_flush_requested` and schedules the flush.
+            try:
+                home.call_soon_threadsafe(self.request_flush)
+            except RuntimeError:
+                pass  # The loop closed in the meantime.
+            return
+        if loop is None:
+            # No loop at all (e.g. a reactive graph built synchronously); whoever
+            # runs the graph will call flush() explicitly.
+            return
+        self._loop = loop
+        if self._flush_requested:
             return
         self._flush_requested = True
         # A fresh context keeps the requester's session and OTel span out of the flush.
@@ -304,10 +324,11 @@ class ReactiveEnvironment:
         if self._flush_requested:
             self._spawn(self.flush())
 
-    def _spawn(self, coro: Awaitable[None]) -> None:
+    def _spawn(self, coro: Awaitable[None]) -> "asyncio.Task[None]":
         task = asyncio.ensure_future(coro)
         self._tasks.add(task)
         task.add_done_callback(self._on_task_done)
+        return task
 
     def _on_task_done(self, task: asyncio.Task[None]) -> None:
         self._tasks.discard(task)
@@ -389,7 +410,8 @@ async def flush() -> None:
     You shouldn't ever need to call this function inside of a Shiny app. It's only
     useful for testing and running reactive code interactively in the console.
 
-    Returns once every started effect, including its async part, has finished.
+    Returns once every started effect, including its async part, has finished, and
+    each session's resulting outputs have been sent.
 
     Note
     ----

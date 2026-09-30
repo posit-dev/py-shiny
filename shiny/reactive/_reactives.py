@@ -501,6 +501,16 @@ class Value(Generic[T]):
             If the value has been destroyed.
         RuntimeError
             If called on a read-only reactive value.
+
+        Note
+        ----
+        Setting a new value schedules a reactive flush, so its dependents re-run
+        without calling :func:`~shiny.reactive.flush`. Call ``set()`` from the thread
+        running Shiny's event loop. From any other thread, hand the call to that loop
+        with ``loop.call_soon_threadsafe(value.set, new_value)``. The reactive graph
+        isn't safe to change from two threads at once, and calling ``set()`` directly
+        from another thread can fail (e.g. when a session's effect depends on the
+        value).
         """
         if self._destroyed:
             raise DestroyedReactiveError(
