@@ -390,6 +390,15 @@ async def flush() -> None:
     useful for testing and running reactive code interactively in the console.
 
     Returns once every started effect, including its async part, has finished.
+
+    Note
+    ----
+    Called from within an effect, or from a task started by an effect that is still
+    running (e.g. via `asyncio.create_task()` or `asyncio.gather()`), this returns
+    right away without waiting: the effect may be waiting on the caller, so waiting
+    could deadlock. Dependents still run on the next flush, but code right after
+    this call can't rely on them having run yet. A task that outlives the effect
+    that started it (such as an extended task's body) waits as usual.
     """
     await _reactive_environment.flush_settled()
 

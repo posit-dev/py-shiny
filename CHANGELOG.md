@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * `reactive.lock()` no longer pauses reactive processing: Shiny itself no longer takes it. To change reactive state from another `asyncio` task, set the value directly (a flush is scheduled automatically) and `await reactive.flush()` to wait until the resulting reactive work has finished.
 
+    * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect or from a task started by an effect that is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits.
+
     * Message handlers (`session.set_message_handler()`) run in their own task, so a slow handler no longer holds up other messages from the client.
 
   (#2508)
