@@ -17,6 +17,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, ui
 from shiny._connection import MockConnection
 from shiny.bookmark._bookmark import BookmarkApp
 from shiny.bookmark._restore_state import RestoreContext
+from shiny.reactive._core import _reactive_environment
 
 TIMEOUT = 1.0
 
@@ -926,3 +927,94 @@ async def test_flush_waits_for_slow_effects_in_other_sessions():
     finally:
         release.set()
         await c.close()
+
+
+# ----------------------------------------------------------------------------
+# Review round 2
+# ----------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_flush_through_child_task_of_flush_callback_returns():
+    # `asyncio.gather()` (and `asyncio.wait_for()` before Python 3.12) awaits in a
+    # child task, which used to wait for a flush that couldn't start until the
+    # current one finished.
+    done: list[bool] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        async def on_flush() -> None:
+            await asyncio.gather(reactive.flush())
+            await asyncio.ensure_future(reactive.flush())
+            done.append(True)
+
+        session.on_flush(on_flush, once=True)
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: done == [True])
+        assert await wait_until(lambda: not _reactive_environment._in_flush)
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_flush_through_child_task_of_effect_returns():
+    # The effect queues its own re-run, then flushes via a child task: the child
+    # must not wait for the re-run, which waits for the effect.
+    v = reactive.value(0)
+    log: list[str] = []
+
+    @reactive.effect
+    async def e():
+        n = v()
+        log.append(f"start {n}")
+        if n == 0:
+            v.set(1)
+            await asyncio.gather(reactive.flush())
+        log.append(f"end {n}")
+
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
+    assert log == ["start 0", "end 0", "start 1", "end 1"]
+    e.destroy()
+
+
+@pytest.mark.asyncio
+async def test_async_calc_invalidated_mid_run_does_not_cache_stale_value():
+    # The stale run is the slower one, so it finishes after the fresh run.
+    v = reactive.value(1)
+    trigger = reactive.value(0)
+    seen: list[tuple[str, int]] = []
+
+    @reactive.calc
+    async def data():
+        x = v()
+        await asyncio.sleep(0.1 if x == 1 else 0.01)
+        return x * 10
+
+    @reactive.effect
+    async def e1():
+        seen.append(("e1", await data()))
+
+    @reactive.effect
+    async def e2():
+        if trigger() == 0:
+            return
+        seen.append(("e2", await data()))
+
+    async def poke() -> None:
+        await asyncio.sleep(0.03)  # data()'s first run is mid-await
+        v.set(2)
+        trigger.set(1)
+
+    poker = asyncio.create_task(poke())
+    await reactive.flush()
+    await poker
+    await asyncio.sleep(0.15)
+    await reactive.flush()
+
+    with reactive.isolate():
+        assert await data() == 20
+    assert ("e2", 20) in seen and seen[-1] == ("e1", 20)
+    e1.destroy()
+    e2.destroy()
