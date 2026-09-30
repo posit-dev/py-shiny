@@ -40,7 +40,7 @@ docker run -d \
   --workdir /home/pwuser \
   --user pwuser \
   "$IMAGE_REF" \
-  /bin/sh -c "npx --no -- playwright run-server --port $container_port --host 0.0.0.0"
+  /bin/sh -c "while true; do npx --no -- playwright run-server --port $container_port --host 0.0.0.0; sleep 1; done"
 
 host_binding=$(docker port "$CONTAINER_NAME" "$container_port/tcp")
 host_port="${host_binding##*:}"
