@@ -129,8 +129,13 @@ def _yield_to_loop() -> Generator[None, None, None]:
     yield
 
 
-# True inside a flush and the effect tasks it starts.
-_within_flush: ContextVar[bool] = ContextVar("within_flush", default=False)
+# The task running the current flush or effect. Tasks created from it inherit this
+# value without being that task, which lets `flush_settled()` tell a call from inside
+# the flush or effect itself (return right away) from one in a task it started (don't
+# wait on the task that started it).
+_flush_owner: ContextVar[Optional["asyncio.Task[object]"]] = ContextVar(
+    "flush_owner", default=None
+)
 
 
 class ReactiveEnvironment:
@@ -146,6 +151,8 @@ class ReactiveEnvironment:
         self._flushed_callbacks = _utils.AsyncCallbacks()
         self._flush_requested: bool = False
         self._in_flush: bool = False
+        # Resolved by the next flush to start (see `flush_pass()`).
+        self._flush_pass_waiters: list[asyncio.Future[None]] = []
         # Set when a flush is requested while one is active.
         self._rerun_flush: bool = False
         # Strong references to fire-and-forget tasks (flushes and effect runs); the
@@ -208,8 +215,9 @@ class ReactiveEnvironment:
         self._in_flush = True
         self._rerun_flush = False
         self._flush_requested = False
-        # Inherited by the effect tasks spawned below.
-        token = _within_flush.set(True)
+        waiters = self._flush_pass_waiters
+        self._flush_pass_waiters = []
+        token = _flush_owner.set(asyncio.current_task())
         try:
             # Wrap entire flush cycle in reactive_update span (or no-op if not collecting)
             async with shiny_otel_span(
@@ -220,37 +228,62 @@ class ReactiveEnvironment:
             ):
                 while not self._pending_flush_queue.empty():
                     ctx = self._pending_flush_queue.get()
-                    self._spawn(ctx.execute_flush_callbacks())
+                    self._spawn(self._run_context(ctx))
                     # CPython runs ready callbacks FIFO, so the task's sync part runs
                     # now, and anything it invalidates is queued before we take the
                     # next ctx.
                     await _yield_to_loop()
                 await self._flushed_callbacks.invoke()
         finally:
-            _within_flush.reset(token)
+            _flush_owner.reset(token)
             self._in_flush = False
-            if self._rerun_flush or not self._pending_flush_queue.empty():
+            for waiter in waiters:
+                if not waiter.done():
+                    waiter.set_result(None)
+            if (
+                self._rerun_flush
+                or self._flush_pass_waiters
+                or not self._pending_flush_queue.empty()
+            ):
                 self._flush_requested = False
                 self.request_flush()
 
+    async def _run_context(self, ctx: Context) -> None:
+        _flush_owner.set(asyncio.current_task())
+        await ctx.execute_flush_callbacks()
+
+    async def flush_pass(self) -> None:
+        """Run one complete flush that starts after this call, or wait for one."""
+        if not self._in_flush:
+            await self.flush()
+            return
+        waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        self._flush_pass_waiters.append(waiter)
+        self._rerun_flush = True
+        await waiter
+
     async def flush_settled(self) -> None:
         """
-        Flush repeatedly until no flush or effect task is left running.
+        Flush until nothing is pending and no flush or effect task is running.
 
-        Returns right away when called from within a flush (an effect or a flushed
-        callback), or when nothing is pending or running.
+        Returns right away when called from within a flush or effect run itself.
+        Called from a task that an effect started, it doesn't wait for that effect.
         """
-        if _within_flush.get():
-            return
         current = asyncio.current_task()
-
-        def running() -> set[asyncio.Task[None]]:
-            return {t for t in self._tasks if t is not current and not t.done()}
-
-        while not self._pending_flush_queue.empty() or running():
-            await self.flush()
-            if tasks := running():
-                await asyncio.wait(tasks)
+        owner = _flush_owner.get()
+        if owner is not None and owner is current:
+            return
+        while True:
+            await self.flush_pass()
+            running = {
+                t
+                for t in self._tasks
+                if not t.done() and t is not current and t is not owner
+            }
+            if not running and self._pending_flush_queue.empty():
+                return
+            if running:
+                await asyncio.wait(running)
 
     def request_flush(self) -> None:
         """
@@ -394,12 +427,17 @@ def on_flushed(
 @no_example()
 def lock() -> asyncio.Lock:
     """
-    A lock that should be held whenever manipulating the reactive graph.
+    A process-wide lock, kept for backward compatibility.
 
-    For example, :func:`~shiny.reactive.lock` makes it safe to set a
-    :class:`~reactive.value` and call :func:`~shiny.reactive.flush` from a different
-    :class:`~asyncio.Task` than the one that is running the Shiny
-    :class:`~shiny.Session`.
+    Shiny no longer takes this lock itself, so holding it doesn't pause reactive
+    processing or serialize effects. Code that holds it only excludes other code
+    that also holds it.
+
+    To change reactive state from a different :class:`~asyncio.Task` than the one
+    running the Shiny :class:`~shiny.Session`, set the :class:`~reactive.value`
+    directly; a flush is scheduled automatically. Await
+    :func:`~shiny.reactive.flush` to wait until the resulting reactive work has
+    finished.
     """
     return _reactive_environment.lock
 

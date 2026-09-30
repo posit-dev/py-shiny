@@ -43,7 +43,8 @@ Status = Literal["initial", "running", "success", "error", "cancelled"]
 class DenialContext(Context):
     """
     A context that denies all requests to read reactive sources. We use this to ensure
-    that code run outside of reactive.lock doesn't inadvertedly read reactive sources.
+    that an extended task's body, which runs outside the reactive flush, doesn't
+    inadvertently read reactive sources.
     """
 
     def on_invalidate(self, func: Callable[[], None]) -> None:
@@ -212,8 +213,9 @@ class ExtendedTask(Generic[P, R]):
                 self.status.set("success")
 
             # Start the dependents (without waiting for their async parts) so they
-            # see this result before the next invocation replaces it.
-            await _reactive_environment.flush()
+            # see this result before the next invocation replaces it. If a flush is
+            # already running, it may have passed them already; wait for the next.
+            await _reactive_environment.flush_pass()
 
             if len(self._invocation_queue) > 0:
                 next_invocation = self._invocation_queue.pop(0)
