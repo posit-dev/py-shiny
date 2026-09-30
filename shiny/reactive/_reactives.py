@@ -813,8 +813,8 @@ class Calc_(Generic[T]):
         """
         Run the calc; return this run's value or error.
 
-        Only the most recent run, if it wasn't invalidated, is cached: an async run
-        can be invalidated and superseded by a newer one while it awaits.
+        Only the most recent run is cached: an async run can be invalidated and
+        superseded by a newer one while it awaits.
         """
         ctx = Context()
         self._ctx = ctx
@@ -848,9 +848,10 @@ class Calc_(Generic[T]):
                             error.append(err)
                 finally:
                     if ctx.id == self._most_recent_ctx_id:
-                        if not ctx._invalidated:
-                            self._value[:] = value
-                            self._error[:] = error
+                        # If this run was invalidated meanwhile, `_invalidated` makes
+                        # the next read recompute anyway.
+                        self._value[:] = value
+                        self._error[:] = error
                         self._running = False
                         self._running_task = None
                         waiters = self._run_waiters

@@ -1162,7 +1162,7 @@ class AppSession(Session):
                             self._dispatch(typing.cast(ClientMessageOther, message_obj))
                         )
                         self._dispatch_tasks.add(task)
-                        task.add_done_callback(self._on_dispatch_done)
+                        task.add_done_callback(self._dispatch_tasks.discard)
 
                     else:
                         raise ProtocolError(
@@ -1674,11 +1674,6 @@ class AppSession(Session):
     def _disable_flush(self) -> None:
         self._flush_enabled = False
         self.app._sessions_needing_flush.pop(self.id, None)
-
-    def _on_dispatch_done(self, task: asyncio.Task[None]) -> None:
-        self._dispatch_tasks.discard(task)
-        # A handler may queue outputs after its first await.
-        self._request_flush()
 
     async def _flush(self) -> None:
         # Outputs go out once per cycle: while any of this session's effects are
