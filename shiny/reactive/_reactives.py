@@ -784,17 +784,21 @@ class Calc_(Generic[T]):
 
         # Another task is computing this value: share that run rather than starting a
         # second one. Recompute only if it was invalidated meanwhile.
+        current = _current_task()
         while (
             self._running
             and not self._invalidated
-            and self._running_task is not _current_task()
+            and self._running_task is not current
         ):
             waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
             self._run_waiters.append(waiter)
             await waiter
 
         if self._invalidated or self._running:
-            await self.update_value()
+            value, error = await self._update_value()
+            if error:
+                raise error[0]
+            return value[0]
 
         if self._error:
             raise self._error[0]
@@ -803,18 +807,28 @@ class Calc_(Generic[T]):
 
     # TODO: should this be private?
     async def update_value(self) -> None:
-        self._ctx = Context()
-        self._most_recent_ctx_id = self._ctx.id
+        await self._update_value()
 
-        self._ctx.on_invalidate(self._on_invalidate_cb)
+    async def _update_value(self) -> tuple[list[T], list[Exception]]:
+        """
+        Run the calc; return this run's value or error.
+
+        Only the most recent run, if it wasn't invalidated, is cached: an async run
+        can be invalidated and superseded by a newer one while it awaits.
+        """
+        ctx = Context()
+        self._ctx = ctx
+        self._most_recent_ctx_id = ctx.id
+
+        ctx.on_invalidate(self._on_invalidate_cb)
 
         self._exec_count += 1
         self._invalidated = False
 
-        was_running = self._running
-        was_running_task = self._running_task
         self._running = True
         self._running_task = _current_task()
+        value: list[T] = []
+        error: list[Exception] = []
 
         from ..session import session_context
 
@@ -827,35 +841,30 @@ class Calc_(Generic[T]):
                 collection_level=self._otel_level,
             ):
                 try:
-                    with self._ctx():
-                        await self._run_func()
+                    with ctx():
+                        try:
+                            value.append(await self._fn())
+                        except Exception as err:
+                            error.append(err)
                 finally:
-                    self._running = was_running
-                    self._running_task = was_running_task
-                    if not was_running:
+                    if ctx.id == self._most_recent_ctx_id:
+                        if not ctx._invalidated:
+                            self._value[:] = value
+                            self._error[:] = error
+                        self._running = False
+                        self._running_task = None
                         waiters = self._run_waiters
                         self._run_waiters = []
                         for waiter in waiters:
                             if not waiter.done():
                                 waiter.set_result(None)
+        return value, error
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
         self._value.clear()  # Allow old value to be GC'd
         self._dependents.invalidate()
         self._ctx = None  # Allow context to be GC'd
-
-    async def _run_func(self) -> None:
-        self._error.clear()
-        try:
-            val = await self._fn()
-
-            # Replace, don't append: a run invalidated partway through may already
-            # have stored a (stale) value.
-            self._value[:] = [val]
-        except Exception as err:
-            self._value.clear()
-            self._error.append(err)
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""
