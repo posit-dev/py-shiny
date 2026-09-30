@@ -58,6 +58,14 @@ from ._core import Context, Dependents, ReactiveWarning, isolate
 from ._utils import is_user_code_frame
 
 
+def _current_task() -> Optional[asyncio.Task[object]]:
+    try:
+        return asyncio.current_task()
+    except RuntimeError:
+        # No running loop (a sync calc read outside of asyncio).
+        return None
+
+
 def _weak_destroy_callback(
     method: Callable[[], None],
     session: Session,
@@ -671,6 +679,10 @@ class Calc_(Generic[T]):
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
         self._running: bool = False
+        # The task running `update_value()`, and readers from other tasks waiting on
+        # that run (async calcs only: concurrent effects can read mid-run).
+        self._running_task: Optional[asyncio.Task[object]] = None
+        self._run_waiters: list[asyncio.Future[None]] = []
         self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
@@ -770,6 +782,17 @@ class Calc_(Generic[T]):
             )
         self._dependents.register()
 
+        # Another task is computing this value: share that run rather than starting a
+        # second one. Recompute only if it was invalidated meanwhile.
+        while (
+            self._running
+            and not self._invalidated
+            and self._running_task is not _current_task()
+        ):
+            waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+            self._run_waiters.append(waiter)
+            await waiter
+
         if self._invalidated or self._running:
             await self.update_value()
 
@@ -789,7 +812,9 @@ class Calc_(Generic[T]):
         self._invalidated = False
 
         was_running = self._running
+        was_running_task = self._running_task
         self._running = True
+        self._running_task = _current_task()
 
         from ..session import session_context
 
@@ -806,6 +831,13 @@ class Calc_(Generic[T]):
                         await self._run_func()
                 finally:
                     self._running = was_running
+                    self._running_task = was_running_task
+                    if not was_running:
+                        waiters = self._run_waiters
+                        self._run_waiters = []
+                        for waiter in waiters:
+                            if not waiter.done():
+                                waiter.set_result(None)
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
@@ -818,8 +850,11 @@ class Calc_(Generic[T]):
         try:
             val = await self._fn()
 
-            self._value.append(val)
+            # Replace, don't append: a run invalidated partway through may already
+            # have stored a (stale) value.
+            self._value[:] = [val]
         except Exception as err:
+            self._value.clear()
             self._error.append(err)
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
@@ -995,6 +1030,8 @@ class Effect_:
         self._priority: int = priority
         self._suspended = suspended
         self._on_resume: Callable[[], None] = lambda: None
+        # Resolved when the latest run finishes (see `on_flush_cb`).
+        self._run_done: Optional[asyncio.Future[None]] = None
 
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
@@ -1079,17 +1116,23 @@ class Effect_:
                 _continue()
 
         async def on_flush_cb() -> None:
+            # Unlike R, runs of one effect don't overlap: a re-run waits for the
+            # previous run's async part, so a slower, older run can't finish last.
+            previous = self._run_done
+            done: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+            self._run_done = done
             try:
+                if previous is not None and not previous.done():
+                    await asyncio.shield(previous)
                 if not self._destroyed:
                     await self._run()
             except Exception as e:
-                # The effect runs in its own task, so nothing above it would see this;
-                # report it to the owning session, which is what the session loop
-                # did when flushes ran inline.
+                # The effect runs in its own task, so report errors to its session.
                 if not self._session:
                     raise
                 await self._session._unhandled_error(e)
             finally:
+                done.set_result(None)
                 # Every exit path (raised, cancelled) must end the busy period.
                 if self._session:
                     self._session._decrement_busy_count()
@@ -1209,8 +1252,10 @@ class Effect_:
         ----------
         priority
             The new priority. A higher value means higher priority: an effect with a
-            higher priority value will execute before all effects with lower priority
-            values. Positive, negative, and zero values are allowed.
+            higher priority value starts before all effects with lower priority
+            values. An async effect's awaited part doesn't hold back lower-priority
+            effects, so they can finish first. Positive, negative, and zero values
+            are allowed.
 
         Note
         ----
@@ -1270,8 +1315,9 @@ def effect(
         until resumed and invalidated).
     priority
         The new priority. A higher value means higher priority: an effect with a higher
-        priority value will execute before all effects with lower priority values.
-        Positive, negative, and zero values are allowed.
+        priority value starts before all effects with lower priority values. An async
+        effect's awaited part doesn't hold back lower-priority effects, so they can
+        finish first. Positive, negative, and zero values are allowed.
     session
         A :class:`~shiny.Session` instance. If not provided, the session is inferred via
         :func:`~shiny.session.get_current_session`.
