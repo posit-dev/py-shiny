@@ -51,6 +51,8 @@ from .bookmark._types import (
 )
 from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
+from .reactive._core import _reactive_environment
+from .reactive._core import on_flushed as reactive_on_flushed
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
 from .ui._page import DEPS_PLACEHOLDER, PageHtmlDocument, page_html
@@ -240,7 +242,10 @@ class App:
 
         self._sessions: dict[str, AppSession] = {}
 
-        # self._sessions_needing_flush: dict[int, AppSession] = {}
+        # Sessions with outputs, errors, or input messages to send after the next
+        # reactive flush (R's `appsNeedingFlush`).
+        self._sessions_needing_flush: dict[str, AppSession] = {}
+        self._unregister_flush_sessions: Optional[Callable[[], None]] = None
 
         self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
@@ -467,6 +472,27 @@ class App:
                 return await session._handle_request(request, action, subpath)
 
         return JSONResponse({"detail": "Not Found"}, status_code=404)
+
+    # ==========================================================================
+    # Flush
+    # ==========================================================================
+    def _request_flush(self, session: AppSession) -> None:
+        self._sessions_needing_flush[session.id] = session
+        if self._unregister_flush_sessions is None:
+            self._unregister_flush_sessions = reactive_on_flushed(
+                self._flush_pending_sessions
+            )
+        _reactive_environment.request_flush()
+
+    async def _flush_pending_sessions(self) -> None:
+        sessions = list(self._sessions_needing_flush.values())
+        self._sessions_needing_flush.clear()
+        for session in sessions:
+            # One session's failure closes that session only; the rest still flush.
+            try:
+                await session._flush()
+            except Exception as e:
+                await session._unhandled_error(e)
 
     # ==========================================================================
     # HTML Dependency stuff
