@@ -16,11 +16,15 @@ from typing import AsyncIterable, Callable, Iterator
 import pytest
 from starlette.requests import Request
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny._connection import MockConnection
 from shiny.bookmark._bookmark import BookmarkApp
 from shiny.bookmark._restore_state import RestoreContext
-from shiny.reactive._core import ReactiveEnvironment, _reactive_environment
+from shiny.reactive._core import (
+    ReactiveEnvironment,
+    ReactiveWarning,
+    _reactive_environment,
+)
 from shiny.session import get_current_session, session_context
 
 TIMEOUT = 1.0
@@ -1050,7 +1054,7 @@ async def test_session_ending_mid_effect_settles_busy_count():
     c.update(go=1)
     assert await wait_until(lambda: c.session._busy_count == 1)
     await c.close()
-    release.set()
+    # Session end cancels the run, so the busy period ends without `release`.
     assert await wait_until(lambda: c.session._busy_count == 0)
 
 
@@ -2005,3 +2009,382 @@ def test_flush_state_from_a_dead_event_loop_is_discarded():
     asyncio.run(use_a_new_loop())
     gc.collect()
     assert finalized == []  # ...but they're kept, so they're never finalized
+
+
+# ----------------------------------------------------------------------------
+# Destroying an effect cancels its in-progress runs (session end, scope destroy)
+# ----------------------------------------------------------------------------
+
+
+def slow_effect(log: list[str], release: asyncio.Event, name: str = "e"):
+    """An effect body that logs its progress and waits on `release`."""
+
+    async def body() -> None:
+        try:
+            log.append(f"{name} start")
+            await release.wait()
+            log.append(f"{name} end")
+        finally:
+            log.append(f"{name} finally")
+
+    return body
+
+
+@pytest.mark.asyncio
+async def test_destroy_cancels_effect_run_in_progress():
+    log: list[str] = []
+    release = asyncio.Event()
+    e = reactive.effect(slow_effect(log, release))
+
+    flush = asyncio.create_task(reactive.flush())
+    assert await wait_until(lambda: log == ["e start"])
+    e.destroy()
+    await asyncio.wait_for(flush, TIMEOUT)
+    assert log == ["e start", "e finally"]
+    release.set()
+    await asyncio.sleep(0.01)
+    assert log == ["e start", "e finally"]
+
+
+@pytest.mark.asyncio
+async def test_destroy_cancels_queued_rerun_waiting_on_previous_run():
+    v = reactive.value(0)
+    release = asyncio.Event()
+    runs: list[int] = []
+
+    @reactive.effect
+    async def e():
+        runs.append(v())
+        await release.wait()
+
+    flush = asyncio.create_task(reactive.flush())
+    assert await wait_until(lambda: runs == [0])
+    v.set(1)  # the re-run waits for the run in progress
+    assert await wait_until(lambda: len(e._run_tasks) == 2)
+    e.destroy()
+    await asyncio.wait_for(flush, TIMEOUT)
+    assert runs == [0]
+    assert e._run_tasks == set()
+
+
+@pytest.mark.asyncio
+async def test_destroy_does_not_cancel_finished_or_other_effects():
+    log: list[str] = []
+    release = asyncio.Event()
+    other = reactive.effect(slow_effect(log, release, "other"))
+
+    @reactive.effect
+    async def done():
+        log.append("done ran")
+
+    flush = asyncio.create_task(reactive.flush())
+    assert await wait_until(lambda: "other start" in log and "done ran" in log)
+    done.destroy()
+    release.set()
+    await asyncio.wait_for(flush, TIMEOUT)
+    assert log.count("other end") == 1
+    other.destroy()
+
+
+@pytest.mark.asyncio
+async def test_effect_that_destroys_itself_keeps_running():
+    log: list[str] = []
+    holder: list[reactive.Effect_] = []
+
+    @reactive.effect
+    async def e():
+        holder[0].destroy()
+        await asyncio.sleep(0)
+        log.append("after destroy")
+
+    holder.append(e)
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
+    assert log == ["after destroy"]
+
+
+@pytest.mark.asyncio
+async def test_effect_that_destroys_itself_from_a_child_task_keeps_running():
+    # `asyncio.gather()` runs its argument in a child task of the effect's run.
+    log: list[str] = []
+    holder: list[reactive.Effect_] = []
+
+    async def destroy_self() -> None:
+        holder[0].destroy()
+        await asyncio.sleep(0)
+        log.append("child after destroy")
+
+    @reactive.effect
+    async def e():
+        await asyncio.gather(destroy_self())
+        log.append("after gather")
+
+    holder.append(e)
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
+    assert log == ["child after destroy", "after gather"]
+
+
+@pytest.mark.asyncio
+async def test_session_end_cancels_running_effects():
+    log: list[str] = []
+    release = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        reactive.effect(slow_effect(log, release))
+
+    c = Client(server)
+    c.send({"method": "init", "data": {}})
+    assert await wait_until(lambda: log == ["e start"])
+    await c.close()
+    assert await wait_until(lambda: log == ["e start", "e finally"])
+    assert c.session._busy_count == 0
+    release.set()
+    await asyncio.sleep(0.01)
+    assert "e end" not in log
+
+
+@pytest.mark.asyncio
+async def test_session_end_cancels_running_render_output():
+    log: list[str] = []
+    release = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @render.text
+        async def out():
+            await slow_effect(log, release, "out")()
+            return "done"
+
+    c = RecordingClient(server)
+    c.send({"method": "init", "data": {}})
+    c.send({"method": "update", "data": {".clientdata_output_out_hidden": False}})
+    assert await wait_until(lambda: log == ["out start"])
+    await c.close()
+    assert await wait_until(lambda: log == ["out start", "out finally"])
+    assert c.session._busy_count == 0
+
+
+@pytest.mark.asyncio
+async def test_session_end_does_not_cancel_other_sessions_effects():
+    log: list[str] = []
+    release = asyncio.Event()
+    names = iter(["a", "b"])
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        reactive.effect(slow_effect(log, release, next(names)))
+
+    a = Client(server)
+    a.send({"method": "init", "data": {}})
+    assert await wait_until(lambda: log == ["a start"])
+    b = Client(server)
+    try:
+        b.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: "b start" in log)
+        await a.close()
+        assert await wait_until(lambda: "a finally" in log)
+        release.set()
+        assert await wait_until(lambda: "b end" in log)
+    finally:
+        release.set()
+        await b.close()
+
+
+@pytest.mark.asyncio
+async def test_effect_error_closes_session_and_cancels_sibling_effects():
+    log: list[str] = []
+    release = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        reactive.effect(slow_effect(log, release, "sibling"))
+
+        @reactive.effect
+        async def _boom():
+            await asyncio.sleep(0.01)
+            raise RuntimeError("boom")
+
+        session.on_ended(lambda: log.append("on_ended"))
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        with pytest.warns(ReactiveWarning):
+            assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
+            assert await wait_until(lambda: "sibling finally" in log)
+        assert "sibling end" not in log
+        assert await wait_until(lambda: "on_ended" in log)
+        assert c.session.id not in c.session.app._sessions
+        assert await wait_until(lambda: c.session._busy_count == 0)
+    finally:
+        await c.close()
+
+
+@pytest.mark.parametrize("via_child_task", [False, True])
+@pytest.mark.asyncio
+async def test_effect_that_closes_its_session_finishes_teardown(via_child_task: bool):
+    log: list[str] = []
+    release = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        reactive.effect(slow_effect(log, release, "sibling"))
+
+        @reactive.effect
+        async def _closer():
+            await asyncio.sleep(0.01)
+            if via_child_task:
+                await asyncio.gather(session.close())
+            else:
+                await session.close()
+            await asyncio.sleep(0)
+            log.append("closer after close")
+
+        # Registered after both effects, so it runs after they're destroyed.
+        session.on_ended(lambda: log.append("on_ended"))
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: "closer after close" in log)
+        assert "on_ended" in log
+        assert "sibling finally" in log and "sibling end" not in log
+        assert c.session.id not in c.session.app._sessions
+        assert await wait_until(lambda: c.session._busy_count == 0)
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_destroying_a_scope_cancels_its_effects_before_its_values_go():
+    # Without cancelling, the module's effect wakes up, reads its destroyed value,
+    # and the DestroyedReactiveError closes the whole session.
+    log: list[str] = []
+    release = asyncio.Event()
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session) -> None:
+        x = reactive.value(1)  # destroyed along with the module's scope
+
+        @reactive.effect
+        async def _():
+            try:
+                log.append("mod start")
+                await release.wait()
+                log.append(f"mod read {x()}")
+            finally:
+                log.append("mod finally")
+
+    # An input update would wait for the busy session to go idle, so the removal
+    # is triggered from within the server instead.
+    remove = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        mod("mod")
+
+        @reactive.effect
+        async def _remove():
+            await remove.wait()
+            await session.destroy("mod")
+            release.set()
+            log.append("removed")
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: log == ["mod start"])
+        remove.set()
+        assert await wait_until(lambda: "removed" in log)
+        assert await wait_until(lambda: "mod finally" in log)
+        await asyncio.sleep(0.02)
+        assert sorted(log) == ["mod finally", "mod start", "removed"]
+        assert not c.session._has_run_session_ended_tasks
+        assert await wait_until(lambda: c.session._busy_count == 0)
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_destroying_a_scope_leaves_other_scopes_running():
+    log: list[str] = []
+    release = asyncio.Event()
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session, name: str) -> None:
+        reactive.effect(slow_effect(log, release, name))
+        if name == "a":
+            mod("child", "a-child")  # nested, so destroyed along with "a"
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        mod("a", "a")
+        mod("ab", "ab")  # shares a prefix with "a" but isn't inside it
+
+        @reactive.effect
+        async def _remove():
+            await remove.wait()
+            await session.destroy("a")
+
+    remove = asyncio.Event()
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: len(log) == 3)
+        remove.set()
+        assert await wait_until(lambda: "a finally" in log and "a-child finally" in log)
+        assert "ab finally" not in log
+        release.set()
+        assert await wait_until(lambda: "ab end" in log)
+    finally:
+        release.set()
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_calc_waiter_recomputes_when_the_run_it_shares_is_cancelled():
+    gate = asyncio.Event()
+    calc_runs: list[int] = []
+    results: list[tuple[str, int]] = []
+
+    @reactive.calc
+    async def c():
+        calc_runs.append(1)
+        await gate.wait()
+        return 42
+
+    @reactive.effect
+    async def a():
+        results.append(("a", await c()))
+
+    @reactive.effect
+    async def b():
+        results.append(("b", await c()))
+
+    flush = asyncio.create_task(reactive.flush())
+    assert await wait_until(lambda: len(calc_runs) == 1)
+    await asyncio.sleep(0.01)  # b is now waiting on a's run of the calc
+    a.destroy()
+    assert await wait_until(lambda: len(calc_runs) == 2)
+    gate.set()
+    await asyncio.wait_for(flush, TIMEOUT)
+    assert results == [("b", 42)]
+    b.destroy()
+
+
+@pytest.mark.asyncio
+async def test_calc_recomputes_after_its_run_is_cancelled():
+    gate = asyncio.Event()
+    calc_runs: list[int] = []
+
+    @reactive.calc
+    async def c():
+        calc_runs.append(1)
+        await gate.wait()
+        return 42
+
+    async def read() -> int:
+        with reactive.isolate():
+            return await c()
+
+    task = asyncio.create_task(read())
+    assert await wait_until(lambda: len(calc_runs) == 1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    gate.set()
+    assert await asyncio.wait_for(read(), TIMEOUT) == 42
+    assert len(calc_runs) == 2

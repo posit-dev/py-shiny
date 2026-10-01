@@ -53,6 +53,13 @@ destroyed, so writes after close are inert. An explicit `session.destroy(id)`
 on a live session does hard-destroy: reading a value from that scope afterwards
 raises `DestroyedReactiveError`.
 
+Both close and `session.destroy(id)` cancel an async effect (or render function)
+that is still running: `asyncio.CancelledError` is raised at its current
+`await`. Put cleanup in `try`/`finally`, not after the `await`, and don't swallow
+`CancelledError`. An effect that closes or destroys its own session keeps
+running. An `ExtendedTask` is not cancelled; call `task.cancel()` from
+`session.on_ended` if it should stop.
+
 ## Read the incoming request: `http_conn` and `clientdata`
 
 `session.http_conn` is the Starlette
