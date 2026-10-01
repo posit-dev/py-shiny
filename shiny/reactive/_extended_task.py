@@ -109,6 +109,11 @@ class ExtendedTask(Generic[P, R]):
         # If invoked while a previous invocation is still running, we queue up.
         self._invocation_queue: list[Callable[[], None]] = []
 
+        # The event loop only holds weak references to running tasks, so a task with no
+        # other reference can be garbage collected mid-flight. Keep the completion tasks
+        # created in `_done_callback()` alive until they finish.
+        self._done_tasks: set[asyncio.Task[None]] = set()
+
     def cancel(self) -> None:
         """
         Cancel the current invocation, if any. If there are pending invocations, cancel
@@ -214,7 +219,9 @@ class ExtendedTask(Generic[P, R]):
                     next_invocation()
                     await flush()
 
-        asyncio.create_task(_impl())
+        done_task = asyncio.create_task(_impl())
+        self._done_tasks.add(done_task)
+        done_task.add_done_callback(self._done_tasks.discard)
 
     def result(self) -> R:
         """

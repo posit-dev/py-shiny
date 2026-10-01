@@ -12,13 +12,13 @@ chat = ui.Chat(id="chat")
 
 # Display it, with a startup message
 chat.ui(
-    messages=["""
+    greeting="""
 Hi! This is a simple Shiny `Chat` UI. Enter a message below and I will
 simply repeat it back to you.
 
 To learn more about chatbots and how to build them with Shiny, check out
 [the documentation](https://shiny.posit.co/py/docs/genai-chatbots.html).
-"""],
+""",
 )
 
 

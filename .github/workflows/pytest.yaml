@@ -73,6 +73,7 @@ jobs:
     # Pyrefly.
     name: "Pyright"
     runs-on: ubuntu-latest
+    if: github.event_name != 'release'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -422,6 +423,7 @@ jobs:
 
   test-narwhals-integration:
     runs-on: ubuntu-latest
+    if: github.event_name != 'release'
     steps:
       - uses: actions/checkout@v6
         with:

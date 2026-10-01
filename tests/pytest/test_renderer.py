@@ -109,13 +109,13 @@ def test_renderer_error_includes_render_prefix():
 def test_download_rejects_function_with_params():
     with pytest.raises(TypeError, match="no required parameters"):
 
-        @render.download  # pyright: ignore[reportArgumentType]
+        @render.download_button  # pyright: ignore[reportArgumentType]
         def bad_download(x: int) -> str:
             return str(x)
 
 
 def test_download_accepts_function_with_no_params():
-    @render.download
+    @render.download_button
     def good_download():
         return "file.txt"
 
@@ -123,7 +123,7 @@ def test_download_accepts_function_with_no_params():
 def test_download_warns_function_with_default_params():
     with pytest.warns(UserWarning, match="parameter.*with default values: x"):
 
-        @render.download
+        @render.download_button
         def good_download(x: str = "file.txt") -> str:
             return x
 

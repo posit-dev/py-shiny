@@ -23,7 +23,15 @@ def test_input_select_kitchensink(page: Page, local_app: ShinyAppProc) -> None:
     multiple_options = ["Banana", "Cherry"]
     multiple_select.set(multiple_options)
     multiple_select.expect_multiple(True)
+    multiple_select.expect_selected(multiple_options)
     multiple_select_txt.expect_value("Banana, Cherry")
+
+    # A multiple select's value is always in choices order, never selection order.
+    # `.expect_selected()` asserts that same order, so it must list the values in
+    # choices order even when they were selected in a different one.
+    multiple_select.set(["Elderberry", "Apple"])
+    multiple_select.expect_selected(["Apple", "Elderberry"])
+    multiple_select_txt.expect_value("Apple, Elderberry")
 
     select_with_selected = controller.InputSelect(page, "select_with_selected")
     select_with_selected_txt = controller.OutputCode(page, "select_with_selected_txt")

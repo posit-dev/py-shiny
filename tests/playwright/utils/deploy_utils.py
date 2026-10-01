@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import os
 import re
@@ -12,6 +13,7 @@ from typing import Any, Callable, List, Optional, TypeVar
 
 import pytest
 from conftest import ScopeName
+from packaging.version import Version
 from playwright.sync_api import Page
 
 from shiny.run._run import shiny_app_gen
@@ -26,6 +28,7 @@ __all__ = (
     "goto_deployed_app",
     "local_deploys_app_url_fixture",
     "skip_if_not_chrome",
+    "skip_if_shinychat_older_than",
 )
 
 # connect
@@ -66,6 +69,35 @@ def skip_on_webkit(fn: CallableT) -> CallableT:
     fn = pytest.mark.skip_browser("webkit")(fn)
 
     return fn
+
+
+def skip_if_shinychat_older_than(
+    required_version: str,
+    reason: Optional[str] = None,
+) -> Callable[[CallableT], CallableT]:
+    """
+    Skip a test unless the installed shinychat is at least `required_version`.
+
+    `pyproject.toml` floors shinychat well below the versions some chat behaviour
+    was introduced in, so a test written against newer semantics -- `greeting=`
+    replacing `messages=`, `icon_assistant=True` opting into the built-in icon --
+    would fail rather than skip on an older but permitted install.
+    """
+    installed_version = importlib.metadata.version("shinychat")
+
+    def _(fn: CallableT) -> CallableT:
+        fn = pytest.mark.skipif(
+            Version(installed_version) < Version(required_version),
+            reason=reason
+            or (
+                f"Requires shinychat >= {required_version} "
+                f"(installed: {installed_version})"
+            ),
+        )(fn)
+
+        return fn
+
+    return _
 
 
 def skip_on_python_version(

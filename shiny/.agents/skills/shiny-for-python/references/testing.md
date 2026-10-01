@@ -8,6 +8,11 @@ app in a subprocess. Use them instead of hand-written CSS selectors, raw
 locators, or `time.sleep()` — controller `expect_*` methods auto-wait and
 auto-retry.
 
+Playwright tests what the user sees. To test server logic alone — output
+values, calcs, error paths, modules — without a browser, use
+`shiny.testserver.test_server()` instead (`references/test-server.md`); it is
+faster and needs no Playwright install.
+
 ## Setup
 
 ```bash

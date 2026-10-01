@@ -317,9 +317,11 @@ def test_show_offcanvas_with_html_wraps_new_panel():
     """show_offcanvas() treats htmltools.HTML() as content, not an id"""
     mock_session = _mock_session()
 
-    result_id = ui.show_offcanvas(
-        HTML("<p>Rendered content.</p>"), session=mock_session
-    )
+    # An anonymous panel has no title, so it also warns about accessibility.
+    with pytest.warns(UserWarning, match="aria-label"):
+        result_id = ui.show_offcanvas(
+            HTML("<p>Rendered content.</p>"), session=mock_session
+        )
 
     assert isinstance(result_id, str) and result_id != ""
     assert mock_session._send_message_sync.call_count == 1
@@ -333,7 +335,9 @@ def test_show_offcanvas_with_tag_wraps_new_panel():
     """show_offcanvas() wraps a bare Tag into a new anonymous offcanvas"""
     mock_session = _mock_session()
 
-    result_id = ui.show_offcanvas(tags.p("Body content"), session=mock_session)
+    # An anonymous panel has no title, so it also warns about accessibility.
+    with pytest.warns(UserWarning, match="aria-label"):
+        result_id = ui.show_offcanvas(tags.p("Body content"), session=mock_session)
 
     assert mock_session._send_message_sync.call_count == 1
     message = mock_session._messages_sent[0]

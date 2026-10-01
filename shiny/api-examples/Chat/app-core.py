@@ -2,16 +2,15 @@ from shiny import App, ui
 
 app_ui = ui.page_fillable(
     ui.panel_title("Hello Shiny Chat"),
-    ui.chat_ui("chat"),
     ui.chat_ui(
         "chat",
-        messages=["""
+        greeting="""
 Hi! This is a simple Shiny `Chat` UI. Enter a message below and I will
 simply repeat it back to you.
 
 To learn more about chatbots and how to build them with Shiny, check out
 [the documentation](https://shiny.posit.co/py/docs/genai-chatbots.html).
-"""],
+""",
     ),
     fillable_mobile=True,
 )

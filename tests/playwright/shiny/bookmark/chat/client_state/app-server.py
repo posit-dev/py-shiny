@@ -17,11 +17,13 @@ ui.page_opts(
 )
 
 
-# Create a chat instance
-init_messages = ["""Welcome!"""]
+# Create a chat instance. The startup message is a `greeting=`: shinychat 0.7.0
+# deprecated `Chat(messages=)` and raises unless `history=False` is also passed.
+# `enable_bookmarking()` bookmarks and restores the greeting content, so this
+# still covers the round-trip.
 chat = ui.Chat(
     id="chat",
-    messages=init_messages,
+    greeting="""Welcome!""",
 )
 
 # Display it
@@ -58,7 +60,7 @@ class RepeaterClient:
         self.messages = cast(list[str], state["messages"])
 
 
-chat_client = RepeaterClient(messages=init_messages)
+chat_client = RepeaterClient(messages=[])
 
 
 # Note:
@@ -98,7 +100,7 @@ def save_bookmark_dir(id: str) -> Path:
 
 # Same app as `app.py`, but with server-side bookmark storage. `"server"` exercises
 # the `_state_id_` restore path, where a plain page load has no `_state_id_` at all --
-# `ui.Chat` still has to render its initial messages in that case.
+# `ui.Chat` still has to render its greeting in that case.
 chat.enable_bookmarking(chat_client, bookmark_store="server")
 
 

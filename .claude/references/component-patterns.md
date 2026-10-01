@@ -33,9 +33,14 @@ representative example):
    example app in `shiny/api-examples/<name>/` (`app-core.py` +
    `app-express.py`), and entries in `docs/_quartodoc-core.yml` /
    `docs/_quartodoc-express.yml`.
-9. For input components, add a Playwright controller class in
-   `shiny/playwright/controller/` (see the `_input_*.py` files there) and
-   register it in the testing quartodoc YAML.
+9. Add or update the companion Playwright controller class in
+   `shiny/playwright/controller/` (see existing controllers in `_input_*.py`,
+   `_overlay.py`, `_layout.py`, `_accordion.py`, `_card.py`, etc.) with
+   locators for sub-elements (trigger, header, title, body, footer, close buttons,
+   etc.), action methods (`set`, `open`, `close`, `show`, `click`, etc.), and
+   expectation methods (`expect_*`). Register it in
+   `shiny/playwright/controller/__init__.py` and `docs/_quartodoc-testing.yml`.
+   When altering existing UI components, always keep their controller in sync.
 10. Add unit tests in `tests/pytest/` and an end-to-end test app + test in
     `tests/playwright/shiny/`.
 11. Update `CHANGELOG.md`.
