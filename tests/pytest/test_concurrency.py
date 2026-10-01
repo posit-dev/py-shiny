@@ -2461,3 +2461,109 @@ async def test_recursive_fibonacci_effect_and_calc_runs_cancel_on_destroy():
         await s.set_inputs(check=1)
         assert checked == [610]
         assert s.error is None
+
+
+@pytest.mark.parametrize("cleanup", ["finally", "except_cancelled", "self_destroy"])
+@pytest.mark.asyncio
+async def test_cleanup_reading_destroyed_scope_values_keeps_session_open(
+    cleanup: str,
+):
+    # A cancelled effect's cleanup runs after the scope's values are destroyed, so
+    # reading one raises DestroyedReactiveError. An effect that has been destroyed
+    # has no session to protect: the error is logged, not sent to the session.
+    log: list[str] = []
+    release = asyncio.Event()
+    remove = asyncio.Event()
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session) -> None:
+        x = reactive.value(1)
+
+        @reactive.effect
+        async def _():
+            if cleanup == "self_destroy":
+                await remove.wait()
+                await session.destroy()  # this run isn't cancelled
+                log.append(f"after {x()}")
+            elif cleanup == "finally":
+                try:
+                    await release.wait()
+                finally:
+                    log.append(f"stopped at {x()}")
+            else:
+                try:
+                    await release.wait()
+                except asyncio.CancelledError:
+                    log.append(f"stopped at {x()}")
+                    raise
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        mod("mod")
+
+        @reactive.effect
+        async def _remove():
+            await remove.wait()
+            if cleanup != "self_destroy":
+                await session.destroy("mod")
+            log.append("removed")
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        await asyncio.sleep(0.02)
+        with pytest.warns(ReactiveWarning, match="has been destroyed"):
+            remove.set()
+            assert await wait_until(lambda: "removed" in log)
+            await asyncio.sleep(0.05)
+        assert not c.session._has_run_session_ended_tasks
+        assert await wait_until(lambda: c.session._busy_count == 0)
+    finally:
+        release.set()
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_cancelled_calc_run_does_not_react_to_sources_only_it_read():
+    use_a = [True]  # not reactive: run 1 reads `a`, run 2 reads only `b`
+    a = reactive.value(0)
+    b = reactive.value(0)
+    gate = asyncio.Event()
+    calc_runs: list[int] = []
+    effect_runs: list[int] = []
+
+    @reactive.calc
+    async def c() -> int:
+        calc_runs.append(1)
+        if use_a[0]:
+            a()
+            await gate.wait()
+        else:
+            b()
+        return 1
+
+    async def read() -> int:
+        with reactive.isolate():
+            return await c()
+
+    task = asyncio.create_task(read())
+    assert await wait_until(lambda: len(calc_runs) == 1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    use_a[0] = False
+
+    @reactive.effect
+    async def e():
+        effect_runs.append(await c())
+
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
+    assert (len(calc_runs), effect_runs) == (2, [1])
+
+    a.set(1)  # only the cancelled run read `a`
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
+    assert (len(calc_runs), effect_runs) == (2, [1])
+
+    b.set(1)  # the current run read `b`
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
+    assert (len(calc_runs), effect_runs) == (3, [1, 1])
+    e.destroy()

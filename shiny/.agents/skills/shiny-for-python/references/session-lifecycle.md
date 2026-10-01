@@ -56,7 +56,9 @@ raises `DestroyedReactiveError`.
 Both close and `session.destroy(id)` cancel an async effect (or render function)
 that is still running: `asyncio.CancelledError` is raised at its current
 `await`. Put cleanup in `try`/`finally`, not after the `await`, and don't swallow
-`CancelledError`. An effect that closes or destroys its own session keeps
+`CancelledError`. With `session.destroy(id)`, cleanup runs after the module's
+values are destroyed, so don't read them there: the `DestroyedReactiveError` is
+only logged, and the rest of the cleanup is skipped. An effect that closes or destroys its own session keeps
 running. An `ExtendedTask` is not cancelled; call `task.cancel()` from
 `session.on_ended` if it should stop.
 

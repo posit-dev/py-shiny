@@ -830,7 +830,13 @@ class Calc_(Generic[T]):
         self._ctx = ctx
         self._most_recent_ctx_id = ctx.id
 
-        ctx.on_invalidate(self._on_invalidate_cb)
+        def on_invalidate() -> None:
+            # A superseded run (e.g. a cancelled one) stays subscribed to what it
+            # read; only the most recent run's sources should invalidate the calc.
+            if ctx.id == self._most_recent_ctx_id:
+                self._on_invalidate_cb()
+
+        ctx.on_invalidate(on_invalidate)
 
         self._exec_count += 1
         self._invalidated = False
@@ -1218,7 +1224,9 @@ class Effect_:
                     warnings.warn(
                         "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
                     )
-                    if self._session:
+                    # A destroyed effect has no session to protect. (E.g. cleanup
+                    # in a cancelled run reads its destroyed scope's values.)
+                    if self._session and not self._destroyed:
                         await self._session._unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
@@ -1243,6 +1251,10 @@ class Effect_:
         its `finally` blocks run but the rest of its body doesn't. The exception is
         the run that calls `destroy()` (directly, or from a task it started), as when
         an effect closes its own session; that run continues.
+
+        An error raised by an effect after it has been destroyed is logged rather
+        than closing the session. (E.g., cleanup in a cancelled run that reads its
+        destroyed scope's values raises `DestroyedReactiveError`.)
 
         Effects are destroyed when their session ends, and when their scope is
         destroyed with :meth:`~shiny.Session.destroy`, so both cancel the effect's

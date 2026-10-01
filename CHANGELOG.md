@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * Setting a `reactive.value` schedules a flush, including when `set()` is called from another thread. The reactive graph itself still isn't thread-safe, so from another thread use `loop.call_soon_threadsafe(value.set, new_value)`.
 
-    * Destroying an effect (`effect.destroy()`) cancels its run that's still in progress: `asyncio.CancelledError` is raised at its current `await`. Since ending a session and `session.destroy(id)` destroy their effects, both now cancel in-progress `async` effects and render functions, instead of letting them run on after their session or module is gone. This also keeps a module's running effect from reading the module's destroyed values, which used to close the whole session. The run that calls `destroy()` (for example, an effect that closes its own session) is not cancelled.
+    * Destroying an effect (`effect.destroy()`) cancels its run that's still in progress: `asyncio.CancelledError` is raised at its current `await`. Since ending a session and `session.destroy(id)` destroy their effects, both now cancel in-progress `async` effects and render functions, instead of letting them run on after their session or module is gone. The cancellation keeps a module's running effect from going on to read the module's destroyed values. An error raised by a destroyed effect, for example by cleanup code that reads those values, is logged instead of closing the session. The run that calls `destroy()` (for example, an effect that closes its own session) is not cancelled.
 
   (#2508, #2515)
 
