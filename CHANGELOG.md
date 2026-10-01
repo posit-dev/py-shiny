@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   (#2508, #2515)
 
+### New features
+
+* Added `session.run_once_when_idle(fn)`, which runs a function once, at the start of the session's next cycle: once all of the session's effects have finished and its outputs have been sent. Input changes from the client and `reactive.invalidate_later()` already wait this way, so effects that are still running keep seeing the same values; use it to change reactive state the same way from a background task or a custom timer. `reactive.invalidate_later()` now uses it instead of a private method. (#PRNUM)
+
 ### Bug fixes
 
 * Setting a reactive value from a download handler (`@render.download_button`) now updates the outputs and effects that read it right away, including while a streamed download is still sending. The session also keeps handling input during a streamed download. Before, they updated only after the next message from the client. (#1785)

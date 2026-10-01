@@ -144,6 +144,15 @@ def data2():
 Declare `poll`/`file_reader` at module top level to share one cache across
 sessions.
 
+To change reactive state from a background task or a custom timer, the way
+input changes and `invalidate_later` do, hand the change to the session. It runs
+once, after the session's running effects finish, so they keep seeing stable
+values:
+
+```python
+session.run_once_when_idle(lambda: latest.set(new_value))
+```
+
 (For long-running async work that must not block the session, see
 `reactive.extended_task` - out of scope here.)
 
@@ -158,6 +167,7 @@ sessions.
 | Wait for / validate a value | `req(x)`, `req(x, cancel_output=True)` |
 | Read without depending | `with reactive.isolate():` |
 | Timer | `reactive.invalidate_later(secs)` |
+| Change state between a session's cycles | `session.run_once_when_idle(fn)` |
 | Poll a data source / file | `@reactive.poll(...)` / `@reactive.file_reader(...)` |
 | Force sync execution in tests | `reactive.flush()` |
 

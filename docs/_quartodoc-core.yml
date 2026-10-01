@@ -296,6 +296,7 @@ quartodoc:
             - session.Session.on_flush
             - session.Session.on_flushed
             - session.Session.on_ended
+            - session.Session.run_once_when_idle
             - session.Session.dynamic_route
             - session.Session.allow_reconnect
             - session.Session.close
