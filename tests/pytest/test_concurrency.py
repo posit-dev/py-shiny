@@ -10,11 +10,12 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from typing import Callable
+from typing import AsyncIterable, Callable, Iterator
 
 import pytest
+from starlette.requests import Request
 
-from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny._connection import MockConnection
 from shiny.bookmark._bookmark import BookmarkApp
 from shiny.bookmark._restore_state import RestoreContext
@@ -621,6 +622,60 @@ async def test_only_downloads_make_the_session_busy():
     for action in ("upload", "dynamic_route", "download"):
         await session._handle_request(None, action, None)  # type: ignore
     assert busy == [0, 0, 1]
+
+
+@pytest.mark.parametrize("kind", ["async", "sync"])
+@pytest.mark.asyncio
+async def test_value_set_in_download_handler_updates_outputs_and_effects(kind: str):
+    # https://github.com/posit-dev/py-shiny/issues/1785: a download is a plain HTTP
+    # request, so on main nothing flushed after its handler set a value.
+    notes: list[int] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        count = reactive.value(0)
+
+        if kind == "async":
+
+            @render.download_button(filename="f.txt")
+            async def dl() -> AsyncIterable[str]:
+                count.set(count.get() + 1)
+                yield "data"
+
+        else:
+
+            @render.download_button(filename="f.txt")
+            def dl() -> Iterator[str]:
+                count.set(count.get() + 1)
+                yield "data"
+
+        @render.text
+        def n():
+            return str(count())
+
+        @reactive.effect
+        @reactive.event(count, ignore_init=True)
+        def _():
+            notes.append(count())
+
+    def n_values() -> list[object]:
+        return [m["values"]["n"] for m in c.sent if "n" in m.get("values", {})]  # type: ignore
+
+    c = RecordingClient(server)
+    try:
+        c.send({"method": "init", "data": {".clientdata_output_n_hidden": False}})
+        assert await wait_until(lambda: n_values()[-1:] == ["0"])
+        for i in (1, 2):
+            request = Request(
+                {"type": "http", "method": "GET", "path": "/", "headers": []}
+            )
+            response = await c.session._handle_request(request, "download", "dl")
+            async for _chunk in response.body_iterator:  # type: ignore
+                pass
+            # No client message needed for the output and effect to update.
+            assert await wait_until(lambda i=i: n_values()[-1:] == [str(i)])
+            assert notes == list(range(1, i + 1))
+    finally:
+        await c.close()
 
 
 # ----------------------------------------------------------------------------
