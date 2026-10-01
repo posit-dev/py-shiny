@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* `ui.input_date()`'s `datesdisabled` now works when `format` is not the default `yyyy-mm-dd`. The dates are now converted on the client the same way `min`/`max` are, instead of being parsed by bootstrap-datepicker with the display `format`. The `data-date-dates-disabled` attribute is replaced by `data-dates-disabled` (and omitted when `datesdisabled` is `None`), and `controller.InputDate.expect_datesdisabled()` checks the new attribute. Requires the updated vendored `shiny.js` (rstudio/shiny#4434). (#2523)
+
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
 
 * `near_points()` and `brushed_points()` now map a non-string categorical column (e.g. one of integers) to its category codes, instead of raising `ValueError: to_float: unsupported dtype for x`. `to_float()` tested the Series itself against `CategoricalDtype`, which no Series ever is, so the categorical branch never ran. (#2505)
