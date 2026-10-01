@@ -152,6 +152,62 @@ def test_overlap_cancellation_and_disconnect(agent_page: Page):
     )
 
 
+@pytest.mark.parametrize("stop", ["cancel", "timeout"])
+def test_slow_python_work_continues_after_browser_stops(agent_page: Page, stop: str):
+    result = agent_page.evaluate(
+        """async stop => {
+            const events = [];
+            let started;
+            const onStarted = new Promise(resolve => { started = resolve; });
+            Shiny.addCustomMessageHandler('slow-operation', state => {
+                events.push(state);
+                if (state === 'started') started();
+            });
+            const controller = new AbortController();
+            const originalSetTimeout = window.setTimeout;
+            let expire;
+            // Trigger the actual 30-second timeout callback without waiting 30s.
+            window.setTimeout = (callback, delay, ...args) => {
+                if (delay === 30000) {
+                    expire = callback;
+                    return originalSetTimeout(callback, delay, ...args);
+                }
+                return originalSetTimeout(callback, delay, ...args);
+            };
+            try {
+                const slow = tools.slow_operation.execute({}, {signal: controller.signal})
+                    .catch(e => e.message);
+                await onStarted;
+                const blocked = await tools.shiny_describe_app.execute({})
+                    .catch(e => e.message);
+                if (stop === 'cancel') controller.abort();
+                else expire();
+                window.setTimeout = originalSetTimeout;
+                const stopped = await slow;
+                // A browser-only call is allowed while Python is still working.
+                const state = JSON.parse(await tools.shiny_describe_app.execute({}));
+                events.push('described');
+                // This RPC queues behind the slow tool and sees its side effect.
+                const factor = JSON.parse(await tools.read_factor.execute({}));
+                events.push('next-rpc');
+                return {blocked, stopped, state, factor, events};
+            } finally {
+                window.setTimeout = originalSetTimeout;
+            }
+        }""",
+        stop,
+    )
+    assert "already running" in result["blocked"]
+    if stop == "cancel":
+        assert result["stopped"].startswith("Tool cancelled")
+    else:
+        assert result["stopped"].startswith("Shiny tool timed out after 30 seconds")
+    assert result["events"] == ["started", "described", "finished", "next-rpc"]
+    assert result["state"]["outputs"]["factor"]["value"] == "1"
+    assert result["factor"] == {"factor": 42}
+    expect(agent_page.locator("#factor")).to_have_text("42")
+
+
 def test_dates_and_disabled_inputs(agent_page: Page):
     page = agent_page
     state = call(

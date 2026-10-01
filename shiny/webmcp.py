@@ -58,7 +58,8 @@ def tool(
         Whether the function only reads application state. This is an agent hint,
         not an enforcement mechanism.
     consequential
-        Whether the action has significant or irreversible effects.
+        Whether the action has significant or irreversible effects. This is an
+        agent hint, not an enforcement mechanism.
     session
         Session to register with. Defaults to the current session.
 
@@ -73,8 +74,11 @@ def tool(
     -----
     Tools are removed when their session or module is destroyed. They use the
     existing authenticated WebSocket and the app's error-sanitization settings.
-    Browser cancellation stops waiting; it does not undo or interrupt Python
-    work already dispatched. Long-running work should use an extended task.
+    Browser cancellation or the 30-second timeout stops waiting and allows
+    another browser tool call; it does not undo or interrupt Python work already
+    dispatched. Later Python RPCs in the same session queue behind that work.
+    Reactive flushing does not wait for extended or background tasks.
+    Long-running work should use an extended task.
     """
     schema = deepcopy(input_schema)
     Draft202012Validator.check_schema(schema)

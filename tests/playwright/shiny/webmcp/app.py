@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast
 
 from htmltools import Tag
@@ -71,6 +72,25 @@ def server(input: Inputs, output: Outputs, session: Session):
     logic("left")
     logic("right")
     factor_value = reactive.Value(1)
+
+    @webmcp.tool(
+        description="Deliberately slow operation for cancellation and timeout tests",
+        input_schema={"type": "object", "properties": {}},
+    )
+    async def slow_operation():
+        await session.send_custom_message("slow-operation", "started")
+        await asyncio.sleep(0.5)
+        factor_value.set(42)
+        await session.send_custom_message("slow-operation", "finished")
+        return {"factor": factor_value()}
+
+    @webmcp.tool(
+        description="Read the slow operation's side effect",
+        input_schema={"type": "object", "properties": {}},
+        read_only=True,
+    )
+    def read_factor():
+        return {"factor": factor_value()}
 
     @reactive.effect
     @reactive.event(input.remove_left)

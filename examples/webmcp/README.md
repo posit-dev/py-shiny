@@ -82,3 +82,12 @@ app = App(ui.page_fluid(ui.input_numeric("quantity", "Quantity", 2)), server, we
 ```
 
 Tools run in an isolated reactive context in their own session and must return JSON-serializable data.
+
+## Security and limitations
+
+- `data-webmcp="exclude"` controls tool discovery, not authorization. Enforce permissions server-side.
+- `read_only` and `consequential` are agent hints, not permission enforcement.
+- Input changes can trigger application effects. For meaningful side effects, expose purpose-built custom tools and enforce permissions server-side.
+- Browser tool calls are normally serialized. Cancellation or the 30-second timeout stops waiting and allows another browser call; Python work already dispatched may still complete. Later Python RPCs in the same session queue behind that work.
+- A reactive flush does not wait for extended or background tasks.
+- Output reading extracts displayed text/code, not plots, tables, or their underlying data. Return structured data through custom tools instead.

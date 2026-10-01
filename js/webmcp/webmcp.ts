@@ -85,9 +85,9 @@ function excluded(el: HTMLElement): boolean {
   return !!el.closest('[data-webmcp="exclude"]');
 }
 function label(el: HTMLElement): string {
-  const explicit = document.querySelector(
-    `label[for="${CSS.escape(el.id)}"]`
-  )?.textContent?.trim();
+  const explicit = document
+    .querySelector(`label[for="${CSS.escape(el.id)}"]`)
+    ?.textContent?.trim();
   if (explicit) return explicit;
   const implicit = el.closest("label")?.textContent?.trim();
   if (implicit) return implicit;
@@ -415,6 +415,8 @@ async function initialize() {
         clearTimeout(timer);
         signal?.removeEventListener("abort", abort);
         $(document).off("shiny:disconnected", disconnect);
+        // Release the browser guard even on cancellation/timeout. Dispatched
+        // Python work continues; later RPCs queue behind it in the same session.
         pending = false;
         if (error) reject(error);
         else resolve(JSON.stringify(value));
@@ -463,6 +465,9 @@ async function initialize() {
       },
       {
         name: "shiny_set_inputs",
+        // No blanket consequentialHint: ordinary filters need not be consequential.
+        // Apps with meaningful side effects should expose purpose-built custom
+        // tools and enforce permissions server-side; annotations are only hints.
         description:
           "Update Shiny input widgets by ID and return their state and visible outputs after a server reactive flush. Input changes can trigger application effects. This does not wait for background tasks.",
         inputSchema: {
