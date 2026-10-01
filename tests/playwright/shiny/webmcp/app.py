@@ -78,10 +78,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         input_schema={"type": "object", "properties": {}},
     )
     async def slow_operation():
-        await session.send_custom_message("slow-operation", "started")
+        await session.send_custom_message("slow-operation", {"state": "started"})
         await asyncio.sleep(0.5)
         factor_value.set(42)
-        await session.send_custom_message("slow-operation", "finished")
+        await session.send_custom_message("slow-operation", {"state": "finished"})
         return {"factor": factor_value()}
 
     @webmcp.tool(

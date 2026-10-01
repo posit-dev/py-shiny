@@ -159,7 +159,7 @@ def test_slow_python_work_continues_after_browser_stops(agent_page: Page, stop: 
             const events = [];
             let started;
             const onStarted = new Promise(resolve => { started = resolve; });
-            Shiny.addCustomMessageHandler('slow-operation', state => {
+            Shiny.addCustomMessageHandler('slow-operation', ({state}) => {
                 events.push(state);
                 if (state === 'started') started();
             });
