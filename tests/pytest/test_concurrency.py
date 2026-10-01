@@ -26,6 +26,7 @@ from shiny.reactive._core import (
     _reactive_environment,
 )
 from shiny.session import get_current_session, session_context
+from shiny.testserver import test_server_async
 
 TIMEOUT = 1.0
 
@@ -2388,3 +2389,75 @@ async def test_calc_recomputes_after_its_run_is_cancelled():
     gate.set()
     assert await asyncio.wait_for(read(), TIMEOUT) == 42
     assert len(calc_runs) == 2
+
+
+@pytest.mark.asyncio
+async def test_recursive_fibonacci_effect_and_calc_runs_cancel_on_destroy():
+    # A recursive async Fibonacci, computed by a calc and read by an effect. Every
+    # call yields, and `go` can pause the recursion mid-run, so the test can see
+    # the effect's queue of runs (one in progress, one waiting) and cancel both.
+    go = asyncio.Event()
+    go.set()
+    calls: list[int] = []
+
+    async def fib(k: int) -> int:
+        await go.wait()
+        await asyncio.sleep(0)
+        calls.append(k)
+        if k < 2:
+            return k
+        return await fib(k - 1) + await fib(k - 2)
+
+    rerun = reactive.value(0)
+    results: list[tuple[int, int]] = []
+    checked: list[int] = []
+    handles: dict[str, reactive.Effect_] = {}
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.calc
+        async def fib_n() -> int:
+            return await fib(input.n())
+
+        @reactive.effect
+        async def show():
+            rerun()
+            results.append((input.n(), await fib_n()))
+
+        @reactive.effect
+        @reactive.event(input.check, ignore_init=True)
+        async def _check():
+            checked.append(await fib_n())
+
+        handles["show"] = show
+
+    async with test_server_async(server) as s:
+        await s.set_inputs(n=10, check=0)
+        assert results == [(10, 55)]
+        show = handles["show"]
+
+        # Start fib(15), then pause it part-way through the recursion.
+        update = asyncio.create_task(s.set_inputs(n=15))
+        start = len(calls)
+        assert await wait_until(lambda: len(calls) > start + 50)
+        go.clear()
+        await asyncio.sleep(0.01)
+        paused_at = len(calls)
+
+        # Invalidating the effect queues a re-run behind the run in progress.
+        rerun.set(1)
+        assert await wait_until(lambda: len(show._run_tasks) == 2)
+
+        # Destroying the effect cancels both: the recursion stops for good.
+        show.destroy()
+        assert await wait_until(lambda: show._run_tasks == set())
+        go.set()
+        await asyncio.wait_for(update, TIMEOUT)  # the session went idle
+        await asyncio.sleep(0.01)
+        assert len(calls) == paused_at
+        assert results == [(10, 55)]
+
+        # The calc's cancelled run cached nothing, so reading it (without changing
+        # `n`) recomputes fib(15) instead of raising.
+        await s.set_inputs(check=1)
+        assert checked == [610]
+        assert s.error is None
