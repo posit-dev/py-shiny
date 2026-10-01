@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * Destroying an effect (`effect.destroy()`) cancels its run that's still in progress: `asyncio.CancelledError` is raised at its current `await`. Since ending a session and `session.destroy(id)` destroy their effects, both now cancel in-progress `async` effects and render functions, instead of letting them run on after their session or module is gone. This also keeps a module's running effect from reading the module's destroyed values, which used to close the whole session. The run that calls `destroy()` (for example, an effect that closes its own session) is not cancelled.
 
-  (#2508)
+  (#2508, #2515)
 
 ### Bug fixes
 
