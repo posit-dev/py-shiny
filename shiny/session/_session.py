@@ -1334,7 +1334,10 @@ class AppSession(Session):
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
         # Busy pauses this session's cycle (no input updates, timers, or outputs), so
-        # only downloads take it, as in R; not uploads or dynamic routes.
+        # only downloads take it, as in R; not uploads or dynamic routes. It covers
+        # only the call to the download handler: a streamed body is read after this
+        # returns, so values the stream sets reach the client while it streams, and
+        # the session keeps handling input during a long download.
         busy = action == "download"
         if busy:
             self._increment_busy_count()

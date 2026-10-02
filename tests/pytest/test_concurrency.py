@@ -624,6 +624,10 @@ async def test_only_downloads_make_the_session_busy():
     assert busy == [0, 0, 1]
 
 
+def download_request() -> Request:
+    return Request({"type": "http", "method": "GET", "path": "/", "headers": []})
+
+
 @pytest.mark.parametrize("kind", ["async", "sync"])
 @pytest.mark.asyncio
 async def test_value_set_in_download_handler_updates_outputs_and_effects(kind: str):
@@ -665,15 +669,94 @@ async def test_value_set_in_download_handler_updates_outputs_and_effects(kind: s
         c.send({"method": "init", "data": {".clientdata_output_n_hidden": False}})
         assert await wait_until(lambda: n_values()[-1:] == ["0"])
         for i in (1, 2):
-            request = Request(
-                {"type": "http", "method": "GET", "path": "/", "headers": []}
+            response = await c.session._handle_request(
+                download_request(), "download", "dl"
             )
-            response = await c.session._handle_request(request, "download", "dl")
             async for _chunk in response.body_iterator:  # type: ignore
                 pass
             # No client message needed for the output and effect to update.
             assert await wait_until(lambda i=i: n_values()[-1:] == [str(i)])
             assert notes == list(range(1, i + 1))
+    finally:
+        await c.close()
+
+
+@pytest.mark.parametrize("kind", ["async", "sync"])
+@pytest.mark.asyncio
+async def test_values_set_mid_stream_are_sent_before_the_stream_ends(kind: str):
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        progress = reactive.value(0)
+
+        if kind == "async":
+
+            @render.download_button(filename="f.txt")
+            async def dl() -> AsyncIterable[str]:
+                for i in (1, 2, 3):
+                    progress.set(i)
+                    yield f"chunk{i}"
+
+        else:
+
+            @render.download_button(filename="f.txt")
+            def dl() -> Iterator[str]:
+                for i in (1, 2, 3):
+                    progress.set(i)
+                    yield f"chunk{i}"
+
+        @render.text
+        def n():
+            return str(progress())
+
+    def n_values() -> list[object]:
+        return [m["values"]["n"] for m in c.sent if "n" in m.get("values", {})]  # type: ignore
+
+    c = RecordingClient(server)
+    try:
+        c.send({"method": "init", "data": {".clientdata_output_n_hidden": False}})
+        assert await wait_until(lambda: n_values()[-1:] == ["0"])
+        response = await c.session._handle_request(download_request(), "download", "dl")
+        chunks = response.body_iterator.__aiter__()  # type: ignore
+        for i in (1, 2, 3):
+            assert await chunks.__anext__() == f"chunk{i}".encode()
+            # The next chunk isn't read yet, so the stream is still open.
+            assert await wait_until(lambda i=i: n_values()[-1:] == [str(i)])
+        with pytest.raises(StopAsyncIteration):
+            await chunks.__anext__()
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_session_handles_input_while_a_download_streams():
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        release = asyncio.Event()
+
+        @reactive.effect
+        @reactive.event(input.release, ignore_init=True)
+        def _():
+            release.set()
+
+        @render.download_button(filename="f.txt")
+        async def dl() -> AsyncIterable[str]:
+            yield "a"
+            await release.wait()
+            yield "b"
+
+    c = RecordingClient(server)
+    try:
+        c.send({"method": "init", "data": {"release": 0}})
+        assert await wait_until(lambda: c.session._flush_enabled)
+        response = await c.session._handle_request(download_request(), "download", "dl")
+
+        async def read_body() -> bytes:
+            return b"".join([chunk async for chunk in response.body_iterator])  # type: ignore
+
+        body = asyncio.create_task(read_body())
+        await asyncio.sleep(0.05)
+        assert not body.done()
+        # The stream finishes only once the session has handled this input.
+        c.update(release=1)
+        assert await asyncio.wait_for(body, TIMEOUT) == b"ab"
     finally:
         await c.close()
 
