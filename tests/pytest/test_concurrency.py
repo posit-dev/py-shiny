@@ -1401,10 +1401,17 @@ async def test_queued_update_waits_if_session_turns_busy_during_flushed_callback
     shared = reactive.value(0)
     release = asyncio.Event()
     x_seen: list[object] = []
+    # Once armed, the on_flushed callback signals that it's running, then waits
+    # for the test, so the session can turn busy while it awaits.
+    armed = asyncio.Event()
+    in_callback = asyncio.Event()
+    proceed = asyncio.Event()
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         async def on_flushed() -> None:
-            await asyncio.sleep(0.02)
+            if armed.is_set():
+                in_callback.set()
+                await proceed.wait()
 
         session.on_flushed(on_flushed, once=False)
 
@@ -1425,15 +1432,19 @@ async def test_queued_update_waits_if_session_turns_busy_during_flushed_callback
         session = c.session
         # Something to send plus a queued update: the flush sends, runs its flushed
         # callbacks, then starts the update.
+        armed.set()
         session.send_input_message("t", {"value": 1})
         session._cycle_start_action(lambda: session._manage_inputs({"x": 1}))
-        await asyncio.sleep(0.005)  # the on_flushed callback is now awaiting
-        shared.set(1)  # ...and the session turns busy meanwhile
+        await asyncio.wait_for(in_callback.wait(), TIMEOUT)
+        shared.set(1)  # the session turns busy while the callback awaits
+        await asyncio.sleep(0.01)
+        proceed.set()
         await asyncio.sleep(0.05)
         assert x_seen == [0]
         release.set()
         assert await wait_until(lambda: x_seen == [0, 1])
     finally:
+        proceed.set()
         release.set()
         await c.close()
 
