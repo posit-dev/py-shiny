@@ -1,6 +1,6 @@
 ---
 name: shiny-doctor
-description: "Auditing, diagnosing, validating, and debugging Shiny for Python (py-shiny) applications. Use when an app throws reactive errors, fails silently, has missing or duplicate UI/server IDs, exhibits reactive dependency cycles, leaks state across sessions, confuses Express and Core paradigms, mixes in R Shiny syntax, blocks the async event loop with synchronous I/O or incorrect extended_task usage, or when requested to validate, check, lint, debug, or doctor a Shiny app ('/shiny-doctor', 'shiny validate', 'diagnose my shiny app', 'why is my reactive not firing')."
+description: "Auditing, diagnosing, validating, and debugging Shiny for Python (py-shiny) applications. Use when an app throws reactive errors, fails silently, has missing or duplicate UI/server IDs, exhibits reactive dependency cycles, leaks state across sessions, confuses Express and Core paradigms, mixes in R Shiny syntax, has slow startup or repeated initialization, blocks the async event loop with synchronous I/O or incorrect extended_task usage, or when requested to validate, check, lint, debug, or doctor a Shiny app ('/shiny-doctor', 'shiny validate', 'diagnose my shiny app', 'why is my reactive not firing')."
 ---
 
 # Shiny Doctor (`/shiny-doctor`)
@@ -12,6 +12,8 @@ When diagnosing an application, follow the **7-Phase Diagnostic Protocol** below
 ---
 
 ## Quick Diagnostic Checklist
+
+Start with `shiny --help` to discover the installed CLI's capabilities. If it lists `validate`, read `shiny validate --help` and run it against the target app using the documented arguments. Use its diagnostics for the checks it covers, then inspect the remaining issues below; do not maintain a parallel set of validation rules. If `validate` is unavailable, continue with manual inspection and runtime verification. CLI diagnostics alone do not establish session-level runtime verification.
 
 | Category | Check | Common Symptom | Fix Reference |
 |---|---|---|---|
@@ -26,6 +28,7 @@ When diagnosing an application, follow the **7-Phase Diagnostic Protocol** below
 | **Modules** | Mismatched UI/Server module instance IDs or duplicate module IDs | Module outputs disconnected; state collisions | [Antipatterns: Module Instance IDs](references/antipatterns.md#9-module-instance-id-mismatches-and-collisions) |
 | **Paradigms** | Mixing Express syntax inside Core or creating `App()` in Express | Duplicate app initialization / layout breaks | [Antipatterns: Paradigm Mixing](references/antipatterns.md#10-mixing-express-and-core-paradigms) |
 | **R Shiny Idioms** | Using `shinyApp`, `fluidPage`, `reactiveVal`, `observeEvent` | `NameError` or `ImportError` on startup | [Antipatterns: R Idioms](references/antipatterns.md#11-r-shiny-syntax-leakage) |
+| **Performance** | Expensive initialization repeated in Express `app.py` or each Core `server()` call | Slow startup or new connections | [Express: Shared Objects](../shiny-for-python/references/express.md#shared-objects-and-startup-cost) |
 
 ---
 
@@ -42,6 +45,7 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
    - Verify that the module instance ID passed when invoking the UI (`my_module_ui("inst_1")`) exactly matches the instance ID passed to the server (`my_module_server("inst_1")`).
    - Ensure module instance IDs are unique within their calling scope.
    - Express modules use the `@module` decorator on the module function.
+   - For Express execution, shared objects, and automatic display behavior, read the [Express guide](../shiny-for-python/references/express.md).
 
 ### Phase 2: Reactive Graph & Purity Audit
 1. **Pure Calculations vs Side Effects**:
@@ -63,6 +67,7 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
    - For synchronous blocking I/O, offload to a worker thread: `await asyncio.to_thread(blocking_io_function, *args)`.
    - For heavy CPU-bound computation, offload to a process pool via `loop.run_in_executor(process_pool, cpu_bound_func, *args)`.
    - **Crucial Reactive Rule**: An extended task runs independently of reactive processing and **cannot directly read reactive sources** (such as `input.x()` or `reactive.value()`). Any needed inputs or reactive values must be captured in reactive context (e.g. inside an `@reactive.effect` / `@reactive.event` or caller) and passed into the task function as parameters upon invocation (`do_work(input.filename())`).
+   - Read the [Extended Tasks guide](../shiny-for-python/references/extended-tasks.md) for implementation, result handling, task buttons, and cancellation.
 
 ### Phase 4: UI / Server Contract & ID Consistency
 1. **ID Matching**:
@@ -75,13 +80,18 @@ Execute these 7 inspection phases when diagnosing a Shiny app:
 1. **Per-Session State**:
    - Session-specific `reactive.value()` state, user session data, and connection state must be created *inside* the `server()` function or module server (in Core) or inside the per-session execution context (in Express).
    - Flag mutable global `reactive.value()` state when it contains user/session-specific data; verify whether cross-session state sharing is intentional (e.g. shared persistent counters or global caches) before treating it as a bug.
+   - In Express, top-level `app.py` state is recreated per session; objects in imported modules are shared. Read the [Session Lifecycle guide](../shiny-for-python/references/session-lifecycle.md) for cleanup and the [Express guide](../shiny-for-python/references/express.md#shared-objects-and-startup-cost) for sharing rules. A shared `reactive.file_reader()` is appropriate for application-wide data that all users may read.
 2. **Container Mutation**:
-   - When modifying lists or dictionaries in a `reactive.value`, re-assign a new/copied container or call `.set()` so downstream reactives invalidate properly.
+   - When modifying lists or dictionaries in a `reactive.value`, pass a new/copied container to `.set()` so downstream reactives invalidate properly.
 
 ### Phase 6: Observability & Performance
 1. **Computation Caching**:
    - Cache expensive intermediate queries or transformations with `@reactive.calc` instead of recomputing inside multiple renderers.
-2. **Telemetry Tracing**:
+2. **Startup and Connection Cost**:
+   - Measure process startup and the time to first output for a new session separately. Inspect costly imports, file reads, model loading, and database queries outside reactive functions.
+   - Express executes `app.py` to build the initial UI and again for each connected session; expensive top-level work delays both stages. Move reusable, application-wide initialization into an imported module, where Python caches it once per process. In Core, keep that initialization outside `server()`.
+   - Keep user-specific data and mutable state per session. Treat shared data as read-only; use `reactive.file_reader()` when a shared file should be cached and invalidate consumers on changes. Defer work needed only after an explicit action, using extended tasks when it is slow.
+3. **Telemetry Tracing**:
    - When diagnosing performance bottlenecks, use `shiny.otel` (`SHINY_OTEL_COLLECT=all`) to trace span timings across the reactive graph.
 
 ### Phase 7: Runtime Verification & Validation

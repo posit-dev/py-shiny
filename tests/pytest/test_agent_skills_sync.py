@@ -108,9 +108,11 @@ def test_shiny_doctor_markdown_links() -> None:
     doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
     for md_file in doctor_dir.rglob("*.md"):
         content = md_file.read_text()
-        links = re.findall(r"\[.*?\]\((references/[^\)]+)\)", content)
+        links = re.findall(r"\[.*?\]\(([^\)]+)\)", content)
         for link in links:
-            target_path = (doctor_dir / link.split("#")[0]).resolve()
+            if "://" in link or link.startswith("#"):
+                continue
+            target_path = (md_file.parent / link.split("#")[0]).resolve()
             assert target_path.is_file(), f"Broken link {link} in {md_file.name}"
 
 

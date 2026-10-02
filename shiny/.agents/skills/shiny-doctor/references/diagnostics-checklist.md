@@ -4,6 +4,10 @@ This reference provides a step-by-step audit and verification checklist for vali
 
 ---
 
+## 0. Built-in Validation
+- [ ] Inspect `shiny --help`. If `validate` is listed, read `shiny validate --help` and run it with the documented arguments for the target app.
+- [ ] Use the command's diagnostics for checks it covers; inspect only the remaining issues manually. If the command is unavailable, use the checks below and record that limitation. A clean CLI result alone does not verify a connected session.
+
 ## 1. Mode & Architecture Checklist
 - [ ] Are imports using `shiny` or `shiny.express` consistently without cross-mode collisions?
 - [ ] In Express mode, is top-level code structured without `app = App(app_ui, server)`?
@@ -30,14 +34,19 @@ This reference provides a step-by-step audit and verification checklist for vali
 - [ ] Are R Shiny idioms (`shinyApp`, `fluidPage`, `reactiveVal`, `observeEvent`, `renderUI`) eliminated and replaced with Python Shiny equivalents?
 
 ## 5. Session Scope & Security Checklist
-- [ ] Are user-specific reactive values initialized inside the `server` function or Express session context (and any global reactive state verified as intentionally shared)?
+- [ ] In Core, is user-specific state initialized inside `server()`? In Express, is it in `app.py`'s per-session scope rather than an imported module? See the [Session Lifecycle guide](../../shiny-for-python/references/session-lifecycle.md) and [Express guide](../../shiny-for-python/references/express.md#shared-objects-and-startup-cost).
+- [ ] Is shared `reactive.file_reader()` data appropriate for all users and treated as read-only?
 - [ ] Are database sessions, user auth context, and state isolated per connection?
 - [ ] Are sensitive environment variables, secrets, database credentials, and auth tokens kept on the server and never accidentally rendered or exposed in client UI outputs?
 
-## 6. Runtime Verification Checklist
+## 6. Startup & Performance Checklist
+- [ ] Have process startup and time to first output for a new session been measured separately?
+- [ ] Is expensive application-wide initialization outside Core `server()` or in an imported module for Express, rather than repeated in `app.py`? See the [Express guide](../../shiny-for-python/references/express.md#shared-objects-and-startup-cost).
+- [ ] Is slow work needed only after an action deferred, with the [Extended Tasks guide](../../shiny-for-python/references/extended-tasks.md) used when reactive processing must remain responsive?
+
+## 7. Runtime Verification Checklist
 - [ ] Has the application been launched via a managed background process / test fixture with a timeout and cleanup to verify import and ASGI server startup without hangs, crashes, or schema errors?
 - [ ] If claiming session-level verification, has a client connection (browser or Playwright test harness using `shiny.pytest` fixtures) been established to exercise the `server()` function, WebSocket connection, and reactive renderers?
 - [ ] Have automated tests been rerun to confirm resolution?
 - [ ] Has the report been accurately labeled (**Runtime Verified (Session Level)**, **Server Startup Verified**, or **Static Diagnosis Only**)?
-
 

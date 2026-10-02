@@ -135,6 +135,55 @@ For reusable, namespaced components, Express uses a single `@module` decorator
 `module.ui()` / `module.server()` pair. See `references/modules-express.md` for
 the full pattern.
 
+## Shared objects and startup cost
+
+Express executes `app.py` once to build the initial UI and again for each
+connected session. Top-level initialization therefore repeats, and top-level
+reactive values in `app.py` are per-session. Move expensive, application-wide
+initialization into an imported module so Python caches it once per process:
+
+```python
+# shared.py (requires pandas and an existing data.csv beside this file)
+from pathlib import Path
+import pandas as pd
+
+data = pd.read_csv(Path(__file__).parent / "data.csv")
+```
+
+```python
+# app.py
+import shared
+from shiny.express import render
+
+@render.data_frame
+def table():
+    return shared.data
+```
+
+Imported objects are shared across sessions; keep them read-only or copy them
+before mutation. Keep user-specific state in `app.py`, not `shared.py`. For a
+shared file that changes, define `@reactive.file_reader(...)` in the imported
+module to share polling and cached data across users. Core's equivalent is
+initialization outside `server()`.
+
+## Assign to suppress automatic display
+
+Express automatically displays the value of each top-level expression. A bare
+call made for its side effect can raise `TypeError: Invalid tag item type` if
+it returns something that is not UI, such as the cancellation callback returned
+by `session.on_ended()`. Assign the result to a variable to suppress display:
+
+```python
+from shiny.express import session
+
+_ = session.on_ended(lambda: print("Session ended"))
+```
+
+Assignment also lets you store ordinary UI objects for later display; use
+`ui.hold()` to capture UI emitted by context managers. See
+[Express in depth](https://shiny.posit.co/py/docs/express-in-depth.html) for
+shared objects and automatic display behavior.
+
 ## When to choose Express vs Core
 
 - **Express**: rapid, linear, single-file apps; dashboards; prototypes;

@@ -27,17 +27,32 @@ def filtered_data():
 `@reactive.calc` expressions are pure, memoized computations. Calling `.set()` inside a calc produces side effects during the reactive calculation phase, violating the pure functional contract and potentially triggering infinite reactive cycles.
 
 ### Good Code
+Keep the derived calculation pure, and move the state update into an effect. This Core example creates the reactive state per session.
+
 ```python
-from shiny import reactive, render
+from shiny import App, reactive, render, ui
 
-@reactive.calc
-def filtered_data():
-    return [1, 2, 3]
+app_ui = ui.page_fluid(ui.output_text("summary"))
 
-@render.text
-def summary():
-    return f"Total rows: {len(filtered_data())}"
+def server(input, output, session):
+    row_count = reactive.value(0)
+
+    @reactive.calc
+    def filtered_data():
+        return [1, 2, 3]
+
+    @reactive.effect
+    def update_row_count():
+        row_count.set(len(filtered_data()))
+
+    @render.text
+    def summary():
+        return f"Total rows: {row_count()}"
+
+app = App(app_ui, server)
 ```
+
+The effect depends on `filtered_data()` and writes `row_count` without reading it, so the write does not make the effect depend on its own output. For writes triggered only by an action, add `@reactive.event(input.button_id)` below `@reactive.effect`.
 
 ---
 
@@ -181,6 +196,8 @@ app = App(app_ui, server)
 
 ## 5. Global State Leakage Across Sessions
 
+The module-global versus `server()` distinction in the examples below applies to **Core mode**. Express re-executes top-level `app.py` code for each session, so top-level reactive values there are per-session; state in an imported module is shared across sessions. See the [Express guide](../../shiny-for-python/references/express.md#shared-objects-and-startup-cost) and [Session Lifecycle guide](../../shiny-for-python/references/session-lifecycle.md) for state scoping and resource cleanup.
+
 ### Symptom
 One user's actions affect or overwrite another user's session data in multi-user deployments.
 
@@ -213,6 +230,23 @@ def server(input, output, session):
         return f"Logged in: {user_state()['logged_in']}"
 ```
 
+### Good Shared State: `reactive.file_reader()`
+Application-wide data that every user is allowed to read can be intentionally shared. Define a file reader once at Core module scope or in an imported `shared.py` module for Express; this shares the polling and cached calculation rather than rereading the same file for each session. The file must exist, and consumers should not mutate the cached result in place.
+
+```python
+# shared.py: imported by app.py in either Core or Express
+from pathlib import Path
+from shiny import reactive
+
+DATA_PATH = Path(__file__).parent / "data.csv"
+
+@reactive.file_reader(DATA_PATH, interval_secs=1, session=None)
+def shared_data():
+    return DATA_PATH.read_text()
+```
+
+Call `shared_data()` inside a renderer or calculation. A change to the file's size or modification time invalidates consumers across sessions. Keep authentication state, preferences, and user-specific data out of this shared cache.
+
 ---
 
 ## 6. Blocking the Async Event Loop and Extended Tasks
@@ -220,116 +254,14 @@ def server(input, output, session):
 ### Symptom
 The application stops responding for all connected users during a computation, download, or sleep, or extended tasks attempt to read reactive values directly.
 
-### Bad Code 1: Blocking call on the event loop
-```python
-import time
-from shiny import render
+### Diagnosis and Prescription
+Slow code inside a renderer, calc, or effect holds up reactive processing even when it uses `async def`. Synchronous I/O or CPU-bound work also blocks the asyncio event loop and can freeze all sessions. An `@reactive.extended_task` runs outside reactive processing, but does not automatically move work to a thread or process.
 
-@render.text
-def report():
-    # BAD: time.sleep blocks the asyncio event loop thread!
-    time.sleep(5)
-    return "Done"
-```
+- Use native async I/O for non-blocking calls. To keep reactive processing responsive during a long operation, use an extended task.
+- Offload blocking synchronous I/O with `await asyncio.to_thread(...)`; use a process pool (`ProcessPoolExecutor`) for heavy CPU work.
+- Extended tasks cannot directly read reactive sources. Capture `input.x()` or reactive values in the invoking effect and pass them as arguments; read the task's `.result()` in a renderer.
 
-### Bad Code 2: False belief that `@reactive.extended_task` automatically runs in a thread/process pool
-```python
-import time
-from shiny import reactive
-
-@reactive.extended_task
-async def compute_heavy_task(n: int):
-    # BAD: ExtendedTask runs on the main thread's event loop!
-    # time.sleep(10) STILL freezes the whole server!
-    time.sleep(10)
-    return n * 42
-```
-
-### Bad Code 3: Reading reactive sources directly inside `@reactive.extended_task`
-```python
-import asyncio
-from shiny import reactive
-
-@reactive.extended_task
-async def do_work():
-    # BAD: Extended tasks cannot access reactive sources directly!
-    # input.filename() or reactive values cannot be read inside extended_task.
-    filename = "data.csv"
-    await asyncio.sleep(1)
-    return filename
-```
-
-### Why It Fails
-Shiny server functions and `@reactive.extended_task` coroutines run on the single asyncio event loop thread. Calling `time.sleep()`, synchronous `requests`, or CPU-bound loops directly inside `async def` blocks the event loop from servicing other WebSocket connections and reactive flushes.
-
-Furthermore, `@reactive.extended_task` executes independently of reactive processing and **cannot directly read reactive sources** (`input.x()`, `reactive.value()`). Because inputs can change while an asynchronous task is executing, Shiny does not track reactive dependencies inside extended tasks. Any reactive values or inputs needed by the task must be passed in as arguments upon invocation.
-
-### Good Code: True async I/O
-```python
-import asyncio
-from shiny import render
-
-@render.text
-async def report():
-    # GOOD: Non-blocking async sleep yields to the event loop
-    await asyncio.sleep(5)
-    return "Done"
-```
-
-### Good Code: Blocking synchronous I/O offloaded to worker thread with invocation from reactive effect
-```python
-import asyncio
-import time
-from shiny import App, reactive, render, ui
-
-def load_file(filename: str) -> str:
-    time.sleep(2)
-    return f"Loaded {filename}"
-
-app_ui = ui.page_fluid(
-    ui.input_text("filename", "File Name", "data.csv"),
-    ui.input_action_button("run", "Load"),
-    ui.output_text("result"),
-)
-
-def server(input, output, session):
-    # GOOD: Task accepts needed inputs as parameters and offloads blocking work
-    @reactive.extended_task
-    async def do_work(filename: str) -> str:
-        return await asyncio.to_thread(load_file, filename)
-
-    # GOOD: Reactive effect captures reactive input value and invokes task
-    @reactive.effect
-    @reactive.event(input.run)
-    def _():
-        do_work(input.filename())
-
-    # GOOD: Output renderer consumes task result via .result()
-    @render.text
-    def result():
-        return do_work.result()
-
-app = App(app_ui, server)
-```
-
-### Good Code: CPU-bound computation offloaded to a ProcessPoolExecutor
-```python
-import asyncio
-from concurrent.futures import ProcessPoolExecutor
-from shiny import reactive
-
-process_pool = ProcessPoolExecutor(max_workers=2)
-
-def heavy_cpu_crunch(n: int) -> int:
-    total = sum(i * i for i in range(n))
-    return total
-
-@reactive.extended_task
-async def cpu_task(n: int):
-    # GOOD: Offloads heavy CPU calculation to a background process pool
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(process_pool, heavy_cpu_crunch, n)
-```
+Read the [Extended Tasks guide](../../shiny-for-python/references/extended-tasks.md) for the runnable definition/invocation pattern, result and status handling, task buttons, and cancellation instead of duplicating those patterns here.
 
 ---
 
@@ -554,6 +486,8 @@ ui.input_slider("n", "N", 1, 10, 5)
 def txt():
     return f"Value: {input.n()}"
 ```
+
+Read the [Express guide](../../shiny-for-python/references/express.md) for the execution model, shared objects, and assignment to suppress automatic display. These details matter when top-level work repeats for each session or a bare call returns an object that Express cannot display.
 
 ---
 
