@@ -1,19 +1,21 @@
 # Bundled Agent Skills
 
-The shiny package ships a single [Agent Skill](https://agentskills.io) under
-`shiny/.agents/skills/shiny-for-python/`, following the [Agent Skills
-specification](https://agentskills.io/specification). Its `SKILL.md` is a
-grouped router: a short index of topics, each pointing at a
-`references/<topic>.md` file with the actual instructions. It is **package
-data**: it ships in the wheel and is discovered by installers such as
-[library-skills](https://library-skills.io), which a user runs from *their*
-project (not from a clone of this repo) to symlink the skills of their
-installed dependencies into `.agents/skills/` or `.claude/skills/`. The `shiny skills
-list|path` CLI subcommands (implemented in `shiny/_main/_skills.py`) are a
-zero-dependency way to inspect it: `list` shows each bundled skill's name and
-description, and `path <name>` prints the skill's directory so its `SKILL.md`
-and supporting files (`references/`, `scripts/`) can be read from the installed
-package.
+The shiny package ships bundled [Agent Skills](https://agentskills.io) under
+`shiny/.agents/skills/`, following the [Agent Skills
+specification](https://agentskills.io/specification). The primary skill is
+`shiny-for-python` (for building, styling, and testing apps), alongside
+`shiny-doctor` (for auditing, validating, and diagnosing existing apps).
+Each skill's `SKILL.md` is an entry point or grouped router: a short index
+of topics, each pointing at a `references/<topic>.md` file with the actual
+instructions. It is **package data**: it ships in the wheel and is discovered by
+installers such as [library-skills](https://library-skills.io), which a user
+runs from *their* project (not from a clone of this repo) to symlink the
+skills of their installed dependencies into `.agents/skills/` or
+`.claude/skills/`. The `shiny skills list|path` CLI subcommands (implemented in
+`shiny/_main/_skills.py`) are a zero-dependency way to inspect them: `list` shows
+each bundled skill's name and description, and `path <name>` prints the skill's
+directory so its `SKILL.md` and supporting files (`references/`, `scripts/`) can
+be read from the installed package.
 
 **Audience:** coding agents *using* shiny to build, test, and debug apps — not
 contributors to shiny itself. Contributor-facing guidance belongs in
@@ -32,21 +34,33 @@ shiny/.agents/skills/
     scripts/          # optional: self-contained runnable code
     references/       # one file per topic, e.g. debugging.md, testing.md, modules.md
     assets/           # optional: templates, images, data files
+  shiny-doctor/
+    SKILL.md          # required: frontmatter + diagnostic workflow & verification
+    references/       # antipatterns.md, diagnostics-checklist.md
 ```
 
-- There is **one** skill directory, `shiny-for-python`; it is not prefixed
-  further (installers namespace skills by package, and the description scopes
-  the skill to Shiny for Python).
-- `SKILL.md`'s body is a grouped index: short sections that bucket related
-  topics (core concepts, layout/UI, outputs, app capabilities, extending
-  shiny, ...), each with a row per topic linking to its
-  `references/<topic>.md` file and a one-line "use when" trigger.
-- **Adding a new topic does not mean creating a new top-level skill
-  directory.** Add a `references/<topic>.md` file with the topic's
-  instructions, then add one index row for it in `shiny-for-python/SKILL.md`
-  (which bucket it belongs in, plus its "use when" trigger). Link with
-  relative paths from the skill root (`references/<topic>.md`) and keep
-  references one level deep — no chains of files pointing at files.
+- Skills sit in un-prefixed top-level directories under `shiny/.agents/skills/`
+  (installers namespace skills by package, and each skill's description scopes
+  it to Shiny for Python).
+- `SKILL.md`'s body is an index or router: short sections or tables linking to
+  `references/<topic>.md` files with "use when" triggers. Link with relative paths
+  from the skill root and keep references one level deep — no chains of files pointing at files.
+
+### When to add a reference topic vs. a new top-level skill
+
+- **Default to adding a reference topic:** Adding a new Shiny capability, component,
+  reactive pattern, or renderer does **not** mean creating a new top-level skill.
+  Add a `references/<topic>.md` file inside `shiny-for-python/references/`, then add an
+  index row for it in `shiny-for-python/SKILL.md`. This preserves progressive disclosure
+  without polluting the agent's catalog at startup.
+- **When a second top-level skill is warranted:** A separate skill directory is justified
+  only when the user intent, operational mode, and workflow protocol are fundamentally
+  distinct. For example, `shiny-doctor` operates as an audit and diagnostic engine
+  reviewing an *existing* codebase for structural bugs and antipatterns under strict runtime
+  verification rules, while `shiny-for-python` is for authoring, styling, and developing apps.
+- **Cross-routing:** When multiple skills exist, each skill's frontmatter description must
+  delineate routing boundaries (including negative constraints, e.g. *"For building apps, use `shiny-for-python`"*),
+  and their indices should cross-reference each other so agents that load one skill can readily find the other.
 
 ## Frontmatter
 
@@ -73,8 +87,8 @@ startup — agents decide from it alone whether to activate the skill):
   add print statements or hidden outputs").
 - Do **not** summarize the skill's workflow or step-by-step process: agents
   that get the recipe from the description follow it and skip the body.
-- Third person. There is only one skill, so its description is a single
-  umbrella statement covering every domain the index groups (reactivity,
+- Third person. For a broad index skill like `shiny-for-python`, its description
+  is an umbrella statement covering every domain the index groups (reactivity,
   layout, outputs, testing, ...) — the description's job is to get the skill
   to activate at all. Disambiguating between topics is the index's job: each
   row's "use when" trigger in `SKILL.md` (and, if that topic has its own
