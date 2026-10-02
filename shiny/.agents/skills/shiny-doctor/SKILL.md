@@ -1,6 +1,6 @@
 ---
 name: shiny-doctor
-description: "Auditing, diagnosing, validating, and debugging Shiny for Python (py-shiny) applications. Use when an app throws reactive errors, fails silently, has missing or duplicate UI/server IDs, exhibits reactive dependency cycles, leaks state across sessions, confuses Express and Core paradigms, mixes in R Shiny syntax, has slow startup or repeated initialization, blocks the async event loop with synchronous I/O or incorrect extended_task usage, or when requested to validate, check, lint, debug, or doctor a Shiny app ('/shiny-doctor', 'shiny validate', 'diagnose my shiny app', 'why is my reactive not firing')."
+description: "Audits, validates, and diagnoses health issues in existing Shiny for Python applications. Use when inspecting an app for reactive bugs, event loop blocks, or session state leaks, or when asked to validate or doctor an app. For building or developing apps, use `shiny-for-python`."
 ---
 
 # Shiny Doctor (`/shiny-doctor`)
