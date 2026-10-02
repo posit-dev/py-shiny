@@ -153,7 +153,6 @@ class ReactiveEnvironment:
         )
         self._next_id: int = 0
         self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
-        self._lock: Optional[asyncio.Lock] = None
         self._flushed_callbacks = _utils.AsyncCallbacks()
         self._flush_requested: bool = False
         # The event loop Shiny runs on, for requests made from other threads.
@@ -168,21 +167,6 @@ class ReactiveEnvironment:
         self._tasks: set[asyncio.Task[None]] = set()
         # Tasks stranded on an event loop that stopped (see `_adopt_loop()`).
         self._abandoned_tasks: set[asyncio.Task[None]] = set()
-
-    @property
-    def lock(self) -> asyncio.Lock:
-        """
-        Lock that protects this ReactiveEnvironment. It must be lazily created, because
-        at the time the module is loaded, there generally isn't a running asyncio loop
-        yet. This causes the asyncio.Lock to be created with a different loop than it
-        will be invoked from later; when that happens, acquire() will succeed if there's
-        no contention, but throw a "hey you're on the wrong loop" error if there is.
-        """
-        if self._lock is None:
-            # Ensure we have a loop; get_running_loop() throws an error if we don't
-            asyncio.get_running_loop()
-            self._lock = asyncio.Lock()
-        return self._lock
 
     def next_id(self) -> int:
         """Return the next available id"""
@@ -445,9 +429,12 @@ async def flush() -> None:
     -------
     You shouldn't ever need to call this function inside of a Shiny app. It's only
     useful for testing and running reactive code interactively in the console.
+    Setting a :class:`~shiny.reactive.value` already schedules a flush, so code that
+    sets one (from a background task, for example) doesn't need to call this.
 
     Returns once every started effect, including its async part, has finished, and
-    each session's resulting outputs have been sent.
+    each session's resulting outputs have been sent. That covers every session, not
+    only the caller's, so in an app it can wait on other sessions' slow effects.
 
     Note
     ----
@@ -489,22 +476,73 @@ def on_flushed(
     return _reactive_environment.on_flushed(func, once)
 
 
-@no_example()
-def lock() -> asyncio.Lock:
+class _NoOpLock:
     """
-    A process-wide lock, kept for backward compatibility.
+    What :func:`~shiny.reactive.lock` returns: it has the methods of an
+    :class:`asyncio.Lock`, but it never blocks.
+    """
 
-    Shiny no longer takes this lock itself, so holding it doesn't pause reactive
-    processing or serialize effects. Code that holds it only excludes other code
-    that also holds it.
+    async def __aenter__(self) -> None:
+        return None
+
+    async def __aexit__(self, *args: object) -> None:
+        return None
+
+    async def acquire(self) -> bool:
+        return True
+
+    def release(self) -> None:
+        pass
+
+    def locked(self) -> bool:
+        return False
+
+
+@no_example()
+def lock() -> _NoOpLock:
+    """
+    Deprecated. Set a reactive value directly instead.
+
+    This function does nothing. It returns an object with the methods of an
+    :class:`asyncio.Lock` that never blocks, so holding it neither pauses reactive
+    processing nor keeps out other code that holds it.
 
     To change reactive state from a different :class:`~asyncio.Task` than the one
-    running the Shiny :class:`~shiny.Session`, set the :class:`~reactive.value`
-    directly; a flush is scheduled automatically. Await
-    :func:`~shiny.reactive.flush` to wait until the resulting reactive work has
-    finished.
+    running the Shiny :class:`~shiny.Session` (for example, a background task),
+    set the :class:`~shiny.reactive.value` directly. Setting it schedules a
+    reactive flush, so there's no need to call :func:`~shiny.reactive.flush`
+    afterwards:
+
+    ```python
+    # Before
+    async with reactive.lock():
+        current_query.set(query)
+        await reactive.flush()
+
+    # After
+    current_query.set(query)
+    ```
+
+    Effects of a session that are paused at an ``await`` see the new value as soon
+    as it is set. To apply the change only once the session's effects have
+    finished, as Shiny does for input changes from the client, use
+    :meth:`~shiny.Session.run_once_when_idle`:
+
+    ```python
+    session.run_once_when_idle(lambda: current_query.set(query))
+    ```
     """
-    return _reactive_environment.lock
+    # Imported here because `shiny._deprecated` imports `shiny.reactive`.
+    from .._deprecated import warn_deprecated
+
+    warn_deprecated(
+        "reactive.lock() is deprecated and does nothing. To change reactive state "
+        "from a background task, set the reactive value directly: a flush is "
+        "scheduled automatically, so `await reactive.flush()` is not needed. To apply "
+        "the change once the session's effects have finished, use "
+        "`session.run_once_when_idle()`."
+    )
+    return _NoOpLock()
 
 
 _timer_tasks: set[asyncio.Task[None]] = set()

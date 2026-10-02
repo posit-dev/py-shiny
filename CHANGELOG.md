@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * `async` effects interleave at each `await` instead of running one after another. `priority` orders when effects start, not when they finish. Runs of the same effect still don't overlap: a re-run waits for the previous run.
 
-    * `reactive.lock()` no longer pauses reactive processing: Shiny itself no longer takes it. To change reactive state from another `asyncio` task, set the value directly (a flush is scheduled automatically) and `await reactive.flush()` to wait until the resulting reactive work has finished.
+    * `reactive.lock()` no longer pauses reactive processing: Shiny itself no longer takes it (see Deprecations). To change reactive state from another `asyncio` task, set the value directly. A flush is scheduled automatically, so there's no need to `await reactive.flush()`.
 
     * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect or from a task started by an effect that is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits.
 
@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New features
 
 * Added `session.run_once_when_idle(fn)`, which runs a function once, at the start of the session's next cycle: once all of the session's effects have finished and its outputs have been sent. Input changes from the client and `reactive.invalidate_later()` already wait this way, so effects that are still running keep seeing the same values; use it to change reactive state the same way from a background task or a custom timer. `reactive.invalidate_later()` now uses it instead of a private method. (#2517)
+
+### Deprecations
+
+* `reactive.lock()` is deprecated. It now does nothing: it warns and returns an object with the methods of an `asyncio.Lock` that never blocks. Remove `async with reactive.lock():` and the `await reactive.flush()` that usually follows it, and set the reactive value directly. To apply a change only once a session's running effects have finished, use `session.run_once_when_idle()`. (#XXXX)
 
 ### Bug fixes
 

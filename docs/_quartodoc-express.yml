@@ -134,7 +134,6 @@ quartodoc:
         - reactive.flush
         - reactive.poll
         - reactive.file_reader
-        - reactive.lock
         - req
     - title: Reusable Express code
       desc: Create reusable Express code.
@@ -255,3 +254,4 @@ quartodoc:
       desc: ""
       contents:
         - express.render.download
+        - reactive.lock
