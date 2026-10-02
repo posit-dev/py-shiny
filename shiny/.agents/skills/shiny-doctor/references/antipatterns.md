@@ -192,6 +192,8 @@ def server(input, output, session):
 app = App(app_ui, server)
 ```
 
+For foundational principles on reactive graph mechanics, choosing between calculations and effects, dependency isolation, and self-invalidation cycles, read the [Reactivity guide](../../shiny-for-python/references/reactivity.md).
+
 ---
 
 ## 5. Global State Leakage Across Sessions

@@ -20,6 +20,7 @@ This reference provides a step-by-step audit and verification checklist for vali
 - [ ] Are action buttons and explicit triggers paired with `@reactive.event(...)`?
 - [ ] Is `with reactive.isolate():` used wherever reactive values must be read without registering an invalidation dependency?
 - [ ] Are mutable collections (lists, dicts) assigned a new reference or copied before updating a `reactive.value`?
+- [ ] Consult the [Reactivity guide](../../shiny-for-python/references/reactivity.md) for deeper principles on calculations, effects, and invalidation cycles.
 
 ## 3. Concurrency & Async Health Checklist
 - [ ] Are all synchronous blocking calls (`time.sleep()`, synchronous `requests`, heavy blocking SQL queries) eliminated from server callbacks?
@@ -46,7 +47,8 @@ This reference provides a step-by-step audit and verification checklist for vali
 
 ## 7. Runtime Verification Checklist
 - [ ] Has the application been launched via a managed background process / test fixture with a timeout and cleanup to verify import and ASGI server startup without hangs, crashes, or schema errors?
-- [ ] If claiming session-level verification, has a client connection (browser or Playwright test harness using `shiny.pytest` fixtures) been established to exercise the `server()` function, WebSocket connection, and reactive renderers?
+- [ ] If claiming session-level verification, has a client connection (browser or Playwright test harness using `shiny.pytest` fixtures such as `local_app` or `create_app_fixture`) been established to exercise the `server()` function, WebSocket connection, and reactive renderers? See the [Testing guide](../../shiny-for-python/references/testing.md).
+- [ ] For behavioral or state bugs where the app runs but behaves incorrectly, have test-mode snapshots (`SHINY_TESTMODE=1`) or `export_test_values()` been used to inspect internal reactive state over HTTP? See the [Debugging guide](../../shiny-for-python/references/debugging.md).
 - [ ] Have automated tests been rerun to confirm resolution?
 - [ ] Has the report been accurately labeled (**Runtime Verified (Session Level)**, **Server Startup Verified**, or **Static Diagnosis Only**)?
 
