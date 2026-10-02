@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### New features
+
+* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, Playwright session recording with synchronized video playback, and interactive HTML Reactlog export with action-scoped execution causality and "Why did this run?" root-cause inspection. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
+
 ### Bug fixes
 
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)

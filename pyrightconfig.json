@@ -4,6 +4,7 @@
     "examples",
     "build",
     "dist",
+    "dist2",
     "typings",
     "sandbox",
     "_dev",

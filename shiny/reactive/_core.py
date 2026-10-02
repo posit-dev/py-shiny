@@ -9,6 +9,9 @@ __all__ = (
     "lock",
     "on_flushed",
     "get_current_context",
+    "mark",
+    "get_marks",
+    "clear_marks",
 )
 
 import asyncio
@@ -18,7 +21,15 @@ import traceback
 import typing
 import warnings
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Generator,
+    Optional,
+    TypeVar,
+)
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
@@ -398,3 +409,75 @@ def invalidate_later(
     ctx.on_invalidate(cancel_task)
     if session:
         unsub = session.on_ended(cancel_task)
+
+
+_context_marks: ContextVar[Optional[list[dict[str, typing.Any]]]] = ContextVar(
+    "_context_marks", default=None
+)
+
+
+def _get_active_session() -> Optional[Any]:
+    try:
+        from ..session import get_current_session
+
+        session = get_current_session()
+        if session is not None:
+            return getattr(session, "_root", session)
+    except Exception:
+        pass
+    return None
+
+
+def mark(label: str = "User mark") -> None:
+    entry: dict[str, typing.Any] = {
+        "action": "userMark",
+        "label": label,
+        "details": label,
+        "time": time.time(),
+        "phase": "mark",
+    }
+    session = _get_active_session()
+    if session is not None:
+        marks = getattr(session, "_reactlog_marks", None)
+        if not isinstance(marks, list):
+            new_marks: list[dict[str, typing.Any]] = []
+            session._reactlog_marks = new_marks
+            marks = new_marks
+        typed_session_marks = typing.cast(list[dict[str, typing.Any]], marks)
+        typed_session_marks.append(entry)
+    else:
+        ctx_list = _context_marks.get()
+        if ctx_list is None:
+            ctx_list = typing.cast(list[dict[str, typing.Any]], [])
+            _context_marks.set(ctx_list)
+        ctx_list.append(entry)
+
+
+def get_marks(session: Optional[Any] = None) -> list[dict[str, typing.Any]]:
+    if session is None:
+        session = _get_active_session()
+    if session is not None:
+        target = getattr(session, "_root", session)
+        marks = getattr(target, "_reactlog_marks", None)
+        if isinstance(marks, list):
+            typed_marks = typing.cast(list[dict[str, typing.Any]], marks)
+            return list(typed_marks)
+        return []
+    ctx_list = _context_marks.get()
+    return list(ctx_list) if ctx_list is not None else []
+
+
+def clear_marks(session: Optional[Any] = None) -> None:
+    if session is None:
+        session = _get_active_session()
+    if session is not None:
+        target = getattr(session, "_root", session)
+        marks = getattr(target, "_reactlog_marks", None)
+        if isinstance(marks, list):
+            marks.clear()
+        else:
+            empty_target_marks: list[dict[str, typing.Any]] = []
+            target._reactlog_marks = empty_target_marks
+    else:
+        empty_ctx_marks: list[dict[str, typing.Any]] = []
+        _context_marks.set(empty_ctx_marks)
