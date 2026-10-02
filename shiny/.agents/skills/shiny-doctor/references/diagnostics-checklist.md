@@ -25,7 +25,7 @@ This reference provides a step-by-step audit and verification checklist for vali
 - [ ] Are all synchronous blocking calls (`time.sleep()`, synchronous `requests`, heavy blocking SQL queries) eliminated from server callbacks?
 - [ ] If `@reactive.extended_task` is used for blocking synchronous I/O, is it offloaded with `await asyncio.to_thread(...)` or a thread pool?
 - [ ] If `@reactive.extended_task` is used for heavy CPU computation, is it offloaded to a `ProcessPoolExecutor`?
-- [ ] Are `@reactive.extended_task` functions free of direct reactive reads (`input.x()`, `reactive.value()`), receiving all needed inputs/reactive values as parameters passed during invocation from reactive context?
+- [ ] Are `@reactive.extended_task` functions free of direct reactive reads (`input.x()`, `reactive.value()`), receiving all needed inputs/reactive values as parameters passed during invocation from reactive context? Extended tasks cannot directly read reactive sources.
 - [ ] Are intermediate expensive computations cached using `@reactive.calc`?
 
 ## 4. UI / Server Contract Checklist

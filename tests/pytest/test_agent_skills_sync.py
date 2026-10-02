@@ -74,9 +74,9 @@ def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
     assert "missing ns() wrapper" not in antipatterns_text
     assert "asyncio.to_thread" in antipatterns_text
     assert "ProcessPoolExecutor" in antipatterns_text
-    assert "cannot directly read reactive sources" in skill_text
+    assert "cannot directly read reactive sources" in checklist_text
     assert '@output(id="summary_output")' in antipatterns_text
-    assert "@output(id=" in skill_text
+    assert "@output(id=" in checklist_text
     assert "Runtime Verified" in skill_text
     assert "Server Startup Verified" in skill_text
     assert "managed background process" in skill_text
