@@ -1938,3 +1938,42 @@ async def test_on_flush_outside_a_cycle_runs_without_sending_an_empty_message():
         assert not any("values" in m for m in c.sent[start:])
     finally:
         await c.close()
+
+
+def test_flush_state_from_a_dead_event_loop_is_discarded():
+    # A flush stranded on an event loop that has stopped (e.g. a previous
+    # `test_server()` run, or a test whose loop closed mid-flush) used to leave the
+    # environment "in a flush" forever: later flushes returned without running, and
+    # `flush_pass()` (used by ExtendedTask) waited forever.
+    env = ReactiveEnvironment()
+    stuck = asyncio.Event()
+
+    async def wait_forever() -> None:
+        await stuck.wait()
+
+    async def strand_a_flush() -> None:
+        env._flushed_callbacks.register(wait_forever)
+        env._spawn(env.flush())
+        await asyncio.sleep(0.01)  # the flush is now waiting on `stuck`
+        assert env._in_flush
+        env.request_flush()  # also leaves a request pending
+
+    old = asyncio.new_event_loop()
+    old.run_until_complete(strand_a_flush())
+    old.close()  # without letting the flush finish
+    env._flushed_callbacks = type(env._flushed_callbacks)()
+
+    ran: list[bool] = []
+
+    async def record() -> None:
+        ran.append(True)
+
+    async def use_a_new_loop() -> None:
+        env._flushed_callbacks.register(record)
+        await asyncio.wait_for(env.flush_pass(), TIMEOUT)
+        assert ran == [True]
+        env.request_flush()
+        await asyncio.sleep(0.01)
+        assert ran == [True, True]
+
+    asyncio.run(use_a_new_loop())

@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, Type
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
+from .._typing_extensions import TypeGuard
 from ..otel._collect import OtelCollectLevel, _get_env_level
 from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
@@ -137,6 +138,12 @@ _flush_owner: ContextVar[Optional["asyncio.Task[object]"]] = ContextVar(
 )
 
 
+def _is_alive(
+    loop: Optional[asyncio.AbstractEventLoop],
+) -> TypeGuard[asyncio.AbstractEventLoop]:
+    return loop is not None and not loop.is_closed() and loop.is_running()
+
+
 class ReactiveEnvironment:
     """The reactive environment"""
 
@@ -210,6 +217,7 @@ class ReactiveEnvironment:
         """
         # Don't start a second flush while one is active; the active one runs again
         # when it finishes.
+        self._adopt_loop(asyncio.get_running_loop())
         if self._in_flush:
             self._rerun_flush = True
             return
@@ -256,6 +264,7 @@ class ReactiveEnvironment:
 
     async def flush_pass(self) -> None:
         """Run one complete flush that starts after this call, or wait for one."""
+        self._adopt_loop(asyncio.get_running_loop())
         if not self._in_flush:
             await self.flush()
             return
@@ -301,7 +310,7 @@ class ReactiveEnvironment:
         except RuntimeError:
             loop = None
         home = self._loop
-        if home is not None and not home.is_closed() and loop is not home:
+        if _is_alive(home) and loop is not home:
             # Another thread: retry on the loop's own thread, so only that thread
             # touches `_flush_requested` and schedules the flush.
             try:
@@ -313,12 +322,32 @@ class ReactiveEnvironment:
             # No loop at all (e.g. a reactive graph built synchronously); whoever
             # runs the graph will call flush() explicitly.
             return
+        self._adopt_loop(loop)
         self._loop = loop
         if self._flush_requested:
             return
         self._flush_requested = True
         # A fresh context keeps the requester's session and OTel span out of the flush.
         loop.call_soon(self._start_requested_flush, context=contextvars.Context())
+
+    def _adopt_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        """
+        Discard flush state left by an event loop that has stopped.
+
+        A flush (or request) stranded on a loop that stopped mid-flush, such as a
+        previous `test_server()` run's, can never finish. Without this, later
+        flushes would return as if one were active, and `flush_pass()` would wait
+        forever.
+        """
+        old = self._loop
+        if old is None or old is loop or _is_alive(old):
+            return
+        self._in_flush = False
+        self._rerun_flush = False
+        self._flush_requested = False
+        self._flush_pass_waiters = []
+        self._tasks = set()
+        self._loop = loop
 
     def _start_requested_flush(self) -> None:
         if self._flush_requested:
