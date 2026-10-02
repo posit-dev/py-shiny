@@ -225,7 +225,7 @@ def near_points(
     # For no current coordinfo
     if coordinfo is None:
         if add_dist:
-            new_df["dist"] = np.nan
+            new_df["dist_"] = np.nan
 
         if all_rows:
             new_df["selected_"] = False
@@ -278,7 +278,7 @@ def near_points(
     dists: pd.Series[float] = (dist_css["x"] ** 2 + dist_css["y"] ** 2) ** 0.5
 
     if add_dist:
-        new_df["dist"] = dists
+        new_df["dist_"] = dists
 
     keep_rows = dists <= threshold
 
@@ -351,8 +351,8 @@ def to_float(x: DataFrameColumn) -> pd.Series[float]:
     """
     if ptypes.is_numeric_dtype(x):  # pyright: ignore[reportUnknownMemberType]
         return cast("pd.Series[float]", x)
-    elif isinstance(x, ptypes.CategoricalDtype):
-        return cast("pd.Series[float]", x.cat.codes + 1)  # pyright: ignore
+    elif isinstance(x.dtype, ptypes.CategoricalDtype):
+        return cast("pd.Series[float]", pd.Series(x).cat.codes + 1)  # pyright: ignore
     elif ptypes.is_string_dtype(x):  # pyright: ignore[reportUnknownMemberType]
         return cast(
             "pd.Series[float]", x.astype("category").cat.codes + 1  # pyright: ignore
