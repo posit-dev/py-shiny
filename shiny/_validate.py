@@ -31,15 +31,15 @@ class ValidateResult:
     """Validation diagnostics and detected structure, with a serializable report."""
 
     mode: Literal["unknown", "core", "express"] = "unknown"
-    errors: list[ValidationIssue] = field(default_factory=list)
-    warnings: list[ValidationIssue] = field(default_factory=list)
-    suggestions: list[str] = field(default_factory=list)
-    input_ids: set[str] = field(default_factory=set)
-    ui_output_ids: set[str] = field(default_factory=set)
-    renderer_ids: set[str] = field(default_factory=set)
-    reactive_vals: set[str] = field(default_factory=set)
-    reactive_calcs: set[str] = field(default_factory=set)
-    duplicate_ids: list[str] = field(default_factory=list)
+    errors: list[ValidationIssue] = field(default_factory=list[ValidationIssue])
+    warnings: list[ValidationIssue] = field(default_factory=list[ValidationIssue])
+    suggestions: list[str] = field(default_factory=list[str])
+    input_ids: set[str] = field(default_factory=set[str])
+    ui_output_ids: set[str] = field(default_factory=set[str])
+    renderer_ids: set[str] = field(default_factory=set[str])
+    reactive_vals: set[str] = field(default_factory=set[str])
+    reactive_calcs: set[str] = field(default_factory=set[str])
+    duplicate_ids: list[str] = field(default_factory=list[str])
 
     @property
     def valid(self) -> bool:
