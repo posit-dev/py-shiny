@@ -20,7 +20,9 @@ def test_skills_list_shows_names_and_descriptions(skill_name: str) -> None:
 
     assert result.exit_code == 0
     assert skill_name in result.output
-    skill_line = next(line for line in result.output.splitlines() if skill_name in line)
+    skill_line = next(
+        line for line in result.output.splitlines() if line.startswith(skill_name)
+    )
     skill_md = (SKILLS_DIR / skill_name / "SKILL.md").read_text()
     match = re.search(r'^description: "?(.+?)"?$', skill_md, re.MULTILINE)
     assert match is not None
