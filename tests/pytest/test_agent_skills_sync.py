@@ -22,7 +22,7 @@ REFERENCES_DIR = (
 
 
 def reference_text(topic: str) -> str:
-    return (REFERENCES_DIR / f"{topic}.md").read_text()
+    return (REFERENCES_DIR / f"{topic}.md").read_text(encoding="utf-8")
 
 
 def test_otel_reference_mentions_public_exports() -> None:
