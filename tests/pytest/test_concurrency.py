@@ -8,6 +8,7 @@ while the receive loop and other sessions keep going.
 from __future__ import annotations
 
 import asyncio
+import gc
 import json
 import threading
 from typing import AsyncIterable, Callable, Iterator
@@ -1962,8 +1963,21 @@ def test_flush_state_from_a_dead_event_loop_is_discarded():
     async def wait_forever() -> None:
         await stuck.wait()
 
+    finalized: list[bool] = []
+
+    async def stranded_run() -> None:
+        try:
+            # Nothing else references this future, so only the environment keeps
+            # the task alive.
+            await asyncio.get_running_loop().create_future()
+        finally:
+            # Runs if the task is garbage-collected: in an effect, in the wrong
+            # context, which raised (and failed whichever test was running).
+            finalized.append(True)
+
     async def strand_a_flush() -> None:
         env._flushed_callbacks.register(wait_forever)
+        env._spawn(stranded_run())
         env._spawn(env.flush())
         await asyncio.sleep(0.01)  # the flush is now waiting on `stuck`
         assert env._in_flush
@@ -1986,5 +2000,8 @@ def test_flush_state_from_a_dead_event_loop_is_discarded():
         env.request_flush()
         await asyncio.sleep(0.01)
         assert ran == [True, True]
+        assert not env._tasks  # the dead loop's tasks no longer count as running
 
     asyncio.run(use_a_new_loop())
+    gc.collect()
+    assert finalized == []  # ...but they're kept, so they're never finalized

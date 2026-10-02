@@ -166,6 +166,8 @@ class ReactiveEnvironment:
         # Strong references to fire-and-forget tasks (flushes and effect runs); the
         # event loop only keeps weak ones.
         self._tasks: set[asyncio.Task[None]] = set()
+        # Tasks stranded on an event loop that stopped (see `_adopt_loop()`).
+        self._abandoned_tasks: set[asyncio.Task[None]] = set()
 
     @property
     def lock(self) -> asyncio.Lock:
@@ -346,6 +348,11 @@ class ReactiveEnvironment:
         self._rerun_flush = False
         self._flush_requested = False
         self._flush_pass_waiters = []
+        # Stop waiting on the dead loop's tasks, but keep them: if collected, their
+        # coroutines' `finally` blocks would run (and fail) in whatever runs then.
+        # ponytail: never freed; only loops that stop mid-flush (tests, repeated
+        # `test_server()` runs) leave any.
+        self._abandoned_tasks |= self._tasks
         self._tasks = set()
         self._loop = loop
 
