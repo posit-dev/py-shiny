@@ -14,7 +14,7 @@ context registers a dependency, so changing that source re-runs everything that
 read it — you never call outputs or schedule updates yourself.
 
 This skill is an **index**. Find your task below and **read the linked
-reference file before writing code** for that area.
+reference file before writing code** for that area. To audit an existing app for quality, use the `shiny-doctor` skill (`../shiny-doctor/SKILL.md`).
 
 ## Foundations
 
@@ -78,6 +78,7 @@ reference file before writing code** for that area.
 
 | Topic | Use when | Reference |
 |---|---|---|
+| App audit & diagnostics | Auditing an existing app for quality, reactive bugs, or concurrency blocks | Use the `shiny-doctor` skill (`../shiny-doctor/SKILL.md`) |
 | Test server | Testing server logic in memory with the `local_server` fixture / `test_server()` — set inputs, assert on outputs/exports, module scopes; no browser | `references/test-server.md` |
 | Testing | End-to-end Playwright tests — launching an app under pytest, locating and asserting on UI | `references/testing.md` |
 | Debugging | Inspecting server-side reactive/input/output state; exposing values to a test harness | `references/debugging.md` |
