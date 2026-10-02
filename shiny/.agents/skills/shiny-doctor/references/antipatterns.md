@@ -96,7 +96,7 @@ def display():
 ## 3. Reading Reactives Outside Reactive Context
 
 ### Symptom
-`SilentException`, `RuntimeError: No reactive context available`, or empty static initializations.
+`RuntimeError: No current reactive context` when executed at module top level, during import, or outside a reactive execution context.
 
 ### Bad Code
 ```python
