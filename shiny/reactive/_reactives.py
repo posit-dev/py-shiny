@@ -771,17 +771,7 @@ class Calc_(Generic[T]):
         self._dependents.register()
 
         if self._invalidated or self._running:
-            # Return the value this call just computed directly, instead of
-            # reading it back out of `self._value`/`self._error` afterward.
-            # `_running` being true (while not invalidated) means we're being
-            # re-entered recursively, from inside our own still-running
-            # `_fn()`; a second, concurrent recursive/nested call would
-            # overwrite `self._value`/`self._error` before an outer frame gets
-            # a chance to read them. Threading the result through the normal
-            # async call-and-return chain keeps each call's own answer tied to
-            # that call, immune to later writes from other calls sharing this
-            # `Calc_`.
-            return await self.update_value()
+            await self.update_value()
 
         if self._error:
             raise self._error[0]
@@ -789,7 +779,7 @@ class Calc_(Generic[T]):
         return self._value[0]
 
     # TODO: should this be private?
-    async def update_value(self) -> T:
+    async def update_value(self) -> None:
         self._ctx = Context()
         self._most_recent_ctx_id = self._ctx.id
 
@@ -813,11 +803,9 @@ class Calc_(Generic[T]):
             ):
                 try:
                     with self._ctx():
-                        val = await self._run_func()
+                        await self._run_func()
                 finally:
                     self._running = was_running
-
-        return val
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
@@ -825,17 +813,23 @@ class Calc_(Generic[T]):
         self._dependents.invalidate()
         self._ctx = None  # Allow context to be GC'd
 
-    async def _run_func(self) -> T:
+    async def _run_func(self) -> None:
         self._error.clear()
         try:
             val = await self._fn()
+
+            # Clear before appending: a reentrant recursive call to this same
+            # `Calc_` (the calc calling itself) re-enters `_run_func` while an
+            # outer frame's call is still pending, so without clearing first,
+            # each level's value just piles onto the same list and the very
+            # first (deepest/base-case) entry -- not this call's own result --
+            # would be whatever a stale index read back. Clearing keeps
+            # exactly one entry: the one this call just computed, read
+            # immediately afterward with no other call able to interleave.
+            self._value.clear()
+            self._value.append(val)
         except Exception as err:
             self._error.append(err)
-            raise
-
-        self._value.clear()
-        self._value.append(val)
-        return val
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""
