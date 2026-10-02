@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### New features
+
+* Added experimental WebMCP support for browser agents sharing a live Shiny session. Opt in with `App(..., webmcp=True)` or `SHINY_WEBMCP=1` to expose standard controls and text outputs, and use `@webmcp.tool` for session-scoped Python tools. Includes a sales explorer example, bundled agent guidance, and server/browser tests. (#2513)
+
 ### Bug fixes
 
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
