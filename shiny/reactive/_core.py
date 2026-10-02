@@ -20,7 +20,15 @@ import types
 import typing
 import warnings
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Awaitable,
+    Callable,
+    Generator,
+    Literal,
+    Optional,
+    TypeVar,
+)
 
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
@@ -476,19 +484,13 @@ def on_flushed(
     return _reactive_environment.on_flushed(func, once)
 
 
-class _NoOpLock:
+class _NoOpLock(asyncio.Lock):
     """
-    What :func:`~shiny.reactive.lock` returns: it has the methods of an
-    :class:`asyncio.Lock`, but it never blocks.
+    What :func:`~shiny.reactive.lock` returns: an :class:`asyncio.Lock` that never
+    blocks, so any number of holders can hold it at once.
     """
 
-    async def __aenter__(self) -> None:
-        return None
-
-    async def __aexit__(self, *args: object) -> None:
-        return None
-
-    async def acquire(self) -> bool:
+    async def acquire(self) -> Literal[True]:
         return True
 
     def release(self) -> None:
@@ -499,27 +501,27 @@ class _NoOpLock:
 
 
 @no_example()
-def lock() -> _NoOpLock:
+def lock() -> asyncio.Lock:
     """
     Deprecated. Set a reactive value directly instead.
 
-    This function does nothing. It returns an object with the methods of an
-    :class:`asyncio.Lock` that never blocks, so holding it neither pauses reactive
-    processing nor keeps out other code that holds it.
+    Apart from emitting a deprecation warning, this function does nothing. It
+    returns an :class:`asyncio.Lock` that never blocks, so holding it neither pauses
+    reactive processing nor keeps out other code that holds it. Code that needs
+    mutual exclusion of its own should create its own :class:`asyncio.Lock`.
 
-    To change reactive state from a different :class:`~asyncio.Task` than the one
-    running the Shiny :class:`~shiny.Session` (for example, a background task),
-    set the :class:`~shiny.reactive.value` directly. Setting it schedules a
-    reactive flush, so there's no need to call :func:`~shiny.reactive.flush`
-    afterwards:
+    To change reactive state from outside a reactive context (for example, from a
+    background :class:`asyncio.Task`), set the :class:`~shiny.reactive.value`
+    directly. Setting it schedules a reactive flush, so there's no need to call
+    :func:`~shiny.reactive.flush` afterwards:
 
     ```python
-    # Before
+    # Deprecated
     async with reactive.lock():
         current_query.set(query)
         await reactive.flush()
 
-    # After
+    # Use instead
     current_query.set(query)
     ```
 
@@ -536,11 +538,11 @@ def lock() -> _NoOpLock:
     from .._deprecated import warn_deprecated
 
     warn_deprecated(
-        "reactive.lock() is deprecated and does nothing. To change reactive state "
-        "from a background task, set the reactive value directly: a flush is "
-        "scheduled automatically, so `await reactive.flush()` is not needed. To apply "
-        "the change once the session's effects have finished, use "
-        "`session.run_once_when_idle()`."
+        "reactive.lock() is deprecated, does nothing, and will be removed in a future "
+        "version of shiny. To change reactive state from a background task, set the "
+        "reactive value directly: a flush is scheduled automatically, so "
+        "`await reactive.flush()` is not needed. To apply the change once the "
+        "session's effects have finished, use `session.run_once_when_idle()`."
     )
     return _NoOpLock()
 

@@ -8,7 +8,6 @@ while the receive loop and other sessions keep going.
 from __future__ import annotations
 
 import asyncio
-import contextvars
 import gc
 import json
 import threading
@@ -2665,8 +2664,10 @@ async def test_run_once_when_idle_error_closes_the_session():
 @pytest.mark.asyncio
 async def test_lock_warns_on_every_call():
     for _ in range(2):
-        with pytest.warns(ShinyDeprecationWarning, match="reactive.lock"):
+        with pytest.warns(ShinyDeprecationWarning, match="reactive.lock") as record:
             reactive.lock()
+        # The warning points at the code that called `lock()`.
+        assert record[0].filename == __file__
 
 
 @pytest.mark.asyncio
@@ -2689,6 +2690,11 @@ async def test_lock_does_not_exclude_other_holders():
     assert await lock.acquire() is True
     assert not lock.locked()
     lock.release()
+    assert isinstance(lock, asyncio.Lock)
+
+    with pytest.raises(ValueError):
+        async with lock:
+            raise ValueError("raised inside the lock")
 
 
 @pytest.mark.asyncio
@@ -2711,7 +2717,7 @@ async def test_value_set_from_background_task_reruns_session_effect():
             await asyncio.sleep(0)
             shared.set(1)
 
-        await asyncio.create_task(producer(), context=contextvars.Context())
+        await asyncio.create_task(producer())
         assert await wait_until(lambda: seen == [0, 1])
     finally:
         await c.close()

@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecations
 
-* `reactive.lock()` is deprecated. It now does nothing: it warns and returns an object with the methods of an `asyncio.Lock` that never blocks. Remove `async with reactive.lock():` and the `await reactive.flush()` that usually follows it, and set the reactive value directly. To apply a change only once a session's running effects have finished, use `session.run_once_when_idle()`. (#XXXX)
+* `reactive.lock()` is deprecated and now emits a `ShinyDeprecationWarning`. It does nothing else: it returns an `asyncio.Lock` that never blocks, so code that holds it no longer keeps out other code that holds it. Code that relies on it for mutual exclusion should create its own `asyncio.Lock`. Remove `async with reactive.lock():` and the `await reactive.flush()` that usually follows it, and set the reactive value directly. To apply a change only once a session's running effects have finished, use `session.run_once_when_idle()`. (#XXXX)
 
 ### Bug fixes
 
