@@ -10,9 +10,15 @@ removals fail loudly here. They check presence only, not prose accuracy.
 
 from __future__ import annotations
 
+import asyncio
+import re
 from pathlib import Path
 
+import pytest
+
 import shiny.otel
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny._connection import MockConnection
 from shiny.otel._collect import OtelCollectLevel
 
 REPO_ROOT = Path(__file__).parents[2]
@@ -42,3 +48,99 @@ def test_otel_reference_mentions_collect_levels() -> None:
             f"OtelCollectLevel.{level.name} is not documented in the otel "
             "reference's collection-levels table."
         )
+
+
+def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
+    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
+    skill_text = (doctor_dir / "SKILL.md").read_text()
+    antipatterns_text = (doctor_dir / "references" / "antipatterns.md").read_text()
+    checklist_text = (
+        doctor_dir / "references" / "diagnostics-checklist.md"
+    ).read_text()
+
+    assert "session.ns" not in skill_text
+    assert "missing ns() wrapper" not in antipatterns_text
+    assert "from shiny import input" not in antipatterns_text
+    assert "shiny.test" not in skill_text
+
+    assert "asyncio.to_thread" in antipatterns_text
+    assert "ProcessPoolExecutor" in antipatterns_text
+    assert "@output(id=" in antipatterns_text
+    assert "@output(id=" in checklist_text
+    assert "shiny.pytest" in skill_text
+
+
+def test_shiny_doctor_code_blocks_compile() -> None:
+    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
+    for md_file in doctor_dir.rglob("*.md"):
+        content = md_file.read_text()
+        code_blocks = re.findall(r"```python\n(.*?)```", content, re.DOTALL)
+        for i, code in enumerate(code_blocks):
+            try:
+                compile(code, f"{md_file.name}_block_{i}", "exec")
+            except SyntaxError as e:
+                raise AssertionError(
+                    f"Syntax error in code block {i} in {md_file.name}: {e}\nCode:\n{code}"
+                ) from e
+
+
+def test_shiny_doctor_markdown_links() -> None:
+    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
+    for md_file in doctor_dir.rglob("*.md"):
+        content = md_file.read_text()
+        links = re.findall(r"\[.*?\]\(([^\)]+)\)", content)
+        for link in links:
+            if "://" in link or link.startswith("#"):
+                continue
+            target_path = (md_file.parent / link.split("#")[0]).resolve()
+            assert target_path.is_file(), f"Broken link {link} in {md_file.name}"
+
+
+@pytest.mark.asyncio
+async def test_shiny_doctor_output_id_override_runtime() -> None:
+    def server(input: Inputs, output: Outputs, session: Session):
+        @output(id="summary_output")
+        @render.text
+        def make_summary():
+            return "Done"
+
+    conn = MockConnection()
+    app = App(ui.TagList(), server)
+    sess = app._create_session(conn)
+
+    async def mock_client():
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
+    assert "summary_output" in sess.output._outputs
+    assert "make_summary" not in sess.output._outputs
+
+
+@pytest.mark.asyncio
+async def test_shiny_doctor_extended_task_semantics_runtime() -> None:
+    def blocking_work(val: str) -> str:
+        return f"result_{val}"
+
+    @reactive.extended_task
+    async def task_with_param(val: str) -> str:
+        return await asyncio.to_thread(blocking_work, val)
+
+    task_with_param("input_val")
+    await asyncio.sleep(0.05)
+
+    with reactive.isolate():
+        assert task_with_param.result() == "result_input_val"
+
+    val_src = reactive.value("bad_read")
+
+    @reactive.extended_task
+    async def task_with_reactive_read():
+        return val_src()
+
+    task_with_reactive_read()
+    await asyncio.sleep(0.05)
+
+    with reactive.isolate():
+        with pytest.raises(RuntimeError, match=r"not allowed to read reactive sources"):
+            task_with_reactive_read.result()

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Improvements
+
+* Added the bundled `shiny-doctor` Agent Skill for app diagnostics and validation, including startup performance checks and links to the existing Express, extended tasks, and session lifecycle guides. The Express guide now explains shared objects and assignment to suppress automatic display. (#2469)
+
 ### Bug fixes
 
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
