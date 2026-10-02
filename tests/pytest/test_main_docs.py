@@ -1,11 +1,55 @@
 from __future__ import annotations
 
 import json
+import sys
+from pathlib import Path
+from types import ModuleType
 from typing import Any, cast
 
+import pytest
 from click.testing import CliRunner
 
 from shiny._main import main
+
+
+def test_public_module_discovery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from shiny._main._docs import _iter_public_modules
+
+    package = ModuleType("docs_discovery_test")
+    package.__path__ = [str(tmp_path)]
+    monkeypatch.setitem(sys.modules, package.__name__, package)
+    public = tmp_path / "public"
+    public.mkdir()
+    (public / "__init__.py").write_text("")
+    (public / "nested.py").write_text("")
+    (tmp_path / "_private.py").write_text("raise RuntimeError('must not import')")
+    (tmp_path / "optional.py").write_text("raise ImportError('missing dependency')")
+    (tmp_path / "deprecated.py").write_text(
+        "import warnings\nwarnings.warn('deprecated import', ImportWarning)"
+    )
+
+    try:
+        names = [module.__name__ for module in _iter_public_modules(package)]
+        assert names == [
+            "docs_discovery_test",
+            "docs_discovery_test.public",
+            "docs_discovery_test.public.nested",
+        ]
+    finally:
+        for name in list(sys.modules):
+            if name.startswith("docs_discovery_test."):
+                del sys.modules[name]
+
+
+def test_docs_autocomplete_discovers_public_modules() -> None:
+    runner = CliRunner()
+    for name in ("module.server", "ui.fill.as_fill_item", "App"):
+        result = runner.invoke(main, ["docs", "--complete", name, "--json"])
+        assert result.exit_code == 0
+        assert name in json.loads(result.output)
+        assert f"shiny.{name}" in json.loads(result.output)
 
 
 def test_docs_single_function() -> None:

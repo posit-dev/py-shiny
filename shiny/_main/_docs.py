@@ -7,30 +7,80 @@ import importlib
 import inspect
 import json
 import operator
+import pkgutil
 import textwrap
-from typing import Any
+import warnings
+from collections.abc import Iterator
+from types import ModuleType
+from typing import Any, Literal
 
 import click
 from click.shell_completion import CompletionItem
+
+from .._typing_extensions import TypedDict
+
+
+class _ParameterInfo(TypedDict):
+    name: str
+    type: str | None
+    default: str | None
+    kind: Literal[
+        "POSITIONAL_ONLY",
+        "POSITIONAL_OR_KEYWORD",
+        "VAR_POSITIONAL",
+        "KEYWORD_ONLY",
+        "VAR_KEYWORD",
+    ]
+
+
+class _MethodInfo(TypedDict):
+    name: str
+    signature: str
+    return_type: str | None
+    parameters: list[_ParameterInfo]
+    docstring: str
+
+
+class _RoutineInfo(_MethodInfo):
+    type: Literal["function"]
+
+
+class _ClassInfo(_MethodInfo):
+    type: Literal["class"]
+    methods: list[_MethodInfo]
+
+
+_DocInfo = _RoutineInfo | _ClassInfo
+
+
+def _iter_public_modules(package: ModuleType) -> Iterator[ModuleType]:
+    yield package
+    for module_info in pkgutil.iter_modules(
+        getattr(package, "__path__", []), prefix=f"{package.__name__}."
+    ):
+        if module_info.name.rsplit(".", 1)[-1].startswith("_"):
+            continue
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", ImportWarning)
+                warnings.simplefilter("error", DeprecationWarning)
+                module = importlib.import_module(module_info.name)
+        except (ImportError, ImportWarning, DeprecationWarning):
+            # Skip unavailable optional modules and deprecated import paths.
+            continue
+        if module_info.ispkg:
+            yield from _iter_public_modules(module)
+        else:
+            yield module
 
 
 @functools.lru_cache(maxsize=1)
 def _get_all_documentable_symbols() -> list[str]:
     symbols: set[str] = set()
-    modules_to_scan = [
-        ("shiny.ui", "ui"),
-        ("shiny.express.ui", "express.ui"),
-        ("shiny.render", "render"),
-        ("shiny.reactive", "reactive"),
-        ("shiny.playwright.controller", "playwright.controller"),
-        ("shiny.session", "session"),
-        ("shiny.types", "types"),
-    ]
-    for full_mod, short_mod in modules_to_scan:
-        try:
-            mod = importlib.import_module(full_mod)
-        except Exception:
-            continue
+    for mod in _iter_public_modules(importlib.import_module("shiny")):
+        full_mod = mod.__name__
+        short_prefix = full_mod.removeprefix("shiny").lstrip(".")
+        short_prefix = f"{short_prefix}." if short_prefix else ""
         for attr in dir(mod):
             if attr.startswith("_"):
                 continue
@@ -39,7 +89,7 @@ def _get_all_documentable_symbols() -> list[str]:
                 continue
             if inspect.isroutine(obj) or inspect.isclass(obj):
                 symbols.add(f"{full_mod}.{attr}")
-                symbols.add(f"{short_mod}.{attr}")
+                symbols.add(f"{short_prefix}{attr}")
                 if inspect.isclass(obj):
                     for m_name in dir(obj):
                         if not m_name.startswith("_"):
@@ -47,7 +97,7 @@ def _get_all_documentable_symbols() -> list[str]:
                                 m_obj = getattr(obj, m_name, None)
                                 if callable(m_obj):
                                     symbols.add(f"{full_mod}.{attr}.{m_name}")
-                                    symbols.add(f"{short_mod}.{attr}.{m_name}")
+                                    symbols.add(f"{short_prefix}{attr}.{m_name}")
                             except Exception:
                                 pass
     return sorted(symbols)
@@ -175,14 +225,14 @@ def _complete_symbol_names(
 
 def _extract_function_signature(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
-) -> tuple[str, str | None, list[dict[str, Any]]]:
+) -> tuple[str, str | None, list[_ParameterInfo]]:
     fn_prefix = "async def " if isinstance(node, ast.AsyncFunctionDef) else "def "
     args_str = ast.unparse(node.args)
     return_type = ast.unparse(node.returns) if node.returns else None
     ret_str = f" -> {return_type}" if return_type else ""
     sig_str = f"{fn_prefix}{node.name}({args_str}){ret_str}:"
 
-    parameters: list[dict[str, Any]] = []
+    parameters: list[_ParameterInfo] = []
     for a in node.args.posonlyargs:
         parameters.append(
             {
@@ -254,11 +304,11 @@ def _extract_function_signature(
     return sig_str, return_type, parameters
 
 
-def _parse_method_info(method: Any, method_name: str) -> dict[str, Any]:
+def _parse_method_info(method: Any, method_name: str) -> _MethodInfo:
     unwrapped = inspect.unwrap(method)
     sig_str: str | None = None
     return_type: str | None = None
-    parameters: list[dict[str, Any]] = []
+    parameters: list[_ParameterInfo] = []
 
     try:
         source = textwrap.dedent(inspect.getsource(unwrapped))
@@ -287,7 +337,7 @@ def _parse_method_info(method: Any, method_name: str) -> dict[str, Any]:
     }
 
 
-def _parse_class_info(cls: Any, full_name: str) -> dict[str, Any]:
+def _parse_class_info(cls: Any, full_name: str) -> _ClassInfo:
     unwrapped = inspect.unwrap(cls)
     bases_str = ""
     try:
@@ -304,7 +354,7 @@ def _parse_class_info(cls: Any, full_name: str) -> dict[str, Any]:
     sig_str = f"class {cls.__name__}{bases_str}:"
     doc = inspect.getdoc(unwrapped) or inspect.getdoc(cls) or ""
 
-    methods: list[dict[str, Any]] = []
+    methods: list[_MethodInfo] = []
     for m_name in dir(cls):
         if not m_name.startswith("_"):
             try:
@@ -325,11 +375,11 @@ def _parse_class_info(cls: Any, full_name: str) -> dict[str, Any]:
     }
 
 
-def _parse_routine_info(func: Any, full_name: str) -> dict[str, Any]:
+def _parse_routine_info(func: Any, full_name: str) -> _RoutineInfo:
     unwrapped = inspect.unwrap(func)
     sig_str: str | None = None
     return_type: str | None = None
-    parameters: list[dict[str, Any]] = []
+    parameters: list[_ParameterInfo] = []
 
     try:
         source = textwrap.dedent(inspect.getsource(unwrapped))
@@ -361,18 +411,18 @@ def _parse_routine_info(func: Any, full_name: str) -> dict[str, Any]:
     }
 
 
-def _get_doc_info(obj: Any, full_name: str) -> dict[str, Any]:
+def _get_doc_info(obj: Any, full_name: str) -> _DocInfo:
     if inspect.isclass(obj):
         return _parse_class_info(obj, full_name)
     return _parse_routine_info(obj, full_name)
 
 
-def _format_text_doc(info: dict[str, Any]) -> str:
+def _format_text_doc(info: _DocInfo) -> str:
     lines: list[str] = [info["signature"]]
     if info.get("docstring"):
         lines.append(info["docstring"])
 
-    if info.get("methods"):
+    if info["type"] == "class" and info["methods"]:
         method_lines: list[str] = []
         for m in info["methods"]:
             m_header = m["signature"]
@@ -437,7 +487,7 @@ def docs(
     if not names:
         raise click.UsageError("Missing argument 'NAMES...'.")
 
-    results: list[dict[str, Any]] = []
+    results: list[_DocInfo] = []
     errors: list[str] = []
     for name in names:
         try:
