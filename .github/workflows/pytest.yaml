@@ -17,9 +17,10 @@ jobs:
     strategy:
       matrix:
         # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
+        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11", "3.10"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.14' }}
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
@@ -209,10 +210,11 @@ jobs:
       packages: write
     strategy:
       matrix:
-        python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
+        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
         shard: [0, 1, 2, 3]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.14' }}
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
@@ -263,10 +265,11 @@ jobs:
       packages: write
     strategy:
       matrix:
-        python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
+        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
         shard: [0, 1, 2, 3]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.14' }}
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
@@ -335,10 +338,11 @@ jobs:
       packages: write
     strategy:
       matrix:
-        python-version: ["3.14", "3.13", "3.12", "3.11", "3.10"]
+        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11", "3.10"]
         browser: ["chromium", "firefox", "webkit"]
         shard: [0, 1]
         exclude:
+          - python-version: ${{ github.event.pull_request.draft && '3.14' }}
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
