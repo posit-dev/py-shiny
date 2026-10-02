@@ -105,58 +105,54 @@ def validate(path: Optional[str], code: Optional[str], json_output: bool) -> Non
     result = validate_shiny_code(source_code)
 
     if json_output:
-        result_with_target = dict(result)
+        result_with_target = dict(result.to_dict())
         result_with_target["target"] = target_desc
         click.echo(json.dumps(result_with_target, indent=2))
-        sys.exit(0 if result["valid"] else 1)
+        sys.exit(0 if result.valid else 1)
 
-    click.echo(cli_bold(f"Validating {target_desc} (Mode: {result['mode']})\n"))
+    click.echo(cli_bold(f"Validating {target_desc} (Mode: {result.mode})\n"))
 
-    if result["errors"]:
+    if result.errors:
         click.echo(cli_bold("Errors:"))
-        for err in result["errors"]:
-            line_str = f"Line {err.get('line', '?')}"
-            code_str = err.get("code", "")
+        for err in result.errors:
+            line_str = f"Line {err['line']}"
+            code_str = err["code"]
             click.echo(
                 f"  {cli_danger(line_str)}: {err['message']} ({cli_code(code_str)})"
             )
         click.echo("")
 
-    if result["warnings"]:
+    if result.warnings:
         click.echo(cli_bold("Warnings:"))
-        for warn in result["warnings"]:
-            line_str = f"Line {warn.get('line', '?')}"
-            code_str = warn.get("code", "")
+        for warn in result.warnings:
+            line_str = f"Line {warn['line']}"
+            code_str = warn["code"]
             click.echo(
                 f"  {cli_warning(line_str)}: {warn['message']} ({cli_code(code_str)})"
             )
         click.echo("")
 
-    if result["valid"] and not result["warnings"]:
+    if result.valid:
         click.echo(cli_success("All validation checks passed successfully!"))
 
-    if (
-        result["detected_inputs"]
-        or result["detected_outputs"]
-        or result["detected_reactives"]
-    ):
+    if result.detected_inputs or result.detected_outputs or result.detected_reactives:
         click.echo(cli_bold("\nDetected Reactive Structure:"))
-        if result["detected_inputs"]:
+        if result.detected_inputs:
             click.echo(
-                f"  Inputs ({len(result['detected_inputs'])}): {', '.join(result['detected_inputs'])}"
+                f"  Inputs ({len(result.detected_inputs)}): {', '.join(result.detected_inputs)}"
             )
-        if result["detected_reactives"]:
+        if result.detected_reactives:
             click.echo(
-                f"  Reactives ({len(result['detected_reactives'])}): {', '.join(result['detected_reactives'])}"
+                f"  Reactives ({len(result.detected_reactives)}): {', '.join(result.detected_reactives)}"
             )
-        if result["detected_outputs"]:
+        if result.detected_outputs:
             click.echo(
-                f"  Outputs ({len(result['detected_outputs'])}): {', '.join(result['detected_outputs'])}"
+                f"  Outputs ({len(result.detected_outputs)}): {', '.join(result.detected_outputs)}"
             )
 
-    if result["suggestions"]:
+    if result.suggestions:
         click.echo(cli_bold("\nSuggestions:"))
-        for s in result["suggestions"]:
+        for s in result.suggestions:
             click.echo(f"  {cli_info(s)}")
 
-    sys.exit(0 if result["valid"] else 1)
+    sys.exit(0 if result.valid else 1)

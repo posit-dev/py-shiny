@@ -490,15 +490,15 @@ def _validate_app_file(app_file: Path | str) -> None:
 
     try:
         report = validate_shiny_file(app_file)
-        if report.get("errors"):
-            for err in report["errors"]:
-                line = err.get("line", "?")
-                msg = err.get("message", "")
+        if report.errors:
+            for err in report.errors:
+                line = err["line"]
+                msg = err["message"]
                 print(f"Error ({app_file}:{line}): {msg}", file=sys.stderr)
-        if report.get("warnings"):
-            for warn in report["warnings"]:
-                line = warn.get("line", "?")
-                msg = warn.get("message", "")
+        if report.warnings:
+            for warn in report.warnings:
+                line = warn["line"]
+                msg = warn["message"]
                 print(f"Warning ({app_file}:{line}): {msg}", file=sys.stderr)
     except Exception:
         pass

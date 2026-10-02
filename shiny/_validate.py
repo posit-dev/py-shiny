@@ -1,22 +1,108 @@
 from __future__ import annotations
 
 import ast
+import re
+import tokenize
+from dataclasses import dataclass, field
+from io import StringIO
 from pathlib import Path
-from typing import Any
+from typing import Literal, TypedDict
+
+
+class ValidationIssue(TypedDict):
+    line: int
+    message: str
+    code: str
+
+
+class ValidationReport(TypedDict):
+    valid: bool
+    mode: str
+    errors: list[ValidationIssue]
+    warnings: list[ValidationIssue]
+    suggestions: list[str]
+    detected_inputs: list[str]
+    detected_outputs: list[str]
+    detected_reactives: list[str]
+
+
+@dataclass
+class ValidateResult:
+    """Validation diagnostics and detected structure, with a serializable report."""
+
+    mode: Literal["unknown", "core", "express"] = "unknown"
+    errors: list[ValidationIssue] = field(default_factory=list)
+    warnings: list[ValidationIssue] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)
+    input_ids: set[str] = field(default_factory=set)
+    ui_output_ids: set[str] = field(default_factory=set)
+    renderer_ids: set[str] = field(default_factory=set)
+    reactive_vals: set[str] = field(default_factory=set)
+    reactive_calcs: set[str] = field(default_factory=set)
+    duplicate_ids: list[str] = field(default_factory=list)
+
+    @property
+    def valid(self) -> bool:
+        return not self.errors and not self.warnings
+
+    def add_error(self, line: int, message: str, code: str) -> None:
+        self.errors.append({"line": line, "message": message, "code": code})
+
+    def add_warning(self, line: int, message: str, code: str) -> None:
+        self.warnings.append({"line": line, "message": message, "code": code})
+
+    @property
+    def detected_inputs(self) -> list[str]:
+        return sorted(self.input_ids)
+
+    @property
+    def detected_outputs(self) -> list[str]:
+        return sorted(self.ui_output_ids | self.renderer_ids)
+
+    @property
+    def detected_reactives(self) -> list[str]:
+        return sorted(self.reactive_vals | self.reactive_calcs)
+
+    def register_id(
+        self, kind: Literal["input", "output", "renderer"], value: str, line: int
+    ) -> None:
+        ids = {
+            "input": self.input_ids,
+            "output": self.ui_output_ids,
+            "renderer": self.renderer_ids,
+        }[kind]
+        if value in ids:
+            self.duplicate_ids.append(value)
+            message = (
+                f"Duplicate renderer function name detected: '{value}'."
+                if kind == "renderer"
+                else f"Duplicate {kind} ID detected: '{value}'. {kind.title()} IDs must be unique."
+            )
+            self.add_warning(line, message, "DUPLICATE_ID")
+        ids.add(value)
+
+    def to_dict(self) -> ValidationReport:
+        return {
+            "valid": self.valid,
+            "mode": self.mode,
+            "errors": self.errors.copy(),
+            "warnings": self.warnings.copy(),
+            "suggestions": self.suggestions.copy(),
+            "detected_inputs": self.detected_inputs,
+            "detected_outputs": self.detected_outputs,
+            "detected_reactives": self.detected_reactives,
+        }
 
 
 class ShinyCodeValidator(ast.NodeVisitor):
+    """Subclass visitor methods and add project rules to ``self.result``.
+
+    Pass the subclass as ``validator_class`` to the validation helpers. Call the
+    superclass visitor method to retain built-in rules and child traversal.
+    """
+
     def __init__(self) -> None:
-        self.mode = "unknown"
-        self.errors: list[dict[str, Any]] = []
-        self.warnings: list[dict[str, Any]] = []
-        self.suggestions: list[str] = []
-        self.input_ids: set[str] = set()
-        self.ui_output_ids: set[str] = set()
-        self.renderer_ids: set[str] = set()
-        self.reactive_vals: set[str] = set()
-        self.reactive_calcs: set[str] = set()
-        self.duplicate_ids: list[str] = []
+        self.result = ValidateResult()
 
         self._in_server_func = False
         self._in_reactive_context = False
@@ -30,10 +116,13 @@ class ShinyCodeValidator(ast.NodeVisitor):
 
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
+            if alias.name == "shiny" or alias.name.startswith("shiny."):
+                if self.result.mode == "unknown":
+                    self.result.mode = "core"
             if "shiny.express" in alias.name:
-                self.mode = "express"
+                self.result.mode = "express"
             if alias.name in ("shinyApp", "fluidPage", "shinyServer"):
-                self.errors.append(
+                self.result.errors.append(
                     {
                         "line": node.lineno,
                         "message": f"R Shiny idiom detected: '{alias.name}'. Use Python Shiny conventions instead.",
@@ -44,8 +133,11 @@ class ShinyCodeValidator(ast.NodeVisitor):
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         module = node.module or ""
+        if module == "shiny" or module.startswith("shiny."):
+            if self.result.mode == "unknown":
+                self.result.mode = "core"
         if "shiny.express" in module:
-            self.mode = "express"
+            self.result.mode = "express"
         for alias in node.names:
             if module == "shiny" and alias.name in (
                 "shinyApp",
@@ -53,7 +145,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 "reactiveVal",
                 "observeEvent",
             ):
-                self.errors.append(
+                self.result.errors.append(
                     {
                         "line": node.lineno,
                         "message": f"R Shiny idiom detected: '{alias.name}'. Use 'shiny.reactive' or 'shiny.ui' equivalents.",
@@ -72,8 +164,8 @@ class ShinyCodeValidator(ast.NodeVisitor):
 
         if node.name == "server" and len(node.args.args) >= 2:
             self._in_server_func = True
-            if self.mode == "unknown":
-                self.mode = "core"
+            if self.result.mode == "unknown":
+                self.result.mode = "core"
 
         is_renderer = any(
             d.startswith("render.") or d.startswith("render_") for d in decorators
@@ -91,26 +183,17 @@ class ShinyCodeValidator(ast.NodeVisitor):
         )
 
         if is_renderer:
-            if node.name in self.renderer_ids:
-                self.duplicate_ids.append(node.name)
-                self.warnings.append(
-                    {
-                        "line": node.lineno,
-                        "message": f"Duplicate renderer function name detected: '{node.name}'.",
-                        "code": "DUPLICATE_ID",
-                    }
-                )
-            self.renderer_ids.add(node.name)
+            self.result.register_id("renderer", node.name, node.lineno)
             self._in_reactive_context = True
         elif is_calc:
-            self.reactive_calcs.add(node.name)
+            self.result.reactive_calcs.add(node.name)
             self._in_reactive_context = True
 
         render_count = sum(
             1 for d in decorators if d.startswith("render.") or d.startswith("render_")
         )
         if render_count > 1:
-            self.errors.append(
+            self.result.errors.append(
                 {
                     "line": node.lineno,
                     "message": f"Function '{node.name}' has multiple render decorators. Only one renderer is allowed per output.",
@@ -146,29 +229,11 @@ class ShinyCodeValidator(ast.NodeVisitor):
             ):
                 widget_id = node.args[0].value
                 if call_name.startswith("ui.input_"):
-                    if widget_id in self.input_ids:
-                        self.duplicate_ids.append(widget_id)
-                        self.warnings.append(
-                            {
-                                "line": node.lineno,
-                                "message": f"Duplicate input ID detected: '{widget_id}'. Input IDs must be unique.",
-                                "code": "DUPLICATE_ID",
-                            }
-                        )
-                    self.input_ids.add(widget_id)
+                    self.result.register_id("input", widget_id, node.lineno)
                 elif call_name.startswith("ui.output_") or call_name.startswith(
                     "shinywidgets.output_widget"
                 ):
-                    if widget_id in self.ui_output_ids:
-                        self.duplicate_ids.append(widget_id)
-                        self.warnings.append(
-                            {
-                                "line": node.lineno,
-                                "message": f"Duplicate output ID detected: '{widget_id}'. Output IDs must be unique.",
-                                "code": "DUPLICATE_ID",
-                            }
-                        )
-                    self.ui_output_ids.add(widget_id)
+                    self.result.register_id("output", widget_id, node.lineno)
 
         self.generic_visit(node)
 
@@ -176,7 +241,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
         for target in node.targets:
             if isinstance(target, ast.Attribute):
                 if isinstance(target.value, ast.Name) and target.value.id == "input":
-                    self.errors.append(
+                    self.result.errors.append(
                         {
                             "line": node.lineno,
                             "message": f"Attempted direct assignment to 'input.{target.attr}'. Inputs are read-only; use reactive.value or update_* functions.",
@@ -189,7 +254,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 if call_name in ("reactive.value", "reactive.Value") and isinstance(
                     target, ast.Name
                 ):
-                    self.reactive_vals.add(target.id)
+                    self.result.reactive_vals.add(target.id)
 
         self.generic_visit(node)
 
@@ -208,7 +273,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
                     is_event_arg = True
 
             if not is_func_call and not is_event_arg and self._in_reactive_context:
-                self.warnings.append(
+                self.result.warnings.append(
                     {
                         "line": node.lineno,
                         "message": f"Input 'input.{node.attr}' accessed without parentheses '()'. Inputs are reactive callables in Python.",
@@ -237,82 +302,83 @@ class ShinyCodeValidator(ast.NodeVisitor):
         return ""
 
 
-def validate_shiny_code(code: str) -> dict[str, Any]:
+def _apply_suppressions(code: str, result: ValidateResult) -> None:
+    suppressed: dict[int, set[str] | None] = {}
+    for token in tokenize.generate_tokens(StringIO(code).readline):
+        if token.type != tokenize.COMMENT:
+            continue
+        match = re.fullmatch(
+            r"\#\s*shiny:\s*(ignore-next-line|ignore)(?:\s+([\w., \t]+))?\s*",
+            token.string,
+        )
+        if not match:
+            continue
+        line = token.start[0] + (match[1] == "ignore-next-line")
+        rules = {rule for rule in re.split(r"[,\s]+", (match[2] or "").strip()) if rule}
+        if line not in suppressed:
+            suppressed[line] = rules or None
+        elif not rules or suppressed[line] is None:
+            suppressed[line] = None
+        else:
+            existing = suppressed[line]
+            if existing is not None:
+                existing.update(rules)
+
+    def keep(issue: ValidationIssue) -> bool:
+        if issue["line"] not in suppressed:
+            return True
+        rules = suppressed[issue["line"]]
+        return rules is not None and issue["code"] not in rules
+
+    result.errors = [issue for issue in result.errors if keep(issue)]
+    result.warnings = [issue for issue in result.warnings if keep(issue)]
+
+
+def validate_shiny_code(
+    code: str, *, validator_class: type[ShinyCodeValidator] = ShinyCodeValidator
+) -> ValidateResult:
+    """Validate source, optionally using a subclass with project rules.
+
+    ``# shiny: ignore [CODE, ...]`` suppresses diagnostics on the current line.
+    ``# shiny: ignore-next-line [CODE, ...]`` suppresses the following line.
+    Omitting codes suppresses all validation rules on that line. Syntax errors
+    cannot be suppressed. These directives also work in the Shiny extension.
+    """
+    validator = validator_class()
+    result = validator.result
     try:
         tree = ast.parse(code)
     except SyntaxError as e:
-        return {
-            "valid": False,
-            "mode": "unknown",
-            "errors": [
-                {
-                    "line": e.lineno or 1,
-                    "message": f"SyntaxError: {e.msg}",
-                    "code": "SYNTAX_ERROR",
-                }
-            ],
-            "warnings": [],
-            "suggestions": [
-                "Fix Python syntax errors before validating Shiny constructs."
-            ],
-            "detected_inputs": [],
-            "detected_outputs": [],
-            "detected_reactives": [],
-        }
+        result.add_error(e.lineno or 1, f"SyntaxError: {e.msg}", "SYNTAX_ERROR")
+        result.suggestions.append(
+            "Fix Python syntax errors before validating Shiny constructs."
+        )
+        return result
 
-    validator = ShinyCodeValidator()
     validator.visit(tree)
-
-    if validator.mode == "unknown":
-        if (
-            "from shiny import ui" in code
-            or "import shiny.ui" in code
-            or "from shiny import render" in code
-        ):
-            validator.mode = "core"
-
-    suggestions: list[str] = []
-    if validator.mode == "express" and validator.duplicate_ids:
-        suggestions.append(
+    _apply_suppressions(code, result)
+    if (
+        result.mode == "express"
+        and result.duplicate_ids
+        and any(issue["code"] == "DUPLICATE_ID" for issue in result.warnings)
+    ):
+        result.suggestions.append(
             "Ensure each UI component in Express mode has a unique string ID."
         )
-    if not validator.errors and not validator.warnings:
-        suggestions.append("Code structure matches Python Shiny best practices.")
-
-    return {
-        "valid": not validator.errors and not validator.warnings,
-        "mode": validator.mode,
-        "errors": validator.errors,
-        "warnings": validator.warnings,
-        "suggestions": suggestions,
-        "detected_inputs": sorted(list(validator.input_ids)),
-        "detected_outputs": sorted(
-            list(validator.ui_output_ids | validator.renderer_ids)
-        ),
-        "detected_reactives": sorted(
-            list(validator.reactive_vals | validator.reactive_calcs)
-        ),
-    }
+    if result.valid:
+        result.suggestions.append("Code structure matches Python Shiny best practices.")
+    return result
 
 
-def validate_shiny_file(path: str | Path) -> dict[str, Any]:
+def validate_shiny_file(
+    path: str | Path, *, validator_class: type[ShinyCodeValidator] = ShinyCodeValidator
+) -> ValidateResult:
+    """Validate a UTF-8 file with built-in or project-specific validation rules."""
     p = Path(path)
     if not p.is_file():
-        return {
-            "valid": False,
-            "mode": "unknown",
-            "errors": [
-                {
-                    "line": 1,
-                    "message": f"File not found: {path}",
-                    "code": "FILE_NOT_FOUND",
-                }
-            ],
-            "warnings": [],
-            "suggestions": [],
-            "detected_inputs": [],
-            "detected_outputs": [],
-            "detected_reactives": [],
-        }
-    code = p.read_text(encoding="utf-8")
-    return validate_shiny_code(code)
+        result = ValidateResult()
+        result.add_error(1, f"File not found: {path}", "FILE_NOT_FOUND")
+        return result
+    return validate_shiny_code(
+        p.read_text(encoding="utf-8"), validator_class=validator_class
+    )
