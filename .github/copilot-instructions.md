@@ -43,7 +43,7 @@ py-shiny/
 
 ### Python Version Support
 - **Minimum**: Python 3.10+ (as of current version)
-- Code must work across supported Python versions (3.10, 3.11, 3.12, 3.13, 3.14)
+- Code must work across supported Python versions (3.10, 3.11, 3.12, 3.13, 3.14, 3.15)
 
 ### Type Hints
 - **Required** for all public APIs

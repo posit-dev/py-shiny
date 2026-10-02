@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Improvements
+
+* Python 3.15 is now officially supported and tested. The unit test, end-to-end test, and type check matrices now include 3.15, and the `Programming Language :: Python :: 3.15` trove classifier was added. (#2519)
+
 ### Bug fixes
 
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
