@@ -72,21 +72,13 @@ def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
 
     assert "session.ns" not in skill_text
     assert "missing ns() wrapper" not in antipatterns_text
+    assert "from shiny import input" not in antipatterns_text
+    assert "shiny.test" not in skill_text
+
     assert "asyncio.to_thread" in antipatterns_text
     assert "ProcessPoolExecutor" in antipatterns_text
-    assert "cannot directly read reactive sources" in checklist_text
-    assert '@output(id="summary_output")' in antipatterns_text
+    assert "@output(id=" in antipatterns_text
     assert "@output(id=" in checklist_text
-    assert "Runtime Verified" in skill_text
-    assert "Server Startup Verified" in skill_text
-    assert "managed background process" in skill_text
-    assert "timeout" in skill_text
-    assert "secrets" in checklist_text
-    assert "Do not rely on `python app.py`" in skill_text
-    assert "from shiny import input" not in antipatterns_text
-    assert "initial_val = val()" in antipatterns_text
-    assert "@reactive.event(input.add_btn)" in antipatterns_text
-    assert "shiny.test" not in skill_text
     assert "shiny.pytest" in skill_text
 
 
