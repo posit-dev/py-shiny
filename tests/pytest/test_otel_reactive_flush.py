@@ -9,7 +9,7 @@ Tests cover:
 
 import os
 from typing import Tuple
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
@@ -17,9 +17,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from shiny.otel._collect import OtelCollectLevel, get_level
 from shiny.otel._core import is_otel_tracing_enabled
-from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive._core import ReactiveEnvironment
-from shiny.session._utils import session_context
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
@@ -76,29 +74,20 @@ class TestReactiveFlushInstrumentation:
     """Tests for reactive_update span instrumentation in flush cycles"""
 
     @pytest.mark.asyncio
-    async def test_flush_creates_span_when_collecting(self):
-        """Test that flush() wraps execution in reactive_update span when collecting"""
+    async def test_flush_creates_no_reactive_update_span(
+        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
+    ):
+        """A flush can serve several sessions, so it has no span of its own; each
+        session's `reactive_update` span follows its cycle (see
+        `test_otel_reactive_update.py`)."""
+        provider, memory_exporter = otel_tracer_provider
         with patch_otel_tracing_state(tracing_enabled=True):
-            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
-                # Create a reactive environment
+            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 env = ReactiveEnvironment()
+                await env.flush()
 
-                # Mock the tracer and span
-                mock_span = Mock()
-                mock_span.__aenter__ = AsyncMock(return_value=mock_span)
-                mock_span.__aexit__ = AsyncMock(return_value=None)
-
-                with patch(
-                    "shiny.reactive._core.shiny_otel_span",
-                    return_value=mock_span,
-                ) as mock_wrapper:
-                    await env.flush()
-
-                    # Verify shiny_otel_span was called with correct parameters
-                    mock_wrapper.assert_called_once()
-                    args, kwargs = mock_wrapper.call_args
-                    assert args[0] == "reactive_update"
-                    assert kwargs["required_level"] == OtelCollectLevel.REACTIVE_UPDATE
+        spans = get_exported_spans(provider, memory_exporter)
+        assert not [s for s in spans if s.name == "reactive_update"]
 
     @pytest.mark.asyncio
     async def test_flush_no_span_when_not_collecting(self):
@@ -114,80 +103,3 @@ class TestReactiveFlushInstrumentation:
 
                     # Tracer should not be retrieved since collection level is too low
                     mock_get_tracer.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_span_parent_child_relationship(
-        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
-    ):
-        """Test that reactive_update span is child of parent span when nested"""
-        provider, memory_exporter = otel_tracer_provider
-
-        with patch_otel_tracing_state(tracing_enabled=True):
-            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
-                # Simulate session_start with reactive_flush inside
-                async with shiny_otel_span(
-                    "session_start",
-                    infer_session_id=True,
-                    attributes={"session.id": "test123"},
-                    required_level=OtelCollectLevel.SESSION,
-                ):
-                    # Create reactive environment and flush
-                    env = ReactiveEnvironment()
-                    await env.flush()
-
-        # Get exported spans with proper flushing
-        spans = get_exported_spans(provider, memory_exporter)
-
-        # Filter out the _otel_is_recording span
-        app_spans = [s for s in spans if not s.name.startswith("_otel")]
-
-        # Should have 2 spans: session_start and reactive_update
-        assert len(app_spans) >= 2
-
-        # Find session_start and reactive_update spans
-        session_span = next((s for s in app_spans if s.name == "session_start"), None)
-        reactive_span = next(
-            (s for s in app_spans if s.name == "reactive_update"), None
-        )
-
-        assert session_span is not None, "session_start span should exist"
-        assert reactive_span is not None, "reactive_update span should exist"
-
-        # Verify parent-child relationship
-        assert reactive_span.parent is not None, "reactive_update should have a parent"
-        assert reactive_span.context is not None, "reactive_update should have context"
-        assert session_span.context is not None, "session_start should have context"
-        assert (
-            reactive_span.parent.span_id == session_span.context.span_id
-        ), "reactive_update parent should be session_start"
-
-        # Verify they're in the same trace
-        assert (
-            reactive_span.context.trace_id == session_span.context.trace_id
-        ), "Spans should be in same trace"
-
-    @pytest.mark.asyncio
-    async def test_reactive_update_span_includes_session_id_from_context(
-        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
-    ):
-        """Test that reactive_update span auto-includes session.id when session context is active."""
-        provider, memory_exporter = otel_tracer_provider
-        mock_session = Mock()
-        mock_session.id = "session-xyz"
-        mock_session.ns = ""
-
-        with patch_otel_tracing_state(tracing_enabled=True):
-            with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
-                with session_context(mock_session):
-                    env = ReactiveEnvironment()
-                    await env.flush()
-
-        spans = get_exported_spans(provider, memory_exporter)
-        app_spans = [s for s in spans if not s.name.startswith("_otel")]
-        reactive_span = next(
-            (s for s in app_spans if s.name == "reactive_update"), None
-        )
-
-        assert reactive_span is not None, "reactive_update span should exist"
-        assert reactive_span.attributes is not None
-        assert reactive_span.attributes.get("session.id") == "session-xyz"
