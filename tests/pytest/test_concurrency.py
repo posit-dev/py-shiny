@@ -1998,9 +1998,9 @@ def test_flush_state_from_a_dead_event_loop_is_discarded():
         await asyncio.wait_for(env.flush_pass(), TIMEOUT)
         assert ran == [True]
         env.request_flush()
-        await asyncio.sleep(0.01)
-        assert ran == [True, True]
-        assert not env._tasks  # the dead loop's tasks no longer count as running
+        # The dead loop's tasks no longer count as running. (Wait for the flush
+        # task's done callback; a timed sleep may not cover it on Windows.)
+        assert await wait_until(lambda: ran == [True, True] and not env._tasks)
 
     asyncio.run(use_a_new_loop())
     gc.collect()
