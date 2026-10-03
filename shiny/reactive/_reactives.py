@@ -58,6 +58,14 @@ from ._core import Context, Dependents, ReactiveWarning, isolate
 from ._utils import is_user_code_frame
 
 
+def _current_task() -> Optional[asyncio.Task[object]]:
+    try:
+        return asyncio.current_task()
+    except RuntimeError:
+        # No running loop (a sync calc read outside of asyncio).
+        return None
+
+
 def _weak_destroy_callback(
     method: Callable[[], None],
     session: Session,
@@ -493,6 +501,16 @@ class Value(Generic[T]):
             If the value has been destroyed.
         RuntimeError
             If called on a read-only reactive value.
+
+        Note
+        ----
+        Setting a new value schedules a reactive flush, so its dependents re-run
+        without calling :func:`~shiny.reactive.flush`. Call ``set()`` from the thread
+        running Shiny's event loop. From any other thread, hand the call to that loop
+        with ``loop.call_soon_threadsafe(value.set, new_value)``. The reactive graph
+        isn't safe to change from two threads at once, and calling ``set()`` directly
+        from another thread can fail (e.g. when a session's effect depends on the
+        value).
         """
         if self._destroyed:
             raise DestroyedReactiveError(
@@ -671,6 +689,10 @@ class Calc_(Generic[T]):
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
         self._running: bool = False
+        # The task running `update_value()`, and readers from other tasks waiting on
+        # that run (async calcs only: concurrent effects can read mid-run).
+        self._running_task: Optional[asyncio.Task[object]] = None
+        self._run_waiters: list[asyncio.Future[None]] = []
         self._most_recent_ctx_id: int = -1
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
@@ -770,8 +792,23 @@ class Calc_(Generic[T]):
             )
         self._dependents.register()
 
+        # Another task is computing this value: share that run rather than starting a
+        # second one. Recompute only if it was invalidated meanwhile.
+        current = _current_task()
+        while (
+            self._running
+            and not self._invalidated
+            and self._running_task is not current
+        ):
+            waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+            self._run_waiters.append(waiter)
+            await waiter
+
         if self._invalidated or self._running:
-            await self.update_value()
+            value, error = await self._update_value()
+            if error:
+                raise error[0]
+            return value[0]
 
         if self._error:
             raise self._error[0]
@@ -780,16 +817,28 @@ class Calc_(Generic[T]):
 
     # TODO: should this be private?
     async def update_value(self) -> None:
-        self._ctx = Context()
-        self._most_recent_ctx_id = self._ctx.id
+        await self._update_value()
 
-        self._ctx.on_invalidate(self._on_invalidate_cb)
+    async def _update_value(self) -> tuple[list[T], list[Exception]]:
+        """
+        Run the calc; return this run's value or error.
+
+        Only the most recent run is cached: an async run can be invalidated and
+        superseded by a newer one while it awaits.
+        """
+        ctx = Context()
+        self._ctx = ctx
+        self._most_recent_ctx_id = ctx.id
+
+        ctx.on_invalidate(self._on_invalidate_cb)
 
         self._exec_count += 1
         self._invalidated = False
 
-        was_running = self._running
         self._running = True
+        self._running_task = _current_task()
+        value: list[T] = []
+        error: list[Exception] = []
 
         from ..session import session_context
 
@@ -802,34 +851,31 @@ class Calc_(Generic[T]):
                 collection_level=self._otel_level,
             ):
                 try:
-                    with self._ctx():
-                        await self._run_func()
+                    with ctx():
+                        try:
+                            value.append(await self._fn())
+                        except Exception as err:
+                            error.append(err)
                 finally:
-                    self._running = was_running
+                    if ctx.id == self._most_recent_ctx_id:
+                        # If this run was invalidated meanwhile, `_invalidated` makes
+                        # the next read recompute anyway.
+                        self._value[:] = value
+                        self._error[:] = error
+                        self._running = False
+                        self._running_task = None
+                        waiters = self._run_waiters
+                        self._run_waiters = []
+                        for waiter in waiters:
+                            if not waiter.done():
+                                waiter.set_result(None)
+        return value, error
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
         self._value.clear()  # Allow old value to be GC'd
         self._dependents.invalidate()
         self._ctx = None  # Allow context to be GC'd
-
-    async def _run_func(self) -> None:
-        self._error.clear()
-        try:
-            val = await self._fn()
-
-            # Clear before appending: a reentrant recursive call to this same
-            # `Calc_` (the calc calling itself) re-enters `_run_func` while an
-            # outer frame's call is still pending, so without clearing first,
-            # each level's value just piles onto the same list and the very
-            # first (deepest/base-case) entry -- not this call's own result --
-            # would be whatever a stale index read back. Clearing keeps
-            # exactly one entry: the one this call just computed, read
-            # immediately afterward with no other call able to interleave.
-            self._value.clear()
-            self._value.append(val)
-        except Exception as err:
-            self._error.append(err)
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""
@@ -1004,6 +1050,8 @@ class Effect_:
         self._priority: int = priority
         self._suspended = suspended
         self._on_resume: Callable[[], None] = lambda: None
+        # Resolved when the latest run finishes (see `on_flush_cb`).
+        self._run_done: Optional[asyncio.Future[None]] = None
 
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
@@ -1088,10 +1136,26 @@ class Effect_:
                 _continue()
 
         async def on_flush_cb() -> None:
-            if not self._destroyed:
-                await self._run()
-            if self._session:
-                self._session._decrement_busy_count()
+            # Unlike R, runs of one effect don't overlap: a re-run waits for the
+            # previous run's async part, so a slower, older run can't finish last.
+            previous = self._run_done
+            done: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+            self._run_done = done
+            try:
+                if previous is not None and not previous.done():
+                    await asyncio.shield(previous)
+                if not self._destroyed:
+                    await self._run()
+            except Exception as e:
+                # The effect runs in its own task, so report errors to its session.
+                if not self._session:
+                    raise
+                await self._session._unhandled_error(e)
+            finally:
+                done.set_result(None)
+                # Every exit path (raised, cancelled) must end the busy period.
+                if self._session:
+                    self._session._decrement_busy_count()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
@@ -1208,8 +1272,10 @@ class Effect_:
         ----------
         priority
             The new priority. A higher value means higher priority: an effect with a
-            higher priority value will execute before all effects with lower priority
-            values. Positive, negative, and zero values are allowed.
+            higher priority value starts before all effects with lower priority
+            values. An async effect's awaited part doesn't hold back lower-priority
+            effects, so they can finish first. Positive, negative, and zero values
+            are allowed.
 
         Note
         ----
@@ -1269,8 +1335,9 @@ def effect(
         until resumed and invalidated).
     priority
         The new priority. A higher value means higher priority: an effect with a higher
-        priority value will execute before all effects with lower priority values.
-        Positive, negative, and zero values are allowed.
+        priority value starts before all effects with lower priority values. An async
+        effect's awaited part doesn't hold back lower-priority effects, so they can
+        finish first. Positive, negative, and zero values are allowed.
     session
         A :class:`~shiny.Session` instance. If not provided, the session is inferred via
         :func:`~shiny.session.get_current_session`.
