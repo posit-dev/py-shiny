@@ -6,27 +6,37 @@ __all__ = (
     "input_radio_buttons",
 )
 
-from typing import Mapping, Optional, Union
+from typing import Iterable, Mapping, Optional, Sequence, Union
 
 from htmltools import Tag, TagAttrs, TagChild, css, div, span, tags
 
 from .._docstring import add_example
 from ..bookmark import restore_input
 from ..module import resolve_id
+from ._choices import (
+    ChoiceKey,
+    ChoiceSelection,
+    ChoiceValue,
+    normalize_choices_mapping,
+    resolve_selected,
+)
 from ._html_deps_shinyverse import components_dependencies
 from ._utils import shiny_input_label
 
-# Canonical format for representing select options.
-_Choices = Mapping[str, TagChild]
-
-# Formats available to the user
+# Formats available to the user. Choice values are coerced with `str()`, so e.g. the
+# `int` keys of a `dict[int, str]` are supported.
 ChoicesArg = Union[
-    # ["a", "b", "c"]
-    "list[str]",
-    # ("a", "b", "c")
-    "tuple[str, ...]",
-    # {"a": "Choice A", "b": tags.i("Choice B")}
-    _Choices,
+    # [0, 1, 2] or ("a", "b", "c")
+    Sequence[ChoiceValue],
+    # {"a": "Choice A", 0: tags.i("Choice B")}
+    Mapping[ChoiceKey, TagChild],
+]
+
+# A single choice value, or several. Coerced with `str()`, so e.g. the `int` keys of a
+# `dict[int, str]` passed as `choices` work here too.
+SelectedArg = Union[
+    ChoiceValue,
+    Sequence[ChoiceValue],
 ]
 
 
@@ -177,7 +187,7 @@ def input_checkbox_group(
     label: TagChild,
     choices: ChoicesArg,
     *,
-    selected: Optional[str | list[str]] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -249,7 +259,7 @@ def input_radio_buttons(
     label: TagChild,
     choices: ChoicesArg,
     *,
-    selected: Optional[str] = None,
+    selected: Optional[SelectedArg] = None,
     inline: bool = False,
     width: Optional[str] = None,
 ) -> Tag:
@@ -318,33 +328,35 @@ def _generate_options(
     id: str,
     type: str,
     choices: ChoicesArg,
-    selected: Optional[str | list[str] | tuple[str, ...]],
+    selected: Optional[SelectedArg],
     inline: bool,
 ) -> Tag:
     choicez = _normalize_choices(choices)
 
-    if selected is None:
-        if type == "radio":
-            selected = list(choicez.keys())[0]
-        else:
-            selected = []
+    # A radio group must always have something checked, so an omitted `selected` falls
+    # back to the first choice. Note the check is against `None` specifically: an empty
+    # `selected` is an explicit request for nothing checked, and must stay that way.
+    if selected is None and type == "radio":
+        if not choicez:
+            raise ValueError(
+                "`choices` cannot be empty for a radio button group unless "
+                "`selected` is given."
+            )
+        selected = next(iter(choicez))
 
-    if isinstance(selected, tuple):
-        selected = list(selected)
-    elif not isinstance(selected, list):
-        selected = [selected]
+    selection = ChoiceSelection(resolve_selected(selected, choicez.keys()))
 
     return div(
         [
             _generate_option(
                 id,
                 type,
-                value=choice[0],
-                label=choice[1],
-                checked=choice[0] in selected,
+                value=value,
+                label=label,
+                checked=value in selection,
                 inline=inline,
             )
-            for choice in choicez.items()
+            for value, label in choicez.items()
         ],
         class_="shiny-options-group",
     )
@@ -379,8 +391,16 @@ def _generate_option(
         )
 
 
-def _normalize_choices(x: ChoicesArg) -> _Choices:
-    if isinstance(x, (list, tuple)):
-        return {k: k for k in x}
+def _normalize_choices(x: ChoicesArg) -> dict[str, TagChild]:
+    """
+    Normalize choices, coercing choice values to `str` so they match the
+    string form the client reports.
+    """
+    if isinstance(x, Mapping):
+        return normalize_choices_mapping(x)
+    elif isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+        return normalize_choices_mapping({k: k for k in x})
     else:
-        return x
+        # A bare `str` satisfies `Sequence[ChoiceValue]` statically, but iterating it
+        # would turn each character into its own choice.
+        raise TypeError("`choices` must be a list, tuple, or dict.")
