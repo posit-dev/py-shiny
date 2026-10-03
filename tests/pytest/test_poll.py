@@ -52,6 +52,9 @@ class OnEndedSessionCallbacks:
     def _decrement_busy_count(self) -> None:
         pass
 
+    def _otel_reactive_update_span(self) -> None:
+        return None
+
     async def __aenter__(self):
         self._session_context.__enter__()
 

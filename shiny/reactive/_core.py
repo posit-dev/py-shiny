@@ -34,8 +34,6 @@ from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
 from .._typing_extensions import TypeGuard
-from ..otel._collect import OtelCollectLevel, _get_env_level
-from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -223,21 +221,17 @@ class ReactiveEnvironment:
         self._flush_pass_waiters = []
         token = _flush_owner.set(asyncio.current_task())
         try:
-            # Wrap entire flush cycle in reactive_update span (or no-op if not collecting)
-            async with shiny_otel_span(
-                "reactive_update",
-                infer_session_id=True,
-                required_level=OtelCollectLevel.REACTIVE_UPDATE,
-                collection_level=_get_env_level(),
-            ):
-                while not self._pending_flush_queue.empty():
-                    ctx = self._pending_flush_queue.get()
-                    self._spawn(self._run_context(ctx))
-                    # CPython runs ready callbacks FIFO, so the task's sync part runs
-                    # now, and anything it invalidates is queued before we take the
-                    # next ctx.
-                    await _yield_to_loop()
-                await self._flushed_callbacks.invoke()
+            # No span here: a flush can serve several sessions. Each session's
+            # `reactive_update` span follows its own cycle (see
+            # `AppSession._increment_busy_count()`).
+            while not self._pending_flush_queue.empty():
+                ctx = self._pending_flush_queue.get()
+                self._spawn(self._run_context(ctx))
+                # CPython runs ready callbacks FIFO, so the task's sync part runs
+                # now, and anything it invalidates is queued before we take the
+                # next ctx.
+                await _yield_to_loop()
+            await self._flushed_callbacks.invoke()
         finally:
             _flush_owner.reset(token)
             self._in_flush = False

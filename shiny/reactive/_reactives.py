@@ -46,7 +46,7 @@ from ..otel._labels import (
     get_otel_label_modifier,
     set_otel_label_modifier,
 )
-from ..otel._span_wrappers import shiny_otel_span
+from ..otel._span_wrappers import shiny_otel_span, use_otel_span
 from ..types import (
     MISSING,
     MISSING_TYPE,
@@ -1185,7 +1185,12 @@ class Effect_:
 
         from ..session import session_context
 
-        with session_context(self._session):
+        # Run in the session's cycle span, so this effect's span (and those of the
+        # calcs it reads) are its children.
+        cycle_span = (
+            self._session._otel_reactive_update_span() if self._session else None
+        )
+        with session_context(self._session), use_otel_span(cycle_span):
             async with shiny_otel_span(
                 self._otel_label,
                 attributes=self._otel_attrs,
