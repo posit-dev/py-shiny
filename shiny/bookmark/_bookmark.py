@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -27,6 +28,13 @@ else:
     AppSession = Any
     ResolvedId = Any
     ExpressStubSession = Any
+
+
+ON_RESTORE_PRIORITY = 1000000
+"""
+Priority of the effect that invokes the `on_restore` callbacks. The session's effects
+with a lower priority run after the callbacks finish, including their async parts.
+"""
 
 
 class Bookmark(ABC):
@@ -164,6 +172,9 @@ class Bookmark(ABC):
         Registers a function that will be called just before restoring state.
 
         This callback will be executed **before** the bookmark state is restored.
+        The session's effects and outputs with a priority below 1000000 (the default
+        is 0) start to run only after all `on_restore` callbacks have finished,
+        including the awaited parts of async callbacks.
         """
         return self._on_restore_callbacks.register(wrap_async(callback))
 
@@ -341,6 +352,9 @@ class BookmarkApp(Bookmark):
         super().__init__()
 
         self._root_session = root_session
+        # Resolved when the `on_restore` callbacks have finished (see
+        # `_create_effects()`).
+        self._restore_done: Optional[asyncio.Future[None]] = None
 
         # # Do not set it to avoid supporting a `None` type.
         # # Instead, only use it after it's been set.
@@ -365,6 +379,15 @@ class BookmarkApp(Bookmark):
         This should only be done within the `init` websocket message.
         """
         self._restore_context_value = restore_context
+
+    def _restore_gate(self, priority: int) -> Optional[asyncio.Future[None]]:
+        """
+        Return the future that an effect with `priority` must wait on before it runs,
+        or `None` if it can run now.
+        """
+        if priority >= ON_RESTORE_PRIORITY:
+            return None
+        return self._restore_done
 
     def _create_effects(self) -> None:
         """
@@ -412,10 +435,16 @@ class BookmarkApp(Bookmark):
                     )
 
             # Run the on_restore function at the beginning of the flush cycle, but after
-            # the server function has been executed.
-            @reactive.effect(priority=1000000)
-            @otel_suppress
-            async def invoke_on_restore_callbacks():
+            # the server function has been executed. A flush doesn't wait for an
+            # effect's async part, so the session's other effects wait on
+            # `_restore_done` instead (see `_restore_gate()`). Unlike R, whose
+            # `onRestore()` callbacks are synchronous, callbacks can be async.
+            restore_done: asyncio.Future[None] = (
+                asyncio.get_running_loop().create_future()
+            )
+            self._restore_done = restore_done
+
+            async def invoke_callbacks() -> None:
                 if self._on_restore_callbacks.count() == 0:
                     return
 
@@ -435,6 +464,17 @@ class BookmarkApp(Bookmark):
                             duration=None,
                             type="error",
                         )
+
+            @reactive.effect(priority=ON_RESTORE_PRIORITY)
+            @otel_suppress
+            async def invoke_on_restore_callbacks():
+                try:
+                    await invoke_callbacks()
+                finally:
+                    # Also when the run is cancelled; `invoke_callbacks()` handles
+                    # the callbacks' errors.
+                    if not restore_done.done():
+                        restore_done.set_result(None)
 
             # Run the on_restored function after the flush cycle completes and
             # information is sent to the client.

@@ -19,6 +19,7 @@ from starlette.requests import Request
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny._connection import MockConnection
 from shiny._deprecated import ShinyDeprecationWarning
+from shiny.bookmark import RestoreState
 from shiny.bookmark._bookmark import BookmarkApp
 from shiny.bookmark._restore_state import RestoreContext
 from shiny.reactive._core import (
@@ -2721,3 +2722,327 @@ async def test_value_set_from_background_task_reruns_session_effect():
         assert await wait_until(lambda: seen == [0, 1])
     finally:
         await c.close()
+
+
+# ----------------------------------------------------------------------------
+# Async bookmark `on_restore` callbacks finish before the session's effects run
+# ----------------------------------------------------------------------------
+
+
+class RestoringClient(RecordingClient):
+    """A RecordingClient for an app that restores its bookmarked state from the URL."""
+
+    def __init__(self, server: Callable[[Inputs, Outputs, Session], None]) -> None:
+        self.recording = RecordingConnection()
+        self.conn = self.recording
+        app = App(lambda request: ui.TagList(), server, bookmark_store="url")
+        self.session = app._create_session(self.conn)
+        self.recording.session = self.session
+        self.task = asyncio.create_task(self.session._run())
+
+    def init(self, **data: object) -> None:
+        """Start the session, restoring `x="restored"`."""
+        url_search = "?_inputs_&x=%22restored%22"
+        self.send(
+            {"method": "init", "data": {".clientdata_url_search": url_search, **data}}
+        )
+
+    def output_values(self, name: str) -> list[object]:
+        return [m["values"][name] for m in self.sent if name in m.get("values", {})]  # type: ignore
+
+
+@pytest.mark.asyncio
+async def test_async_on_restore_finishes_before_other_effects_start():
+    seen: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        v = reactive.value("default")
+
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            await asyncio.sleep(0.01)
+            v.set(state.input["x"])
+
+        @reactive.effect
+        def _():
+            seen.append(v())
+
+        @render.text
+        def out():
+            return v()
+
+    c = RestoringClient(server)
+    try:
+        c.init(**{".clientdata_output_out_hidden": False})
+        assert await wait_until(lambda: c.output_values("out") == ["restored"])
+        assert seen == ["restored"]
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_effects_waiting_on_restore_start_in_priority_order():
+    log: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            await asyncio.sleep(0.01)
+            log.append("restored")
+
+        @reactive.effect(priority=-1)
+        def _():
+            log.append("low")
+
+        @reactive.effect(priority=1)
+        def _():
+            log.append("high")
+
+    c = RestoringClient(server)
+    try:
+        c.init()
+        assert await wait_until(lambda: len(log) == 3)
+        assert log == ["restored", "high", "low"]
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_effect_above_restore_priority_does_not_wait_for_restore():
+    release = asyncio.Event()
+    log: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            await release.wait()
+            log.append("restored")
+
+        @reactive.effect(priority=2_000_000)
+        def _():
+            log.append("above")
+
+    c = RestoringClient(server)
+    try:
+        c.init()
+        assert await wait_until(lambda: log == ["above"])
+        release.set()
+        assert await wait_until(lambda: log == ["above", "restored"])
+    finally:
+        release.set()
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_slow_restore_does_not_block_other_sessions():
+    release = asyncio.Event()
+    a_log: list[str] = []
+    b_seen: list[object] = []
+
+    def server_a(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            await release.wait()
+
+        @reactive.effect
+        def _():
+            a_log.append("ran")
+
+    def server_b(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _():
+            b_seen.append(input.x())
+
+    a, b = RestoringClient(server_a), Client(server_b)
+    try:
+        a.init()
+        b.send({"method": "init", "data": {"x": 0}})
+        assert await wait_until(lambda: b_seen == [0])
+        b.update(x=1)
+        assert await wait_until(lambda: b_seen == [0, 1])
+        assert a_log == []
+        release.set()
+        assert await wait_until(lambda: a_log == ["ran"])
+    finally:
+        release.set()
+        await a.close()
+        await b.close()
+
+
+@pytest.mark.asyncio
+async def test_effects_run_after_an_on_restore_callback_fails():
+    log: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            await asyncio.sleep(0.01)
+            log.append("raising")
+            raise RuntimeError("restore failed")
+
+        @reactive.effect
+        def _():
+            log.append("ran")
+
+    c = RestoringClient(server)
+    try:
+        with pytest.warns(UserWarning, match="restore failed"):
+            c.init()
+            assert await wait_until(lambda: len(log) == 2)
+        assert log == ["raising", "ran"]
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_effects_run_after_an_on_restore_callback_is_cancelled():
+    # The callback's error handling catches `Exception` only, so a cancellation
+    # ends the restore effect's run with `CancelledError`.
+    log: list[str] = []
+    awaited: list[asyncio.Task[None]] = []
+
+    async def wait_forever() -> None:
+        await asyncio.Event().wait()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            awaited.append(asyncio.create_task(wait_forever()))
+            log.append("restore start")
+            await awaited[0]
+
+        @reactive.effect
+        def _():
+            log.append("ran")
+
+    c = RestoringClient(server)
+    try:
+        c.init()
+        assert await wait_until(lambda: log == ["restore start"])
+        awaited[0].cancel()
+        assert await wait_until(lambda: log == ["restore start", "ran"])
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_module_effects_wait_for_restore():
+    release = asyncio.Event()
+    log: list[str] = []
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _():
+            log.append("mod")
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            await release.wait()
+            log.append("restored")
+
+        mod("mod")
+
+    c = RestoringClient(server)
+    try:
+        c.init()
+        await asyncio.sleep(0.02)
+        assert log == []
+        release.set()
+        assert await wait_until(lambda: log == ["restored", "mod"])
+    finally:
+        release.set()
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_destroying_an_effect_waiting_on_restore_leaves_the_others_waiting():
+    release = asyncio.Event()
+    log: list[str] = []
+    effects: dict[str, reactive.Effect_] = {}
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            await release.wait()
+            log.append("restored")
+
+        @reactive.effect
+        def a():
+            log.append("a")
+
+        @reactive.effect
+        def b():
+            log.append("b")
+
+        effects.update(a=a, b=b)
+
+    c = RestoringClient(server)
+    try:
+        c.init()
+        assert await wait_until(
+            lambda: len(effects) == 2
+            and all(len(e._run_tasks) == 1 for e in effects.values())
+        )
+        effects["a"].destroy()
+        release.set()
+        assert await wait_until(lambda: log == ["restored", "b"])
+    finally:
+        release.set()
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_effect_waits_for_restore_at_the_priority_it_was_queued_at():
+    release = asyncio.Event()
+    log: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            await release.wait()
+            log.append("restored")
+
+        @reactive.effect
+        def e():
+            log.append("e")
+
+        # Takes effect on the next invalidation; this run is queued at priority 0.
+        e.set_priority(2_000_000)
+
+    c = RestoringClient(server)
+    try:
+        c.init()
+        await asyncio.sleep(0.02)
+        assert log == []
+        release.set()
+        assert await wait_until(lambda: log == ["restored", "e"])
+    finally:
+        release.set()
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_session_end_during_restore_cancels_waiting_effects():
+    log: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            try:
+                log.append("restore start")
+                await asyncio.Event().wait()
+            finally:
+                log.append("restore finally")
+
+        @reactive.effect
+        def _():
+            log.append("effect ran")
+
+    c = RestoringClient(server)
+    c.init()
+    assert await wait_until(lambda: log == ["restore start"])
+    await c.close()
+    assert log == ["restore start", "restore finally"]
+    assert c.session._busy_count == 0

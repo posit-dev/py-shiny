@@ -55,6 +55,9 @@ class OnEndedSessionCallbacks:
     def _otel_reactive_update_span(self) -> None:
         return None
 
+    def _restore_gate(self, priority: int) -> None:
+        return None
+
     async def __aenter__(self):
         self._session_context.__enter__()
 
