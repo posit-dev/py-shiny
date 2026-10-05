@@ -2952,6 +2952,12 @@ class Outputs:
                 await session._send_message(
                     {"recalculating": {"name": output_name, "status": "recalculating"}}
                 )
+                # Let the message go out before a synchronous renderer blocks the event
+                # loop, so that the output's busy indicator shows. On Windows, a write
+                # made while an earlier write is still in flight goes out only when the
+                # loop runs again.
+                # https://github.com/posit-dev/py-shiny/issues/1381
+                await asyncio.sleep(0)
 
                 try:
                     async with shiny_otel_span(
