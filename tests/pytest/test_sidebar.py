@@ -7,7 +7,7 @@ import pytest
 from htmltools import HTML, TagAttrValue, TagifiedTag, TagifiedTagList, TagList
 
 from shiny import ui
-from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue
+from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue, SidebarRole
 
 
 @pytest.mark.parametrize(
@@ -118,12 +118,8 @@ def test_sidebar_complementary_role_uses_aside():
 
 
 @pytest.mark.parametrize("role", ["form", "search", "region"])
-def test_sidebar_landmark_roles_use_div_with_role(role: str):
-    sidebar_tag, _ = get_sidebar_tags(
-        ui.sidebar(
-            id="sb", title="Filters", role=role
-        )  # pyright: ignore[reportArgumentType]
-    )
+def test_sidebar_landmark_roles_use_div_with_role(role: SidebarRole):
+    sidebar_tag, _ = get_sidebar_tags(ui.sidebar(id="sb", title="Filters", role=role))
 
     assert sidebar_tag.name == "div"
     assert sidebar_tag.attrs["role"] == role
