@@ -270,7 +270,9 @@ jobs:
         timeout-minutes: 10
         shell: bash
         run: |
-          make playwright-shiny SUB_FILE="bugs/1381-busy-indicator-progress" PLAYWRIGHT_BROWSERS=chromium PYTEST_BROWSERS="--browser chromium"
+          # No `--with-deps`: on Windows it only adds the Media Foundation feature,
+          # which headless Chromium doesn't need, and that takes about 3 minutes.
+          make playwright-shiny SUB_FILE="bugs/1381-busy-indicator-progress" PLAYWRIGHT_BROWSERS=chromium PLAYWRIGHT_INSTALL_ARGS=--only-shell PYTEST_BROWSERS="--browser chromium"
 
   playwright-examples:
     if: github.event_name != 'release'
