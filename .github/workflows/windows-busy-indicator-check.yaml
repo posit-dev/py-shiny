@@ -1,0 +1,91 @@
+# One-off check for #1381 (busy indicators that do not show on Windows) against the
+# concurrency changes in #2508. Each variant runs the busy-indicator progress test
+# five times on Windows:
+#
+# - main: the released behavior, with both #1388 yields.
+# - main-without-yields: main with both yields removed. This is the negative
+#   control: the test must fail here, or the runner does not reproduce #1381.
+# - this-branch: the #2508 stack, which keeps only the yield after each effect run.
+# - this-branch-without-yield: the #2508 stack with that yield removed too.
+name: Windows busy indicator check (#1381)
+
+on:
+  push:
+    branches: ["jat255/2508-windows-busy-indicator-check"]
+  workflow_dispatch:
+
+jobs:
+  busy-indicator:
+    name: ${{ matrix.target }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - main
+          - main-without-yields
+          - this-branch
+          - this-branch-without-yield
+    steps:
+      - name: Check out the code under test
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ startsWith(matrix.target, 'main') && 'main' || github.sha }}
+          fetch-depth: 0
+
+      - name: Check out the test
+        uses: actions/checkout@v6
+        with:
+          path: .harness
+
+      - name: Remove the #1381 yields
+        if: endsWith(matrix.target, 'yields') || endsWith(matrix.target, 'yield')
+        shell: python
+        run: |
+          import pathlib
+          import re
+          import sys
+
+          files = ["shiny/reactive/_reactives.py"]
+          if "${{ matrix.target }}".startswith("main"):
+              files.append("shiny/session/_session.py")
+          for name in files:
+              path = pathlib.Path(name)
+              text, count = re.subn(
+                  r"(# https://github\.com/posit-dev/py-shiny/issues/1381\n)"
+                  r"[ \t]*await asyncio\.sleep\(0\)\n",
+                  r"\1",
+                  path.read_text(),
+              )
+              if count != 1:
+                  sys.exit(f"{name}: expected 1 yield, found {count}")
+              path.write_text(text)
+              print(f"{name}: removed the yield")
+
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+        with:
+          python-version: "3.12"
+
+      - name: Add the test
+        shell: bash
+        run: |
+          cp -r .harness/tests/playwright/shiny/bugs/1381-busy-indicator-progress \
+            tests/playwright/shiny/bugs/
+
+      - name: Install chromium
+        shell: bash
+        run: playwright install chromium
+
+      - name: Run the test five times
+        shell: bash
+        run: |
+          status=0
+          for i in 1 2 3 4 5; do
+            echo "::group::Run $i"
+            pytest -p no:xdist -o addopts="" -s --browser chromium \
+              tests/playwright/shiny/bugs/1381-busy-indicator-progress || status=1
+            echo "::endgroup::"
+          done
+          exit $status
