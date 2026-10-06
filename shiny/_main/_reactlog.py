@@ -78,12 +78,15 @@ def _load_saved(path: Path) -> dict[str, Any]:
     return export
 
 
-def _check_paths(input_file: Path, outputs: list[Path]) -> None:
+def _check_paths(inputs: list[Path], outputs: list[Path]) -> None:
+    protected = {p.resolve(): p for p in inputs}
     seen: set[Path] = set()
     for out in outputs:
         resolved = out.resolve()
-        if resolved == input_file.resolve():
-            raise RecordingError(f"Refusing to overwrite the input file {input_file}.")
+        if resolved in protected:
+            raise RecordingError(
+                f"Refusing to overwrite the input file {protected[resolved]}."
+            )
         if resolved in seen:
             raise RecordingError(f"{out} is used for more than one output.")
         seen.add(resolved)
@@ -250,12 +253,18 @@ def reactlog(
                 for p in (html_out, json_out, mermaid_out, test_out)
                 if p is not None
             ]
+            inputs = [input_file] + ([Path(replay_file)] if replay_file else [])
             # Fail before recording, not after.
             _check_paths(
-                input_file,
-                out_paths + ([video_path] if video_path is not None else []),
+                inputs, out_paths + ([video_path] if video_path is not None else [])
             )
+            if test_out is not None and Path(test_out).exists():
+                raise RecordingError(
+                    f"{test_out} already exists; pass another --test path so a "
+                    "refined test isn't overwritten."
+                )
 
+            actions: list[dict[str, Any]] = []
             if saved_input:
                 exports = [_load_saved(input_file)]
             elif no_browser:
@@ -280,11 +289,8 @@ def reactlog(
                     redact_inputs=redact_inputs,
                 )
                 exports = [rec.export]
+                actions = rec.actions
                 video_path = rec.video_path
-                if test_out is not None:
-                    _write_test(
-                        Path(test_out), app_file=input_file, actions=rec.actions
-                    )
 
             if redact_inputs:
                 for export in exports:
@@ -303,7 +309,7 @@ def reactlog(
                 ]
             ]
             _check_paths(
-                input_file,
+                inputs,
                 [p for _, *ps in targets for p in ps if p is not None]
                 + ([video_path] if video_path is not None else []),
             )
@@ -319,6 +325,14 @@ def reactlog(
                 )
             if video_path is not None:
                 click.echo(cli_success(f"Video saved to {video_path}"))
+            # Last, so a failure here can't lose the recording's other outputs.
+            if test_out is not None:
+                _write_test(
+                    Path(test_out),
+                    app_file=input_file,
+                    actions=actions,
+                    redact_outputs=redact_inputs,
+                )
     except RecordingError as err:
         click.echo(cli_danger(str(err)))
         sys.exit(1)
@@ -347,15 +361,27 @@ def _write(path: Path, text: str) -> None:
 
 
 def _write_test(
-    test_path: Path, *, app_file: Path, actions: list[dict[str, Any]]
+    test_path: Path,
+    *,
+    app_file: Path,
+    actions: list[dict[str, Any]],
+    redact_outputs: bool,
 ) -> None:
+    try:
+        rel = Path(os.path.relpath(app_file.resolve(), test_path.resolve().parent))
+    except ValueError:  # on Windows, the app and test are on different drives
+        rel = app_file.resolve()
     # The `local_app` fixture finds an `app.py` next to the test on its own.
-    rel = os.path.relpath(app_file.resolve(), test_path.resolve().parent)
-    app_path = None if rel == "app.py" else Path(rel).as_posix()
+    app_path = None if rel == Path("app.py") else rel.as_posix()
     test_name = app_file.resolve().parent.name or "app"
     _write(
         test_path,
-        generate_controller_test(actions, test_name=test_name, app_path=app_path),
+        generate_controller_test(
+            actions,
+            test_name=test_name,
+            app_path=app_path,
+            redact_outputs=redact_outputs,
+        ),
     )
     click.echo(cli_success(f"Controller test written to {test_path}"))
 
