@@ -9,7 +9,7 @@ from typing import Any, Callable, Generator
 
 import pytest
 
-from shiny.reactive import Value, _trace, calc, effect
+from shiny.reactive import Value, _trace, calc, effect, flush
 from shiny.reactive._trace import (
     ExecuteEvent,
     NodeKind,
@@ -332,6 +332,44 @@ async def test_define_value_change_freeze(rec: Recorder) -> None:
     v.freeze()
     assert rec.of("value") == [("value", "v", 2)]
     assert rec.of("freeze") == [("freeze", "v")]
+
+
+@pytest.mark.asyncio
+async def test_edges_and_dynamic_dependencies(rec: Recorder) -> None:
+    # Drain effects left pending by earlier tests so they don't add edges here.
+    await flush()
+    rec.log.clear()
+
+    use_b = Value(False, name="use_b")
+    a = Value(1, name="a")
+    b = Value(2, name="b")
+
+    @calc
+    def c() -> int:
+        return a()
+
+    @effect
+    def e() -> None:
+        c()
+        if use_b():
+            b()
+
+    await flush()
+    assert rec.of("add") == [
+        ("add", "reactive.effect e", "reactive.calc c", False),
+        ("add", "reactive.calc c", "a", False),
+        ("add", "reactive.effect e", "use_b", False),
+    ]
+
+    rec.log.clear()
+    use_b.set(True)
+    await flush()
+    assert ("invalidate", "reactive.effect e") in rec.log
+    assert ("remove", "reactive.effect e", "use_b", False) in rec.log
+    assert ("remove", "reactive.effect e", "reactive.calc c", False) in rec.log
+    assert ("add", "reactive.effect e", "b", False) in rec.log
+    # The calc was not invalidated, so its edge to `a` is untouched.
+    assert ("remove", "reactive.calc c", "a", False) not in rec.log
 
 
 @pytest.mark.xfail(strict=True, reason="execute span lands in Task 4")
