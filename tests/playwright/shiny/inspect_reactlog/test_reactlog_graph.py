@@ -6,11 +6,11 @@ from typing import Literal
 
 from playwright.sync_api import Locator, Page, expect
 
-from shiny._inspect import (
+from shiny.reactive._reactlog._record import record_shiny_session
+from shiny.reactive._reactlog._viewer import (
     format_reactlog_html,
     generate_reactlog,
     load_reactlog_json,
-    record_shiny_session,
 )
 
 
@@ -1004,7 +1004,7 @@ def out():
 
 
 def test_r_import_search_preserves_all_nodes(page: Page) -> None:
-    from shiny._inspect import load_reactlog_json
+    from shiny.reactive._reactlog._viewer import load_reactlog_json
 
     raw = [
         {"action": "invalidateStart", "reactId": "r2"},
@@ -1061,7 +1061,7 @@ def test_r_import_search_preserves_all_nodes(page: Page) -> None:
 
 
 def test_fit_large_graph(page: Page) -> None:
-    from shiny._inspect import load_reactlog_json
+    from shiny.reactive._reactlog._viewer import load_reactlog_json
 
     raw = [
         {
@@ -1611,7 +1611,7 @@ def out():
 
 
 def test_live_reactlog_input_and_mark_waves(page: Page) -> None:
-    # Shaped like shiny._reactlog.ReactlogRecorder output: `rN` ids, typed inputs.
+    # Shaped like shiny.reactive._reactlog.ReactlogRecorder output: `rN` ids, typed inputs.
     t0 = 1_700_000_000.0
     log: list[dict[str, object]] = [
         {

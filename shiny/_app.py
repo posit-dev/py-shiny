@@ -44,8 +44,6 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
-from ._inspect import format_reactlog_html, generate_reactlog, load_reactlog_json
-from ._reactlog import ReactlogRecorder, session_picker_html
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, is_test_mode, sort_keys_length
 from .bookmark._global import as_bookmark_dir_fn
@@ -58,6 +56,13 @@ from .bookmark._types import (
 )
 from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
+from .reactive._reactlog import (
+    ReactlogRecorder,
+    format_reactlog_html,
+    load_reactlog_json,
+    session_picker_html,
+)
+from .reactive._reactlog._viewer import generate_reactlog
 from .reactive._trace import add_tracer
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE

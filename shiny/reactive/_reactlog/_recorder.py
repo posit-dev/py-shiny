@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 
 from htmltools import tags
 
-from .reactive._trace import (
+from .._trace import (
     DependencyAdded,
     DependencyRemoved,
     ExecuteEvent,

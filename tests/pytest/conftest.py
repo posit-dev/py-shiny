@@ -9,10 +9,10 @@ import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from shiny._reactlog import ReactlogRecorder
 from shiny.otel import _core
 from shiny.otel._constants import TRACER_NAME
 from shiny.reactive import _trace
+from shiny.reactive._reactlog import ReactlogRecorder
 
 from .otel_helpers import otel_tracer_provider_impl
 
