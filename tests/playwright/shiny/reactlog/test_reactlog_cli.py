@@ -2,9 +2,12 @@ import json
 import os
 import re
 import signal
+import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 from playwright.sync_api import Page
@@ -12,6 +15,63 @@ from playwright.sync_api import Page
 from shiny.playwright import controller
 
 APP = Path(__file__).parent / "record_app" / "app.py"
+
+
+def _kill_cli(proc: subprocess.Popen[str]) -> None:
+    """SIGTERM stops the CLI and the app (own session) it started; SIGKILL if hung."""
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.wait()
+
+
+def _accepts_connections(port: int) -> bool:
+    try:
+        socket.create_connection(("127.0.0.1", port), timeout=0.5).close()
+    except OSError:
+        return False
+    return True
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+def test_reactlog_cli_sigterm_stops_the_app(tmp_path: Path) -> None:
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "shiny",
+            "reactlog",
+            str(APP),
+            "--no-browser",
+            "--json",
+            str(tmp_path / "o.json"),
+        ],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        assert proc.stdout is not None
+        first_line = proc.stdout.readline()
+        url = re.search(r"http://\S+", first_line)
+        assert url is not None, first_line
+        port = urlparse(url.group(0)).port
+        assert port is not None
+        assert _accepts_connections(port)
+
+        proc.terminate()  # the CLI pid only, not its group
+        proc.wait(timeout=30)
+        deadline = time.time() + 5
+        while _accepts_connections(port) and time.time() < deadline:
+            time.sleep(0.1)
+        assert not _accepts_connections(port), "the app outlived the CLI"
+    finally:
+        _kill_cli(proc)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
@@ -58,9 +118,7 @@ def test_reactlog_cli_no_browser_exports_after_ctrl_c(
         os.killpg(proc.pid, signal.SIGINT)
         output, _ = proc.communicate(timeout=60)
     finally:
-        if proc.poll() is None:
-            os.killpg(proc.pid, signal.SIGKILL)
-            proc.wait()
+        _kill_cli(proc)
 
     assert proc.returncode == 0, output
     assert "2 sessions were recorded; exported the newest" in output

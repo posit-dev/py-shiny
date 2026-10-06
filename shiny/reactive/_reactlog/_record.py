@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import signal
 import sys
 import tempfile
 import threading
@@ -12,9 +13,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from ...run._run import ShinyAppProc, run_shiny_app
 
@@ -107,6 +109,33 @@ def _start_app(app_file: Path) -> ShinyAppProc:
         raise RecordingError(
             "\n".join([f"Failed to start Shiny app {app_file}:", *tail])
         ) from err
+
+
+@contextmanager
+def _terminate_as_interrupt() -> Generator[None]:
+    """
+    Treat SIGTERM and SIGHUP like Ctrl+C while an app is running.
+
+    The app runs in its own session, so it only stops through the callers' `finally`
+    blocks, which these signals' default actions would skip.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def interrupt(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    names = ["SIGTERM", "SIGHUP"]  # SIGHUP does not exist on Windows
+    previous = {
+        sig: signal.signal(sig, interrupt)
+        for sig in (getattr(signal, name) for name in names if hasattr(signal, name))
+    }
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
 
 
 def _get_json(app: ShinyAppProc, path: str) -> Any:
@@ -297,7 +326,7 @@ def record_session(
     try:
         # The Playwright sync API refuses to run on a thread that owns an asyncio
         # loop (pytest-playwright, async callers), so always give it its own thread.
-        with ThreadPoolExecutor(max_workers=1) as executor:
+        with _terminate_as_interrupt(), ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(drive_browser)
             try:
                 video_start, saved = future.result()
@@ -335,8 +364,9 @@ def serve_and_collect(
     """Run `app_file` with reactlog on for others to drive; export the chosen sessions."""
     app = _start_app(app_file)
     try:
-        on_ready(app.url)
-        wait()
+        with _terminate_as_interrupt():
+            on_ready(app.url)
+            wait()
         sessions: list[dict[str, Any]] = _get_json(app, "__reactlog__/sessions")
         if not sessions:
             raise RecordingError("No sessions were recorded.")
