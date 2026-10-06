@@ -72,6 +72,8 @@ not a runtime execution trace.
 For the in-app report, use `SHINY_REACTLOG=1 shiny run app.py` or `shiny run
 --reactlog app.py`. With neither CLI flag, the runner respects the environment and
 the app's `reactlog` setting. `--no-reactlog` disables the environment-based default.
+Press `Cmd+F8` on macOS or `Ctrl+F8` on Windows/Linux to open the report in a new
+tab. Add `Shift` to the shortcut to mark a time point in the Reactlog.
 Local in-app reports use the complete app source, including local imports; when
 that file is unavailable, analysis falls back to the server function's source.
 
