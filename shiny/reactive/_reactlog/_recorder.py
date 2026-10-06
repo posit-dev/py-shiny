@@ -163,6 +163,10 @@ class ReactlogRecorder(ReactiveTracer):
             # Inputs and outputs are renamed after they are defined.
             entry["label"] = label
             entry["type"] = rtype
+        # Set on output effects after they are defined.
+        render_type = node._node_render_type
+        if render_type is not None:
+            entry["render_type"] = render_type
         # Output effects get their user render function after being defined.
         fn = node._node_fn
         if fn is not None and log.source_fns.get(rid) != id(fn):
