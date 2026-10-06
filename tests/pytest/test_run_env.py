@@ -68,9 +68,9 @@ def test_create_app_fixture_accepts_env_param() -> None:
     assert callable(fixture)
 
 
-@pytest.mark.parametrize("kwargs, expected", [({}, False), ({"start_new_session": True}, True)])
+@pytest.mark.parametrize("start_new_session", [None, True])
 def test_run_shiny_app_passes_start_new_session(
-    kwargs: dict[str, bool], expected: bool
+    start_new_session: bool | None,
 ) -> None:
     captured: dict[str, object] = {}
 
@@ -80,6 +80,13 @@ def test_run_shiny_app_passes_start_new_session(
 
     with mock.patch.object(_run.subprocess, "Popen", fake_popen):
         with mock.patch.object(_run, "ShinyAppProc"):
-            _run.run_shiny_app("app.py", wait_for_start=False, **kwargs)
+            if start_new_session is None:  # the default
+                _run.run_shiny_app("app.py", wait_for_start=False)
+            else:
+                _run.run_shiny_app(
+                    "app.py",
+                    wait_for_start=False,
+                    start_new_session=start_new_session,
+                )
 
-    assert captured["start_new_session"] is expected
+    assert captured["start_new_session"] is bool(start_new_session)
