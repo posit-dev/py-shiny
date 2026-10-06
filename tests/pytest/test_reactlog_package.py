@@ -1,6 +1,13 @@
 from pathlib import Path
 
 import shiny.reactive
+from shiny.reactive._reactlog import (
+    ReactlogRecorder,
+    format_graph_mermaid,
+    format_reactlog_html,
+    load_reactlog_json,
+    session_picker_html,
+)
 
 
 def test_reactive_package_does_not_import_reactlog() -> None:
@@ -9,14 +16,6 @@ def test_reactive_package_does_not_import_reactlog() -> None:
 
 
 def test_reactlog_package_exports() -> None:
-    from shiny.reactive._reactlog import (
-        ReactlogRecorder,
-        format_graph_mermaid,
-        format_reactlog_html,
-        load_reactlog_json,
-        session_picker_html,
-    )
-
     assert all(
         callable(x)
         for x in (

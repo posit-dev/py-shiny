@@ -1,17 +1,20 @@
 import re
 from collections.abc import Generator
+from typing import Any
 
 import pytest
 from playwright.sync_api import Error, Page, expect
 
-from shiny._inspect import format_reactlog_html, generate_reactlog
+from shiny import reactive, render
+from shiny.reactive._reactlog._viewer import format_reactlog_html, load_reactlog_json
+from tests.pytest._reactlog_fixtures import record_export
 
 
 @pytest.fixture(autouse=True)
 def no_report_errors(page: Page) -> Generator[None, None, None]:
     errors: list[str] = []
 
-    def on_error(error: Error):
+    def on_error(error: Error) -> None:
         errors.append(str(error))
 
     page.on("pageerror", on_error)
@@ -22,28 +25,69 @@ def no_report_errors(page: Page) -> Generator[None, None, None]:
 
 CODE = """from shiny import reactive, render
 @reactive.calc
-def doubled():
+def doubled() -> int:
     return input.x() * 2
 @render.text
-def result():
+def result() -> str:
     return doubled()
 @render.text
-def other():
+def other() -> str:
     return input.y()
 """
 
 
-def report():
-    data = generate_reactlog(
-        CODE,
-        recorded_actions=[
-            {"type": "input", "name": "x", "value": 2, "timestamp": 1000},
-            {"type": "input", "name": "y", "value": 3, "timestamp": 2000},
-        ],
+def report(steps: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    def server(input: Any, output: Any, session: Any) -> None:
+        @reactive.calc
+        def doubled() -> int:
+            return input.x() * 2
+
+        @output
+        @render.text
+        def result() -> str:
+            return str(doubled())
+
+        @output
+        @render.text
+        def other() -> str:
+            return str(input.y())
+
+    data = load_reactlog_json(
+        record_export(
+            server,
+            steps
+            or [
+                {
+                    "x": 1,
+                    "y": 2,
+                    ".clientdata_output_result_hidden": False,
+                    ".clientdata_output_other_hidden": False,
+                },
+                {"x": 2},
+                {"y": 3},
+            ],
+        )
     )
+    labels = {
+        "input.x": "input:x",
+        "input.y": "input:y",
+        "reactive.calc doubled": "calc:doubled",
+        "output result": "output:result",
+        "output other": "output:other",
+    }
+    data["nodes"] = [n for n in data["nodes"] if n["label"] in labels]
+    ids = {n["id"]: labels[n["label"]] for n in data["nodes"]}
     for node in data["nodes"]:
+        node["id"] = ids[node["id"]]
         if node["id"] in ("calc:doubled", "output:result"):
             node["module"] = "analysis"
+    for edge in data["edges"]:
+        for key in ("from", "to"):
+            edge[key] = ids.get(edge[key], edge[key])
+    for event in data["events"]:
+        for key in ("id", "node_id", "edge_from", "edge_to"):
+            if key in event:
+                event[key] = ids.get(event[key], event[key])
     return data
 
 
