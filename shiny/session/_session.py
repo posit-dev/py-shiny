@@ -72,7 +72,7 @@ from ..reactive import flush as reactive_flush
 from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
-from ..reactive._trace import attribute_to_session
+from ..reactive._trace import attribute_to_session, hooks
 from ..render.renderer import Renderer, RendererT
 from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
@@ -2209,7 +2209,8 @@ class Inputs:
             self._map[key] = new_value
 
         value = self._map[key]
-        self._set_node_module(original_key, value)
+        if hooks.define_node:  # only reactlog reads it; keep untraced reads cheap
+            self._set_node_module(original_key, value)
         return value
 
     def _set_node_module(self, key: str, value: Value[Any]) -> None:
