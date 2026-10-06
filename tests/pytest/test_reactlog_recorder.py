@@ -176,3 +176,22 @@ async def test_cross_session_invalidation_lands_in_reader_session(
         x["action"] == "invalidateStart" and x["label"] == watcher for x in log_a
     )
     assert not [x for x in log_b if x.get("label") == watcher]
+
+
+def test_recorder_keeps_recent_ended_sessions(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(_reactlog, "_MAX_ENDED_SESSIONS", 2)
+    r = ReactlogRecorder(owns_session=lambda sid: True)
+    for sid in ("s1", "s2", "s3"):
+        r.start_session(sid)
+        _change(r, sid, FakeNode(1, "input.x"), sid)
+        r.end_session(sid, marks=[{"action": "userMark", "label": sid, "time": 1.0}])
+    r.start_session("live")
+
+    # The oldest ended session is evicted along with its log.
+    assert [s.id for s in r.sessions()] == ["live", "s3", "s2"]
+    assert r.session("s1") is None and r.export("s1")["log"] == []
+    s3 = r.session("s3")
+    assert s3 is not None and s3.end is not None
+    assert s3.marks == [{"action": "userMark", "label": "s3", "time": 1.0}]
+    live = r.session("live")
+    assert live is not None and live.end is None
