@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import gc
 import warnings
+import weakref
 from typing import Any, Callable, Generator
 
 import pytest
 
-from shiny import App, module, reactive, ui
+from shiny import App, module, reactive, render, ui
 from shiny._connection import MockConnection
 from shiny.reactive import Value, _trace, calc, effect, flush, isolate
+from shiny.reactive._core import Context, on_flushed
 from shiny.reactive._trace import (
     ExecuteEvent,
     NodeKind,
@@ -29,6 +32,7 @@ class FakeNode:
         self._node_kind: NodeKind = kind
         self._node_label = label or f"n{node_id}"
         self._node_fn: Callable[..., object] | None = None
+        self._node_session_id: str | None = None
 
 
 def _subscribed(kind: str, tracer: ReactiveTracer) -> bool:
@@ -337,6 +341,24 @@ async def test_define_value_change_freeze(rec: Recorder) -> None:
 
 
 @pytest.mark.asyncio
+async def test_value_change_precedes_invalidation(rec: Recorder) -> None:
+    await flush()
+    v = Value(1, name="v")
+
+    @effect
+    def e() -> None:
+        v()
+
+    await flush()
+    rec.log.clear()
+    v.set(2)
+    assert [x for x in rec.log if x[0] in ("value", "invalidate")] == [
+        ("value", "v", 2),
+        ("invalidate", "reactive.effect e"),
+    ]
+
+
+@pytest.mark.asyncio
 async def test_edges_and_dynamic_dependencies(rec: Recorder) -> None:
     # Drain effects left pending by earlier tests so they don't add edges here.
     await flush()
@@ -375,11 +397,6 @@ async def test_edges_and_dynamic_dependencies(rec: Recorder) -> None:
 
 
 def test_value_not_kept_alive_by_dependents_closure() -> None:
-    import gc
-    import weakref
-
-    from shiny.reactive._core import Context
-
     gc.disable()
     try:
         v = Value(1, name="v")
@@ -395,9 +412,6 @@ def test_value_not_kept_alive_by_dependents_closure() -> None:
 
 @pytest.mark.asyncio
 async def test_output_effect_traces_as_output(rec: Recorder) -> None:
-    from shiny import App, render, ui
-    from shiny._connection import MockConnection
-
     def server(input: Any, output: Any, session: Any) -> None:
         @render.text
         def txt() -> str:
@@ -470,8 +484,6 @@ async def test_calc_error_visible_to_tracer_and_still_cached(rec: Recorder) -> N
 
 @pytest.mark.asyncio
 async def test_flush_span_encloses_on_flushed_callbacks() -> None:
-    from shiny.reactive._core import on_flushed
-
     order: list[str] = []
 
     class FlushOrder(ReactiveTracer):
@@ -516,7 +528,8 @@ async def test_isolated_reads_are_isolated_edges(rec: Recorder) -> None:
     await flush()
     assert ("remove", "reactive.effect e", "a", True) in rec.log
     assert ("add", "reactive.effect e", "a", True) in rec.log
-    assert ("invalidate", "reactive.effect e") in rec.log
+    # Only the effect itself; isolated contexts never emit NodeInvalidated.
+    assert rec.of("invalidate") == [("invalidate", "reactive.effect e")]
 
     rec.log.clear()
     a.set(5)  # isolated: must not re-run the effect
