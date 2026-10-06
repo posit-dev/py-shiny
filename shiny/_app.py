@@ -640,9 +640,16 @@ window.addEventListener('keydown', function(e) {{
                     sources[rel] = Path(path).read_text(encoding="utf-8")
                 except (OSError, UnicodeError):
                     pass
-        data["sources"] = sources
         if app_file is not None:
-            data["entry_file"] = _relative_source(str(app_file), app_dir)
+            entry = _relative_source(str(app_file), app_dir)
+            data["entry_file"] = entry
+            # The App Code tab shows the entry file even when no node lives in it.
+            if local and entry not in sources:
+                try:
+                    sources[entry] = app_file.read_text(encoding="utf-8")
+                except (OSError, UnicodeError):
+                    pass
+        data["sources"] = sources
         return data
 
     async def _on_reactlog_export_cb(self, request: Request) -> Response:

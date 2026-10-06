@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import json
 import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator, Callable
@@ -628,6 +630,59 @@ async def test_reactlog_export_endpoint() -> None:
             str(x.get("source_file", "")).startswith("/") for x in remote_data["log"]
         )
         assert missing.status_code == 404
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+async def test_reactlog_export_includes_entry_file_without_nodes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Every node lives in the module file, but the App Code tab shows app.py.
+    (tmp_path / "mods.py").write_text(
+        "from shiny import module, reactive\n"
+        "\n"
+        "@module.server\n"
+        "def watcher_server(input, output, session):\n"
+        "    @reactive.effect\n"
+        "    def watcher():\n"
+        "        input.x()\n"
+    )
+    entry = tmp_path / "app.py"
+    entry.write_text(
+        "from shiny import App, ui\n"
+        "import mods\n"
+        "\n"
+        "def server(input, output, session):\n"
+        "    mods.watcher_server('m')\n"
+        "\n"
+        "app = App(ui.TagList(), server, reactlog=True)\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.delitem(sys.modules, "mods", raising=False)
+    spec = importlib.util.spec_from_file_location("reactlog_entry_app", entry)
+    assert spec is not None and spec.loader is not None
+    namespace = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(namespace)
+    app: App = namespace.app
+    try:
+        async with _live_session(
+            app, {"m-x": 1}, _entered("reactive.effect watcher")
+        ) as sess:
+            local = await app._on_reactlog_export_cb(
+                _reactlog_request(
+                    app, path="/__reactlog__/export", session_id=sess.id, local=True
+                )
+            )
+            remote = await app._on_reactlog_export_cb(
+                _reactlog_request(app, path="/__reactlog__/export", session_id=sess.id)
+            )
+        local_data = json.loads(bytes(local.body))
+        assert local_data["entry_file"] == "app.py"
+        assert local_data["sources"]["app.py"] == entry.read_text()
+        assert "mods.py" in local_data["sources"]
+        assert json.loads(bytes(remote.body))["sources"] == {}
     finally:
         app.reactlog_enabled = False
 
