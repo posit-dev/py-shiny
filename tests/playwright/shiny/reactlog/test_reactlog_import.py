@@ -24,7 +24,7 @@ def test_cli_report_and_browser_import_replay_the_same_r_trace(
     source = tmp_path / "trace.json"
     source.write_text(json.dumps(trace))
     html = tmp_path / "trace.html"
-    result = CliRunner().invoke(main, ["inspect", str(source), "--html", str(html)])
+    result = CliRunner().invoke(main, ["reactlog", str(source), "--html", str(html)])
     assert result.exit_code == 0, result.output
     page.goto(html.as_uri())
     graph = "() => ({nodes: reactlogData.nodes, edges: reactlogData.edges, events: reactlogData.events})"
