@@ -211,7 +211,7 @@ class App:
         self._reactlog_enabled: bool = (
             reactlog if reactlog is not None else (os.getenv("SHINY_REACTLOG") == "1")
         )
-        # Note: this token is embedded in every page the app serves (for the Cmd+F3
+        # Note: this token is embedded in every page the app serves (for the Cmd+F8
         # hotkey), so it only proves the requester can load the app; it is not a
         # secret. Anyone who can reach an app with reactlog enabled can view its
         # reactive graph. App source is additionally gated to direct local requests.
@@ -476,7 +476,7 @@ class App:
             token = self._reactlog_token
             script = f"""<script>
 window.addEventListener('keydown', function(e) {{
-  if ((e.metaKey || e.ctrlKey) && e.key === 'F3') {{
+  if ((e.metaKey || e.ctrlKey) && e.key === 'F8') {{
     e.preventDefault();
     var token = '{token}';
     var sessId = (window.Shiny && window.Shiny.shinyapp && window.Shiny.shinyapp.config) ? window.Shiny.shinyapp.config.sessionId : '';
