@@ -1756,9 +1756,9 @@ def load_reactlog_json(
                 "line": item.get("line"),
                 **{
                     key: value
-                    for key, value in nodes_map.get(str(nid), {}).items()
-                    if key in ("module", "render_type", "line", "source_file")
-                    and value is not None
+                    for key in ("module", "render_type", "line", "source_file")
+                    if (value := item.get(key, nodes_map.get(str(nid), {}).get(key)))
+                    is not None
                 },
             }
 
