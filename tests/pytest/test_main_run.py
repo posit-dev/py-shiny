@@ -358,3 +358,74 @@ def test_try_import_module() -> None:
     assert _run.try_import_module("foo/bar.baz") is None
     # Leading '.' makes find_spec throw ImportError
     assert _run.try_import_module(".relative") is None
+
+
+def test_reactlog_toggle_installs_and_removes_tracer() -> None:
+    from shiny import App, ui
+    from shiny.reactive._trace import hooks
+
+    def subscribed(rec: object) -> bool:
+        return any(getattr(cb, "__self__", None) is rec for cb in hooks.add_dependency)
+
+    app = App(ui.TagList(), None, reactlog=False)
+    assert app._reactlog_recorder is None
+    app.reactlog_enabled = True
+    rec = app._reactlog_recorder
+    assert rec is not None and subscribed(rec)
+    app.reactlog_enabled = False
+    assert app._reactlog_recorder is None and not subscribed(rec)
+
+
+@pytest.mark.asyncio
+async def test_reactlog_endpoint_shows_runtime_dependency() -> None:
+    import asyncio
+
+    from starlette.requests import Request
+
+    from shiny import App, reactive, ui
+    from shiny._connection import MockConnection
+
+    def server(input: Any, output: Any, session: Any) -> None:
+        @reactive.effect
+        def watcher() -> None:
+            input[f"dyn_{1}"]()  # computed name: invisible to static analysis
+
+    app = App(ui.TagList(), server, reactlog=True)
+    task: asyncio.Task[None] | None = None
+    conn = MockConnection()
+    try:
+        sess = app._create_session(conn)
+        conn.cause_receive('{"method":"init","data":{"dyn_1":5}}')
+        task = asyncio.create_task(sess._run())
+        recorder = app._reactlog_recorder
+        assert recorder is not None
+        for _ in range(500):
+            if any(
+                x["action"] == "enter" and x["label"] == "reactive.effect watcher"
+                for x in recorder.export(sess.id)["log"]
+            ):
+                break
+            await asyncio.sleep(0.01)
+
+        request = Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/__reactlog__",
+                "headers": [],
+                "query_string": f"session_id={sess.id}".encode(),
+                "client": ("127.0.0.1", 1),
+            }
+        )
+        body = bytes((await app._on_reactlog_request_cb(request)).body).decode()
+        assert "input.dyn_1" in body
+        assert "reactive.effect watcher" in body
+
+        conn.cause_disconnect()
+        await task
+        assert sess.id not in recorder._logs
+    finally:
+        conn.cause_disconnect()
+        if task is not None:
+            await task
+        app.reactlog_enabled = False
