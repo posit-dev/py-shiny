@@ -324,31 +324,32 @@ def record_session(
         return video_start, saved
 
     try:
-        # The Playwright sync API refuses to run on a thread that owns an asyncio
-        # loop (pytest-playwright, async callers), so always give it its own thread.
-        with _terminate_as_interrupt(), ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(drive_browser)
-            try:
-                video_start, saved = future.result()
-            except KeyboardInterrupt:
-                stop.set()
-                video_start, saved = future.result()
+        with _terminate_as_interrupt():
+            # The Playwright sync API refuses to run on a thread that owns an asyncio
+            # loop (pytest-playwright, async callers), so always give it its own thread.
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(drive_browser)
+                try:
+                    video_start, saved = future.result()
+                except KeyboardInterrupt:
+                    stop.set()
+                    video_start, saved = future.result()
 
-        if not session_ids:
-            raise RecordingError(
-                "The app never started a Shiny session in the browser."
+            if not session_ids:
+                raise RecordingError(
+                    "The app never started a Shiny session in the browser."
+                )
+            session_id = session_ids[-1]
+            export = _export(app, session_id)
+            for entry in export["log"]:
+                entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
+            if redact_inputs:
+                redact_export(export)
+            for action in actions:
+                action["time"] = max(0.0, float(action.get("time", 0)) - video_start)
+            return Recording(
+                export=export, actions=actions, video_path=saved, session_id=session_id
             )
-        session_id = session_ids[-1]
-        export = _export(app, session_id)
-        for entry in export["log"]:
-            entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
-        if redact_inputs:
-            redact_export(export)
-        for action in actions:
-            action["time"] = max(0.0, float(action.get("time", 0)) - video_start)
-        return Recording(
-            export=export, actions=actions, video_path=saved, session_id=session_id
-        )
     finally:
         app.close()
         shutil.rmtree(video_dir, ignore_errors=True)
@@ -367,9 +368,9 @@ def serve_and_collect(
         with _terminate_as_interrupt():
             on_ready(app.url)
             wait()
-        sessions: list[dict[str, Any]] = _get_json(app, "__reactlog__/sessions")
-        if not sessions:
-            raise RecordingError("No sessions were recorded.")
-        return [_export(app, session_id) for session_id in choose(sessions)]
+            sessions: list[dict[str, Any]] = _get_json(app, "__reactlog__/sessions")
+            if not sessions:
+                raise RecordingError("No sessions were recorded.")
+            return [_export(app, session_id) for session_id in choose(sessions)]
     finally:
         app.close()
