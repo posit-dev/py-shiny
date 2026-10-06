@@ -2812,6 +2812,7 @@ class Outputs:
 
             output_obs._trace_kind = "output"
             output_obs._trace_label = output_otel_label
+            output_obs._node_fn = renderer_func
 
             output_obs.on_invalidate(
                 lambda: require_real_session()._send_progress(

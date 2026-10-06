@@ -168,6 +168,10 @@ class Value(Generic[T]):
     _node_session_id: str | None = None
 
     @property
+    def _node_namespace(self) -> str | None:
+        return self._otel_namespace
+
+    @property
     def _node_label(self) -> str:
         return self._name if self._name else f"value{self._node_id}"
 
@@ -683,6 +687,11 @@ class Calc_(Generic[T]):
     def _node_session_id(self) -> str | None:
         return None if self._session is None else self._session.id
 
+    @property
+    def _node_namespace(self) -> str | None:
+        ns = "" if self._session is None else str(self._session.ns)
+        return ns or None
+
     def __init__(
         self,
         fn: CalcFunction[T],
@@ -1026,6 +1035,11 @@ class Effect_:
     @property
     def _node_session_id(self) -> str | None:
         return None if self._session is None else self._session.id
+
+    @property
+    def _node_namespace(self) -> str | None:
+        ns = "" if self._session is None else str(self._session.ns)
+        return ns or None
 
     def __init__(
         self,
