@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+import pytest
 from playwright.sync_api import Page
 
 from shiny.playwright import controller
@@ -52,3 +53,57 @@ def test_record_session_exports_latest_session_after_reload(tmp_path: Path) -> N
 
     rec = record_session(APP, video_path=None, script=script)
     assert rec.session_id == seen[-1] != seen[0]
+
+
+def test_record_session_keeps_export_when_browser_quits(tmp_path: Path) -> None:
+    def script(page: Page, url: str) -> None:
+        page.goto(url)
+        controller.OutputText(page, "out").expect_value("6")
+        browser = page.context.browser
+        assert browser is not None
+        browser.close()
+
+    rec = record_session(APP, video_path=tmp_path / "v.webm", script=script)
+    assert rec.video_path is None
+    assert "output out" in _labels(rec.export)
+
+
+def _type_pw_and_txt(page: Page, url: str) -> None:
+    page.goto(url)
+    controller.OutputText(page, "out").expect_value("6")
+    controller.InputPassword(page, "pw").set("hunter2")
+    controller.InputText(page, "txt").set("hello")
+    # Wait for the server to see the text input before the recording ends.
+    page.wait_for_function("Shiny.shinyapp.$inputValues.txt === 'hello'")
+
+
+def _last_value(actions: list[dict[str, Any]], name: str) -> Any:
+    return [a["value"] for a in actions if a.get("name") == name][-1]
+
+
+def _input_values(export: dict[str, Any], label: str) -> list[str]:
+    return [
+        x["value"]
+        for x in export["log"]
+        if x["action"] == "valueChange" and x.get("label") == label
+    ]
+
+
+@pytest.mark.parametrize("redact_inputs", [False, True])
+def test_record_session_redacts_inputs(redact_inputs: bool) -> None:
+    rec = record_session(
+        APP,
+        video_path=None,
+        script=_type_pw_and_txt,
+        redact_inputs=redact_inputs,
+    )
+    assert _last_value(rec.actions, "pw") == "[REDACTED]"
+    txt_values = _input_values(rec.export, "input.txt")
+    assert txt_values
+    if redact_inputs:
+        assert _last_value(rec.actions, "txt") == "[REDACTED]"
+        assert set(txt_values) == {"[REDACTED]"}
+        assert set(_input_values(rec.export, "input.pw")) == {"[REDACTED]"}
+    else:
+        assert _last_value(rec.actions, "txt") == "hello"
+        assert "'hello'" in txt_values
