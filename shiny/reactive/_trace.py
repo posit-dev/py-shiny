@@ -406,7 +406,10 @@ def emit_invalidate(node: ReactiveNode, *, ctx_id: int) -> None:
     _call_point(
         hooks.invalidate,
         NodeInvalidated(
-            session_id=_node_session_id(node), time=time.time(), node=node, ctx_id=ctx_id
+            session_id=_node_session_id(node),
+            time=time.time(),
+            node=node,
+            ctx_id=ctx_id,
         ),
     )
 
@@ -443,7 +446,10 @@ def execute_span(node: ReactiveNode, *, ctx_id: int) -> ContextManager[None]:
     return _span(
         hooks.execute,
         ExecuteEvent(
-            session_id=_node_session_id(node), time=time.time(), node=node, ctx_id=ctx_id
+            session_id=_node_session_id(node),
+            time=time.time(),
+            node=node,
+            ctx_id=ctx_id,
         ),
     )
 
