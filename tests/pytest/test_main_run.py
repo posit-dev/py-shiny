@@ -584,3 +584,84 @@ async def test_reactlog_remote_requests_must_name_the_session() -> None:
         ]
     finally:
         app.reactlog_enabled = False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+async def test_reactlog_export_endpoint() -> None:
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def watcher() -> None:
+            input.x()
+
+    app = App(ui.TagList(), server, reactlog=True)
+    try:
+        async with _live_session(
+            app, {"x": 1}, _entered("reactive.effect watcher")
+        ) as sess:
+            local = await app._on_reactlog_export_cb(
+                _reactlog_request(
+                    app, path="/__reactlog__/export", session_id=sess.id, local=True
+                )
+            )
+            remote = await app._on_reactlog_export_cb(
+                _reactlog_request(app, path="/__reactlog__/export", session_id=sess.id)
+            )
+            missing = await app._on_reactlog_export_cb(
+                _reactlog_request(
+                    app, path="/__reactlog__/export", session_id="nope", local=True
+                )
+            )
+        local_data = json.loads(bytes(local.body))
+        remote_data = json.loads(bytes(remote.body))
+        watcher = next(
+            x
+            for x in local_data["log"]
+            if x["action"] == "define" and x["label"] == "reactive.effect watcher"
+        )
+        assert watcher["source_file"] == "test_main_run.py"
+        assert (
+            "test_reactlog_export_endpoint" in local_data["sources"]["test_main_run.py"]
+        )
+        assert remote_data["sources"] == {}
+        assert not any(
+            str(x.get("source_file", "")).startswith("/") for x in remote_data["log"]
+        )
+        assert missing.status_code == 404
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+def test_reactlog_sessions_endpoint_is_local_only() -> None:
+    app = App(ui.TagList(), None, reactlog=True)
+    try:
+        session = app._create_session(MockConnection())
+        client = TestClient(app.starlette_app)
+        listed = client.get("/__reactlog__/sessions").json()
+        assert [s["id"] for s in listed] == [session.id]
+        assert listed[0]["end"] is None
+        proxied = client.get(
+            f"/__reactlog__/sessions?token={app.reactlog_token}",
+            headers={"X-Forwarded-For": "203.0.113.5"},
+        )
+        assert proxied.status_code == 403
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+async def test_remote_reactlog_without_session_shows_empty_viewer() -> None:
+    app = App(ui.TagList(), None, reactlog=True)
+    try:
+        app._create_session(MockConnection())
+        response = await app._on_reactlog_request_cb(_reactlog_request(app))
+        data, source = _viewer_payload(response.body)
+        assert data["nodes"] == [] and source == ""
+        assert data["summary"] == (
+            "No session selected. Open this page with Cmd/Ctrl+F3 from the app, "
+            "or pass session_id."
+        )
+    finally:
+        app.reactlog_enabled = False
