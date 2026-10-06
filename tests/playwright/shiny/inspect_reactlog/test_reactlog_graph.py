@@ -1917,13 +1917,20 @@ def test_app_box_left_of_modules_and_edges_avoid_input_nodes(page: Page) -> None
 def test_live_reactlog_input_and_mark_waves(page: Page) -> None:
     # Shaped like shiny._reactlog.ReactlogRecorder output: `rN` ids, typed inputs.
     t0 = 1_700_000_000.0
-    log = [
-        {"action": "define", "reactId": "r1", "label": "input.x", "type": "input"},
+    log: list[dict[str, object]] = [
+        {
+            "action": "define",
+            "reactId": "r1",
+            "label": "input.x",
+            "type": "input",
+            "time": t0,
+        },
         {
             "action": "define",
             "reactId": "r2",
             "label": "reactive.effect e",
             "type": "observer",
+            "time": t0,
         },
         {
             "action": "valueChange",
@@ -1943,8 +1950,6 @@ def test_live_reactlog_input_and_mark_waves(page: Page) -> None:
             "time": t0 + 3,
         },
     ]
-    for entry in log[:2]:
-        entry["time"] = t0
     page.set_content(
         format_reactlog_html(load_reactlog_json({"log": log}), source_code=""),
         wait_until="domcontentloaded",
