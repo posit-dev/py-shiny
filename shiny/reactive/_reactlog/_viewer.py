@@ -308,11 +308,7 @@ def load_reactlog_json(
         )
         t_ms = int(t_sec * 1000)
 
-        prov = item.get("provenance") or (
-            "observed"
-            if action in ("valueChange", "inputChange", "userClick", "userAction")
-            else "inferred"
-        )
+        prov = item.get("provenance") or "observed"
         phase = item.get("phase") or (
             "init"
             if item_idx <= init_end
@@ -470,7 +466,7 @@ def load_reactlog_json(
                     step=i,
                     event="define",
                     phase="init",
-                    provenance="inferred",
+                    provenance="observed",
                     node_id=n["id"],
                     node_label=n["label"],
                     node_type=n["role"],
@@ -487,8 +483,6 @@ def load_reactlog_json(
         (i for i, e in enumerate(normalized_events) if e.get("phase") == "interaction"),
         0,
     )
-    obs_count = len([e for e in normalized_events if e.get("provenance") == "observed"])
-    inf_count = len([e for e in normalized_events if e.get("provenance") == "inferred"])
 
     parsed_dict: Optional[Dict[str, Any]] = (
         cast(Dict[str, Any], parsed) if isinstance(parsed, dict) else None
@@ -513,8 +507,6 @@ def load_reactlog_json(
         "init_steps_count": init_count,
         "interaction_steps_count": interact_count,
         "first_interaction_step": first_interact,
-        "observed_events_count": obs_count,
-        "inferred_events_count": inf_count,
         "unmatched_inputs": [],
         "unmatched_inputs_count": 0,
         "disclaimer": "Imported reactive log data from JSON format.",
@@ -1809,6 +1801,15 @@ def format_reactlog_html(
           initWave.endStep = idx;
           initWave.endTime = t;
           initWave.totalEvents++;
+          const initType = ev.type || ev.node_type;
+          if (evAction === 'enter' && (initType === 'calc' || initType === 'output')) {{
+            const nId = ev.node_id || ev.id || '';
+            const name = waveNodeName(nId);
+            const ran = initType === 'calc' ? initWave.calcs : initWave.outputs;
+            if (name && !ran.some(item => item.name === name)) {{
+              ran.push({{ name, nodeId: nId, step: idx, details: ev.details }});
+            }}
+          }}
         }} else {{
           if (evAction === 'userMark' && ev.mark_wave) {{
             // Same bookmark wave the server builds for generated reactlogs.
@@ -2655,7 +2656,7 @@ def format_reactlog_html(
         }}
 
         const provBadge = document.createElement('span');
-        const prov = ev.provenance || 'inferred';
+        const prov = ev.provenance || 'observed';
         provBadge.className = `event-badge provenance-${{prov}}`;
         provBadge.innerHTML = `${{prov === 'observed' ? ICONS.eye : ICONS.zap}} ${{prov.toUpperCase()}}`;
         badgesWrap.appendChild(provBadge);
@@ -2770,7 +2771,7 @@ def format_reactlog_html(
             upstreamNote = `Upstream dependencies invalidated: ${{invParents.map(p => escapeHTML(p.label)).join(', ')}}`;
           }}
         }}
-        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was observed or inferred during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
+        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was recorded during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
         if (lastExec) {{
           const lastTime = lastExec.time_sec !== undefined ? lastExec.time_sec : (lastExec.time || 0);
           narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${{escapeHTML(formatTime(lastTime))}}</span><button type="button" class="btn mini" data-seek-step="${{lastExec.step}}">Jump to run</button></div>`;
@@ -3898,7 +3899,7 @@ def format_reactlog_html(
           const rawT = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
           const tSec = Math.max(0, baseEpoch > 0 ? (rawT - baseEpoch) : rawT);
           const tMs = Number(item.timestamp || (tSec * 1000));
-          const prov = item.provenance || (['valueChange', 'inputChange', 'userClick', 'userAction'].includes(act) ? 'observed' : 'inferred');
+          const prov = item.provenance || 'observed';
           const phase = item.phase || (['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act) ? 'init' : 'interaction');
 
           if (act === 'dependsOn' && depFrom && depTo) {{

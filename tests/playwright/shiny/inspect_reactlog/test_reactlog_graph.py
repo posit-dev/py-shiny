@@ -817,6 +817,36 @@ def test_humanized_timeline_dynamic_verbs_and_causal_summary(
     expect(phase_select).to_be_visible()
 
 
+def test_init_story_counts_recorded_calcs_and_outputs(
+    page: Page, tmp_path: Path
+) -> None:
+    code = """from shiny import reactive, render
+
+def server(input, output, session):
+    @reactive.calc
+    def doubled():
+        return input.x() * 2
+
+    @render.text
+    def result():
+        return str(doubled())
+"""
+    reactlog = _record(tmp_path, code, [{"x": 1, **_visible("result")}, {"x": 2}])
+    page.set_content(format_reactlog_html(reactlog, source_code=code))
+    page.evaluate(f"seekTo({_step(reactlog, 'enter', 'output result')})")
+    expect(page.locator("#causal-summary-text")).to_have_text(
+        "App Initialized. Evaluated 1 calc and rendered 1 output."
+    )
+
+
+def test_empty_graph_shows_summary_notice(page: Page) -> None:
+    reactlog = load_reactlog_json({"log": []})
+    reactlog["summary"] = "No session selected."
+    page.set_content(format_reactlog_html(reactlog, ""))
+    expect(page.locator("#causal-summary-text")).to_have_text("No session selected.")
+    expect(page.locator("#causal-summary-text")).to_be_visible()
+
+
 def test_action_scoped_causal_story_and_did_not_run_explanation(
     page: Page, tmp_path: Path
 ) -> None:
