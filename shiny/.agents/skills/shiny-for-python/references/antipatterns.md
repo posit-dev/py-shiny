@@ -192,13 +192,13 @@ def server(input, output, session):
 app = App(app_ui, server)
 ```
 
-For foundational principles on reactive graph mechanics, choosing between calculations and effects, dependency isolation, and self-invalidation cycles, read the [Reactivity guide](../../shiny-for-python/references/reactivity.md).
+For calculations and effects, ensure dependencies are isolated and calculations remain pure functions without side effects.
 
 ---
 
 ## 5. Global State Leakage Across Sessions
 
-The module-global versus `server()` distinction in the examples below applies to **Core mode**. Express re-executes top-level `app.py` code for each session, so top-level reactive values there are per-session; state in an imported module is shared across sessions. See the [Express guide](../../shiny-for-python/references/express.md#shared-objects-and-startup-cost) and [Session Lifecycle guide](../../shiny-for-python/references/session-lifecycle.md) for state scoping and resource cleanup.
+The module-global versus `server()` distinction in the examples below applies to **Core mode**. Express re-executes top-level `app.py` code for each session, so top-level reactive values there are per-session; state in an imported module is shared across sessions.
 
 ### Symptom
 One user's actions affect or overwrite another user's session data in multi-user deployments.
@@ -263,7 +263,7 @@ Slow code inside a renderer, calc, or effect holds up reactive processing even w
 - Offload blocking synchronous I/O with `await asyncio.to_thread(...)`; use a process pool (`ProcessPoolExecutor`) for heavy CPU work.
 - Extended tasks cannot directly read reactive sources. Capture `input.x()` or reactive values in the invoking effect and pass them as arguments; read the task's `.result()` in a renderer.
 
-Read the [Extended Tasks guide](../../shiny-for-python/references/extended-tasks.md) for the runnable definition/invocation pattern, result and status handling, task buttons, and cancellation instead of duplicating those patterns here.
+Use `@reactive.extended_task` for long-running jobs, pass arguments into the task upon invocation, and read its `.result()` inside a renderer.
 
 ---
 
@@ -489,7 +489,7 @@ def txt():
     return f"Value: {input.n()}"
 ```
 
-Read the [Express guide](../../shiny-for-python/references/express.md) for the execution model, shared objects, and assignment to suppress automatic display. These details matter when top-level work repeats for each session or a bare call returns an object that Express cannot display.
+In Express mode, top-level expressions execute for each new session; state defined in separate imported helper modules is shared across all sessions.
 
 ---
 

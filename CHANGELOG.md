@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* Added the bundled `shiny-doctor` Agent Skill for app diagnostics and validation, including startup performance checks and links to the existing Express, extended tasks, and session lifecycle guides. The Express guide now explains shared objects and assignment to suppress automatic display. (#2469)
+* Integrated Shiny Doctor into the bundled `shiny-for-python` Agent Skill so app audits and repairs share its reactivity, concurrency, debugging, and testing references. The separate `shiny-doctor` skill is no longer bundled. (#2469)
 
 ### Bug fixes
 

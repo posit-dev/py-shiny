@@ -14,7 +14,7 @@ SKILLS_DIR = Path(_main_skills.__file__).parent.parent / ".agents" / "skills"
 SKILL_NAME = "shiny-for-python"
 
 
-@pytest.mark.parametrize("skill_name", ["shiny-for-python", "shiny-doctor"])
+@pytest.mark.parametrize("skill_name", [SKILL_NAME])
 def test_skills_list_shows_names_and_descriptions(skill_name: str) -> None:
     result = CliRunner().invoke(main, ["skills", "list"])
 
@@ -40,7 +40,7 @@ def test_skills_list_with_empty_skills_dir(
     assert "No skills" in result.output
 
 
-@pytest.mark.parametrize("skill_name", ["shiny-for-python", "shiny-doctor"])
+@pytest.mark.parametrize("skill_name", [SKILL_NAME])
 def test_skills_path_prints_skill_directory(skill_name: str) -> None:
     result = CliRunner().invoke(main, ["skills", "path", skill_name])
 
@@ -55,7 +55,7 @@ def test_skills_path_unknown_name_lists_available_skills() -> None:
     assert result.exit_code != 0
     assert "does-not-exist" in result.output
     assert "shiny-for-python" in result.output
-    assert "shiny-doctor" in result.output
+    assert "shiny-doctor" not in result.output
 
 
 def test_skills_path_with_missing_skills_dir(

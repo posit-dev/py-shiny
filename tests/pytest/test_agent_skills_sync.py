@@ -51,12 +51,10 @@ def test_otel_reference_mentions_collect_levels() -> None:
 
 
 def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
-    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
-    skill_text = (doctor_dir / "SKILL.md").read_text()
-    antipatterns_text = (doctor_dir / "references" / "antipatterns.md").read_text()
-    checklist_text = (
-        doctor_dir / "references" / "diagnostics-checklist.md"
-    ).read_text()
+    doctor_dir = REFERENCES_DIR
+    skill_text = (doctor_dir / "doctor.md").read_text()
+    antipatterns_text = (doctor_dir / "antipatterns.md").read_text()
+    checklist_text = (doctor_dir / "diagnostics-checklist.md").read_text()
 
     assert "session.ns" not in skill_text
     assert "missing ns() wrapper" not in antipatterns_text
@@ -71,8 +69,11 @@ def test_shiny_doctor_concurrency_and_module_accuracy() -> None:
 
 
 def test_shiny_doctor_code_blocks_compile() -> None:
-    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
-    for md_file in doctor_dir.rglob("*.md"):
+    doctor_dir = REFERENCES_DIR
+    for md_file in (
+        doctor_dir / name
+        for name in ("doctor.md", "antipatterns.md", "diagnostics-checklist.md")
+    ):
         content = md_file.read_text()
         code_blocks = re.findall(r"```python\n(.*?)```", content, re.DOTALL)
         for i, code in enumerate(code_blocks):
@@ -85,8 +86,11 @@ def test_shiny_doctor_code_blocks_compile() -> None:
 
 
 def test_shiny_doctor_markdown_links() -> None:
-    doctor_dir = REPO_ROOT / "shiny" / ".agents" / "skills" / "shiny-doctor"
-    for md_file in doctor_dir.rglob("*.md"):
+    doctor_dir = REFERENCES_DIR
+    for md_file in (
+        doctor_dir / name
+        for name in ("doctor.md", "antipatterns.md", "diagnostics-checklist.md")
+    ):
         content = md_file.read_text()
         links = re.findall(r"\[.*?\]\(([^\)]+)\)", content)
         for link in links:

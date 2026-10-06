@@ -2,9 +2,9 @@
 
 The shiny package ships bundled [Agent Skills](https://agentskills.io) under
 `shiny/.agents/skills/`, following the [Agent Skills
-specification](https://agentskills.io/specification). The primary skill is
-`shiny-for-python` (for building, styling, and testing apps), alongside
-`shiny-doctor` (for auditing, validating, and diagnosing existing apps).
+specification](https://agentskills.io/specification). The bundled skill is
+`shiny-for-python`, covering building, styling, testing, and debugging apps,
+including the Shiny Doctor workflow for auditing and repairing existing apps.
 Each skill's `SKILL.md` is an entry point or grouped router: a short index
 of topics, each pointing at a `references/<topic>.md` file with the actual
 instructions. It is **package data**: it ships in the wheel and is discovered by
@@ -34,9 +34,6 @@ shiny/.agents/skills/
     scripts/          # optional: self-contained runnable code
     references/       # one file per topic, e.g. debugging.md, testing.md, modules.md
     assets/           # optional: templates, images, data files
-  shiny-doctor/
-    SKILL.md          # required: frontmatter + diagnostic workflow & verification
-    references/       # antipatterns.md, diagnostics-checklist.md
 ```
 
 - Skills sit in un-prefixed top-level directories under `shiny/.agents/skills/`
@@ -44,7 +41,8 @@ shiny/.agents/skills/
   it to Shiny for Python).
 - `SKILL.md`'s body is an index or router: short sections or tables linking to
   `references/<topic>.md` files with "use when" triggers. Link with relative paths
-  from the skill root and keep references one level deep — no chains of files pointing at files.
+  from the skill root. References may link to related guides in the same
+  directory; load only those relevant to the task.
 
 ### When to add a reference topic vs. a new top-level skill
 
@@ -53,14 +51,10 @@ shiny/.agents/skills/
   Add a `references/<topic>.md` file inside `shiny-for-python/references/`, then add an
   index row for it in `shiny-for-python/SKILL.md`. This preserves progressive disclosure
   without polluting the agent's catalog at startup.
-- **When a second top-level skill is warranted:** A separate skill directory is justified
-  only when the user intent, operational mode, and workflow protocol are fundamentally
-  distinct. For example, `shiny-doctor` operates as an audit and diagnostic engine
-  reviewing an *existing* codebase for structural bugs and antipatterns under strict runtime
-  verification rules, while `shiny-for-python` is for authoring, styling, and developing apps.
-- **Cross-routing:** When multiple skills exist, each skill's frontmatter description must
-  delineate routing boundaries (including negative constraints, e.g. *"For building apps, use `shiny-for-python`"*),
-  and their indices should cross-reference each other so agents that load one skill can readily find the other.
+- **Audit and repair:** Shiny Doctor lives in `shiny-for-python/references/doctor.md`.
+  Its diagnostic workflow links to the shared API guides, `antipatterns.md`, and
+  `diagnostics-checklist.md`. Keep those references indexed in `SKILL.md` and
+  load them only when relevant to the diagnosis or a broad audit.
 
 ## Frontmatter
 
