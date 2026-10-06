@@ -187,35 +187,6 @@ def apply_frame_patches(
     return nw_data.with_columns(*scatter_columns)
 
 
-def _get_categorical_categories(col: nw.Series, dtype: DType) -> list[Any]:
-    native = nw.to_native(col)
-    if isinstance(dtype, nw.Enum):
-        if hasattr(dtype, "categories"):
-            return list(dtype.categories)
-        native_dtype = getattr(native, "dtype", None)
-        if (
-            native_dtype is not None
-            and hasattr(native_dtype, "categories")
-            and native_dtype.categories is not None
-        ):
-            native_cats = native_dtype.categories
-            if hasattr(native_cats, "to_list"):
-                return native_cats.to_list()
-            return list(native_cats)
-
-    native_ns = getattr(nw.get_native_namespace(col), "__name__", "")
-    if native_ns == "polars":
-        return native.drop_nulls().unique(maintain_order=True).to_list()
-
-    native_cat = getattr(native, "cat", None)
-    if native_cat is not None and hasattr(native_cat, "categories"):
-        if hasattr(native_cat.categories, "tolist"):
-            return native_cat.categories.tolist()
-        return list(native_cat.categories)
-
-    return col.cat.get_categories().to_list()
-
-
 # serialize_dtype ----------------------------------------------------------------------
 def serialize_dtype(col: nw.Series) -> FrameDtype:
 
@@ -230,7 +201,7 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         type_ = "numeric"
 
     elif isinstance(dtype, (nw.Categorical, nw.Enum)):
-        categories = _get_categorical_categories(col, dtype)
+        categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
     elif isinstance(dtype, nw.Boolean):
         type_ = "boolean"
