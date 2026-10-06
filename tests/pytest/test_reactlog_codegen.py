@@ -5,7 +5,9 @@ from typing import Any
 
 import pytest
 
-from shiny.reactive._reactlog._codegen import generate_controller_test
+from shiny.reactive._reactlog._codegen import REDACTED, generate_controller_test
+
+IDLE = {"type": "idle"}
 
 
 def inp(name: str, value: Any, binding: str | None, **el: str) -> dict[str, Any]:
@@ -93,6 +95,17 @@ def out(
             'controller.InputDate(page, "d").set("2024-02-02")',
         ),
         (
+            {**inp("d", "2024-02-02", "shiny.dateInput"), "display": "02/02/2024"},
+            'controller.InputDate(page, "d").set("02/02/2024")',
+        ),
+        (
+            {
+                **inp("dr", ["2024-03-01", "2024-03-02"], "shiny.dateRangeInput"),
+                "display": ["03/01/2024", "03/02/2024"],
+            },
+            'controller.InputDateRange(page, "dr").set(("03/01/2024", "03/02/2024"))',
+        ),
+        (
             inp("dr", ["2024-03-01", "2024-03-02"], "shiny.dateRangeInput"),
             'controller.InputDateRange(page, "dr").set(("2024-03-01", "2024-03-02"))',
         ),
@@ -177,7 +190,7 @@ def test_codegen_asserts_outputs_after_their_action() -> None:
         code.index('expect_value("A")'),
     )
     assert goto < first_expect < set_t < second_expect
-    assert 'controller.OutputTextVerbatim(page, "v").expect_value("n=1")' in code
+    assert 'controller.OutputCode(page, "v").expect_value("n=1")' in code
     assert "# plot updated" in code
 
 
@@ -204,10 +217,10 @@ def test_codegen_output_is_black_formatted() -> None:
     actions = [
         out("o", "start"),
         inp("t", "a\n\u00e9", "shiny.textInput"),
-        out("o", "A"),
+        out("o", "A" * 100),
         inp("go", 1, "shiny.actionButtonInput", tag="BUTTON"),
     ]
-    for app_path in (None, "../app.py"):
+    for app_path in (None, "../" * 30 + "app.py"):
         code = generate_controller_test(actions, test_name="app", app_path=app_path)
         assert black.format_str(code, mode=black.Mode()) == code
 
@@ -216,7 +229,7 @@ def test_codegen_comments_cannot_inject_code() -> None:
     actions = [
         inp("w", 1, "my.widget\nimport os", tag="DIV"),
         out("o\nimport sys", None, binding="shiny.imageOutput"),
-        inp("p\nimport re", "[REDACTED]", "shiny.passwordInput"),
+        inp("p\nimport re", REDACTED, "shiny.passwordInput"),
     ]
     code = generate_controller_test(actions, test_name="app")
     tree = ast.parse(code)
@@ -261,3 +274,145 @@ def test_codegen_incomplete_range_becomes_todo() -> None:
     )
     assert "# TODO: incomplete value for 'dr'" in code
     assert "None" not in code.replace("-> None", "")
+
+
+def test_codegen_asserts_only_settled_values_at_idle() -> None:
+    actions = [
+        IDLE,
+        out("o", "start"),
+        inp("t", "a", "shiny.textInput"),
+        out("o", "A"),
+        inp("n", 5, "shiny.numberInput"),
+        out("o", "A5"),
+        out("p", "P"),
+        IDLE,
+    ]
+    code = generate_controller_test(actions, test_name="app")
+    assert 'expect_value("A")' not in code
+    set_n = code.index('InputNumeric(page, "n")')
+    assert code.index('expect_value("start")') < code.index('InputText(page, "t")')
+    assert set_n < code.index('expect_value("A5")')
+    assert set_n < code.index('expect_value("P")')
+
+
+def test_codegen_asserts_each_idle_cycle_after_its_action() -> None:
+    actions = [
+        inp("t", "a", "shiny.textInput"),
+        out("o", "A"),
+        IDLE,
+        inp("n", 5, "shiny.numberInput"),
+        IDLE,
+        # py-shiny sends `idle` before the flush's values.
+        out("o", "B"),
+    ]
+    code = generate_controller_test(actions, test_name="app")
+    assert (
+        code.index('InputText(page, "t")')
+        < code.index('expect_value("A")')
+        < code.index('InputNumeric(page, "n")')
+        < code.index('expect_value("B")')
+    )
+
+
+def test_codegen_idle_values_land_on_the_settled_step() -> None:
+    # Two quick checkbox events; the first flush's values arrive after the second.
+    actions = [
+        inp("cg", ["x"], "shiny.checkboxGroupInput"),
+        inp("cg", ["x", "z"], "shiny.checkboxGroupInput"),
+        IDLE,
+        out("o", "x"),
+        IDLE,
+        out("o", "xz"),
+        inp("t", "a", "shiny.textInput"),
+        IDLE,
+        out("q", "Q"),
+    ]
+    code = generate_controller_test(actions, test_name="app")
+    assert 'expect_value("x")' not in code
+    assert (
+        code.index('InputCheckboxGroup(page, "cg").set(["x", "z"])')
+        < code.index('expect_value("xz")')
+        < code.index('InputText(page, "t")')
+        < code.index('expect_value("Q")')
+    )
+
+
+def test_codegen_without_idle_asserts_latest_value_per_step() -> None:
+    actions = [
+        inp("t", "a", "shiny.textInput"),
+        out("o", "A"),
+        out("o", "A2"),
+        inp("n", 1, "shiny.numberInput"),
+        out("q", "Q1"),
+        inp("n", 2, "shiny.numberInput"),
+        out("o", "B"),
+    ]
+    code = generate_controller_test(actions, test_name="app")
+    assert 'expect_value("A")' not in code and 'expect_value("A2")' in code
+    assert 'expect_value("Q1")' not in code  # from the superseded n=1
+    assert code.index('InputNumeric(page, "n").set("2")') < code.index(
+        'expect_value("B")'
+    )
+
+
+def test_codegen_cleared_value_becomes_todo() -> None:
+    code = generate_controller_test(
+        [inp("d\nx", None, "shiny.dateInput")], test_name="app"
+    )
+    assert "# TODO: 'd\\\\nx' was cleared" in code
+    assert ".set(" not in code
+
+
+def test_codegen_redacted_recording_keeps_clicks_and_hides_outputs() -> None:
+    actions = [
+        inp("go", REDACTED, "shiny.actionButtonInput", tag="BUTTON"),
+        inp("w", REDACTED, "my.widget", tag="BUTTON"),
+        out("o", "secret"),
+        out("v", "secret", tag="PRE"),
+    ]
+    code = generate_controller_test(actions, test_name="app")
+    assert 'controller.InputActionButton(page, "go").click()' in code
+    assert "page.locator('[id=\"w\"]').click()" in code
+    assert "secret" not in code
+    assert "# o updated" in code and "# v updated" in code
+    flagged = generate_controller_test(
+        [inp("t", "a", "shiny.textInput"), out("o", "secret")],
+        test_name="app",
+        redact_outputs=True,
+    )
+    assert "secret" not in flagged and "# o updated" in flagged
+
+
+def test_codegen_formats_with_black_when_available() -> None:
+    pytest.importorskip("black")
+    code = generate_controller_test([], test_name="x" * 80)
+    # Unformatted, the signature is one line far past black's 88 columns.
+    assert "\n    page: Page, local_app: ShinyAppProc\n" in code
+
+
+def test_codegen_collapsed_step_waits_for_the_next_idle() -> None:
+    actions = [
+        inp("cg", ["x"], "shiny.checkboxGroupInput"),
+        IDLE,
+        out("o", "x"),
+        out("p", "P"),
+        inp("cg", ["x", "z"], "shiny.checkboxGroupInput"),
+    ]
+    # The recording ended before the server settled the new value.
+    code = generate_controller_test(actions, test_name="app")
+    assert "expect_value" not in code
+    # Once it settles, values it didn't change are still asserted.
+    code = generate_controller_test(actions + [IDLE, out("o", "xz")], test_name="app")
+    assert 'expect_value("x")' not in code
+    assert 'expect_value("xz")' in code and 'expect_value("P")' in code
+
+
+def test_codegen_identical_repeat_keeps_settled_outputs() -> None:
+    actions = [
+        inp("t", "a", "shiny.textInput"),
+        IDLE,
+        out("o", "A"),
+        inp("t", "a", "shiny.textInput"),
+    ]
+    code = generate_controller_test(actions, test_name="app")
+    assert code.count("InputText") == 1 and 'expect_value("A")' in code
