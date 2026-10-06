@@ -659,7 +659,7 @@ async def test_reactlog_export_includes_entry_file_without_nodes(
         "\n"
         "app = App(ui.TagList(), server, reactlog=True)\n"
     )
-    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.setattr(sys, "path", [str(tmp_path), *sys.path])
     monkeypatch.delitem(sys.modules, "mods", raising=False)
     spec = importlib.util.spec_from_file_location("reactlog_entry_app", entry)
     assert spec is not None and spec.loader is not None
