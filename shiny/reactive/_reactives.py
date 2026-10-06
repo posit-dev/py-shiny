@@ -170,7 +170,7 @@ class Value(Generic[T]):
 
     @property
     def _node_namespace(self) -> str | None:
-        return self._otel_namespace
+        return self._node_module
 
     @property
     def _node_label(self) -> str:
@@ -234,6 +234,9 @@ class Value(Generic[T]):
             ns_str = str(session.ns)
             if ns_str:  # Only use non-empty namespaces
                 self._otel_namespace = ns_str
+        # The module reactlog groups this value under; `Inputs` corrects it for
+        # values created by another session than the one they belong to.
+        self._node_module: str | None = self._otel_namespace
         # Lazily initialized OTel label for value updates; Allows for `_name` to be adjusted manually after init (ex: Inputs class)
         self._otel_label: str | None = None
         # Guards destroy() idempotency — _set(MISSING) should only run once

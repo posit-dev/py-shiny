@@ -273,14 +273,12 @@ def panel(input, output, session):
         input.n()
 
 def server(input, output, session):
+    panel("sales")
+
     @render.plot
     def chart():
         input.n()
-
-    panel("sales")
 """
-    # The root plot is defined (and renders) first: the shared
-    # `.clientdata_pixelratio` value takes the namespace of whoever reads it first.
     export = _export(
         tmp_path, code, [{"n": 1, "sales-n": 1, **_visible("chart", "sales-chart")}]
     )
@@ -384,6 +382,48 @@ def server(input, output, session):
     expect(page.locator(".event-item.is-current")).to_have_count(0)
 
 
+<<<<<<< HEAD
+=======
+def test_draggable_splitter_and_video_tab_resize(page: Page, tmp_path: Path) -> None:
+    reactlog = _record(tmp_path, _VAL_CODE, _VAL_STEPS)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=_VAL_CODE, video_path="demo.webm"),
+        wait_until="domcontentloaded",
+    )
+
+    resizer = page.locator("#split-resizer")
+    expect(resizer).to_be_visible()
+
+    # Keyboard resizing
+    resizer.focus()
+    page.keyboard.press("ArrowLeft")
+    expect(resizer).to_have_attribute("aria-valuenow", "464")
+
+    # Switching to recording tab widens sidebar
+    video_tab = page.locator("#video-tab")
+    video_tab.click()
+    expect(page.locator("#video-panel")).to_be_visible()
+    expect(page.locator("video")).to_be_visible()
+
+
+def test_trace_timeline_scrubber_and_action_chips(page: Page, tmp_path: Path) -> None:
+    reactlog = _record(tmp_path, _MULT_CODE, _MULT_STEPS)
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=_MULT_CODE, video_path="demo.webm"),
+        wait_until="domcontentloaded",
+    )
+
+    trace_bar = page.locator("#trace-timeline-bar")
+    expect(trace_bar).to_be_visible()
+    expect(page.locator("#trace-playhead")).to_be_visible()
+    # The change to 8 and the re-render it causes; the initial render is init.
+    expect(page.locator("#lane-inputs .trace-chip")).to_have_count(1)
+    expect(page.locator("#lane-outputs .trace-chip")).to_have_count(1)
+    expect(page.locator("#lane-calcs .trace-chip")).to_have_count(0)
+    expect(page.locator(".trace-chip")).to_have_count(2)
+
+
+>>>>>>> 723b39795 (fix(reactlog): init phase and module attribution for recorded logs)
 def test_event_timeline_labels_initialization_and_recorded_actions(
     page: Page, tmp_path: Path
 ) -> None:
@@ -394,15 +434,10 @@ def test_event_timeline_labels_initialization_and_recorded_actions(
         wait_until="domcontentloaded",
     )
 
-    # Recorded `define`s interleave with the session's activity, so the list
-    # gets a heading at every phase change.
-    expected: list[str] = []
-    for ev in reactlog["events"]:
-        label = "Initialization" if ev["phase"] == "init" else "Recorded actions"
-        if not expected or expected[-1] != label:
-            expected.append(label)
-    assert expected[:2] == ["Initialization", "Recorded actions"]
-    expect(page.locator(".event-phase-label")).to_have_text(expected)
+    phase_labels = page.locator(".event-phase-label")
+    expect(phase_labels).to_have_count(2)
+    expect(phase_labels.nth(0)).to_have_text("Initialization")
+    expect(phase_labels.nth(1)).to_have_text("Recorded actions")
 
 
 def test_event_items_can_be_activated_with_keyboard(page: Page, tmp_path: Path) -> None:
@@ -434,14 +469,14 @@ def test_event_inspector_describes_steps_without_graph_nodes(
         wait_until="domcontentloaded",
     )
 
-    # A recorded flush boundary belongs to no node.
+    # The end of the initial flush belongs to no node.
     page.keyboard.press("Escape")
     step = next(
         i for i, e in enumerate(reactlog["events"]) if e["event"] == "queueEmpty"
     )
     page.evaluate(f"seekTo({step})")
     expect(page.locator("#insp-title")).to_have_text("queueEmpty")
-    expect(page.locator("#insp-type")).to_have_text("queueEmpty")
+    expect(page.locator("#insp-type")).to_have_text("Initialization event")
     expect(page.locator("#insp-status")).to_have_text("active")
 
 
@@ -679,7 +714,17 @@ def server(input, output, session):
 
     expect(page.locator("#actions-tab, #timeline-tab")).to_have_count(0)
 
+<<<<<<< HEAD
     graph_node(page, _node(reactlog, "reactive.calc calc_b")).click()
+=======
+    action_items = page.locator(".action-story-item")
+    expect(action_items).to_have_count(1)
+
+    events_tab = page.locator("#timeline-tab")
+    events_tab.click()
+
+    page.locator(_node(reactlog, "reactive.calc calc_b")).click()
+>>>>>>> 723b39795 (fix(reactlog): init phase and module attribution for recorded logs)
     drawer_toggle = page.locator("#btn-toggle-source-drawer")
     expect(drawer_toggle).to_be_visible()
 
@@ -736,6 +781,86 @@ def server(input, output, session):
     expect(page.locator(".graph-node")).to_have_count(7)
 
 
+<<<<<<< HEAD
+=======
+def test_timeline_activity_mode_and_realtime_toggle(page: Page, tmp_path: Path) -> None:
+    reactlog = _record(tmp_path, _VAL_CODE, [*_VAL_STEPS, {"val": 20}])
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=_VAL_CODE),
+        wait_until="domcontentloaded",
+    )
+
+    mode_select = page.locator("#timeline-mode-select")
+    expect(mode_select).to_be_visible()
+
+    burst_anchors = page.locator("#trace-burst-track .burst-anchor")
+    expect(burst_anchors).to_have_count(2)
+
+    mode_select.select_option("realtime")
+    expect(mode_select).to_have_value("realtime")
+
+    mode_select.select_option("activity")
+    expect(mode_select).to_have_value("activity")
+
+
+def test_trace_tooltip_is_hidden_until_timeline_drag(
+    page: Page, tmp_path: Path
+) -> None:
+    reactlog = _record(tmp_path, _VAL_CODE, [*_VAL_STEPS, {"val": 2}])
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=_VAL_CODE),
+        wait_until="domcontentloaded",
+    )
+
+    tooltip = page.locator("#trace-tooltip")
+    expect(tooltip).to_be_hidden()
+
+    track = page.locator("#trace-track-wrap")
+    track_box = track.bounding_box()
+    assert track_box is not None
+    start_x = track_box["x"] + track_box["width"] * 0.75
+    drag_y = track_box["y"] + 2
+    page.mouse.move(start_x, drag_y)
+    page.mouse.down()
+    page.mouse.move(start_x + 10, drag_y)
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text("s")
+    page.mouse.up()
+    expect(tooltip).to_be_hidden()
+
+
+def test_timeline_seismograph_and_burst_anchors(page: Page, tmp_path: Path) -> None:
+    code = """from shiny import reactive, render
+
+def server(input, output, session):
+    @reactive.calc
+    def doubled():
+        return input.x() * 2
+
+    @render.text
+    def res():
+        return str(doubled())
+"""
+    reactlog = _record(tmp_path, code, [{"x": 1, **_visible("res")}, {"x": 5}])
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    seismograph = page.locator("#trace-seismograph")
+    expect(seismograph).to_be_visible()
+
+    next_btn = page.locator("#btn-next-action")
+    prev_btn = page.locator("#btn-prev-action")
+    expect(next_btn).to_be_visible()
+    expect(prev_btn).to_be_visible()
+
+    next_btn.click()
+    status_line = page.locator("#trace-status-line")
+    expect(status_line).to_be_visible()
+
+
+>>>>>>> 723b39795 (fix(reactlog): init phase and module attribution for recorded logs)
 def test_multi_parent_dag_tree_and_single_target_synchronization(
     page: Page, tmp_path: Path
 ) -> None:
@@ -777,6 +902,48 @@ def server(input, output, session):
     expect(why_story).to_contain_text("reactive.calc calc_b")
 
 
+<<<<<<< HEAD
+=======
+def test_activity_mode_equidistant_distribution_and_group_popover(
+    page: Page, tmp_path: Path
+) -> None:
+    code = """from shiny import reactive, render
+
+def server(input, output, session):
+    @reactive.calc
+    def subtotal():
+        return input.units() * 5
+
+    @render.text
+    def out_a():
+        return f"A: {subtotal()}"
+
+    @render.text
+    def out_b():
+        return f"B: {subtotal()}"
+"""
+    reactlog = _record(
+        tmp_path, code, [{"units": 10, **_visible("out_a", "out_b")}, {"units": 20}]
+    )
+    page.set_content(
+        format_reactlog_html(reactlog, source_code=code),
+        wait_until="domcontentloaded",
+    )
+
+    burst_cols = page.locator(".burst-region-column")
+    expect(burst_cols).to_have_count(2)
+
+    group_chip = page.locator("#lane-outputs .trace-chip.is-grouped").first
+    expect(group_chip).to_be_visible()
+    expect(group_chip).to_contain_text("2 outputs")
+
+    group_chip.click()
+    popover = page.locator("#group-chip-popover")
+    expect(popover).to_be_visible()
+    expect(popover).to_contain_text("2 Outputs in burst")
+
+
+>>>>>>> 723b39795 (fix(reactlog): init phase and module attribution for recorded logs)
 _PRICE_CODE = """from shiny import reactive, render
 
 def server(input, output, session):
@@ -802,9 +969,23 @@ def test_humanized_timeline_dynamic_verbs_and_causal_summary(
         wait_until="domcontentloaded",
     )
 
+<<<<<<< HEAD
     page.evaluate(f"seekTo({_step(reactlog, 'valueChange', 'input.price', 30)})")
     expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
     expect(page.locator("#causal-summary-banner")).to_have_count(0)
+=======
+    # 1. Humanized Timeline Anchor
+    burst_anchors = page.locator(".burst-anchor")
+    expect(burst_anchors).to_have_count(2)
+    expect(burst_anchors.nth(1)).to_contain_text("price")
+    expect(burst_anchors.nth(1)).to_have_attribute(
+        "title", re.compile(r"price: 25 → 30")
+    )
+
+    # 2. Causal Story Banner above graph
+    causal_banner = page.locator("#causal-summary-banner")
+    expect(causal_banner).to_be_visible()
+>>>>>>> 723b39795 (fix(reactlog): init phase and module attribution for recorded logs)
 
     # 3. Dynamic Why Question for Input
     graph_node(page, _node(reactlog, "input.price")).click()

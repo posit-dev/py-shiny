@@ -2184,6 +2184,7 @@ class Inputs:
             value._name = key
         else:
             value._name = f"input.{key}"
+        self._set_node_module(key, value)
         self._map[self._ns(key)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
@@ -2207,7 +2208,18 @@ class Inputs:
             # Do not call __setitem__ directly here. The _name would be undone
             self._map[key] = new_value
 
-        return self._map[key]
+        value = self._map[key]
+        self._set_node_module(original_key, value)
+        return value
+
+    def _set_node_module(self, key: str, value: Value[Any]) -> None:
+        """Attribute `value` to the module whose id it is (reactlog grouping), not
+        to whichever session happened to create it."""
+        if key.startswith("."):
+            # Client data is the root session's, whoever reads it first.
+            value._node_module = None
+        elif str(self._ns) and not isinstance(key, ResolvedId):
+            value._node_module = str(self._ns)
 
     def __delitem__(self, key: str) -> None:
         del self._map[self._ns(key)]

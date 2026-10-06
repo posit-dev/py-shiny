@@ -163,6 +163,11 @@ class ReactlogRecorder(ReactiveTracer):
             # Inputs and outputs are renamed after they are defined.
             entry["label"] = label
             entry["type"] = rtype
+            namespace = node._node_namespace
+            if namespace:
+                entry["module"] = namespace
+            else:
+                entry.pop("module", None)
         # Set on output effects after they are defined.
         render_type = node._node_render_type
         if render_type is not None:
