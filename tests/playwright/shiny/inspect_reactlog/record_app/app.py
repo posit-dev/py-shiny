@@ -3,6 +3,8 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 1, 10, 3),
     ui.output_text("out"),
+    ui.input_password("pw", "PW"),
+    ui.input_text("txt", "TXT"),
 )
 
 

@@ -8,6 +8,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -26,13 +27,12 @@ _APP_ENV = {"SHINY_REACTLOG": "1", "SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1
 # window or reloading the page loses nothing.
 RECORDER_SCRIPT = r"""
 (() => {
-  const redactAll = !!window.__shinyReactlogRedactAll;
   const send = (item) => {
     item.time = Date.now() / 1000;
     if (window.__shinyReactlogAction) window.__shinyReactlogAction(item);
   };
   const sensitive = (name, el) => {
-    if (redactAll) return true;
+    if (window.__shinyReactlogRedactAll) return true;
     if (el && (el.type === "password")) return true;
     const lower = (name || "").toLowerCase();
     return ["password", "secret", "token", "api_key", "apikey"].some((s) => lower.includes(s));
@@ -85,8 +85,14 @@ def _start_app(app_file: Path) -> ShinyAppProc:
 
 
 def _get_json(url: str) -> Any:
-    with urllib.request.urlopen(url, timeout=10) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    # HTTPError is a URLError subclass.
+    except (urllib.error.URLError, json.JSONDecodeError) as err:
+        raise RecordingError(
+            f"Could not fetch the recorded reactlog from the app: {err}"
+        ) from err
 
 
 def _export(app_url: str, session_id: str) -> dict[str, Any]:
@@ -94,20 +100,39 @@ def _export(app_url: str, session_id: str) -> dict[str, Any]:
     return _get_json(f"{app_url}__reactlog__/export?{query}")
 
 
+def _start_stdin_reader(done: threading.Event) -> bool:
+    """
+    Set `done` when the user presses Enter; return whether a reader was started.
+
+    Only reads from an interactive terminal: piped or closed stdin would hit EOF at
+    once (ending the recording) or swallow input meant for a later prompt.
+    """
+    stdin = sys.stdin
+    if stdin is None or not stdin.isatty():
+        return False
+
+    def read_stdin() -> None:
+        if stdin.readline():  # "" is EOF, not Enter
+            done.set()
+
+    threading.Thread(target=read_stdin, daemon=True).start()
+    return True
+
+
 def _wait_for_enter_or_close(page: Page, timeout_secs: float) -> None:
     from playwright.sync_api import Error as PlaywrightError
 
     done = threading.Event()
-
-    def read_stdin() -> None:
-        sys.stdin.readline()
-        done.set()
-
-    threading.Thread(target=read_stdin, daemon=True).start()
-    sys.stderr.write(
-        "Recording. Interact with the app, then press Enter here "
-        "(or close the browser window) to finish.\n"
-    )
+    if _start_stdin_reader(done):
+        sys.stderr.write(
+            "Recording. Interact with the app, then press Enter here "
+            "(or close the browser window) to finish.\n"
+        )
+    else:
+        sys.stderr.write(
+            "Recording. Interact with the app, then close the browser window "
+            "to finish.\n"
+        )
     deadline = time.time() + timeout_secs
     while not done.is_set() and time.time() < deadline and not page.is_closed():
         try:
@@ -138,6 +163,7 @@ def record_session(
         If Playwright is missing, the app fails to start, or no session started.
     """
     try:
+        from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import sync_playwright
     except ImportError as err:
         raise RecordingError(
@@ -172,9 +198,11 @@ def record_session(
             context.expose_function(  # pyright: ignore[reportUnknownMemberType]
                 "__shinyReactlogSession", on_session
             )
-            if redact_inputs:
-                context.add_init_script("window.__shinyReactlogRedactAll = true;")
-            context.add_init_script(RECORDER_SCRIPT)
+            # One script, so the redaction flag is set before the recorder runs.
+            redact_js = "true" if redact_inputs else "false"
+            context.add_init_script(
+                f"window.__shinyReactlogRedactAll = {redact_js};\n" + RECORDER_SCRIPT
+            )
             page = context.new_page()
             video_start = time.time()
             video = page.video
@@ -183,15 +211,21 @@ def record_session(
             else:
                 page.goto(app.url)
                 _wait_for_enter_or_close(page, timeout_secs)
-            if not page.is_closed():
-                page.close()
-            context.close()
             saved: Path | None = None
-            if video is not None and video_path is not None:
-                video_path.parent.mkdir(parents=True, exist_ok=True)
-                video.save_as(str(video_path))
-                saved = video_path
-            browser.close()
+            # The user (or script) may have quit the whole browser; keep the log.
+            try:
+                if not page.is_closed():
+                    page.close()
+                context.close()
+                if video is not None and video_path is not None:
+                    video_path.parent.mkdir(parents=True, exist_ok=True)
+                    video.save_as(str(video_path))
+                    saved = video_path
+                browser.close()
+            except PlaywrightError as err:
+                saved = None
+                if video_path is not None:
+                    sys.stderr.write(f"Video could not be saved: {err}\n")
         return video_start, saved
 
     try:
@@ -208,6 +242,13 @@ def record_session(
         export = _export(app.url, session_id)
         for entry in export["log"]:
             entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
+        if redact_inputs:
+            for entry in export["log"]:
+                if (
+                    entry.get("action") == "valueChange"
+                    and entry.get("type") == "input"
+                ):
+                    entry["value"] = "[REDACTED]"
         for action in actions:
             action["time"] = max(0.0, float(action.get("time", 0)) - video_start)
         return Recording(
