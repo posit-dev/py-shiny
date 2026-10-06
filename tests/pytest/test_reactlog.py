@@ -1765,3 +1765,66 @@ def test_record_log_fixture_returns_real_graph() -> None:
     labels = {n["label"] for n in data["nodes"]}
     assert {"input.n", "reactive.calc doubled", "output out"} <= labels
     assert any(e["event"] == "valueChange" for e in data["events"])
+
+
+def test_recorded_initial_flush_is_init_phase() -> None:
+    data = _chain_log(1, 2)
+    events = data["events"]
+    init_end = next(i for i, e in enumerate(events) if e["event"] == "queueEmpty")
+    assert all(e["phase"] == "init" for e in events[: init_end + 1])
+    assert events[init_end + 1 :], "expected post-init events"
+    first_change = next(
+        e for e in events[init_end + 1 :] if e["event"] == "valueChange"
+    )
+    assert first_change["node_label"] == "input.n"
+    assert first_change["value"] == "2"
+    assert first_change["phase"] == "interaction"
+
+
+def test_saved_r_reactlog_initial_flush_is_init_phase() -> None:
+    # R's reactlog also ends the initial flush with `queueEmpty`.
+    raw = [
+        {"action": "define", "reactId": "r1", "type": "reactiveValuesKey"},
+        {"action": "valueChange", "reactId": "r1", "value": "1"},
+        {"action": "enter", "reactId": "r2"},
+        {"action": "exit", "reactId": "r2"},
+        {"action": "queueEmpty"},
+        {"action": "valueChange", "reactId": "r1", "value": "2"},
+        {"action": "enter", "reactId": "r2"},
+    ]
+    phases = [e["phase"] for e in load_reactlog_json(raw)["events"]]
+    assert phases == ["init"] * 5 + ["interaction"] * 2
+    # A phase already in the log wins.
+    raw[1]["phase"] = "interaction"
+    assert load_reactlog_json(raw)["events"][1]["phase"] == "interaction"
+
+
+def test_recorded_module_attribution_of_inputs_and_client_data() -> None:
+    @module.server
+    def panel(input: Any, output: Any, session: Any) -> None:
+        @render.plot
+        def chart() -> None:
+            return None
+
+        @render.text
+        def label() -> str:
+            return str(input.n())
+
+    def server(input: Any, output: Any, session: Any) -> None:
+        panel("sales")
+
+    export = record_export(
+        server,
+        [
+            {
+                "sales-n": 1,
+                ".clientdata_output_sales-chart_hidden": False,
+                ".clientdata_output_sales-label_hidden": False,
+            }
+        ],
+    )
+    defines = {e["label"]: e for e in export["log"] if e["action"] == "define"}
+    # Shared client data, first read by the module's plot, is the root's.
+    assert "module" not in defines[".clientdata_pixelratio"]
+    # Created by the root from the init message, but it is the module's input.
+    assert defines["input.sales-n"]["module"] == "sales"

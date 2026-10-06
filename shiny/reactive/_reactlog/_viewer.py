@@ -1641,8 +1641,18 @@ def load_reactlog_json(
 
     normalized_events: List[Dict[str, Any]] = []
     step_idx = 0
+    # Everything up to the first `queueEmpty` is the session's initial flush:
+    # the init message's values and the first render are not user actions.
+    init_end = next(
+        (
+            i
+            for i, item in enumerate(raw_events)
+            if (item.get("action") or item.get("event")) == "queueEmpty"
+        ),
+        -1,
+    )
 
-    for item in raw_events:
+    for item_idx, item in enumerate(raw_events):
         action = str(item.get("action") or item.get("event") or "")
         nid = item.get("reactId") or item.get("node_id") or item.get("id")
         lbl = item.get("label") or item.get("node_label") or nid or ""
@@ -1679,7 +1689,8 @@ def load_reactlog_json(
         )
         phase = item.get("phase") or (
             "init"
-            if action in ("define", "analysisInit", "createContext", "sessionInit")
+            if item_idx <= init_end
+            or action in ("define", "analysisInit", "createContext", "sessionInit")
             else "interaction"
         )
         status = item.get("status")
@@ -3318,7 +3329,9 @@ def format_reactlog_html(
 
         if (isInit) {{
           if (ev.value !== undefined && ev.value !== null) {{
-            const raw = ev.node_id || ev.id || ev.node_label || ev.label || '';
+            const initId = ev.node_id || ev.id || '';
+            // Recorded inputs are named by label, as in the interaction branch below.
+            const raw = ((ev.type === 'input' || ev.node_type === 'input') && !initId.startsWith('input:') ? (ev.node_label || ev.label) : '') || initId || ev.node_label || ev.label || '';
             const name = cleanName(raw);
             if (name) lastKnownValues.set(name, ev.value);
           }}

@@ -250,14 +250,12 @@ def panel(input, output, session):
         input.n()
 
 def server(input, output, session):
+    panel("sales")
+
     @render.plot
     def chart():
         input.n()
-
-    panel("sales")
 """
-    # The root plot is defined (and renders) first: the shared
-    # `.clientdata_pixelratio` value takes the namespace of whoever reads it first.
     export = _export(
         tmp_path, code, [{"n": 1, "sales-n": 1, **_visible("chart", "sales-chart")}]
     )
@@ -409,12 +407,11 @@ def test_trace_timeline_scrubber_and_action_chips(page: Page, tmp_path: Path) ->
     trace_bar = page.locator("#trace-timeline-bar")
     expect(trace_bar).to_be_visible()
     expect(page.locator("#trace-playhead")).to_be_visible()
-    # One wave per recorded value of `multiplier` (initial 5, then 8); each
-    # re-renders `res`.
-    expect(page.locator("#lane-inputs .trace-chip")).to_have_count(2)
-    expect(page.locator("#lane-outputs .trace-chip")).to_have_count(2)
+    # The change to 8 and the re-render it causes; the initial render is init.
+    expect(page.locator("#lane-inputs .trace-chip")).to_have_count(1)
+    expect(page.locator("#lane-outputs .trace-chip")).to_have_count(1)
     expect(page.locator("#lane-calcs .trace-chip")).to_have_count(0)
-    expect(page.locator(".trace-chip")).to_have_count(4)
+    expect(page.locator(".trace-chip")).to_have_count(2)
 
 
 def test_event_timeline_labels_initialization_and_recorded_actions(
@@ -426,15 +423,10 @@ def test_event_timeline_labels_initialization_and_recorded_actions(
         wait_until="domcontentloaded",
     )
 
-    # Recorded `define`s interleave with the session's activity, so the list
-    # gets a heading at every phase change.
-    expected: list[str] = []
-    for ev in reactlog["events"]:
-        label = "Initialization" if ev["phase"] == "init" else "Recorded actions"
-        if not expected or expected[-1] != label:
-            expected.append(label)
-    assert expected[:2] == ["Initialization", "Recorded actions"]
-    expect(page.locator(".event-phase-label")).to_have_text(expected)
+    phase_labels = page.locator(".event-phase-label")
+    expect(phase_labels).to_have_count(2)
+    expect(phase_labels.nth(0)).to_have_text("Initialization")
+    expect(phase_labels.nth(1)).to_have_text("Recorded actions")
 
 
 def test_event_items_can_be_activated_with_keyboard(page: Page, tmp_path: Path) -> None:
@@ -464,14 +456,14 @@ def test_event_inspector_describes_steps_without_graph_nodes(
         wait_until="domcontentloaded",
     )
 
-    # A recorded flush boundary belongs to no node.
+    # The end of the initial flush belongs to no node.
     page.keyboard.press("Escape")
     step = next(
         i for i, e in enumerate(reactlog["events"]) if e["event"] == "queueEmpty"
     )
     page.evaluate(f"seekTo({step})")
     expect(page.locator("#insp-title")).to_have_text("queueEmpty")
-    expect(page.locator("#insp-type")).to_have_text("queueEmpty")
+    expect(page.locator("#insp-type")).to_have_text("Initialization event")
     expect(page.locator("#insp-status")).to_have_text("active")
 
 
@@ -727,9 +719,8 @@ def server(input, output, session):
     actions_panel = page.locator("#actions-panel")
     expect(actions_panel).to_be_visible()
 
-    # The initial value and the change to 42.
     action_items = page.locator(".action-story-item")
-    expect(action_items).to_have_count(2)
+    expect(action_items).to_have_count(1)
 
     events_tab = page.locator("#timeline-tab")
     events_tab.click()
@@ -800,9 +791,8 @@ def test_timeline_activity_mode_and_realtime_toggle(page: Page, tmp_path: Path) 
     mode_select = page.locator("#timeline-mode-select")
     expect(mode_select).to_be_visible()
 
-    # Init, then one wave per recorded value of `val` (10, then 20).
     burst_anchors = page.locator("#trace-burst-track .burst-anchor")
-    expect(burst_anchors).to_have_count(3)
+    expect(burst_anchors).to_have_count(2)
 
     mode_select.select_option("realtime")
     expect(mode_select).to_have_value("realtime")
@@ -935,9 +925,8 @@ def server(input, output, session):
         wait_until="domcontentloaded",
     )
 
-    # Init, then one wave per recorded value of `units`.
     burst_cols = page.locator(".burst-region-column")
-    expect(burst_cols).to_have_count(3)
+    expect(burst_cols).to_have_count(2)
 
     group_chip = page.locator("#lane-outputs .trace-chip.is-grouped").first
     expect(group_chip).to_be_visible()
@@ -973,11 +962,11 @@ def test_humanized_timeline_dynamic_verbs_and_causal_summary(
         wait_until="domcontentloaded",
     )
 
-    # 1. Humanized Timeline Anchor: Init, price = 25, then price 25 -> 30.
+    # 1. Humanized Timeline Anchor
     burst_anchors = page.locator(".burst-anchor")
-    expect(burst_anchors).to_have_count(3)
-    expect(burst_anchors.nth(2)).to_contain_text("price")
-    expect(burst_anchors.nth(2)).to_have_attribute(
+    expect(burst_anchors).to_have_count(2)
+    expect(burst_anchors.nth(1)).to_contain_text("price")
+    expect(burst_anchors.nth(1)).to_have_attribute(
         "title", re.compile(r"price: 25 → 30")
     )
 
