@@ -202,8 +202,8 @@ class Value(Generic[T]):
         self._node_id: int = _trace.next_node_id()
         self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
-        self._value_dependents: Dependents = Dependents()
-        self._is_set_dependents: Dependents = Dependents()
+        self._value_dependents: Dependents = Dependents(owner=self)
+        self._is_set_dependents: Dependents = Dependents(owner=self)
         # Optional name for OpenTelemetry logging and debugging
         # Priority during initialization: 1) explicit name parameter, 2) inferred from assignment, 3) None
         # Can be overwritten later by Inputs class when value is added/accessed
@@ -694,7 +694,7 @@ class Calc_(Generic[T]):
         self._fn: CalcFunctionAsync[T] = _utils.wrap_async(fn)
         self._is_async: bool = _utils.is_async_callable(fn)
 
-        self._dependents: Dependents = Dependents()
+        self._dependents: Dependents = Dependents(owner=self)
         self._invalidated: bool = True
         self._running: bool = False
         self._most_recent_ctx_id: int = -1
@@ -809,7 +809,7 @@ class Calc_(Generic[T]):
 
     # TODO: should this be private?
     async def update_value(self) -> None:
-        self._ctx = Context()
+        self._ctx = Context(owner=self)
         self._most_recent_ctx_id = self._ctx.id
 
         self._ctx.on_invalidate(self._on_invalidate_cb)
@@ -1105,7 +1105,7 @@ class Effect_:
         self._create_context().invalidate()
 
     def _create_context(self) -> Context:
-        ctx = Context()
+        ctx = Context(owner=self)
 
         # Store the context explicitly in Effect object
         # TODO: More explanation here
