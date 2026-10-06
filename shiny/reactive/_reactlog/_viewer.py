@@ -3305,6 +3305,9 @@ def format_reactlog_html(
       }});
       let initWave = null;
       let curWave = null;
+      // Recorded ids (`r3`) carry no name; use the node's label instead.
+      const nodeLabels = new Map((reactlogData.nodes || []).map(n => [n.id, n.label]));
+      const waveNodeName = nId => cleanName(nId.includes(':') ? nId : (nodeLabels.get(nId) || nId));
 
       events.forEach((ev, idx) => {{
         const evAction = ev.action || ev.event || '';
@@ -4256,6 +4259,8 @@ def format_reactlog_html(
       const cleanTargetName = cleanName(targetLabel);
       const cleanTargetId = cleanName(targetNode.name || targetNode.id);
       const burstEventForNode = burstEvents.find(e => {{
+        // Dropping a dependency (e.g. an isolated read being invalidated) is not a run.
+        if (e.event === 'dependsOnRemove') return false;
         const eid = e.node_id || e.id || '';
         return eid === nodeId || cleanName(eid) === cleanTargetId || cleanName(eid) === cleanTargetName || (e.node_label && (cleanName(e.node_label) === cleanTargetName || cleanName(e.node_label) === cleanTargetId));
       }});
@@ -4829,7 +4834,7 @@ def format_reactlog_html(
       events.forEach(ev => {{
         const nid = ev.node_id || ev.id;
         if (!nid) return;
-        if (ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
+        if (ev.event === 'enter' || ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
           counts.set(nid, (counts.get(nid) || 0) + 1);
         }}
       }});
