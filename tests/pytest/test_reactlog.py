@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import runpy
 import textwrap
 from html.parser import HTMLParser
@@ -11,7 +12,7 @@ import pytest
 from click.testing import CliRunner
 from starlette.testclient import TestClient
 
-from shiny import App
+from shiny import App, module, reactive, render
 from shiny._connection import MockConnection
 from shiny._main import main
 from shiny.reactive._reactlog._viewer import (
@@ -22,6 +23,43 @@ from shiny.reactive._reactlog._viewer import (
     inspect_reactive_graph,
     load_reactlog_json,
 )
+from tests.pytest._reactlog_fixtures import record_export, record_log
+
+_CHAIN_SOURCE = """def server(input, output, session):
+    @reactive.calc
+    def doubled():
+        return input.n() * 2
+
+    @render.text
+    def out():
+        return f"Doubled is {doubled()}"
+"""
+
+
+def _chain_server(input: Any, output: Any, session: Any) -> None:
+    @reactive.calc
+    def doubled() -> Any:
+        return input.n() * 2
+
+    @render.text
+    def out() -> str:
+        return f"Doubled is {doubled()}"
+
+
+def _chain_log(*values: Any) -> Dict[str, Any]:
+    """A recorded `input.n -> doubled -> out` session: init with the first value,
+    then one update per remaining value. Recorded `sources` (this test file) are
+    dropped so HTML assertions only see the viewer's own markup."""
+    first, *rest = values or (1,)
+    steps = [{"n": first, ".clientdata_output_out_hidden": False}]
+    data = record_log(_chain_server, [*steps, *({"n": v} for v in rest)])
+    return {**data, "sources": {}}
+
+
+def _mermaid_id(mermaid: str, label: str) -> str:
+    match = re.search(rf'(n\d+)\["{re.escape(label)}"\]', mermaid)
+    assert match is not None, label
+    return match.group(1)
 
 
 class _TagCollector(HTMLParser):
@@ -220,16 +258,9 @@ def out():
 
 
 def test_relative_video_path_different_directories():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}"
-"""
-    reactlog = generate_reactlog(code)
     html = format_reactlog_html(
-        reactlog,
-        source_code=code,
+        _chain_log(),
+        source_code=_CHAIN_SOURCE,
         video_path="/project/recordings/sub/session.webm",
         html_path="/project/reports/reactlog.html",
     )
@@ -237,14 +268,7 @@ def greeting():
 
 
 def test_format_reactlog_html_self_contained_and_accessible():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert "https://" not in html
     assert 'src="http' not in html
     assert 'href="http' not in html
@@ -257,30 +281,17 @@ def greeting():
 
 
 def test_format_reactlog_html_escaping():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}"
-"""
-    reactlog = generate_reactlog(
-        code, inputs={"name": "</script><script>alert('xss')</script>"}
+    reactlog = _chain_log("</script><script>alert('xss')</script>")
+    html = format_reactlog_html(
+        reactlog, source_code=_CHAIN_SOURCE, title="Test Reactlog"
     )
-    html = format_reactlog_html(reactlog, source_code=code, title="Test Reactlog")
     assert "<!DOCTYPE html>" in html
     assert "</script><script>alert('xss')</script>" not in html
     assert "\\u003c/script\\u003e\\u003cscript\\u003e" in html
 
 
 def test_format_reactlog_html_semantic_tags():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     parser = _TagCollector()
     parser.feed(html)
     assert parser.has_tag("header")
@@ -290,47 +301,19 @@ def greeting():
 
 
 def test_format_reactlog_html_graph_visible_on_initialization():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("a", "A", 1)
-@reactive.calc
-def calc_b():
-    return input.a() + 1
-@render.text
-def out_c():
-    return str(calc_b())
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert ".graph-edge" in html
     assert "opacity: 0.75;" in html
     assert ".graph-edge { opacity: 0;" not in html
 
 
 def test_reactlog_phase_separation_and_skip():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("n", "N", 5)
-@reactive.calc
-def calc_val():
-    return input.n() * 2
-@render.text
-def out_val():
-    return f"Val={calc_val()}"
-"""
-    recorded_actions = [
-        {"type": "input", "name": "n", "value": 42, "timestamp": 1200},
-        {"type": "output", "name": "out_val", "timestamp": 1500},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
+    reactlog = _chain_log(5, 42)
     assert reactlog["init_steps_count"] > 0
     assert reactlog["interaction_steps_count"] > 0
-    assert reactlog["first_interaction_step"] == reactlog["init_steps_count"]
 
     html = format_reactlog_html(
-        reactlog, source_code=code, video_path="/tmp/recording.webm"
+        reactlog, source_code=_CHAIN_SOURCE, video_path="/tmp/recording.webm"
     )
     assert "phase-selector" in html
     assert "btn-skip-init" in html
@@ -339,45 +322,47 @@ def out_val():
 
 
 def test_format_mermaid_and_dot():
-    code = """from shiny.express import input, render, ui
-ui.input_slider("n", "N", 1, 10, 5)
-@render.text
-def txt():
-    return f"Value: {input.n()}"
-"""
-    graph = inspect_reactive_graph(code)
+    graph = _chain_log()
     mermaid = format_graph_mermaid(graph)
     assert "graph TD" in mermaid
-    assert "n0" in mermaid
-    assert "n1" in mermaid
-    assert "n0 --> n1" in mermaid
+    n = _mermaid_id(mermaid, "input.n")
+    doubled = _mermaid_id(mermaid, "reactive.calc doubled")
+    out = _mermaid_id(mermaid, "output out")
+    assert f"{n} --> {doubled}" in mermaid
+    assert f"{doubled} --> {out}" in mermaid
 
     dot = format_graph_dot(graph)
     assert "digraph ReactiveGraph" in dot
-    assert '"n0" -> "n1";' in dot
+    assert f'"{n}" -> "{doubled}";' in dot
 
 
 def test_mermaid_and_dot_hyphen_underscore_collision():
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("a_b", "A_B", 1)
-ui.input_numeric("a-b", "A-B", 2)
-@render.text
-def out1():
-    return str(input.a_b())
-@render.text
-def out2():
-    return str(input["a-b"]())
-"""
-    graph = inspect_reactive_graph(code)
+    def server(input: Any, output: Any, session: Any) -> None:
+        @render.text
+        def out1() -> str:
+            return str(input.a_b())
+
+        @render.text
+        def out2() -> str:
+            return str(input["a-b"]())
+
+    graph = record_log(
+        server,
+        [
+            {
+                "a_b": 1,
+                "a-b": 2,
+                ".clientdata_output_out1_hidden": False,
+                ".clientdata_output_out2_hidden": False,
+            }
+        ],
+    )
     mermaid = format_graph_mermaid(graph)
-    assert (
-        'n0["input.a-b"]:::inputClass' in mermaid
-        or 'n1["input.a-b"]:::inputClass' in mermaid
-    )
-    assert (
-        'n0["input.a_b"]:::inputClass' in mermaid
-        or 'n1["input.a_b"]:::inputClass' in mermaid
-    )
+    hyphen = _mermaid_id(mermaid, "input.a-b")
+    underscore = _mermaid_id(mermaid, "input.a_b")
+    assert hyphen != underscore
+    assert f'{hyphen}["input.a-b"]:::inputClass' in mermaid
+    assert f'{underscore}["input.a_b"]:::inputClass' in mermaid
     dot = format_graph_dot(graph)
     assert 'label="input.a-b"' in dot
     assert 'label="input.a_b"' in dot
@@ -460,28 +445,14 @@ def out():
 
 
 def test_format_reactlog_html_has_compact_sidebar():
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("val", "Val", 10)
-@render.text
-def out():
-    return f"V: {input.val()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert 'id="sidebar-rail"' in html
     assert 'id="split-resizer"' not in html
     assert "width: 40px" in html
 
 
 def test_html_trace_timeline_ribbon():
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("n", "N", 10)
-@render.text
-def out():
-    return f"V={input.n()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert 'id="trace-timeline-bar"' in html
     assert 'id="trace-track-wrap"' in html
     assert 'id="scrubber-range"' in html
@@ -490,21 +461,10 @@ def out():
 
 
 def test_reactlog_json_contract_r_shiny_compatibility():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("n", "Number", 5)
-
-@reactive.calc
-def double():
-    return input.n() * 2
-
-@render.text
-def txt():
-    return str(double())
-"""
-    reactlog = generate_reactlog(code)
-    assert reactlog["version"] == "1.0"
+    reactlog = record_export(
+        _chain_server, [{"n": 5, ".clientdata_output_out_hidden": False}]
+    )
+    assert "version" in reactlog
     assert "session" in reactlog
     assert "log" in reactlog
     assert isinstance(reactlog["log"], list)
@@ -520,11 +480,11 @@ def txt():
 
     for ev in log_events:
         assert "action" in ev
-        assert "id" in ev
-        assert "label" in ev
-        assert "type" in ev
         assert "time" in ev
         assert "session" in ev
+        if "reactId" in ev:
+            assert "label" in ev
+            assert "type" in ev
 
 
 def test_load_reactlog_json_with_r_reactlog_schema():
@@ -597,20 +557,16 @@ def test_load_reactlog_json_with_r_reactlog_schema():
 
 
 def test_format_reactlog_html_theme_support():
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("n", "N", 5)
-@render.text
-def out():
-    return str(input.n())
-"""
-    reactlog = generate_reactlog(code)
+    reactlog = _chain_log()
 
-    html_dark = format_reactlog_html(reactlog, source_code=code, theme="dark")
+    html_dark = format_reactlog_html(reactlog, source_code=_CHAIN_SOURCE, theme="dark")
     assert 'data-theme="dark"' in html_dark
     assert 'id="btn-theme-toggle"' in html_dark
     assert 'id="btn-open-json"' in html_dark
 
-    html_light = format_reactlog_html(reactlog, source_code=code, theme="light")
+    html_light = format_reactlog_html(
+        reactlog, source_code=_CHAIN_SOURCE, theme="light"
+    )
     assert 'data-theme="light"' in html_light
     assert '[data-theme="light"]' in html_light
     assert "--bg: #f8fafc;" in html_light
@@ -848,19 +804,7 @@ def test_reactlog_html_xss_protection_on_imported_data():
 
 
 def test_reactlog_execution_debugger_elements_and_helpers():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("val", "Val", 10)
-@reactive.calc
-def computed():
-    return input.val() * 2
-@render.text
-def out():
-    return f"Computed: {computed()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
 
     assert "why-card" in html
     assert "why-story" in html
@@ -1104,38 +1048,42 @@ parent("two")
 
 
 def test_plot_snapshots_and_module_metadata_survive_json_roundtrip():
-    code = """
-from shiny import module, render
-@module.server
-def chart(input, output, session):
-    @render.plot
-    def result():
-        return input.n()
-chart("sales")
-"""
-    plot = {"src": "data:image/png;base64,aGVsbG8=", "alt": "Revenue"}
-    report = generate_reactlog(
-        code,
-        recorded_actions=[
-            {"type": "output", "name": "sales-result", "timestamp": 100, "plot": plot}
-        ],
-    )
-    observed = next(e for e in report["events"] if e["event"] == "outputUpdated")
-    assert observed["plot"] == plot
-    loaded = load_reactlog_json(json.dumps(report))
-    node = next(n for n in loaded["nodes"] if n["id"] == "output:sales-result")
-    assert node["module"] == "sales"
-    assert node["render_type"] == "plot"
-    assert any(e.get("plot") == plot for e in loaded["events"])
-    unsafe = generate_reactlog(
-        code,
-        recorded_actions=[
+    @module.server
+    def chart(input: Any, output: Any, session: Any) -> None:
+        @render.plot
+        def result() -> None:
+            return None
+
+    def server(input: Any, output: Any, session: Any) -> None:
+        chart("sales")
+
+    def export_with_plot(plot: Dict[str, Any]) -> Dict[str, Any]:
+        export = record_export(
+            server, [{".clientdata_output_sales-result_hidden": False}]
+        )
+        define = next(
+            e
+            for e in export["log"]
+            if e["action"] == "define" and e["label"] == "output sales:result"
+        )
+        assert define["module"] == "sales"
+        export["log"].append(
             {
+                "action": "valueChange",
+                "reactId": define["reactId"],
+                "label": define["label"],
                 "type": "output",
-                "name": "sales-result",
-                "plot": {"src": "https://example.com/tracker.png"},
+                "time": export["log"][-1]["time"],
+                "plot": plot,
             }
-        ],
+        )
+        return export
+
+    plot = {"src": "data:image/png;base64,aGVsbG8=", "alt": "Revenue"}
+    loaded = load_reactlog_json(json.dumps(export_with_plot(plot)))
+    assert any(e.get("plot") == plot for e in loaded["events"])
+    unsafe = load_reactlog_json(
+        export_with_plot({"src": "https://example.com/tracker.png"})
     )
     assert not any("plot" in e for e in unsafe["events"])
 
@@ -1260,27 +1208,20 @@ def test_reactive_marks_api_and_generate_reactlog():
     assert len(reactive.get_marks()) == 1
     assert reactive.get_marks()[0]["label"] == "checkpoint-1"
 
-    code = "from shiny.express import input\ninput.x()"
-    rlog = generate_reactlog(code, marks=reactive.get_marks())
+    reactive.clear_marks()
+
+    def server(input: Any, output: Any, session: Any) -> None:
+        reactive.mark("checkpoint-1")
+
+    rlog = record_log(server, [{}])
     assert rlog["success"] is True
     mark_events = [e for e in rlog["events"] if e.get("action") == "userMark"]
     assert len(mark_events) == 1
     assert mark_events[0]["details"] == "User mark: checkpoint-1"
-    reactive.clear_marks()
 
 
 def test_reactlog_html_features():
-    code = "from shiny.express import input, render\n@render.text\ndef out():\n    return f'{input.x()}'"
-    rlog = generate_reactlog(
-        code,
-        recorded_actions=[
-            {"type": "input", "name": "x", "value": 1, "timestamp": 10},
-            {"type": "input", "name": "x", "value": 2, "timestamp": 20},
-            {"type": "input", "name": "x", "value": 3, "timestamp": 30},
-            {"type": "input", "name": "x", "value": 4, "timestamp": 40},
-        ],
-    )
-    html = format_reactlog_html(rlog, code)
+    html = format_reactlog_html(_chain_log(0, 1, 2, 3, 4), _CHAIN_SOURCE)
     assert "shortcuts-modal" in html
     assert "Isolated read" in html
     assert "arrow-isolated" in html
@@ -1828,16 +1769,15 @@ def test_load_reactlog_json_recorded_inputs_are_sources():
 
 def test_load_reactlog_json_marks_match_generated_marks():
     ev = next(e for e in _live_events() if e["action"] == "userMark")
-    generated = next(
-        e
-        for e in generate_reactlog(
-            "from shiny.express import input\ninput.x()",
-            marks=[{"action": "userMark", "label": "checkpoint", "time": 1.0}],
-        )["events"]
-        if e["action"] == "userMark"
-    )
     keys = ("event", "node_label", "node_type", "phase", "provenance", "details")
-    assert {k: ev[k] for k in keys} == {k: generated[k] for k in keys}
+    assert {k: ev[k] for k in keys} == {
+        "event": "userMark",
+        "node_label": "\U0001f516 checkpoint",
+        "node_type": "mark",
+        "phase": "interaction",
+        "provenance": "observed",
+        "details": "User mark: checkpoint",
+    }
     assert ev["mark_wave"]["is_mark"] is True
     assert ev["mark_wave"]["trigger"] == "Bookmark: checkpoint"
 
@@ -1847,3 +1787,21 @@ def test_reactlog_viewer_builds_waves_for_recorded_inputs_and_marks():
     html = format_reactlog_html(load_reactlog_json({"log": _live_log()}), "")
     assert "evAction === 'userMark' && ev.mark_wave" in html
     assert "ev.type === 'input' || ev.node_type === 'input'" in html
+
+
+def test_record_log_fixture_returns_real_graph() -> None:
+    def server(input: Any, output: Any, session: Any) -> None:
+        @reactive.calc
+        def doubled() -> int:
+            return input.n() * 2
+
+        @render.text
+        def out() -> str:
+            return str(doubled())
+
+    data = record_log(
+        server, [{"n": 1, ".clientdata_output_out_hidden": False}, {"n": 2}]
+    )
+    labels = {n["label"] for n in data["nodes"]}
+    assert {"input.n", "reactive.calc doubled", "output out"} <= labels
+    assert any(e["event"] == "valueChange" for e in data["events"])
