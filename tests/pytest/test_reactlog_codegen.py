@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from typing import Any
 
 import pytest
@@ -120,17 +121,17 @@ def test_codegen_maps_bindings_to_controllers(
     [
         (
             inp("w", "v", "my.widget", tag="INPUT", elType="text"),
-            'page.locator("#w").fill("v")',
+            'page.locator(\'[id="w"]\').fill("v")',
         ),
         (
             inp("w", True, "my.widget", tag="INPUT", elType="checkbox"),
-            'page.locator("#w").set_checked(True)',
+            "page.locator('[id=\"w\"]').set_checked(True)",
         ),
         (
             inp("w", "v", "my.widget", tag="SELECT"),
-            'page.locator("#w").select_option("v")',
+            'page.locator(\'[id="w"]\').select_option("v")',
         ),
-        (inp("w", 1, "my.widget", tag="BUTTON"), 'page.locator("#w").click()'),
+        (inp("w", 1, "my.widget", tag="BUTTON"), "page.locator('[id=\"w\"]').click()"),
         (inp("w", {"a": 1}, "my.widget", tag="DIV"), "Shiny.setInputValue"),
     ],
 )
@@ -209,3 +210,54 @@ def test_codegen_output_is_black_formatted() -> None:
     for app_path in (None, "../app.py"):
         code = generate_controller_test(actions, test_name="app", app_path=app_path)
         assert black.format_str(code, mode=black.Mode()) == code
+
+
+def test_codegen_comments_cannot_inject_code() -> None:
+    actions = [
+        inp("w", 1, "my.widget\nimport os", tag="DIV"),
+        out("o\nimport sys", None, binding="shiny.imageOutput"),
+        inp("p\nimport re", "[REDACTED]", "shiny.passwordInput"),
+    ]
+    code = generate_controller_test(actions, test_name="app")
+    tree = ast.parse(code)
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.Import)]
+    (func,) = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
+    assert len(func.body) == 2  # goto + the setInputValue evaluate
+
+
+def test_codegen_uses_slider_display_label() -> None:
+    code = generate_controller_test(
+        [
+            {**inp("n", 1500, "shiny.sliderInput"), "display": "1,500"},
+            {
+                **inp("r", [1000, 2000], "shiny.sliderInput"),
+                "display": ["1,000", "2,000"],
+            },
+        ],
+        test_name="app",
+    )
+    assert 'InputSlider(page, "n").set("1,500")' in code
+    assert 'InputSliderRange(page, "r").set(("1,000", "2,000"))' in code
+
+
+def test_codegen_does_not_collapse_fallback_button_clicks() -> None:
+    actions = [
+        inp("w", 1, "my.widget", tag="BUTTON"),
+        inp("w", 2, "my.widget", tag="BUTTON"),
+    ]
+    assert generate_controller_test(actions, test_name="app").count(".click()") == 2
+
+
+def test_codegen_fallback_locator_handles_special_ids() -> None:
+    code = generate_controller_test(
+        [inp("a.b:c", "v", "my.widget", tag="INPUT", elType="text")], test_name="app"
+    )
+    assert 'page.locator(\'[id="a.b:c"]\').fill("v")' in code
+
+
+def test_codegen_incomplete_range_becomes_todo() -> None:
+    code = generate_controller_test(
+        [inp("dr", ["2024-03-01", None], "shiny.dateRangeInput")], test_name="app"
+    )
+    assert "# TODO: incomplete value for 'dr'" in code
+    assert "None" not in code.replace("-> None", "")
