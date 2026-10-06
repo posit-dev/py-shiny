@@ -187,6 +187,50 @@ def apply_frame_patches(
     return nw_data.with_columns(*scatter_columns)
 
 
+def _get_categorical_categories(col: nw.Series, dtype: DType) -> list[str]:
+    if isinstance(dtype, nw.Enum):
+        if hasattr(dtype, "categories"):
+            return [str(x) for x in dtype.categories]
+        native = nw.to_native(col, strict=False)
+        native_dtype = getattr(native, "dtype", None)
+        if (
+            native_dtype is not None
+            and hasattr(native_dtype, "categories")
+            and native_dtype.categories is not None
+        ):
+            native_cats = native_dtype.categories
+            if hasattr(native_cats, "to_list"):
+                return [str(x) for x in native_cats.to_list()]
+            return [str(x) for x in native_cats]
+
+    native = nw.to_native(col, strict=False)
+    native_ns = getattr(nw.get_native_namespace(col), "__name__", "")
+    if native_ns == "polars":
+        if hasattr(native, "drop_nulls") and hasattr(native, "unique"):
+            return [
+                str(x)
+                for x in native.drop_nulls().unique(maintain_order=True).to_list()
+            ]
+        try:
+            unique_col = col.drop_nulls().unique(maintain_order=True)
+        except TypeError:
+            unique_col = col.drop_nulls().unique()
+        return [str(x) for x in unique_col.to_list()]
+
+    native_cat = getattr(native, "cat", None)
+    if native_cat is not None and hasattr(native_cat, "categories"):
+        return [str(x) for x in native_cat.categories]
+
+    try:
+        return [str(x) for x in col.cat.get_categories().to_list()]
+    except Exception:
+        try:
+            unique_col = col.drop_nulls().unique(maintain_order=True)
+        except TypeError:
+            unique_col = col.drop_nulls().unique()
+        return [str(x) for x in unique_col.to_list()]
+
+
 # serialize_dtype ----------------------------------------------------------------------
 def serialize_dtype(col: nw.Series) -> FrameDtype:
 
@@ -201,7 +245,7 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         type_ = "numeric"
 
     elif isinstance(dtype, (nw.Categorical, nw.Enum)):
-        categories = col.cat.get_categories().to_list()
+        categories = _get_categorical_categories(col, dtype)
         return {"type": "categorical", "categories": categories}
     elif isinstance(dtype, nw.Boolean):
         type_ = "boolean"
@@ -247,7 +291,8 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     data = as_data_frame(into_data)
 
     type_hints = [
-        serialize_dtype(data.get_column(col_name)) for col_name in data.columns
+        serialize_dtype(cast(nw.Series, data.get_column(col_name)))
+        for col_name in data.columns
     ]
 
     # TODO-future-barret; Swich serialization to "by column", rather than "by row"
