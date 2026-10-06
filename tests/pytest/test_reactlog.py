@@ -998,7 +998,7 @@ def test_load_reactlog_json_recorded_inputs_are_sources():
     ]
 
 
-def test_load_reactlog_json_marks_match_generated_marks():
+def test_load_reactlog_json_marks_match_mark_helpers():
     ev = next(e for e in _live_events() if e["action"] == "userMark")
     keys = ("event", "node_label", "node_type", "phase", "provenance", "details")
     assert {k: ev[k] for k in keys} == {
