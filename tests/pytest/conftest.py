@@ -2,14 +2,17 @@
 Pytest configuration and fixtures for OpenTelemetry tests.
 """
 
+import gc
 from typing import Iterator, Tuple
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
+from shiny._reactlog import ReactlogRecorder
 from shiny.otel import _core
 from shiny.otel._constants import TRACER_NAME
+from shiny.reactive import _trace
 
 from .otel_helpers import otel_tracer_provider_impl
 
@@ -100,3 +103,20 @@ def otel_tracer_provider(
     yield provider, exporter
     # Reset so subsequent callers re-fetch from the global provider
     _core._tracer = None
+
+
+@pytest.fixture
+def no_leaked_reactlog_tracer() -> Iterator[None]:
+    """
+    Fail if a test leaves a reactlog recorder installed once its Apps are gone.
+
+    An App's recorder is removed when reactlog is turned off or the App is
+    garbage collected, so the test's own Apps must not be kept alive.
+    """
+    yield
+    gc.collect()
+    leaked = [t for t in _trace._tracers if isinstance(t, ReactlogRecorder)]
+    for tracer in leaked:
+        _trace._tracers.remove(tracer)
+    _trace._rebuild_hooks()
+    assert not leaked, "reactlog recorder outlived its App"
