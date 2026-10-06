@@ -1,3 +1,6 @@
+import os
+import signal
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +68,22 @@ def test_record_session_keeps_export_when_browser_quits(tmp_path: Path) -> None:
 
     rec = record_session(APP, video_path=tmp_path / "v.webm", script=script)
     assert rec.video_path is None
+    assert "output out" in _labels(rec.export)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+def test_record_session_keeps_export_when_driver_dies(
+    tmp_path: Path,
+) -> None:
+    # A terminal's Ctrl+C reaches the Playwright driver too; once it is gone every
+    # Playwright call fails with a plain Exception ("Connection closed").
+    def script(page: Page, url: str) -> None:
+        page.goto(url)
+        controller.OutputText(page, "out").expect_value("6")
+        driver = page._impl_obj._connection._transport._proc  # type: ignore
+        os.kill(driver.pid, signal.SIGKILL)  # pyright: ignore
+
+    rec = record_session(APP, video_path=tmp_path / "v.webm", script=script)
     assert "output out" in _labels(rec.export)
 
 
