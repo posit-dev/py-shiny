@@ -845,7 +845,13 @@ class Calc_(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            val = await self._fn()
+            # Inside the `try` so tracers see the exception before it is cached.
+            with (
+                _trace.execute_span(self, ctx_id=self._most_recent_ctx_id)
+                if hooks.execute
+                else _trace.NULL_CM
+            ):
+                val = await self._fn()
 
             self._value.append(val)
         except Exception as err:
@@ -1150,7 +1156,14 @@ class Effect_:
             ):
                 try:
                     with ctx():
-                        await self._fn()
+                        # Inside the `try` so tracers see the exception before it
+                        # is handled below.
+                        with (
+                            _trace.execute_span(self, ctx_id=ctx.id)
+                            if hooks.execute
+                            else _trace.NULL_CM
+                        ):
+                            await self._fn()
 
                         # Yield so that messages can be sent to the client if necessary.
                         # https://github.com/posit-dev/py-shiny/issues/1381
