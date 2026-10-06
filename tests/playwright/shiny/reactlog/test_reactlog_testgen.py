@@ -75,5 +75,35 @@ def test_replay_rejects_unknown_fixtures(tmp_path: Path) -> None:
 def test_replay_reports_failed_assertions(tmp_path: Path, page: Page) -> None:
     test_file = tmp_path / "test_x.py"
     test_file.write_text("def test_x(page):\n    assert False, 'nope'\n")
-    with pytest.raises(RecordingError, match="test_x failed during --replay: nope"):
+    with pytest.raises(
+        RecordingError, match="test_x failed during replay: AssertionError: nope"
+    ):
         replay_script(test_file)(page, "http://unused")
+
+
+def test_replay_reports_playwright_errors_cleanly(tmp_path: Path) -> None:
+    test_file = tmp_path / "test_x.py"
+    test_file.write_text(
+        "def test_click(page, local_app):\n"
+        "    page.goto(local_app.url)\n"
+        "    page.locator('#nope').click(timeout=500)\n"
+    )
+    with pytest.raises(
+        RecordingError, match="test_x.py::test_click failed during replay"
+    ):
+        record_session(APP, video_path=None, script=replay_script(test_file))
+
+
+def test_replay_supports_dataclasses_and_reports_import_errors(tmp_path: Path) -> None:
+    ok = tmp_path / "test_dc.py"
+    ok.write_text(
+        "from __future__ import annotations\n"
+        "from dataclasses import dataclass\n\n"
+        "@dataclass\nclass Point:\n    x: int\n\n"
+        "def test_dc(page):\n    pass\n"
+    )
+    replay_script(ok)
+    bad = tmp_path / "test_bad.py"
+    bad.write_text("raise ValueError('boom')\n")
+    with pytest.raises(RecordingError, match="Cannot import .*boom"):
+        replay_script(bad)

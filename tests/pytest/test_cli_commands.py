@@ -422,3 +422,16 @@ def test_reactlog_cli_rejects_incompatible_flags(tmp_path: Path) -> None:
     ):
         res = CliRunner().invoke(main, ["reactlog", str(app), *flags])
         assert res.exit_code == 2, (flags, res.output)
+
+
+def test_reactlog_cli_test_needs_an_app_file(tmp_path: Path) -> None:
+    out = str(tmp_path / "test_app.py")
+    for args in (
+        ["--code", "from shiny.express import ui"],
+        ["-"],
+    ):
+        res = CliRunner().invoke(
+            main, ["reactlog", *args, "--test", out], input="from shiny import ui\n"
+        )
+        assert res.exit_code == 2, (args, res.output)
+        assert "--test needs an app file" in res.output
