@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from ...run._run import ShinyAppProc, run_shiny_app
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Page
+    from playwright.sync_api import Browser, BrowserContext, Page, Video
 
 _APP_ENV = {"SHINY_REACTLOG": "1", "SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1"}
 
@@ -79,25 +79,38 @@ class Recording:
 
 def _start_app(app_file: Path) -> ShinyAppProc:
     try:
-        return run_shiny_app(app_file, wait_for_start=True, env=_APP_ENV)
+        # A terminal's Ctrl+C goes to the whole process group; in its own session
+        # the app keeps running until the recording is exported.
+        return run_shiny_app(
+            app_file, wait_for_start=True, env=_APP_ENV, start_new_session=True
+        )
     except Exception as err:  # run_shiny_app raises various errors for a bad app
-        raise RecordingError(f"Failed to start Shiny app {app_file}: {err}") from err
+        # The message ends with the app's stderr, whose last lines name the problem.
+        text = str(err).partition("stderr:\n")[2] or str(err)
+        tail = [line for line in text.splitlines() if line.strip()][-5:]
+        raise RecordingError(
+            "\n".join([f"Failed to start Shiny app {app_file}:", *tail])
+        ) from err
 
 
-def _get_json(url: str) -> Any:
+def _get_json(app: ShinyAppProc, path: str) -> Any:
     try:
-        with urllib.request.urlopen(url, timeout=10) as resp:
+        with urllib.request.urlopen(app.url + path, timeout=10) as resp:
             return json.loads(resp.read().decode("utf-8"))
     # HTTPError is a URLError subclass.
     except (urllib.error.URLError, json.JSONDecodeError) as err:
+        if app.proc.poll() is not None:
+            raise RecordingError(
+                "The app stopped before the recording could be exported."
+            ) from err
         raise RecordingError(
             f"Could not fetch the recorded reactlog from the app: {err}"
         ) from err
 
 
-def _export(app_url: str, session_id: str) -> dict[str, Any]:
+def _export(app: ShinyAppProc, session_id: str) -> dict[str, Any]:
     query = urllib.parse.urlencode({"session_id": session_id})
-    return _get_json(f"{app_url}__reactlog__/export?{query}")
+    return _get_json(app, f"__reactlog__/export?{query}")
 
 
 def _start_stdin_reader(done: threading.Event) -> bool:
@@ -129,8 +142,6 @@ def redact_export(export: dict[str, Any]) -> None:
 def _wait_for_enter_or_close(
     page: Page, timeout_secs: float, stop: threading.Event | None = None
 ) -> None:
-    from playwright.sync_api import Error as PlaywrightError
-
     done = threading.Event()
     if _start_stdin_reader(done):
         sys.stderr.write(
@@ -152,8 +163,41 @@ def _wait_for_enter_or_close(
         try:
             # Also lets Playwright deliver exposed-function calls.
             page.wait_for_timeout(250)
-        except PlaywrightError:
+        # The browser was quit, or Ctrl+C also stopped the Playwright driver (which
+        # raises a plain Exception).
+        except Exception:
             break
+
+
+def _close_browser(
+    page: Page,
+    *,
+    context: BrowserContext,
+    browser: Browser,
+    video: Video | None,
+    video_path: Path | None,
+) -> Path | None:
+    """
+    Close the browser, saving the video to `video_path`; return it if it was saved.
+
+    Best effort: the user may have quit the browser, and a terminal's Ctrl+C also
+    stops the Playwright driver, so any error here only loses the video, never the
+    recording.
+    """
+    saved: Path | None = None
+    try:
+        if not page.is_closed():
+            page.close()
+        context.close()
+        if video is not None and video_path is not None:
+            video_path.parent.mkdir(parents=True, exist_ok=True)
+            video.save_as(str(video_path))
+            saved = video_path
+        browser.close()
+    except Exception as err:  # Playwright errors, a dead driver, or OSError
+        if video_path is not None and saved is None:
+            sys.stderr.write(f"Video could not be saved: {err}\n")
+    return saved
 
 
 def record_session(
@@ -177,7 +221,6 @@ def record_session(
         If Playwright is missing, the app fails to start, or no session started.
     """
     try:
-        from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import sync_playwright
     except ImportError as err:
         raise RecordingError(
@@ -226,21 +269,13 @@ def record_session(
             else:
                 page.goto(app.url)
                 _wait_for_enter_or_close(page, timeout_secs, stop)
-            saved: Path | None = None
-            # The user (or script) may have quit the whole browser; keep the log.
-            try:
-                if not page.is_closed():
-                    page.close()
-                context.close()
-                if video is not None and video_path is not None:
-                    video_path.parent.mkdir(parents=True, exist_ok=True)
-                    video.save_as(str(video_path))
-                    saved = video_path
-                browser.close()
-            except PlaywrightError as err:
-                saved = None
-                if video_path is not None:
-                    sys.stderr.write(f"Video could not be saved: {err}\n")
+            saved = _close_browser(
+                page,
+                context=context,
+                browser=browser,
+                video=video,
+                video_path=video_path,
+            )
         return video_start, saved
 
     try:
@@ -259,7 +294,7 @@ def record_session(
                 "The app never started a Shiny session in the browser."
             )
         session_id = session_ids[-1]
-        export = _export(app.url, session_id)
+        export = _export(app, session_id)
         for entry in export["log"]:
             entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
         if redact_inputs:
@@ -286,9 +321,9 @@ def serve_and_collect(
     try:
         on_ready(app.url)
         wait()
-        sessions: list[dict[str, Any]] = _get_json(f"{app.url}__reactlog__/sessions")
+        sessions: list[dict[str, Any]] = _get_json(app, "__reactlog__/sessions")
         if not sessions:
             raise RecordingError("No sessions were recorded.")
-        return [_export(app.url, session_id) for session_id in choose(sessions)]
+        return [_export(app, session_id) for session_id in choose(sessions)]
     finally:
         app.close()
