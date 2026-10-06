@@ -59,6 +59,7 @@ To see what's bundled without installing anything, run `shiny skills list`.
 ## Developer CLI
 
 - `shiny reactlog app.py`: Run the app, record a real browser session (with video), and export an interactive Reactlog (HTML, JSON, or Mermaid). `--no-browser` lets you drive the app yourself; a saved `.json` can be reopened.
+  `--test test_app.py` also writes a Playwright controller test that replays the recorded session: a deterministic starting point you can refine by hand or with an agent. `--replay test_app.py` records the session by running such a test instead of waiting for you.
 
 The Reactlog is a trace of what actually ran: every reactive node defined, every
 dependency taken, and every invalidation and re-execution in the recorded session,
