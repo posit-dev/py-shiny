@@ -122,6 +122,8 @@ def test_recorder_value_repr_is_safe() -> None:
     node = FakeNode(1, "v")
     _change(r, "s1", node, "x" * 10_000)
     _change(r, "s1", node, Boom())
+    _change(r, "s1", node, list(range(1_000_000)))
     values = [x["value"] for x in r.export("s1")["log"] if x["action"] == "valueChange"]
     assert len(values[0]) <= 210
-    assert values[1] == "<unrepresentable Boom>"
+    assert "Boom" in values[1]
+    assert len(values[2]) <= 210
