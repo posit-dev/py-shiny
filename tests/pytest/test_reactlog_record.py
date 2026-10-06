@@ -34,14 +34,18 @@ def test_start_app_runs_app_in_its_own_session(
     # A terminal's Ctrl+C goes to the whole process group; the app must outlive it
     # so the recording can still be exported.
     calls: list[dict[str, Any]] = []
-    monkeypatch.setattr(
-        _record, "run_shiny_app", lambda app_file, **kw: calls.append(kw)
-    )
+
+    def fake_run(app_file: Path, **kwargs: Any) -> None:
+        calls.append(kwargs)
+
+    monkeypatch.setattr(_record, "run_shiny_app", fake_run)
     _record._start_app(Path("app.py"))  # pyright: ignore[reportPrivateUsage]
     assert calls[0]["start_new_session"] is True
 
 
-def test_serve_and_collect_reports_app_that_stopped(tmp_path: Path) -> None:
+def test_serve_and_collect_reports_app_that_stopped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     app = tmp_path / "app.py"
     app.write_text("from shiny.express import ui\nui.p('hi')\n")
     procs: list[Any] = []
@@ -55,10 +59,14 @@ def test_serve_and_collect_reports_app_that_stopped(tmp_path: Path) -> None:
         procs[0].proc.kill()
         procs[0].proc.wait()
 
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(_record, "_start_app", start_and_keep)
-        with pytest.raises(RecordingError, match="The app stopped before"):
-            serve_and_collect(app, on_ready=lambda url: None, wait=kill_app, choose=list)
+    monkeypatch.setattr(_record, "_start_app", start_and_keep)
+    with pytest.raises(RecordingError, match="The app stopped before"):
+        serve_and_collect(
+            app,
+            on_ready=lambda url: None,
+            wait=kill_app,
+            choose=lambda sessions: [s["id"] for s in sessions],
+        )
 
 
 class _Closable:
