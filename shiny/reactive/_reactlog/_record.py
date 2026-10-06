@@ -50,8 +50,19 @@ RECORDER_SCRIPT = r"""
     $(document).on("shiny:inputchanged.shinyReactlog", (e) => {
       if (e.name.startsWith(".")) return;
       const el = e.el || document.getElementById(e.name);
+      // Sliders: the formatted label text the Playwright controller drags until it matches.
+      const box = el && el.closest ? el.closest(".shiny-input-container") : null;
+      const txt = (sel) => {
+        const n = box && box.querySelector(sel);
+        return n ? n.textContent : null;
+      };
+      let display = null;
+      if (e.binding && e.binding.name === "shiny.sliderInput" && !sensitive(e.name, el)) {
+        display = Array.isArray(e.value) ? [txt(".irs-from"), txt(".irs-to")] : txt(".irs-single");
+      }
       send({
         type: "input",
+        display: display,
         name: e.name,
         value: sensitive(e.name, el) ? "[REDACTED]" : e.value,
         inputType: e.inputType || "",
