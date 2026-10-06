@@ -274,12 +274,11 @@ class GraphVisitor(ast.NodeVisitor):
             self.isolated_depth -= 1
             return
 
-        if self.event_depth > 0:
-            self.generic_visit(node)
-            return
-
-        dep_key = "isolated_deps" if self.isolated_depth > 0 else "deps"
-        calc_key = "isolated_calc_deps" if self.isolated_depth > 0 else "calc_deps"
+        # Event handlers isolate body reads; keep those relationships visible
+        # without treating them as invalidation triggers.
+        isolated = self.isolated_depth > 0 or self.event_depth > 0
+        dep_key = "isolated_deps" if isolated else "deps"
+        calc_key = "isolated_calc_deps" if isolated else "calc_deps"
 
         if (
             isinstance(node.func, ast.Attribute)
