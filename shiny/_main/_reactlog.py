@@ -3,15 +3,17 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
 
 from ..reactive._reactlog._record import (
     RecordingError,
     record_session,
+    redact_export,
     serve_and_collect,
 )
 from ..reactive._reactlog._viewer import (
@@ -37,8 +39,45 @@ def _choose_interactively(sessions: list[dict[str, Any]]) -> list[str]:
     return [sessions[pick - 1]["id"]]
 
 
+def _is_interactive() -> bool:
+    return sys.stdin is not None and sys.stdin.isatty()
+
+
 def _wait_for_enter() -> None:
-    click.prompt("", default="", show_default=False, prompt_suffix="")
+    """Block until the user finishes: Enter on a terminal, else Ctrl+C / SIGINT."""
+    try:
+        if _is_interactive():
+            click.prompt("", default="", show_default=False, prompt_suffix="")
+        else:
+            # Piped or closed stdin would hit EOF at once, so wait for a signal.
+            while True:
+                time.sleep(0.5)
+    except (click.Abort, EOFError, KeyboardInterrupt):
+        pass
+
+
+def _load_saved(path: Path) -> dict[str, Any]:
+    try:
+        export = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as err:  # JSONDecodeError and UnicodeDecodeError
+        raise RecordingError(f"Not a reactlog JSON file: {path}") from err
+    if not isinstance(export, dict):
+        raise RecordingError(f"Not a reactlog JSON file: {path}")
+    export = cast("dict[str, Any]", export)
+    if not isinstance(export.get("log"), list):
+        raise RecordingError(f"Not a reactlog JSON file: {path}")
+    return export
+
+
+def _check_paths(input_file: Path, outputs: list[Path]) -> None:
+    seen: set[Path] = set()
+    for out in outputs:
+        resolved = out.resolve()
+        if resolved == input_file.resolve():
+            raise RecordingError(f"Refusing to overwrite the input file {input_file}.")
+        if resolved in seen:
+            raise RecordingError(f"{out} is used for more than one output.")
+        seen.add(resolved)
 
 
 def _with_suffix(path: Path, suffix: str | None) -> Path:
@@ -147,23 +186,39 @@ def reactlog(
     try:
         with tempfile.TemporaryDirectory() as tmp:
             input_file = _resolve_input(path, code=code, tmp_dir=Path(tmp))
-            outputs = [
-                Path(p) for p in (html_out, json_out, mermaid_out) if p is not None
-            ]
-            for out in outputs:
-                if out.resolve() == input_file.resolve():
-                    raise RecordingError(
-                        f"Refusing to overwrite the input file {input_file}."
-                    )
+            saved_input = input_file.suffix.lower() == ".json"
+            if no_browser and video_out is not None:
+                raise click.UsageError("--video cannot be used with --no-browser.")
+            if all_sessions and not no_browser:
+                raise click.UsageError("--all requires --no-browser.")
+            if saved_input and (no_browser or video_out is not None or all_sessions):
+                raise click.UsageError(
+                    "--no-browser, --video, and --all do not apply to a saved .json reactlog."
+                )
 
             video_path: Path | None = None
-            if input_file.suffix.lower() == ".json":
-                exports = [json.loads(input_file.read_text(encoding="utf-8"))]
+            if not (saved_input or no_browser):
+                if video_out is not None:
+                    video_path = Path(video_out)
+                elif html_out is not None:
+                    video_path = Path(html_out).with_suffix(".webm")
+            out_paths = [
+                Path(p) for p in (html_out, json_out, mermaid_out) if p is not None
+            ]
+            # Fail before recording, not after.
+            _check_paths(
+                input_file,
+                out_paths + ([video_path] if video_path is not None else []),
+            )
+
+            if saved_input:
+                exports = [_load_saved(input_file)]
             elif no_browser:
+                finish = "press Enter" if _is_interactive() else "press Ctrl+C"
                 exports = serve_and_collect(
                     input_file,
                     on_ready=lambda url: click.echo(
-                        f"App running at {url}\nInteract with it, then press Enter to export."
+                        f"App running at {url}\nInteract with it, then {finish} to export."
                     ),
                     wait=_wait_for_enter,
                     choose=(
@@ -173,31 +228,45 @@ def reactlog(
                     ),
                 )
             else:
-                if video_out is not None:
-                    video_path = Path(video_out)
-                elif html_out is not None:
-                    video_path = Path(html_out).with_suffix(".webm")
                 rec = record_session(
                     input_file, video_path=video_path, redact_inputs=redact_inputs
                 )
                 exports = [rec.export]
                 video_path = rec.video_path
 
-            for export in exports:
-                suffix = (
-                    str(export.get("session", ""))[:8] if len(exports) > 1 else None
+            if redact_inputs:
+                for export in exports:
+                    redact_export(export)
+
+            targets = [
+                (
+                    export,
+                    _with_suffix(Path(html_out), suffix) if html_out else None,
+                    _with_suffix(Path(json_out), suffix) if json_out else None,
+                    _with_suffix(Path(mermaid_out), suffix) if mermaid_out else None,
                 )
+                for export in exports
+                for suffix in [
+                    str(export.get("session", ""))[:8] if len(exports) > 1 else None
+                ]
+            ]
+            _check_paths(
+                input_file,
+                [p for _, *ps in targets for p in ps if p is not None]
+                + ([video_path] if video_path is not None else []),
+            )
+            for export, html_p, json_p, mermaid_p in targets:
                 _write_outputs(
                     export,
-                    html_out=_with_suffix(Path(html_out), suffix) if html_out else None,
-                    json_out=_with_suffix(Path(json_out), suffix) if json_out else None,
-                    mermaid_out=(
-                        _with_suffix(Path(mermaid_out), suffix) if mermaid_out else None
-                    ),
+                    html_out=html_p,
+                    json_out=json_p,
+                    mermaid_out=mermaid_p,
                     video_path=video_path,
                     title=title,
                     theme=theme,
                 )
+            if video_path is not None:
+                click.echo(cli_success(f"Video saved to {video_path}"))
     except RecordingError as err:
         click.echo(cli_danger(str(err)))
         sys.exit(1)
@@ -215,6 +284,14 @@ def _resolve_input(path: str | None, *, code: str | None, tmp_dir: Path) -> Path
     if not p.is_file():
         raise RecordingError(f"File not found: {p}")
     return p
+
+
+def _write(path: Path, text: str) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    except OSError as err:
+        raise RecordingError(f"Could not write {path}: {err}") from err
 
 
 def _write_outputs(
@@ -238,11 +315,11 @@ def _write_outputs(
             html_path=str(html_out),
             theme=theme,
         )
-        html_out.write_text(html, encoding="utf-8")
+        _write(html_out, html)
         click.echo(cli_success(f"Reactlog viewer written to {html_out}"))
     if json_out is not None:
-        json_out.write_text(json.dumps(export, indent=2), encoding="utf-8")
+        _write(json_out, json.dumps(export, indent=2))
         click.echo(cli_success(f"Reactlog JSON written to {json_out}"))
     if mermaid_out is not None:
-        mermaid_out.write_text(format_graph_mermaid(data), encoding="utf-8")
+        _write(mermaid_out, format_graph_mermaid(data))
         click.echo(cli_success(f"Mermaid graph written to {mermaid_out}"))

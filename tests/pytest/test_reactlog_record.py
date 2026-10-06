@@ -7,7 +7,9 @@ import pytest
 from shiny.reactive._reactlog._record import (
     RecordingError,
     _start_stdin_reader,
+    _wait_for_enter_or_close,
     record_session,
+    redact_export,
 )
 
 
@@ -41,3 +43,27 @@ def test_stdin_reader_ignores_eof_on_tty(monkeypatch: pytest.MonkeyPatch) -> Non
     done = threading.Event()
     assert _start_stdin_reader(done) is True
     assert done.wait(timeout=2)
+
+
+def test_wait_loop_returns_when_stop_is_set() -> None:
+    class FakePage:
+        def is_closed(self) -> bool:
+            return False
+
+        def wait_for_timeout(self, ms: float) -> None:
+            stop.set()
+
+    stop = threading.Event()
+    _wait_for_enter_or_close(FakePage(), 60.0, stop)  # type: ignore[arg-type]
+    assert stop.is_set()
+
+
+def test_redact_export_only_touches_input_value_changes() -> None:
+    export = {
+        "log": [
+            {"action": "valueChange", "type": "input", "value": "x"},
+            {"action": "valueChange", "type": "calc", "value": "y"},
+        ]
+    }
+    redact_export(export)
+    assert [e["value"] for e in export["log"]] == ["[REDACTED]", "y"]
