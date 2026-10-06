@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import warnings
 from typing import Any, Callable, Generator
 
 import pytest
@@ -177,3 +178,61 @@ def test_attribute_to_session_sets_session_id() -> None:
 
 def test_node_ids_are_unique() -> None:
     assert _trace.next_node_id() != _trace.next_node_id()
+
+
+def test_span_completes_exits_before_warning_on_enter_error() -> None:
+    """When enter fails and warning raises, already-entered tracers must still exit."""
+    log: list[str] = []
+
+    class GoodSpan(ReactiveTracer):
+        @contextlib.contextmanager
+        def on_execute(self, event: ExecuteEvent) -> Generator[None, None, None]:
+            log.append("enter")
+            try:
+                yield
+            finally:
+                log.append("exit")
+
+    class BadEnterSpan(ReactiveTracer):
+        @contextlib.contextmanager
+        def on_execute(self, event: ExecuteEvent) -> Generator[None, None, None]:
+            raise RuntimeError("enter crash")
+            yield  # pragma: no cover
+
+    removers = [add_tracer(GoodSpan()), add_tracer(BadEnterSpan())]
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", ReactiveTracerWarning)
+            with pytest.raises(ReactiveTracerWarning, match="enter crash"):
+                with _trace.execute_span(FakeNode(1), ctx_id=1):
+                    log.append("body")  # pragma: no cover
+    finally:
+        for remove in removers:
+            remove()
+    # GoodSpan's finally block must run even though warning was raised during error handling
+    assert log == ["enter", "exit"]
+
+
+def test_point_hook_calls_all_before_warning_error() -> None:
+    """When a tracer raises and warning is configured as error, other tracers must still run."""
+    seen: list[object] = []
+
+    class BrokenHook(ReactiveTracer):
+        def on_value_change(self, event: ValueChanged) -> None:
+            raise RuntimeError("hook crash")
+
+    class GoodHook(ReactiveTracer):
+        def on_value_change(self, event: ValueChanged) -> None:
+            seen.append(event.value)
+
+    removers = [add_tracer(BrokenHook()), add_tracer(GoodHook())]
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", ReactiveTracerWarning)
+            with pytest.raises(ReactiveTracerWarning, match="hook crash"):
+                _trace.emit_value_change(FakeNode(1), value=42)
+    finally:
+        for remove in removers:
+            remove()
+    # GoodHook must run even though BrokenHook raised
+    assert seen == [42]
