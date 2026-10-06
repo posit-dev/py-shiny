@@ -152,3 +152,21 @@ def test_replay_supports_dataclasses_and_reports_import_errors(tmp_path: Path) -
     bad.write_text("raise ValueError('boom')\n")
     with pytest.raises(RecordingError, match="Cannot import .*boom"):
         replay_script(bad)
+
+
+def test_replay_notes_when_several_sessions_were_recorded(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    test_file = tmp_path / "test_two.py"
+    test_file.write_text(
+        "from shiny.playwright import controller\n\n"
+        "def test_one(page, local_app):\n"
+        "    page.goto(local_app.url)\n"
+        "    controller.OutputText(page, 'out').expect_value('6')\n\n"
+        "def test_two(page, local_app):\n"
+        "    page.goto(local_app.url)\n"
+        "    controller.InputSlider(page, 'n').set('4')\n"
+        "    controller.OutputText(page, 'out').expect_value('8')\n"
+    )
+    record_session(APP, video_path=None, script=replay_script(test_file))
+    assert "2 sessions were recorded; exported the last" in capsys.readouterr().err
