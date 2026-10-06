@@ -704,7 +704,7 @@ def _make_event(
         semantic_state = "observed_execution"
     elif event in ("wouldEvaluate", "inferred"):
         semantic_state = "inferred_execution"
-    elif event in ("propagate", "invalidate"):
+    elif event in ("propagate", "invalidate", "invalidateStart"):
         semantic_state = "invalidated"
     elif event in (
         "define",
@@ -748,6 +748,51 @@ def _make_event(
         item["edge_from"] = edge_from
         item["edge_to"] = edge_to
     return item
+
+
+def _mark_event(
+    *, step: int, label: str, timestamp: int, time_sec: float, session: str
+) -> Dict[str, Any]:
+    """A timeline bookmark event, shared by generated and loaded reactlogs."""
+    return _make_event(
+        step=step,
+        event="userMark",
+        action="userMark",
+        phase="interaction",
+        provenance="observed",
+        node_id=None,
+        node_label=f"🔖 {label}",
+        node_type="mark",
+        status="active",
+        timestamp=timestamp,
+        time_sec=time_sec,
+        details=f"User mark: {label}",
+        session=session,
+    )
+
+
+def _mark_wave(*, label: str, time_sec: float, step: int, index: int) -> Dict[str, Any]:
+    """A timeline bookmark wave, shared by generated and loaded reactlogs."""
+    return {
+        "action_id": f"mark-{index}",
+        "index": index,
+        "is_init": False,
+        "is_mark": True,
+        "start_time": time_sec,
+        "end_time": time_sec,
+        "start_step": step,
+        "end_step": step,
+        "trigger": f"Bookmark: {label}",
+        "trigger_label": f"🔖 {label}",
+        "short_label": f"🔖 {label[:20]}",
+        "human_action": f"Mark: {label}",
+        "trigger_node_id": "",
+        "trigger_value": None,
+        "invalidated_nodes": [],
+        "inferred_executions": [],
+        "observed_executions": [],
+        "observed_outputs": [],
+    }
 
 
 def generate_reactlog(
@@ -939,43 +984,21 @@ def generate_reactlog(
         mark_time = float(m.get("time") or 0.0)
         mark_ms = int(m.get("timestamp") or (mark_time * 1000))
         events.append(
-            _make_event(
+            _mark_event(
                 step=cur_step,
-                event="userMark",
-                action="userMark",
-                phase="interaction",
-                provenance="observed",
-                node_id=None,
-                node_label=f"🔖 {mark_label}",
-                node_type="mark",
-                status="active",
+                label=mark_label,
                 timestamp=mark_ms,
                 time_sec=mark_time,
-                details=f"User mark: {mark_label}",
                 session=session,
             )
         )
         action_waves.append(
-            {
-                "action_id": f"mark-{len(action_waves)}",
-                "index": len(action_waves),
-                "is_init": False,
-                "is_mark": True,
-                "start_time": mark_time,
-                "end_time": mark_time,
-                "start_step": cur_step,
-                "end_step": cur_step,
-                "trigger": f"Bookmark: {mark_label}",
-                "trigger_label": f"🔖 {mark_label}",
-                "short_label": f"🔖 {mark_label[:20]}",
-                "human_action": f"Mark: {mark_label}",
-                "trigger_node_id": "",
-                "trigger_value": None,
-                "invalidated_nodes": [],
-                "inferred_executions": [],
-                "observed_executions": [],
-                "observed_outputs": [],
-            }
+            _mark_wave(
+                label=mark_label,
+                time_sec=mark_time,
+                step=cur_step,
+                index=len(action_waves),
+            )
         )
         return cur_step + 1
 
@@ -1670,7 +1693,7 @@ def load_reactlog_json(
         if not status:
             if action in ("define",):
                 status = "discovered"
-            elif action in ("invalidate", "propagate"):
+            elif action in ("invalidate", "invalidateStart", "propagate"):
                 status = "affected"
             elif action in ("enter", "wouldEvaluate", "outputUpdated"):
                 status = "scheduled"
@@ -1687,7 +1710,11 @@ def load_reactlog_json(
                 details = f"Defined reactive node '{lbl}'"
             elif action == "dependsOn":
                 details = f"Dependency: '{dep_from}' used by '{dep_to}'"
-            elif action == "invalidate":
+            elif action == "dependsOnRemove":
+                details = (
+                    f"Removed dependency: '{dep_from}' no longer used by '{dep_to}'"
+                )
+            elif action in ("invalidate", "invalidateStart"):
                 details = f"Invalidated '{lbl}'"
             elif action in ("valueChange", "inputChange"):
                 details = f"Value change for '{lbl}': {val_str}"
@@ -1743,24 +1770,50 @@ def load_reactlog_json(
                 },
             }
 
-        ev_dict = _make_event(
-            step=step_idx,
-            event=action,
-            phase=phase,
-            provenance=prov,
-            node_id=str(nid) if nid else None,
-            node_label=str(lbl) if lbl else None,
-            node_type=str(ntype) if ntype else None,
-            status=status,
-            timestamp=t_ms,
-            time_sec=round(t_sec, 3),
-            value=val_str,
-            edge_from=str(dep_from) if (action == "dependsOn" or dep_from) else None,
-            edge_to=str(dep_to) if (action == "dependsOn" or dep_to) else None,
-            details=details,
-            session=str(item.get("session") or session_name),
-            action=action,
-        )
+        event_session = str(item.get("session") or session_name)
+        if action == "userMark":
+            mark_label = str(item.get("label") or "Bookmark")
+            ev_dict = _mark_event(
+                step=step_idx,
+                label=mark_label,
+                timestamp=t_ms,
+                time_sec=round(t_sec, 3),
+                session=event_session,
+            )
+            # Loaded logs have no `action_waves`; the viewer builds waves itself
+            # and turns this into the same bookmark wave generated logs get.
+            ev_dict["mark_wave"] = _mark_wave(
+                label=mark_label, time_sec=round(t_sec, 3), step=step_idx, index=0
+            )
+        else:
+            # A removed dependency is not an active edge; only `details` names it.
+            is_removal = action == "dependsOnRemove"
+            ev_dict = _make_event(
+                step=step_idx,
+                event=action,
+                phase=phase,
+                provenance=prov,
+                node_id=str(nid) if nid else None,
+                node_label=str(lbl) if lbl else None,
+                node_type=str(ntype) if ntype else None,
+                status=status,
+                timestamp=t_ms,
+                time_sec=round(t_sec, 3),
+                value=val_str,
+                edge_from=(
+                    str(dep_from)
+                    if not is_removal and (action == "dependsOn" or dep_from)
+                    else None
+                ),
+                edge_to=(
+                    str(dep_to)
+                    if not is_removal and (action == "dependsOn" or dep_to)
+                    else None
+                ),
+                details=details,
+                session=event_session,
+                action=action,
+            )
         preview = item.get("plot")
         if isinstance(preview, dict):
             plot_dict = cast(Dict[str, Any], preview)
@@ -3552,6 +3605,65 @@ def format_reactlog_html(
       return String(val);
     }}
 
+    // Maps a server-built wave (see action_waves in generate_reactlog) to a burst.
+    function waveToBurst(w, idx) {{
+      const inputs = [];
+      if (w.trigger_node_id) {{
+        inputs.push({{
+          name: cleanName(w.trigger_node_id),
+          nodeId: w.trigger_node_id,
+          step: w.start_step,
+          isClick: !w.trigger_value,
+          details: w.trigger || w.human_action,
+          value: w.trigger_value
+        }});
+      }}
+      const calcs = filterItems(w.inferred_executions || [], id => id.startsWith('calc:'))
+        .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
+      const outputs = filterItems(w.inferred_executions || [], id => id.startsWith('output:'))
+        .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
+
+      let shortLabel = w.short_label || '';
+      if (!shortLabel) {{
+        if (w.is_init) {{
+          shortLabel = 'Init';
+        }} else if (w.trigger_node_id) {{
+          shortLabel = cleanName(w.trigger_node_id);
+        }} else if (w.trigger_label) {{
+          shortLabel = cleanName(w.trigger_label.split(':')[0]);
+        }} else {{
+          shortLabel = 'Action';
+        }}
+      }}
+
+      return {{
+        id: w.action_id || `burst-${{idx}}`,
+        index: w.index !== undefined ? w.index : idx,
+        isInit: Boolean(w.is_init),
+        isMark: Boolean(w.is_mark),
+        startTime: w.start_time || 0.0,
+        endTime: w.end_time || 0.0,
+        time: w.start_time || 0.0,
+        startStep: w.start_step || 0,
+        endStep: w.end_step || 0,
+        triggerLabel: w.trigger_label || w.trigger || 'Action',
+        shortLabel: shortLabel,
+        humanAction: w.human_action || w.trigger || 'Action',
+        triggerNodeId: w.trigger_node_id || '',
+        triggerValue: w.trigger_value,
+        inputs: inputs,
+        calcs: calcs,
+        outputs: outputs,
+        invalidatedNodes: new Set(w.invalidated_nodes || []),
+        inferredExecutions: new Set(w.inferred_executions || []),
+        observedExecutions: new Set(w.observed_executions || []),
+        observedOutputs: new Set(w.observed_outputs || []),
+        totalEvents: (w.end_step - w.start_step + 1),
+        userChanges: inputs.length,
+        details: w.trigger || 'Action'
+      }};
+    }}
+
     function buildActionWaves() {{
       if (reactlogData.action_waves && reactlogData.action_waves.length > 0) {{
         const rawWaves = reactlogData.action_waves;
@@ -3565,63 +3677,7 @@ def format_reactlog_html(
           }}
           coalesced.push(w);
         }}
-        const mapped = coalesced.map((w, idx) => {{
-          const inputs = [];
-          if (w.trigger_node_id) {{
-            inputs.push({{
-              name: cleanName(w.trigger_node_id),
-              nodeId: w.trigger_node_id,
-              step: w.start_step,
-              isClick: !w.trigger_value,
-              details: w.trigger || w.human_action,
-              value: w.trigger_value
-            }});
-          }}
-          const calcs = filterItems(w.inferred_executions || [], id => id.startsWith('calc:'))
-            .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
-          const outputs = filterItems(w.inferred_executions || [], id => id.startsWith('output:'))
-            .map(id => ({{ name: cleanName(id), nodeId: id, step: w.start_step }}));
-
-          let shortLabel = w.short_label || '';
-          if (!shortLabel) {{
-            if (w.is_init) {{
-              shortLabel = 'Init';
-            }} else if (w.trigger_node_id) {{
-              shortLabel = cleanName(w.trigger_node_id);
-            }} else if (w.trigger_label) {{
-              shortLabel = cleanName(w.trigger_label.split(':')[0]);
-            }} else {{
-              shortLabel = 'Action';
-            }}
-          }}
-
-          return {{
-            id: w.action_id || `burst-${{idx}}`,
-            index: w.index !== undefined ? w.index : idx,
-            isInit: Boolean(w.is_init),
-            isMark: Boolean(w.is_mark),
-            startTime: w.start_time || 0.0,
-            endTime: w.end_time || 0.0,
-            time: w.start_time || 0.0,
-            startStep: w.start_step || 0,
-            endStep: w.end_step || 0,
-            triggerLabel: w.trigger_label || w.trigger || 'Action',
-            shortLabel: shortLabel,
-            humanAction: w.human_action || w.trigger || 'Action',
-            triggerNodeId: w.trigger_node_id || '',
-            triggerValue: w.trigger_value,
-            inputs: inputs,
-            calcs: calcs,
-            outputs: outputs,
-            invalidatedNodes: new Set(w.invalidated_nodes || []),
-            inferredExecutions: new Set(w.inferred_executions || []),
-            observedExecutions: new Set(w.observed_executions || []),
-            observedOutputs: new Set(w.observed_outputs || []),
-            totalEvents: (w.end_step - w.start_step + 1),
-            userChanges: inputs.length,
-            details: w.trigger || 'Action'
-          }};
-        }});
+        const mapped = coalesced.map(waveToBurst);
         allBursts = mapped;
         actionWaves = filterItems(mapped, w => !w.isInit);
         return;
@@ -3674,7 +3730,17 @@ def format_reactlog_html(
           initWave.endTime = t;
           initWave.totalEvents++;
         }} else {{
-          const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction';
+          if (evAction === 'userMark' && ev.mark_wave) {{
+            // Same bookmark wave the server builds for generated reactlogs.
+            const markIdx = actionWaves.length + 1;
+            actionWaves.push(waveToBurst({{ ...ev.mark_wave, action_id: `mark-${{markIdx}}`, index: markIdx }}, markIdx));
+            curWave = null;
+            return;
+          }}
+          const nId = ev.node_id || ev.id || '';
+          // Recorded (live) reactlogs identify inputs by type, not an `input:` id.
+          const isInputNode = ev.type === 'input' || ev.node_type === 'input';
+          const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || (isInputNode && evAction === 'valueChange');
           const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0;
           if (!curWave || (t - curWave.startTime) > 0.25 || isNewTrigger) {{
             curWave = {{
@@ -3704,9 +3770,8 @@ def format_reactlog_html(
           curWave.endTime = t;
           curWave.totalEvents++;
 
-          const nId = ev.node_id || ev.id || '';
-          if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:')) {{
-            const raw = nId || ev.details || '';
+          if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:') || isInputNode) {{
+            const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
             if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
               const name = cleanName(raw) || 'input';
               const prevVal = lastKnownValues.get(name);
@@ -5121,7 +5186,7 @@ def format_reactlog_html(
           const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
           const isEdgeActive = (fromMatch && toMatch)
             ? (fromMatch === e.from && toMatch === e.to)
-            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate'));
+            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart'));
 
 
 

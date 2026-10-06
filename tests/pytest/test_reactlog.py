@@ -1947,3 +1947,125 @@ def test_load_reactlog_json_marks_isolated_edges():
         ("r1", "r3", True),
         ("r2", "r3", False),
     }
+
+
+def test_load_reactlog_json_mixed_isolation_on_same_edge_is_not_isolated():
+    def dep(isolate: bool, t: float) -> Dict[str, Any]:
+        return {
+            "action": "dependsOn",
+            "reactId": "r2",
+            "depOnReactId": "r1",
+            "isolate": isolate,
+            "time": t,
+        }
+
+    out = load_reactlog_json({"log": [dep(True, 1.0), dep(False, 2.0)]})
+    assert out["edges"] == [{"from": "r1", "to": "r2"}]
+
+
+# A live (recorded) reactlog, as produced by shiny._reactlog.ReactlogRecorder.
+_LIVE_LOG: List[Dict[str, Any]] = [
+    {"action": "define", "reactId": "r1", "label": "input.x", "type": "input"},
+    {
+        "action": "define",
+        "reactId": "r2",
+        "label": "reactive.effect e",
+        "type": "observer",
+    },
+    {
+        "action": "dependsOn",
+        "reactId": "r2",
+        "depOnReactId": "r1",
+        "label": "reactive.effect e",
+        "type": "observer",
+        "isolate": False,
+    },
+    {
+        "action": "valueChange",
+        "reactId": "r1",
+        "label": "input.x",
+        "type": "input",
+        "value": "1",
+    },
+    {"action": "userMark", "label": "checkpoint", "details": "checkpoint"},
+    {
+        "action": "valueChange",
+        "reactId": "r1",
+        "label": "input.x",
+        "type": "input",
+        "value": "2",
+    },
+    {
+        "action": "invalidateStart",
+        "reactId": "r2",
+        "label": "reactive.effect e",
+        "type": "observer",
+    },
+    {
+        "action": "dependsOnRemove",
+        "reactId": "r2",
+        "depOnReactId": "r1",
+        "label": "reactive.effect e",
+        "type": "observer",
+        "isolate": False,
+    },
+]
+
+
+def _live_log() -> List[Dict[str, Any]]:
+    return [
+        {"provenance": "observed", "time": 1_700_000_000.0 + i, **entry}
+        for i, entry in enumerate(_LIVE_LOG)
+    ]
+
+
+def _live_events() -> List[Dict[str, Any]]:
+    return load_reactlog_json({"log": _live_log()})["events"]
+
+
+def test_load_reactlog_json_invalidate_start_is_an_invalidation():
+    ev = next(e for e in _live_events() if e["action"] == "invalidateStart")
+    assert ev["status"] == "affected"
+    assert ev["details"] == "Invalidated 'reactive.effect e'"
+    assert ev["semantic_state"] == "invalidated"
+
+
+def test_load_reactlog_json_depends_on_remove_is_not_an_active_edge():
+    ev = next(e for e in _live_events() if e["action"] == "dependsOnRemove")
+    assert ev.get("edge_from") is None
+    assert ev.get("dependsOn") is None
+    assert ev["details"] == "Removed dependency: 'r1' no longer used by 'r2'"
+
+
+def test_load_reactlog_json_recorded_inputs_are_sources():
+    out = load_reactlog_json({"log": _live_log()})
+    node = next(n for n in out["nodes"] if n["id"] == "r1")
+    assert (node["role"], node["type"]) == ("source", "input")
+    changes = [e for e in out["events"] if e["action"] == "valueChange"]
+    assert [(e["node_type"], e["value"]) for e in changes] == [
+        ("input", "1"),
+        ("input", "2"),
+    ]
+
+
+def test_load_reactlog_json_marks_match_generated_marks():
+    ev = next(e for e in _live_events() if e["action"] == "userMark")
+    generated = next(
+        e
+        for e in generate_reactlog(
+            "from shiny.express import input\ninput.x()",
+            marks=[{"action": "userMark", "label": "checkpoint", "time": 1.0}],
+        )["events"]
+        if e["action"] == "userMark"
+    )
+    keys = ("event", "node_label", "node_type", "phase", "provenance", "details")
+    assert {k: ev[k] for k in keys} == {k: generated[k] for k in keys}
+    assert ev["mark_wave"]["is_mark"] is True
+    assert ev["mark_wave"]["trigger"] == "Bookmark: checkpoint"
+
+
+def test_reactlog_viewer_builds_waves_for_recorded_inputs_and_marks():
+    # The viewer computes waves client-side for loaded logs; pin the hooks it keys on.
+    html = format_reactlog_html(load_reactlog_json({"log": _live_log()}), "")
+    assert "evAction === 'userMark' && ev.mark_wave" in html
+    assert "ev.type === 'input' || ev.node_type === 'input'" in html

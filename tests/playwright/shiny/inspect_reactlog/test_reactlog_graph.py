@@ -8,6 +8,7 @@ from playwright.sync_api import Page, expect
 from shiny._inspect import (
     format_reactlog_html,
     generate_reactlog,
+    load_reactlog_json,
     record_shiny_session,
 )
 
@@ -1711,3 +1712,45 @@ def txt():
     page.locator('.graph-node[data-id="calc:compute"]').click()
     expect(page.locator("#insp-runs-badge")).to_contain_text("Runs: 4×")
     expect(page.locator("#insp-runs-badge svg.flame-icon")).to_be_visible()
+
+
+def test_live_reactlog_input_and_mark_waves(page: Page) -> None:
+    # Shaped like shiny._reactlog.ReactlogRecorder output: `rN` ids, typed inputs.
+    t0 = 1_700_000_000.0
+    log = [
+        {"action": "define", "reactId": "r1", "label": "input.x", "type": "input"},
+        {
+            "action": "define",
+            "reactId": "r2",
+            "label": "reactive.effect e",
+            "type": "observer",
+        },
+        {
+            "action": "valueChange",
+            "reactId": "r1",
+            "label": "input.x",
+            "type": "input",
+            "value": "1",
+            "time": t0 + 1,
+        },
+        {"action": "userMark", "label": "checkpoint", "time": t0 + 2},
+        {
+            "action": "valueChange",
+            "reactId": "r1",
+            "label": "input.x",
+            "type": "input",
+            "value": "2",
+            "time": t0 + 3,
+        },
+    ]
+    for entry in log[:2]:
+        entry["time"] = t0
+    page.set_content(
+        format_reactlog_html(load_reactlog_json({"log": log}), source_code=""),
+        wait_until="domcontentloaded",
+    )
+
+    mark = page.locator(".burst-anchor.is-mark")
+    expect(mark).to_have_count(1)
+    expect(mark.locator(".burst-anchor-label")).to_have_text("🔖 checkpoint")
+    expect(page.locator('.burst-anchor[title*="x: 1 → 2"]')).to_have_count(1)
