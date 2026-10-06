@@ -1389,7 +1389,11 @@ controls("filters")
     assert {"from": "input:filters-apply", "to": "effect:filters-save"} in result[
         "edges"
     ]
-    assert not any(e["from"] == "input:filters-value" for e in result["edges"])
+    assert {
+        "from": "input:filters-value",
+        "to": "effect:filters-save",
+        "isolated": True,
+    } in result["edges"]
 
 
 def test_multifile_modules_aliases_packages_and_source_locations(tmp_path: Path):
@@ -1447,6 +1451,80 @@ def server(input, output, session):
     result = CliRunner().invoke(main, ["inspect", str(app), "--json"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.output)["sources"] == report["sources"]
+
+
+def test_reactlog_app_beside_shiny_package_excludes_framework_sources():
+    import shiny
+
+    source = """import shiny.reactive
+from shiny import reactive, render
+from shiny.express import input, ui
+ui.input_slider("price", "Price", 10, 50, 25)
+ui.input_numeric("qty", "Quantity", 2)
+ui.input_text("client", "Client", "Acme")
+ui.input_action_button("discount", "Apply discount")
+@reactive.calc
+def subtotal():
+    return input.price() * input.qty()
+@reactive.calc
+@reactive.event(input.discount)
+def discounted_total():
+    return subtotal() * 0.9
+@render.text
+def order_summary():
+    return f"{input.client()}: ${subtotal():.2f}"
+@render.text
+def discounted_summary():
+    return f"Discounted: ${discounted_total():.2f}"
+@render.text
+def client_badge():
+    return f"Client: {input.client()}"
+"""
+    # Use the actual framework directory to reproduce running from its checkout.
+    app_path = Path(shiny.__file__).resolve().parent.parent / "app.py"
+    report = generate_reactlog(source, source_path=app_path)
+    assert report["success"] is True
+    assert {node["id"] for node in report["nodes"]} == {
+        "input:price",
+        "input:qty",
+        "input:client",
+        "input:discount",
+        "calc:subtotal",
+        "calc:discounted_total",
+        "output:order_summary",
+        "output:discounted_summary",
+        "output:client_badge",
+    }
+    assert report["sources"] == {"app.py": source}
+    assert {"from": "input:price", "to": "calc:subtotal"} in report["edges"]
+    assert {"from": "input:qty", "to": "calc:subtotal"} in report["edges"]
+    assert {"from": "input:discount", "to": "calc:discounted_total"} in report["edges"]
+    assert {
+        "from": "calc:subtotal",
+        "to": "calc:discounted_total",
+        "isolated": True,
+    } in report["edges"]
+    assert {"from": "calc:subtotal", "to": "output:order_summary"} in report["edges"]
+    assert {"from": "input:client", "to": "output:order_summary"} in report["edges"]
+    assert {"from": "input:client", "to": "output:client_badge"} in report["edges"]
+    assert {
+        "from": "calc:discounted_total",
+        "to": "output:discounted_summary",
+    } in report["edges"]
+    price_change = generate_reactlog(source, source_path=app_path, inputs={"price": 30})
+    assert {
+        event["node_id"]
+        for event in price_change["events"]
+        if event["event"] == "wouldEvaluate"
+    } == {"calc:subtotal", "output:order_summary"}
+    discount_click = generate_reactlog(
+        source, source_path=app_path, inputs={"discount": 1}
+    )
+    assert {
+        event["node_id"]
+        for event in discount_click["events"]
+        if event["event"] == "wouldEvaluate"
+    } == {"calc:discounted_total", "output:discounted_summary"}
 
 
 def test_multifile_circular_imports_and_duplicate_function_names(tmp_path: Path):
@@ -1587,7 +1665,7 @@ def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "__reactlog__?token=" in resp.text
-    assert "F3" in resp.text
+    assert "F8" in resp.text
 
     rlog_resp = client.get("/__reactlog__")
     assert rlog_resp.status_code == 200

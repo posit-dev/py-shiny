@@ -42,11 +42,16 @@ def read_app_sources(
         for node in tree.body:
             if isinstance(node, ast.Import):
                 for alias in node.names:
+                    # Shiny is framework code, even when the app is in its checkout.
+                    if alias.name.split(".")[0] == "shiny":
+                        continue
                     target = locate(alias.name.split("."), root)
                     if target:
                         read(target)
                         bindings[alias.asname or alias.name] = (target, None)
             elif isinstance(node, ast.ImportFrom):
+                if not node.level and (node.module or "").split(".")[0] == "shiny":
+                    continue
                 base = path.parent if node.level else root
                 for _ in range(max(0, node.level - 1)):
                     base = base.parent
