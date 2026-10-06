@@ -159,6 +159,7 @@ def test_reactlog_cli_no_browser_picks_session(
 
     monkeypatch.setattr(cli, "serve_and_collect", fake_serve)
     monkeypatch.setattr(cli, "_wait_for_enter", lambda: None)
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
     app = tmp_path / "app.py"
     app.write_text("from shiny.express import ui\n")
 
@@ -187,6 +188,42 @@ def test_reactlog_cli_no_browser_picks_session(
     assert (tmp_path / "o-aaaaaaaa.json").is_file() and (
         tmp_path / "o-bbbbbbbb.json"
     ).is_file()
+
+
+def test_reactlog_cli_no_browser_without_tty_exports_newest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sessions = [  # newest first
+        {"id": "a" * 64, "start": 2.0, "end": None},
+        {"id": "b" * 64, "start": 1.0, "end": 1.5},
+    ]
+
+    def fake_serve(
+        app_file: Path,
+        *,
+        on_ready: Callable[[str], None],
+        wait: Callable[[], None],
+        choose: Callable[[list[dict[str, Any]]], list[str]],
+    ) -> list[dict[str, Any]]:
+        wait()
+        return [dict(SAVED, session=i) for i in choose(sessions)]
+
+    monkeypatch.setattr(cli, "serve_and_collect", fake_serve)
+    monkeypatch.setattr(cli, "_wait_for_enter", lambda: None)
+    monkeypatch.setattr(cli, "_is_interactive", lambda: False)
+    app = tmp_path / "app.py"
+    app.write_text("from shiny.express import ui\n")
+    out = tmp_path / "o.json"
+
+    res = CliRunner().invoke(
+        main, ["reactlog", str(app), "--no-browser", "--json", str(out)], input=""
+    )
+    assert res.exit_code == 0, res.output
+    assert json.loads(out.read_text())["session"] == "a" * 64
+    assert (
+        "2 sessions were recorded; exported the newest (pass --all to export all)."
+        in res.output
+    )
 
 
 def test_reactlog_cli_reports_app_start_failure(
