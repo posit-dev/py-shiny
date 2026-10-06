@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import json
 import runpy
+import textwrap
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
 
 import pytest
 from click.testing import CliRunner
+from starlette.testclient import TestClient
 
+from shiny import App
+from shiny._connection import MockConnection
 from shiny._inspect import (
     format_graph_dot,
     format_graph_mermaid,
@@ -1592,7 +1596,8 @@ def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
 
     rlog_resp = client.get("/__reactlog__")
     assert rlog_resp.status_code == 200
-    assert "Reactlog report" in rlog_resp.text
+    assert "choose a session" in rlog_resp.text
+    assert "No sessions recorded yet" in rlog_resp.text
 
     mark_resp = client.post("/__reactlog__/mark", json={"label": "test-mark"})
     assert mark_resp.status_code == 200
@@ -1737,11 +1742,23 @@ def test_app_reactlog_explicit_config(monkeypatch: pytest.MonkeyPatch):
     assert len(app_enabled.reactlog_token) > 10
 
 
+def _recorded_view_source(app: App) -> str:
+    """The app source a local user sees in a recorded session's "App code" tab."""
+    session = app._create_session(MockConnection())
+    response = TestClient(app.starlette_app).get(
+        "/__reactlog__", params={"session_id": session.id}
+    )
+    assert response.status_code == 200
+    source, _ = json.JSONDecoder().raw_decode(
+        response.text.split("const rawAppSource = ", 1)[1]
+    )
+    return source
+
+
 @pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_in_app_reactlog_reads_complete_source_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    from starlette.testclient import TestClient
 
     monkeypatch.syspath_prepend(  # pyright: ignore[reportUnknownMemberType]
         str(tmp_path)
@@ -1763,21 +1780,11 @@ app = App(app_ui, server, reactlog=True)
     app_file = tmp_path / "app.py"
     app_file.write_text(source)
     app = runpy.run_path(str(app_file))["app"]
-    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
-    assert response.status_code == 200
-    report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
-    )
-    nodes = {n["id"]: n for n in report["nodes"]}
-    assert "output:sales-total" in nodes
-    assert nodes["input:unused"]["line"] == 3
-    assert nodes["output:sales-total"]["source_file"] == "review_module.py"
-    assert report["sources"]["app.py"] == source
+    assert _recorded_view_source(app) == source
 
 
 @pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch):
-    from starlette.testclient import TestClient
 
     from shiny import App, _app, ui
 
@@ -1793,20 +1800,13 @@ def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(_app.inspect, "getfile", missing_file)
     monkeypatch.setattr(_app.inspect, "getsource", available_source)
     app = App(ui.page_fluid(), server, reactlog=True)
-    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
-    report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
-    )
-    assert report["success"] is True
-    assert {n["id"] for n in report["nodes"]} == {"input:x", "output:out"}
-    assert not report["entry_file"]
+    assert _recorded_view_source(app) == textwrap.dedent(available_source(server))
 
 
 @pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_express_reactlog_reads_app_source(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    from starlette.testclient import TestClient
 
     from shiny.express._run import wrap_express_app
 
@@ -1821,15 +1821,10 @@ def total():
     app_file.write_text(source)
     app = wrap_express_app(app_file)
     try:
-        response = TestClient(app.init_starlette_app()).get("/__reactlog__")
+        assert _recorded_view_source(app) == source
     finally:
         # The express app module stays in sys.modules, so the App is never collected.
         app.reactlog_enabled = False
-    report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
-    )
-    assert {n["id"] for n in report["nodes"]} == {"input:amount", "output:total"}
-    assert report["sources"]["app.py"] == source
 
 
 def test_custom_session_inherits_private_reactlog_storage():
