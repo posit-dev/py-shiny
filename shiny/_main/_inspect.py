@@ -187,6 +187,17 @@ def inspect(
     redact_inputs: bool = False,
     title: Optional[str] = None,
 ) -> None:
+    # `--html` takes an optional value, so `shiny inspect --html app.py` makes
+    # `app.py` the output path. Treat an app/JSON/dir value as the input instead.
+    if (
+        path is None
+        and html_out is not None
+        and (
+            Path(html_out).suffix.lower() in (".py", ".json") or Path(html_out).is_dir()
+        )
+    ):
+        path, html_out = html_out, "reactlog.html"
+
     if json_flag:
         selected_format = "json"
     elif mermaid_flag:
@@ -400,6 +411,16 @@ def inspect(
 
         if output_format == "html":
             out_file_path = html_out if html_out is not None else "reactlog.html"
+            if (
+                app_file_to_run is not None
+                and Path(out_file_path).resolve() == Path(app_file_to_run).resolve()
+            ):
+                click.echo(
+                    cli_danger(
+                        f"Refusing to overwrite the inspected file {app_file_to_run} with the HTML report."
+                    )
+                )
+                sys.exit(1)
             detected_title = title or (
                 _extract_page_title(source_code) if not is_json_input else None
             )

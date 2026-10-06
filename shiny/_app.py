@@ -292,23 +292,25 @@ class App:
             ),
             starlette.routing.Mount("/", app=self._dependency_handler),
         ]
-        if self._reactlog_enabled:
-            routes.insert(
-                0,
-                starlette.routing.Route(
-                    "/__reactlog__",
-                    self._on_reactlog_request_cb,
-                    methods=["GET"],
-                ),
-            )
-            routes.insert(
-                0,
-                starlette.routing.Route(
-                    "/__reactlog__/mark",
-                    self._on_reactlog_mark_cb,
-                    methods=["GET", "POST"],
-                ),
-            )
+        # Always routed; the handlers check `reactlog_enabled` per request so that
+        # enabling/disabling it after the App is built (e.g. `run_app(reactlog=)`)
+        # takes effect.
+        routes.insert(
+            0,
+            starlette.routing.Route(
+                "/__reactlog__",
+                self._on_reactlog_request_cb,
+                methods=["GET"],
+            ),
+        )
+        routes.insert(
+            0,
+            starlette.routing.Route(
+                "/__reactlog__/mark",
+                self._on_reactlog_mark_cb,
+                methods=["GET", "POST"],
+            ),
+        )
         middleware: list[starlette.middleware.Middleware] = []
         if autoreload_url():
             shared_dir = os.path.join(os.path.dirname(__file__), "www", "shared")
@@ -477,7 +479,7 @@ window.addEventListener('keydown', function(e) {{
     if (e.shiftKey) {{
       var label = prompt('Enter mark label:', 'Bookmark');
       if (label) {{
-        fetch('/__reactlog__/mark?token=' + encodeURIComponent(token), {{
+        fetch('__reactlog__/mark?token=' + encodeURIComponent(token), {{
           method: 'POST',
           headers: {{'Content-Type': 'application/json'}},
           body: JSON.stringify({{label: label, session_id: sessId}})
@@ -486,7 +488,7 @@ window.addEventListener('keydown', function(e) {{
         }});
       }}
     }} else {{
-      var url = '/__reactlog__?token=' + encodeURIComponent(token) + (sessId ? '&session_id=' + encodeURIComponent(sessId) : '');
+      var url = '__reactlog__?token=' + encodeURIComponent(token) + (sessId ? '&session_id=' + encodeURIComponent(sessId) : '');
       window.open(url, '_blank');
     }}
   }}
@@ -499,35 +501,54 @@ window.addEventListener('keydown', function(e) {{
 
         return HTMLResponse(content=html_content)
 
-    def _check_reactlog_access(self, request: Request) -> bool:
+    @staticmethod
+    def _is_direct_local_request(request: Request) -> bool:
+        """
+        True only for a loopback client that did not come through a proxy.
+
+        A reverse proxy on the same host (nginx, Workbench, Connect) makes every
+        remote user's request arrive from 127.0.0.1, so a loopback address alone
+        does not mean the user is local.
+        """
         client_host = request.client.host if request.client else ""
-        is_loopback = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
+        if client_host not in ("127.0.0.1", "::1", "localhost", "testclient"):
+            return False
+        return not any(
+            h in request.headers
+            for h in ("forwarded", "x-forwarded-for", "x-forwarded-host", "x-real-ip")
+        )
+
+    def _check_reactlog_access(self, request: Request) -> Response | None:
+        """Return an error response if the request may not use Reactlog."""
+        if not self._reactlog_enabled:
+            return Response("Not Found", status_code=404)
         token = (
             request.query_params.get("token")
             or request.headers.get("X-Reactlog-Token")
             or ""
         )
-        if self._reactlog_token and token == self._reactlog_token:
-            return True
-        return is_loopback
+        if secrets.compare_digest(token, self._reactlog_token):
+            return None
+        if self._is_direct_local_request(request):
+            return None
+        return Response(
+            "Forbidden: Reactlog endpoint is restricted to authenticated or local requests.",
+            status_code=403,
+        )
 
     async def _on_reactlog_request_cb(self, request: Request) -> Response:
         from . import reactive
         from ._inspect import format_reactlog_html, generate_reactlog
 
-        if not self._check_reactlog_access(request):
-            return Response(
-                "Forbidden: Reactlog endpoint is restricted to authenticated or loopback requests.",
-                status_code=403,
-            )
-
-        client_host = request.client.host if request.client else ""
-        is_loopback = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
+        if (err := self._check_reactlog_access(request)) is not None:
+            return err
 
         target_fn = self._raw_server_fn
         source_code = ""
         app_file: Path | None = None
-        if is_loopback:
+        # The token is in every page the app serves, so it only proves the
+        # requester can load the app. App source is only shown to local users.
+        if self._is_direct_local_request(request):
             app_file = self._reactlog_source_path
             if app_file is None and target_fn is not None:
                 try:
@@ -571,11 +592,8 @@ window.addEventListener('keydown', function(e) {{
     async def _on_reactlog_mark_cb(self, request: Request) -> Response:
         from . import reactive
 
-        if not self._check_reactlog_access(request):
-            return Response(
-                "Forbidden: Reactlog endpoint is restricted to authenticated or loopback requests.",
-                status_code=403,
-            )
+        if (err := self._check_reactlog_access(request)) is not None:
+            return err
 
         session_id = request.query_params.get("session_id")
         body_dict: dict[str, object] = {}

@@ -4,6 +4,7 @@ import html as html_lib
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from shiny._main import main
@@ -79,6 +80,24 @@ def greeting():
     assert "App code" in html
     assert html_lib.escape("<unsafe-demo-marker>") in html
     assert "<unsafe-demo-marker>" not in html
+
+
+def test_cli_inspect_html_before_app_does_not_overwrite_app(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    code = "from shiny.express import ui\nui.input_text('name', 'Name')\n"
+    app_file = tmp_path / "app.py"
+    app_file.write_text(code, encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    res = CliRunner().invoke(main, ["inspect", "--html", str(app_file)])
+    assert res.exit_code == 0, res.output
+    assert (tmp_path / "reactlog.html").is_file()
+    assert app_file.read_text(encoding="utf-8") == code
+
+    res = CliRunner().invoke(main, ["inspect", str(app_file), "--html", str(app_file)])
+    assert res.exit_code == 1
+    assert app_file.read_text(encoding="utf-8") == code
 
 
 def test_cli_inspect_directory_requires_app_py(tmp_path: Path):

@@ -30,7 +30,7 @@ def test_reactlog_runner_preserves_config_unless_overridden(
 
     def serve(target: Any, **kwargs: Any) -> None:
         loaded = target if existing_app else App(ui.page_fluid("test"), None)
-        response = TestClient(loaded.init_starlette_app()).get("/__reactlog__")
+        response = TestClient(loaded.starlette_app).get("/__reactlog__")
         assert (response.status_code == 200) is expected
 
     monkeypatch.setattr(_run, "_run_uvicorn", serve)
@@ -53,14 +53,65 @@ def test_reactlog_runner_preserves_explicit_app_config(
     app = App(ui.page_fluid("test"), None, reactlog=True)
 
     def serve(target: Any, **kwargs: Any) -> None:
-        assert (
-            TestClient(target.init_starlette_app()).get("/__reactlog__").status_code
-            == 200
-        )
+        assert TestClient(target.starlette_app).get("/__reactlog__").status_code == 200
 
     monkeypatch.setattr(_run, "_run_uvicorn", serve)
     _run.run_app(app, dev_mode=False)
     assert "SHINY_REACTLOG" not in os.environ
+
+
+def test_reactlog_runner_enables_existing_disabled_app(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from starlette.testclient import TestClient
+
+    from shiny import App, ui
+
+    app = App(ui.page_fluid("test"), None, reactlog=False)
+    statuses: list[int] = []
+
+    def serve(target: Any, **kwargs: Any) -> None:
+        statuses.append(
+            TestClient(target.starlette_app).get("/__reactlog__").status_code
+        )
+
+    monkeypatch.setattr(_run, "_run_uvicorn", serve)
+    _run.run_app(app, dev_mode=False, reactlog=True)
+    _run.run_app(app, dev_mode=False, reactlog=False)
+    assert statuses == [200, 404]
+
+
+def test_reactlog_proxied_requests_are_not_local() -> None:
+    from starlette.testclient import TestClient
+
+    from shiny import App, ui
+
+    def server(input: Any, output: Any, session: Any) -> None:
+        "REACTLOG_SOURCE_MARKER"
+
+    app = App(ui.page_fluid("test"), server, reactlog=True)
+    client = TestClient(app.starlette_app)
+    proxied = {"X-Forwarded-For": "203.0.113.5"}
+
+    assert "REACTLOG_SOURCE_MARKER" in client.get("/__reactlog__").text
+    assert client.get("/__reactlog__", headers=proxied).status_code == 403
+
+    token_url = f"/__reactlog__?token={app.reactlog_token}"
+    response = client.get(token_url, headers=proxied)
+    assert response.status_code == 200
+    assert "REACTLOG_SOURCE_MARKER" not in response.text
+
+
+def test_reactlog_script_uses_relative_urls() -> None:
+    from starlette.testclient import TestClient
+
+    from shiny import App, ui
+
+    app = App(ui.page_fluid("test"), None, reactlog=True)
+    page = TestClient(app.starlette_app).get("/").text
+    assert "'__reactlog__?token=" in page
+    assert "'__reactlog__/mark?token=" in page
+    assert "'/__reactlog__" not in page
 
 
 @pytest.mark.parametrize(
@@ -78,7 +129,7 @@ def test_reactlog_cli_respects_environment(
     def serve(target: Any, **kwargs: Any) -> None:
         app = App(ui.page_fluid("test"), None)
         assert (
-            TestClient(app.init_starlette_app()).get("/__reactlog__").status_code == 200
+            TestClient(app.starlette_app).get("/__reactlog__").status_code == 200
         ) is expected
 
     monkeypatch.setattr(_run, "_run_uvicorn", serve)

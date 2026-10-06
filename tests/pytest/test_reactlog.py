@@ -1586,7 +1586,7 @@ def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
     client = TestClient(starlette_app)
     resp = client.get("/")
     assert resp.status_code == 200
-    assert "/__reactlog__" in resp.text
+    assert "__reactlog__?token=" in resp.text
     assert "F3" in resp.text
 
     rlog_resp = client.get("/__reactlog__")
