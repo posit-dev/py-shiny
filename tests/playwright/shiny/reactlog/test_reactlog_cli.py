@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -26,6 +27,18 @@ def _kill_cli(proc: subprocess.Popen[str]) -> None:
         except subprocess.TimeoutExpired:
             os.killpg(proc.pid, signal.SIGKILL)
             proc.wait()
+
+
+def _cleanup(proc: subprocess.Popen[str], port: int | None) -> None:
+    """Stop the CLI, then any app server it orphaned (its own session, own port)."""
+    _kill_cli(proc)
+    if port is None or not _accepts_connections(port) or shutil.which("lsof") is None:
+        return
+    pids = subprocess.run(
+        ["lsof", "-ti", f"tcp:{port}", "-sTCP:LISTEN"], capture_output=True, text=True
+    ).stdout.split()
+    for pid in pids:
+        os.kill(int(pid), signal.SIGKILL)
 
 
 def _accepts_connections(port: int) -> bool:
@@ -55,6 +68,7 @@ def test_reactlog_cli_sigterm_stops_the_app(tmp_path: Path) -> None:
         text=True,
         start_new_session=True,
     )
+    port: int | None = None
     try:
         assert proc.stdout is not None
         first_line = proc.stdout.readline()
@@ -71,7 +85,7 @@ def test_reactlog_cli_sigterm_stops_the_app(tmp_path: Path) -> None:
             time.sleep(0.1)
         assert not _accepts_connections(port), "the app outlived the CLI"
     finally:
-        _kill_cli(proc)
+        _cleanup(proc, port)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
@@ -100,11 +114,13 @@ def test_reactlog_cli_no_browser_exports_after_ctrl_c(
         text=True,
         start_new_session=True,
     )
+    port: int | None = None
     try:
         assert proc.stdout is not None
         first_line = proc.stdout.readline()
         url = re.search(r"http://\S+", first_line)
         assert url is not None, first_line
+        port = urlparse(url.group(0)).port
 
         page.goto(url.group(0))
         controller.InputSlider(page, "n").set("7")
@@ -118,7 +134,7 @@ def test_reactlog_cli_no_browser_exports_after_ctrl_c(
         os.killpg(proc.pid, signal.SIGINT)
         output, _ = proc.communicate(timeout=60)
     finally:
-        _kill_cli(proc)
+        _cleanup(proc, port)
 
     assert proc.returncode == 0, output
     assert "2 sessions were recorded; exported the newest" in output
