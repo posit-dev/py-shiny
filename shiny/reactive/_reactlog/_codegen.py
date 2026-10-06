@@ -7,7 +7,8 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable
 
-_REDACTED = "[REDACTED]"
+REDACTED = "[REDACTED]"
+"""Stands in for a recorded input value that must not be written out."""
 
 Action = dict[str, Any]
 
@@ -26,13 +27,13 @@ class _Incomplete(ValueError):
     """The recorded value lacks a part the controller needs."""
 
 
-def _call(controller: str, input_id: str, method: str, arg: str = "") -> str:
+def _call(controller: str, input_id: str, *, method: str, arg: str = "") -> str:
     return f"controller.{controller}(page, {_s(input_id)}).{method}({arg})"
 
 
 def _pair(value: Any) -> str:
     a, b = value
-    if a is None or b is None:
+    if a in (None, "") or b in (None, ""):
         raise _Incomplete
     return f"({_s(a)}, {_s(b)})"
 
@@ -73,64 +74,84 @@ def _is_link(action: Action) -> bool:
 
 
 def _set(controller: str, arg: Callable[[Any], str] = _s) -> Callable[[Action], str]:
-    return lambda a: _call(controller, a["name"], "set", arg(a["value"]))
+    # Sliders are dragged, and date fields typed, until the visible text matches, so
+    # prefer the recorded `display` text (e.g. "1,500", "02/03/2024") to the value.
+    def emit(a: Action) -> str:
+        shown = a.get("display")
+        value = a["value"] if shown is None else shown
+        return _call(controller, a["name"], method="set", arg=arg(value))
+
+    return emit
 
 
 def _click(controller: str) -> Callable[[Action], str]:
-    return lambda a: _call(controller, a["name"], "click")
+    return lambda a: _call(controller, a["name"], method="click")
 
 
 def _select_arg(value: Any) -> str:
     return _strings(value) if isinstance(value, list) else _s(value)
 
 
-def _slider(controller: str) -> Callable[[Action], str]:
-    # Sliders are dragged until the label text matches, so prefer the recorded
-    # formatted label (`display`, e.g. "1,500") over the raw value.
-    def emit(a: Action) -> str:
-        shown = a.get("display")
-        value = a["value"] if shown is None else shown
-        arg = _pair if controller == "InputSliderRange" else _s
-        return _call(controller, a["name"], "set", arg(value))
-
-    return emit
+def _bool_arg(value: Any) -> str:
+    return repr(bool(value))
 
 
 MAPPINGS: list[ControllerMapping] = [
-    ControllerMapping("shiny.sliderInput", _is_range, _slider("InputSliderRange")),
-    ControllerMapping("shiny.sliderInput", _always, _slider("InputSlider")),
     ControllerMapping(
-        "shiny.selectInput", _is_selectize, _set("InputSelectize", _select_arg)
+        "shiny.sliderInput", matches=_is_range, emit=_set("InputSliderRange", _pair)
     ),
-    ControllerMapping("shiny.selectInput", _always, _set("InputSelect", _select_arg)),
-    ControllerMapping("shiny.numberInput", _always, _set("InputNumeric")),
-    ControllerMapping("shiny.textInput", _always, _set("InputText")),
-    ControllerMapping("shiny.textareaInput", _always, _set("InputTextArea")),
-    ControllerMapping("shiny.passwordInput", _always, _set("InputPassword")),
+    ControllerMapping("shiny.sliderInput", matches=_always, emit=_set("InputSlider")),
     ControllerMapping(
-        "shiny.checkboxInput",
-        _is_switch,
-        _set("InputSwitch", lambda v: repr(bool(v))),
+        "shiny.selectInput",
+        matches=_is_selectize,
+        emit=_set("InputSelectize", _select_arg),
     ),
     ControllerMapping(
-        "shiny.checkboxInput", _always, _set("InputCheckbox", lambda v: repr(bool(v)))
+        "shiny.selectInput", matches=_always, emit=_set("InputSelect", _select_arg)
+    ),
+    ControllerMapping("shiny.numberInput", matches=_always, emit=_set("InputNumeric")),
+    ControllerMapping("shiny.textInput", matches=_always, emit=_set("InputText")),
+    ControllerMapping(
+        "shiny.textareaInput", matches=_always, emit=_set("InputTextArea")
+    ),
+    ControllerMapping(
+        "shiny.passwordInput", matches=_always, emit=_set("InputPassword")
+    ),
+    ControllerMapping(
+        "shiny.checkboxInput", matches=_is_switch, emit=_set("InputSwitch", _bool_arg)
+    ),
+    ControllerMapping(
+        "shiny.checkboxInput", matches=_always, emit=_set("InputCheckbox", _bool_arg)
     ),
     ControllerMapping(
         "shiny.checkboxGroupInput",
-        _always,
-        _set("InputCheckboxGroup", lambda v: _strings(v or [])),
-    ),
-    ControllerMapping("shiny.radioInput", _always, _set("InputRadioButtons")),
-    ControllerMapping("shiny.dateInput", _always, _set("InputDate")),
-    ControllerMapping("shiny.dateRangeInput", _always, _set("InputDateRange", _pair)),
-    ControllerMapping(
-        "shiny.actionButtonInput", _is_link, _click("InputActionLink"), click=True
+        matches=_always,
+        emit=_set("InputCheckboxGroup", lambda v: _strings(v or [])),
     ),
     ControllerMapping(
-        "shiny.actionButtonInput", _always, _click("InputActionButton"), click=True
+        "shiny.radioInput", matches=_always, emit=_set("InputRadioButtons")
+    ),
+    ControllerMapping("shiny.dateInput", matches=_always, emit=_set("InputDate")),
+    ControllerMapping(
+        "shiny.dateRangeInput", matches=_always, emit=_set("InputDateRange", _pair)
     ),
     ControllerMapping(
-        "bslib.task-button", _always, _click("InputTaskButton"), click=True
+        "shiny.actionButtonInput",
+        matches=_is_link,
+        emit=_click("InputActionLink"),
+        click=True,
+    ),
+    ControllerMapping(
+        "shiny.actionButtonInput",
+        matches=_always,
+        emit=_click("InputActionButton"),
+        click=True,
+    ),
+    ControllerMapping(
+        "bslib.task-button",
+        matches=_always,
+        emit=_click("InputTaskButton"),
+        click=True,
     ),
 ]
 
@@ -166,8 +187,7 @@ def _find_mapping(action: Action) -> ControllerMapping | None:
 
 
 def _is_click(action: Action) -> bool:
-    if action["value"] == _REDACTED:
-        return False
+    # Clicks carry no meaningful value, so a redacted one still replays.
     mapping = _find_mapping(action)
     if mapping is not None:
         return mapping.click
@@ -176,8 +196,11 @@ def _is_click(action: Action) -> bool:
 
 def _statement(action: Action) -> str:
     name = _comment_text(repr(action["name"]))
-    if action["value"] == _REDACTED:
-        return f"# TODO: value for {name} was redacted"
+    if not _is_click(action):
+        if action["value"] == REDACTED:
+            return f"# TODO: value for {name} was redacted"
+        if action["value"] is None:
+            return f"# TODO: {name} was cleared"
     mapping = _find_mapping(action)
     if mapping is None:
         return _fallback(action)
@@ -187,14 +210,14 @@ def _statement(action: Action) -> str:
         return f"# TODO: incomplete value for {name}"
 
 
-def _assertion(name: str, output: Action) -> str:
-    if output.get("binding") == "shiny.textOutput" and isinstance(
-        output.get("value"), str
+def _assertion(name: str, output: Action, *, redact: bool) -> str:
+    if (
+        not redact
+        and output.get("binding") == "shiny.textOutput"
+        and isinstance(output.get("value"), str)
     ):
-        controller = (
-            "OutputTextVerbatim" if output.get("tag") == "PRE" else "OutputText"
-        )
-        return _call(controller, name, "expect_value", _s(output["value"]))
+        controller = "OutputCode" if output.get("tag") == "PRE" else "OutputText"
+        return _call(controller, name, method="expect_value", arg=_s(output["value"]))
     return f"# {_comment_text(name)} updated"
 
 
@@ -203,31 +226,82 @@ def _identifier(name: str) -> str:
     return ident or "app"
 
 
-def generate_controller_test(
-    actions: list[Action], *, test_name: str, app_path: str | None = None
-) -> str:
-    """A pytest file replaying `actions` with Shiny Playwright controllers."""
-    steps: list[tuple[Action | None, dict[str, Action]]] = [(None, {})]
-    for action in actions:
-        if action.get("type") == "output":
-            steps[-1][1][action["name"]] = action
-        elif action.get("type") == "input":
-            last = steps[-1][0]
-            repeat = (
-                last is not None
-                and last["name"] == action["name"]
-                and not _is_click(action)
-            )
-            if repeat:
-                steps[-1] = (action, steps[-1][1])
-            else:
-                steps.append((action, {}))
+Step = tuple[Action | None, dict[str, Action]]
 
+
+def _steps(actions: list[Action]) -> list[Step]:
+    """
+    Group `actions` into (input action, outputs to assert after it) steps.
+
+    Repeated values of one input collapse into a single step. With `idle` markers
+    (sent when the server finishes a flush) only the values outputs had when the
+    app went idle are asserted, so a fast next input can't leave an assertion for a
+    transient value; a collapsed step's outputs wait for the next idle again, where
+    newer values replace them. Without idle markers (older recordings) each step
+    asserts the latest value of the outputs that updated before the next input, and
+    a collapsed step drops the outputs of the superseded values.
+    """
+    steps: list[Step] = [(None, {})]
+    by_idle = any(a.get("type") == "idle" for a in actions)
+    pending: dict[str, Action] = {}  # output values not yet seen settled
+    settled = False  # py-shiny sends `idle` just before the flush's values
+    for action in actions:
+        kind = action.get("type")
+        if kind == "output":
+            target = pending if by_idle and not settled else steps[-1][1]
+            target[action["name"]] = action
+        elif kind == "idle":
+            steps[-1][1].update(pending)
+            pending.clear()
+            settled = True
+        elif kind == "input":
+            settled = False
+            last, outputs = steps[-1]
+            if last is None or last["name"] != action["name"] or _is_click(action):
+                steps.append((action, {}))
+            elif (last["value"], last.get("display")) != (
+                action["value"],
+                action.get("display"),
+            ):
+                if by_idle:
+                    pending = {**outputs, **pending}
+                steps[-1] = (action, {})
+    return steps
+
+
+def _format(code: str) -> str:
+    """`code` formatted with black when it is installed (best effort)."""
+    try:
+        import black
+    except ImportError:
+        return code
+    try:
+        return black.format_str(code, mode=black.Mode())
+    except ValueError:  # black's InvalidInput; generated code should always parse
+        return code
+
+
+def generate_controller_test(
+    actions: list[Action],
+    *,
+    test_name: str,
+    app_path: str | None = None,
+    redact_outputs: bool = False,
+) -> str:
+    """
+    A pytest file replaying `actions` with Shiny Playwright controllers.
+
+    Text output assertions become `# <id> updated` comments with `redact_outputs`,
+    or when any recorded value was redacted, so redacted text can't leak.
+    """
+    redact = redact_outputs or any(a.get("value") == REDACTED for a in actions)
     body = ["page.goto(local_app.url)"]
-    for action, outputs in steps:
+    for action, outputs in _steps(actions):
         if action is not None:
             body.append(_statement(action))
-        body.extend(_assertion(name, out) for name, out in outputs.items())
+        body.extend(
+            _assertion(name, out, redact=redact) for name, out in outputs.items()
+        )
 
     header = [
         "import pytest" if app_path is not None else None,
@@ -246,4 +320,4 @@ def generate_controller_test(
     signature = f"def test_{_identifier(test_name)}(page: Page, local_app: ShinyAppProc) -> None:"
     lines = [x for x in header if x is not None] + marker + [signature]
     lines += ["    " + line for line in body]
-    return "\n".join(lines) + "\n"
+    return _format("\n".join(lines) + "\n")
