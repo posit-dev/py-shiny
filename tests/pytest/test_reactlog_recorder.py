@@ -5,7 +5,7 @@ from typing import Any, Callable, Iterator
 
 import pytest
 
-from shiny import App, Inputs, Outputs, Session, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny._connection import MockConnection
 from shiny.reactive import Value, calc, effect, flush, isolate
 from shiny.reactive._reactlog import ReactlogRecorder
@@ -21,6 +21,7 @@ class FakeNode:
         self._node_label = label
         self._node_fn: Callable[..., object] | None = None
         self._node_session_id: str | None = None
+        self._node_namespace: str | None = None
 
 
 def _change(
@@ -196,3 +197,47 @@ def test_recorder_keeps_recent_ended_sessions(monkeypatch: pytest.MonkeyPatch) -
     assert s3.marks == [{"action": "userMark", "label": "s3", "time": 1.0}]
     live = r.session("live")
     assert live is not None and live.end is None
+
+
+@pytest.mark.asyncio
+async def test_recorder_define_entries_carry_source_and_module() -> None:
+    @module.server
+    def panel(input: Any, output: Any, session: Any) -> None:
+        @reactive.calc
+        def doubled() -> int:
+            return input.n() * 2
+
+        @render.text
+        def out() -> str:
+            return str(doubled())
+
+    def server(input: Any, output: Any, session: Any) -> None:
+        panel("p")
+
+    r = ReactlogRecorder(owns_session=lambda sid: True)
+    remove = add_tracer(r)
+    try:
+        conn = MockConnection()
+        sess = App(ui.TagList(), server)._create_session(conn)
+
+        async def client() -> None:
+            conn.cause_receive(
+                '{"method":"init","data":{"p-n":1,'
+                '".clientdata_output_p-out_hidden":false}}'
+            )
+            conn.cause_disconnect()
+
+        await asyncio.gather(client(), sess._run())
+        defines = {
+            x["label"]: x for x in r.export(sess.id)["log"] if x["action"] == "define"
+        }
+    finally:
+        remove()
+
+    calc = defines["reactive.calc p:doubled"]
+    assert calc["source_file"] == __file__
+    assert isinstance(calc["line"], int)
+    assert calc["module"] == "p"
+    out = defines["output p:out"]
+    assert out["source_file"] == __file__  # the user's render function
+    assert "source_file" not in defines["input.p-n"]
