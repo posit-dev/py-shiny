@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import reprlib
 import time
 from collections import deque
 from typing import Any, Callable, Generator
@@ -24,7 +25,9 @@ from .reactive._trace import (
 # ponytail: fixed cap; make configurable if long sessions need more history.
 _MAX_EVENTS_PER_SESSION = 50_000
 
-_MAX_REPR_LEN = 200
+_repr = reprlib.Repr()
+_repr.maxstring = 200
+_repr.maxother = 200
 
 
 def _react_id(node: ReactiveNode) -> str:
@@ -40,9 +43,8 @@ def _react_type(node: ReactiveNode) -> str:
 
 def _safe_repr(value: object) -> str:
     try:
-        text = repr(value)
-        return text if len(text) <= _MAX_REPR_LEN else text[:_MAX_REPR_LEN] + "..."
-    # A user object's __repr__ may raise anything; never break recording.
+        return _repr.repr(value)
+    # reprlib already guards raising __repr__; last-resort guard so recording never breaks.
     except Exception:
         return f"<unrepresentable {type(value).__name__}>"
 
@@ -68,7 +70,7 @@ class ReactlogRecorder(ReactiveTracer):
     def export(self, session_id: str) -> dict[str, Any]:
         shared = self._logs.get(None) or _SessionLog()
         own = self._logs.get(session_id) or _SessionLog()
-        nodes = {**shared.nodes, **own.nodes}
+        nodes = {k: dict(v) for k, v in {**shared.nodes, **own.nodes}.items()}
         log = sorted(
             [*nodes.values(), *shared.events, *own.events], key=lambda x: x["time"]
         )
