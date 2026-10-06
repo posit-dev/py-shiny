@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 
 from htmltools import tags
 
+from ...otel._attributes import extract_source_ref
 from .._trace import (
     DependencyAdded,
     DependencyRemoved,
@@ -143,7 +144,7 @@ class ReactlogRecorder(ReactiveTracer):
         rtype = _react_type(node)
         entry = log.nodes.get(rid)
         if entry is None:
-            log.nodes[rid] = {
+            entry = {
                 "action": "define",
                 "reactId": rid,
                 "label": label,
@@ -152,10 +153,22 @@ class ReactlogRecorder(ReactiveTracer):
                 "time": t,
                 "provenance": "observed",
             }
+            namespace = node._node_namespace
+            if namespace:
+                entry["module"] = namespace
+            log.nodes[rid] = entry
         else:
             # Inputs and outputs are renamed after they are defined.
             entry["label"] = label
             entry["type"] = rtype
+        # Output effects get their user render function after being defined.
+        fn = node._node_fn
+        if fn is not None:
+            ref = extract_source_ref(fn)
+            if "code.file.path" in ref:
+                entry["source_file"] = ref["code.file.path"]
+            if "code.line.number" in ref:
+                entry["line"] = ref["code.line.number"]
 
     def _record(
         self,
