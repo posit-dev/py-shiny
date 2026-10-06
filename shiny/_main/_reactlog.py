@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import time
@@ -10,10 +11,12 @@ from typing import Any, cast
 
 import click
 
+from ..reactive._reactlog._codegen import generate_controller_test
 from ..reactive._reactlog._record import (
     RecordingError,
     record_session,
     redact_export,
+    replay_script,
     serve_and_collect,
 )
 from ..reactive._reactlog._viewer import (
@@ -100,11 +103,18 @@ def _with_suffix(path: Path, suffix: str | None) -> Path:
     with the app, then press Enter or close the window. Use --no-browser to drive the app
     yourself (or with another tool), or pass a saved .json reactlog to view it again.
 
+    --test writes a Playwright controller test of the recorded session: a
+    deterministic starting point to refine by hand or with an agent. --replay records
+    the session by running such a test instead of waiting for you.
+
     Examples:
 
+    \b
         shiny reactlog app.py
         shiny reactlog app.py --html report.html --json report.json
         shiny reactlog app.py --no-browser --all
+        shiny reactlog app.py --test test_app.py
+        shiny reactlog app.py --replay test_app.py
         shiny reactlog report.json --html
     """,
 )
@@ -156,6 +166,20 @@ def _with_suffix(path: Path, suffix: str | None) -> Path:
 @click.option(
     "--redact-inputs", is_flag=True, default=False, help="Redact all input values."
 )
+@click.option(
+    "--test",
+    "test_out",
+    type=str,
+    default=None,
+    help="Write a Playwright controller test that replays the recorded session.",
+)
+@click.option(
+    "--replay",
+    "replay_file",
+    type=str,
+    default=None,
+    help="Record the session by running this Playwright test file (no manual interaction).",
+)
 @click.option("--title", type=str, default=None, help="Title for the HTML viewer.")
 @click.option(
     "--theme",
@@ -173,6 +197,8 @@ def reactlog(
     no_browser: bool,
     all_sessions: bool,
     redact_inputs: bool,
+    test_out: str | None,
+    replay_file: str | None,
     title: str | None,
     theme: str,
 ) -> None:
@@ -195,6 +221,13 @@ def reactlog(
             saved_input = input_file.suffix.lower() == ".json"
             if no_browser and video_out is not None:
                 raise click.UsageError("--video cannot be used with --no-browser.")
+            if (no_browser or saved_input) and (test_out or replay_file):
+                raise click.UsageError(
+                    "--test and --replay need the recording browser; "
+                    "they don't apply with --no-browser or a saved .json reactlog."
+                )
+            if test_out and replay_file:
+                raise click.UsageError("Use either --test or --replay, not both.")
             if all_sessions and not no_browser:
                 raise click.UsageError("--all requires --no-browser.")
             if saved_input and (no_browser or video_out is not None or all_sessions):
@@ -209,7 +242,9 @@ def reactlog(
                 elif html_out is not None:
                     video_path = Path(html_out).with_suffix(".webm")
             out_paths = [
-                Path(p) for p in (html_out, json_out, mermaid_out) if p is not None
+                Path(p)
+                for p in (html_out, json_out, mermaid_out, test_out)
+                if p is not None
             ]
             # Fail before recording, not after.
             _check_paths(
@@ -235,10 +270,17 @@ def reactlog(
                 )
             else:
                 rec = record_session(
-                    input_file, video_path=video_path, redact_inputs=redact_inputs
+                    input_file,
+                    video_path=video_path,
+                    script=replay_script(Path(replay_file)) if replay_file else None,
+                    redact_inputs=redact_inputs,
                 )
                 exports = [rec.export]
                 video_path = rec.video_path
+                if test_out is not None:
+                    _write_test(
+                        Path(test_out), app_file=input_file, actions=rec.actions
+                    )
 
             if redact_inputs:
                 for export in exports:
@@ -298,6 +340,20 @@ def _write(path: Path, text: str) -> None:
         path.write_text(text, encoding="utf-8")
     except OSError as err:
         raise RecordingError(f"Could not write {path}: {err}") from err
+
+
+def _write_test(
+    test_path: Path, *, app_file: Path, actions: list[dict[str, Any]]
+) -> None:
+    # The `local_app` fixture finds an `app.py` next to the test on its own.
+    rel = os.path.relpath(app_file.resolve(), test_path.resolve().parent)
+    app_path = None if rel == "app.py" else Path(rel).as_posix()
+    test_name = app_file.resolve().parent.name or "app"
+    _write(
+        test_path,
+        generate_controller_test(actions, test_name=test_name, app_path=app_path),
+    )
+    click.echo(cli_success(f"Controller test written to {test_path}"))
 
 
 def _write_outputs(
