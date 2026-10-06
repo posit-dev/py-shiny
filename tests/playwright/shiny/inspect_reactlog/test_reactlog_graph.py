@@ -9,6 +9,7 @@ from playwright.sync_api import Locator, Page, expect
 from shiny._inspect import (
     format_reactlog_html,
     generate_reactlog,
+    load_reactlog_json,
     record_shiny_session,
 )
 
@@ -1607,3 +1608,46 @@ def out():
 
     toggle_btn.click()
     expect(sidebar).to_be_visible()
+
+
+def test_live_reactlog_input_and_mark_waves(page: Page) -> None:
+    # Shaped like shiny._reactlog.ReactlogRecorder output: `rN` ids, typed inputs.
+    t0 = 1_700_000_000.0
+    log = [
+        {"action": "define", "reactId": "r1", "label": "input.x", "type": "input"},
+        {
+            "action": "define",
+            "reactId": "r2",
+            "label": "reactive.effect e",
+            "type": "observer",
+        },
+        {
+            "action": "valueChange",
+            "reactId": "r1",
+            "label": "input.x",
+            "type": "input",
+            "value": "1",
+            "time": t0 + 1,
+        },
+        {"action": "userMark", "label": "checkpoint", "time": t0 + 2},
+        {
+            "action": "valueChange",
+            "reactId": "r1",
+            "label": "input.x",
+            "type": "input",
+            "value": "2",
+            "time": t0 + 3,
+        },
+    ]
+    for entry in log[:2]:
+        entry["time"] = t0
+    page.set_content(
+        format_reactlog_html(load_reactlog_json({"log": log}), source_code=""),
+        wait_until="domcontentloaded",
+    )
+
+    expect(page.locator(".timeline-marker.is-mark")).to_have_count(1)
+    page.locator("#scrubber-range").fill("3")
+    expect(page.locator("#active-flush-label")).to_contain_text("checkpoint")
+    page.locator("#scrubber-range").fill("4")
+    expect(page.locator("#active-flush-label")).to_contain_text("x: 1 → 2")
