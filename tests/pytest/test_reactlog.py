@@ -2062,6 +2062,7 @@ def test_reactlog_html_features():
     assert "node-exec-badge" in html
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("SHINY_REACTLOG", "1")
     from starlette.testclient import TestClient
@@ -2135,6 +2136,7 @@ def test_shiny_run_reactlog_flag():
     assert "--reactlog" in result.output
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_reactlog_remote_security_access_control():
     from starlette.testclient import TestClient
 
@@ -2209,6 +2211,7 @@ def test_reactive_marks_session_scoping_and_isolation():
         assert len(reactive.get_marks()) == 1
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_app_reactlog_explicit_config(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("SHINY_REACTLOG", raising=False)
     from shiny import App, ui
@@ -2221,6 +2224,7 @@ def test_app_reactlog_explicit_config(monkeypatch: pytest.MonkeyPatch):
     assert len(app_enabled.reactlog_token) > 10
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_in_app_reactlog_reads_complete_source_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
@@ -2258,6 +2262,7 @@ app = App(app_ui, server, reactlog=True)
     assert report["sources"]["app.py"] == source
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch):
     from starlette.testclient import TestClient
 
@@ -2284,6 +2289,7 @@ def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch
     assert not report["entry_file"]
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_express_reactlog_reads_app_source(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
@@ -2301,7 +2307,11 @@ def total():
 """
     app_file.write_text(source)
     app = wrap_express_app(app_file)
-    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
+    try:
+        response = TestClient(app.init_starlette_app()).get("/__reactlog__")
+    finally:
+        # The express app module stays in sys.modules, so the App is never collected.
+        app.reactlog_enabled = False
     report, _ = json.JSONDecoder().raw_decode(
         response.text.split("const reactlogData = ", 1)[1]
     )
