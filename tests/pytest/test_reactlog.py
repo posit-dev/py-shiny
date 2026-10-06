@@ -16,11 +16,8 @@ from shiny import App, module, reactive, render
 from shiny._connection import MockConnection
 from shiny._main import main
 from shiny.reactive._reactlog._viewer import (
-    format_graph_dot,
     format_graph_mermaid,
     format_reactlog_html,
-    generate_reactlog,
-    inspect_reactive_graph,
     load_reactlog_json,
 )
 from tests.pytest._reactlog_fixtures import record_export, record_log
@@ -76,185 +73,6 @@ class _TagCollector(HTMLParser):
             and all(candidate_attrs.get(key) == value for key, value in attrs.items())
             for candidate, candidate_attrs in self.tags
         )
-
-
-def test_inspect_graph_roles():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_slider("n", "N", 1, 10, 5)
-
-@reactive.calc
-def doubled():
-    return input.n() * 2
-
-@reactive.effect
-def log_val():
-    print(doubled())
-
-@render.text
-def out():
-    return f"Doubled is {doubled()}"
-"""
-    graph = inspect_reactive_graph(code)
-    assert graph["success"] is True
-    roles = {n["id"]: n["role"] for n in graph["nodes"]}
-    assert roles["input:n"] == "source"
-    assert roles["calc:doubled"] == "conductor"
-    assert roles["effect:log_val"] == "observer"
-    assert roles["output:out"] == "observer"
-
-
-def test_topological_execution_order():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_slider("x", "X", 1, 10, 5)
-
-@reactive.calc
-def a_derived():
-    return z_base() + 10
-
-@reactive.calc
-def z_base():
-    return input.x() * 2
-
-@render.text
-def out():
-    return f"Result: {a_derived()}"
-"""
-    reactlog = generate_reactlog(code, inputs={"x": 3})
-    assert reactlog["success"] is True
-
-    calc_events = [
-        e["node_id"] for e in reactlog["events"] if e["event"] == "wouldEvaluate"
-    ]
-    assert "calc:z_base" in calc_events
-    assert "calc:a_derived" in calc_events
-    assert "output:out" in calc_events
-
-    z_index = calc_events.index("calc:z_base")
-    a_index = calc_events.index("calc:a_derived")
-    out_index = calc_events.index("output:out")
-    assert z_index < a_index < out_index
-
-
-def test_node_id_collision_input_and_calc_same_name():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("value", "Value", 10)
-
-@reactive.calc
-def value():
-    return input.value() * 2
-
-@render.text
-def value():
-    return f"Final {value()}"
-"""
-    graph = inspect_reactive_graph(code)
-    assert graph["success"] is True
-    node_ids = {n["id"] for n in graph["nodes"]}
-    assert "input:value" in node_ids
-    assert "calc:value" in node_ids
-    assert "output:value" in node_ids
-    assert len(graph["nodes"]) == 3
-
-    edges = [(e["from"], e["to"]) for e in graph["edges"]]
-    assert ("input:value", "calc:value") in edges
-    assert ("calc:value", "output:value") in edges
-
-
-def test_generate_reactlog_with_recorded_actions():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_slider("count", "Count", 1, 100, 20)
-
-@reactive.calc
-def triple():
-    return input.count() * 3
-
-@render.text
-def display():
-    return f"Value is {triple()}"
-"""
-    actions = [
-        {
-            "type": "input",
-            "name": "count",
-            "value": 45,
-            "inputType": "shiny.sliderInput",
-            "timestamp": 120,
-        },
-        {"type": "click", "target": "submit_btn", "text": "Submit", "timestamp": 250},
-        {"type": "output", "name": "display", "timestamp": 310},
-    ]
-
-    reactlog = generate_reactlog(code, recorded_actions=actions, video_path="demo.webm")
-    assert reactlog["success"] is True
-    assert reactlog["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
-    assert reactlog["video_path"] == "demo.webm"
-    assert reactlog["observed_events_count"] == 3
-    assert reactlog["inferred_events_count"] > 0
-
-    event_types = [e["event"] for e in reactlog["events"]]
-    assert "analysisInit" in event_types
-    assert "define" in event_types
-    assert "inputChange" in event_types
-    assert "userClick" in event_types
-    assert "outputUpdated" in event_types
-    assert "recordingComplete" in event_types
-
-
-def test_deduplicate_input_actions():
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("val", "Val", 1)
-@render.text
-def out():
-    return str(input.val())
-"""
-    actions = [
-        {"type": "input", "name": "val", "value": 10, "timestamp": 100},
-        {
-            "type": "input",
-            "name": "val",
-            "value": 10,
-            "timestamp": 120,
-        },  # duplicate within 20ms
-        {"type": "input", "name": "val", "value": 20, "timestamp": 600},  # new value
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=actions)
-    input_changes = [e for e in reactlog["events"] if e["event"] == "inputChange"]
-    assert len(input_changes) == 2
-    assert input_changes[0]["value"] == "10"
-    assert input_changes[1]["value"] == "20"
-
-
-def test_observed_vs_inferred_provenance_labels():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("n", "N", 5)
-@reactive.calc
-def double():
-    return input.n() * 2
-@render.text
-def out():
-    return str(double())
-"""
-    actions = [
-        {"type": "input", "name": "n", "value": 15, "timestamp": 200},
-        {"type": "output", "name": "out", "timestamp": 300},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=actions)
-    for e in reactlog["events"]:
-        assert e.get("provenance") in ("observed", "inferred")
-
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert "provenance-observed" in html
-    assert "provenance-inferred" in html
 
 
 def test_relative_video_path_different_directories():
@@ -321,7 +139,7 @@ def test_reactlog_phase_separation_and_skip():
     assert "setupVideoSync()" in html
 
 
-def test_format_mermaid_and_dot():
+def test_format_mermaid():
     graph = _chain_log()
     mermaid = format_graph_mermaid(graph)
     assert "graph TD" in mermaid
@@ -331,12 +149,8 @@ def test_format_mermaid_and_dot():
     assert f"{n} --> {doubled}" in mermaid
     assert f"{doubled} --> {out}" in mermaid
 
-    dot = format_graph_dot(graph)
-    assert "digraph ReactiveGraph" in dot
-    assert f'"{n}" -> "{doubled}";' in dot
 
-
-def test_mermaid_and_dot_hyphen_underscore_collision():
+def test_mermaid_hyphen_underscore_collision():
     def server(input: Any, output: Any, session: Any) -> None:
         @render.text
         def out1() -> str:
@@ -363,85 +177,6 @@ def test_mermaid_and_dot_hyphen_underscore_collision():
     assert hyphen != underscore
     assert f'{hyphen}["input.a-b"]:::inputClass' in mermaid
     assert f'{underscore}["input.a_b"]:::inputClass' in mermaid
-    dot = format_graph_dot(graph)
-    assert 'label="input.a-b"' in dot
-    assert 'label="input.a_b"' in dot
-
-
-def test_unresolved_inputs_creates_source_nodes():
-    code = """from shiny.express import input, render
-
-@render.text
-def result():
-    return f"Hello {input.customer()}"
-"""
-    graph = inspect_reactive_graph(code)
-    assert graph["success"] is True
-    node_ids = {n["id"] for n in graph["nodes"]}
-    assert "input:customer" in node_ids
-    assert "output:result" in node_ids
-
-    inp_node = next(n for n in graph["nodes"] if n["id"] == "input:customer")
-    assert inp_node["declaration"] == "unresolved"
-    assert inp_node["role"] == "source"
-
-    edges = [(e["from"], e["to"]) for e in graph["edges"]]
-    assert ("input:customer", "output:result") in edges
-
-
-def test_inferred_events_count_includes_recording_complete():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name")
-@render.text
-def greet():
-    return f"Hi {input.name()}"
-"""
-    reactlog = generate_reactlog(
-        code,
-        recorded_actions=[
-            {"type": "input", "name": "name", "value": "Alice", "timestamp": 100}
-        ],
-    )
-    inferred_events = [
-        e for e in reactlog["events"] if e.get("provenance") == "inferred"
-    ]
-    assert reactlog["inferred_events_count"] == len(inferred_events)
-
-
-def test_exact_edge_highlighting_with_multiple_dependencies():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("a", "A", 1)
-ui.input_numeric("b", "B", 2)
-
-@reactive.calc
-def total():
-    return input.a() + input.b()
-
-@render.text
-def out():
-    return str(total())
-"""
-    actions = [
-        {"type": "input", "name": "a", "value": 10, "timestamp": 100},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=actions)
-    propagate_events = [e for e in reactlog["events"] if e["event"] == "propagate"]
-    assert len(propagate_events) >= 1
-    first_prop = propagate_events[0]
-    assert first_prop["edge_from"] == "input:a"
-    assert first_prop["edge_to"] == "calc:total"
-
-    depends_events = [e for e in reactlog["events"] if e["event"] == "dependsOn"]
-    assert any(
-        e.get("edge_from") == "input:a" and e.get("edge_to") == "calc:total"
-        for e in depends_events
-    )
-    assert any(
-        e.get("edge_from") == "input:b" and e.get("edge_to") == "calc:total"
-        for e in depends_events
-    )
 
 
 def test_format_reactlog_html_has_compact_sidebar():
@@ -570,130 +305,6 @@ def test_format_reactlog_html_theme_support():
     assert 'data-theme="light"' in html_light
     assert '[data-theme="light"]' in html_light
     assert "--bg: #f8fafc;" in html_light
-
-
-def test_reactive_event_decorator_semantics():
-    code = """from shiny import reactive
-from shiny.express import input, render, ui
-
-ui.input_action_button("go", "Go")
-ui.input_text("secret", "Secret", value="hidden")
-
-@reactive.effect
-@reactive.event(input.go)
-def update():
-    x = input.secret()
-
-@reactive.calc
-@reactive.event(input.go)
-def compute():
-    return input.secret() + " computed"
-
-@render.text
-def txt():
-    return compute()
-"""
-    graph = inspect_reactive_graph(code)
-    assert graph["success"] is True
-
-    edges = graph["edges"]
-    assert {"from": "input:go", "to": "effect:update"} in edges
-    assert {"from": "input:secret", "to": "effect:update"} not in edges
-
-    assert {"from": "input:go", "to": "calc:compute"} in edges
-    assert {"from": "input:secret", "to": "calc:compute"} not in edges
-
-    assert {"from": "calc:compute", "to": "output:txt"} in edges
-
-
-def test_reactive_event_multiple_triggers():
-    code = """from shiny import reactive
-from shiny.express import input, render
-
-@reactive.calc
-def base_val():
-    return 10
-
-@reactive.calc
-@reactive.event(input.btn1, input.btn2, base_val)
-def multi_triggered():
-    body_val = input.ignored_input()
-    return body_val * 2
-"""
-    graph = inspect_reactive_graph(code)
-    assert graph["success"] is True
-
-    edges = graph["edges"]
-    assert {"from": "input:btn1", "to": "calc:multi_triggered"} in edges
-    assert {"from": "input:btn2", "to": "calc:multi_triggered"} in edges
-    assert {"from": "calc:base_val", "to": "calc:multi_triggered"} in edges
-    assert {"from": "input:ignored_input", "to": "calc:multi_triggered"} not in edges
-
-
-def test_reactive_isolate_block_semantics():
-    code = """from shiny import reactive
-from shiny.express import input, render
-
-@render.text
-def out():
-    val_a = input.a()
-    with reactive.isolate():
-        val_b = input.b()
-    return f"{val_a} {val_b}"
-"""
-    graph = inspect_reactive_graph(code)
-    assert graph["success"] is True
-
-    edges = graph["edges"]
-    assert {"from": "input:a", "to": "output:out"} in edges
-    assert {"from": "input:b", "to": "output:out", "isolated": True} in edges
-
-
-@pytest.mark.parametrize("recorded", [False, True])
-@pytest.mark.parametrize("changed", ["a", "b", "c"])
-def test_isolated_reads_do_not_invalidate_downstream(recorded: bool, changed: str):
-    code = """from shiny import reactive, render
-@reactive.calc
-def cached():
-    return input.c()
-@render.text
-def out():
-    value = input.a()
-    with reactive.isolate():
-        value += input.b() + cached()
-    return str(value)
-"""
-    report = generate_reactlog(
-        code,
-        inputs={changed: 2},
-        recorded_actions=(
-            [{"type": "input", "name": changed, "value": 2, "timestamp": 1000}]
-            if recorded
-            else None
-        ),
-    )
-    expected_nodes: dict[str, set[str]] = {
-        "a": {"output:out"},
-        "b": set(),
-        "c": {"calc:cached"},
-    }
-    expected = expected_nodes[changed]
-    for kind in ("propagate", "wouldEvaluate"):
-        assert {
-            e["node_id"] for e in report["events"] if e["event"] == kind
-        } == expected
-    assert {"from": "input:b", "to": "output:out", "isolated": True} in report["edges"]
-    assert {"from": "calc:cached", "to": "output:out", "isolated": True} in report[
-        "edges"
-    ]
-    assert not any(
-        e["event"] == "dependsOn" and e["edge_from"] in ("input:b", "calc:cached")
-        for e in report["events"]
-    )
-    if recorded:
-        wave = report["action_waves"][-1]
-        assert set(wave["invalidated_nodes"]) == expected
-        assert set(wave["inferred_executions"]) == expected
 
 
 def test_real_shiny_for_r_reactlog_parsing_and_epoch_time_normalization():
@@ -832,108 +443,6 @@ def test_reactlog_execution_debugger_elements_and_helpers():
     assert "trace-status-line" in html
 
 
-def test_password_and_secret_inputs_redacted_at_ast_visitor():
-    code = """from shiny.express import input, render, ui
-ui.input_password("user_pass", "Password", value="super_secret_123")
-ui.input_text("api_key_token", "API Key", value="sk-123456789")
-ui.input_text("normal_user", "Username", value="admin")
-@render.text
-def out():
-    return f"User: {input.normal_user()}"
-"""
-    graph = inspect_reactive_graph(code)
-    assert graph["success"] is True
-    defaults = graph.get("input_defaults", {})
-    assert defaults.get("user_pass") == "[REDACTED]"
-    assert defaults.get("api_key_token") == "[REDACTED]"
-    assert defaults.get("normal_user") == "admin"
-
-
-def test_authoritative_action_waves_in_reactlog():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("price", "Price", 25)
-ui.input_numeric("units", "Units", 10)
-
-@reactive.calc
-def subtotal():
-    return input.price() * input.units()
-
-@render.text
-def summary():
-    return f"Subtotal: {subtotal()}"
-"""
-    actions = [
-        {"type": "input", "name": "price", "value": 30, "timestamp": 200},
-        {
-            "type": "click",
-            "name": "recalc_btn",
-            "text": "Recalculate",
-            "timestamp": 500,
-        },
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=actions)
-    assert reactlog["success"] is True
-    waves = reactlog.get("action_waves", [])
-    assert len(waves) == 3
-
-    init_w = waves[0]
-    assert init_w["is_init"] is True
-    assert init_w["trigger"] == "Init"
-
-    price_w = waves[1]
-    assert price_w["is_init"] is False
-    assert "price" in price_w["trigger"]
-    assert price_w["trigger_node_id"] == "input:price"
-    assert "calc:subtotal" in price_w["invalidated_nodes"]
-    assert "output:summary" in price_w["invalidated_nodes"]
-    assert "calc:subtotal" in price_w["inferred_executions"]
-    assert "output:summary" in price_w["observed_outputs"]
-
-    click_w = waves[2]
-    assert click_w["is_init"] is False
-    assert "Click" in click_w["trigger"]
-
-
-def test_semantic_states_in_events():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("x", "X", 5)
-
-@reactive.calc
-def doubled():
-    return input.x() * 2
-
-@render.text
-def out():
-    return str(doubled())
-"""
-    actions = [
-        {"type": "input", "name": "x", "value": 10, "timestamp": 100},
-        {"type": "output", "name": "out", "timestamp": 200},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=actions)
-    events = reactlog["events"]
-
-    define_evs = [e for e in events if e["event"] == "define"]
-    for e in define_evs:
-        assert e["semantic_state"] == "dependency_only"
-
-    input_evs = [e for e in events if e["event"] == "inputChange"]
-    for e in input_evs:
-        assert e["semantic_state"] == "observed_execution"
-
-    prop_evs = [e for e in events if e["event"] == "propagate"]
-    for e in prop_evs:
-        assert e["semantic_state"] == "invalidated"
-
-    eval_evs = [e for e in events if e["event"] == "wouldEvaluate"]
-    for e in eval_evs:
-        assert e["semantic_state"] == "inferred_execution"
-
-
 def test_source_code_html_includes_line_numbers():
     from shiny.reactive._reactlog._viewer import _format_python_source_html
 
@@ -978,73 +487,6 @@ def test_r_reactlog_types_and_late_definitions():
     assert nodes["r3"]["role"] == "observer"
     assert nodes["r4"]["role"] == "source"
     assert result["edges"] == [{"from": "r1$x", "to": "r2"}, {"from": "r2", "to": "r3"}]
-
-
-def test_module_instances_and_cross_boundary_dependencies():
-    code = """
-from shiny import module, reactive, render, ui
-@module.ui
-def sales_ui():
-    return ui.input_numeric("units", "Units", 10)
-@module.server
-def sales_server(input, output, session, factor):
-    @reactive.calc
-    def subtotal():
-        return input.units() * factor()
-    @render.plot
-    def chart():
-        return subtotal()
-    return subtotal
-sales_ui("west")
-sales_ui("east")
-def server(input, output, session):
-    @reactive.calc
-    def factor():
-        return input.price()
-    west = sales_server("west", factor)
-    east = sales_server("east", factor=factor)
-    @render.text
-    def total():
-        return west() + east()
-"""
-    result = inspect_reactive_graph(code)
-    nodes = {n["id"]: n for n in result["nodes"]}
-    edges = {(e["from"], e["to"]) for e in result["edges"]}
-    for name in ("west", "east"):
-        assert nodes[f"input:{name}-units"]["module"] == name
-        assert nodes[f"input:{name}-units"]["value"] == 10
-        assert nodes[f"output:{name}-chart"]["render_type"] == "plot"
-        assert (f"input:{name}-units", f"calc:{name}-subtotal") in edges
-        assert ("calc:factor", f"calc:{name}-subtotal") in edges
-        assert (f"calc:{name}-subtotal", "output:total") in edges
-    assert "calc:subtotal" not in nodes
-
-
-def test_nested_modules_keep_distinct_namespaces():
-    code = """
-from shiny import module, reactive, render
-@module.server
-def child(input, output, session):
-    @reactive.calc
-    def value():
-        return input.n()
-    return value
-@module.server
-def parent(input, output, session):
-    inner = child("inner")
-    @render.text
-    def result():
-        return inner()
-parent("one")
-parent("two")
-"""
-    result = inspect_reactive_graph(code)
-    nodes = {n["id"]: n for n in result["nodes"]}
-    assert nodes["calc:one-inner-value"]["module"] == "one-inner"
-    assert nodes["output:one-result"]["module"] == "one"
-    assert {"from": "calc:two-inner-value", "to": "output:two-result"} in result[
-        "edges"
-    ]
 
 
 def test_plot_snapshots_and_module_metadata_survive_json_roundtrip():
@@ -1093,61 +535,6 @@ def test_plot_snapshots_and_module_metadata_survive_json_roundtrip():
     assert not any("plot" in e for e in unsafe["events"])
 
 
-def test_module_event_triggers_are_namespaced():
-    result = inspect_reactive_graph("""
-from shiny import module, reactive
-@module.server
-def controls(input, output, session):
-    @reactive.effect
-    @reactive.event(input.apply)
-    def save():
-        print(input.value())
-controls("filters")
-""")
-    assert {"from": "input:filters-apply", "to": "effect:filters-save"} in result[
-        "edges"
-    ]
-    assert {
-        "from": "input:filters-value",
-        "to": "effect:filters-save",
-        "isolated": True,
-    } in result["edges"]
-
-
-def test_multifile_circular_imports_and_duplicate_function_names(tmp_path: Path):
-    code = """import first
-import second
-first.sales("one")
-second.sales("two")
-"""
-    module_code = """import {other}
-from shiny import module, reactive
-@module.server
-def sales(input, output, session):
-    @reactive.calc
-    def total():
-        return input.{input_name}()
-    return total
-"""
-    for name, other in (("first", "second"), ("second", "first")):
-        (tmp_path / f"{name}.py").write_text(
-            module_code.format(other=other, input_name=name)
-        )
-    app = tmp_path / "app.py"
-    app.write_text(code)
-    report = inspect_reactive_graph(code, source_path=app)
-    assert {"from": "input:one-first", "to": "calc:one-total"} in report["edges"]
-    assert {"from": "input:two-second", "to": "calc:two-total"} in report["edges"]
-    assert len(report["sources"]) == 3
-
-
-def test_multifile_reports_syntax_error_in_imported_file(tmp_path: Path):
-    (tmp_path / "broken.py").write_text("def invalid(:\n")
-    report = inspect_reactive_graph("import broken", source_path=tmp_path / "app.py")
-    assert report["success"] is False
-    assert "broken.py:1" in report["error"]
-
-
 def test_load_reactlog_json_with_plot_preview():
     data = {
         "version": "1.0",
@@ -1174,37 +561,6 @@ def test_load_reactlog_json_with_plot_preview():
     assert loaded["events"][0]["plot"]["src"].startswith("data:image/png;base64")
 
 
-def test_isolated_dependencies_marked_in_edges():
-    code = """from shiny import reactive
-from shiny.express import input, render
-
-@reactive.calc
-def isolated_calc():
-    with reactive.isolate():
-        val = input.untracked()
-    return val + input.tracked()
-
-@render.text
-def txt():
-    with reactive.isolate():
-        return f"{input.isolated_out()}"
-"""
-    res = inspect_reactive_graph(code)
-    assert res["success"] is True
-    edges = res["edges"]
-    assert {
-        "from": "input:untracked",
-        "to": "calc:isolated_calc",
-        "isolated": True,
-    } in edges
-    assert {"from": "input:tracked", "to": "calc:isolated_calc"} in edges
-    assert {
-        "from": "input:isolated_out",
-        "to": "output:txt",
-        "isolated": True,
-    } in edges
-
-
 def test_recorded_sources_reach_the_viewer():
     export = record_export(
         _chain_server, [{"n": 1, ".clientdata_output_out_hidden": False}]
@@ -1217,7 +573,7 @@ def test_recorded_sources_reach_the_viewer():
     assert json.dumps("def test_recorded_sources_reach_the_viewer():")[1:-1] in html
 
 
-def test_reactive_marks_api_and_generate_reactlog():
+def test_reactive_marks_api_and_recorded_marks():
     from shiny import reactive
 
     reactive.clear_marks()
@@ -1273,44 +629,6 @@ def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
     assert get_mark_resp.status_code == 200
     assert get_mark_resp.json()["status"] == "ok"
     assert any(m["label"] == "test-mark" for m in get_mark_resp.json()["marks"])
-
-
-def test_interleaved_timeline_bookmarks():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("x", "X", 10)
-ui.input_numeric("y", "Y", 20)
-
-@render.text
-def out():
-    return f"val={input.x() + input.y()}"
-"""
-    recorded_actions = [
-        {"type": "input", "name": "x", "value": 15, "timestamp": 1000},
-        {"type": "input", "name": "y", "value": 25, "timestamp": 3000},
-    ]
-    marks = [
-        {"action": "userMark", "label": "Start Mark", "time": 0.5, "timestamp": 500},
-        {"action": "userMark", "label": "Middle Mark", "time": 2.0, "timestamp": 2000},
-        {"action": "userMark", "label": "End Mark", "time": 4.0, "timestamp": 4000},
-    ]
-
-    rlog = generate_reactlog(code, recorded_actions=recorded_actions, marks=marks)
-    assert rlog["success"] is True
-
-    waves = rlog.get("action_waves", [])
-    mark_waves = [w for w in waves if w.get("is_mark")]
-    assert len(mark_waves) == 3
-
-    labels = [w["trigger_label"] for w in waves]
-    start_idx = next(i for i, l in enumerate(labels) if "Start Mark" in l)
-    x_idx = next(i for i, l in enumerate(labels) if "x" in l)
-    mid_idx = next(i for i, l in enumerate(labels) if "Middle Mark" in l)
-    y_idx = next(i for i, l in enumerate(labels) if "y" in l)
-    end_idx = next(i for i, l in enumerate(labels) if "End Mark" in l)
-
-    assert start_idx < x_idx < mid_idx < y_idx < end_idx
 
 
 def test_shiny_run_reactlog_flag():
@@ -1522,120 +840,6 @@ def test_custom_session_inherits_private_reactlog_storage():
     reactive.clear_marks(first)
     assert reactive.get_marks(first) == []
     assert [m["label"] for m in reactive.get_marks(second)] == ["second"]
-
-
-def test_inspect_fully_qualified_shiny_decorators():
-    code = """import shiny
-shiny.ui.input_numeric("unused", "Unused", 7)
-@shiny.reactive.calc
-def doubled():
-    return input.x() * 2
-@shiny.render.text
-def out():
-    with shiny.reactive.isolate():
-        extra = input.y()
-    return str(doubled() + extra)
-"""
-    graph = inspect_reactive_graph(code)
-    assert {n["id"] for n in graph["nodes"]} == {
-        "input:unused",
-        "input:x",
-        "input:y",
-        "calc:doubled",
-        "output:out",
-    }
-    assert {"from": "input:x", "to": "calc:doubled"} in graph["edges"]
-    assert {"from": "calc:doubled", "to": "output:out"} in graph["edges"]
-    assert {"from": "input:y", "to": "output:out", "isolated": True} in graph["edges"]
-
-
-@pytest.mark.parametrize("decorator", ["my_calculator", "side_effect", "prevent"])
-def test_inspect_ignores_unrelated_decorator_names(decorator: str):
-    graph = inspect_reactive_graph(
-        f"@{decorator}\ndef helper():\n    return input.x()\n"
-    )
-    assert graph["nodes"] == []
-
-
-def test_express_showcase_reactlog_features():
-    app_file = Path(__file__).resolve().parent.parent.parent / "dist2" / "app.py"
-    if not app_file.exists():
-        return
-    source = app_file.read_text(encoding="utf-8")
-    report = generate_reactlog(source, source_path=app_file)
-    assert report["success"] is True
-    node_types = {n["type"] for n in report["nodes"]}
-    assert {"input", "calc", "effect", "output"}.issubset(node_types)
-    modules = {n.get("module") for n in report["nodes"] if n.get("module")}
-    assert modules == {"solar", "wind"}
-    isolated = [e for e in report["edges"] if e.get("isolated")]
-    assert len(isolated) >= 1
-    assert set(report["sources"].keys()) == {"app.py", "zone_module.py"}
-
-
-def test_format_reactlog_html_flush_navigation_and_pipeline():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-ui.input_numeric("x", "X", 10)
-@reactive.calc
-def doubled():
-    return input.x() * 2
-@render.text
-def out():
-    return str(doubled())
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="flush-select"' not in html
-    assert 'id="btn-prev-flush"' in html
-    assert 'id="btn-next-flush"' in html
-    assert 'id="flush-counter-badge"' in html
-    assert 'id="flush-pipeline-bar"' not in html
-    assert 'id="pipe-trigger"' not in html
-    assert 'id="pipe-invalidated"' not in html
-    assert 'id="pipe-calcs"' not in html
-    assert 'id="pipe-outputs"' not in html
-    assert "selectFlush(" in html
-    assert "updateFlushUI(" in html
-
-
-def test_format_reactlog_html_overview_and_zooming_modes():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-ui.input_numeric("n", "N", 5)
-@reactive.calc
-def sq():
-    return input.n() ** 2
-@render.text
-def display():
-    return f"Val={sq()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="btn-mode-overview"' in html
-    assert 'id="btn-mode-flush"' in html
-    assert 'id="btn-mode-full"' in html
-    assert 'id="module-overview-panel"' in html
-    assert 'id="module-filter-select"' in html
-    assert "setViewMode(" in html
-    assert "zoomToModule(" in html
-    assert "renderModuleOverview(" in html
-
-
-def test_format_reactlog_html_flush_details_card():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name", "World")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}!"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="flush-card"' in html
-    assert 'id="flush-card-title"' in html
-    assert 'id="flush-card-trigger"' in html
-    assert 'id="flush-execution-order"' in html
-    assert "getActiveFlushNodeIds(" in html
 
 
 def test_load_reactlog_json_marks_isolated_edges():
@@ -1885,3 +1089,39 @@ def test_recorded_module_attribution_of_inputs_and_client_data() -> None:
     assert "module" not in defines[".clientdata_pixelratio"]
     # Created by the root from the init message, but it is the module's input.
     assert defines["input.sales-n"]["module"] == "sales"
+
+
+def test_format_reactlog_html_flush_navigation_and_pipeline():
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
+    assert 'id="flush-select"' not in html
+    assert 'id="btn-prev-flush"' in html
+    assert 'id="btn-next-flush"' in html
+    assert 'id="flush-counter-badge"' in html
+    assert 'id="flush-pipeline-bar"' not in html
+    assert 'id="pipe-trigger"' not in html
+    assert 'id="pipe-invalidated"' not in html
+    assert 'id="pipe-calcs"' not in html
+    assert 'id="pipe-outputs"' not in html
+    assert "selectFlush(" in html
+    assert "updateFlushUI(" in html
+
+
+def test_format_reactlog_html_overview_and_zooming_modes():
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
+    assert 'id="btn-mode-overview"' in html
+    assert 'id="btn-mode-flush"' in html
+    assert 'id="btn-mode-full"' in html
+    assert 'id="module-overview-panel"' in html
+    assert 'id="module-filter-select"' in html
+    assert "setViewMode(" in html
+    assert "zoomToModule(" in html
+    assert "renderModuleOverview(" in html
+
+
+def test_format_reactlog_html_flush_details_card():
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
+    assert 'id="flush-card"' in html
+    assert 'id="flush-card-title"' in html
+    assert 'id="flush-card-trigger"' in html
+    assert 'id="flush-execution-order"' in html
+    assert "getActiveFlushNodeIds(" in html
