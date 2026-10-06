@@ -187,11 +187,11 @@ def apply_frame_patches(
     return nw_data.with_columns(*scatter_columns)
 
 
-def _get_categorical_categories(col: nw.Series, dtype: DType) -> list[str]:
+def _get_categorical_categories(col: nw.Series, dtype: DType) -> list[Any]:
+    native = nw.to_native(col)
     if isinstance(dtype, nw.Enum):
         if hasattr(dtype, "categories"):
-            return [str(x) for x in dtype.categories]
-        native = nw.to_native(col, strict=False)
+            return list(dtype.categories)
         native_dtype = getattr(native, "dtype", None)
         if (
             native_dtype is not None
@@ -200,35 +200,20 @@ def _get_categorical_categories(col: nw.Series, dtype: DType) -> list[str]:
         ):
             native_cats = native_dtype.categories
             if hasattr(native_cats, "to_list"):
-                return [str(x) for x in native_cats.to_list()]
-            return [str(x) for x in native_cats]
+                return native_cats.to_list()
+            return list(native_cats)
 
-    native = nw.to_native(col, strict=False)
     native_ns = getattr(nw.get_native_namespace(col), "__name__", "")
     if native_ns == "polars":
-        if hasattr(native, "drop_nulls") and hasattr(native, "unique"):
-            return [
-                str(x)
-                for x in native.drop_nulls().unique(maintain_order=True).to_list()
-            ]
-        try:
-            unique_col = col.drop_nulls().unique(maintain_order=True)
-        except TypeError:
-            unique_col = col.drop_nulls().unique()
-        return [str(x) for x in unique_col.to_list()]
+        return native.drop_nulls().unique(maintain_order=True).to_list()
 
     native_cat = getattr(native, "cat", None)
     if native_cat is not None and hasattr(native_cat, "categories"):
-        return [str(x) for x in native_cat.categories]
+        if hasattr(native_cat.categories, "tolist"):
+            return native_cat.categories.tolist()
+        return list(native_cat.categories)
 
-    try:
-        return [str(x) for x in col.cat.get_categories().to_list()]
-    except Exception:
-        try:
-            unique_col = col.drop_nulls().unique(maintain_order=True)
-        except TypeError:
-            unique_col = col.drop_nulls().unique()
-        return [str(x) for x in unique_col.to_list()]
+    return col.cat.get_categories().to_list()
 
 
 # serialize_dtype ----------------------------------------------------------------------

@@ -227,6 +227,10 @@ def assert_frame_equal2(
             pd.Series(pd.Categorical(["a", None, "b"], categories=["a", "b", "c"])),
             ("categorical", ["a", "b", "c"]),
         ),
+        (
+            pd.Series(pd.Categorical([1, None, 2], categories=[1, 2, 3])),
+            ("categorical", [1, 2, 3]),
+        ),
         (pd.Series([{"x": 1}]), "object"),
         (pd.Series([h1("yo")]), "html"),
         (pd.Series([HTML("yo")]), "html"),
@@ -237,7 +241,7 @@ def test_serialize_dtype(
         "pd.Series[Any]",
         pl.Series,
     ],
-    res_type: str | tuple[str, list[str]],
+    res_type: str | tuple[str, list[Any]],
 ):
     nw_ser = series_to_narwhals(ser)
     dtype_info = serialize_dtype(nw_ser)

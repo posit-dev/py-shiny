@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import (
     TYPE_CHECKING,
+    Any,
     Dict,
     Literal,
     Optional,
@@ -209,7 +210,7 @@ class FrameDtypeSubset(TypedDict):
 
 class FrameDtypeCategories(TypedDict):
     type: Literal["categorical"]
-    categories: list[str]
+    categories: list[Any]
 
 
 FrameDtype = Union[
