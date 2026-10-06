@@ -3307,6 +3307,9 @@ def format_reactlog_html(
       }});
       let initWave = null;
       let curWave = null;
+      // Recorded ids (`r3`) carry no name; use the node's label instead.
+      const nodeLabels = new Map((reactlogData.nodes || []).map(n => [n.id, n.label]));
+      const waveNodeName = nId => cleanName(nId.includes(':') ? nId : (nodeLabels.get(nId) || nId));
 
       events.forEach((ev, idx) => {{
         const evAction = ev.action || ev.event || '';
@@ -3417,12 +3420,12 @@ def format_reactlog_html(
               }}
             }}
           }} else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor'))) {{
-            const name = cleanName(nId);
+            const name = waveNodeName(nId);
             if (name && !curWave.calcs.some(item => item.name === name)) {{
               curWave.calcs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
           }} else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer'))) {{
-            const name = cleanName(nId);
+            const name = waveNodeName(nId);
             if (name && !curWave.outputs.some(item => item.name === name)) {{
               curWave.outputs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
@@ -4235,6 +4238,8 @@ def format_reactlog_html(
 
       const cleanTargetName = cleanName(targetNode.name || targetNode.id);
       const burstEventForNode = burstEvents.find(e => {{
+        // Dropping a dependency (e.g. an isolated read being invalidated) is not a run.
+        if (e.event === 'dependsOnRemove') return false;
         const eid = e.node_id || e.id || '';
         return eid === nodeId || cleanName(eid) === cleanTargetName || (e.node_label && cleanName(e.node_label) === cleanTargetName);
       }});
@@ -4673,7 +4678,7 @@ def format_reactlog_html(
       events.forEach(ev => {{
         const nid = ev.node_id || ev.id;
         if (!nid) return;
-        if (ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
+        if (ev.event === 'enter' || ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
           counts.set(nid, (counts.get(nid) || 0) + 1);
         }}
       }});
