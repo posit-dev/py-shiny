@@ -320,3 +320,105 @@ def test_reactlog_cli_rejects_duplicate_outputs(tmp_path: Path) -> None:
     )
     assert res.exit_code == 1
     assert "more than one output" in res.output
+
+
+def test_reactlog_cli_writes_generated_test(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    actions = [
+        {
+            "type": "input",
+            "name": "n",
+            "value": 7,
+            "binding": "shiny.sliderInput",
+            "tag": "INPUT",
+            "elType": "text",
+            "classes": "",
+            "container": "",
+        }
+    ]
+
+    def fake_record(app_file: Path, **kw: Any) -> Recording:
+        return Recording(export=SAVED, actions=actions, session_id="s1")
+
+    monkeypatch.setattr(cli, "record_session", fake_record)
+    app = tmp_path / "app.py"
+    app.write_text("from shiny.express import ui\n")
+    test_file = tmp_path / "test_app.py"
+    res = CliRunner().invoke(
+        main,
+        [
+            "reactlog",
+            str(app),
+            "--json",
+            str(tmp_path / "o.json"),
+            "--test",
+            str(test_file),
+        ],
+    )
+    assert res.exit_code == 0, res.output
+    assert 'controller.InputSlider(page, "n").set("7")' in test_file.read_text()
+    assert "parametrize" not in test_file.read_text()  # test sits next to app.py
+
+
+def test_reactlog_cli_generated_test_points_at_app(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fake_record(app_file: Path, **kw: Any) -> Recording:
+        return Recording(export=SAVED, session_id="s1")
+
+    monkeypatch.setattr(cli, "record_session", fake_record)
+    app = tmp_path / "myapp" / "app.py"
+    app.parent.mkdir()
+    app.write_text("from shiny.express import ui\n")
+    test_file = tmp_path / "tests" / "test_app.py"
+    res = CliRunner().invoke(
+        main,
+        ["reactlog", str(app), "--json", str(tmp_path / "o.json")]
+        + ["--test", str(test_file)],
+    )
+    assert res.exit_code == 0, res.output
+    assert '"../myapp/app.py"' in test_file.read_text()
+
+
+def test_reactlog_cli_replay_passes_script(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, Any] = {}
+
+    def fake_record(app_file: Path, **kw: Any) -> Recording:
+        seen.update(kw)
+        return Recording(export=SAVED, session_id="s1")
+
+    monkeypatch.setattr(cli, "record_session", fake_record)
+    app = tmp_path / "app.py"
+    app.write_text("from shiny.express import ui\n")
+    replay = tmp_path / "test_app.py"
+    replay.write_text("def test_app(page, local_app):\n    pass\n")
+    res = CliRunner().invoke(
+        main,
+        ["reactlog", str(app), "--json", str(tmp_path / "o.json")]
+        + ["--replay", str(replay)],
+    )
+    assert res.exit_code == 0, res.output
+    assert callable(seen["script"])
+
+
+def test_reactlog_cli_test_output_cannot_overwrite_app(tmp_path: Path) -> None:
+    app = tmp_path / "app.py"
+    app.write_text("from shiny.express import ui\n")
+    res = CliRunner().invoke(main, ["reactlog", str(app), "--test", str(app)])
+    assert res.exit_code != 0
+    assert "Refusing to overwrite" in res.output
+
+
+def test_reactlog_cli_rejects_incompatible_flags(tmp_path: Path) -> None:
+    app = tmp_path / "app.py"
+    app.write_text("from shiny.express import ui\n")
+    for flags in (
+        ["--no-browser", "--test", "t.py"],
+        ["--no-browser", "--replay", "t.py"],
+        ["--test", "t.py", "--replay", "t.py"],
+    ):
+        res = CliRunner().invoke(main, ["reactlog", str(app), *flags])
+        assert res.exit_code == 2, (flags, res.output)
