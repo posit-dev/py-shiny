@@ -62,8 +62,11 @@ def test_recorder_captures_binding_names() -> None:
     }
     assert texts.get("text_out") == "text=hi"
     switch = next(a for a in rec.actions if a.get("name") == "switch")
-    assert (
-        "form-check-input" in switch["classes"]
-    )  # the checkbox has shiny-input-checkbox
+    checkbox = next(a for a in rec.actions if a.get("name") == "checkbox")
+    # Switch vs checkbox: `container` is identical; `classes` tells them apart.
+    assert "form-check-input" in switch["classes"]
+    assert "shiny-input-checkbox" not in switch["classes"]
+    assert "shiny-input-checkbox" in checkbox["classes"]
+    assert "form-check-input" not in checkbox["classes"]
     link = next(a for a in rec.actions if a.get("name") == "link")
     assert link["tag"] == "A"
