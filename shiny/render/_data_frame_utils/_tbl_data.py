@@ -291,8 +291,7 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     data = as_data_frame(into_data)
 
     type_hints = [
-        serialize_dtype(cast(nw.Series, data.get_column(col_name)))
-        for col_name in data.columns
+        serialize_dtype(data.get_column(col_name)) for col_name in data.columns
     ]
 
     # TODO-future-barret; Swich serialization to "by column", rather than "by row"
