@@ -58,10 +58,12 @@ def _safe_repr(value: object) -> str:
 
 
 class _SessionLog:
-    __slots__ = ("nodes", "events")
+    __slots__ = ("nodes", "events", "source_fns")
 
     def __init__(self) -> None:
         self.nodes: dict[str, dict[str, Any]] = {}
+        # rid -> id() of the fn its source ref came from (no strong refs held).
+        self.source_fns: dict[str, int] = {}
         self.events: deque[dict[str, Any]] = deque(maxlen=_MAX_EVENTS_PER_SESSION)
 
 
@@ -163,12 +165,17 @@ class ReactlogRecorder(ReactiveTracer):
             entry["type"] = rtype
         # Output effects get their user render function after being defined.
         fn = node._node_fn
-        if fn is not None:
+        if fn is not None and log.source_fns.get(rid) != id(fn):
+            log.source_fns[rid] = id(fn)
             ref = extract_source_ref(fn)
-            if "code.file.path" in ref:
-                entry["source_file"] = ref["code.file.path"]
-            if "code.line.number" in ref:
-                entry["line"] = ref["code.line.number"]
+            for key, ref_key in (
+                ("source_file", "code.file.path"),
+                ("line", "code.line.number"),
+            ):
+                if ref_key in ref:
+                    entry[key] = ref[ref_key]  # type: ignore[literal-required]
+                else:
+                    entry.pop(key, None)
 
     def _record(
         self,
