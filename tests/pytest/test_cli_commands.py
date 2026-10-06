@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import json
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -156,13 +158,14 @@ def test_reactlog_cli_no_browser_picks_session(
         return [dict(SAVED, session=i) for i in ids]
 
     monkeypatch.setattr(cli, "serve_and_collect", fake_serve)
+    monkeypatch.setattr(cli, "_wait_for_enter", lambda: None)
     app = tmp_path / "app.py"
     app.write_text("from shiny.express import ui\n")
 
     res = CliRunner().invoke(
         main,
         ["reactlog", str(app), "--no-browser", "--json", str(tmp_path / "o.json")],
-        input="\n2\n",
+        input="2\n",
     )
     assert res.exit_code == 0, res.output
     assert "http://127.0.0.1:9/" in res.output
@@ -178,7 +181,7 @@ def test_reactlog_cli_no_browser_picks_session(
             "--json",
             str(tmp_path / "o.json"),
         ],
-        input="\n",
+        input="",
     )
     assert res.exit_code == 0, res.output
     assert (tmp_path / "o-aaaaaaaa.json").is_file() and (
@@ -199,3 +202,84 @@ def test_reactlog_cli_reports_app_start_failure(
     assert res.exit_code == 1
     assert "Failed to start Shiny app" in res.output
     assert "Traceback" not in res.output
+
+
+def test_wait_for_enter_returns_on_ctrl_c_without_tty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def interrupt(secs: float) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    monkeypatch.setattr(time, "sleep", interrupt)
+    cli._wait_for_enter()  # pyright: ignore[reportPrivateUsage]
+
+
+def test_reactlog_cli_redacts_saved_json(tmp_path: Path) -> None:
+    out = tmp_path / "out.json"
+    res = CliRunner().invoke(
+        main, ["reactlog", str(_saved(tmp_path)), "--redact-inputs", "--json", str(out)]
+    )
+    assert res.exit_code == 0, res.output
+    values = [e["value"] for e in json.loads(out.read_text())["log"] if "value" in e]
+    assert values == ["[REDACTED]"]
+
+
+def test_reactlog_cli_creates_output_dirs(tmp_path: Path) -> None:
+    out = tmp_path / "new" / "dir" / "out.json"
+    res = CliRunner().invoke(
+        main, ["reactlog", str(_saved(tmp_path)), "--json", str(out)]
+    )
+    assert res.exit_code == 0, res.output
+    assert out.is_file()
+
+
+def test_reactlog_cli_unwritable_output(tmp_path: Path) -> None:
+    blocker = tmp_path / "file"
+    blocker.write_text("")
+    res = CliRunner().invoke(
+        main, ["reactlog", str(_saved(tmp_path)), "--json", str(blocker / "o.json")]
+    )
+    assert res.exit_code == 1
+    assert "Could not write" in res.output and "Traceback" not in res.output
+
+
+@pytest.mark.parametrize("content", ["not json", "[1, 2]", '{"log": 3}'])
+def test_reactlog_cli_invalid_saved_json(tmp_path: Path, content: str) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text(content)
+    res = CliRunner().invoke(
+        main, ["reactlog", str(bad), "--json", str(tmp_path / "o.json")]
+    )
+    assert res.exit_code == 1
+    assert "Not a reactlog JSON file" in res.output and "Traceback" not in res.output
+
+
+@pytest.mark.parametrize(
+    "flags, saved",
+    [
+        (["--video", "v.webm", "--no-browser"], False),
+        (["--all"], False),
+        (["--no-browser"], True),
+        (["--video", "v.webm"], True),
+        (["--all"], True),
+    ],
+)
+def test_reactlog_cli_rejects_inapplicable_flags(
+    tmp_path: Path, flags: list[str], saved: bool
+) -> None:
+    target = _saved(tmp_path) if saved else tmp_path / "app.py"
+    if not saved:
+        target.write_text("from shiny.express import ui\n")
+    res = CliRunner().invoke(main, ["reactlog", str(target), *flags])
+    assert res.exit_code == 2, res.output
+
+
+def test_reactlog_cli_rejects_duplicate_outputs(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    res = CliRunner().invoke(
+        main,
+        ["reactlog", str(_saved(tmp_path)), "--html", str(out), "--json", str(out)],
+    )
+    assert res.exit_code == 1
+    assert "more than one output" in res.output
