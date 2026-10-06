@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional, cast
 
 import click
 
-from ..reactive._reactlog._record import record_shiny_session
 from ..reactive._reactlog._viewer import (
     format_graph_dot,
     format_graph_mermaid,
@@ -317,85 +316,11 @@ def inspect(
                     )
                 sys.exit(1)
 
-        out_file_path = (
-            (html_out or "reactlog.html") if output_format == "html" else None
-        )
-        effective_video_path = (video_path or "recording.webm") if record_flag else None
-        used_paths: dict[Path, str] = {}
-        if app_file_to_run is not None:
-            used_paths[Path(app_file_to_run).resolve()] = "the inspected file"
-        for path_to_write, purpose in (
-            (out_file_path, "the HTML report"),
-            (effective_video_path, "the video recording"),
-        ):
-            if path_to_write is None:
-                continue
-            resolved_path = Path(path_to_write).resolve()
-            if resolved_path in used_paths:
-                message = f"Refusing to overwrite {used_paths[resolved_path]} at {path_to_write} with {purpose}."
-                if output_format == "json":
-                    click.echo(json.dumps({"success": False, "error": message}))
-                    sys.exit(1)
-                raise click.ClickException(message)
-            used_paths[resolved_path] = purpose
-
         recorded_actions: Optional[List[Dict[str, Any]]] = None
         actual_video_path: Optional[str] = None
 
         if record_flag:
-            if not app_file_to_run:
-                if output_format == "json":
-                    click.echo(
-                        json.dumps(
-                            {
-                                "success": False,
-                                "error": "Cannot record without an app file.",
-                            }
-                        )
-                    )
-                else:
-                    click.echo(cli_danger("Cannot record without an app file."))
-                sys.exit(1)
-
-            is_machine_output = output_format in ("json", "mermaid", "dot")
-            click.echo(
-                cli_bold(f"Recording Playwright session for {target_desc}..."),
-                err=is_machine_output,
-            )
-            rec_result = record_shiny_session(
-                app_file_to_run,
-                video_path=effective_video_path,
-                headless=headless,
-                auto_interact=auto_interact,
-                redact_inputs=redact_inputs,
-            )
-            if not rec_result.get("success"):
-                err = rec_result.get("error", "Unknown error during recording")
-                if output_format == "json":
-                    click.echo(json.dumps({"success": False, "error": err}))
-                else:
-                    click.echo(cli_danger(f"Playwright recording failed: {err}"))
-                sys.exit(1)
-
-            raw_actions = rec_result.get("actions", [])
-            recorded_actions = (
-                cast(List[Dict[str, Any]], raw_actions)
-                if isinstance(raw_actions, list)
-                else []
-            )
-            actual_video_path = rec_result.get("video_path")
-            act_count = len(recorded_actions)
-            click.echo(
-                cli_success(
-                    f"Recorded {act_count} action(s) in {rec_result.get('duration_secs')}s"
-                ),
-                err=is_machine_output,
-            )
-            if actual_video_path:
-                click.echo(
-                    cli_info(f"Session video saved to: {actual_video_path}"),
-                    err=is_machine_output,
-                )
+            raise click.UsageError("Recording moved to `shiny reactlog`.")
 
         reactlog_data: Dict[str, Any] = {}
         is_json_input = False
@@ -428,7 +353,18 @@ def inspect(
                 )
             sys.exit(1)
 
-        if out_file_path is not None:
+        if output_format == "html":
+            out_file_path = html_out if html_out is not None else "reactlog.html"
+            if (
+                app_file_to_run is not None
+                and Path(out_file_path).resolve() == Path(app_file_to_run).resolve()
+            ):
+                click.echo(
+                    cli_danger(
+                        f"Refusing to overwrite the inspected file {app_file_to_run} with the HTML report."
+                    )
+                )
+                sys.exit(1)
             detected_title = title or (
                 _extract_page_title(source_code) if not is_json_input else None
             )
