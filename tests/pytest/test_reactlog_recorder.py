@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any, Callable, Iterator
+from unittest import mock
 
 import pytest
 
@@ -241,3 +242,26 @@ async def test_recorder_define_entries_carry_source_and_module() -> None:
     out = defines["output p:out"]
     assert out["source_file"] == __file__  # the user's render function
     assert "source_file" not in defines["input.p-n"]
+
+
+def test_recorder_computes_source_ref_once_per_function() -> None:
+    def f1() -> None: ...
+
+    def f2() -> None: ...
+
+    r = ReactlogRecorder(owns_session=lambda sid: True)
+    node = FakeNode(1, "v")
+    node._node_fn = f1
+    with mock.patch.object(
+        _reactlog, "extract_source_ref", wraps=_reactlog.extract_source_ref
+    ) as spy:
+        for i in range(5):
+            _change(r, "s1", node, i)
+        assert spy.call_count == 1
+        define = r.export("s1")["log"][0]
+        line1 = define["line"]
+        node._node_fn = f2
+        _change(r, "s1", node, 9)
+        assert spy.call_count == 2
+    define = next(x for x in r.export("s1")["log"] if x["action"] == "define")
+    assert define["line"] != line1
