@@ -76,7 +76,7 @@ from ..otel._span_wrappers import (
 )
 from ..reactive import Effect_, Value, effect, isolate
 from ..reactive._core import _enclosing_run, _reactive_environment
-from ..reactive._trace import attribute_to_session
+from ..reactive._trace import attribute_to_session, hooks
 from ..render.renderer import Renderer, RendererT
 from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
@@ -2558,7 +2558,8 @@ class Inputs:
             self._map[key] = new_value
 
         value = self._map[key]
-        self._set_node_module(original_key, value)
+        if hooks.define_node:  # only reactlog reads it; keep untraced reads cheap
+            self._set_node_module(original_key, value)
         return value
 
     def _set_node_module(self, key: str, value: Value[Any]) -> None:
