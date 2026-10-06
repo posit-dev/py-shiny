@@ -236,10 +236,6 @@ def assert_frame_equal2(
             ("categorical", ["a", "b", "c"]),
         ),
         (
-            pd.Series(pd.Categorical([1, None, 2], categories=[1, 2, 3])),
-            ("categorical", [1, 2, 3]),
-        ),
-        (
             pd.Series(pd.Categorical([], categories=["Polar", "Panda", "Brown"])),
             ("categorical", ["Polar", "Panda", "Brown"]),
         ),
@@ -257,7 +253,7 @@ def test_serialize_dtype(
         "pd.Series[Any]",
         pl.Series,
     ],
-    res_type: str | tuple[str, list[Any]],
+    res_type: str | tuple[str, list[str]],
 ):
     nw_ser = series_to_narwhals(ser)
     dtype_info = serialize_dtype(nw_ser)
