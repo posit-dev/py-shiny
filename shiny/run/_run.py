@@ -261,6 +261,7 @@ def run_shiny_app(
     timeout_secs: float = 30,
     bufsize: int = 64 * 1024,
     env: dict[str, str] | None = None,
+    start_new_session: bool = False,
 ) -> ShinyAppProc:
     """
     Run a Shiny app in a subprocess.
@@ -287,6 +288,10 @@ def run_shiny_app(
         Extra environment variables for the app subprocess, merged over the parent
         environment (supplied values win). When ``None`` (the default), the parent
         environment is inherited unchanged.
+    start_new_session
+        If True, run the app in a new session (its own process group on POSIX), so a
+        Ctrl+C in the terminal reaches only the parent process and the app keeps
+        running until it is closed. Passed to :class:`subprocess.Popen`.
 
     Returns
     -------
@@ -317,6 +322,7 @@ def run_shiny_app(
         cwd=cwd,
         env=_subprocess_env(env),
         encoding="utf-8",
+        start_new_session=start_new_session,
     )
 
     # TODO: Detect early exit
@@ -347,6 +353,7 @@ def run_shiny_app(
                 timeout_secs=timeout_secs,
                 bufsize=bufsize,
                 env=env,
+                start_new_session=start_new_session,
             )
 
     return sa
