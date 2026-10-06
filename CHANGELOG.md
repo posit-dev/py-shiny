@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, Playwright session recording with synchronized video playback, and interactive HTML Reactlog export with action-scoped execution causality and "Why did this run?" root-cause inspection. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
+* Added `shiny reactlog` subcommand: records an app's real reactive activity (dependencies, invalidations, executions, isolated reads) from a browser session with synchronized video, and exports an interactive Reactlog viewer, JSON, or Mermaid. Apps can also enable the live viewer (Cmd/Ctrl+F3) with `App(reactlog=True)` or `shiny run --reactlog`. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
 
 ### Bug fixes
 
