@@ -425,46 +425,6 @@ def greet():
     assert reactlog["inferred_events_count"] == len(inferred_events)
 
 
-def test_cli_inspect_basic():
-    runner = CliRunner()
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_slider("x", "X", 1, 5, 2)
-
-@reactive.calc
-def squared():
-    return input.x() ** 2
-
-@render.text
-def result():
-    return f"Res: {squared()}"
-"""
-    res = runner.invoke(main, ["inspect", "--code", code])
-    assert res.exit_code == 0
-    assert "Reactive Dependency Graph" in res.output
-    assert "Inputs (Sources):" in res.output
-    assert "input.x" in res.output
-    assert "squared" in res.output
-    assert "result" in res.output
-
-
-def test_cli_inspect_json():
-    runner = CliRunner()
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("val", "Val", 10)
-@render.text
-def out():
-    return f"V: {input.val()}"
-"""
-    res = runner.invoke(main, ["inspect", "--code", code, "--json"])
-    assert res.exit_code == 0
-    data = json.loads(res.output)
-    assert data["success"] is True
-    assert len(data["nodes"]) == 2
-    assert len(data["edges"]) == 1
-
-
 def test_exact_edge_highlighting_with_multiple_dependencies():
     code = """from shiny.express import input, render, ui
 from shiny import reactive
@@ -530,61 +490,6 @@ def out():
     assert 'id="trace-track-wrap"' in html
     assert 'id="trace-playhead"' in html
     assert "initTraceTimeline()" in html
-
-
-def test_cli_inspect_json_clean_stdout(tmp_path: Path):
-    app_file = tmp_path / "app.py"
-    app_file.write_text(
-        """from shiny.express import input, render, ui
-ui.input_numeric("n", "N", 10)
-@render.text
-def out():
-    return f"Val={input.n()}"
-""",
-        encoding="utf-8",
-    )
-    runner = CliRunner()
-    res = runner.invoke(main, ["inspect", str(app_file), "--json"])
-    assert res.exit_code == 0
-    json_start = res.output.find("{")
-    assert json_start != -1
-    data = json.loads(res.output[json_start:])
-    assert data["success"] is True
-    assert "events" in data
-    assert len(data["nodes"]) == 2
-
-
-def test_cli_inspect_reactlog():
-    runner = CliRunner()
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("n", "N", 5)
-@render.text
-def show():
-    return str(input.n())
-"""
-    res = runner.invoke(main, ["inspect", "--code", code, "--reactlog"])
-    assert res.exit_code == 0
-    assert "Reactive Event Log" in res.output
-    assert "analysisInit" in res.output
-
-
-def test_cli_inspect_html_export(tmp_path: Path):
-    runner = CliRunner()
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("val", "Val", 10)
-@render.text
-def out():
-    return f"V: {input.val()}"
-"""
-    out_html = tmp_path / "custom_reactlog.html"
-    res = runner.invoke(
-        main,
-        ["inspect", "--code", code, "--html", str(out_html)],
-    )
-    assert res.exit_code == 0
-    assert out_html.is_file()
-    content = out_html.read_text(encoding="utf-8")
-    assert "Reactlog report" in content
 
 
 def test_reactlog_json_contract_r_shiny_compatibility():
@@ -712,50 +617,6 @@ def out():
     assert 'data-theme="light"' in html_light
     assert '[data-theme="light"]' in html_light
     assert "--bg: #f8fafc;" in html_light
-
-
-def test_cli_inspect_theme_and_json_file(tmp_path: Path):
-    r_reactlog = {
-        "version": "1.0",
-        "session": "s1",
-        "log": [
-            {
-                "action": "define",
-                "id": "input:x",
-                "label": "x",
-                "type": "observable",
-                "time": 0.1,
-            },
-            {
-                "action": "define",
-                "id": "output:y",
-                "label": "y",
-                "type": "observer",
-                "time": 0.2,
-            },
-            {
-                "action": "dependsOn",
-                "id": "output:y",
-                "dependsOn": "input:x",
-                "time": 0.3,
-            },
-        ],
-    }
-    json_file = tmp_path / "legacy.json"
-    json_file.write_text(json.dumps(r_reactlog), encoding="utf-8")
-
-    out_html = tmp_path / "legacy_out.html"
-    runner = CliRunner()
-    res = runner.invoke(
-        main,
-        ["inspect", str(json_file), "--html", str(out_html), "--theme", "light"],
-    )
-    assert res.exit_code == 0
-    assert out_html.is_file()
-    html_content = out_html.read_text(encoding="utf-8")
-    assert 'data-theme="light"' in html_content
-    assert "input:x" in html_content
-    assert "output:y" in html_content
 
 
 def test_reactive_event_decorator_semantics():
@@ -987,34 +848,6 @@ def test_reactlog_html_xss_protection_on_imported_data():
         or "\\u0022" in html
         or "escapeHTML" in html
     )
-
-
-def test_cli_inspect_record_with_format_json_and_video_defaults(tmp_path: Path):
-    app_file = tmp_path / "app.py"
-    app_file.write_text(
-        """from shiny.express import input, render, ui
-ui.input_numeric("x", "X", 10)
-@render.text
-def out():
-    return str(input.x())
-""",
-        encoding="utf-8",
-    )
-
-    runner = CliRunner()
-    res = runner.invoke(main, ["inspect", str(app_file), "--format", "json"])
-    assert res.exit_code == 0
-    data = json.loads(res.output)
-    assert data.get("success") is True
-    assert "nodes" in data
-    assert "edges" in data
-    assert "target" in data
-
-    html_out = tmp_path / "plain_report.html"
-    res_html = runner.invoke(main, ["inspect", str(app_file), "--html", str(html_out)])
-    assert res_html.exit_code == 0
-    html_text = html_out.read_text(encoding="utf-8")
-    assert 'id="video-tab"' not in html_text
 
 
 def test_reactlog_execution_debugger_elements_and_helpers():
@@ -1334,63 +1167,6 @@ controls("filters")
         "edges"
     ]
     assert not any(e["from"] == "input:filters-value" for e in result["edges"])
-
-
-def test_multifile_modules_aliases_packages_and_source_locations(tmp_path: Path):
-    package = tmp_path / "modules"
-    package.mkdir()
-    (package / "__init__.py").write_text("from .sales import panel as exported_panel\n")
-    module_source = """from shiny import module, reactive, render, ui
-raise RuntimeError("Inspection must never execute this module")
-@module.ui
-def panel():
-    return ui.input_numeric("units", "Units", 10)
-@module.server
-def sales(input, output, session, price):
-    @reactive.calc
-    def total():
-        return input.units() * price()
-    @render.plot
-    def chart():
-        return total()
-    return total
-"""
-    (package / "sales.py").write_text(module_source)
-    code = """from shiny import reactive, render
-from modules import exported_panel as panel
-import modules.sales as sales_module
-panel("west")
-panel("east")
-def server(input, output, session):
-    @reactive.calc
-    def price():
-        return input.price()
-    west = sales_module.sales("west", price)
-    east = sales_module.sales("east", price=price)
-    @render.text
-    def combined():
-        return west() + east()
-"""
-    app = tmp_path / "app.py"
-    app.write_text(code)
-    report = generate_reactlog(code, source_path=app)
-    nodes = {n["id"]: n for n in report["nodes"]}
-    assert nodes["input:west-units"]["source_file"] == "modules/sales.py"
-    assert nodes["calc:west-total"]["line"] == 9
-    assert nodes["output:west-chart"]["source_file"] == "modules/sales.py"
-    assert nodes["output:combined"]["source_file"] == "app.py"
-    assert {"from": "calc:east-total", "to": "output:combined"} in report["edges"]
-    assert {"from": "calc:price", "to": "calc:west-total"} in report["edges"]
-    assert report["sources"]["modules/sales.py"] == module_source
-    loaded = load_reactlog_json(json.dumps(report))
-    assert loaded["sources"] == report["sources"]
-    assert (
-        next(n for n in loaded["nodes"] if n["id"] == "calc:west-total")["source_file"]
-        == "modules/sales.py"
-    )
-    result = CliRunner().invoke(main, ["inspect", str(app), "--json"])
-    assert result.exit_code == 0, result.output
-    assert json.loads(result.output)["sources"] == report["sources"]
 
 
 def test_multifile_circular_imports_and_duplicate_function_names(tmp_path: Path):

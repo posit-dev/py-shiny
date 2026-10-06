@@ -1898,7 +1898,7 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
             lines.append(f'    {syn_id}["{label}"]:::inputClass')
         elif ntype == "calc":
             lines.append(f'    {syn_id}["{label}"]:::calcClass')
-        elif ntype == "effect":
+        elif ntype in ("effect", "observer"):
             lines.append(f'    {syn_id}["{label}"]:::effectClass')
         else:
             lines.append(f'    {syn_id}["{label}"]:::outputClass')
@@ -1907,7 +1907,8 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
         f = node_id_map.get(str(edge["from"]))
         t = node_id_map.get(str(edge["to"]))
         if f and t:
-            lines.append(f"    {f} --> {t}")
+            arrow = "-.->" if edge.get("isolated") else "-->"
+            lines.append(f"    {f} {arrow} {t}")
 
     lines.append(
         "    classDef inputClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;"
