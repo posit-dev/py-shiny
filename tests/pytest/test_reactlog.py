@@ -1368,3 +1368,15 @@ def test_format_reactlog_html_overview_and_zooming_modes():
     assert "setViewMode(" in html
     assert "zoomToModule(" in html
     assert "renderModuleOverview(" in html
+def test_load_reactlog_json_defaults_provenance_to_observed() -> None:
+    # Every loaded event was recorded; nothing is simulated any more.
+    loaded = load_reactlog_json(
+        {
+            "log": [
+                {"action": "define", "reactId": "r1", "label": "c", "type": "calc"},
+                {"action": "enter", "reactId": "r1", "label": "c", "type": "calc"},
+            ]
+        }
+    )
+    assert {e["provenance"] for e in loaded["events"]} == {"observed"}
+    assert "inferred_events_count" not in loaded
