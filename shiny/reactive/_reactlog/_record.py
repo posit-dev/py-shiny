@@ -119,7 +119,16 @@ def _start_stdin_reader(done: threading.Event) -> bool:
     return True
 
 
-def _wait_for_enter_or_close(page: Page, timeout_secs: float) -> None:
+def redact_export(export: dict[str, Any]) -> None:
+    """Replace every recorded input value in `export` with "[REDACTED]", in place."""
+    for entry in export["log"]:
+        if entry.get("action") == "valueChange" and entry.get("type") == "input":
+            entry["value"] = "[REDACTED]"
+
+
+def _wait_for_enter_or_close(
+    page: Page, timeout_secs: float, stop: threading.Event | None = None
+) -> None:
     from playwright.sync_api import Error as PlaywrightError
 
     done = threading.Event()
@@ -134,7 +143,12 @@ def _wait_for_enter_or_close(page: Page, timeout_secs: float) -> None:
             "to finish.\n"
         )
     deadline = time.time() + timeout_secs
-    while not done.is_set() and time.time() < deadline and not page.is_closed():
+    while (
+        not done.is_set()
+        and not (stop is not None and stop.is_set())
+        and time.time() < deadline
+        and not page.is_closed()
+    ):
         try:
             # Also lets Playwright deliver exposed-function calls.
             page.wait_for_timeout(250)
@@ -173,6 +187,7 @@ def record_session(
 
     app = _start_app(app_file)
     video_dir = Path(tempfile.mkdtemp(prefix="shiny_reactlog_"))
+    stop = threading.Event()  # set on Ctrl+C: "finish", not "abort"
     actions: list[dict[str, Any]] = []
     session_ids: list[str] = []
 
@@ -210,7 +225,7 @@ def record_session(
                 script(page, app.url)
             else:
                 page.goto(app.url)
-                _wait_for_enter_or_close(page, timeout_secs)
+                _wait_for_enter_or_close(page, timeout_secs, stop)
             saved: Path | None = None
             # The user (or script) may have quit the whole browser; keep the log.
             try:
@@ -232,7 +247,12 @@ def record_session(
         # The Playwright sync API refuses to run on a thread that owns an asyncio
         # loop (pytest-playwright, async callers), so always give it its own thread.
         with ThreadPoolExecutor(max_workers=1) as executor:
-            video_start, saved = executor.submit(drive_browser).result()
+            future = executor.submit(drive_browser)
+            try:
+                video_start, saved = future.result()
+            except KeyboardInterrupt:
+                stop.set()
+                video_start, saved = future.result()
 
         if not session_ids:
             raise RecordingError(
@@ -243,12 +263,7 @@ def record_session(
         for entry in export["log"]:
             entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
         if redact_inputs:
-            for entry in export["log"]:
-                if (
-                    entry.get("action") == "valueChange"
-                    and entry.get("type") == "input"
-                ):
-                    entry["value"] = "[REDACTED]"
+            redact_export(export)
         for action in actions:
             action["time"] = max(0.0, float(action.get("time", 0)) - video_start)
         return Recording(
