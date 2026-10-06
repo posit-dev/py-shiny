@@ -58,11 +58,11 @@ from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
 from .reactive._reactlog import (
     ReactlogRecorder,
+    SessionInfo,
     format_reactlog_html,
     load_reactlog_json,
     session_picker_html,
 )
-from .reactive._reactlog._viewer import generate_reactlog
 from .reactive._trace import add_tracer
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
@@ -77,6 +77,20 @@ SANITIZE_ERROR_MSG: str = (
     "An error has occurred. Check your logs or contact the app author for clarification."
 )
 SANITIZE_OTEL_ERRORS: bool = True
+
+
+_REACTLOG_NO_SESSION_NOTICE = (
+    "No session selected. Open this page with Cmd/Ctrl+F3 from the app, "
+    "or pass session_id."
+)
+
+
+def _relative_source(path: str, app_dir: Path | None) -> str:
+    """A path safe to export: relative to the app directory, else just the name."""
+    p = Path(path)
+    if app_dir is not None and p.is_relative_to(app_dir):
+        return p.relative_to(app_dir).as_posix()
+    return p.name
 
 
 class App:
@@ -319,6 +333,18 @@ class App:
                 "/__reactlog__",
                 self._on_reactlog_request_cb,
                 methods=["GET"],
+            ),
+        )
+        routes.insert(
+            0,
+            starlette.routing.Route(
+                "/__reactlog__/export", self._on_reactlog_export_cb, methods=["GET"]
+            ),
+        )
+        routes.insert(
+            0,
+            starlette.routing.Route(
+                "/__reactlog__/sessions", self._on_reactlog_sessions_cb, methods=["GET"]
             ),
         )
         routes.insert(
@@ -575,9 +601,79 @@ window.addEventListener('keydown', function(e) {{
             return next(iter(self._sessions.values()))
         return None
 
-    async def _on_reactlog_request_cb(self, request: Request) -> Response:
+    def _reactlog_app_file(self) -> Path | None:
+        if self._reactlog_source_path is not None:
+            return self._reactlog_source_path
+        if self._raw_server_fn is None:
+            return None
+        try:
+            return Path(inspect.getfile(self._raw_server_fn))
+        except (TypeError, OSError):
+            return None
+
+    def _reactlog_export(
+        self, session_id: str, *, local: bool
+    ) -> dict[str, Any] | None:
         from . import reactive
 
+        recorder = self._reactlog_recorder
+        info = recorder.session(session_id) if recorder is not None else None
+        if recorder is None or info is None:
+            return None
+        live = self._sessions.get(session_id)
+        marks = reactive.get_marks(live) if live is not None else info.marks
+        data = recorder.export(session_id)
+        data["log"] = sorted(
+            [*data["log"], *marks], key=lambda entry: entry.get("time", 0)
+        )
+        app_file = self._reactlog_app_file()
+        app_dir = app_file.parent if app_file is not None else None
+        sources: dict[str, str] = {}
+        for entry in data["log"]:
+            path = entry.get("source_file")
+            if not isinstance(path, str):
+                continue
+            rel = _relative_source(path, app_dir)
+            entry["source_file"] = rel
+            if local and rel not in sources:
+                try:
+                    sources[rel] = Path(path).read_text(encoding="utf-8")
+                except (OSError, UnicodeError):
+                    pass
+        data["sources"] = sources
+        if app_file is not None:
+            data["entry_file"] = _relative_source(str(app_file), app_dir)
+        return data
+
+    async def _on_reactlog_export_cb(self, request: Request) -> Response:
+        if (err := self._check_reactlog_access(request)) is not None:
+            return err
+        data = self._reactlog_export(
+            request.query_params.get("session_id") or "",
+            local=self._is_direct_local_request(request),
+        )
+        if data is None:
+            return JSONResponse({"error": "unknown session"}, status_code=404)
+        return JSONResponse(data)
+
+    async def _on_reactlog_sessions_cb(self, request: Request) -> Response:
+        if (err := self._check_reactlog_access(request)) is not None:
+            return err
+        if not self._is_direct_local_request(request):
+            # Session ids grant access to session routes (uploads, downloads).
+            return Response(
+                "Forbidden: the session list is only available to local requests.",
+                status_code=403,
+            )
+        recorder = self._reactlog_recorder
+        sessions: list[SessionInfo] = (
+            recorder.sessions() if recorder is not None else []
+        )
+        return JSONResponse(
+            [{"id": s.id, "start": s.start, "end": s.end} for s in sessions]
+        )
+
+    async def _on_reactlog_request_cb(self, request: Request) -> Response:
         if (err := self._check_reactlog_access(request)) is not None:
             return err
 
@@ -587,12 +683,7 @@ window.addEventListener('keydown', function(e) {{
         # The token is in every page the app serves, so it only proves the
         # requester can load the app. App source is only shown to local users.
         if self._is_direct_local_request(request):
-            app_file = self._reactlog_source_path
-            if app_file is None and target_fn is not None:
-                try:
-                    app_file = Path(inspect.getfile(target_fn))
-                except (TypeError, OSError):
-                    pass
+            app_file = self._reactlog_app_file()
 
             if app_file is not None:
                 try:
@@ -634,24 +725,18 @@ window.addEventListener('keydown', function(e) {{
                     )
                 )
 
-        if recorder is not None and recorded_session is not None:
-            live_session = self._sessions.get(recorded_session.id)
-            marks = (
-                reactive.get_marks(live_session)
-                if live_session is not None
-                else recorded_session.marks
+        data = (
+            self._reactlog_export(
+                session_id, local=self._is_direct_local_request(request)
             )
-            recorded = recorder.export(recorded_session.id)
-            recorded["log"] = sorted(
-                [*recorded["log"], *marks], key=lambda entry: entry.get("time", 0)
-            )
-            reactlog_data = load_reactlog_json(recorded)
+            if session_id
+            else None
+        )
+        if data is not None:
+            reactlog_data = load_reactlog_json(data)
         else:
-            marks = list(self._app_marks) + reactive.get_marks()
-            # No live session to show: fall back to static analysis of the source.
-            reactlog_data = generate_reactlog(
-                source_code, source_path=app_file, marks=marks
-            )
+            reactlog_data = load_reactlog_json({"log": []})
+            reactlog_data["summary"] = _REACTLOG_NO_SESSION_NOTICE
         app_name = os.path.basename(app_file) if app_file else "Shiny App"
         html = format_reactlog_html(reactlog_data, source_code, title=app_name)
         return HTMLResponse(content=html)
