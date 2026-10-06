@@ -31,6 +31,12 @@ def _when(t: float | None) -> str:
 def _choose_interactively(sessions: list[dict[str, Any]]) -> list[str]:
     if len(sessions) == 1:
         return [sessions[0]["id"]]
+    if not _is_interactive():  # nobody to ask; sessions are newest first
+        click.echo(
+            f"{len(sessions)} sessions were recorded; exported the newest "
+            "(pass --all to export all)."
+        )
+        return [sessions[0]["id"]]
     for i, s in enumerate(sessions, start=1):
         click.echo(
             f"  {i}. {s['id'][:12]}  started {_when(s['start'])}  ended {_when(s['end'])}"
