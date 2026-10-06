@@ -1,393 +1,238 @@
+"""Record a real Shiny session in a browser (or wait for one) and fetch its reactlog."""
+
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
-import inspect
 import json
-import os
 import shutil
 import sys
 import tempfile
+import threading
 import time
+import urllib.parse
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable
 
-from ...run._run import run_shiny_app
+from ...run._run import ShinyAppProc, run_shiny_app
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Page
+
+_APP_ENV = {"SHINY_REACTLOG": "1", "SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1"}
+
+# Streams browser actions and session ids to Python as they happen, so closing the
+# window or reloading the page loses nothing.
+RECORDER_SCRIPT = r"""
+(() => {
+  const redactAll = !!window.__shinyReactlogRedactAll;
+  const send = (item) => {
+    item.time = Date.now() / 1000;
+    if (window.__shinyReactlogAction) window.__shinyReactlogAction(item);
+  };
+  const sensitive = (name, el) => {
+    if (redactAll) return true;
+    if (el && (el.type === "password")) return true;
+    const lower = (name || "").toLowerCase();
+    return ["password", "secret", "token", "api_key", "apikey"].some((s) => lower.includes(s));
+  };
+  const attach = () => {
+    if (!(window.$ && window.Shiny)) return;
+    $(document).off(".shinyReactlog");
+    $(document).on("shiny:sessioninitialized.shinyReactlog", () => {
+      if (window.__shinyReactlogSession) {
+        window.__shinyReactlogSession(Shiny.shinyapp.config.sessionId);
+      }
+    });
+    $(document).on("shiny:inputchanged.shinyReactlog", (e) => {
+      if (e.name.startsWith(".")) return;
+      const el = e.el || document.getElementById(e.name);
+      send({
+        type: "input",
+        name: e.name,
+        value: sensitive(e.name, el) ? "[REDACTED]" : e.value,
+        inputType: e.inputType || "",
+      });
+    });
+    $(document).on("shiny:value.shinyReactlog", (e) => {
+      send({ type: "output", name: e.name });
+    });
+  };
+  document.addEventListener("DOMContentLoaded", attach);
+  window.addEventListener("load", attach);
+})();
+"""
 
 
-def _record_session_sync(
-    app_path: str,
-    video_path: Optional[str] = "recording.webm",
-    headless: bool = False,
-    record_script: Optional[Callable[[Any], None]] = None,
-    timeout_secs: float = 60.0,
-    auto_interact: bool = False,
+class RecordingError(Exception):
+    """A recording could not be made; the message is shown to the user as-is."""
+
+
+@dataclass
+class Recording:
+    export: dict[str, Any]
+    actions: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])
+    video_path: Path | None = None
+    session_id: str = ""
+
+
+def _start_app(app_file: Path) -> ShinyAppProc:
+    try:
+        return run_shiny_app(app_file, wait_for_start=True, env=_APP_ENV)
+    except Exception as err:  # run_shiny_app raises various errors for a bad app
+        raise RecordingError(f"Failed to start Shiny app {app_file}: {err}") from err
+
+
+def _get_json(url: str) -> Any:
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _export(app_url: str, session_id: str) -> dict[str, Any]:
+    query = urllib.parse.urlencode({"session_id": session_id})
+    return _get_json(f"{app_url}__reactlog__/export?{query}")
+
+
+def _wait_for_enter_or_close(page: Page, timeout_secs: float) -> None:
+    from playwright.sync_api import Error as PlaywrightError
+
+    done = threading.Event()
+
+    def read_stdin() -> None:
+        sys.stdin.readline()
+        done.set()
+
+    threading.Thread(target=read_stdin, daemon=True).start()
+    sys.stderr.write(
+        "Recording. Interact with the app, then press Enter here "
+        "(or close the browser window) to finish.\n"
+    )
+    deadline = time.time() + timeout_secs
+    while not done.is_set() and time.time() < deadline and not page.is_closed():
+        try:
+            # Also lets Playwright deliver exposed-function calls.
+            page.wait_for_timeout(250)
+        except PlaywrightError:
+            break
+
+
+def record_session(
+    app_file: Path,
+    *,
+    video_path: Path | None,
+    script: Callable[[Page, str], None] | None = None,
     redact_inputs: bool = False,
-    viewport_size: Optional[Dict[str, int]] = None,
-) -> Dict[str, Any]:
+    timeout_secs: float = 3600.0,
+) -> Recording:
+    """
+    Run `app_file` with reactlog on, record one browser session, and return its export.
+
+    With `script`, the browser is headless and `script(page, app_url)` drives it (it
+    must navigate itself); otherwise a headed browser opens and the user finishes with
+    Enter or by closing the window.
+
+    Raises
+    ------
+    RecordingError
+        If Playwright is missing, the app fails to start, or no session started.
+    """
     try:
         from playwright.sync_api import sync_playwright
-    except ImportError:
-        return {
-            "success": False,
-            "error": "Playwright is not installed. Install it with: pip install playwright && playwright install chromium",
-            "actions": [],
-            "video_path": None,
-        }
+    except ImportError as err:
+        raise RecordingError(
+            "Playwright is not installed. Install it with: "
+            "pip install playwright && playwright install chromium"
+        ) from err
 
-    app_target = Path(app_path).resolve()
-    if not app_target.exists():
-        return {
-            "success": False,
-            "error": f"App file not found: {app_path}",
-            "actions": [],
-            "video_path": None,
-        }
+    app = _start_app(app_file)
+    video_dir = Path(tempfile.mkdtemp(prefix="shiny_reactlog_"))
+    actions: list[dict[str, Any]] = []
+    session_ids: list[str] = []
 
-    start_time = time.time()
-    try:
-        sa = run_shiny_app(
-            app_target,
-            wait_for_start=True,
-            timeout_secs=min(timeout_secs, 30.0),
-            env={"SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1", "SHINY_REACTLOG": "1"},
-        )
-    except Exception as err:
-        return {
-            "success": False,
-            "error": f"Failed to start Shiny app: {err}",
-            "actions": [],
-            "video_path": None,
-        }
+    # Playwright can't register bound builtins like `list.append` directly.
+    def on_action(item: dict[str, Any]) -> None:
+        actions.append(item)
 
-    app_url = sa.url
-    temp_dir = tempfile.mkdtemp(prefix="shiny_record_")
-    recorded_actions: List[Dict[str, Any]] = []
-    saved_video_path: Optional[str] = None
+    def on_session(session_id: str) -> None:
+        session_ids.append(session_id)
 
-    try:
+    def drive_browser() -> tuple[float, Path | None]:
         with sync_playwright() as p:
-            ws_endpoint = os.environ.get("PW_TEST_CONNECT_WS_ENDPOINT")
-            if ws_endpoint:
-                connect_kwargs: Dict[str, Any] = {}
-                connect_param_name = (
-                    "endpoint"
-                    if "endpoint" in inspect.signature(p.chromium.connect).parameters
-                    else "ws_endpoint"
-                )
-                connect_kwargs[connect_param_name] = ws_endpoint
-                expose_net = os.environ.get("PW_TEST_CONNECT_EXPOSE_NETWORK")
-                if expose_net:
-                    connect_kwargs["expose_network"] = expose_net
-                browser = p.chromium.connect(**connect_kwargs)
-            else:
-                browser = p.chromium.launch(headless=headless)
-            v_width = (
-                int(viewport_size["width"])
-                if viewport_size and "width" in viewport_size
-                else 1280
-            )
-            v_height = (
-                int(viewport_size["height"])
-                if viewport_size and "height" in viewport_size
-                else 1440
-            )
+            browser = p.chromium.launch(headless=script is not None)
             context = browser.new_context(
-                record_video_dir=temp_dir,
-                record_video_size={"width": v_width, "height": v_height},
-                viewport={"width": v_width, "height": v_height},
+                viewport={"width": 1280, "height": 900},
+                record_video_dir=str(video_dir) if video_path is not None else None,
+                record_video_size={"width": 1280, "height": 900},
             )
+            # Playwright types `callback` as a bare `Callable`.
+            context.expose_function(  # pyright: ignore[reportUnknownMemberType]
+                "__shinyReactlogAction", on_action
+            )
+            context.expose_function(  # pyright: ignore[reportUnknownMemberType]
+                "__shinyReactlogSession", on_session
+            )
+            if redact_inputs:
+                context.add_init_script("window.__shinyReactlogRedactAll = true;")
+            context.add_init_script(RECORDER_SCRIPT)
             page = context.new_page()
-            page_start_time = time.time()
-
-            redact_all_js = "true" if redact_inputs else "false"
-            recorder_init_script = f"""
-            window.__recordedActions = [];
-            window.__recordStartTime = Date.now();
-            const recentInputs = new Map();
-            let lastClickTime = 0;
-            let lastClickTarget = '';
-            const shouldRedactAll = {redact_all_js};
-
-            function isSensitiveInput(name, el) {{
-                if (shouldRedactAll) return true;
-                if (el && (el.type === 'password' || el.getAttribute('type') === 'password')) return true;
-                const lower = (name || '').toLowerCase();
-                return lower.includes('password') || lower.includes('secret') || lower.includes('token') || lower.includes('api_key') || lower.includes('apikey');
-            }}
-
-            function trackAction(item) {{
-                item.timestamp = Date.now() - window.__recordStartTime;
-                window.__recordedActions.push(item);
-            }}
-
-            function attachShinyListeners() {{
-                if (window.$ && window.Shiny) {{
-                    $(document).off('.shinyRecorder');
-                    $(document).on('shiny:inputchanged.shinyRecorder', (e) => {{
-                        if (e.name.startsWith('.')) return;
-                        const el = document.getElementById(e.name) || document.querySelector('[name="' + e.name + '"]');
-                        const sensitive = isSensitiveInput(e.name, el);
-                        const safeVal = sensitive ? '[REDACTED]' : e.value;
-                        const valKey = typeof safeVal === 'object' ? JSON.stringify(safeVal) : String(safeVal);
-                        recentInputs.set(e.name, {{ val: valKey, t: Date.now() }});
-                        trackAction({{
-                            type: 'input',
-                            name: e.name,
-                            value: safeVal,
-                            inputType: e.inputType || 'shiny'
-                        }});
-                    }});
-                    $(document).on('shiny:value.shinyRecorder', (e) => {{
-                        trackAction({{
-                            type: 'output',
-                            name: e.name,
-                            plot: e.value && typeof e.value.src === 'string' && /^data:image\\/(png|jpeg|gif|webp);base64,/.test(e.value.src)
-                                ? {{ src: e.value.src, alt: e.value.alt || e.name }} : undefined
-                        }});
-                    }});
-                }}
-            }}
-
-            document.addEventListener('DOMContentLoaded', attachShinyListeners);
-            window.addEventListener('load', attachShinyListeners);
-            document.addEventListener('shiny:connected', attachShinyListeners);
-
-            document.addEventListener('change', (e) => {{
-                const target = e.target;
-                if (!target || !target.id || target.id.startsWith('.')) return;
-                const id = target.id;
-                const sensitive = isSensitiveInput(id, target);
-                const rawVal = target.value !== undefined ? target.value : target.checked;
-                const val = sensitive ? '[REDACTED]' : rawVal;
-                const valKey = String(val);
-                const rec = recentInputs.get(id);
-                if (rec && (Date.now() - rec.t < 350) && rec.val === valKey) {{
-                    return;
-                }}
-                if (window.Shiny && window.Shiny.setInputValue && target.closest('.shiny-input-container')) {{
-                    return;
-                }}
-                recentInputs.set(id, {{ val: valKey, t: Date.now() }});
-                trackAction({{
-                    type: 'input',
-                    name: id,
-                    value: val,
-                    inputType: target.type || target.tagName.toLowerCase()
-                }});
-            }}, true);
-
-            document.addEventListener('click', (e) => {{
-                const target = e.target.closest('button, input, select, textarea, a, .btn');
-                if (!target) return;
-                const tgtName = target.id || target.name || target.tagName.toLowerCase();
-                const now = Date.now();
-                if (tgtName === lastClickTarget && (now - lastClickTime < 200)) {{
-                    return;
-                }}
-                lastClickTime = now;
-                lastClickTarget = tgtName;
-                trackAction({{
-                    type: 'click',
-                    target: tgtName,
-                    text: (target.innerText || target.value || '').trim().slice(0, 50)
-                }});
-            }}, true);
-            """
-            page.add_init_script(recorder_init_script)
-
-            page.goto(app_url, wait_until="domcontentloaded")
-            time.sleep(0.5)
-
-            if record_script:
-                record_script(page)
-                time.sleep(0.5)
-            elif not headless:
-                try:
-                    sys.stderr.write(
-                        "\n🔴 Recording browser session... Interact with your Shiny app.\n"
-                        "Press [Enter] here (or close the browser window) when done recording: "
-                    )
-                    sys.stderr.flush()
-                    deadline = time.time() + timeout_secs
-                    while time.time() < deadline:
-                        if page.is_closed():
-                            break
-                        import select
-
-                        empty_r: List[Any] = []
-                        empty_w: List[Any] = []
-                        r, _, _ = select.select([sys.stdin], empty_r, empty_w, 0.3)
-                        if r:
-                            sys.stdin.readline()
-                            break
-                except Exception:
-                    time.sleep(2.0)
-            elif auto_interact:
-                try:
-                    time.sleep(0.8)
-                    input_locators = page.locator(
-                        "input.shiny-input-number, input.shiny-input-text, input[type='number'], input[type='text']"
-                    ).all()
-                    for inp in input_locators[:3]:
-                        try:
-                            val = inp.input_value()
-                            if val.isdigit():
-                                inp.fill(str(int(val) + 5))
-                            elif val:
-                                inp.fill(f"{val} Updated")
-                            time.sleep(0.4)
-                        except Exception:
-                            pass
-
-                    buttons = page.locator(
-                        "button.action-button, button.btn-primary, button.btn"
-                    ).all()
-                    for btn in buttons[:2]:
-                        try:
-                            btn.click()
-                            time.sleep(0.5)
-                        except Exception:
-                            pass
-                except Exception:
-                    time.sleep(1.0)
+            video_start = time.time()
+            video = page.video
+            if script is not None:
+                script(page, app.url)
             else:
-                time.sleep(1.0)
-
-            try:
-                if not page.is_closed():
-                    raw_actions = page.evaluate("() => window.__recordedActions || []")
-                    if isinstance(raw_actions, list):
-                        recorded_actions = cast(List[Dict[str, Any]], raw_actions)
-            except Exception:
-                pass
-
-            app_marks: List[Dict[str, Any]] = []
-            try:
-                import urllib.request
-
-                req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
-                with urllib.request.urlopen(req, timeout=3.0) as resp:
-                    mark_data = json.loads(resp.read().decode())
-                    if isinstance(mark_data, dict) and "marks" in mark_data:
-                        raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
-                        for rm in raw_marks:
-                            item = dict(rm)
-                            raw_t = float(item.get("time") or 0.0)
-                            if raw_t > 1_000_000_000:
-                                rel_sec = max(0.0, round(raw_t - page_start_time, 2))
-                                item["time"] = rel_sec
-                                item["timestamp"] = int(rel_sec * 1000)
-                            app_marks.append(item)
-            except Exception:
-                pass
-
-            page_video = page.video
-
-            page.close()
+                page.goto(app.url)
+                _wait_for_enter_or_close(page, timeout_secs)
+            if not page.is_closed():
+                page.close()
             context.close()
-
-            if page_video and video_path:
-                out_v = Path(video_path).resolve()
-                out_v.parent.mkdir(parents=True, exist_ok=True)
-                try:
-                    page_video.save_as(str(out_v))
-                    saved_video_path = str(out_v)
-                except Exception:
-                    pass
-            elif page_video:
-                temp_video = Path(temp_dir) / "recording.webm"
-                try:
-                    page_video.save_as(str(temp_video))
-                    saved_video_path = str(temp_video)
-                except Exception:
-                    pass
-
+            saved: Path | None = None
+            if video is not None and video_path is not None:
+                video_path.parent.mkdir(parents=True, exist_ok=True)
+                video.save_as(str(video_path))
+                saved = video_path
             browser.close()
+        return video_start, saved
 
-        if not saved_video_path:
-            video_files = list(Path(temp_dir).glob("*.webm"))
-            if video_files and video_path:
-                out_v = Path(video_path).resolve()
-                out_v.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(video_files[0], out_v)
-                saved_video_path = str(out_v)
-            elif video_files:
-                saved_video_path = str(video_files[0])
-
-        if not app_marks:
-            try:
-                import urllib.request
-
-                req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
-                with urllib.request.urlopen(req, timeout=3.0) as resp:
-                    mark_data = json.loads(resp.read().decode())
-                    if isinstance(mark_data, dict) and "marks" in mark_data:
-                        raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
-                        for rm in raw_marks:
-                            item = dict(rm)
-                            raw_t = float(item.get("time") or 0.0)
-                            if raw_t > 1_000_000_000:
-                                rel_sec = max(0.0, round(raw_t - page_start_time, 2))
-                                item["time"] = rel_sec
-                                item["timestamp"] = int(rel_sec * 1000)
-                            app_marks.append(item)
-            except Exception:
-                pass
-
-        return {
-            "success": True,
-            "actions": recorded_actions,
-            "marks": app_marks,
-            "video_path": saved_video_path,
-            "duration_secs": round(time.time() - start_time, 2),
-        }
-
-    finally:
-        sa.close()
-        try:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        except Exception:
-            pass
-
-
-def record_shiny_session(
-    app_path: str,
-    video_path: Optional[str] = "recording.webm",
-    headless: bool = False,
-    record_script: Optional[Callable[[Any], None]] = None,
-    timeout_secs: float = 60.0,
-    auto_interact: bool = False,
-    redact_inputs: bool = False,
-    viewport_size: Optional[Dict[str, int]] = None,
-) -> Dict[str, Any]:
     try:
-        asyncio.get_running_loop()
-        has_running_loop = True
-    except RuntimeError:
-        has_running_loop = False
+        # The Playwright sync API refuses to run on a thread that owns an asyncio
+        # loop (pytest-playwright, async callers), so always give it its own thread.
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            video_start, saved = executor.submit(drive_browser).result()
 
-    if has_running_loop:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                _record_session_sync,
-                app_path,
-                video_path,
-                headless,
-                record_script,
-                timeout_secs,
-                auto_interact,
-                redact_inputs,
-                viewport_size,
+        if not session_ids:
+            raise RecordingError(
+                "The app never started a Shiny session in the browser."
             )
-            return future.result()
-    return _record_session_sync(
-        app_path,
-        video_path,
-        headless,
-        record_script,
-        timeout_secs,
-        auto_interact,
-        redact_inputs,
-        viewport_size,
-    )
+        session_id = session_ids[-1]
+        export = _export(app.url, session_id)
+        for entry in export["log"]:
+            entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
+        for action in actions:
+            action["time"] = max(0.0, float(action.get("time", 0)) - video_start)
+        return Recording(
+            export=export, actions=actions, video_path=saved, session_id=session_id
+        )
+    finally:
+        app.close()
+        shutil.rmtree(video_dir, ignore_errors=True)
+
+
+def serve_and_collect(
+    app_file: Path,
+    *,
+    on_ready: Callable[[str], None],
+    wait: Callable[[], None],
+    choose: Callable[[list[dict[str, Any]]], list[str]],
+) -> list[dict[str, Any]]:
+    """Run `app_file` with reactlog on for others to drive; export the chosen sessions."""
+    app = _start_app(app_file)
+    try:
+        on_ready(app.url)
+        wait()
+        sessions: list[dict[str, Any]] = _get_json(f"{app.url}__reactlog__/sessions")
+        if not sessions:
+            raise RecordingError("No sessions were recorded.")
+        return [_export(app.url, session_id) for session_id in choose(sessions)]
+    finally:
+        app.close()
