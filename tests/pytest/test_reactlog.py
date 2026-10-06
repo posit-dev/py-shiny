@@ -464,7 +464,7 @@ def test_reactlog_json_contract_r_shiny_compatibility():
     reactlog = record_export(
         _chain_server, [{"n": 5, ".clientdata_output_out_hidden": False}]
     )
-    assert "version" in reactlog
+    assert reactlog["version"] == "1"
     assert "session" in reactlog
     assert "log" in reactlog
     assert isinstance(reactlog["log"], list)
@@ -1081,6 +1081,11 @@ def test_plot_snapshots_and_module_metadata_survive_json_roundtrip():
 
     plot = {"src": "data:image/png;base64,aGVsbG8=", "alt": "Revenue"}
     loaded = load_reactlog_json(json.dumps(export_with_plot(plot)))
+    node = next(n for n in loaded["nodes"] if n["label"] == "output sales:result")
+    assert node["module"] == "sales"
+    assert node["render_type"] == "plot"
+    assert node["source_file"] == Path(__file__).name
+    assert isinstance(node["line"], int)
     assert any(e.get("plot") == plot for e in loaded["events"])
     unsafe = load_reactlog_json(
         export_with_plot({"src": "https://example.com/tracker.png"})
@@ -1198,6 +1203,18 @@ def txt():
         "to": "output:txt",
         "isolated": True,
     } in edges
+
+
+def test_recorded_sources_reach_the_viewer():
+    export = record_export(
+        _chain_server, [{"n": 1, ".clientdata_output_out_hidden": False}]
+    )
+    loaded = load_reactlog_json(export)
+    node = next(n for n in loaded["nodes"] if n["label"] == "reactive.calc doubled")
+    assert node["source_file"] in loaded["sources"]
+    html = format_reactlog_html(loaded, source_code=_CHAIN_SOURCE)
+    # A line only this test file contains, JSON-embedded in the viewer data.
+    assert json.dumps("def test_recorded_sources_reach_the_viewer():")[1:-1] in html
 
 
 def test_reactive_marks_api_and_generate_reactlog():

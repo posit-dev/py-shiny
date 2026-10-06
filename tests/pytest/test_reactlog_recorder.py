@@ -23,6 +23,7 @@ class FakeNode:
         self._node_fn: Callable[..., object] | None = None
         self._node_session_id: str | None = None
         self._node_namespace: str | None = None
+        self._node_render_type: str | None = None
 
 
 def _change(
