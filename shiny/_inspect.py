@@ -706,7 +706,7 @@ def _make_event(
         semantic_state = "observed_execution"
     elif event in ("wouldEvaluate", "inferred"):
         semantic_state = "inferred_execution"
-    elif event in ("propagate", "invalidate"):
+    elif event in ("propagate", "invalidate", "invalidateStart"):
         semantic_state = "invalidated"
     elif event in (
         "define",
@@ -750,6 +750,51 @@ def _make_event(
         item["edge_from"] = edge_from
         item["edge_to"] = edge_to
     return item
+
+
+def _mark_event(
+    *, step: int, label: str, timestamp: int, time_sec: float, session: str
+) -> Dict[str, Any]:
+    """A timeline bookmark event, shared by generated and loaded reactlogs."""
+    return _make_event(
+        step=step,
+        event="userMark",
+        action="userMark",
+        phase="interaction",
+        provenance="observed",
+        node_id=None,
+        node_label=f"🔖 {label}",
+        node_type="mark",
+        status="active",
+        timestamp=timestamp,
+        time_sec=time_sec,
+        details=f"User mark: {label}",
+        session=session,
+    )
+
+
+def _mark_wave(*, label: str, time_sec: float, step: int, index: int) -> Dict[str, Any]:
+    """A timeline bookmark wave, shared by generated and loaded reactlogs."""
+    return {
+        "action_id": f"mark-{index}",
+        "index": index,
+        "is_init": False,
+        "is_mark": True,
+        "start_time": time_sec,
+        "end_time": time_sec,
+        "start_step": step,
+        "end_step": step,
+        "trigger": f"Bookmark: {label}",
+        "trigger_label": f"🔖 {label}",
+        "short_label": f"🔖 {label[:20]}",
+        "human_action": f"Mark: {label}",
+        "trigger_node_id": "",
+        "trigger_value": None,
+        "invalidated_nodes": [],
+        "inferred_executions": [],
+        "observed_executions": [],
+        "observed_outputs": [],
+    }
 
 
 def generate_reactlog(
@@ -951,19 +996,11 @@ def generate_reactlog(
         mark_time = float(m.get("time") or 0.0)
         mark_ms = int(m.get("timestamp") or (mark_time * 1000))
         events.append(
-            _make_event(
+            _mark_event(
                 step=cur_step,
-                event="userMark",
-                action="userMark",
-                phase="interaction",
-                provenance="observed",
-                node_id=None,
-                node_label=f"🔖 {mark_label}",
-                node_type="mark",
-                status="active",
+                label=mark_label,
                 timestamp=mark_ms,
                 time_sec=mark_time,
-                details=f"User mark: {mark_label}",
                 session=session,
             )
         )
@@ -973,26 +1010,12 @@ def generate_reactlog(
             if source_file:
                 events[-1].update(source_file=source_file, line=m.get("line"))
         action_waves.append(
-            {
-                "action_id": f"mark-{len(action_waves)}",
-                "index": len(action_waves),
-                "is_init": False,
-                "is_mark": True,
-                "start_time": mark_time,
-                "end_time": mark_time,
-                "start_step": cur_step,
-                "end_step": cur_step,
-                "trigger": f"Bookmark: {mark_label}",
-                "trigger_label": f"🔖 {mark_label}",
-                "short_label": f"🔖 {mark_label[:20]}",
-                "human_action": f"Mark: {mark_label}",
-                "trigger_node_id": "",
-                "trigger_value": None,
-                "invalidated_nodes": [],
-                "inferred_executions": [],
-                "observed_executions": [],
-                "observed_outputs": [],
-            }
+            _mark_wave(
+                label=mark_label,
+                time_sec=mark_time,
+                step=cur_step,
+                index=len(action_waves),
+            )
         )
         return cur_step + 1
 
@@ -1781,7 +1804,7 @@ def load_reactlog_json(
         if not status:
             if action in ("define",):
                 status = "discovered"
-            elif action in ("invalidate", "propagate"):
+            elif action in ("invalidate", "invalidateStart", "propagate"):
                 status = "affected"
             elif action in ("enter", "wouldEvaluate", "outputUpdated"):
                 status = "scheduled"
@@ -1831,24 +1854,94 @@ def load_reactlog_json(
                 item.get("isolate")
             )
 
-        ev_dict = _make_event(
-            step=step_idx,
-            event=action,
-            phase=phase,
-            provenance=prov,
-            node_id=str(nid) if nid else None,
-            node_label=str(lbl) if lbl else None,
-            node_type=str(ntype) if ntype else None,
-            status=status,
-            timestamp=t_ms,
-            time_sec=round(t_sec, 3),
-            value=val_str,
-            edge_from=str(dep_from) if (action == "dependsOn" or dep_from) else None,
-            edge_to=str(dep_to) if (action == "dependsOn" or dep_to) else None,
-            details=details,
-            session=str(item.get("session") or session_name),
-            action=action,
-        )
+        if (
+            nid
+            and str(nid) not in _R_SENTINEL_REACT_IDS
+            and (str(nid) not in nodes_map or action == "define")
+        ):
+            role = "conductor"
+            clean_type = str(ntype).lower()
+            if clean_type in (
+                "input",
+                "reactiveval",
+                "reactivevalueskey",
+                "reactivevaluesnames",
+                "reactivevaluesaslist",
+                "reactivevaluesaslistall",
+            ) or str(nid).startswith("input:"):
+                role = "source"
+                clean_type = "input"
+            elif (
+                clean_type in ("observer", "output", "effect")
+                or str(nid).startswith("output:")
+                or str(nid).startswith("effect:")
+            ):
+                role = "observer"
+                clean_type = "output"
+            elif clean_type in ("calc", "reactive", "observable"):
+                role = "conductor"
+                clean_type = "calc"
+
+            name_val = str(nid).split(":", 1)[1] if ":" in str(nid) else str(nid)
+            nodes_map[str(nid)] = {
+                "id": str(nid),
+                "name": name_val,
+                "type": clean_type,
+                "role": role,
+                "label": str(lbl),
+                "line": item.get("line"),
+                **{
+                    key: value
+                    for key, value in nodes_map.get(str(nid), {}).items()
+                    if key in ("module", "render_type", "line", "source_file")
+                    and value is not None
+                },
+            }
+
+        event_session = str(item.get("session") or session_name)
+        if action == "userMark":
+            mark_label = str(item.get("label") or "Bookmark")
+            ev_dict = _mark_event(
+                step=step_idx,
+                label=mark_label,
+                timestamp=t_ms,
+                time_sec=round(t_sec, 3),
+                session=event_session,
+            )
+            # Loaded logs have no `action_waves`; the viewer builds waves itself
+            # and turns this into the same bookmark wave generated logs get.
+            ev_dict["mark_wave"] = _mark_wave(
+                label=mark_label, time_sec=round(t_sec, 3), step=step_idx, index=0
+            )
+        else:
+            # A removed dependency is not an active edge; only `details` names it.
+            is_removal = action == "dependsOnRemove"
+            ev_dict = _make_event(
+                step=step_idx,
+                event=action,
+                phase=phase,
+                provenance=prov,
+                node_id=str(nid) if nid else None,
+                node_label=str(lbl) if lbl else None,
+                node_type=str(ntype) if ntype else None,
+                status=status,
+                timestamp=t_ms,
+                time_sec=round(t_sec, 3),
+                value=val_str,
+                edge_from=(
+                    str(dep_from)
+                    if not is_removal and (action == "dependsOn" or dep_from)
+                    else None
+                ),
+                edge_to=(
+                    str(dep_to)
+                    if not is_removal and (action == "dependsOn" or dep_to)
+                    else None
+                ),
+                details=details,
+                session=event_session,
+                action=action,
+            )
         for key in ("error", "source_file", "line", "isolate"):
             if key in item:
                 ev_dict[key] = item[key]
