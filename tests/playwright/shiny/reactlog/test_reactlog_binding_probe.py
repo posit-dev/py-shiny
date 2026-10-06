@@ -32,6 +32,7 @@ def test_recorder_captures_binding_names() -> None:
     def script(page: Page, url: str) -> None:
         page.goto(url)
         controller.InputSlider(page, "slider").set("5")
+        controller.InputSlider(page, "big").set("2,500")
         controller.InputSliderRange(page, "range").set(("3", "4"))
         controller.InputSelect(page, "select").set("b")
         controller.InputSelectize(page, "selectize").set("b")
@@ -68,5 +69,7 @@ def test_recorder_captures_binding_names() -> None:
     assert "shiny-input-checkbox" not in switch["classes"]
     assert "shiny-input-checkbox" in checkbox["classes"]
     assert "form-check-input" not in checkbox["classes"]
+    big = [a for a in rec.actions if a.get("name") == "big"][-1]
+    assert big["display"] == "2,500"
     link = next(a for a in rec.actions if a.get("name") == "link")
     assert link["tag"] == "A"
