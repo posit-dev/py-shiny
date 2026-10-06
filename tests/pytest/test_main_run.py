@@ -89,14 +89,15 @@ def test_reactlog_proxied_requests_are_not_local() -> None:
         "REACTLOG_SOURCE_MARKER"
 
     app = App(ui.page_fluid("test"), server, reactlog=True)
+    session = app._create_session(MockConnection())
     client = TestClient(app.starlette_app)
     proxied = {"X-Forwarded-For": "203.0.113.5"}
+    url = f"/__reactlog__?session_id={session.id}"
 
-    assert "REACTLOG_SOURCE_MARKER" in client.get("/__reactlog__").text
-    assert client.get("/__reactlog__", headers=proxied).status_code == 403
+    assert "REACTLOG_SOURCE_MARKER" in client.get(url).text
+    assert client.get(url, headers=proxied).status_code == 403
 
-    token_url = f"/__reactlog__?token={app.reactlog_token}"
-    response = client.get(token_url, headers=proxied)
+    response = client.get(f"{url}&token={app.reactlog_token}", headers=proxied)
     assert response.status_code == 200
     assert "REACTLOG_SOURCE_MARKER" not in response.text
 
@@ -466,8 +467,58 @@ async def test_reactlog_endpoint_shows_runtime_dependency() -> None:
             "from": ids["input.dyn_1"],
             "to": ids["reactive.effect watcher"],
         } in data["edges"]
+        # The ended session stays viewable, now with an end time.
         recorder = app._reactlog_recorder
-        assert recorder is not None and sess.id not in recorder._logs
+        assert recorder is not None
+        info = recorder.session(sess.id)
+        assert info is not None and info.end is not None
+        response = await app._on_reactlog_request_cb(
+            _reactlog_request(app, session_id=sess.id)
+        )
+        data, _ = _viewer_payload(response.body)
+        assert "input.dyn_1" in {n["label"] for n in data["nodes"]}
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+def test_reactlog_without_session_id_redirects_to_only_session() -> None:
+    app = App(ui.TagList(), None, reactlog=True)
+    try:
+        session = app._create_session(MockConnection())
+        client = TestClient(app.starlette_app)
+        response = client.get("/__reactlog__", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == f"?session_id={session.id}"
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+async def test_reactlog_without_session_id_lists_sessions_for_local_users() -> None:
+    app = App(ui.TagList(), None, reactlog=True)
+    try:
+        client = TestClient(app.starlette_app)
+        empty = client.get("/__reactlog__").text
+        assert "No sessions recorded yet" in empty
+
+        first = app._create_session(MockConnection())
+        second = app._create_session(MockConnection())
+        app._remove_session(first)
+        page = client.get("/__reactlog__").text
+        assert "choose a session" in page
+        # Newest first; the ended session shows an end time, the live one "Active".
+        assert page.index(second.id) < page.index(first.id)
+        assert page.count("Active") == 1
+        assert f'href="?session_id={first.id}"' in page
+
+        unknown = client.get("/__reactlog__?session_id=nope").text
+        assert "Session 'nope' was not found." in unknown
+
+        # Session ids grant access to session routes: never list them remotely.
+        remote = await app._on_reactlog_request_cb(_reactlog_request(app))
+        assert second.id not in bytes(remote.body).decode()
     finally:
         app.reactlog_enabled = False
 

@@ -19,6 +19,7 @@ from typing import (
     TypeVar,
     cast,
 )
+from urllib.parse import urlencode
 
 import starlette.applications
 import starlette.middleware
@@ -37,14 +38,14 @@ if TYPE_CHECKING:
     from htmltools import Tagified
 
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse, Response
+from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
 from ._inspect import format_reactlog_html, generate_reactlog, load_reactlog_json
-from ._reactlog import ReactlogRecorder
+from ._reactlog import ReactlogRecorder, session_picker_html
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, is_test_mode, sort_keys_length
 from .bookmark._global import as_bookmark_dir_fn
@@ -361,6 +362,8 @@ class App:
         id = secrets.token_hex(32)
         session = AppSession(self, id, conn, debug=self._debug)
         self._sessions[id] = session
+        if self._reactlog_recorder is not None:
+            self._reactlog_recorder.start_session(id)
         return session
 
     def _remove_session(self, session: AppSession | str) -> None:
@@ -370,7 +373,10 @@ class App:
         if self._debug:
             print(f"remove_session: {session}", flush=True)
         if self._reactlog_recorder is not None:
-            self._reactlog_recorder.drop_session(session)
+            # Keep the ended session (and its marks) viewable in the reactlog.
+            self._reactlog_recorder.end_session(
+                session, marks=self._sessions[session]._reactlog_marks
+            )
         del self._sessions[session]
 
     def run(self, **kwargs: object) -> None:
@@ -597,22 +603,46 @@ window.addEventListener('keydown', function(e) {{
                 except (TypeError, OSError):
                     pass
 
-        target_session = self._reactlog_target_session(
-            request, session_id=request.query_params.get("session_id")
+        session_id = request.query_params.get("session_id")
+        recorder = self._reactlog_recorder
+        recorded_session = (
+            recorder.session(session_id) if recorder and session_id else None
         )
 
-        if target_session:
-            marks = reactive.get_marks(target_session)
-        else:
-            marks = list(self._app_marks) + reactive.get_marks()
+        if recorder is not None and recorded_session is None:
+            # Listing sessions exposes their ids, which grant access to session
+            # routes (uploads, downloads), so only local users may pick one.
+            if self._is_direct_local_request(request):
+                sessions = recorder.sessions()
+                if len(sessions) == 1 and not session_id:
+                    query = {**request.query_params, "session_id": sessions[0].id}
+                    return RedirectResponse(url="?" + urlencode(query))
+                return HTMLResponse(
+                    session_picker_html(
+                        sessions,
+                        query=request.query_params,
+                        notice=(
+                            f"Session {session_id!r} was not found."
+                            if session_id
+                            else None
+                        ),
+                    )
+                )
 
-        if target_session is not None and self._reactlog_recorder is not None:
-            recorded = self._reactlog_recorder.export(target_session.id)
+        if recorder is not None and recorded_session is not None:
+            live_session = self._sessions.get(recorded_session.id)
+            marks = (
+                reactive.get_marks(live_session)
+                if live_session is not None
+                else recorded_session.marks
+            )
+            recorded = recorder.export(recorded_session.id)
             recorded["log"] = sorted(
                 [*recorded["log"], *marks], key=lambda entry: entry.get("time", 0)
             )
             reactlog_data = load_reactlog_json(recorded)
         else:
+            marks = list(self._app_marks) + reactive.get_marks()
             # No live session to show: fall back to static analysis of the source.
             reactlog_data = generate_reactlog(
                 source_code, source_path=app_file, marks=marks
