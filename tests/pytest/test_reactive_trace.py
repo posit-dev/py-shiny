@@ -9,6 +9,8 @@ from typing import Any, Callable, Generator
 
 import pytest
 
+from shiny import App, module, reactive, ui
+from shiny._connection import MockConnection
 from shiny.reactive import Value, _trace, calc, effect, flush, isolate
 from shiny.reactive._trace import (
     ExecuteEvent,
@@ -528,3 +530,67 @@ def test_top_level_isolate_has_no_edges(rec: Recorder) -> None:
         a()
     assert rec.of("add") == []
     assert ("isolate_enter", None) in rec.log
+
+
+async def _run_session(server: Any, *messages: str) -> Any:
+    conn = MockConnection()
+    sess = App(ui.TagList(), server)._create_session(conn)
+
+    async def mock_client() -> None:
+        for message in messages:
+            conn.cause_receive(message)
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
+    return sess
+
+
+@pytest.mark.asyncio
+async def test_input_value_changes_attributed_to_session() -> None:
+    events: list[ValueChanged] = []
+
+    class Cap(ReactiveTracer):
+        def on_value_change(self, event: ValueChanged) -> None:
+            events.append(event)
+
+    remove = add_tracer(Cap())
+    try:
+        sess = await _run_session(
+            None,
+            '{"method":"init","data":{"x":1}}',
+            '{"method":"update","data":{"x":2}}',
+        )
+    finally:
+        remove()
+    assert [
+        (e.node._node_label, e.value, e.session_id)
+        for e in events
+        if e.node._node_label == "input.x"
+    ] == [("input.x", 1, sess.id), ("input.x", 2, sess.id)]
+
+
+@pytest.mark.asyncio
+async def test_module_nodes_use_root_session_id() -> None:
+    defined: list[_trace.NodeDefined] = []
+
+    class Cap(ReactiveTracer):
+        def on_define_node(self, event: _trace.NodeDefined) -> None:
+            defined.append(event)
+
+    @module.server
+    def mod_server(input: Any, output: Any, session: Any) -> None:
+        @reactive.calc
+        def inner() -> int:
+            return 1
+
+    def server(input: Any, output: Any, session: Any) -> None:
+        mod_server("m")
+
+    remove = add_tracer(Cap())
+    try:
+        sess = await _run_session(server, '{"method":"init","data":{}}')
+    finally:
+        remove()
+    inner = [e for e in defined if e.node._node_label == "reactive.calc m:inner"]
+    assert len(inner) == 1
+    assert inner[0].session_id == sess.id
