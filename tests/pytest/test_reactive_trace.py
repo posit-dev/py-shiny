@@ -9,7 +9,7 @@ from typing import Any, Callable, Generator
 
 import pytest
 
-from shiny.reactive import _trace
+from shiny.reactive import Value, _trace, calc, effect
 from shiny.reactive._trace import (
     ExecuteEvent,
     NodeKind,
@@ -236,3 +236,121 @@ def test_point_hook_calls_all_before_warning_error() -> None:
             remove()
     # GoodHook must run even though BrokenHook raised
     assert seen == [42]
+
+
+class Recorder(ReactiveTracer):
+    """Records hook calls as tuples keyed by node label."""
+
+    def __init__(self) -> None:
+        self.log: list[tuple[Any, ...]] = []
+
+    def on_define_node(self, event: _trace.NodeDefined) -> None:
+        self.log.append(("define", event.node._node_label))
+
+    def on_add_dependency(self, event: _trace.DependencyAdded) -> None:
+        self.log.append(
+            ("add", event.reader._node_label, event.target._node_label, event.isolated)
+        )
+
+    def on_remove_dependency(self, event: _trace.DependencyRemoved) -> None:
+        self.log.append(
+            (
+                "remove",
+                event.reader._node_label,
+                event.target._node_label,
+                event.isolated,
+            )
+        )
+
+    def on_invalidate(self, event: _trace.NodeInvalidated) -> None:
+        self.log.append(("invalidate", event.node._node_label))
+
+    def on_value_change(self, event: ValueChanged) -> None:
+        self.log.append(("value", event.node._node_label, event.value))
+
+    def on_freeze_value(self, event: _trace.ValueFrozen) -> None:
+        self.log.append(("freeze", event.node._node_label))
+
+    @contextlib.contextmanager
+    def on_isolate(self, event: _trace.IsolateEvent) -> Generator[None, None, None]:
+        reader = event.reader._node_label if event.reader else None
+        self.log.append(("isolate_enter", reader))
+        yield
+        self.log.append(("isolate_exit", reader))
+
+    @contextlib.contextmanager
+    def on_execute(self, event: ExecuteEvent) -> Generator[None, None, None]:
+        label = event.node._node_label
+        self.log.append(("enter", label))
+        try:
+            yield
+        except BaseException as exc:
+            self.log.append(("exit", label, type(exc).__name__))
+            raise
+        self.log.append(("exit", label, None))
+
+    @contextlib.contextmanager
+    def on_flush(self, event: _trace.FlushEvent) -> Generator[None, None, None]:
+        self.log.append(("flush_start",))
+        yield
+        self.log.append(("flush_end",))
+
+    def of(self, kind: str) -> list[tuple[Any, ...]]:
+        return [x for x in self.log if x[0] == kind]
+
+
+@pytest.fixture
+def rec() -> Generator[Recorder, None, None]:
+    recorder = Recorder()
+    remove = add_tracer(recorder)
+    yield recorder
+    remove()
+
+
+@pytest.mark.asyncio
+async def test_define_value_change_freeze(rec: Recorder) -> None:
+    v = Value(1, name="v")
+
+    @calc
+    def c() -> int:
+        return v()
+
+    @effect
+    def e() -> None:
+        c()
+
+    assert rec.of("define") == [
+        ("define", "v"),
+        ("define", "reactive.calc c"),
+        ("define", "reactive.effect e"),
+    ]
+    assert len({v._node_id, c._node_id, e._node_id}) == 3
+    assert (v._node_kind, c._node_kind, e._node_kind) == ("value", "calc", "effect")
+
+    v.set(2)
+    v.set(2)  # same object: no change event
+    v.freeze()
+    assert rec.of("value") == [("value", "v", 2)]
+    assert rec.of("freeze") == [("freeze", "v")]
+
+
+@pytest.mark.xfail(strict=True, reason="execute span lands in Task 4")
+@pytest.mark.asyncio
+async def test_output_effect_traces_as_output(rec: Recorder) -> None:
+    from shiny import App, render, ui
+    from shiny._connection import MockConnection
+
+    def server(input: Any, output: Any, session: Any) -> None:
+        @render.text
+        def txt() -> str:
+            return "hi"
+
+    conn = MockConnection()
+    sess = App(ui.TagList(), server)._create_session(conn)
+
+    async def mock_client() -> None:
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
+    assert ("enter", "output txt") in rec.log
