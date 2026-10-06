@@ -435,3 +435,108 @@ def test_reactlog_cli_test_needs_an_app_file(tmp_path: Path) -> None:
         )
         assert res.exit_code == 2, (args, res.output)
         assert "--test needs an app file" in res.output
+
+
+def _fake_record(
+    monkeypatch: pytest.MonkeyPatch, actions: list[dict[str, Any]] | None = None
+) -> list[Path]:
+    calls: list[Path] = []
+
+    def fake_record(app_file: Path, **kw: Any) -> Recording:
+        calls.append(app_file)
+        return Recording(export=SAVED, actions=actions or [], session_id="s1")
+
+    monkeypatch.setattr(cli, "record_session", fake_record)
+    return calls
+
+
+def _app(tmp_path: Path) -> Path:
+    app = tmp_path / "app.py"
+    app.write_text("from shiny.express import ui\n")
+    return app
+
+
+def test_reactlog_cli_redacted_test_hides_outputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _fake_record(
+        monkeypatch,
+        [
+            # Only the flag says the recording was redacted: clicks keep values.
+            {"type": "input", "name": "go", "value": 1, "tag": "BUTTON"},
+            {"type": "output", "name": "o", "binding": "shiny.textOutput"}
+            | {"value": "secret", "tag": "DIV"},
+        ],
+    )
+    test_file = tmp_path / "test_app.py"
+    args = ["reactlog", str(_app(tmp_path)), "--json", str(tmp_path / "o.json")]
+    res = CliRunner().invoke(main, args + ["--redact-inputs", "--test", str(test_file)])
+    assert res.exit_code == 0, res.output
+    assert "secret" not in test_file.read_text()
+    assert "# o updated" in test_file.read_text()
+
+
+def test_reactlog_cli_writes_reactlog_before_the_test(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _fake_record(monkeypatch)
+    blocker = tmp_path / "file"
+    blocker.write_text("")
+    out = tmp_path / "o.json"
+    res = CliRunner().invoke(
+        main,
+        ["reactlog", str(_app(tmp_path)), "--json", str(out)]
+        + ["--test", str(blocker / "test_app.py")],
+    )
+    assert res.exit_code == 1 and "Could not write" in res.output
+    assert out.is_file()
+
+
+def test_reactlog_cli_test_marker_falls_back_to_absolute_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def cross_drive(*args: Any) -> str:
+        raise ValueError("path is on mount 'C:', start on mount 'D:'")
+
+    _fake_record(monkeypatch)
+    monkeypatch.setattr(cli.os.path, "relpath", cross_drive)
+    app = _app(tmp_path)
+    test_file = tmp_path / "tests" / "test_app.py"
+    res = CliRunner().invoke(
+        main,
+        ["reactlog", str(app), "--json", str(tmp_path / "o.json")]
+        + ["--test", str(test_file)],
+    )
+    assert res.exit_code == 0, res.output
+    assert f'"{app.resolve().as_posix()}"' in test_file.read_text()
+
+
+def test_reactlog_cli_outputs_cannot_overwrite_replay_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _fake_record(monkeypatch)
+    replay = tmp_path / "test_app.py"
+    replay.write_text("def test_app(page, local_app):\n    pass\n")
+    res = CliRunner().invoke(
+        main,
+        ["reactlog", str(_app(tmp_path)), "--replay", str(replay)]
+        + ["--json", str(replay)],
+    )
+    assert res.exit_code == 1 and "Refusing to overwrite" in res.output
+    assert not calls and replay.read_text().startswith("def test_app")
+
+
+def test_reactlog_cli_test_refuses_existing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _fake_record(monkeypatch)
+    test_file = tmp_path / "test_app.py"
+    test_file.write_text("# refined by hand\n")
+    res = CliRunner().invoke(
+        main,
+        ["reactlog", str(_app(tmp_path)), "--json", str(tmp_path / "o.json")]
+        + ["--test", str(test_file)],
+    )
+    assert res.exit_code == 1
+    assert "already exists" in res.output and "Traceback" not in res.output
+    assert not calls and test_file.read_text() == "# refined by hand\n"

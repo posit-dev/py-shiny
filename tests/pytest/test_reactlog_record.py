@@ -1,4 +1,6 @@
 import io
+import signal
+import sys
 import threading
 from pathlib import Path
 from typing import Any
@@ -10,9 +12,11 @@ from shiny.reactive._reactlog._record import (
     RecordingError,
     _close_browser,
     _start_stdin_reader,
+    _terminate_as_interrupt,
     _wait_for_enter_or_close,
     record_session,
     redact_export,
+    replay_script,
     serve_and_collect,
 )
 
@@ -169,7 +173,7 @@ def test_wait_loop_returns_when_stop_is_set() -> None:
             stop.set()
 
     stop = threading.Event()
-    _wait_for_enter_or_close(FakePage(), 60.0, stop)  # type: ignore[arg-type]
+    _wait_for_enter_or_close(FakePage(), timeout_secs=60.0, stop=stop)  # type: ignore[arg-type]
     assert stop.is_set()
 
 
@@ -182,3 +186,67 @@ def test_redact_export_only_touches_input_value_changes() -> None:
     }
     redact_export(export)
     assert [e["value"] for e in export["log"]] == ["[REDACTED]", "y"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+def test_terminate_as_interrupt_keeps_ignored_signals(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Under `nohup`, SIGHUP is ignored and must stay ignored.
+    real_getsignal = signal.getsignal
+    installed: list[int] = []
+    real_signal = signal.signal
+
+    def fake_getsignal(sig: int) -> Any:
+        return signal.SIG_IGN if sig == signal.SIGHUP else real_getsignal(sig)
+
+    def spy_signal(sig: int, handler: Any) -> Any:
+        installed.append(sig)
+        return real_signal(sig, handler)
+
+    monkeypatch.setattr(signal, "getsignal", fake_getsignal)
+    monkeypatch.setattr(signal, "signal", spy_signal)
+    with _terminate_as_interrupt():
+        pass
+    assert signal.SIGHUP not in installed and signal.SIGTERM in installed
+
+
+@pytest.mark.parametrize(
+    "body, message",
+    [
+        ("pytest.fail('x')", "test_x failed during replay: Failed: x"),
+        ("pytest.skip('y')", "test_x was skipped during replay: y"),
+        ("raise SystemExit(3)", "test_x failed during replay: SystemExit: 3"),
+    ],
+)
+def test_replay_turns_test_outcomes_into_errors(
+    tmp_path: Path, body: str, message: str
+) -> None:
+    test_file = tmp_path / "test_x.py"
+    test_file.write_text(f"import pytest\n\ndef test_x(page):\n    {body}\n")
+    with pytest.raises(RecordingError, match=message):
+        replay_script(test_file)(object(), "http://unused")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "body, message",
+    [
+        ("pytest.skip('z', allow_module_level=True)", "skipped: z"),
+        ("pytest.importorskip('no_such_module_xyz')", "skipped: .*no_such_module"),
+        ("raise SystemExit(2)", "Cannot import .*SystemExit: 2"),
+    ],
+)
+def test_replay_import_outcomes_become_errors(
+    tmp_path: Path, body: str, message: str
+) -> None:
+    test_file = tmp_path / "test_x.py"
+    test_file.write_text(f"import pytest\n{body}\n")
+    with pytest.raises(RecordingError, match=message):
+        replay_script(test_file)
+
+
+def test_replay_lets_keyboard_interrupt_through(tmp_path: Path) -> None:
+    test_file = tmp_path / "test_x.py"
+    test_file.write_text("def test_x(page):\n    raise KeyboardInterrupt\n")
+    with pytest.raises(KeyboardInterrupt):
+        replay_script(test_file)(object(), "http://unused")  # type: ignore[arg-type]

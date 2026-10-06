@@ -155,6 +155,8 @@ def _terminate_as_interrupt() -> Generator[None]:
     previous = {
         sig: signal.signal(sig, interrupt)
         for sig in (getattr(signal, name) for name in names if hasattr(signal, name))
+        # An ignored signal (e.g. SIGHUP under `nohup`) stays ignored.
+        if signal.getsignal(sig) is not signal.SIG_IGN
     }
     try:
         yield
@@ -338,7 +340,7 @@ def record_session(
                 script(page, app.url)
             else:
                 page.goto(app.url)
-                _wait_for_enter_or_close(page, timeout_secs, stop)
+                _wait_for_enter_or_close(page, timeout_secs=timeout_secs, stop=stop)
             saved = _close_browser(
                 page,
                 context=context,
@@ -365,6 +367,10 @@ def record_session(
                     "The app never started a Shiny session in the browser."
                 )
             session_id = session_ids[-1]
+            if len(set(session_ids)) > 1:  # e.g. a reload, or several replayed tests
+                sys.stderr.write(
+                    f"{len(set(session_ids))} sessions were recorded; exported the last.\n"
+                )
             export = _export(app, session_id)
             for entry in export["log"]:
                 entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
@@ -404,6 +410,11 @@ def serve_and_collect(
 _REPLAY_FIXTURES = {"page", "local_app"}
 
 
+def _is_skip(err: BaseException) -> bool:
+    # pytest's skip outcome; matched by name since pytest isn't a shiny dependency.
+    return type(err).__name__ == "Skipped"
+
+
 @dataclass
 class _ReplayApp:
     """Stands in for the `local_app` fixture; generated tests only read `.url`."""
@@ -431,8 +442,13 @@ def replay_script(test_file: Path) -> Callable[[Page, str], None]:
     sys.modules[name] = module
     try:
         spec.loader.exec_module(module)
-    except Exception as err:  # anything the user's file raises at import time
-        raise RecordingError(f"Cannot import {test_file}: {err}") from err
+    except KeyboardInterrupt:
+        raise
+    # Anything the user's file raises at import time, including pytest's skip/fail
+    # outcomes and SystemExit, which are BaseExceptions.
+    except BaseException as err:  # noqa: B036 (re-raised as RecordingError)
+        what = f"skipped: {err}" if _is_skip(err) else f"{type(err).__name__}: {err}"
+        raise RecordingError(f"Cannot import {test_file}: {what}") from err
     finally:
         sys.modules.pop(name, None)
     tests = [
@@ -456,11 +472,16 @@ def replay_script(test_file: Path) -> Callable[[Page, str], None]:
             params = inspect.signature(fn).parameters
             try:
                 fn(**{k: v for k, v in fixtures.items() if k in params})
-            # Assertions, Playwright timeouts, or any other error in the user's test.
-            except Exception as err:
-                raise RecordingError(
-                    f"{test_file.name}::{fn.__name__} failed during replay: "
-                    f"{type(err).__name__}: {err}"
-                ) from err
+            except KeyboardInterrupt:
+                raise
+            # Assertions, Playwright timeouts, pytest outcomes, or any other error in
+            # the user's test.
+            except BaseException as err:  # noqa: B036 (re-raised as RecordingError)
+                what = (
+                    f"was skipped during replay: {err}"
+                    if _is_skip(err)
+                    else f"failed during replay: {type(err).__name__}: {err}"
+                )
+                raise RecordingError(f"{test_file.name}::{fn.__name__} {what}") from err
 
     return script
