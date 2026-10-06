@@ -67,6 +67,9 @@ class ReactiveNode(Protocol):
     def _node_fn(self) -> Callable[..., object] | None: ...
 
     @property
+    def _node_namespace(self) -> str | None: ...
+
+    @property
     def _node_session_id(self) -> str | None:
         """Root id of the session that owns this node; None if not session-owned."""
         ...
