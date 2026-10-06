@@ -308,11 +308,7 @@ def load_reactlog_json(
         )
         t_ms = int(t_sec * 1000)
 
-        prov = item.get("provenance") or (
-            "observed"
-            if action in ("valueChange", "inputChange", "userClick", "userAction")
-            else "inferred"
-        )
+        prov = item.get("provenance") or "observed"
         phase = item.get("phase") or (
             "init"
             if item_idx <= init_end
@@ -470,7 +466,7 @@ def load_reactlog_json(
                     step=i,
                     event="define",
                     phase="init",
-                    provenance="inferred",
+                    provenance="observed",
                     node_id=n["id"],
                     node_label=n["label"],
                     node_type=n["role"],
@@ -487,8 +483,6 @@ def load_reactlog_json(
         (i for i, e in enumerate(normalized_events) if e.get("phase") == "interaction"),
         0,
     )
-    obs_count = len([e for e in normalized_events if e.get("provenance") == "observed"])
-    inf_count = len([e for e in normalized_events if e.get("provenance") == "inferred"])
 
     parsed_dict: Optional[Dict[str, Any]] = (
         cast(Dict[str, Any], parsed) if isinstance(parsed, dict) else None
@@ -513,8 +507,6 @@ def load_reactlog_json(
         "init_steps_count": init_count,
         "interaction_steps_count": interact_count,
         "first_interaction_step": first_interact,
-        "observed_events_count": obs_count,
-        "inferred_events_count": inf_count,
         "unmatched_inputs": [],
         "unmatched_inputs_count": 0,
         "disclaimer": "Imported reactive log data from JSON format.",
@@ -860,15 +852,7 @@ def format_reactlog_html(
     .summary-card-icon {{ color: var(--text-muted); opacity: 0.8; }}
     .summary-card-val {{ font: 800 1.35rem/1 var(--mono); color: var(--text); letter-spacing: -0.02em; }}
     .summary-card.card-observed .summary-card-val {{ color: var(--source); }}
-    .summary-card.card-inferred .summary-card-val {{ color: var(--effect); }}
     .summary-card-subtext {{ font: 500 0.64rem var(--mono); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-    .summary-breakdown-section {{ display: flex; flex-direction: column; gap: 0.4rem; background: var(--surface-2); padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); }}
-    .summary-breakdown-header {{ display: flex; justify-content: space-between; font: 700 0.65rem var(--mono); }}
-    .breakdown-legend-obs {{ color: var(--source); display: inline-flex; align-items: center; gap: 0.3rem; }}
-    .breakdown-legend-inf {{ color: var(--effect); display: inline-flex; align-items: center; gap: 0.3rem; }}
-    .summary-breakdown-bar {{ width: 100%; height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; display: flex; }}
-    .breakdown-seg-obs {{ background: var(--source); height: 100%; transition: width 200ms ease; }}
-    .breakdown-seg-inf {{ background: var(--effect); height: 100%; transition: width 200ms ease; }}
     .summary-meta-note {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }}
 
     /* Streamlined Toolbar */
@@ -1236,36 +1220,16 @@ def format_reactlog_html(
             <div class="summary-card-val" id="stat-edges">0</div>
             <div class="summary-card-subtext">Causal links</div>
           </div>
-          <div class="summary-card card-observed">
+          <div class="summary-card card-observed" style="grid-column: 1 / -1">
             <div class="summary-card-header">
-              <span class="summary-card-label">Observed:</span>
+              <span class="summary-card-label">Events</span>
               <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--source)" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
             </div>
             <div class="summary-card-val" id="stat-observed">0</div>
-            <div class="summary-card-subtext">Browser events</div>
-          </div>
-          <div class="summary-card card-inferred">
-            <div class="summary-card-header">
-              <span class="summary-card-label">Inferred:</span>
-              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--effect)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            </div>
-            <div class="summary-card-val" id="stat-inferred">0</div>
-            <div class="summary-card-subtext">Cascade steps</div>
+            <div class="summary-card-subtext">Recorded reactive events</div>
           </div>
         </div>
-        <div class="summary-breakdown-section">
-          <div class="summary-breakdown-header">
-            <span class="breakdown-legend-obs" id="legend-obs-text"><span class="chip-dot" style="background:var(--source)"></span> 0% Observed</span>
-            <span class="breakdown-legend-inf" id="legend-inf-text"><span class="chip-dot" style="background:var(--effect)"></span> 0% Inferred</span>
-          </div>
-          <div class="summary-breakdown-bar" id="summary-breakdown-bar" title="Observed vs Inferred events">
-            <div class="breakdown-seg-obs" id="seg-obs" style="width: 50%"></div>
-            <div class="breakdown-seg-inf" id="seg-inf" style="width: 50%"></div>
-          </div>
-        </div>
-        <div class="summary-meta-note" id="summary-meta-note">
-          Simulated dependency steps from AST static analysis.
-        </div>
+        <div class="summary-meta-note" id="summary-meta-note"></div>
       </div>
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
       <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
@@ -1952,6 +1916,15 @@ def format_reactlog_html(
           initWave.endStep = idx;
           initWave.endTime = t;
           initWave.totalEvents++;
+          const initType = ev.type || ev.node_type;
+          if (evAction === 'enter' && (initType === 'calc' || initType === 'output')) {{
+            const nId = ev.node_id || ev.id || '';
+            const name = waveNodeName(nId);
+            const ran = initType === 'calc' ? initWave.calcs : initWave.outputs;
+            if (name && !ran.some(item => item.name === name)) {{
+              ran.push({{ name, nodeId: nId, step: idx, details: ev.details }});
+            }}
+          }}
         }} else {{
           if (evAction === 'userMark' && ev.mark_wave) {{
             // Same bookmark wave the server builds for generated reactlogs.
@@ -2241,7 +2214,8 @@ def format_reactlog_html(
       laneCalcs.innerHTML = '';
       laneOutputs.innerHTML = '';
 
-      const displayWaves = allBursts;
+      // Lanes chart what each action caused; the Init anchor covers startup.
+      const displayWaves = filterItems(allBursts, w => !w.isInit);
       displayWaves.forEach(wave => {{
         const wavePct = calculateTimePct(wave.time);
 
@@ -2432,14 +2406,16 @@ def format_reactlog_html(
       if (!banner) return;
 
       if (!curWave) {{
-        banner.textContent = 'Ready to trace reactive causality';
+        // An empty graph says why (e.g. no session selected) where it is seen.
+        const empty = (reactlogData.nodes || []).length === 0 && reactlogData.summary;
+        banner.textContent = empty ? reactlogData.summary : 'Ready to trace reactive causality';
         return;
       }}
 
       if (curWave.isInit) {{
         const cLen = curWave.calcs.length;
         const oLen = curWave.outputs.length;
-        banner.innerHTML = `<strong>App Initialized.</strong> Evaluated ${{cLen}} calcs and rendered ${{oLen}} outputs.`;
+        banner.innerHTML = `<strong>App Initialized.</strong> Evaluated ${{cLen}} calc${{cLen === 1 ? '' : 's'}} and rendered ${{oLen}} output${{oLen === 1 ? '' : 's'}}.`;
         return;
       }}
 
@@ -2581,10 +2557,8 @@ def format_reactlog_html(
 
       document.getElementById('stat-nodes').textContent = String(nodes.length);
       document.getElementById('stat-edges').textContent = String(edges.length);
-      const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
-      const infCount = reactlogData.inferred_events_count !== undefined ? reactlogData.inferred_events_count : events.reduce((acc, e) => acc + (e.provenance === 'inferred' ? 1 : 0), 0);
+      const obsCount = events.length;
       document.getElementById('stat-observed').textContent = String(obsCount);
-      document.getElementById('stat-inferred').textContent = String(infCount);
 
       const inCount = filterItems(nodes, n => n.role === 'source' || n.type === 'input').length;
       const calcCount = filterItems(nodes, n => n.role === 'conductor' || n.type === 'calc').length;
@@ -2592,22 +2566,9 @@ def format_reactlog_html(
       const nodesSubtext = document.getElementById('stat-nodes-subtext');
       if (nodesSubtext) nodesSubtext.textContent = `${{inCount}} in · ${{calcCount}} calc · ${{outCount}} out`;
 
-      const totEvents = Math.max(1, obsCount + infCount);
-      const obsPct = Math.round((obsCount / totEvents) * 100);
-      const infPct = 100 - obsPct;
-      const segObs = document.getElementById('seg-obs');
-      const segInf = document.getElementById('seg-inf');
-      if (segObs) segObs.style.width = `${{obsPct}}%`;
-      if (segInf) segInf.style.width = `${{infPct}}%`;
-
-      const legObs = document.getElementById('legend-obs-text');
-      if (legObs) legObs.innerHTML = `<span class="chip-dot" style="background:var(--source)"></span> ${{obsPct}}% Observed`;
-      const legInf = document.getElementById('legend-inf-text');
-      if (legInf) legInf.innerHTML = `<span class="chip-dot" style="background:var(--effect)"></span> ${{infPct}}% Inferred`;
-
       const metaNote = document.getElementById('summary-meta-note');
       if (metaNote) {{
-        metaNote.textContent = reactlogData.summary || `Captured ${{obsCount}} browser interactions triggering ${{infCount}} reactive cascade evaluations across ${{nodes.length}} graph nodes.`;
+        metaNote.textContent = reactlogData.summary || `Recorded ${{obsCount}} events across ${{nodes.length}} graph nodes.`;
       }}
 
       const scrubber = document.getElementById('scrubber-range');
@@ -2802,7 +2763,7 @@ def format_reactlog_html(
         }}
 
         const provBadge = document.createElement('span');
-        const prov = ev.provenance || 'inferred';
+        const prov = ev.provenance || 'observed';
         provBadge.className = `event-badge provenance-${{prov}}`;
         provBadge.innerHTML = `${{prov === 'observed' ? ICONS.eye : ICONS.zap}} ${{prov.toUpperCase()}}`;
         badgesWrap.appendChild(provBadge);
@@ -2917,7 +2878,7 @@ def format_reactlog_html(
             upstreamNote = `Upstream dependencies invalidated: ${{invParents.map(p => escapeHTML(p.label)).join(', ')}}`;
           }}
         }}
-        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was observed or inferred during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
+        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was recorded during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
         if (lastExec) {{
           const lastTime = lastExec.time_sec !== undefined ? lastExec.time_sec : (lastExec.time || 0);
           narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${{escapeHTML(formatTime(lastTime))}}</span><button type="button" class="btn mini" data-seek-step="${{lastExec.step}}">Jump to run</button></div>`;
@@ -4060,7 +4021,7 @@ def format_reactlog_html(
           const rawT = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
           const tSec = Math.max(0, baseEpoch > 0 ? (rawT - baseEpoch) : rawT);
           const tMs = Number(item.timestamp || (tSec * 1000));
-          const prov = item.provenance || (['valueChange', 'inputChange', 'userClick', 'userAction'].includes(act) ? 'observed' : 'inferred');
+          const prov = item.provenance || 'observed';
           const phase = item.phase || (['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act) ? 'init' : 'interaction');
 
           if (act === 'dependsOn' && depFrom && depTo) {{

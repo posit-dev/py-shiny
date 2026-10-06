@@ -1099,3 +1099,17 @@ def test_recorded_module_attribution_of_inputs_and_client_data() -> None:
     assert "module" not in defines[".clientdata_pixelratio"]
     # Created by the root from the init message, but it is the module's input.
     assert defines["input.sales-n"]["module"] == "sales"
+
+
+def test_load_reactlog_json_defaults_provenance_to_observed() -> None:
+    # Every loaded event was recorded; nothing is simulated any more.
+    loaded = load_reactlog_json(
+        {
+            "log": [
+                {"action": "define", "reactId": "r1", "label": "c", "type": "calc"},
+                {"action": "enter", "reactId": "r1", "label": "c", "type": "calc"},
+            ]
+        }
+    )
+    assert {e["provenance"] for e in loaded["events"]} == {"observed"}
+    assert "inferred_events_count" not in loaded
