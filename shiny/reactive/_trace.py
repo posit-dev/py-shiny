@@ -265,13 +265,20 @@ def _warn(hook: object, err: Exception) -> None:
     )
 
 
+def _warn_all(errors: list[tuple[object, Exception]]) -> None:
+    for hook, err in errors:
+        _warn(hook, err)
+
+
 def _call_point(callbacks: tuple[Callable[..., None], ...], event: _Event) -> None:
+    errors: list[tuple[object, Exception]] = []
     for cb in callbacks:
         try:
             cb(event)
         # Broad on purpose: a broken tracer must never break app reactivity.
         except Exception as err:
-            _warn(cb, err)
+            errors.append((cb, err))
+    _warn_all(errors)
 
 
 @contextlib.contextmanager
@@ -279,6 +286,7 @@ def _span(
     callbacks: tuple[Callable[..., ContextManager[None]], ...], event: _Event
 ) -> Generator[None, None, None]:
     entered: list[ContextManager[None]] = []
+    enter_errors: list[tuple[object, Exception]] = []
     for cb in callbacks:
         try:
             cm = cb(event)
@@ -286,7 +294,15 @@ def _span(
             entered.append(cm)
         # Broad on purpose: a broken tracer must never break app reactivity.
         except Exception as err:
-            _warn(cb, err)
+            enter_errors.append((cb, err))
+
+    # Warn about enter errors, but if warning raises, still exit entered CMs.
+    try:
+        _warn_all(enter_errors)
+    except BaseException as warn_exc:
+        _exit_all(entered, warn_exc)
+        raise
+
     try:
         yield
     except BaseException as exc:
@@ -297,6 +313,7 @@ def _span(
 
 
 def _exit_all(entered: list[ContextManager[None]], exc: BaseException | None) -> None:
+    errors: list[tuple[object, Exception]] = []
     for cm in reversed(entered):
         try:
             # The return value is ignored: tracers cannot suppress app exceptions.
@@ -307,7 +324,8 @@ def _exit_all(entered: list[ContextManager[None]], exc: BaseException | None) ->
             )
         # Broad on purpose: a broken tracer must never break app reactivity.
         except Exception as err:
-            _warn(cm, err)
+            errors.append((cm, err))
+    _warn_all(errors)
 
 
 def emit_define_node(node: ReactiveNode) -> None:
