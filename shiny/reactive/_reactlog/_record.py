@@ -407,19 +407,22 @@ def replay_script(test_file: Path) -> Callable[[Page, str], None]:
     ------
     RecordingError
         If the file can't be imported, has no tests, or a test needs a fixture other
-        than `page` and `local_app`; the returned script raises it when a test's
-        assertion fails.
+        than `page` and `local_app`; the returned script raises it when a test
+        fails.
     """
-    spec = importlib.util.spec_from_file_location(
-        f"_reactlog_replay_{test_file.stem}", test_file
-    )
+    name = f"_reactlog_replay_{test_file.stem}"
+    spec = importlib.util.spec_from_file_location(name, test_file)
     if spec is None or spec.loader is None:
         raise RecordingError(f"Cannot import {test_file}.")
     module = importlib.util.module_from_spec(spec)
+    # Registered while it runs, so dataclasses and annotations can find the module.
+    sys.modules[name] = module
     try:
         spec.loader.exec_module(module)
-    except (OSError, SyntaxError, ImportError) as err:
+    except Exception as err:  # anything the user's file raises at import time
         raise RecordingError(f"Cannot import {test_file}: {err}") from err
+    finally:
+        sys.modules.pop(name, None)
     tests = [
         fn
         for name, fn in vars(module).items()
@@ -441,9 +444,11 @@ def replay_script(test_file: Path) -> Callable[[Page, str], None]:
             params = inspect.signature(fn).parameters
             try:
                 fn(**{k: v for k, v in fixtures.items() if k in params})
-            except AssertionError as err:  # what Playwright's `expect` raises
+            # Assertions, Playwright timeouts, or any other error in the user's test.
+            except Exception as err:
                 raise RecordingError(
-                    f"{test_file.name}::{fn.__name__} failed during --replay: {err}"
+                    f"{test_file.name}::{fn.__name__} failed during replay: "
+                    f"{type(err).__name__}: {err}"
                 ) from err
 
     return script
