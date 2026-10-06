@@ -60,20 +60,17 @@ To see what's bundled without installing anything, run `shiny skills list`.
 
 - `shiny reactlog app.py`: Run the app, record a real browser session (with video), and export an interactive Reactlog (HTML, JSON, or Mermaid). `--no-browser` lets you drive the app yourself; a saved `.json` can be reopened.
 
-Reactlog analysis recognizes conventional `reactive.calc`, `reactive.effect`,
-`reactive.event`, and `render.*` decorators, their fully qualified `shiny.*` forms,
-and direct imports named `calc`/`effect` (including legacy `Calc`/`Effect`). Isolated
-reads remain visible but do not trigger simulated invalidation. Analysis is static:
-renamed Shiny imports (such as `reactive as r`), reassigned or shadowed API names,
-custom decorator wrappers, and dynamic module IDs are not resolved. Local module
-imports and literal module IDs are supported. Treat the graph as an inferred view,
-not a runtime execution trace.
+The Reactlog is a trace of what actually ran: every reactive node defined, every
+dependency taken, and every invalidation and re-execution in the recorded session,
+with each node's source file and line.
 
-For the in-app report, use `SHINY_REACTLOG=1 shiny run app.py` or `shiny run
---reactlog app.py`. With neither CLI flag, the runner respects the environment and
-the app's `reactlog` setting. `--no-reactlog` disables the environment-based default.
-Local in-app reports use the complete app source, including local imports; when
-that file is unavailable, analysis falls back to the server function's source.
+To view the Reactlog while an app runs, enable it with `App(..., reactlog=True)`,
+`shiny run --reactlog app.py`, or `SHINY_REACTLOG=1`, then press Cmd/Ctrl+F3 in the
+app. `--no-reactlog` disables the environment-based default.
+
+Recorded input values appear in the viewer and in exported files. Pass
+`--redact-inputs` to `shiny reactlog` to replace them with `[REDACTED]` before
+sharing an export.
 
 ## Development
 
