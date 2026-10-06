@@ -22,6 +22,7 @@ import traceback
 import types
 import typing
 import warnings
+import weakref
 from contextvars import ContextVar
 from typing import (
     TYPE_CHECKING,
@@ -39,6 +40,8 @@ from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
 from .._typing_extensions import TypeGuard
 from ..types import MISSING, MISSING_TYPE
+from . import _trace
+from ._trace import ReactiveNode, hooks
 
 
 def _print_round_finished_error(e: Exception) -> None:
@@ -63,8 +66,14 @@ warnings.simplefilter("always", ReactiveWarning)
 class Context:
     """A reactive context"""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, owner: ReactiveNode | None = None, *, isolated: bool = False
+    ) -> None:
         self.id: int = _reactive_environment.next_id()
+        # The reactive node that runs in this context (None for bare contexts);
+        # used to attribute dependency edges for tracers.
+        self.owner: ReactiveNode | None = owner
+        self.isolated: bool = isolated
         self._invalidated: bool = False
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._flush_callbacks: list[Callable[[], Awaitable[None]]] = []
@@ -80,6 +89,9 @@ class Context:
             return
 
         self._invalidated = True
+
+        if hooks.invalidate and self.owner is not None and not self.isolated:
+            _trace.emit_invalidate(self.owner, ctx_id=self.id)
 
         for cb in self._invalidate_callbacks:
             cb()
@@ -111,8 +123,13 @@ class Context:
 
 
 class Dependents:
-    def __init__(self) -> None:
+    def __init__(self, owner: ReactiveNode | None = None) -> None:
         self._dependents: dict[int, Context] = {}
+        # Weak, so a Value/Calc does not gain a reference cycle through its
+        # Dependents.
+        self._owner: weakref.ref[ReactiveNode] | None = (
+            None if owner is None else weakref.ref(owner)
+        )
 
     def register(self) -> None:
         ctx: Context = get_current_context()
@@ -123,9 +140,27 @@ class Dependents:
 
         self._dependents[ctx.id] = ctx
 
+        reader = ctx.owner
+        target = None if self._owner is None else self._owner()
+        if reader is not None and target is not None and hooks.add_dependency:
+            _trace.emit_add_dependency(
+                reader=reader, target=target, ctx_id=ctx.id, isolated=ctx.isolated
+            )
+
         def on_invalidate_cb() -> None:
             if ctx.id in self._dependents:
                 del self._dependents[ctx.id]
+                if (
+                    reader is not None
+                    and target is not None
+                    and hooks.remove_dependency
+                ):
+                    _trace.emit_remove_dependency(
+                        reader=reader,
+                        target=target,
+                        ctx_id=ctx.id,
+                        isolated=ctx.isolated,
+                    )
 
         ctx.on_invalidate(on_invalidate_cb)
 
