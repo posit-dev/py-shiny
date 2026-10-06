@@ -1586,7 +1586,8 @@ def load_reactlog_json(
                     raw_events.append(cast(Dict[str, Any], ev_item))
 
     nodes_map: Dict[str, Dict[str, Any]] = {}
-    edges_set: Set[tuple[str, str]] = set()
+    # An edge is isolated only if every recorded read along it was isolated.
+    edges_isolated: Dict[tuple[str, str], bool] = {}
 
     if existing_nodes:
         for n in existing_nodes:
@@ -1599,7 +1600,7 @@ def load_reactlog_json(
             f = str(e.get("depOnReactId") or e.get("from") or e.get("dependsOn") or "")
             t = str(e.get("reactId") or e.get("to") or "")
             if f and t:
-                edges_set.add((f, t))
+                edges_isolated[(f, t)] = bool(e.get("isolated"))
 
     raw_times: List[float] = []
     for item in raw_events:
@@ -1698,7 +1699,10 @@ def load_reactlog_json(
                 details = f"Event '{action}' on '{lbl}'"
 
         if action == "dependsOn" and dep_from and dep_to:
-            edges_set.add((str(dep_from), str(dep_to)))
+            key = (str(dep_from), str(dep_to))
+            edges_isolated[key] = edges_isolated.get(key, True) and bool(
+                item.get("isolate")
+            )
 
         if nid and (str(nid) not in nodes_map or action == "define"):
             role = "conductor"
@@ -1771,7 +1775,10 @@ def load_reactlog_json(
         step_idx += 1
 
     final_nodes = list(nodes_map.values())
-    final_edges = [{"from": f, "to": t} for f, t in sorted(edges_set)]
+    final_edges = [
+        {"from": f, "to": t, **({"isolated": True} if isolated else {})}
+        for (f, t), isolated in sorted(edges_isolated.items())
+    ]
 
     if not normalized_events and final_nodes:
         for i, n in enumerate(final_nodes):
