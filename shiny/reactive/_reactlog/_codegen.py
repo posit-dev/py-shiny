@@ -98,16 +98,16 @@ def _bool_arg(value: Any) -> str:
 
 MAPPINGS: list[ControllerMapping] = [
     ControllerMapping(
-        "shiny.sliderInput", matches=_is_range, emit=_set("InputSliderRange", _pair)
+        "shiny.sliderInput", matches=_is_range, emit=_set("InputSliderRange", arg=_pair)
     ),
     ControllerMapping("shiny.sliderInput", matches=_always, emit=_set("InputSlider")),
     ControllerMapping(
         "shiny.selectInput",
         matches=_is_selectize,
-        emit=_set("InputSelectize", _select_arg),
+        emit=_set("InputSelectize", arg=_select_arg),
     ),
     ControllerMapping(
-        "shiny.selectInput", matches=_always, emit=_set("InputSelect", _select_arg)
+        "shiny.selectInput", matches=_always, emit=_set("InputSelect", arg=_select_arg)
     ),
     ControllerMapping("shiny.numberInput", matches=_always, emit=_set("InputNumeric")),
     ControllerMapping("shiny.textInput", matches=_always, emit=_set("InputText")),
@@ -118,22 +118,26 @@ MAPPINGS: list[ControllerMapping] = [
         "shiny.passwordInput", matches=_always, emit=_set("InputPassword")
     ),
     ControllerMapping(
-        "shiny.checkboxInput", matches=_is_switch, emit=_set("InputSwitch", _bool_arg)
+        "shiny.checkboxInput",
+        matches=_is_switch,
+        emit=_set("InputSwitch", arg=_bool_arg),
     ),
     ControllerMapping(
-        "shiny.checkboxInput", matches=_always, emit=_set("InputCheckbox", _bool_arg)
+        "shiny.checkboxInput",
+        matches=_always,
+        emit=_set("InputCheckbox", arg=_bool_arg),
     ),
     ControllerMapping(
         "shiny.checkboxGroupInput",
         matches=_always,
-        emit=_set("InputCheckboxGroup", lambda v: _strings(v or [])),
+        emit=_set("InputCheckboxGroup", arg=lambda v: _strings(v or [])),
     ),
     ControllerMapping(
         "shiny.radioInput", matches=_always, emit=_set("InputRadioButtons")
     ),
     ControllerMapping("shiny.dateInput", matches=_always, emit=_set("InputDate")),
     ControllerMapping(
-        "shiny.dateRangeInput", matches=_always, emit=_set("InputDateRange", _pair)
+        "shiny.dateRangeInput", matches=_always, emit=_set("InputDateRange", arg=_pair)
     ),
     ControllerMapping(
         "shiny.actionButtonInput",
@@ -265,7 +269,7 @@ def _steps(actions: list[Action]) -> list[Step]:
             ):
                 if by_idle:
                     pending = {**outputs, **pending}
-                steps[-1] = (action, {})
+                steps[-1] = (action, dict[str, Action]())
     return steps
 
 
