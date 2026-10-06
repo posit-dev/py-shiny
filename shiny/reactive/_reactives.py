@@ -163,6 +163,7 @@ class Value(Generic[T]):
 
     _node_kind: NodeKind = "value"
     _node_fn: Callable[..., object] | None = None
+    _node_render_type: str | None = None
     # Values are not owned by a session's reactive graph node; events on them are
     # attributed to the session that is current when they happen.
     _node_session_id: str | None = None
@@ -678,6 +679,7 @@ class Calc_(Generic[T]):
     """
 
     _node_kind: NodeKind = "calc"
+    _node_render_type: str | None = None
 
     @property
     def _node_label(self) -> str:
@@ -1024,6 +1026,10 @@ class Effect_:
         return self._trace_label or self._otel_label
 
     @property
+    def _node_render_type(self) -> str | None:
+        return self._trace_render_type
+
+    @property
     def _node_session_id(self) -> str | None:
         return None if self._session is None else self._session.id
 
@@ -1047,6 +1053,7 @@ class Effect_:
         # Overridden by `Outputs.set_renderer` so output effects trace as outputs.
         self._trace_kind: NodeKind = "effect"
         self._trace_label: str | None = None
+        self._trace_render_type: str | None = None
 
         from ..render.renderer import Renderer
         from ..session import Session
