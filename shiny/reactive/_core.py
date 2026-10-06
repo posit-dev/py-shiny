@@ -124,6 +124,20 @@ class Dependents:
             None if owner is None else weakref.ref(owner)
         )
 
+    def _emit_edge(
+        self,
+        ctx: Context,
+        emit: Callable[..., None],
+    ) -> None:
+        # Resolve reader/target at emit time and never keep them in a closure, so
+        # the edge bookkeeping cannot keep a Value/Calc alive.
+        reader = ctx.owner
+        if reader is None or self._owner is None:
+            return
+        target = self._owner()
+        if target is not None:
+            emit(reader=reader, target=target, ctx_id=ctx.id, isolated=ctx.isolated)
+
     def register(self) -> None:
         ctx: Context = get_current_context()
 
@@ -133,27 +147,14 @@ class Dependents:
 
         self._dependents[ctx.id] = ctx
 
-        reader = ctx.owner
-        target = None if self._owner is None else self._owner()
-        if reader is not None and target is not None and hooks.add_dependency:
-            _trace.emit_add_dependency(
-                reader=reader, target=target, ctx_id=ctx.id, isolated=ctx.isolated
-            )
+        if hooks.add_dependency:
+            self._emit_edge(ctx, _trace.emit_add_dependency)
 
         def on_invalidate_cb() -> None:
             if ctx.id in self._dependents:
                 del self._dependents[ctx.id]
-                if (
-                    reader is not None
-                    and target is not None
-                    and hooks.remove_dependency
-                ):
-                    _trace.emit_remove_dependency(
-                        reader=reader,
-                        target=target,
-                        ctx_id=ctx.id,
-                        isolated=ctx.isolated,
-                    )
+                if hooks.remove_dependency:
+                    self._emit_edge(ctx, _trace.emit_remove_dependency)
 
         ctx.on_invalidate(on_invalidate_cb)
 

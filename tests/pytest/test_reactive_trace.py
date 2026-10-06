@@ -372,6 +372,25 @@ async def test_edges_and_dynamic_dependencies(rec: Recorder) -> None:
     assert ("remove", "reactive.calc c", "a", False) not in rec.log
 
 
+def test_value_not_kept_alive_by_dependents_closure() -> None:
+    import gc
+    import weakref
+
+    from shiny.reactive._core import Context
+
+    gc.disable()
+    try:
+        v = Value(1, name="v")
+        ref = weakref.ref(v)
+        ctx = Context()
+        with ctx():
+            v()
+        del v
+        assert ref() is None
+    finally:
+        gc.enable()
+
+
 @pytest.mark.xfail(strict=True, reason="execute span lands in Task 4")
 @pytest.mark.asyncio
 async def test_output_effect_traces_as_output(rec: Recorder) -> None:
