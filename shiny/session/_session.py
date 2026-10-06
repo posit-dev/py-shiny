@@ -72,6 +72,7 @@ from ..reactive import flush as reactive_flush
 from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
+from ..reactive._trace import attribute_to_session
 from ..render.renderer import Renderer, RendererT
 from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
@@ -1126,7 +1127,10 @@ class AppSession(Session):
 
                             conn_state = ConnectionState.Running
                             message_obj = typing.cast(ClientMessageInit, message_obj)
-                            self._manage_inputs(message_obj["data"])
+                            # Deliberately outside `session_context` (OTel does not log
+                            # initial inputs), but tracers still need the session.
+                            with attribute_to_session(self.id):
+                                self._manage_inputs(message_obj["data"])
 
                             # Wrap server function initialization in session_start span
                             with session_context(self):
