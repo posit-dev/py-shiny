@@ -58,7 +58,7 @@ To see what's bundled without installing anything, run `shiny skills list`.
 
 ## Developer CLI
 
-- `shiny inspect app.py --reactlog`: Static reactive dependency graph (DAG) with simulated invalidation ordering and interactive HTML export (`--html`). It does not execute app code.
+- `shiny reactlog app.py`: Run the app, record a real browser session (with video), and export an interactive Reactlog (HTML, JSON, or Mermaid). `--no-browser` lets you drive the app yourself; a saved `.json` can be reopened.
 
 Reactlog analysis recognizes conventional `reactive.calc`, `reactive.effect`,
 `reactive.event`, and `render.*` decorators, their fully qualified `shiny.*` forms,
