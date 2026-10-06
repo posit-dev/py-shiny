@@ -42,6 +42,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
+from ._inspect import format_reactlog_html, generate_reactlog, load_reactlog_json
+from ._reactlog import ReactlogRecorder
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, is_test_mode, sort_keys_length
 from .bookmark._global import as_bookmark_dir_fn
@@ -54,6 +56,7 @@ from .bookmark._types import (
 )
 from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
+from .reactive._trace import add_tracer
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
 from .ui._page import DEPS_PLACEHOLDER, PageHtmlDocument, page_html
@@ -208,13 +211,14 @@ class App:
 
         self._debug: bool = debug
         self._test_mode: bool = is_test_mode() if test_mode is None else test_mode
-        self._reactlog_enabled: bool = (
-            reactlog if reactlog is not None else (os.getenv("SHINY_REACTLOG") == "1")
-        )
+        self._reactlog_recorder: ReactlogRecorder | None = None
+        self._remove_reactlog_recorder: Callable[[], None] | None = None
+        self._reactlog_enabled: bool = False
         # Note: this token is embedded in every page the app serves (for the Cmd+F8
         # hotkey), so it only proves the requester can load the app; it is not a
         # secret. Anyone who can reach an app with reactlog enabled can view its
-        # reactive graph. App source is additionally gated to direct local requests.
+        # recorded reactive events, including truncated input/value reprs. App
+        # source is additionally gated to direct local requests.
         self._reactlog_token: str = secrets.token_urlsafe(16)
 
         # Settings that the user can change after creating the App object.
@@ -249,6 +253,9 @@ class App:
         self._static_assets: dict[str, Path] = static_assets_map
 
         self._sessions: dict[str, AppSession] = {}
+        self.reactlog_enabled = (
+            reactlog if reactlog is not None else (os.getenv("SHINY_REACTLOG") == "1")
+        )
         self._app_marks: list[dict[str, Any]] = []
 
         # self._sessions_needing_flush: dict[int, AppSession] = {}
@@ -361,6 +368,8 @@ class App:
 
         if self._debug:
             print(f"remove_session: {session}", flush=True)
+        if self._reactlog_recorder is not None:
+            self._reactlog_recorder.drop_session(session)
         del self._sessions[session]
 
     def run(self, **kwargs: object) -> None:
@@ -542,7 +551,6 @@ window.addEventListener('keydown', function(e) {{
 
     async def _on_reactlog_request_cb(self, request: Request) -> Response:
         from . import reactive
-        from ._inspect import format_reactlog_html, generate_reactlog
 
         if (err := self._check_reactlog_access(request)) is not None:
             return err
@@ -586,9 +594,17 @@ window.addEventListener('keydown', function(e) {{
         else:
             marks = list(self._app_marks) + reactive.get_marks()
 
-        reactlog_data = generate_reactlog(
-            source_code, source_path=app_file, marks=marks
-        )
+        if target_session is not None and self._reactlog_recorder is not None:
+            recorded = self._reactlog_recorder.export(target_session.id)
+            recorded["log"] = sorted(
+                [*recorded["log"], *marks], key=lambda entry: entry.get("time", 0)
+            )
+            reactlog_data = load_reactlog_json(recorded)
+        else:
+            # No live session to show: fall back to static analysis of the source.
+            reactlog_data = generate_reactlog(
+                source_code, source_path=app_file, marks=marks
+            )
         app_name = os.path.basename(app_file) if app_file else "Shiny App"
         html = format_reactlog_html(reactlog_data, source_code, title=app_name)
         return HTMLResponse(content=html)
@@ -825,6 +841,15 @@ window.addEventListener('keydown', function(e) {{
     @reactlog_enabled.setter
     def reactlog_enabled(self, value: bool) -> None:
         self._reactlog_enabled = bool(value)
+        if self._reactlog_enabled and self._reactlog_recorder is None:
+            self._reactlog_recorder = ReactlogRecorder(
+                owns_session=lambda session_id: session_id in self._sessions
+            )
+            self._remove_reactlog_recorder = add_tracer(self._reactlog_recorder)
+        elif not self._reactlog_enabled and self._remove_reactlog_recorder is not None:
+            self._remove_reactlog_recorder()
+            self._reactlog_recorder = None
+            self._remove_reactlog_recorder = None
 
     @property
     def reactlog_token(self) -> str:
