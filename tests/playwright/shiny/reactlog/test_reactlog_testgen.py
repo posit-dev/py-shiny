@@ -32,11 +32,7 @@ def _record_and_generate(tmp_path: Path) -> Path:
     return test_file
 
 
-def test_generated_test_passes_against_the_app(tmp_path: Path) -> None:
-    test_file = _record_and_generate(tmp_path)
-    code = test_file.read_text()
-    assert 'controller.InputSlider(page, "n").set("7")' in code
-    assert 'controller.OutputText(page, "out").expect_value("14")' in code
+def _run_pytest(test_file: Path, *args: str) -> None:
     result = subprocess.run(
         [
             sys.executable,
@@ -48,12 +44,61 @@ def test_generated_test_passes_against_the_app(tmp_path: Path) -> None:
             "-p",
             "no:cacheprovider",
             "-q",
+            *args,
         ],
         capture_output=True,
         text=True,
-        cwd=tmp_path,
+        cwd=test_file.parent,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_generated_test_passes_against_the_app(tmp_path: Path) -> None:
+    test_file = _record_and_generate(tmp_path)
+    code = test_file.read_text()
+    assert 'controller.InputSlider(page, "n").set("7")' in code
+    assert 'controller.OutputText(page, "out").expect_value("14")' in code
+    _run_pytest(test_file)
+
+
+def test_generated_test_asserts_settled_values(tmp_path: Path) -> None:
+    def script(page: Page, url: str) -> None:
+        page.goto(url)
+        # Each `set` fires several input events; the next input follows at once.
+        controller.InputCheckboxGroup(page, "cg").set(["x", "z"])
+        controller.InputText(page, "txt").set("hi")
+        controller.InputDate(page, "d").set("02/03/2024")
+        controller.InputDateRange(page, "dr").set(("03/01/2024", "03/02/2024"))
+        controller.InputSlider(page, "n").set("7")
+        controller.OutputCode(page, "code_out").expect_value("n=7")
+        controller.OutputText(page, "dates_out").expect_value(
+            "d=2024-02-03 dr=(datetime.date(2024, 3, 1), datetime.date(2024, 3, 2))"
+        )
+
+    rec = record_session(APP, video_path=None, script=script)
+    code = generate_controller_test(
+        rec.actions,
+        test_name="record app",
+        app_path=Path(os.path.relpath(APP, tmp_path)).as_posix(),
+    )
+    assert 'controller.InputCheckboxGroup(page, "cg").set(["x", "z"])' in code
+    assert 'controller.InputDate(page, "d").set("02/03/2024")' in code
+    assert 'controller.OutputCode(page, "code_out").expect_value("n=7")' in code
+    assert """expect_value("cg=('x', 'z')")""" in code
+    assert """expect_value("cg=('x',)")""" not in code
+    # Pausing after every action must not change what the test sees.
+    slow = "".join(
+        line
+        + (
+            "    page.wait_for_timeout(700)\n"
+            if ".set(" in line or ".click(" in line
+            else ""
+        )
+        for line in code.splitlines(keepends=True)
+    )
+    test_file = tmp_path / "test_generated.py"
+    test_file.write_text(slow)
+    _run_pytest(test_file, "-W", "error")
 
 
 def test_replay_records_the_scripted_session(tmp_path: Path) -> None:
