@@ -213,7 +213,7 @@ class App:
         self._debug: bool = debug
         self._test_mode: bool = is_test_mode() if test_mode is None else test_mode
         self._reactlog_recorder: ReactlogRecorder | None = None
-        self._remove_reactlog_recorder: weakref.finalize[[], None] | None = None
+        self._remove_reactlog_recorder: weakref.finalize[[], App] | None = None
         self._reactlog_enabled: bool = False
         # Note: this token is embedded in every page the app serves (for the Cmd+F8
         # hotkey), so it only proves the requester can load the app; it is not a
