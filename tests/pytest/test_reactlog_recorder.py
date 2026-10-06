@@ -5,11 +5,12 @@ from typing import Any, Callable, Iterator
 
 import pytest
 
-from shiny import App, Inputs, Outputs, Session, _reactlog, ui
+from shiny import App, Inputs, Outputs, Session, ui
 from shiny._connection import MockConnection
-from shiny._inspect import load_reactlog_json
-from shiny._reactlog import ReactlogRecorder
 from shiny.reactive import Value, calc, effect, flush, isolate
+from shiny.reactive._reactlog import ReactlogRecorder
+from shiny.reactive._reactlog import _recorder as _reactlog
+from shiny.reactive._reactlog._viewer import load_reactlog_json
 from shiny.reactive._trace import NodeKind, ValueChanged, add_tracer
 
 

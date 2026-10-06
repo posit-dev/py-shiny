@@ -9,13 +9,13 @@ from typing import Any, Dict, List, Optional, cast
 
 import click
 
-from .._inspect import (
+from ..reactive._reactlog._record import record_shiny_session
+from ..reactive._reactlog._viewer import (
     format_graph_dot,
     format_graph_mermaid,
     format_reactlog_html,
     generate_reactlog,
     load_reactlog_json,
-    record_shiny_session,
 )
 from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success
 
