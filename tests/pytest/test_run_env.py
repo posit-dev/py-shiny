@@ -66,3 +66,20 @@ def test_create_app_fixture_accepts_env_param() -> None:
     # Returns a callable (a pytest fixture function) without launching anything.
     fixture = create_app_fixture("app.py")
     assert callable(fixture)
+
+
+@pytest.mark.parametrize("kwargs, expected", [({}, False), ({"start_new_session": True}, True)])
+def test_run_shiny_app_passes_start_new_session(
+    kwargs: dict[str, bool], expected: bool
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_popen(*args: object, **popen_kwargs: object):
+        captured.update(popen_kwargs)
+        return mock.Mock(stdout=None, stderr=None)
+
+    with mock.patch.object(_run.subprocess, "Popen", fake_popen):
+        with mock.patch.object(_run, "ShinyAppProc"):
+            _run.run_shiny_app("app.py", wait_for_start=False, **kwargs)
+
+    assert captured["start_new_session"] is expected
