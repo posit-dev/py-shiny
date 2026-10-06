@@ -2031,3 +2031,50 @@ def greeting():
     assert 'id="flush-card-trigger"' in html
     assert 'id="flush-execution-order"' in html
     assert "getActiveFlushNodeIds(" in html
+
+
+def test_load_reactlog_json_marks_isolated_edges():
+    data = {
+        "log": [
+            {
+                "action": "define",
+                "reactId": "r1",
+                "label": "a",
+                "type": "reactiveVal",
+                "time": 1.0,
+            },
+            {
+                "action": "define",
+                "reactId": "r2",
+                "label": "b",
+                "type": "reactiveVal",
+                "time": 1.0,
+            },
+            {
+                "action": "define",
+                "reactId": "r3",
+                "label": "e",
+                "type": "observer",
+                "time": 1.0,
+            },
+            {
+                "action": "dependsOn",
+                "reactId": "r3",
+                "depOnReactId": "r1",
+                "isolate": True,
+                "time": 2.0,
+            },
+            {
+                "action": "dependsOn",
+                "reactId": "r3",
+                "depOnReactId": "r2",
+                "isolate": False,
+                "time": 2.0,
+            },
+        ]
+    }
+    out = load_reactlog_json(data)
+    assert {(e["from"], e["to"], e.get("isolated", False)) for e in out["edges"]} == {
+        ("r1", "r3", True),
+        ("r2", "r3", False),
+    }
