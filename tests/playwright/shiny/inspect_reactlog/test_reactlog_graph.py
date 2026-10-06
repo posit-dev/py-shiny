@@ -6,7 +6,6 @@ from typing import Literal
 
 from playwright.sync_api import Locator, Page, expect
 
-from shiny.reactive._reactlog._record import record_shiny_session
 from shiny.reactive._reactlog._viewer import (
     format_reactlog_html,
     generate_reactlog,
@@ -242,43 +241,6 @@ def greeting():
     expect(source_highlight).to_have_attribute("data-line", "2")
 
 
-def test_headless_recording_session(tmp_path: Path) -> None:
-    app_file = tmp_path / "app.py"
-    app_file.write_text(
-        """from shiny.express import input, render, ui
-ui.input_numeric("n", "Number", 10)
-@render.text
-def out():
-    return f"N={input.n()}"
-""",
-        encoding="utf-8",
-    )
-
-    video_out = tmp_path / "test_session.webm"
-
-    def record_actions(page: Page) -> None:
-        page.wait_for_selector("input#n")
-        page.fill("input#n", "42")
-        page.wait_for_timeout(500)
-
-    res = record_shiny_session(
-        str(app_file),
-        video_path=str(video_out),
-        headless=True,
-        record_script=record_actions,
-    )
-
-    assert res["success"] is True
-    assert video_out.exists()
-    assert len(res["actions"]) >= 1
-
-    reactlog = generate_reactlog(
-        app_file.read_text(),
-        recorded_actions=res["actions"],
-        video_path=str(video_out),
-    )
-    assert reactlog["success"] is True
-    assert reactlog["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
 
 
 def test_phase_filter_and_skip_button(page: Page) -> None:

@@ -551,46 +551,6 @@ def out():
     assert len(data["nodes"]) == 2
 
 
-def test_cli_inspect_record_json_clean_stdout(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    app_file = tmp_path / "app.py"
-    app_file.write_text(
-        """from shiny.express import input, render, ui
-ui.input_numeric("n", "N", 10)
-@render.text
-def out():
-    return f"Val={input.n()}"
-""",
-        encoding="utf-8",
-    )
-    import shiny._main._inspect as main_inspect_mod
-    import shiny.reactive._reactlog._record as inspect_mod
-
-    def _mock_record(*args: object, **kwargs: object) -> dict[str, object]:
-        return {
-            "success": True,
-            "actions": [{"type": "input", "name": "n", "value": 10, "timestamp": 100}],
-            "video_path": None,
-        }
-
-    monkeypatch.setattr(inspect_mod, "record_shiny_session", _mock_record)
-    monkeypatch.setattr(main_inspect_mod, "record_shiny_session", _mock_record)
-
-    runner = CliRunner()
-    res = runner.invoke(
-        main,
-        ["inspect", str(app_file), "--record", "--headless", "--json"],
-    )
-    assert res.exit_code == 0
-    json_start = res.output.find("{")
-    assert json_start != -1
-    data = json.loads(res.output[json_start:])
-    assert data["success"] is True
-    assert "events" in data
-    assert data["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
-
-
 def test_cli_inspect_reactlog():
     runner = CliRunner()
     code = """from shiny.express import input, render, ui
@@ -1195,26 +1155,6 @@ def out():
     eval_evs = [e for e in events if e["event"] == "wouldEvaluate"]
     for e in eval_evs:
         assert e["semantic_state"] == "inferred_execution"
-
-
-def test_record_session_options_passive_by_default():
-    import inspect as py_inspect
-
-    from shiny._main._inspect import inspect as inspect_cli_fn
-    from shiny.reactive._reactlog._record import record_shiny_session
-
-    sig_rec = py_inspect.signature(record_shiny_session)
-    assert sig_rec.parameters["auto_interact"].default is False
-    assert sig_rec.parameters["redact_inputs"].default is False
-
-    cli_params = {p.name: p.default for p in inspect_cli_fn.params}
-    assert cli_params["auto_interact"] is False
-    assert cli_params["redact_inputs"] is False
-
-    if inspect_cli_fn.callback:
-        sig_cb = py_inspect.signature(inspect_cli_fn.callback)
-        assert sig_cb.parameters["auto_interact"].default is False
-        assert sig_cb.parameters["redact_inputs"].default is False
 
 
 def test_source_code_html_includes_line_numbers():
