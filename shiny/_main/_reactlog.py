@@ -226,6 +226,10 @@ def reactlog(
                     "--test and --replay need the recording browser; "
                     "they don't apply with --no-browser or a saved .json reactlog."
                 )
+            if test_out and (code is not None or path == "-"):
+                raise click.UsageError(
+                    "--test needs an app file; it can't be used with --code or stdin."
+                )
             if test_out and replay_file:
                 raise click.UsageError("Use either --test or --replay, not both.")
             if all_sessions and not no_browser:
