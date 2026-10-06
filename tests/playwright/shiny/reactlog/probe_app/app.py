@@ -20,7 +20,7 @@ app_ui = ui.page_fluid(
     ui.input_action_link("link", "l"),
     ui.input_task_button("task", "t"),
     ui.output_text("text_out"),
-    ui.output_text_verbatim("verbatim_out"),
+    ui.output_code("verbatim_out"),
 )
 
 
@@ -29,7 +29,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def text_out():
         return f"text={input.text()}"
 
-    @render.text
+    @render.code
     def verbatim_out():
         return f"n={input.numeric()}"
 

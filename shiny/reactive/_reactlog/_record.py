@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from ...run._run import ShinyAppProc, run_shiny_app
+from ._codegen import REDACTED
 
 if TYPE_CHECKING:
     from playwright.sync_api import Browser, BrowserContext, Page, Video
@@ -29,8 +30,7 @@ _APP_ENV = {"SHINY_REACTLOG": "1", "SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1
 
 # Streams browser actions and session ids to Python as they happen, so closing the
 # window or reloading the page loses nothing.
-RECORDER_SCRIPT = r"""
-(() => {
+RECORDER_SCRIPT = "(() => {\n  const REDACTED = " + json.dumps(REDACTED) + ";" + r"""
   const send = (item) => {
     item.time = Date.now() / 1000;
     if (window.__shinyReactlogAction) window.__shinyReactlogAction(item);
@@ -58,17 +58,27 @@ RECORDER_SCRIPT = r"""
         const n = box && box.querySelector(sel);
         return n ? n.textContent : null;
       };
+      // Date inputs: the visible field text, which follows the input's `format`.
+      const fields = () => (box ? Array.from(box.querySelectorAll("input"), (n) => n.value) : []);
+      const binding = e.binding && e.binding.name ? e.binding.name : null;
       let display = null;
-      if (e.binding && e.binding.name === "shiny.sliderInput" && !sensitive(e.name, el)) {
-        display = Array.isArray(e.value) ? [txt(".irs-from"), txt(".irs-to")] : txt(".irs-single");
+      if (!sensitive(e.name, el)) {
+        if (binding === "shiny.sliderInput") {
+          display = Array.isArray(e.value) ? [txt(".irs-from"), txt(".irs-to")] : txt(".irs-single");
+        } else if (binding === "shiny.dateInput") {
+          display = fields()[0] ?? null;
+        } else if (binding === "shiny.dateRangeInput") {
+          const [from, to] = fields();
+          display = [from ?? null, to ?? null];
+        }
       }
       send({
         type: "input",
         display: display,
         name: e.name,
-        value: sensitive(e.name, el) ? "[REDACTED]" : e.value,
+        value: sensitive(e.name, el) ? REDACTED : e.value,
         inputType: e.inputType || "",
-        binding: e.binding && e.binding.name ? e.binding.name : null,
+        binding: binding,
         tag: el ? el.tagName : "",
         elType: el && el.type ? String(el.type) : "",
         classes: el && el.className ? String(el.className) : "",
@@ -89,6 +99,8 @@ RECORDER_SCRIPT = r"""
         value: binding === "shiny.textOutput" && typeof e.value === "string" ? e.value : undefined,
       });
     });
+    // The server finished a flush. py-shiny sends this just before the flush's values.
+    $(document).on("shiny:idle.shinyReactlog", () => send({ type: "idle" }));
   };
   document.addEventListener("DOMContentLoaded", attach);
   window.addEventListener("load", attach);
@@ -191,10 +203,10 @@ def _start_stdin_reader(done: threading.Event) -> bool:
 
 
 def redact_export(export: dict[str, Any]) -> None:
-    """Replace every recorded input value in `export` with "[REDACTED]", in place."""
+    """Replace every recorded input value in `export` with `REDACTED`, in place."""
     for entry in export["log"]:
         if entry.get("action") == "valueChange" and entry.get("type") == "input":
-            entry["value"] = "[REDACTED]"
+            entry["value"] = REDACTED
 
 
 def _wait_for_enter_or_close(
