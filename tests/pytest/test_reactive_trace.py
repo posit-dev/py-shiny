@@ -9,7 +9,7 @@ from typing import Any, Callable, Generator
 
 import pytest
 
-from shiny.reactive import Value, _trace, calc, effect, flush
+from shiny.reactive import Value, _trace, calc, effect, flush, isolate
 from shiny.reactive._trace import (
     ExecuteEvent,
     NodeKind,
@@ -391,7 +391,6 @@ def test_value_not_kept_alive_by_dependents_closure() -> None:
         gc.enable()
 
 
-@pytest.mark.xfail(strict=True, reason="execute span lands in Task 4")
 @pytest.mark.asyncio
 async def test_output_effect_traces_as_output(rec: Recorder) -> None:
     from shiny import App, render, ui
@@ -406,8 +405,126 @@ async def test_output_effect_traces_as_output(rec: Recorder) -> None:
     sess = App(ui.TagList(), server)._create_session(conn)
 
     async def mock_client() -> None:
-        conn.cause_receive('{"method":"init","data":{}}')
+        # Outputs are suspended until the client reports them visible.
+        conn.cause_receive(
+            '{"method":"init","data":{".clientdata_output_txt_hidden":false}}'
+        )
+        # Let the output effect run before the session ends.
+        await asyncio.sleep(0.1)
         conn.cause_disconnect()
 
     await asyncio.gather(mock_client(), sess._run())
     assert ("enter", "output txt") in rec.log
+
+
+@pytest.mark.asyncio
+async def test_execute_spans_nest(rec: Recorder) -> None:
+    await flush()
+    rec.log.clear()
+    v = Value(1, name="v")
+
+    @calc
+    def c() -> int:
+        return v()
+
+    @effect
+    def e() -> None:
+        c()
+
+    await flush()
+    assert [x for x in rec.log if x[0] in ("enter", "exit")] == [
+        ("enter", "reactive.effect e"),
+        ("enter", "reactive.calc c"),
+        ("exit", "reactive.calc c", None),
+        ("exit", "reactive.effect e", None),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_calc_error_visible_to_tracer_and_still_cached(rec: Recorder) -> None:
+    await flush()
+    rec.log.clear()
+
+    @calc
+    def c() -> int:
+        raise ValueError("boom")
+
+    seen: list[int] = []
+
+    @effect
+    def e() -> None:
+        for _ in range(2):
+            try:
+                c()
+            except ValueError:
+                seen.append(1)
+
+    await flush()
+    assert seen == [1, 1]
+    assert [x for x in rec.of("exit") if x[1] == "reactive.calc c"] == [
+        ("exit", "reactive.calc c", "ValueError")
+    ]
+
+
+@pytest.mark.asyncio
+async def test_flush_span_encloses_on_flushed_callbacks() -> None:
+    from shiny.reactive._core import on_flushed
+
+    order: list[str] = []
+
+    class FlushOrder(ReactiveTracer):
+        @contextlib.contextmanager
+        def on_flush(self, event: _trace.FlushEvent) -> Generator[None, None, None]:
+            order.append("start")
+            yield
+            order.append("end")
+
+    async def flushed() -> None:
+        order.append("flushed")
+
+    remove = add_tracer(FlushOrder())
+    unregister = on_flushed(flushed, once=True)
+    try:
+        await flush()
+    finally:
+        remove()
+        unregister()
+    assert order == ["start", "flushed", "end"]
+
+
+@pytest.mark.asyncio
+async def test_isolated_reads_are_isolated_edges(rec: Recorder) -> None:
+    await flush()
+    rec.log.clear()
+    a = Value(1, name="a")
+    trig = Value(0, name="trig")
+
+    @effect
+    def e() -> None:
+        trig()
+        with isolate():
+            a()
+
+    await flush()
+    assert ("add", "reactive.effect e", "a", True) in rec.log
+    assert ("isolate_enter", "reactive.effect e") in rec.log
+
+    rec.log.clear()
+    trig.set(1)
+    await flush()
+    assert ("remove", "reactive.effect e", "a", True) in rec.log
+    assert ("add", "reactive.effect e", "a", True) in rec.log
+    assert ("invalidate", "reactive.effect e") in rec.log
+
+    rec.log.clear()
+    a.set(5)  # isolated: must not re-run the effect
+    await flush()
+    assert rec.of("enter") == []
+
+
+def test_top_level_isolate_has_no_edges(rec: Recorder) -> None:
+    a = Value(1, name="a")
+    with isolate():
+        a()
+    assert rec.of("add") == []
+    assert ("isolate_enter", None) in rec.log
