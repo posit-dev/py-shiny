@@ -460,9 +460,21 @@ class ReactiveEnvironment:
 
     @contextlib.contextmanager
     def isolate(self) -> Generator[None, None, None]:
-        token = self._current_context.set(Context())
+        outer = self._current_context.get()
+        reader = None if outer is None else outer.owner
+        isolate_ctx = Context(owner=reader, isolated=True)
+        if outer is not None and reader is not None:
+            # End the isolated edges when the reader re-runs, instead of leaving
+            # the throwaway context registered until the target changes.
+            outer.on_invalidate(isolate_ctx.invalidate)
+        token = self._current_context.set(isolate_ctx)
         try:
-            yield
+            with (
+                _trace.isolate_span(reader, ctx_id=isolate_ctx.id)
+                if hooks.isolate
+                else _trace.NULL_CM
+            ):
+                yield
         finally:
             self._current_context.reset(token)
 
