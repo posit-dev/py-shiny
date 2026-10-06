@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib.util
+import inspect
 import json
 import shutil
 import signal
@@ -385,3 +387,63 @@ def serve_and_collect(
             return [_export(app, session_id) for session_id in choose(sessions)]
     finally:
         app.close()
+
+
+_REPLAY_FIXTURES = {"page", "local_app"}
+
+
+@dataclass
+class _ReplayApp:
+    """Stands in for the `local_app` fixture; generated tests only read `.url`."""
+
+    url: str
+
+
+def replay_script(test_file: Path) -> Callable[[Page, str], None]:
+    """
+    A `record_session` script that runs every `test_*` function in `test_file`.
+
+    Raises
+    ------
+    RecordingError
+        If the file can't be imported, has no tests, or a test needs a fixture other
+        than `page` and `local_app`; the returned script raises it when a test's
+        assertion fails.
+    """
+    spec = importlib.util.spec_from_file_location(
+        f"_reactlog_replay_{test_file.stem}", test_file
+    )
+    if spec is None or spec.loader is None:
+        raise RecordingError(f"Cannot import {test_file}.")
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except (OSError, SyntaxError, ImportError) as err:
+        raise RecordingError(f"Cannot import {test_file}: {err}") from err
+    tests = [
+        fn
+        for name, fn in vars(module).items()
+        if name.startswith("test_") and callable(fn)
+    ]
+    if not tests:
+        raise RecordingError(f"No test_* functions found in {test_file}.")
+    for fn in tests:
+        extra = set(inspect.signature(fn).parameters) - _REPLAY_FIXTURES
+        if extra:
+            raise RecordingError(
+                f"{test_file.name}::{fn.__name__} needs fixtures --replay can't "
+                "provide: " + ", ".join(sorted(extra))
+            )
+
+    def script(page: Page, url: str) -> None:
+        fixtures = {"page": page, "local_app": _ReplayApp(url=url)}
+        for fn in tests:
+            params = inspect.signature(fn).parameters
+            try:
+                fn(**{k: v for k, v in fixtures.items() if k in params})
+            except AssertionError as err:  # what Playwright's `expect` raises
+                raise RecordingError(
+                    f"{test_file.name}::{fn.__name__} failed during --replay: {err}"
+                ) from err
+
+    return script
