@@ -5,7 +5,7 @@ import json
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable
+from typing import Any, AsyncGenerator, Callable
 from urllib.parse import urlencode
 
 import pytest
@@ -377,7 +377,7 @@ def _reactlog_request(
     body: bytes = b"",
 ) -> Request:
     """A reactlog request; non-local ones authenticate with the app's token."""
-    query = {} if local else {"token": app.reactlog_token}
+    query: dict[str, str] = {} if local else {"token": app.reactlog_token}
     if session_id is not None:
         query["session_id"] = session_id
     sent = False
@@ -402,7 +402,7 @@ def _reactlog_request(
     )
 
 
-def _viewer_payload(body: bytes) -> tuple[dict[str, Any], str]:
+def _viewer_payload(body: bytes | memoryview) -> tuple[dict[str, Any], str]:
     """The reactlog data and app source embedded in the viewer page."""
     text = bytes(body).decode()
     decoder = json.JSONDecoder()
@@ -414,7 +414,7 @@ def _viewer_payload(body: bytes) -> tuple[dict[str, Any], str]:
 @asynccontextmanager
 async def _live_session(
     app: App, init: dict[str, Any], ready: Callable[[list[dict[str, Any]]], bool]
-) -> AsyncIterator[AppSession]:
+) -> AsyncGenerator[AppSession, None]:
     """Run a mock session until its recorded log satisfies `ready`."""
     conn = MockConnection()
     sess = app._create_session(conn)
