@@ -2806,6 +2806,9 @@ class Outputs:
                     }
                 )
 
+            output_obs._trace_kind = "output"
+            output_obs._trace_label = output_otel_label
+
             output_obs.on_invalidate(
                 lambda: require_real_session()._send_progress(
                     "binding", {"id": output_name}
