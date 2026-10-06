@@ -15,7 +15,8 @@ from starlette.testclient import TestClient
 
 from shiny import App
 from shiny._connection import MockConnection
-from shiny._inspect import (
+from shiny._main import main
+from shiny.reactive._reactlog._viewer import (
     format_graph_dot,
     format_graph_mermaid,
     format_reactlog_html,
@@ -23,7 +24,6 @@ from shiny._inspect import (
     inspect_reactive_graph,
     load_reactlog_json,
 )
-from shiny._main import main
 
 
 def test_inspect_graph_roles():
@@ -419,8 +419,8 @@ def out():
 """,
         encoding="utf-8",
     )
-    import shiny._inspect as inspect_mod
     import shiny._main._inspect as main_inspect_mod
+    import shiny.reactive._reactlog._record as inspect_mod
 
     def _mock_record(*args: object, **kwargs: object) -> dict[str, object]:
         return {
@@ -1152,8 +1152,8 @@ def summary():
 def test_record_session_options_passive_by_default():
     import inspect as py_inspect
 
-    from shiny._inspect import record_shiny_session
     from shiny._main._inspect import inspect as inspect_cli_fn
+    from shiny.reactive._reactlog._record import record_shiny_session
 
     sig_rec = py_inspect.signature(record_shiny_session)
     assert sig_rec.parameters["auto_interact"].default is False
@@ -2097,7 +2097,7 @@ def test_load_reactlog_json_mixed_isolation_on_same_edge_is_not_isolated():
     assert out["edges"] == [{"from": "r1", "to": "r2"}]
 
 
-# A live (recorded) reactlog, as produced by shiny._reactlog.ReactlogRecorder.
+# A live (recorded) reactlog, as produced by shiny.reactive._reactlog.ReactlogRecorder.
 _LIVE_LOG: List[Dict[str, Any]] = [
     {"action": "define", "reactId": "r1", "label": "input.x", "type": "input"},
     {
