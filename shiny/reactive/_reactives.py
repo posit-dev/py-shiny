@@ -161,6 +161,16 @@ class Value(Generic[T]):
     * :func:`~shiny.reactive.effect`
     """
 
+    _node_kind: NodeKind = "value"
+    _node_fn: Callable[..., object] | None = None
+    # Values are not owned by a session's reactive graph node; events on them are
+    # attributed to the session that is current when they happen.
+    _node_session_id: str | None = None
+
+    @property
+    def _node_label(self) -> str:
+        return self._name if self._name else f"value{self._node_id}"
+
     # These overloads are necessary so that the following hold:
     # - Value() is marked by the type checker as an error, because the type T is
     #   unknown. (It is not a run-time error.)
@@ -183,13 +193,6 @@ class Value(Generic[T]):
 
     # If `value` is MISSING, then `get()` will raise a SilentException, until a new
     # value is set. Calling `unset()` will set the value to MISSING.
-    _node_kind: NodeKind = "value"
-    _node_fn: Callable[..., object] | None = None
-
-    @property
-    def _node_label(self) -> str:
-        return self._name if self._name else f"value{self._node_id}"
-
     def __init__(
         self,
         value: T | MISSING_TYPE = MISSING,
@@ -523,14 +526,15 @@ class Value(Generic[T]):
         if not force and self._value is value:
             return False
 
+        # Before invalidating, so tracers see the cause before its effects.
+        if hooks.value_change:
+            _trace.emit_value_change(self, value=value)
+
         if isinstance(self._value, MISSING_TYPE) != isinstance(value, MISSING_TYPE):
             self._is_set_dependents.invalidate()
 
         self._value = value
         self._value_dependents.invalidate()
-
-        if hooks.value_change:
-            _trace.emit_value_change(self, value=value)
 
         self._emit_otel_log()
 
@@ -674,6 +678,10 @@ class Calc_(Generic[T]):
     @property
     def _node_label(self) -> str:
         return self._otel_label
+
+    @property
+    def _node_session_id(self) -> str | None:
+        return None if self._session is None else self._session.id
 
     def __init__(
         self,
@@ -1006,6 +1014,10 @@ class Effect_:
     def _node_label(self) -> str:
         return self._trace_label or self._otel_label
 
+    @property
+    def _node_session_id(self) -> str | None:
+        return None if self._session is None else self._session.id
+
     def __init__(
         self,
         fn: EffectFunction | EffectFunctionAsync,
@@ -1049,7 +1061,8 @@ class Effect_:
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
 
-        self._session: Optional[Session]
+        # Set before the stub-session early return so `_node_session_id` works.
+        self._session: Optional[Session] = None
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.

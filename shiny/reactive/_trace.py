@@ -25,7 +25,24 @@ import time
 import warnings
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Callable, ContextManager, Generator, Literal, Optional, Protocol
+from typing import Callable, ContextManager, Generator, Literal, Protocol
+
+__all__ = (
+    "NodeKind",
+    "ReactiveTracerWarning",
+    "ReactiveNode",
+    "NodeDefined",
+    "DependencyAdded",
+    "DependencyRemoved",
+    "NodeInvalidated",
+    "ValueChanged",
+    "ValueFrozen",
+    "IsolateEvent",
+    "ExecuteEvent",
+    "FlushEvent",
+    "ReactiveTracer",
+    "add_tracer",
+)
 
 NodeKind = Literal["value", "calc", "effect", "output"]
 
@@ -48,6 +65,11 @@ class ReactiveNode(Protocol):
 
     @property
     def _node_fn(self) -> Callable[..., object] | None: ...
+
+    @property
+    def _node_session_id(self) -> str | None:
+        """Root id of the session that owns this node; None if not session-owned."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +118,7 @@ class ValueFrozen(_Event):
 
 @dataclass(frozen=True, slots=True)
 class IsolateEvent(_Event):
-    reader: Optional[ReactiveNode]
+    reader: ReactiveNode | None
     ctx_id: int
 
 
@@ -223,7 +245,7 @@ def _rebuild_hooks() -> None:
 # Session attribution
 # ------------------------------------------------------------------------------
 
-_session_id_override: ContextVar[Optional[str]] = ContextVar(
+_session_id_override: ContextVar[str | None] = ContextVar(
     "shiny_trace_session_id", default=None
 )
 
@@ -250,6 +272,19 @@ def _current_session_id() -> str | None:
 
     session = get_current_session()
     return None if session is None else session.id
+
+
+def _node_session_id(node: ReactiveNode | None) -> str | None:
+    """
+    Session for a node-scoped event: the node's own session if it has one, else
+    the current one. A Value set in session B can invalidate session A's effect;
+    that invalidation belongs to A.
+    """
+    if node is not None:
+        session_id = node._node_session_id
+        if session_id is not None:
+            return session_id
+    return _current_session_id()
 
 
 # ------------------------------------------------------------------------------
@@ -341,7 +376,7 @@ def emit_add_dependency(
     _call_point(
         hooks.add_dependency,
         DependencyAdded(
-            session_id=_current_session_id(),
+            session_id=_node_session_id(reader),
             time=time.time(),
             reader=reader,
             target=target,
@@ -357,7 +392,7 @@ def emit_remove_dependency(
     _call_point(
         hooks.remove_dependency,
         DependencyRemoved(
-            session_id=_current_session_id(),
+            session_id=_node_session_id(reader),
             time=time.time(),
             reader=reader,
             target=target,
@@ -371,7 +406,7 @@ def emit_invalidate(node: ReactiveNode, *, ctx_id: int) -> None:
     _call_point(
         hooks.invalidate,
         NodeInvalidated(
-            session_id=_current_session_id(), time=time.time(), node=node, ctx_id=ctx_id
+            session_id=_node_session_id(node), time=time.time(), node=node, ctx_id=ctx_id
         ),
     )
 
@@ -396,7 +431,7 @@ def isolate_span(reader: ReactiveNode | None, *, ctx_id: int) -> ContextManager[
     return _span(
         hooks.isolate,
         IsolateEvent(
-            session_id=_current_session_id(),
+            session_id=_node_session_id(reader),
             time=time.time(),
             reader=reader,
             ctx_id=ctx_id,
@@ -408,7 +443,7 @@ def execute_span(node: ReactiveNode, *, ctx_id: int) -> ContextManager[None]:
     return _span(
         hooks.execute,
         ExecuteEvent(
-            session_id=_current_session_id(), time=time.time(), node=node, ctx_id=ctx_id
+            session_id=_node_session_id(node), time=time.time(), node=node, ctx_id=ctx_id
         ),
     )
 

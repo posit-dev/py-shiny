@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Callable, Iterator
 
 import pytest
 
-from shiny import _reactlog
+from shiny import App, Inputs, Outputs, Session, _reactlog, ui
+from shiny._connection import MockConnection
 from shiny._inspect import load_reactlog_json
 from shiny._reactlog import ReactlogRecorder
 from shiny.reactive import Value, calc, effect, flush, isolate
@@ -17,6 +19,7 @@ class FakeNode:
         self._node_kind: NodeKind = kind
         self._node_label = label
         self._node_fn: Callable[..., object] | None = None
+        self._node_session_id: str | None = None
 
 
 def _change(
@@ -127,3 +130,49 @@ def test_recorder_value_repr_is_safe() -> None:
     assert len(values[0]) <= 210
     assert "Boom" in values[1]
     assert len(values[2]) <= 210
+
+
+@pytest.mark.asyncio
+async def test_cross_session_invalidation_lands_in_reader_session(
+    recorder: ReactlogRecorder,
+) -> None:
+    shared = Value(0, name="shared")
+    runs: list[int] = []
+    a_ran = asyncio.Event()
+    a_reran = asyncio.Event()
+
+    def server_a(input: Inputs, output: Outputs, session: Session) -> None:
+        @effect
+        def watcher() -> None:
+            runs.append(shared())
+            (a_reran if len(runs) > 1 else a_ran).set()
+
+    def server_b(input: Inputs, output: Outputs, session: Session) -> None:
+        @effect
+        def setter() -> None:
+            shared.set(input.go())
+
+    conn_a, conn_b = MockConnection(), MockConnection()
+    sess_a = App(ui.TagList(), server_a)._create_session(conn_a)
+    sess_b = App(ui.TagList(), server_b)._create_session(conn_b)
+
+    async def client() -> None:
+        conn_a.cause_receive('{"method":"init","data":{}}')
+        await a_ran.wait()
+        conn_b.cause_receive('{"method":"init","data":{"go":1}}')
+        await a_reran.wait()
+        conn_b.cause_disconnect()
+        conn_a.cause_disconnect()
+
+    await asyncio.wait_for(
+        asyncio.gather(client(), sess_a._run(), sess_b._run()), timeout=5
+    )
+    assert runs == [0, 1]
+
+    watcher = "reactive.effect watcher"
+    log_a = recorder.export(sess_a.id)["log"]
+    log_b = recorder.export(sess_b.id)["log"]
+    assert any(
+        x["action"] == "invalidateStart" and x["label"] == watcher for x in log_a
+    )
+    assert not [x for x in log_b if x.get("label") == watcher]
