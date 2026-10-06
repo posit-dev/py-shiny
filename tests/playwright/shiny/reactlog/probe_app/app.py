@@ -2,6 +2,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui
 
 app_ui = ui.page_fluid(
     ui.input_slider("slider", "s", 0, 10, 1),
+    ui.input_slider("big", "b", 0, 5000, 1000),
     ui.input_slider("range", "r", 0, 10, (1, 2)),
     ui.input_select("select", "s", ["a", "b"], selectize=False),
     ui.input_selectize("selectize", "s", ["a", "b"]),

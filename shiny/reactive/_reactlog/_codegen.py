@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 _REDACTED = "[REDACTED]"
-_CLICK_BINDINGS = ("shiny.actionButtonInput", "bslib.task-button")
 
 Action = dict[str, Any]
 
@@ -18,12 +17,23 @@ def _s(value: Any) -> str:
     return json.dumps(str(value))
 
 
+def _comment_text(value: Any) -> str:
+    """Recorded text made safe for a one-line `#` comment (no raw newlines)."""
+    return json.dumps(str(value))[1:-1]
+
+
+class _Incomplete(ValueError):
+    """The recorded value lacks a part the controller needs."""
+
+
 def _call(controller: str, input_id: str, method: str, arg: str = "") -> str:
     return f"controller.{controller}(page, {_s(input_id)}).{method}({arg})"
 
 
 def _pair(value: Any) -> str:
     a, b = value
+    if a is None or b is None:
+        raise _Incomplete
     return f"({_s(a)}, {_s(b)})"
 
 
@@ -33,99 +43,94 @@ def _strings(value: Any) -> str:
 
 @dataclass(frozen=True)
 class ControllerMapping:
-    """One row of the binding → controller table; the first matching row wins."""
+    """One row of the binding to controller table; the first matching row wins."""
 
     binding: str
     matches: Callable[[Action], bool]
-    emit: Callable[[str, Any], str]
+    emit: Callable[[Action], str]
+    click: bool = False
 
 
 def _always(action: Action) -> bool:
     return True
 
 
+def _is_range(action: Action) -> bool:
+    return isinstance(action["value"], list)
+
+
+def _is_selectize(action: Action) -> bool:
+    return "selectized" in action.get("classes", "")
+
+
+def _is_switch(action: Action) -> bool:
+    classes = action.get("classes", "")
+    return "form-check-input" in classes and "shiny-input-checkbox" not in classes
+
+
+def _is_link(action: Action) -> bool:
+    return action.get("tag") == "A"
+
+
+def _set(controller: str, arg: Callable[[Any], str] = _s) -> Callable[[Action], str]:
+    return lambda a: _call(controller, a["name"], "set", arg(a["value"]))
+
+
+def _click(controller: str) -> Callable[[Action], str]:
+    return lambda a: _call(controller, a["name"], "click")
+
+
+def _select_arg(value: Any) -> str:
+    return _strings(value) if isinstance(value, list) else _s(value)
+
+
+def _slider(controller: str) -> Callable[[Action], str]:
+    # Sliders are dragged until the label text matches, so prefer the recorded
+    # formatted label (`display`, e.g. "1,500") over the raw value.
+    def emit(a: Action) -> str:
+        shown = a.get("display")
+        value = a["value"] if shown is None else shown
+        arg = _pair if controller == "InputSliderRange" else _s
+        return _call(controller, a["name"], "set", arg(value))
+
+    return emit
+
+
 MAPPINGS: list[ControllerMapping] = [
+    ControllerMapping("shiny.sliderInput", _is_range, _slider("InputSliderRange")),
+    ControllerMapping("shiny.sliderInput", _always, _slider("InputSlider")),
     ControllerMapping(
-        "shiny.sliderInput",
-        lambda a: isinstance(a["value"], list),
-        lambda i, v: _call("InputSliderRange", i, "set", _pair(v)),
+        "shiny.selectInput", _is_selectize, _set("InputSelectize", _select_arg)
     ),
-    ControllerMapping(
-        "shiny.sliderInput", _always, lambda i, v: _call("InputSlider", i, "set", _s(v))
-    ),
-    ControllerMapping(
-        "shiny.selectInput",
-        lambda a: "selectized" in a.get("classes", ""),
-        lambda i, v: _call(
-            "InputSelectize", i, "set", _strings(v) if isinstance(v, list) else _s(v)
-        ),
-    ),
-    ControllerMapping(
-        "shiny.selectInput",
-        _always,
-        lambda i, v: _call(
-            "InputSelect", i, "set", _strings(v) if isinstance(v, list) else _s(v)
-        ),
-    ),
-    ControllerMapping(
-        "shiny.numberInput",
-        _always,
-        lambda i, v: _call("InputNumeric", i, "set", _s(v)),
-    ),
-    ControllerMapping(
-        "shiny.textInput", _always, lambda i, v: _call("InputText", i, "set", _s(v))
-    ),
-    ControllerMapping(
-        "shiny.textareaInput",
-        _always,
-        lambda i, v: _call("InputTextArea", i, "set", _s(v)),
-    ),
-    ControllerMapping(
-        "shiny.passwordInput",
-        _always,
-        lambda i, v: _call("InputPassword", i, "set", _s(v)),
-    ),
+    ControllerMapping("shiny.selectInput", _always, _set("InputSelect", _select_arg)),
+    ControllerMapping("shiny.numberInput", _always, _set("InputNumeric")),
+    ControllerMapping("shiny.textInput", _always, _set("InputText")),
+    ControllerMapping("shiny.textareaInput", _always, _set("InputTextArea")),
+    ControllerMapping("shiny.passwordInput", _always, _set("InputPassword")),
     ControllerMapping(
         "shiny.checkboxInput",
-        lambda a: "form-check-input" in a.get("classes", "")
-        and "shiny-input-checkbox" not in a.get("classes", ""),
-        lambda i, v: _call("InputSwitch", i, "set", repr(bool(v))),
+        _is_switch,
+        _set("InputSwitch", lambda v: repr(bool(v))),
     ),
     ControllerMapping(
-        "shiny.checkboxInput",
-        _always,
-        lambda i, v: _call("InputCheckbox", i, "set", repr(bool(v))),
+        "shiny.checkboxInput", _always, _set("InputCheckbox", lambda v: repr(bool(v)))
     ),
     ControllerMapping(
         "shiny.checkboxGroupInput",
         _always,
-        lambda i, v: _call("InputCheckboxGroup", i, "set", _strings(v or [])),
+        _set("InputCheckboxGroup", lambda v: _strings(v or [])),
+    ),
+    ControllerMapping("shiny.radioInput", _always, _set("InputRadioButtons")),
+    ControllerMapping("shiny.dateInput", _always, _set("InputDate")),
+    ControllerMapping("shiny.dateRangeInput", _always, _set("InputDateRange", _pair)),
+    ControllerMapping(
+        "shiny.actionButtonInput", _is_link, _click("InputActionLink"), click=True
     ),
     ControllerMapping(
-        "shiny.radioInput",
-        _always,
-        lambda i, v: _call("InputRadioButtons", i, "set", _s(v)),
+        "shiny.actionButtonInput", _always, _click("InputActionButton"), click=True
     ),
     ControllerMapping(
-        "shiny.dateInput", _always, lambda i, v: _call("InputDate", i, "set", _s(v))
-    ),
-    ControllerMapping(
-        "shiny.dateRangeInput",
-        _always,
-        lambda i, v: _call("InputDateRange", i, "set", _pair(v)),
-    ),
-    ControllerMapping(
-        "shiny.actionButtonInput",
-        lambda a: a.get("tag") == "A",
-        lambda i, v: _call("InputActionLink", i, "click"),
-    ),
-    ControllerMapping(
-        "shiny.actionButtonInput",
-        _always,
-        lambda i, v: _call("InputActionButton", i, "click"),
-    ),
-    ControllerMapping(
-        "bslib.task-button", _always, lambda i, v: _call("InputTaskButton", i, "click")
+        "bslib.task-button", _always, _click("InputTaskButton"), click=True
     ),
 ]
 
@@ -134,8 +139,10 @@ _TEXT_LIKE = {"", "text", "number", "email", "search", "tel", "url", "password",
 
 def _fallback(action: Action) -> str:
     i, v, tag = action["name"], action["value"], action.get("tag", "")
-    loc = f"page.locator({_s('#' + i)})"
-    note = f"  # no controller for {action.get('binding') or 'unknown binding'}"
+    selector = "[id=" + json.dumps(str(i)) + "]"  # CSS-quoted, so `.`/`:` are fine
+    literal = "'" + selector.replace("\\", "\\\\").replace("'", "\\'") + "'"
+    loc = f"page.locator({literal})"
+    note = f"  # no controller for {_comment_text(action.get('binding') or 'unknown binding')}"
     if tag == "TEXTAREA" or (tag == "INPUT" and action.get("elType", "") in _TEXT_LIKE):
         return f"{loc}.fill({_s(v)}){note}"
     if tag == "INPUT" and action.get("elType") in ("checkbox", "radio"):
@@ -151,13 +158,33 @@ def _fallback(action: Action) -> str:
     )
 
 
-def _statement(action: Action) -> str:
-    if action["value"] == _REDACTED:
-        return f"# TODO: value for {action['name']!r} was redacted"
+def _find_mapping(action: Action) -> ControllerMapping | None:
     for mapping in MAPPINGS:
         if mapping.binding == action.get("binding") and mapping.matches(action):
-            return mapping.emit(action["name"], action["value"])
-    return _fallback(action)
+            return mapping
+    return None
+
+
+def _is_click(action: Action) -> bool:
+    if action["value"] == _REDACTED:
+        return False
+    mapping = _find_mapping(action)
+    if mapping is not None:
+        return mapping.click
+    return action.get("tag") in ("BUTTON", "A")
+
+
+def _statement(action: Action) -> str:
+    name = _comment_text(repr(action["name"]))
+    if action["value"] == _REDACTED:
+        return f"# TODO: value for {name} was redacted"
+    mapping = _find_mapping(action)
+    if mapping is None:
+        return _fallback(action)
+    try:
+        return mapping.emit(action)
+    except _Incomplete:
+        return f"# TODO: incomplete value for {name}"
 
 
 def _assertion(name: str, output: Action) -> str:
@@ -168,7 +195,7 @@ def _assertion(name: str, output: Action) -> str:
             "OutputTextVerbatim" if output.get("tag") == "PRE" else "OutputText"
         )
         return _call(controller, name, "expect_value", _s(output["value"]))
-    return f"# {name} updated"
+    return f"# {_comment_text(name)} updated"
 
 
 def _identifier(name: str) -> str:
@@ -189,7 +216,7 @@ def generate_controller_test(
             repeat = (
                 last is not None
                 and last["name"] == action["name"]
-                and action.get("binding") not in _CLICK_BINDINGS
+                and not _is_click(action)
             )
             if repeat:
                 steps[-1] = (action, steps[-1][1])
