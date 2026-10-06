@@ -53,10 +53,26 @@ RECORDER_SCRIPT = r"""
         name: e.name,
         value: sensitive(e.name, el) ? "[REDACTED]" : e.value,
         inputType: e.inputType || "",
+        binding: e.binding && e.binding.name ? e.binding.name : null,
+        tag: el ? el.tagName : "",
+        elType: el && el.type ? String(el.type) : "",
+        classes: el && el.className ? String(el.className) : "",
+        container: el && el.closest && el.closest(".shiny-input-container")
+          ? String(el.closest(".shiny-input-container").className) : "",
       });
     });
     $(document).on("shiny:value.shinyReactlog", (e) => {
-      send({ type: "output", name: e.name });
+      // Outputs arrive wrapped in an adapter; the named binding is inside it.
+      const inner = e.binding && e.binding.binding ? e.binding.binding : e.binding;
+      const binding = inner && inner.name ? inner.name : null;
+      const el = document.getElementById(e.name);
+      send({
+        type: "output",
+        name: e.name,
+        binding: binding,
+        tag: el ? el.tagName : "",
+        value: binding === "shiny.textOutput" && typeof e.value === "string" ? e.value : undefined,
+      });
     });
   };
   document.addEventListener("DOMContentLoaded", attach);
