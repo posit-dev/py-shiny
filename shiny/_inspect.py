@@ -6710,7 +6710,7 @@ def format_reactlog_html(
 
     window.addEventListener('DOMContentLoaded', () => {{
       init();
-      new ResizeObserver(() => {{ if (currentViewMode !== 'overview') fitGraph(); }}).observe(document.getElementById('graph-container'));
+      new ResizeObserver(() => {{ if (currentViewMode !== 'overview') {{ if (graphViewports.has(currentViewMode + ':' + selectedModuleFilter)) applyZoom(); else fitGraph(); }} }}).observe(document.getElementById('graph-container'));
     }});
   </script>
   <div id="shortcuts-modal" class="modal-backdrop" hidden onclick="if(event.target===this)toggleShortcutsModal()">

@@ -69,6 +69,7 @@ def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page
     expect(page.locator("#why-story")).to_contain_text("input.x")
     page.get_by_role("button", name="Zoom in", exact=True).click()
     transform = page.locator("#viewport-g").get_attribute("transform")
+    assert transform is not None
     page.get_by_role("button", name="Back to overview").click()
     expect(page.locator("#module-overview-panel")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
