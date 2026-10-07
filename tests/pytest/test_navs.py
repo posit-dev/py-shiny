@@ -49,17 +49,17 @@ def test_navset_tab_markup():
     assert TagList(x).render()["html"] == textwrap.dedent("""\
         <ul class="nav nav-tabs" data-tabsetid="7776790190029">
           <li class="nav-item">
-            <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link active" href="#tab-7776790190029-0">a</a>
+            <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link active" href="#tab-7776790190029-0" aria-controls="tab-7776790190029-0">a</a>
           </li>
           <li class="nav-item">
-            <a data-bs-toggle="tab" data-toggle="tab" data-value="b" role="tab" class="nav-link" href="#tab-7776790190029-1">b</a>
+            <a data-bs-toggle="tab" data-toggle="tab" data-value="b" role="tab" class="nav-link" href="#tab-7776790190029-1" aria-controls="tab-7776790190029-1">b</a>
           </li>
           <li>Some item</li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle " data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
             <ul class="dropdown-menu" data-tabsetid="1710475945045">
               <li>
-                <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item" href="#tab-1710475945045-0">c</a>
+                <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item" href="#tab-1710475945045-0" aria-controls="tab-1710475945045-0">c</a>
               </li>
               <li class="dropdown-divider"></li>
               <li class="dropdown-header">Plain text</li>
@@ -85,7 +85,7 @@ def test_navset_pill_markup():
             <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
             <ul class="dropdown-menu" data-tabsetid="7776790190029">
               <li>
-                <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-7776790190029-0">c</a>
+                <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-7776790190029-0" aria-controls="tab-7776790190029-0">c</a>
               </li>
               <li class="dropdown-divider"></li>
               <li class="dropdown-header">Plain text</li>
@@ -94,7 +94,7 @@ def test_navset_pill_markup():
             </ul>
           </li>
           <li class="nav-item">
-            <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link" href="#tab-navset_pill_id-1">a</a>
+            <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link" href="#tab-navset_pill_id-1" aria-controls="tab-navset_pill_id-1">a</a>
           </li>
         </ul>
         <div class="tab-content" data-tabsetid="navset_pill_id">
@@ -117,18 +117,18 @@ def test_navset_card_pill_markup():
           <div class="card-header">
             <ul class="nav nav-pills card-header-pills" data-tabsetid="7776790190029">
               <li class="nav-item">
-                <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link" href="#tab-7776790190029-0">a</a>
+                <a data-bs-toggle="tab" data-toggle="tab" data-value="a" role="tab" class="nav-link" href="#tab-7776790190029-0" aria-controls="tab-7776790190029-0">a</a>
               </li>
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle active" data-bs-toggle="dropdown" data-value="Menu" href="#" role="button">Menu</a>
                 <ul class="dropdown-menu" data-tabsetid="1710475945045">
                   <li>
-                    <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-1710475945045-0">c</a>
+                    <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-1710475945045-0" aria-controls="tab-1710475945045-0">c</a>
                   </li>
                 </ul>
               </li>
               <li class="nav-item">
-                <a data-bs-toggle="tab" data-toggle="tab" data-value="b" role="tab" class="nav-link" href="#tab-7776790190029-2">b</a>
+                <a data-bs-toggle="tab" data-toggle="tab" data-value="b" role="tab" class="nav-link" href="#tab-7776790190029-2" aria-controls="tab-7776790190029-2">b</a>
               </li>
             </ul>
           </div>
@@ -163,7 +163,7 @@ def test_navset_bar_markup():
                   <ul class="dropdown-menu" data-tabsetid="1710475945045">
                     <li class="dropdown-header">Plain text</li>
                     <li>
-                      <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-1710475945045-1">c</a>
+                      <a data-bs-toggle="tab" data-toggle="tab" data-value="c" role="tab" class="dropdown-item active" href="#tab-1710475945045-1" aria-controls="tab-1710475945045-1">c</a>
                     </li>
                   </ul>
                 </li>
@@ -195,6 +195,13 @@ def test_navset_tabsetid_uses_the_input_id():
     assert tabset_ids(x) == ["my_tabs", "my_tabs"]
     assert 'id="tab-my_tabs-0"' in html
     assert 'href="#tab-my_tabs-0"' in html
+
+
+def test_navset_tab_links_have_aria_controls():
+    html = TagList(ui.navset_tab(a, b, id="my_tabs")).render()["html"]
+
+    assert 'href="#tab-my_tabs-0" aria-controls="tab-my_tabs-0"' in html
+    assert 'href="#tab-my_tabs-1" aria-controls="tab-my_tabs-1"' in html
 
 
 def test_navset_tabsetid_is_stable_across_renders():

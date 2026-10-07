@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### New features
+
+* `ui.sidebar()` gains a `role` parameter (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark. (#2526)
+
+### Improvements
+
+* Navigation links that target a tab panel (e.g. in `ui.navset_tab()`) now carry `aria-controls` pointing at the panel's `id`, alongside the existing `href` (rstudio/bslib#1355). (#2526)
+
 ### Bug fixes
 
 * `ui.input_date()`'s `datesdisabled` now works when `format` is not the default `yyyy-mm-dd`. The dates are now converted on the client the same way `min`/`max` are, instead of being parsed by bootstrap-datepicker with the display `format`. The `data-date-dates-disabled` attribute is replaced by `data-dates-disabled` (and omitted when `datesdisabled` is `None`), and `controller.InputDate.expect_datesdisabled()` checks the new attribute. Requires the updated vendored `shiny.js` (rstudio/shiny#4434). (#2523)
