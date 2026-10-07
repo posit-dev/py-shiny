@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### New features
+
+* Added a built-in developer CLI tool: `shiny validate` statically checks apps for common reactivity errors and duplicate IDs. It returns a nonzero exit status when it finds errors or warnings.
+
 ### Bug fixes
 
 * Fixed an issue where data frames containing Polars `Categorical` or `Enum` columns raised `AttributeRemovedError: get_categories was removed in version 2.0` when serialized with Polars >= 2.0. (#2529)

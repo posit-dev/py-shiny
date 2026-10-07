@@ -1,0 +1,50 @@
+[
+  {
+    "name": "inline all",
+    "code": "from shiny import render\n@render.text\ndef result():\n    return input.n  # shiny: ignore\n",
+    "lines": []
+  },
+  {
+    "name": "inline code",
+    "code": "from shiny import render\n@render.text\ndef result():\n    return input.n  # shiny: ignore UNCALLED_INPUT\n",
+    "lines": []
+  },
+  {
+    "name": "next line",
+    "code": "from shiny import render\n@render.text\ndef result():\n    # shiny: ignore-next-line UNCALLED_INPUT\n    return input.n\n",
+    "lines": []
+  },
+  {
+    "name": "rule list",
+    "code": "from shiny import render\n@render.text\ndef result():\n    return input.n  # shiny: ignore INPUT_ASSIGNMENT, UNCALLED_INPUT\n",
+    "lines": []
+  },
+  {
+    "name": "wrong rule",
+    "code": "from shiny import render\n@render.text\ndef result():\n    return input.n  # shiny: ignore INPUT_ASSIGNMENT\n",
+    "lines": [
+      4
+    ]
+  },
+  {
+    "name": "line local",
+    "code": "from shiny import render\n@render.text\ndef result():\n    first = input.n  # shiny: ignore\n    return input.n\n",
+    "lines": [
+      5
+    ]
+  },
+  {
+    "name": "literal directive",
+    "code": "from shiny import render\n@render.text\ndef result():\n    message = \"# shiny: ignore-next-line\"\n    return input.n\n",
+    "lines": [
+      5
+    ]
+  },
+  {
+    "name": "exact following line",
+    "code": "from shiny import render\n@render.text\ndef result():\n    # shiny: ignore-next-line\n\n    return input.n\n",
+    "lines": [
+      6
+    ]
+  }
+]
