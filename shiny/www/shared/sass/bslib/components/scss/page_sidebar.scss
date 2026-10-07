@@ -28,6 +28,7 @@ $bslib-sidebar-padding: $spacer * 1.5 !default;
   // the sidebar side only to make room for content.
   .bslib-page-sidebar,
   .bslib-page-navbar>div {
+    >.bslib-page-main>.bslib-sidebar-layout.sidebar-collapsed,
     >.bslib-sidebar-layout.sidebar-collapsed {
       &:not(.sidebar-right)>.main {
         padding-right: var(--_padding);
@@ -43,18 +44,28 @@ $bslib-sidebar-padding: $spacer * 1.5 !default;
 @include media-breakpoint-up(sm) {
   // Ensure the page-level main area has a minimum height and width to prevent
   // overly squished content in small screens, like IDE preview panels.
-  .bslib-sidebar-layout {
-    .bslib-page-main.html-fill-container {
-      min-height: var(--bslib-page-main-min-height, #{$bslib-page-main-min-height});
-    }
+  .bslib-page-sidebar .bslib-sidebar-layout > .main.html-fill-container,
+  .bslib-page-navbar .bslib-sidebar-layout .bslib-page-main.html-fill-container {
+    min-height: var(--bslib-page-main-min-height, #{$bslib-page-main-min-height});
+  }
 
-    // But only apply the width constraint when the sidebar expanded (i.e.
-    // not collapsed or in transition) to prevent overlap with toggle button.
+  // But only apply the width constraint when the sidebar expanded (i.e.
+  // not collapsed or in transition) to prevent overlap with toggle button.
+  .bslib-page-sidebar .bslib-sidebar-layout {
+    &:not(.sidebar-collapsed),
+    &.transitioning {
+      > .main.html-fill-container {
+        min-width: var(--bslib-page-main-min-width, #{$bslib-page-main-min-width});
+      }
+    }
+  }
+
+  .bslib-page-navbar .bslib-sidebar-layout {
     &:not(.sidebar-collapsed),
     &.transitioning {
       .bslib-page-main.html-fill-container {
         min-width: var(--bslib-page-main-min-width, #{$bslib-page-main-min-width});
       }
     }
-  } 
+  }
 }
