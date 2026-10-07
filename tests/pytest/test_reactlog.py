@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import json
 import runpy
+import textwrap
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
 
 import pytest
 from click.testing import CliRunner
+from starlette.testclient import TestClient
 
+from shiny import App
+from shiny._connection import MockConnection
 from shiny._inspect import (
     format_graph_dot,
     format_graph_mermaid,
@@ -1653,6 +1657,7 @@ def test_reactlog_html_features():
     assert "node-exec-badge" in html
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("SHINY_REACTLOG", "1")
     from starlette.testclient import TestClient
@@ -1669,7 +1674,8 @@ def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
 
     rlog_resp = client.get("/__reactlog__")
     assert rlog_resp.status_code == 200
-    assert "Reactlog report" in rlog_resp.text
+    assert "choose a session" in rlog_resp.text
+    assert "No sessions recorded yet" in rlog_resp.text
 
     mark_resp = client.post("/__reactlog__/mark", json={"label": "test-mark"})
     assert mark_resp.status_code == 200
@@ -1726,6 +1732,7 @@ def test_shiny_run_reactlog_flag():
     assert "--reactlog" in result.output
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_reactlog_remote_security_access_control():
     from starlette.testclient import TestClient
 
@@ -1798,6 +1805,7 @@ def test_reactive_marks_session_scoping_and_isolation():
         assert len(reactive.get_marks()) == 1
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_app_reactlog_explicit_config(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("SHINY_REACTLOG", raising=False)
     from shiny import App, ui
@@ -1810,10 +1818,23 @@ def test_app_reactlog_explicit_config(monkeypatch: pytest.MonkeyPatch):
     assert len(app_enabled.reactlog_token) > 10
 
 
+def _recorded_view_source(app: App) -> str:
+    """The app source a local user sees in a recorded session's "App code" tab."""
+    session = app._create_session(MockConnection())
+    response = TestClient(app.starlette_app).get(
+        "/__reactlog__", params={"session_id": session.id}
+    )
+    assert response.status_code == 200
+    source, _ = json.JSONDecoder().raw_decode(
+        response.text.split("const rawAppSource = ", 1)[1]
+    )
+    return source
+
+
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_in_app_reactlog_reads_complete_source_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    from starlette.testclient import TestClient
 
     monkeypatch.syspath_prepend(  # pyright: ignore[reportUnknownMemberType]
         str(tmp_path)
@@ -1835,20 +1856,11 @@ app = App(app_ui, server, reactlog=True)
     app_file = tmp_path / "app.py"
     app_file.write_text(source)
     app = runpy.run_path(str(app_file))["app"]
-    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
-    assert response.status_code == 200
-    report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
-    )
-    nodes = {n["id"]: n for n in report["nodes"]}
-    assert "output:sales-total" in nodes
-    assert nodes["input:unused"]["line"] == 3
-    assert nodes["output:sales-total"]["source_file"] == "review_module.py"
-    assert report["sources"]["app.py"] == source
+    assert _recorded_view_source(app) == source
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch):
-    from starlette.testclient import TestClient
 
     from shiny import App, _app, ui
 
@@ -1864,19 +1876,13 @@ def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(_app.inspect, "getfile", missing_file)
     monkeypatch.setattr(_app.inspect, "getsource", available_source)
     app = App(ui.page_fluid(), server, reactlog=True)
-    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
-    report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
-    )
-    assert report["success"] is True
-    assert {n["id"] for n in report["nodes"]} == {"input:x", "output:out"}
-    assert not report["entry_file"]
+    assert _recorded_view_source(app) == textwrap.dedent(available_source(server))
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_express_reactlog_reads_app_source(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    from starlette.testclient import TestClient
 
     from shiny.express._run import wrap_express_app
 
@@ -1890,12 +1896,11 @@ def total():
 """
     app_file.write_text(source)
     app = wrap_express_app(app_file)
-    response = TestClient(app.init_starlette_app()).get("/__reactlog__")
-    report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
-    )
-    assert {n["id"] for n in report["nodes"]} == {"input:amount", "output:total"}
-    assert report["sources"]["app.py"] == source
+    try:
+        assert _recorded_view_source(app) == source
+    finally:
+        # The express app module stays in sys.modules, so the App is never collected.
+        app.reactlog_enabled = False
 
 
 def test_custom_session_inherits_private_reactlog_storage():
@@ -1976,6 +1981,175 @@ def test_express_showcase_reactlog_features():
     isolated = [e for e in report["edges"] if e.get("isolated")]
     assert len(isolated) >= 1
     assert set(report["sources"].keys()) == {"app.py", "zone_module.py"}
+
+
+def test_load_reactlog_json_marks_isolated_edges():
+    data = {
+        "log": [
+            {
+                "action": "define",
+                "reactId": "r1",
+                "label": "a",
+                "type": "reactiveVal",
+                "time": 1.0,
+            },
+            {
+                "action": "define",
+                "reactId": "r2",
+                "label": "b",
+                "type": "reactiveVal",
+                "time": 1.0,
+            },
+            {
+                "action": "define",
+                "reactId": "r3",
+                "label": "e",
+                "type": "observer",
+                "time": 1.0,
+            },
+            {
+                "action": "dependsOn",
+                "reactId": "r3",
+                "depOnReactId": "r1",
+                "isolate": True,
+                "time": 2.0,
+            },
+            {
+                "action": "dependsOn",
+                "reactId": "r3",
+                "depOnReactId": "r2",
+                "isolate": False,
+                "time": 2.0,
+            },
+        ]
+    }
+    out = load_reactlog_json(data)
+    assert {(e["from"], e["to"], e.get("isolated", False)) for e in out["edges"]} == {
+        ("r1", "r3", True),
+        ("r2", "r3", False),
+    }
+
+
+def test_load_reactlog_json_mixed_isolation_on_same_edge_is_not_isolated():
+    def dep(isolate: bool, t: float) -> Dict[str, Any]:
+        return {
+            "action": "dependsOn",
+            "reactId": "r2",
+            "depOnReactId": "r1",
+            "isolate": isolate,
+            "time": t,
+        }
+
+    out = load_reactlog_json({"log": [dep(True, 1.0), dep(False, 2.0)]})
+    assert out["edges"] == [{"from": "r1", "to": "r2"}]
+
+
+# A live (recorded) reactlog, as produced by shiny._reactlog.ReactlogRecorder.
+_LIVE_LOG: List[Dict[str, Any]] = [
+    {"action": "define", "reactId": "r1", "label": "input.x", "type": "input"},
+    {
+        "action": "define",
+        "reactId": "r2",
+        "label": "reactive.effect e",
+        "type": "observer",
+    },
+    {
+        "action": "dependsOn",
+        "reactId": "r2",
+        "depOnReactId": "r1",
+        "label": "reactive.effect e",
+        "type": "observer",
+        "isolate": False,
+    },
+    {
+        "action": "valueChange",
+        "reactId": "r1",
+        "label": "input.x",
+        "type": "input",
+        "value": "1",
+    },
+    {"action": "userMark", "label": "checkpoint", "details": "checkpoint"},
+    {
+        "action": "valueChange",
+        "reactId": "r1",
+        "label": "input.x",
+        "type": "input",
+        "value": "2",
+    },
+    {
+        "action": "invalidateStart",
+        "reactId": "r2",
+        "label": "reactive.effect e",
+        "type": "observer",
+    },
+    {
+        "action": "dependsOnRemove",
+        "reactId": "r2",
+        "depOnReactId": "r1",
+        "label": "reactive.effect e",
+        "type": "observer",
+        "isolate": False,
+    },
+]
+
+
+def _live_log() -> List[Dict[str, Any]]:
+    return [
+        {"provenance": "observed", "time": 1_700_000_000.0 + i, **entry}
+        for i, entry in enumerate(_LIVE_LOG)
+    ]
+
+
+def _live_events() -> List[Dict[str, Any]]:
+    return load_reactlog_json({"log": _live_log()})["events"]
+
+
+def test_load_reactlog_json_invalidate_start_is_an_invalidation():
+    ev = next(e for e in _live_events() if e["action"] == "invalidateStart")
+    assert ev["status"] == "affected"
+    assert ev["details"] == "Invalidated 'reactive.effect e'"
+    assert ev["semantic_state"] == "invalidated"
+
+
+def test_load_reactlog_json_depends_on_remove_is_not_an_active_edge():
+    ev = next(e for e in _live_events() if e["action"] == "dependsOnRemove")
+    assert ev.get("edge_from") is None
+    assert ev.get("dependsOn") is None
+    assert ev["details"] == "Removed dependency: 'r1' no longer used by 'r2'"
+
+
+def test_load_reactlog_json_recorded_inputs_are_sources():
+    out = load_reactlog_json({"log": _live_log()})
+    node = next(n for n in out["nodes"] if n["id"] == "r1")
+    assert (node["role"], node["type"]) == ("source", "input")
+    changes = [e for e in out["events"] if e["action"] == "valueChange"]
+    assert [(e["node_type"], e["value"]) for e in changes] == [
+        ("input", "1"),
+        ("input", "2"),
+    ]
+
+
+def test_load_reactlog_json_marks_match_generated_marks():
+    ev = next(e for e in _live_events() if e["action"] == "userMark")
+    generated = next(
+        e
+        for e in generate_reactlog(
+            "from shiny.express import input\ninput.x()",
+            marks=[{"action": "userMark", "label": "checkpoint", "time": 1.0}],
+        )["events"]
+        if e["action"] == "userMark"
+    )
+    keys = ("event", "node_label", "node_type", "phase", "provenance", "details")
+    assert {k: ev[k] for k in keys} == {k: generated[k] for k in keys}
+    assert ev["mark_wave"]["is_mark"] is True
+    assert ev["mark_wave"]["trigger"] == "Bookmark: checkpoint"
+
+
+def test_reactlog_viewer_builds_waves_for_recorded_inputs_and_marks():
+    # The viewer computes waves client-side for loaded logs; pin the hooks it keys on.
+    html = format_reactlog_html(load_reactlog_json({"log": _live_log()}), "")
+    assert "evAction === 'userMark' && ev.mark_wave" in html
+    assert "ev.type === 'input' || ev.node_type === 'input'" in html
 
 
 def test_format_reactlog_html_flush_navigation_and_pipeline():

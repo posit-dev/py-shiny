@@ -54,7 +54,9 @@ from ..types import (
     NotifyException,
     SilentException,
 )
+from . import _trace
 from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._trace import NodeKind, hooks
 from ._utils import is_user_code_frame
 
 
@@ -159,6 +161,16 @@ class Value(Generic[T]):
     * :func:`~shiny.reactive.effect`
     """
 
+    _node_kind: NodeKind = "value"
+    _node_fn: Callable[..., object] | None = None
+    # Values are not owned by a session's reactive graph node; events on them are
+    # attributed to the session that is current when they happen.
+    _node_session_id: str | None = None
+
+    @property
+    def _node_label(self) -> str:
+        return self._name if self._name else f"value{self._node_id}"
+
     # These overloads are necessary so that the following hold:
     # - Value() is marked by the type checker as an error, because the type T is
     #   unknown. (It is not a run-time error.)
@@ -190,10 +202,11 @@ class Value(Generic[T]):
     ) -> None:
         from ..session._utils import get_current_session
 
+        self._node_id: int = _trace.next_node_id()
         self._value: T | MISSING_TYPE = value
         self._read_only: bool = read_only
-        self._value_dependents: Dependents = Dependents()
-        self._is_set_dependents: Dependents = Dependents()
+        self._value_dependents: Dependents = Dependents(owner=self)
+        self._is_set_dependents: Dependents = Dependents(owner=self)
         # Optional name for OpenTelemetry logging and debugging
         # Priority during initialization: 1) explicit name parameter, 2) inferred from assignment, 3) None
         # Can be overwritten later by Inputs class when value is added/accessed
@@ -227,6 +240,9 @@ class Value(Generic[T]):
             # invalidated and the stored value is freed. (Not on session close --
             # see `_weak_destroy_callback`.)
             session.on_destroy(_weak_destroy_callback(self.destroy, session))
+
+        if hooks.define_node:
+            _trace.emit_define_node(self)
 
     def _try_infer_name(self) -> str | None:
         """
@@ -510,6 +526,10 @@ class Value(Generic[T]):
         if not force and self._value is value:
             return False
 
+        # Before invalidating, so tracers see the cause before its effects.
+        if hooks.value_change:
+            _trace.emit_value_change(self, value=value)
+
         if isinstance(self._value, MISSING_TYPE) != isinstance(value, MISSING_TYPE):
             self._is_set_dependents.invalidate()
 
@@ -629,6 +649,8 @@ class Value(Generic[T]):
                 f"Reactive value '{self._name}' has been destroyed."
             )
         self._value = MISSING
+        if hooks.freeze_value:
+            _trace.emit_freeze_value(self)
 
 
 value = Value
@@ -651,6 +673,16 @@ class Calc_(Generic[T]):
     (instead, use the :func:`~shiny.reactive.calc` decorator).
     """
 
+    _node_kind: NodeKind = "calc"
+
+    @property
+    def _node_label(self) -> str:
+        return self._otel_label
+
+    @property
+    def _node_session_id(self) -> str | None:
+        return None if self._session is None else self._session.id
+
     def __init__(
         self,
         fn: CalcFunction[T],
@@ -661,6 +693,8 @@ class Calc_(Generic[T]):
 
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
+        self._node_id: int = _trace.next_node_id()
+        self._node_fn: Callable[..., object] | None = fn
 
         # The CalcAsync subclass will pass in an async function, but it tells the
         # static type checker that it's synchronous. wrap_async() is smart -- if is
@@ -668,7 +702,7 @@ class Calc_(Generic[T]):
         self._fn: CalcFunctionAsync[T] = _utils.wrap_async(fn)
         self._is_async: bool = _utils.is_async_callable(fn)
 
-        self._dependents: Dependents = Dependents()
+        self._dependents: Dependents = Dependents(owner=self)
         self._invalidated: bool = True
         self._running: bool = False
         self._most_recent_ctx_id: int = -1
@@ -725,6 +759,9 @@ class Calc_(Generic[T]):
                 _weak_destroy_callback(self.destroy, self._session)
             )
 
+        if hooks.define_node:
+            _trace.emit_define_node(self)
+
     def destroy(self) -> None:
         """
         Destroy this reactive calc.
@@ -780,7 +817,7 @@ class Calc_(Generic[T]):
 
     # TODO: should this be private?
     async def update_value(self) -> None:
-        self._ctx = Context()
+        self._ctx = Context(owner=self)
         self._most_recent_ctx_id = self._ctx.id
 
         self._ctx.on_invalidate(self._on_invalidate_cb)
@@ -816,7 +853,13 @@ class Calc_(Generic[T]):
     async def _run_func(self) -> None:
         self._error.clear()
         try:
-            val = await self._fn()
+            # Inside the `try` so tracers see the exception before it is cached.
+            with (
+                _trace.execute_span(self, ctx_id=self._most_recent_ctx_id)
+                if hooks.execute
+                else _trace.NULL_CM
+            ):
+                val = await self._fn()
 
             # Clear before appending: a reentrant recursive call to this same
             # `Calc_` (the calc calling itself) re-enters `_run_func` while an
@@ -972,6 +1015,18 @@ class Effect_:
     (instead, use the :func:`Effect` decorator).
     """
 
+    @property
+    def _node_kind(self) -> NodeKind:
+        return self._trace_kind
+
+    @property
+    def _node_label(self) -> str:
+        return self._trace_label or self._otel_label
+
+    @property
+    def _node_session_id(self) -> str | None:
+        return None if self._session is None else self._session.id
+
     def __init__(
         self,
         fn: EffectFunction | EffectFunctionAsync,
@@ -982,6 +1037,11 @@ class Effect_:
     ) -> None:
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
+        self._node_id: int = _trace.next_node_id()
+        self._node_fn: Callable[..., object] | None = fn
+        # Overridden by `Outputs.set_renderer` so output effects trace as outputs.
+        self._trace_kind: NodeKind = "effect"
+        self._trace_label: str | None = None
 
         from ..render.renderer import Renderer
         from ..session import Session
@@ -1010,7 +1070,8 @@ class Effect_:
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
 
-        self._session: Optional[Session]
+        # Set before the stub-session early return so `_node_session_id` works.
+        self._session: Optional[Session] = None
         # Use `isinstance(x, MISSING_TYPE)`` instead of `x is MISSING` because
         # the type checker doesn't know that MISSING is the only instance of
         # MISSING_TYPE; this saves us from casting later on.
@@ -1056,11 +1117,14 @@ class Effect_:
         # Extract collection level from function attribute (e.g., set by `@otel.suppress` or `@otel.collect` decorators)
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
+        if hooks.define_node:
+            _trace.emit_define_node(self)
+
         # Defer the first running of this until flushReact is called
         self._create_context().invalidate()
 
     def _create_context(self) -> Context:
-        ctx = Context()
+        ctx = Context(owner=self)
 
         # Store the context explicitly in Effect object
         # TODO: More explanation here
@@ -1114,7 +1178,14 @@ class Effect_:
             ):
                 try:
                     with ctx():
-                        await self._fn()
+                        # Inside the `try` so tracers see the exception before it
+                        # is handled below.
+                        with (
+                            _trace.execute_span(self, ctx_id=ctx.id)
+                            if hooks.execute
+                            else _trace.NULL_CM
+                        ):
+                            await self._fn()
 
                         # Yield so that messages can be sent to the client if necessary.
                         # https://github.com/posit-dev/py-shiny/issues/1381
