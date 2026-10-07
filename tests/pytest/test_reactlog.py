@@ -1746,9 +1746,7 @@ def test_reactlog_remote_security_access_control():
 
         return remote_app
 
-    remote_client = TestClient(
-        make_remote(client_app)
-    )  # pyright: ignore[reportArgumentType]
+    remote_client = TestClient(make_remote(client_app))  # pyright: ignore[reportArgumentType]
     assert remote_client.get("/__reactlog__").status_code == 403
     assert remote_client.get("/__reactlog__/mark").status_code == 403
 
@@ -1978,3 +1976,68 @@ def test_express_showcase_reactlog_features():
     isolated = [e for e in report["edges"] if e.get("isolated")]
     assert len(isolated) >= 1
     assert set(report["sources"].keys()) == {"app.py", "zone_module.py"}
+
+
+def test_format_reactlog_html_flush_navigation_and_pipeline():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+ui.input_numeric("x", "X", 10)
+@reactive.calc
+def doubled():
+    return input.x() * 2
+@render.text
+def out():
+    return str(doubled())
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert 'id="flush-select"' in html
+    assert 'id="btn-prev-flush"' in html
+    assert 'id="btn-next-flush"' in html
+    assert 'id="flush-counter-badge"' in html
+    assert 'id="flush-pipeline-bar"' in html
+    assert 'id="pipe-trigger"' in html
+    assert 'id="pipe-invalidated"' in html
+    assert 'id="pipe-calcs"' in html
+    assert 'id="pipe-outputs"' in html
+    assert "selectFlush(" in html
+    assert "updateFlushUI(" in html
+
+
+def test_format_reactlog_html_overview_and_zooming_modes():
+    code = """from shiny.express import input, render, ui
+from shiny import reactive
+ui.input_numeric("n", "N", 5)
+@reactive.calc
+def sq():
+    return input.n() ** 2
+@render.text
+def display():
+    return f"Val={sq()}"
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert 'id="btn-mode-overview"' in html
+    assert 'id="btn-mode-flush"' in html
+    assert 'id="btn-mode-full"' in html
+    assert 'id="module-overview-panel"' in html
+    assert 'id="module-filter-select"' in html
+    assert "setViewMode(" in html
+    assert "zoomToModule(" in html
+    assert "renderModuleOverview(" in html
+
+
+def test_format_reactlog_html_flush_details_card():
+    code = """from shiny.express import input, render, ui
+ui.input_text("name", "Name", "World")
+@render.text
+def greeting():
+    return f"Hello, {input.name()}!"
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert 'id="flush-card"' in html
+    assert 'id="flush-card-title"' in html
+    assert 'id="flush-card-trigger"' in html
+    assert 'id="flush-execution-order"' in html
+    assert "getActiveFlushNodeIds(" in html

@@ -1024,9 +1024,9 @@ def summary():
         "title", re.compile(r"price: 25 → 30")
     )
 
-    # 2. Causal Story Banner above graph
+    # 2. Causal Story Banner above graph is removed as requested
     causal_banner = page.locator("#causal-summary-banner")
-    expect(causal_banner).to_be_visible()
+    expect(causal_banner).to_be_hidden()
 
     # 3. Dynamic Why Question for Input
     page.locator('.graph-node[data-id="input:price"]').click()
@@ -1702,12 +1702,158 @@ def txt():
     page.set_content(format_reactlog_html(rlog, code))
 
     badge = page.locator(
-        '.graph-node[data-id="calc:compute"] .node-exec-badge.is-hotspot'
+        '.graph-node[data-id="calc:compute"] .node-exec-badge'
     )
     expect(badge).to_be_visible()
     expect(badge).to_contain_text("4×")
-    expect(badge.locator("path")).to_be_visible()
 
     page.locator('.graph-node[data-id="calc:compute"]').click()
     expect(page.locator("#insp-runs-badge")).to_contain_text("Runs: 4×")
-    expect(page.locator("#insp-runs-badge svg.flame-icon")).to_be_visible()
+    expect(page.locator("#insp-runs-badge svg.flame-icon")).not_to_be_attached()
+
+
+def test_reactlog_flush_pipeline_and_stepper(page: Page) -> None:
+    code = """from shiny import reactive
+from shiny.express import input, render
+ui.input_numeric("val", "Val", 1)
+@reactive.calc
+def calc_x():
+    return input.val() * 10
+@render.text
+def out():
+    return str(calc_x())
+"""
+    actions = [
+        {"type": "input", "name": "val", "value": 5, "timestamp": 100},
+    ]
+    rlog = generate_reactlog(code, recorded_actions=actions)
+    page.set_content(format_reactlog_html(rlog, code))
+
+    expect(page.locator("#flush-select")).to_be_visible()
+    expect(page.locator("#flush-pipeline-bar")).to_be_visible()
+    expect(page.locator("#flush-card")).to_be_visible()
+
+    # Step to flush 1
+    page.locator("#btn-next-flush").click()
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Flush 2")
+    expect(page.locator("#pipe-invalidated-count")).to_have_text("2")
+    expect(page.locator("#pipe-calcs-count")).to_have_text("1")
+    expect(page.locator("#pipe-outputs-count")).to_have_text("1")
+
+
+def test_reactlog_overview_mode_and_module_cards(page: Page) -> None:
+    code = """from shiny import module, reactive
+from shiny.express import input, render
+
+@module.server
+def mod1_server(input, output, session):
+    @reactive.calc
+    def calc_a():
+        return input.n() + 1
+    @render.text
+    def out_a():
+        return str(calc_a())
+
+mod1_server("sub1")
+"""
+    rlog = generate_reactlog(code)
+    page.set_content(format_reactlog_html(rlog, code))
+
+    overview_btn = page.locator("#btn-mode-overview")
+    expect(overview_btn).to_be_visible()
+    overview_btn.click()
+
+    panel = page.locator("#module-overview-panel")
+    expect(panel).to_be_visible()
+    cards = page.locator(".module-card")
+    expect(cards).to_have_count(1)
+    expect(cards.first).to_contain_text("sub1")
+
+    # Zoom into module from card
+    page.locator('.module-card[data-module="sub1"] button').click()
+    expect(panel).not_to_be_visible()
+    expect(page.locator(".graph-node")).to_have_count(3)
+
+
+def test_reactlog_bottom_timeline_bar_and_sidebar_markers(page: Page) -> None:
+    code = """from shiny import reactive
+from shiny.express import input, render
+
+@reactive.calc
+def calc_val():
+    return input.val() * 2
+
+@render.text
+def out():
+    return f"{calc_val()}"
+"""
+    actions = [
+        {"type": "input", "name": "val", "value": 5, "timestamp": 100},
+        {"type": "input", "name": "val", "value": 10, "timestamp": 200},
+    ]
+    rlog = generate_reactlog(code, recorded_actions=actions)
+    page.set_content(format_reactlog_html(rlog, code))
+
+    expect(page.locator("#bottom-timeline-bar")).to_be_visible()
+    expect(page.locator("#timeline-sidebar")).to_be_visible()
+    expect(page.locator("#timeline-sidebar .burst-anchor")).to_have_count(3)
+
+    markers = page.locator("#timeline-sidebar .burst-anchor")
+    markers.nth(1).click()
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Flush 2")
+
+    page.locator("#btn-step-forward").click()
+    expect(page.locator("#step-display")).not_to_have_text("Step 0 /")
+
+
+def test_reactlog_repeat_execution_badge_uniform(page: Page) -> None:
+    code = """from shiny import reactive
+from shiny.express import input, render
+
+@reactive.calc
+def compute():
+    return input.val() * 2
+
+@render.text
+def out():
+    return f"{compute()}"
+"""
+    actions = [
+        {"type": "input", "name": "val", "value": 1, "timestamp": 10},
+        {"type": "input", "name": "val", "value": 2, "timestamp": 20},
+        {"type": "input", "name": "val", "value": 3, "timestamp": 30},
+        {"type": "input", "name": "val", "value": 4, "timestamp": 40},
+    ]
+    rlog = generate_reactlog(code, recorded_actions=actions)
+    page.set_content(format_reactlog_html(rlog, code))
+
+    badge = page.locator('.graph-node[data-id="calc:compute"] .node-exec-badge')
+    expect(badge).to_be_visible()
+    badge_text = badge.text_content() or ""
+    assert "🔥" not in badge_text
+    assert "4" in badge_text
+
+
+def test_reactlog_inspector_drawer_toggle(page: Page) -> None:
+    code = """from shiny import reactive
+from shiny.express import input, render
+
+@render.text
+def out():
+    return f"{input.x()}"
+"""
+    rlog = generate_reactlog(code)
+    page.set_content(format_reactlog_html(rlog, code))
+
+    sidebar = page.locator("#sidebar")
+    close_btn = page.locator('button[aria-label="Close Inspector"]')
+    toggle_btn = page.locator("#btn-toggle-inspector-bottom")
+
+    expect(sidebar).to_be_visible()
+    close_btn.click()
+    expect(sidebar).to_be_hidden()
+
+    toggle_btn.click()
+    expect(sidebar).to_be_visible()
+
+
