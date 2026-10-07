@@ -99,7 +99,7 @@ class Progress:
             return None
 
         self.value = value
-        if value:
+        if value is not None:
             # Normalize value to number between 0 and 1
             value = min(1, max(0, (value - self.min) / (self.max - self.min)))
 

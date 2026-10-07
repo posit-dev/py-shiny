@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* `Progress.set(0)` now places the bar at `0` relative to `min` and `max`, instead of sending `0` unnormalized. With a negative `min`, such as `Progress(min=-10, max=10)`, a value of `0` showed an empty bar rather than a half-full one. (#2518)
+
 * `ui.input_date()`'s `datesdisabled` now works when `format` is not the default `yyyy-mm-dd`. The dates are now converted on the client the same way `min`/`max` are, instead of being parsed by bootstrap-datepicker with the display `format`. The `data-date-dates-disabled` attribute is replaced by `data-dates-disabled` (and omitted when `datesdisabled` is `None`), and `controller.InputDate.expect_datesdisabled()` checks the new attribute. Requires the updated vendored `shiny.js` (rstudio/shiny#4434). (#2523)
 
 * Fixed an issue where data frames containing Polars `Categorical` or `Enum` columns raised `AttributeRemovedError: get_categories was removed in version 2.0` when serialized with Polars >= 2.0. (#2529)
