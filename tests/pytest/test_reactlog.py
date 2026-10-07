@@ -624,7 +624,7 @@ def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "__reactlog__?token=" in resp.text
-    assert "F3" in resp.text
+    assert "F8" in resp.text
 
     rlog_resp = client.get("/__reactlog__")
     assert rlog_resp.status_code == 200

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from playwright.sync_api import Page, expect
 
@@ -11,6 +11,20 @@ from shiny.reactive._reactlog._viewer import format_reactlog_html, load_reactlog
 from tests.pytest._reactlog_fixtures import record_export
 
 PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7S8AAAAASUVORK5CYII="
+
+
+def load_graph_report(
+    page: Page,
+    html: str,
+    *,
+    wait_until: Literal["load", "domcontentloaded", "networkidle", "commit"] = "load",
+) -> None:
+    """Open the graph and inspector explicitly for tests of those surfaces."""
+    page.set_content(html, wait_until=wait_until)
+    page.locator("#btn-mode-full").click()
+    page.locator("#btn-toggle-inspector").click()
+    page.locator("#event-history").evaluate("el => el.open = true")
+    page.locator("#flush-card").evaluate("el => el.open = true")
 
 
 def _visible(*ids: str) -> dict[str, bool]:
@@ -145,7 +159,8 @@ _VAL_STEPS: list[dict[str, Any]] = [{"val": 10, **_visible("out")}]
 
 def test_graph_elements_visible_on_initialization(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _XY_CODE, _XY_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_XY_CODE),
         wait_until="domcontentloaded",
     )
@@ -164,7 +179,8 @@ def test_graph_elements_visible_on_initialization(page: Page, tmp_path: Path) ->
 
 def test_hover_highlights_connections(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _XY_CODE, _XY_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_XY_CODE),
         wait_until="domcontentloaded",
     )
@@ -206,7 +222,7 @@ def server(input, output, session):
         tmp_path, code, [{"x": 1, "y": 2, **_visible("result", "sibling", "other")}]
     )
     other = _id(report, "output other")
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     page.locator(_node(report, "reactive.calc doubled")).click()
     page.locator(".toolbar").hover()
     # 9 nodes (incl. 3 `.clientdata_*_hidden`); only x -> doubled -> result stay lit.
@@ -269,7 +285,7 @@ def server(input, output, session):
     )
     report = load_reactlog_json(export)
     steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     expect(page.locator(".app-box")).to_contain_text("App (no namespace)")
     root_chart = _node(report, "output chart")
     page.locator(root_chart).click()
@@ -305,7 +321,8 @@ def server(input, output, session):
     # Recorded inputs carry no source line; the output's definition does.
     output_step = _step(reactlog, "define", "output greeting")
 
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -326,7 +343,8 @@ def server(input, output, session):
 
 def test_recording_video_tab(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _VAL_CODE, _VAL_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(
             reactlog, source_code=_VAL_CODE, video_path="/path/to/demo.webm"
         ),
@@ -355,7 +373,8 @@ def server(input, output, session):
         return f"Result: {double_n()}"
 """
     reactlog = _record(tmp_path, code, [{"n": 10, **_visible("out_txt")}, {"n": 25}])
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -377,7 +396,8 @@ def server(input, output, session):
 
 def test_draggable_splitter_and_video_tab_resize(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _VAL_CODE, _VAL_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_VAL_CODE, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -399,7 +419,8 @@ def test_draggable_splitter_and_video_tab_resize(page: Page, tmp_path: Path) -> 
 
 def test_trace_timeline_scrubber_and_action_chips(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _MULT_CODE, _MULT_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_MULT_CODE, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -418,7 +439,8 @@ def test_event_timeline_labels_initialization_and_recorded_actions(
     page: Page, tmp_path: Path
 ) -> None:
     reactlog = _record(tmp_path, _MULT_CODE, _MULT_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_MULT_CODE, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -431,7 +453,8 @@ def test_event_timeline_labels_initialization_and_recorded_actions(
 
 def test_event_items_can_be_activated_with_keyboard(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _MULT_CODE, _MULT_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_MULT_CODE),
         wait_until="domcontentloaded",
     )
@@ -451,7 +474,8 @@ def test_event_inspector_describes_steps_without_graph_nodes(
     page: Page, tmp_path: Path
 ) -> None:
     reactlog = _record(tmp_path, _MULT_CODE, _MULT_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_MULT_CODE),
         wait_until="domcontentloaded",
     )
@@ -471,7 +495,8 @@ def test_video_playback_resumes_without_rewinding_after_last_graph_event(
     page: Page, tmp_path: Path
 ) -> None:
     reactlog = _record(tmp_path, _MULT_CODE, _MULT_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_MULT_CODE, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -505,7 +530,8 @@ def test_video_frame_callback_updates_graph_between_timeupdate_events(
     # The user changes `multiplier` 2s into the recording.
     _delay_from(export, "input.multiplier", 8, seconds=2)
     reactlog = load_reactlog_json(export)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_MULT_CODE, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -536,7 +562,8 @@ def test_video_frame_callback_updates_graph_between_timeupdate_events(
 
 def test_theme_toggle_button_and_modes(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _VAL_CODE, _VAL_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_VAL_CODE, theme="dark"),
         wait_until="domcontentloaded",
     )
@@ -556,7 +583,8 @@ def test_theme_toggle_button_and_modes(page: Page, tmp_path: Path) -> None:
 
 def test_in_browser_load_reactlog_json(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _VAL_CODE, _VAL_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_VAL_CODE),
         wait_until="domcontentloaded",
     )
@@ -622,7 +650,8 @@ def server(input, output, session):
         return str(doubled())
 """
     reactlog = _record(tmp_path, code, [{"x": 10, "y": 20, **_visible("result")}])
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -651,7 +680,8 @@ def server(input, output, session):
 
 def test_selection_keeps_all_nodes_visible(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _XY_CODE, _XY_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_XY_CODE),
         wait_until="domcontentloaded",
     )
@@ -676,7 +706,8 @@ def test_selection_keeps_all_nodes_visible(page: Page, tmp_path: Path) -> None:
 
 def test_recording_summary_popover_toggle(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _VAL_CODE, _VAL_STEPS)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_VAL_CODE),
         wait_until="domcontentloaded",
     )
@@ -709,7 +740,8 @@ def server(input, output, session):
         return str(calc_b())
 """
     reactlog = _record(tmp_path, code, [{"val": 5, **_visible("out")}, {"val": 42}])
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -758,7 +790,8 @@ def server(input, output, session):
     reactlog = _record(
         tmp_path, code, [{"x": 1, "y": 10, **_visible("o", "separate_out")}]
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -783,7 +816,8 @@ def server(input, output, session):
 
 def test_timeline_activity_mode_and_realtime_toggle(page: Page, tmp_path: Path) -> None:
     reactlog = _record(tmp_path, _VAL_CODE, [*_VAL_STEPS, {"val": 20}])
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_VAL_CODE),
         wait_until="domcontentloaded",
     )
@@ -805,7 +839,8 @@ def test_trace_tooltip_is_hidden_until_timeline_drag(
     page: Page, tmp_path: Path
 ) -> None:
     reactlog = _record(tmp_path, _VAL_CODE, [*_VAL_STEPS, {"val": 2}])
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_VAL_CODE),
         wait_until="domcontentloaded",
     )
@@ -840,7 +875,8 @@ def server(input, output, session):
         return str(doubled())
 """
     reactlog = _record(tmp_path, code, [{"x": 1, **_visible("res")}, {"x": 5}])
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -877,7 +913,8 @@ def server(input, output, session):
         return f"Sum: {calc_a() + calc_b()}"
 """
     reactlog = _record(tmp_path, code, [{"a": 1, "b": 2, **_visible("merged")}])
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -920,7 +957,8 @@ def server(input, output, session):
     reactlog = _record(
         tmp_path, code, [{"units": 10, **_visible("out_a", "out_b")}, {"units": 20}]
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -957,7 +995,8 @@ def test_humanized_timeline_dynamic_verbs_and_causal_summary(
     reactlog = _record(
         tmp_path, _PRICE_CODE, [{"price": 25, **_visible("summary")}, {"price": 30}]
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_PRICE_CODE),
         wait_until="domcontentloaded",
     )
@@ -971,8 +1010,7 @@ def test_humanized_timeline_dynamic_verbs_and_causal_summary(
     )
 
     # 2. Causal Story Banner above graph
-    causal_banner = page.locator("#causal-summary-banner")
-    expect(causal_banner).to_be_visible()
+    expect(page.locator("#flush-pipeline-bar")).to_be_visible()
 
     # 3. Dynamic Why Question for Input
     page.locator(_node(reactlog, "input.price")).click()
@@ -1007,7 +1045,7 @@ def server(input, output, session):
         return str(doubled())
 """
     reactlog = _record(tmp_path, code, [{"x": 1, **_visible("result")}, {"x": 2}])
-    page.set_content(format_reactlog_html(reactlog, source_code=code))
+    load_graph_report(page, format_reactlog_html(reactlog, source_code=code))
     page.evaluate(f"seekTo({_step(reactlog, 'enter', 'output result')})")
     expect(page.locator("#causal-summary-text")).to_have_text(
         "App Initialized. Evaluated 1 calc and rendered 1 output."
@@ -1017,7 +1055,7 @@ def server(input, output, session):
 def test_empty_graph_shows_summary_notice(page: Page) -> None:
     reactlog = load_reactlog_json({"log": []})
     reactlog["summary"] = "No session selected."
-    page.set_content(format_reactlog_html(reactlog, ""))
+    load_graph_report(page, format_reactlog_html(reactlog, ""))
     expect(page.locator("#causal-summary-text")).to_have_text("No session selected.")
     expect(page.locator("#causal-summary-text")).to_be_visible()
 
@@ -1057,7 +1095,8 @@ def server(input, output, session):
             {"price": 30},
         ],
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -1156,11 +1195,13 @@ def test_malicious_node_id_no_code_execution_xss_protection(
         ],
     }
 
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=_VAL_CODE),
         wait_until="domcontentloaded",
     )
     page.evaluate("data => loadReactlogObject(data)", malicious_json)
+    page.locator("#btn-mode-full").click()
 
     # Click nodes and buttons to trigger any handlers
     page.locator('.graph-node[data-id="calc:safe_node"]').click()
@@ -1181,7 +1222,8 @@ def server(input, output, session):
         return f"Result: {double_val()}"
 """
     reactlog = _record(tmp_path, code, [{"val": 10, **_visible("out")}])
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -1232,7 +1274,9 @@ def test_r_import_search_preserves_all_nodes(page: Page) -> None:
         {"action": "dependsOn", "reactId": "r3", "depOnReactId": "r2"},
         {"action": "dependsOn", "reactId": "r4", "depOnReactId": "r1$x"},
     ]
-    page.set_content(format_reactlog_html(load_reactlog_json(raw), source_code=""))
+    load_graph_report(
+        page, format_reactlog_html(load_reactlog_json(raw), source_code="")
+    )
     # Exercise the separate browser file-import normalizer as well.
     page.evaluate("raw => loadReactlogObject(raw)", raw)
     expect(page.locator('.graph-node[data-id="r1$x"]')).to_have_attribute(
@@ -1269,7 +1313,9 @@ def test_fit_large_graph(page: Page) -> None:
         }
         for i in range(200)
     ]
-    page.set_content(format_reactlog_html(load_reactlog_json(raw), source_code=""))
+    load_graph_report(
+        page, format_reactlog_html(load_reactlog_json(raw), source_code="")
+    )
     page.get_by_role("button", name="Fit graph to view", exact=True).click()
     bounds = page.evaluate("""() => {
         const svg = document.getElementById('reactlog-svg').getBoundingClientRect();
@@ -1291,7 +1337,7 @@ def server(input, output, session):
 
 def test_search_keyboard_and_reset_view(page: Page, tmp_path: Path) -> None:
     report = _record(tmp_path, _X_RESULT_CODE, [{"x": 1, **_visible("result")}])
-    page.set_content(format_reactlog_html(report, _X_RESULT_CODE))
+    load_graph_report(page, format_reactlog_html(report, _X_RESULT_CODE))
     search = page.locator("#search-input")
     search.fill(f"id:{_id(report, 'output result')}")
     search.press("ArrowDown")
@@ -1318,7 +1364,7 @@ def test_narrow_report_keeps_graph_and_controls_accessible(
     try:
         for width in (390, 768):
             page.set_viewport_size({"width": width, "height": 844})
-            page.set_content(format_reactlog_html(report, _X_RESULT_CODE))
+            load_graph_report(page, format_reactlog_html(report, _X_RESULT_CODE))
             bounds = page.evaluate("""() => {
                 const graph = document.getElementById('graph-container').getBoundingClientRect();
                 const sidebar = document.getElementById('sidebar').getBoundingClientRect();
@@ -1363,7 +1409,7 @@ def server(input, output, session):
     report = _record(
         tmp_path, code, [{"units": 2, "price": 3, "discount": 1, **_visible("result")}]
     )
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     positions = page.locator(".graph-node").evaluate_all(
         "nodes => Object.fromEntries(nodes.map(n => [n.dataset.id, +n.querySelector('rect').getAttribute('x')]))"
     )
@@ -1405,7 +1451,7 @@ def server(input, output, session):
     )
     combined = _id(report, "output combined")
     west_total = _node(report, "reactive.calc west:total")
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     assert page.locator(".module-box").count() == 2
     page.locator('.module-box[data-module="west"] text').dblclick()
     expect(page.locator('.graph-node[data-id="module:west"]')).to_have_attribute(
@@ -1448,7 +1494,7 @@ def test_plot_preview_follows_timeline_without_future_images(
     report = load_reactlog_json(export)
     chart = _id(report, "output chart")
     steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
-    page.set_content(format_reactlog_html(report, _CHART_CODE))
+    load_graph_report(page, format_reactlog_html(report, _CHART_CODE))
     page.evaluate(f"selectNode('{chart}')")
     expect(page.locator("#insp-plot-image")).to_be_hidden()
     page.evaluate(f"seekTo({steps[0]})")
@@ -1478,7 +1524,9 @@ def server(input, output, session):
     # `chart` and `summary` render within the same flush, so their timestamps
     # (nearly) coincide.
     step = _step(report, "enter", "output chart")
-    page.set_content(format_reactlog_html(report, code, video_path="recording.webm"))
+    load_graph_report(
+        page, format_reactlog_html(report, code, video_path="recording.webm")
+    )
     page.evaluate(
         f"seekTo({step}); document.getElementById('session-video').dispatchEvent(new Event('timeupdate'))"
     )
@@ -1517,7 +1565,7 @@ def server(input, output, session):
         files={"sales.py": module_source},
     )
     revenue = _node(report, "reactive.calc west:revenue")
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     page.locator(revenue).click()
     expect(page.locator("#insp-meta-line")).to_have_text("sales.py · Line 6")
     page.locator("#btn-toggle-source-drawer").click()
@@ -1542,6 +1590,7 @@ def server(input, output, session):
         "def result():"
     )
     page.evaluate("data => loadReactlogObject(data)", report)
+    page.locator("#btn-mode-full").click()
     page.locator(revenue).click()
     expect(page.get_by_label("Source file")).to_have_value("sales.py")
 
@@ -1555,7 +1604,7 @@ def test_source_highlighting_survives_file_switches_and_json_import(
     }
     report = _record(tmp_path, _VAL_CODE, _VAL_STEPS)
     report.update(sources=sources, entry_file="app.py")
-    page.set_content(format_reactlog_html(report, sources["app.py"]))
+    load_graph_report(page, format_reactlog_html(report, sources["app.py"]))
     page.get_by_role("tab", name="App code").click()
     source = page.locator("#source-panel code")
     expect(source.locator(".syntax-keyword").first).to_have_text("from")
@@ -1584,6 +1633,7 @@ def test_source_highlighting_survives_file_switches_and_json_import(
         entry_file="other.py",
     )
     page.evaluate("report => loadReactlogObject(report)", replacement)
+    page.locator("#btn-toggle-inspector").click()
     page.get_by_role("tab", name="App code").click()
     expect(source.locator(".syntax-comment")).to_have_text("# Imported")
     expect(source.locator(".syntax-string")).to_have_text('"New file"')
@@ -1604,7 +1654,7 @@ def server(input, output, session):
         return str(amount())
 """
     report = _record(tmp_path, code, [{"units": 1, **_visible("out")}])
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     page.locator(_node(report, "reactive.calc amount")).click()
     page.locator("#btn-toggle-source-drawer").click()
     snippet = page.locator("#insp-source-code")
@@ -1624,7 +1674,7 @@ def server(input, output, session):
         return f"{input.x()}"
 """
     rlog = _record(tmp_path, code, [{"x": 1, **_visible("out")}, {"x": 2}])
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     modal = page.locator("#shortcuts-modal")
     expect(modal).to_be_hidden()
@@ -1656,7 +1706,7 @@ def server(input, output, session):
         return f"{isolated_calc()}"
 """
     rlog = _record(tmp_path, code, [{"untracked": 1, "tracked": 2, **_visible("txt")}])
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     isolated_edges = page.locator(".graph-edge.is-isolated")
     expect(isolated_edges).to_have_count(1)
@@ -1678,7 +1728,7 @@ def server(input, output, session):
     report = _record(
         tmp_path, code, [{"a": 1, "b": 1, **_visible("out")}, {"b": 2}, {"a": 3}]
     )
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     # Changing only the isolated `b` does not re-render `out`.
     page.evaluate(f"seekTo({_step(report, 'valueChange', 'input.b', 2)})")
     page.locator(_node(report, "output out")).click()
@@ -1715,17 +1765,17 @@ def server(input, output, session):
         code,
         [{"val": 1, **_visible("txt")}, {"val": 2}, {"val": 3}, {"val": 4}],
     )
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     compute = _node(rlog, "reactive.calc compute")
-    badge = page.locator(f"{compute} .node-exec-badge.is-hotspot")
+    badge = page.locator(f"{compute} .node-exec-badge")
     expect(badge).to_be_visible()
     expect(badge).to_contain_text("4×")
-    expect(badge.locator("path")).to_be_visible()
+    expect(badge.locator("path")).to_have_count(0)
 
     page.locator(compute).click()
     expect(page.locator("#insp-runs-badge")).to_contain_text("Runs: 4×")
-    expect(page.locator("#insp-runs-badge svg.flame-icon")).to_be_visible()
+    expect(page.locator("#insp-runs-badge svg.flame-icon")).not_to_be_attached()
 
 
 def test_live_reactlog_input_and_mark_waves(page: Page, tmp_path: Path) -> None:
@@ -1748,7 +1798,8 @@ def server(input, output, session):
         change,
         {"action": "userMark", "label": "checkpoint", "time": log[change]["time"]},
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(load_reactlog_json(export), source_code=code),
         wait_until="domcontentloaded",
     )
