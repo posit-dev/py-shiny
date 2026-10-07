@@ -13,7 +13,8 @@ from urllib.parse import urlencode
 
 from htmltools import tags
 
-from .reactive._trace import (
+from ...otel._attributes import extract_source_ref
+from .._trace import (
     DependencyAdded,
     DependencyRemoved,
     ExecuteEvent,
@@ -57,10 +58,12 @@ def _safe_repr(value: object) -> str:
 
 
 class _SessionLog:
-    __slots__ = ("nodes", "events")
+    __slots__ = ("nodes", "events", "source_fns")
 
     def __init__(self) -> None:
         self.nodes: dict[str, dict[str, Any]] = {}
+        # rid -> id() of the fn its source ref came from (no strong refs held).
+        self.source_fns: dict[str, int] = {}
         self.events: deque[dict[str, Any]] = deque(maxlen=_MAX_EVENTS_PER_SESSION)
 
 
@@ -143,7 +146,7 @@ class ReactlogRecorder(ReactiveTracer):
         rtype = _react_type(node)
         entry = log.nodes.get(rid)
         if entry is None:
-            log.nodes[rid] = {
+            entry = {
                 "action": "define",
                 "reactId": rid,
                 "label": label,
@@ -152,10 +155,36 @@ class ReactlogRecorder(ReactiveTracer):
                 "time": t,
                 "provenance": "observed",
             }
+            namespace = node._node_namespace
+            if namespace:
+                entry["module"] = namespace
+            log.nodes[rid] = entry
         else:
             # Inputs and outputs are renamed after they are defined.
             entry["label"] = label
             entry["type"] = rtype
+            namespace = node._node_namespace
+            if namespace:
+                entry["module"] = namespace
+            else:
+                entry.pop("module", None)
+        # Set on output effects after they are defined.
+        render_type = node._node_render_type
+        if render_type is not None:
+            entry["render_type"] = render_type
+        # Output effects get their user render function after being defined.
+        fn = node._node_fn
+        if fn is not None and log.source_fns.get(rid) != id(fn):
+            log.source_fns[rid] = id(fn)
+            ref = extract_source_ref(fn)
+            for key, ref_key in (
+                ("source_file", "code.file.path"),
+                ("line", "code.line.number"),
+            ):
+                if ref_key in ref:
+                    entry[key] = ref[ref_key]  # type: ignore[literal-required]
+                else:
+                    entry.pop(key, None)
 
     def _record(
         self,

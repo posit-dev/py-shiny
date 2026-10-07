@@ -72,7 +72,7 @@ from ..reactive import flush as reactive_flush
 from ..reactive import isolate
 from ..reactive._core import lock
 from ..reactive._core import on_flushed as reactive_on_flushed
-from ..reactive._trace import attribute_to_session
+from ..reactive._trace import attribute_to_session, hooks
 from ..render.renderer import Renderer, RendererT
 from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
@@ -2184,6 +2184,7 @@ class Inputs:
             value._name = key
         else:
             value._name = f"input.{key}"
+        self._set_node_module(key, value)
         self._map[self._ns(key)] = value
 
     def __getitem__(self, key: str) -> Value[Any]:
@@ -2207,7 +2208,19 @@ class Inputs:
             # Do not call __setitem__ directly here. The _name would be undone
             self._map[key] = new_value
 
-        return self._map[key]
+        value = self._map[key]
+        if hooks.define_node:  # only reactlog reads it; keep untraced reads cheap
+            self._set_node_module(original_key, value)
+        return value
+
+    def _set_node_module(self, key: str, value: Value[Any]) -> None:
+        """Attribute `value` to the module whose id it is (reactlog grouping), not
+        to whichever session happened to create it."""
+        if key.startswith("."):
+            # Client data is the root session's, whoever reads it first.
+            value._node_module = None
+        elif str(self._ns) and not isinstance(key, ResolvedId):
+            value._node_module = str(self._ns)
 
     def __delitem__(self, key: str) -> None:
         del self._map[self._ns(key)]
@@ -2812,6 +2825,8 @@ class Outputs:
 
             output_obs._trace_kind = "output"
             output_obs._trace_label = output_otel_label
+            output_obs._trace_render_type = type(renderer).__name__
+            output_obs._node_fn = renderer_func
 
             output_obs.on_invalidate(
                 lambda: require_real_session()._send_progress(

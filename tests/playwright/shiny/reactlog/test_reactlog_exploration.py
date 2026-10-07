@@ -1,16 +1,19 @@
 from collections.abc import Generator
+from typing import Any
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Error, Page, expect
 
-from shiny._inspect import format_reactlog_html, generate_reactlog
+from shiny import reactive, render
+from shiny.reactive._reactlog._viewer import format_reactlog_html, load_reactlog_json
+from tests.pytest._reactlog_fixtures import record_export
 
 
 @pytest.fixture(autouse=True)
 def no_report_errors(page: Page) -> Generator[None, None, None]:
-    errors = []
+    errors: list[str] = []
 
-    def on_error(error):
+    def on_error(error: Error) -> None:
         errors.append(str(error))
 
     page.on("pageerror", on_error)
@@ -21,32 +24,75 @@ def no_report_errors(page: Page) -> Generator[None, None, None]:
 
 CODE = """from shiny import reactive, render
 @reactive.calc
-def doubled():
+def doubled() -> int:
     return input.x() * 2
 @render.text
-def result():
+def result() -> str:
     return doubled()
 @render.text
-def other():
+def other() -> str:
     return input.y()
 """
 
 
-def report():
-    data = generate_reactlog(
-        CODE,
-        recorded_actions=[
-            {"type": "input", "name": "x", "value": 2, "timestamp": 1000},
-            {"type": "input", "name": "y", "value": 3, "timestamp": 2000},
-        ],
+def report(steps: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    def server(input: Any, output: Any, session: Any) -> None:
+        @reactive.calc
+        def doubled() -> int:
+            return input.x() * 2
+
+        @output
+        @render.text
+        def result() -> str:
+            return str(doubled())
+
+        @output
+        @render.text
+        def other() -> str:
+            return str(input.y())
+
+    data = load_reactlog_json(
+        record_export(
+            server,
+            steps
+            or [
+                {
+                    "x": 1,
+                    "y": 2,
+                    ".clientdata_output_result_hidden": False,
+                    ".clientdata_output_other_hidden": False,
+                },
+                {"x": 2},
+                {"y": 3},
+            ],
+        )
     )
+    labels = {
+        "input.x": "input:x",
+        "input.y": "input:y",
+        "reactive.calc doubled": "calc:doubled",
+        "output result": "output:result",
+        "output other": "output:other",
+    }
+    data["nodes"] = [n for n in data["nodes"] if n["label"] in labels]
+    ids = {n["id"]: labels[n["label"]] for n in data["nodes"]}
     for node in data["nodes"]:
+        node["id"] = ids[node["id"]]
         if node["id"] in ("calc:doubled", "output:result"):
             node["module"] = "analysis"
+    for edge in data["edges"]:
+        for key in ("from", "to"):
+            edge[key] = ids.get(edge[key], edge[key])
+    for event in data["events"]:
+        for key in ("id", "node_id", "edge_from", "edge_to"):
+            if key in event:
+                event[key] = ids.get(event[key], event[key])
     return data
 
 
-def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page):
+def test_overview_drills_into_module_and_returns_without_losing_scope(
+    page: Page,
+) -> None:
     page.set_content(format_reactlog_html(report(), CODE))
     expect(page.locator("#module-overview-panel")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
@@ -83,7 +129,7 @@ def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page
     expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
 
 
-def test_search_selection_opens_details_and_filters_events(page: Page):
+def test_search_selection_opens_details_and_filters_events(page: Page) -> None:
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#search-input").fill("id:calc:doubled")
     page.locator("#search-results button").click()
@@ -101,7 +147,9 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
     expect(page.locator("#search-input")).to_have_value("")
 
 
-def test_activity_interval_filters_graph_and_preserves_selected_action(page: Page):
+def test_activity_interval_filters_graph_and_preserves_selected_action(
+    page: Page,
+) -> None:
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#overview-activity-section > summary").click()
     page.get_by_label("Activity interval start").select_option("1")
@@ -118,7 +166,9 @@ def test_activity_interval_filters_graph_and_preserves_selected_action(page: Pag
     expect(page.locator("#scrubber-range")).to_have_value(step)
 
 
-def test_phase_stage_and_root_filters_share_scope_and_clear_together(page: Page):
+def test_phase_stage_and_root_filters_share_scope_and_clear_together(
+    page: Page,
+) -> None:
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#module-filter-select").select_option("__root__")
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
@@ -134,8 +184,8 @@ def test_phase_stage_and_root_filters_share_scope_and_clear_together(page: Page)
     expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
 
 
-def test_empty_recording_can_open_overview_and_graph(page: Page):
-    errors = []
+def test_empty_recording_can_open_overview_and_graph(page: Page) -> None:
+    errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
     expect(page.locator("#module-overview-panel")).to_be_visible()
@@ -145,7 +195,7 @@ def test_empty_recording_can_open_overview_and_graph(page: Page):
     assert errors == []
 
 
-def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
+def test_clear_all_restores_entire_graph_from_active_flush(page: Page) -> None:
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#overview-activity-section > summary").click()
     page.locator("#overview-activity button").nth(1).click()
@@ -154,13 +204,19 @@ def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     expect(page.locator(".graph-node")).to_have_count(5)
 
 
-def test_large_overview_prioritizes_modules_and_reveals_activity_on_demand(page: Page):
-    data = generate_reactlog(
-        CODE,
-        recorded_actions=[
-            {"type": "input", "name": "x", "value": i, "timestamp": i * 1000}
-            for i in range(1, 111)
-        ],
+def test_large_overview_prioritizes_modules_and_reveals_activity_on_demand(
+    page: Page,
+) -> None:
+    data = report(
+        [
+            {
+                "x": 0,
+                "y": 2,
+                ".clientdata_output_result_hidden": False,
+                ".clientdata_output_other_hidden": False,
+            },
+            *[{"x": i} for i in range(1, 111)],
+        ]
     )
     for i in range(17):
         data["nodes"].append(
@@ -173,7 +229,7 @@ def test_large_overview_prioritizes_modules_and_reveals_activity_on_demand(page:
             }
         )
     page.set_content(format_reactlog_html(data, CODE))
-    expect(page.locator(".module-card")).to_have_count(18)
+    expect(page.locator(".module-card")).to_have_count(19)
     expect(page.locator(".module-card").first).to_be_visible()
     expect(page.locator("#overview-activity")).to_be_hidden()
     expect(page.locator("#timeline-sidebar")).to_be_hidden()

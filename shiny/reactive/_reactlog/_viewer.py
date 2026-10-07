@@ -1,641 +1,12 @@
 from __future__ import annotations
 
-import ast
-import asyncio
-import concurrent.futures
-import copy
 import html as html_lib
-import inspect
 import io
 import json
 import keyword
 import os
-import shutil
-import sys
-import tempfile
-import time
 import tokenize
-from collections import deque
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, cast
-
-
-def _expand_module_calls(tree: ast.Module) -> tuple[ast.Module, Dict[str, str]]:
-    """Expand same-file modules with literal IDs for static analysis, never execution.
-
-    Each call gets its own namespaced inputs/functions. Reactive parameters and a
-    directly returned reactive are aliases, preserving edges across the boundary.
-    Dynamic IDs cannot be resolved statically. Local imports are combined before expansion.
-    """
-    definitions = {
-        node.name: node
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and any(
-            isinstance(d, ast.Attribute)
-            and isinstance(d.value, ast.Name)
-            and d.value.id == "module"
-            and d.attr in ("ui", "server")
-            for d in node.decorator_list
-        )
-    }
-    members: Dict[str, str] = {}
-    expanded: List[ast.stmt] = []
-    active: Set[str] = set()
-
-    class Expander(ast.NodeTransformer):
-        def __init__(
-            self, namespace: str = "", aliases: Optional[Dict[str, ast.expr]] = None
-        ):
-            self.namespace = namespace
-            self.aliases = dict(aliases or {})
-
-        def qualify(self, name: str) -> str:
-            qualified = f"{self.namespace}-{name}" if self.namespace else name
-            if self.namespace:
-                members[qualified] = self.namespace
-            return qualified
-
-        def visit_Name(self, node: ast.Name) -> ast.expr:
-            return copy.deepcopy(self.aliases.get(node.id, node))
-
-        def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-            if isinstance(node.value, ast.Name) and node.value.id == "input":
-                node.attr = self.qualify(node.attr)
-                return node
-            return self.generic_visit(node)
-
-        def visit_FunctionDef(
-            self, node: ast.FunctionDef | ast.AsyncFunctionDef
-        ) -> Any:
-            if node.name in definitions:
-                return None
-            child = Expander(self.namespace, self.aliases)
-            # Register all reactive functions before visiting their bodies (forward references).
-            for stmt in node.body:
-                if (
-                    isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    and stmt.decorator_list
-                ):
-                    child.aliases[stmt.name] = ast.Name(
-                        id=self.qualify(stmt.name), ctx=ast.Load()
-                    )
-            alias = self.aliases.get(node.name)
-            if isinstance(alias, ast.Name):
-                node.name = alias.id
-            node.decorator_list = [
-                cast(ast.expr, self.visit(d)) for d in node.decorator_list
-            ]
-            node.body = [
-                result
-                for stmt in node.body
-                if (result := child.visit(stmt)) is not None
-            ]
-            return node
-
-        visit_AsyncFunctionDef = visit_FunctionDef
-
-        def visit_Assign(self, node: ast.Assign) -> ast.AST:
-            is_module = (
-                isinstance(node.value, ast.Call)
-                and isinstance(node.value.func, ast.Name)
-                and node.value.func.id in definitions
-            )
-            node.value = cast(ast.expr, self.visit(node.value))
-            if is_module and isinstance(node.value, ast.Name):
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        self.aliases[target.id] = node.value
-            return node
-
-        def visit_Call(self, node: ast.Call) -> ast.AST:
-            name = node.func.id if isinstance(node.func, ast.Name) else ""
-            if name in definitions:
-                definition = definitions[name]
-                if (
-                    not node.args
-                    or not isinstance(node.args[0], ast.Constant)
-                    or not isinstance(node.args[0].value, str)
-                    or name in active
-                ):
-                    return ast.Constant(value=None)
-                namespace = self.qualify(node.args[0].value)
-                params = definition.args.args
-                is_server = any(
-                    isinstance(d, ast.Attribute) and d.attr == "server"
-                    for d in definition.decorator_list
-                )
-                params = params[3:] if is_server else params
-                aliases = {
-                    param.arg: cast(ast.expr, self.visit(copy.deepcopy(arg)))
-                    for param, arg in zip(params, node.args[1:])
-                }
-                aliases.update(
-                    {
-                        kw.arg: cast(ast.expr, self.visit(copy.deepcopy(kw.value)))
-                        for kw in node.keywords
-                        if kw.arg
-                    }
-                )
-                child = Expander(namespace, aliases)
-                for stmt in definition.body:
-                    if (
-                        isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef))
-                        and stmt.decorator_list
-                    ):
-                        child.aliases[stmt.name] = ast.Name(
-                            id=child.qualify(stmt.name), ctx=ast.Load()
-                        )
-                active.add(name)
-                result: ast.expr = ast.Constant(value=None)
-                for stmt in copy.deepcopy(definition.body):
-                    if isinstance(stmt, ast.Return):
-                        if is_server and stmt.value is not None:
-                            result = cast(ast.expr, child.visit(stmt.value))
-                        elif stmt.value is not None:
-                            expanded.append(
-                                ast.Expr(value=cast(ast.expr, child.visit(stmt.value)))
-                            )
-                    else:
-                        visited = child.visit(stmt)
-                        if visited is not None:
-                            expanded.append(visited)
-                active.remove(name)
-                return ast.copy_location(result, node)
-            if (
-                isinstance(node.func, ast.Attribute)
-                and isinstance(node.func.value, ast.Name)
-                and node.func.value.id == "ui"
-                and node.func.attr.startswith(("input_", "output_"))
-                and node.args
-                and isinstance(node.args[0], ast.Constant)
-                and isinstance(node.args[0].value, str)
-            ):
-                node.args[0].value = self.qualify(node.args[0].value)
-            return self.generic_visit(node)
-
-    transformed = cast(ast.Module, Expander().visit(copy.deepcopy(tree)))
-    transformed.body.extend(expanded)
-    return transformed, members
-
-
-class GraphVisitor(ast.NodeVisitor):
-    def __init__(self) -> None:
-        self.inputs: Dict[str, int] = {}
-        self.input_defaults: Dict[str, Any] = {}
-        self.input_files: Dict[str, str] = {}
-        self.calcs: Dict[str, Dict[str, Any]] = {}
-        self.outputs: Dict[str, Dict[str, Any]] = {}
-        self.effects: Dict[str, Dict[str, Any]] = {}
-        self.current_calc: Optional[str] = None
-        self.current_output: Optional[str] = None
-        self.current_effect: Optional[str] = None
-        self.isolated_depth: int = 0
-        self.event_depth: int = 0
-
-    def visit_With(self, node: ast.With) -> None:
-        is_isolate_block = False
-        for item in node.items:
-            ctx = item.context_expr
-            if isinstance(ctx, ast.Call):
-                func_name = self._get_decorator_name(ctx.func)
-                if func_name in ("reactive.isolate", "isolate") or func_name.endswith(
-                    ".isolate"
-                ):
-                    is_isolate_block = True
-            elif isinstance(ctx, (ast.Attribute, ast.Name)):
-                func_name = self._get_decorator_name(ctx)
-                if func_name in ("reactive.isolate", "isolate") or func_name.endswith(
-                    ".isolate"
-                ):
-                    is_isolate_block = True
-
-        if is_isolate_block:
-            self.isolated_depth += 1
-        self.generic_visit(node)
-        if is_isolate_block:
-            self.isolated_depth -= 1
-
-    def visit_Call(self, node: ast.Call) -> None:
-        func_name = self._get_decorator_name(node.func)
-
-        if (
-            func_name.startswith("ui.input_")
-            and node.args
-            and isinstance(node.args[0], ast.Constant)
-            and isinstance(node.args[0].value, str)
-        ):
-            input_id = node.args[0].value
-            if input_id not in self.inputs:
-                self.inputs[input_id] = node.lineno
-                self.input_files[input_id] = getattr(node, "source_file", "")
-            is_password_input = func_name == "ui.input_password" or any(
-                s in input_id.lower()
-                for s in ("password", "secret", "token", "api_key", "apikey")
-            )
-            if is_password_input:
-                self.input_defaults[input_id] = "[REDACTED]"
-            else:
-                default_val = None
-                for kw in node.keywords:
-                    if kw.arg == "value" and isinstance(kw.value, ast.Constant):
-                        default_val = kw.value.value
-                if default_val is None:
-                    if (
-                        func_name
-                        in (
-                            "ui.input_numeric",
-                            "ui.input_text",
-                            "ui.input_text_area",
-                        )
-                        and len(node.args) >= 3
-                        and isinstance(node.args[2], ast.Constant)
-                    ):
-                        default_val = node.args[2].value
-                    elif (
-                        func_name == "ui.input_slider"
-                        and len(node.args) >= 5
-                        and isinstance(node.args[4], ast.Constant)
-                    ):
-                        default_val = node.args[4].value
-                if default_val is not None:
-                    self.input_defaults[input_id] = default_val
-
-        is_isolate_call = func_name in (
-            "reactive.isolate",
-            "isolate",
-        ) or func_name.endswith(".isolate")
-        if is_isolate_call:
-            self.isolated_depth += 1
-            for arg in node.args:
-                self.visit(arg)
-            for kw in node.keywords:
-                self.visit(kw.value)
-            self.isolated_depth -= 1
-            return
-
-        # Event handlers isolate body reads; keep those relationships visible
-        # without treating them as invalidation triggers.
-        isolated = self.isolated_depth > 0 or self.event_depth > 0
-        dep_key = "isolated_deps" if isolated else "deps"
-        calc_key = "isolated_calc_deps" if isolated else "calc_deps"
-
-        if (
-            isinstance(node.func, ast.Attribute)
-            and isinstance(node.func.value, ast.Name)
-            and node.func.value.id == "input"
-        ):
-            target_input = node.func.attr
-            self.input_files.setdefault(target_input, getattr(node, "source_file", ""))
-            if self.current_output and self.current_output in self.outputs:
-                self.outputs[self.current_output][dep_key].add(target_input)
-            elif self.current_effect and self.current_effect in self.effects:
-                self.effects[self.current_effect][dep_key].add(target_input)
-            elif self.current_calc and self.current_calc in self.calcs:
-                self.calcs[self.current_calc][dep_key].add(target_input)
-
-        if isinstance(node.func, ast.Name):
-            called_name = node.func.id
-            if self.current_output and self.current_output in self.outputs:
-                self.outputs[self.current_output][calc_key].add(called_name)
-            elif self.current_effect and self.current_effect in self.effects:
-                self.effects[self.current_effect][calc_key].add(called_name)
-            elif self.current_calc and self.current_calc in self.calcs:
-                self.calcs[self.current_calc][calc_key].add(called_name)
-
-        self.generic_visit(node)
-
-    def _get_decorator_name(self, d: ast.AST) -> str:
-        if isinstance(d, ast.Call):
-            d = d.func
-        parts: List[str] = []
-        while isinstance(d, ast.Attribute):
-            parts.append(d.attr)
-            d = d.value
-        if isinstance(d, ast.Name):
-            parts.append(d.id)
-            return ".".join(reversed(parts)).removeprefix("shiny.")
-        return ""
-
-    def _extract_event_triggers(self, d: ast.AST) -> tuple[Set[str], Set[str]]:
-        input_deps: Set[str] = set()
-        calc_deps: Set[str] = set()
-
-        if not isinstance(d, ast.Call):
-            return input_deps, calc_deps
-
-        def _process_expr(expr: ast.AST) -> None:
-            if (
-                isinstance(expr, ast.Attribute)
-                and isinstance(expr.value, ast.Name)
-                and expr.value.id == "input"
-            ):
-                input_deps.add(expr.attr)
-            elif isinstance(expr, ast.Call):
-                if (
-                    isinstance(expr.func, ast.Attribute)
-                    and isinstance(expr.func.value, ast.Name)
-                    and expr.func.value.id == "input"
-                ):
-                    input_deps.add(expr.func.attr)
-                elif isinstance(expr.func, ast.Name):
-                    calc_deps.add(expr.func.id)
-            elif isinstance(expr, ast.Name):
-                calc_deps.add(expr.id)
-            elif isinstance(expr, (ast.Tuple, ast.List)):
-                for elt in expr.elts:
-                    _process_expr(elt)
-
-        for arg in d.args:
-            _process_expr(arg)
-
-        return input_deps, calc_deps
-
-    def _handle_func_def(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-        decorators: List[str] = [
-            name for d in node.decorator_list if (name := self._get_decorator_name(d))
-        ]
-
-        has_event_decorator = False
-        event_input_deps: Set[str] = set()
-        event_calc_deps: Set[str] = set()
-
-        for d in node.decorator_list:
-            d_name = self._get_decorator_name(d)
-            if d_name in ("event", "reactive.event"):
-                has_event_decorator = True
-                inp_d, c_d = self._extract_event_triggers(d)
-                event_input_deps.update(inp_d)
-                event_calc_deps.update(c_d)
-
-        is_effect = any(
-            d in ("effect", "Effect", "reactive.effect", "reactive.Effect")
-            for d in decorators
-        )
-        is_render = any(
-            d.startswith("render.") or d.startswith("render_") for d in decorators
-        )
-        is_calc = (
-            any(
-                d in ("calc", "Calc", "reactive.calc", "reactive.Calc")
-                for d in decorators
-            )
-            and not is_effect
-            and not is_render
-        )
-
-        prev_out = self.current_output
-        prev_effect = self.current_effect
-        prev_calc = self.current_calc
-
-        if is_render:
-            self.current_output = node.name
-            self.outputs[node.name] = {
-                "render_type": next(
-                    (d.split(".")[-1] for d in decorators if d.startswith("render.")),
-                    "output",
-                ),
-                "line": node.lineno,
-                "source_file": getattr(node, "source_file", ""),
-                "deps": set(event_input_deps),
-                "calc_deps": set(event_calc_deps),
-                "isolated_deps": set(),
-                "isolated_calc_deps": set(),
-                "is_async": isinstance(node, ast.AsyncFunctionDef),
-            }
-        elif is_effect:
-            self.current_effect = node.name
-            self.effects[node.name] = {
-                "line": node.lineno,
-                "source_file": getattr(node, "source_file", ""),
-                "deps": set(event_input_deps),
-                "calc_deps": set(event_calc_deps),
-                "isolated_deps": set(),
-                "isolated_calc_deps": set(),
-                "is_async": isinstance(node, ast.AsyncFunctionDef),
-            }
-        elif is_calc:
-            self.current_calc = node.name
-            self.calcs[node.name] = {
-                "line": node.lineno,
-                "source_file": getattr(node, "source_file", ""),
-                "deps": set(event_input_deps),
-                "calc_deps": set(event_calc_deps),
-                "isolated_deps": set(),
-                "isolated_calc_deps": set(),
-                "is_async": isinstance(node, ast.AsyncFunctionDef),
-            }
-
-        if has_event_decorator:
-            self.event_depth += 1
-
-        for stmt in node.body:
-            self.visit(stmt)
-
-        if has_event_decorator:
-            self.event_depth -= 1
-
-        self.current_output = prev_out
-        self.current_effect = prev_effect
-        self.current_calc = prev_calc
-
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        self._handle_func_def(node)
-
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        self._handle_func_def(node)
-
-
-def inspect_reactive_graph(
-    code: str, source_path: str | Path | None = None
-) -> Dict[str, Any]:
-    sources: Dict[str, str] = {}
-    entry_file = ""
-    try:
-        if source_path is not None:
-            from ._inspect_sources import read_app_sources
-
-            tree, sources, entry_file = read_app_sources(code, source_path)
-        else:
-            tree = ast.parse(code)
-    except SyntaxError as e:
-        return {
-            "success": False,
-            "error": f"SyntaxError: {e.msg} ({e.filename}:{e.lineno})",
-            "nodes": [],
-            "edges": [],
-            "summary": "Syntax error in source code",
-        }
-
-    tree, module_members = _expand_module_calls(tree)
-    visitor = GraphVisitor()
-    visitor.visit(tree)
-
-    known_calcs = set(visitor.calcs.keys())
-
-    referenced_inputs: Set[str] = set()
-    for meta in visitor.outputs.values():
-        referenced_inputs.update(meta["deps"])
-        referenced_inputs.update(meta.get("isolated_deps", set()))
-    for meta in visitor.effects.values():
-        referenced_inputs.update(meta["deps"])
-        referenced_inputs.update(meta.get("isolated_deps", set()))
-    for meta in visitor.calcs.values():
-        referenced_inputs.update(meta["deps"])
-        referenced_inputs.update(meta.get("isolated_deps", set()))
-
-    all_inputs = set(visitor.inputs.keys()) | referenced_inputs
-
-    nodes: List[Dict[str, Any]] = []
-    for inp in sorted(all_inputs):
-        is_declared = inp in visitor.inputs
-        line = visitor.inputs.get(inp)
-        default_val = visitor.input_defaults.get(inp)
-        nodes.append(
-            {
-                "id": f"input:{inp}",
-                "name": inp,
-                "type": "input",
-                "role": "source",
-                "label": f"input.{inp}",
-                "line": line,
-                "value": default_val,
-                "declaration": "declared" if is_declared else "unresolved",
-                "source_file": visitor.input_files.get(inp, ""),
-            }
-        )
-    for c, meta in sorted(visitor.calcs.items()):
-        nodes.append(
-            {
-                "id": f"calc:{c}",
-                "name": c,
-                "type": "calc",
-                "role": "conductor",
-                "label": f"calc:{c}",
-                "line": meta["line"],
-                "source_file": meta.get("source_file", ""),
-            }
-        )
-    for eff, meta in sorted(visitor.effects.items()):
-        nodes.append(
-            {
-                "id": f"effect:{eff}",
-                "name": eff,
-                "type": "effect",
-                "role": "observer",
-                "label": f"effect:{eff}",
-                "line": meta["line"],
-                "source_file": meta.get("source_file", ""),
-            }
-        )
-    for out, meta in sorted(visitor.outputs.items()):
-        nodes.append(
-            {
-                "id": f"output:{out}",
-                "name": out,
-                "type": "output",
-                "role": "observer",
-                "label": f"output:{out}",
-                "render_type": meta["render_type"],
-                "line": meta["line"],
-                "source_file": meta.get("source_file", ""),
-            }
-        )
-
-    edges: List[Dict[str, Any]] = []
-    for out_name, meta in visitor.outputs.items():
-        for dep in sorted(meta["deps"]):
-            edges.append({"from": f"input:{dep}", "to": f"output:{out_name}"})
-        for cdep in sorted(meta["calc_deps"]):
-            if cdep in known_calcs:
-                edges.append({"from": f"calc:{cdep}", "to": f"output:{out_name}"})
-        for dep in sorted(meta.get("isolated_deps", set())):
-            if dep not in meta["deps"]:
-                edges.append(
-                    {
-                        "from": f"input:{dep}",
-                        "to": f"output:{out_name}",
-                        "isolated": True,
-                    }
-                )
-        for cdep in sorted(meta.get("isolated_calc_deps", set())):
-            if cdep in known_calcs and cdep not in meta["calc_deps"]:
-                edges.append(
-                    {
-                        "from": f"calc:{cdep}",
-                        "to": f"output:{out_name}",
-                        "isolated": True,
-                    }
-                )
-
-    for eff_name, meta in visitor.effects.items():
-        for dep in sorted(meta["deps"]):
-            edges.append({"from": f"input:{dep}", "to": f"effect:{eff_name}"})
-        for cdep in sorted(meta["calc_deps"]):
-            if cdep in known_calcs:
-                edges.append({"from": f"calc:{cdep}", "to": f"effect:{eff_name}"})
-        for dep in sorted(meta.get("isolated_deps", set())):
-            if dep not in meta["deps"]:
-                edges.append(
-                    {
-                        "from": f"input:{dep}",
-                        "to": f"effect:{eff_name}",
-                        "isolated": True,
-                    }
-                )
-        for cdep in sorted(meta.get("isolated_calc_deps", set())):
-            if cdep in known_calcs and cdep not in meta["calc_deps"]:
-                edges.append(
-                    {
-                        "from": f"calc:{cdep}",
-                        "to": f"effect:{eff_name}",
-                        "isolated": True,
-                    }
-                )
-
-    for calc_name, meta in visitor.calcs.items():
-        for dep in sorted(meta["deps"]):
-            edges.append({"from": f"input:{dep}", "to": f"calc:{calc_name}"})
-        for cdep in sorted(meta["calc_deps"]):
-            if cdep in known_calcs and cdep != calc_name:
-                edges.append({"from": f"calc:{cdep}", "to": f"calc:{calc_name}"})
-        for dep in sorted(meta.get("isolated_deps", set())):
-            if dep not in meta["deps"]:
-                edges.append(
-                    {
-                        "from": f"input:{dep}",
-                        "to": f"calc:{calc_name}",
-                        "isolated": True,
-                    }
-                )
-        for cdep in sorted(meta.get("isolated_calc_deps", set())):
-            if (
-                cdep in known_calcs
-                and cdep != calc_name
-                and cdep not in meta["calc_deps"]
-            ):
-                edges.append(
-                    {
-                        "from": f"calc:{cdep}",
-                        "to": f"calc:{calc_name}",
-                        "isolated": True,
-                    }
-                )
-
-    for node in nodes:
-        if node["name"] in module_members:
-            node["module"] = module_members[node["name"]]
-
-    total_observers = len(visitor.outputs) + len(visitor.effects)
-    return {
-        "success": True,
-        "nodes": nodes,
-        "edges": edges,
-        "input_defaults": visitor.input_defaults,
-        "sources": sources,
-        "entry_file": entry_file,
-        "summary": f"{len(all_inputs)} inputs (sources), {len(visitor.calcs)} reactives (conductors), {total_observers} outputs & effects (observers)",
-    }
+from typing import Any, Dict, List, Optional, cast
 
 
 def _is_plot_data_url(src: Any) -> bool:
@@ -794,759 +165,8 @@ def _mark_wave(*, label: str, time_sec: float, step: int, index: int) -> Dict[st
     }
 
 
-def generate_reactlog(
-    code: str,
-    inputs: Optional[Dict[str, Any]] = None,
-    recorded_actions: Optional[List[Dict[str, Any]]] = None,
-    video_path: Optional[str] = None,
-    session: str = "default",
-    source_path: str | Path | None = None,
-    marks: Optional[List[Dict[str, Any]]] = None,
-) -> Dict[str, Any]:
-    user_marks: List[Dict[str, Any]] = list(marks) if marks is not None else []
-
-    graph = inspect_reactive_graph(code, source_path=source_path)
-    if not graph.get("success"):
-        return graph
-
-    nodes = graph.get("nodes", [])
-    edges = graph.get("edges", [])
-    events: List[Dict[str, Any]] = []
-    step = 0
-
-    adj_downstream: Dict[str, List[str]] = {}
-    adj_upstream: Dict[str, List[str]] = {}
-    for edge in edges:
-        # Isolated reads are visible relationships, not invalidation triggers.
-        if edge.get("isolated"):
-            continue
-        f, t = edge["from"], edge["to"]
-        adj_downstream.setdefault(f, []).append(t)
-        adj_upstream.setdefault(t, []).append(f)
-
-    nodes_by_id = {n["id"]: n for n in nodes}
-
-    events.append(
-        _make_event(
-            step=step,
-            event="analysisInit",
-            phase="init",
-            provenance="inferred",
-            node_id=None,
-            node_label="session",
-            node_type="session",
-            status="active",
-            timestamp=0,
-            time_sec=0.0,
-            details=(
-                "Initialized reactive session with recorded Playwright interactions"
-                if recorded_actions
-                else "Started static AST dependency analysis; app code was not executed"
-            ),
-            session=session,
-        )
-    )
-    step += 1
-
-    for node in nodes:
-        initial_val = (inputs or {}).get(node.get("name", ""))
-        if initial_val is None:
-            initial_val = node.get("value")
-        events.append(
-            _make_event(
-                step=step,
-                event="define",
-                phase="init",
-                provenance="inferred",
-                node_id=node["id"],
-                node_label=node["label"],
-                node_type=node["role"],
-                status="discovered",
-                timestamp=0,
-                time_sec=0.0,
-                value=str(initial_val) if initial_val is not None else None,
-                details=f"Discovered {node['role']} node '{node['label']}' at line {node.get('line', '?')}",
-                session=session,
-            )
-        )
-        step += 1
-
-    def compute_evaluation_order(invalidated: Set[str]) -> List[Dict[str, Any]]:
-        conductor_ids = {
-            n["id"]
-            for n in nodes
-            if n["role"] == "conductor" and n["id"] in invalidated
-        }
-        conductor_in_degree: Dict[str, int] = {cid: 0 for cid in conductor_ids}
-        for cid in conductor_ids:
-            for up in adj_upstream.get(cid, []):
-                if up in conductor_ids:
-                    conductor_in_degree[cid] += 1
-
-        queue = deque(
-            [cid for cid, deg in sorted(conductor_in_degree.items()) if deg == 0]
-        )
-        sorted_conductors: List[str] = []
-        while queue:
-            curr = queue.popleft()
-            sorted_conductors.append(curr)
-            for down in adj_downstream.get(curr, []):
-                if down in conductor_in_degree:
-                    conductor_in_degree[down] -= 1
-                    if conductor_in_degree[down] == 0:
-                        queue.append(down)
-
-        for cid in sorted(conductor_ids):
-            if cid not in sorted_conductors:
-                sorted_conductors.append(cid)
-
-        observer_nodes = [
-            n for n in nodes if n["role"] == "observer" and n["id"] in invalidated
-        ]
-
-        return [
-            nodes_by_id[cid] for cid in sorted_conductors if cid in nodes_by_id
-        ] + observer_nodes
-
-    def cascade_record_invalidate(
-        nid: str, cur_step: int, invalidated: Set[str], ts_ms: int, ts_s: float
-    ) -> int:
-        nid_lbl = nodes_by_id.get(nid, {}).get("label", nid)
-        for down in adj_downstream.get(nid, []):
-            if down not in invalidated:
-                invalidated.add(down)
-                node_obj = nodes_by_id.get(down, {})
-                down_lbl = node_obj.get("label", down)
-                events.append(
-                    _make_event(
-                        step=cur_step,
-                        event="propagate",
-                        phase="interaction",
-                        provenance="inferred",
-                        node_id=down,
-                        node_label=down_lbl,
-                        node_type=node_obj.get("role", "conductor"),
-                        status="affected",
-                        timestamp=ts_ms,
-                        time_sec=ts_s,
-                        edge_from=nid,
-                        edge_to=down,
-                        details=f"Inferred invalidation of '{down_lbl}' by '{nid_lbl}'",
-                        session=session,
-                    )
-                )
-                cur_step += 1
-                cur_step = cascade_record_invalidate(
-                    down, cur_step, invalidated, ts_ms, ts_s
-                )
-        return cur_step
-
-    unmatched_inputs: List[str] = []
-    action_waves: List[Dict[str, Any]] = [
-        {
-            "action_id": "burst-init",
-            "index": 0,
-            "is_init": True,
-            "start_time": 0.0,
-            "end_time": 0.0,
-            "start_step": 0,
-            "end_step": step - 1,
-            "trigger": "Init",
-            "trigger_label": "Init",
-            "short_label": "Init",
-            "human_action": "Init",
-            "trigger_node_id": "",
-            "trigger_value": None,
-            "invalidated_nodes": [],
-            "inferred_executions": [n["id"] for n in nodes if n["role"] != "source"],
-            "observed_executions": [],
-            "observed_outputs": [],
-        }
-    ]
-
-    epoch_marks = [
-        float(m.get("time") or 0.0)
-        for m in user_marks
-        if float(m.get("time") or 0.0) > 1_000_000_000
-    ]
-    if epoch_marks:
-        min_epoch = min(epoch_marks)
-        for m in user_marks:
-            t = float(m.get("time") or 0.0)
-            if t > 1_000_000_000:
-                rel_t = round(max(0.0, t - min_epoch), 2)
-                m["time"] = rel_t
-                m["timestamp"] = int(rel_t * 1000)
-
-    def append_single_mark(m: Dict[str, Any], cur_step: int) -> int:
-        mark_label = str(m.get("label", "Bookmark"))
-        mark_time = float(m.get("time") or 0.0)
-        mark_ms = int(m.get("timestamp") or (mark_time * 1000))
-        events.append(
-            _mark_event(
-                step=cur_step,
-                label=mark_label,
-                timestamp=mark_ms,
-                time_sec=mark_time,
-                session=session,
-            )
-        )
-        action_waves.append(
-            _mark_wave(
-                label=mark_label,
-                time_sec=mark_time,
-                step=cur_step,
-                index=len(action_waves),
-            )
-        )
-        return cur_step + 1
-
-    def append_user_marks(cur_step: int) -> int:
-        for m in user_marks:
-            cur_step = append_single_mark(m, cur_step)
-        return cur_step
-
-    if recorded_actions:
-        deduped_actions: List[Dict[str, Any]] = []
-        last_input_action: Dict[str, tuple[Any, int]] = {}
-        for act in recorded_actions:
-            atype = act.get("type")
-            aname = act.get("name")
-            aval = act.get("value")
-            ats = int(act.get("timestamp") or 0)
-            if atype == "input" and aname:
-                last_val, last_time = last_input_action.get(aname, (None, -999999))
-                if str(last_val) == str(aval) and (ats - last_time) < 250:
-                    continue
-                last_input_action[aname] = (aval, ats)
-            deduped_actions.append(act)
-
-        last_known_vals: Dict[str, Any] = {
-            n.get("name", n["id"]): n.get("value") for n in nodes
-        }
-
-        def _mark_time(m: Dict[str, Any]) -> float:
-            return float(m.get("time") or 0.0)
-
-        sorted_user_marks = sorted(user_marks, key=_mark_time)
-        mark_idx = 0
-        last_ts = 0
-        for action in deduped_actions:
-            ts = action.get("timestamp")
-            if ts is not None:
-                last_ts = int(ts)
-            ts_ms = last_ts
-            ts_sec = round(ts_ms / 1000.0, 2)
-
-            while (
-                mark_idx < len(sorted_user_marks)
-                and float(sorted_user_marks[mark_idx].get("time") or 0.0) <= ts_sec
-            ):
-                step = append_single_mark(sorted_user_marks[mark_idx], step)
-                mark_idx += 1
-
-            action_start_step = step
-            action_type = action.get("type", "action")
-            raw_name = str(action.get("name") or action.get("target") or "unknown")
-            action_val = action.get("value")
-
-            if action_type == "input":
-                node_id = (
-                    f"input:{raw_name}"
-                    if f"input:{raw_name}" in nodes_by_id
-                    else (raw_name if raw_name in nodes_by_id else None)
-                )
-                if node_id and node_id in nodes_by_id:
-                    node_obj = nodes_by_id[node_id]
-                    events.append(
-                        _make_event(
-                            step=step,
-                            event="inputChange",
-                            phase="interaction",
-                            provenance="observed",
-                            node_id=node_id,
-                            node_label=node_obj["label"],
-                            node_type="source",
-                            status="assumed",
-                            timestamp=ts_ms,
-                            time_sec=ts_sec,
-                            value=str(action_val),
-                            details=f"Observed browser input change: {node_obj['label']} = {action_val!r}",
-                            session=session,
-                        )
-                    )
-                    step += 1
-
-                    invalidated_nodes: Set[str] = set()
-                    step = cascade_record_invalidate(
-                        node_id, step, invalidated_nodes, ts_ms, ts_sec
-                    )
-
-                    eval_order = compute_evaluation_order(invalidated_nodes)
-                    for target in eval_order:
-                        tid = target["id"]
-                        tlabel = target["label"]
-                        trole = target["role"]
-
-                        events.append(
-                            _make_event(
-                                step=step,
-                                event="wouldEvaluate",
-                                phase="interaction",
-                                provenance="inferred",
-                                node_id=tid,
-                                node_label=tlabel,
-                                node_type=trole,
-                                status="scheduled",
-                                timestamp=ts_ms,
-                                time_sec=ts_sec,
-                                details=f"Inferred evaluation: '{tlabel}' (static topological order)",
-                                session=session,
-                            )
-                        )
-                        step += 1
-
-                        for dep in adj_upstream.get(tid, []):
-                            dep_lbl = nodes_by_id.get(dep, {}).get("label", dep)
-                            events.append(
-                                _make_event(
-                                    step=step,
-                                    event="dependsOn",
-                                    phase="interaction",
-                                    provenance="inferred",
-                                    node_id=tid,
-                                    node_label=tlabel,
-                                    node_type=trole,
-                                    status="scheduled",
-                                    timestamp=ts_ms,
-                                    time_sec=ts_sec,
-                                    edge_from=dep,
-                                    edge_to=tid,
-                                    details=f"Inferred dependency: '{dep_lbl}' used by '{tlabel}'",
-                                    session=session,
-                                )
-                            )
-                            step += 1
-
-                        events.append(
-                            _make_event(
-                                step=step,
-                                event="ordered",
-                                phase="interaction",
-                                provenance="inferred",
-                                node_id=tid,
-                                node_label=tlabel,
-                                node_type=trole,
-                                status="scheduled",
-                                timestamp=ts_ms,
-                                time_sec=ts_sec,
-                                details=f"Inferred completed state for '{tlabel}'",
-                                session=session,
-                            )
-                        )
-                        step += 1
-
-                    prev_v = last_known_vals.get(raw_name)
-                    if (
-                        prev_v is not None
-                        and action_val is not None
-                        and str(prev_v) != str(action_val)
-                    ):
-                        human_trigger = f"{raw_name}: {prev_v} → {action_val}"
-                    elif action_val is not None:
-                        human_trigger = f"{raw_name}: {action_val}"
-                    else:
-                        human_trigger = f"{raw_name} changed"
-                    if action_val is not None:
-                        last_known_vals[raw_name] = action_val
-
-                    action_waves.append(
-                        {
-                            "action_id": f"burst-{len(action_waves)}",
-                            "index": len(action_waves),
-                            "is_init": False,
-                            "start_time": ts_sec,
-                            "end_time": ts_sec,
-                            "start_step": action_start_step,
-                            "end_step": step - 1,
-                            "trigger": human_trigger,
-                            "trigger_label": raw_name,
-                            "short_label": raw_name,
-                            "human_action": human_trigger,
-                            "trigger_node_id": node_id,
-                            "trigger_value": (
-                                str(action_val) if action_val is not None else None
-                            ),
-                            "invalidated_nodes": sorted(list(invalidated_nodes)),
-                            "inferred_executions": [t["id"] for t in eval_order],
-                            "observed_executions": [node_id],
-                            "observed_outputs": [
-                                t["id"] for t in eval_order if t["role"] == "observer"
-                            ],
-                        }
-                    )
-                else:
-                    unmatched_inputs.append(raw_name)
-                    events.append(
-                        _make_event(
-                            step=step,
-                            event="inputChange",
-                            phase="interaction",
-                            provenance="observed",
-                            node_id=None,
-                            node_label=f"input.{raw_name}",
-                            node_type="source",
-                            status="assumed",
-                            timestamp=ts_ms,
-                            time_sec=ts_sec,
-                            value=str(action_val),
-                            details=f"Observed browser input change (unmatched node): input.{raw_name} = {action_val!r}",
-                            session=session,
-                        )
-                    )
-                    step += 1
-
-            elif action_type == "output":
-                out_id = (
-                    f"output:{raw_name}"
-                    if f"output:{raw_name}" in nodes_by_id
-                    else (raw_name if raw_name in nodes_by_id else None)
-                )
-                node_lbl = (
-                    nodes_by_id[out_id]["label"]
-                    if out_id and out_id in nodes_by_id
-                    else f"output:{raw_name}"
-                )
-                events.append(
-                    _make_event(
-                        step=step,
-                        event="outputUpdated",
-                        phase="interaction",
-                        provenance="observed",
-                        node_id=out_id,
-                        node_label=node_lbl,
-                        node_type="observer",
-                        status="scheduled",
-                        timestamp=ts_ms,
-                        time_sec=ts_sec,
-                        details=f"Observed browser output render: {node_lbl}",
-                        session=session,
-                    )
-                )
-                preview = action.get("plot")
-                if isinstance(preview, dict):
-                    plot_dict = cast(Dict[str, Any], preview)
-                    plot_src = plot_dict.get("src")
-                    if _is_plot_data_url(plot_src):
-                        plot_alt = plot_dict.get("alt")
-                        events[-1]["plot"] = {
-                            "src": str(plot_src),
-                            "alt": str(plot_alt) if plot_alt else node_lbl,
-                        }
-                step += 1
-
-            elif action_type == "click":
-                events.append(
-                    _make_event(
-                        step=step,
-                        event="userClick",
-                        phase="interaction",
-                        provenance="observed",
-                        node_id=None,
-                        node_label=raw_name,
-                        node_type="user",
-                        status="active",
-                        timestamp=ts_ms,
-                        time_sec=ts_sec,
-                        details=f"Observed user click: {action.get('text', raw_name)}",
-                        session=session,
-                    )
-                )
-                step += 1
-
-                action_waves.append(
-                    {
-                        "action_id": f"burst-{len(action_waves)}",
-                        "index": len(action_waves),
-                        "is_init": False,
-                        "start_time": ts_sec,
-                        "end_time": ts_sec,
-                        "start_step": action_start_step,
-                        "end_step": step - 1,
-                        "trigger": f"Click: {action.get('text', raw_name)}",
-                        "trigger_label": f"Click: {action.get('text', raw_name)}",
-                        "short_label": f"Click: {action.get('text', raw_name)[:12]}",
-                        "human_action": f"Click: {action.get('text', raw_name)}",
-                        "trigger_node_id": "",
-                        "trigger_value": None,
-                        "invalidated_nodes": [],
-                        "inferred_executions": [],
-                        "observed_executions": [],
-                        "observed_outputs": [],
-                    }
-                )
-
-        while mark_idx < len(sorted_user_marks):
-            step = append_single_mark(sorted_user_marks[mark_idx], step)
-            mark_idx += 1
-
-        events.append(
-            _make_event(
-                step=step,
-                event="recordingComplete",
-                phase="interaction",
-                provenance="inferred",
-                node_id=None,
-                node_label="session",
-                node_type="engine",
-                status="idle",
-                timestamp=last_ts,
-                time_sec=round(last_ts / 1000.0, 2),
-                details="Playwright recording complete",
-                session=session,
-            )
-        )
-        step += 1
-
-        obs_count = len([e for e in events if e.get("provenance") == "observed"])
-        inf_count = len([e for e in events if e.get("provenance") == "inferred"])
-        events[-1][
-            "details"
-        ] = f"Playwright recording finished: {obs_count} observed browser event(s), {inf_count} inferred dependency step(s)"
-
-        init_count = len([e for e in events if e.get("phase") == "init"])
-        interact_count = len([e for e in events if e.get("phase") == "interaction"])
-        first_interact = next(
-            (i for i, e in enumerate(events) if e.get("phase") == "interaction"), 0
-        )
-
-        return {
-            "success": True,
-            "version": "1.0",
-            "session": session,
-            "trace_kind": "inferred_simulation_with_recorded_browser_events",
-            "nodes": nodes,
-            "sources": graph.get("sources", {}),
-            "entry_file": graph.get("entry_file", ""),
-            "edges": edges,
-            "events": events,
-            "log": events,
-            "action_waves": action_waves,
-            "marks": user_marks,
-            "steps_total": len(events),
-            "init_steps_count": init_count,
-            "interaction_steps_count": interact_count,
-            "first_interaction_step": first_interact,
-            "observed_events_count": obs_count,
-            "inferred_events_count": inf_count,
-            "unmatched_inputs": unmatched_inputs,
-            "unmatched_inputs_count": len(unmatched_inputs),
-            "recorded_actions": deduped_actions,
-            "video_path": video_path,
-            "disclaimer": "Server reactive execution is statically inferred from AST dependency analysis. Dynamic dependencies or isolated reactives may not appear in this graph.",
-            "summary": f"Observed {obs_count} browser event(s); inferred {inf_count} simulated dependency steps across {len(nodes)} graph nodes",
-        }
-
-    sim_inputs = dict(inputs or {})
-    if not sim_inputs:
-        input_nodes = [n for n in nodes if n["role"] == "source"]
-        for n in input_nodes:
-            sim_inputs[n["name"]] = 10
-
-    invalidated_nodes_static: Set[str] = set()
-
-    def cascade_invalidate(nid: str, cur_step: int) -> int:
-        nid_lbl = nodes_by_id.get(nid, {}).get("label", nid)
-        for down in adj_downstream.get(nid, []):
-            if down not in invalidated_nodes_static:
-                invalidated_nodes_static.add(down)
-                node_obj = nodes_by_id.get(down, {})
-                down_lbl = node_obj.get("label", down)
-                events.append(
-                    _make_event(
-                        step=cur_step,
-                        event="propagate",
-                        phase="interaction",
-                        provenance="inferred",
-                        node_id=down,
-                        node_label=down_lbl,
-                        node_type=node_obj.get("role", "conductor"),
-                        status="affected",
-                        timestamp=0,
-                        time_sec=0.0,
-                        edge_from=nid,
-                        edge_to=down,
-                        details=f"Inferred invalidation of '{down_lbl}' from '{nid_lbl}'",
-                        session=session,
-                    )
-                )
-                cur_step += 1
-                cur_step = cascade_invalidate(down, cur_step)
-        return cur_step
-
-    for input_name, input_val in sim_inputs.items():
-        node_id = (
-            f"input:{input_name}"
-            if f"input:{input_name}" in nodes_by_id
-            else (input_name if input_name in nodes_by_id else input_name)
-        )
-        node_lbl = nodes_by_id.get(node_id, {}).get("label", f"input.{input_name}")
-        events.append(
-            _make_event(
-                step=step,
-                event="assumeValue",
-                phase="interaction",
-                provenance="inferred",
-                node_id=node_id,
-                node_label=node_lbl,
-                node_type="source",
-                status="assumed",
-                timestamp=0,
-                time_sec=0.0,
-                value=str(input_val),
-                details=f"Simulation assumes {node_lbl} is set to {input_val!r}",
-                session=session,
-            )
-        )
-        step += 1
-        step = cascade_invalidate(node_id, step)
-
-    events.append(
-        _make_event(
-            step=step,
-            event="orderingStart",
-            phase="interaction",
-            provenance="inferred",
-            node_id=None,
-            node_label="reactiveEnvironment",
-            node_type="engine",
-            status="active",
-            timestamp=0,
-            time_sec=0.0,
-            details=f"Simulating static ordering for {len(invalidated_nodes_static)} affected node(s)",
-            session=session,
-        )
-    )
-    step += 1
-
-    eval_order = compute_evaluation_order(invalidated_nodes_static)
-    for target in eval_order:
-        tid = target["id"]
-        tlabel = target["label"]
-        trole = target["role"]
-
-        events.append(
-            _make_event(
-                step=step,
-                event="wouldEvaluate",
-                phase="interaction",
-                provenance="inferred",
-                node_id=tid,
-                node_label=tlabel,
-                node_type=trole,
-                status="scheduled",
-                timestamp=0,
-                time_sec=0.0,
-                details=f"Inferred evaluation: '{tlabel}' (static topological order; not executed)",
-                session=session,
-            )
-        )
-        step += 1
-
-        for dep in adj_upstream.get(tid, []):
-            dep_lbl = nodes_by_id.get(dep, {}).get("label", dep)
-            events.append(
-                _make_event(
-                    step=step,
-                    event="dependsOn",
-                    phase="interaction",
-                    provenance="inferred",
-                    node_id=tid,
-                    node_label=tlabel,
-                    node_type=trole,
-                    status="scheduled",
-                    timestamp=0,
-                    time_sec=0.0,
-                    edge_from=dep,
-                    edge_to=tid,
-                    details=f"Inferred dependency edge: '{dep_lbl}' used by '{tlabel}'",
-                    session=session,
-                )
-            )
-            step += 1
-
-        events.append(
-            _make_event(
-                step=step,
-                event="ordered",
-                phase="interaction",
-                provenance="inferred",
-                node_id=tid,
-                node_label=tlabel,
-                node_type=trole,
-                status="scheduled",
-                timestamp=0,
-                time_sec=0.0,
-                details=f"Inferred completed state for '{tlabel}'",
-                session=session,
-            )
-        )
-        step += 1
-
-    step = append_user_marks(step)
-
-    events.append(
-        _make_event(
-            step=step,
-            event="orderingComplete",
-            phase="interaction",
-            provenance="inferred",
-            node_id=None,
-            node_label="reactiveEnvironment",
-            node_type="engine",
-            status="idle",
-            timestamp=0,
-            time_sec=0.0,
-            details=f"Static ordering contains {len(eval_order)} nodes; no reactive flush occurred",
-            session=session,
-        )
-    )
-
-    init_count = len([e for e in events if e.get("phase") == "init"])
-    interact_count = len([e for e in events if e.get("phase") == "interaction"])
-    first_interact = next(
-        (i for i, e in enumerate(events) if e.get("phase") == "interaction"), 0
-    )
-
-    return {
-        "success": True,
-        "version": "1.0",
-        "session": session,
-        "trace_kind": "static_inferred_simulation",
-        "sources": graph.get("sources", {}),
-        "entry_file": graph.get("entry_file", ""),
-        "nodes": nodes,
-        "edges": edges,
-        "events": events,
-        "log": events,
-        "action_waves": action_waves,
-        "marks": user_marks,
-        "steps_total": len(events),
-        "init_steps_count": init_count,
-        "interaction_steps_count": interact_count,
-        "first_interaction_step": first_interact,
-        "observed_events_count": 0,
-        "inferred_events_count": len(events),
-        "unmatched_inputs": [],
-        "unmatched_inputs_count": 0,
-        "disclaimer": "Server reactive execution is statically inferred from AST dependency analysis. Dynamic dependencies or isolated reactives may not appear in this graph.",
-        "summary": f"Static dependency simulation: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes_static)} affected); app code was not executed",
-    }
-
-
 def load_reactlog_json(
     json_data: str | Dict[str, Any] | List[Any] | Any,
-    source_code: Optional[str] = None,
 ) -> Dict[str, Any]:
     if isinstance(json_data, str):
         try:
@@ -1647,8 +267,18 @@ def load_reactlog_json(
 
     normalized_events: List[Dict[str, Any]] = []
     step_idx = 0
+    # Everything up to the first `queueEmpty` is the session's initial flush:
+    # the init message's values and the first render are not user actions.
+    init_end = next(
+        (
+            i
+            for i, item in enumerate(raw_events)
+            if (item.get("action") or item.get("event")) == "queueEmpty"
+        ),
+        -1,
+    )
 
-    for item in raw_events:
+    for item_idx, item in enumerate(raw_events):
         action = str(item.get("action") or item.get("event") or "")
         nid = item.get("reactId") or item.get("node_id") or item.get("id")
         lbl = item.get("label") or item.get("node_label") or nid or ""
@@ -1678,14 +308,11 @@ def load_reactlog_json(
         )
         t_ms = int(t_sec * 1000)
 
-        prov = item.get("provenance") or (
-            "observed"
-            if action in ("valueChange", "inputChange", "userClick", "userAction")
-            else "inferred"
-        )
+        prov = item.get("provenance") or "observed"
         phase = item.get("phase") or (
             "init"
-            if action in ("define", "analysisInit", "createContext", "sessionInit")
+            if item_idx <= init_end
+            or action in ("define", "analysisInit", "createContext", "sessionInit")
             else "interaction"
         )
         status = item.get("status")
@@ -1763,9 +390,9 @@ def load_reactlog_json(
                 "line": item.get("line"),
                 **{
                     key: value
-                    for key, value in nodes_map.get(str(nid), {}).items()
-                    if key in ("module", "render_type", "line", "source_file")
-                    and value is not None
+                    for key in ("module", "render_type", "line", "source_file")
+                    if (value := item.get(key, nodes_map.get(str(nid), {}).get(key)))
+                    is not None
                 },
             }
 
@@ -1839,7 +466,7 @@ def load_reactlog_json(
                     step=i,
                     event="define",
                     phase="init",
-                    provenance="inferred",
+                    provenance="observed",
                     node_id=n["id"],
                     node_label=n["label"],
                     node_type=n["role"],
@@ -1856,8 +483,6 @@ def load_reactlog_json(
         (i for i, e in enumerate(normalized_events) if e.get("phase") == "interaction"),
         0,
     )
-    obs_count = len([e for e in normalized_events if e.get("provenance") == "observed"])
-    inf_count = len([e for e in normalized_events if e.get("provenance") == "inferred"])
 
     parsed_dict: Optional[Dict[str, Any]] = (
         cast(Dict[str, Any], parsed) if isinstance(parsed, dict) else None
@@ -1882,393 +507,11 @@ def load_reactlog_json(
         "init_steps_count": init_count,
         "interaction_steps_count": interact_count,
         "first_interaction_step": first_interact,
-        "observed_events_count": obs_count,
-        "inferred_events_count": inf_count,
         "unmatched_inputs": [],
         "unmatched_inputs_count": 0,
         "disclaimer": "Imported reactive log data from JSON format.",
         "summary": f"Imported Reactlog graph: {len(final_nodes)} nodes, {len(final_edges)} edges, {len(normalized_events)} log events",
     }
-
-
-def _record_session_sync(
-    app_path: str,
-    video_path: Optional[str] = "recording.webm",
-    headless: bool = False,
-    record_script: Optional[Callable[[Any], None]] = None,
-    timeout_secs: float = 60.0,
-    auto_interact: bool = False,
-    redact_inputs: bool = False,
-    viewport_size: Optional[Dict[str, int]] = None,
-) -> Dict[str, Any]:
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return {
-            "success": False,
-            "error": "Playwright is not installed. Install it with: pip install playwright && playwright install chromium",
-            "actions": [],
-            "video_path": None,
-        }
-
-    app_target = Path(app_path).resolve()
-    if not app_target.exists():
-        return {
-            "success": False,
-            "error": f"App file not found: {app_path}",
-            "actions": [],
-            "video_path": None,
-        }
-
-    from .run._run import run_shiny_app
-
-    start_time = time.time()
-    try:
-        sa = run_shiny_app(
-            app_target,
-            wait_for_start=True,
-            timeout_secs=min(timeout_secs, 30.0),
-            env={"SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1", "SHINY_REACTLOG": "1"},
-        )
-    except Exception as err:
-        return {
-            "success": False,
-            "error": f"Failed to start Shiny app: {err}",
-            "actions": [],
-            "video_path": None,
-        }
-
-    app_url = sa.url
-    temp_dir = tempfile.mkdtemp(prefix="shiny_record_")
-    recorded_actions: List[Dict[str, Any]] = []
-    saved_video_path: Optional[str] = None
-
-    try:
-        with sync_playwright() as p:
-            ws_endpoint = os.environ.get("PW_TEST_CONNECT_WS_ENDPOINT")
-            if ws_endpoint:
-                connect_kwargs: Dict[str, Any] = {}
-                connect_param_name = (
-                    "endpoint"
-                    if "endpoint" in inspect.signature(p.chromium.connect).parameters
-                    else "ws_endpoint"
-                )
-                connect_kwargs[connect_param_name] = ws_endpoint
-                expose_net = os.environ.get("PW_TEST_CONNECT_EXPOSE_NETWORK")
-                if expose_net:
-                    connect_kwargs["expose_network"] = expose_net
-                browser = p.chromium.connect(**connect_kwargs)
-            else:
-                browser = p.chromium.launch(headless=headless)
-            v_width = (
-                int(viewport_size["width"])
-                if viewport_size and "width" in viewport_size
-                else 1280
-            )
-            v_height = (
-                int(viewport_size["height"])
-                if viewport_size and "height" in viewport_size
-                else 1440
-            )
-            context = browser.new_context(
-                record_video_dir=temp_dir,
-                record_video_size={"width": v_width, "height": v_height},
-                viewport={"width": v_width, "height": v_height},
-            )
-            page = context.new_page()
-            page_start_time = time.time()
-
-            redact_all_js = "true" if redact_inputs else "false"
-            recorder_init_script = f"""
-            window.__recordedActions = [];
-            window.__recordStartTime = Date.now();
-            const recentInputs = new Map();
-            let lastClickTime = 0;
-            let lastClickTarget = '';
-            const shouldRedactAll = {redact_all_js};
-
-            function isSensitiveInput(name, el) {{
-                if (shouldRedactAll) return true;
-                if (el && (el.type === 'password' || el.getAttribute('type') === 'password')) return true;
-                const lower = (name || '').toLowerCase();
-                return lower.includes('password') || lower.includes('secret') || lower.includes('token') || lower.includes('api_key') || lower.includes('apikey');
-            }}
-
-            function trackAction(item) {{
-                item.timestamp = Date.now() - window.__recordStartTime;
-                window.__recordedActions.push(item);
-            }}
-
-            function attachShinyListeners() {{
-                if (window.$ && window.Shiny) {{
-                    $(document).off('.shinyRecorder');
-                    $(document).on('shiny:inputchanged.shinyRecorder', (e) => {{
-                        if (e.name.startsWith('.')) return;
-                        const el = document.getElementById(e.name) || document.querySelector('[name="' + e.name + '"]');
-                        const sensitive = isSensitiveInput(e.name, el);
-                        const safeVal = sensitive ? '[REDACTED]' : e.value;
-                        const valKey = typeof safeVal === 'object' ? JSON.stringify(safeVal) : String(safeVal);
-                        recentInputs.set(e.name, {{ val: valKey, t: Date.now() }});
-                        trackAction({{
-                            type: 'input',
-                            name: e.name,
-                            value: safeVal,
-                            inputType: e.inputType || 'shiny'
-                        }});
-                    }});
-                    $(document).on('shiny:value.shinyRecorder', (e) => {{
-                        trackAction({{
-                            type: 'output',
-                            name: e.name,
-                            plot: e.value && typeof e.value.src === 'string' && /^data:image\\/(png|jpeg|gif|webp);base64,/.test(e.value.src)
-                                ? {{ src: e.value.src, alt: e.value.alt || e.name }} : undefined
-                        }});
-                    }});
-                }}
-            }}
-
-            document.addEventListener('DOMContentLoaded', attachShinyListeners);
-            window.addEventListener('load', attachShinyListeners);
-            document.addEventListener('shiny:connected', attachShinyListeners);
-
-            document.addEventListener('change', (e) => {{
-                const target = e.target;
-                if (!target || !target.id || target.id.startsWith('.')) return;
-                const id = target.id;
-                const sensitive = isSensitiveInput(id, target);
-                const rawVal = target.value !== undefined ? target.value : target.checked;
-                const val = sensitive ? '[REDACTED]' : rawVal;
-                const valKey = String(val);
-                const rec = recentInputs.get(id);
-                if (rec && (Date.now() - rec.t < 350) && rec.val === valKey) {{
-                    return;
-                }}
-                if (window.Shiny && window.Shiny.setInputValue && target.closest('.shiny-input-container')) {{
-                    return;
-                }}
-                recentInputs.set(id, {{ val: valKey, t: Date.now() }});
-                trackAction({{
-                    type: 'input',
-                    name: id,
-                    value: val,
-                    inputType: target.type || target.tagName.toLowerCase()
-                }});
-            }}, true);
-
-            document.addEventListener('click', (e) => {{
-                const target = e.target.closest('button, input, select, textarea, a, .btn');
-                if (!target) return;
-                const tgtName = target.id || target.name || target.tagName.toLowerCase();
-                const now = Date.now();
-                if (tgtName === lastClickTarget && (now - lastClickTime < 200)) {{
-                    return;
-                }}
-                lastClickTime = now;
-                lastClickTarget = tgtName;
-                trackAction({{
-                    type: 'click',
-                    target: tgtName,
-                    text: (target.innerText || target.value || '').trim().slice(0, 50)
-                }});
-            }}, true);
-            """
-            page.add_init_script(recorder_init_script)
-
-            page.goto(app_url, wait_until="domcontentloaded")
-            time.sleep(0.5)
-
-            if record_script:
-                record_script(page)
-                time.sleep(0.5)
-            elif not headless:
-                try:
-                    sys.stderr.write(
-                        "\n🔴 Recording browser session... Interact with your Shiny app.\n"
-                        "Press [Enter] here (or close the browser window) when done recording: "
-                    )
-                    sys.stderr.flush()
-                    deadline = time.time() + timeout_secs
-                    while time.time() < deadline:
-                        if page.is_closed():
-                            break
-                        import select
-
-                        empty_r: List[Any] = []
-                        empty_w: List[Any] = []
-                        r, _, _ = select.select([sys.stdin], empty_r, empty_w, 0.3)
-                        if r:
-                            sys.stdin.readline()
-                            break
-                except Exception:
-                    time.sleep(2.0)
-            elif auto_interact:
-                try:
-                    time.sleep(0.8)
-                    input_locators = page.locator(
-                        "input.shiny-input-number, input.shiny-input-text, input[type='number'], input[type='text']"
-                    ).all()
-                    for inp in input_locators[:3]:
-                        try:
-                            val = inp.input_value()
-                            if val.isdigit():
-                                inp.fill(str(int(val) + 5))
-                            elif val:
-                                inp.fill(f"{val} Updated")
-                            time.sleep(0.4)
-                        except Exception:
-                            pass
-
-                    buttons = page.locator(
-                        "button.action-button, button.btn-primary, button.btn"
-                    ).all()
-                    for btn in buttons[:2]:
-                        try:
-                            btn.click()
-                            time.sleep(0.5)
-                        except Exception:
-                            pass
-                except Exception:
-                    time.sleep(1.0)
-            else:
-                time.sleep(1.0)
-
-            try:
-                if not page.is_closed():
-                    raw_actions = page.evaluate("() => window.__recordedActions || []")
-                    if isinstance(raw_actions, list):
-                        recorded_actions = cast(List[Dict[str, Any]], raw_actions)
-            except Exception:
-                pass
-
-            app_marks: List[Dict[str, Any]] = []
-            try:
-                import urllib.request
-
-                req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
-                with urllib.request.urlopen(req, timeout=3.0) as resp:
-                    mark_data = json.loads(resp.read().decode())
-                    if isinstance(mark_data, dict) and "marks" in mark_data:
-                        raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
-                        for rm in raw_marks:
-                            item = dict(rm)
-                            raw_t = float(item.get("time") or 0.0)
-                            if raw_t > 1_000_000_000:
-                                rel_sec = max(0.0, round(raw_t - page_start_time, 2))
-                                item["time"] = rel_sec
-                                item["timestamp"] = int(rel_sec * 1000)
-                            app_marks.append(item)
-            except Exception:
-                pass
-
-            page_video = page.video
-
-            page.close()
-            context.close()
-
-            if page_video and video_path:
-                out_v = Path(video_path).resolve()
-                out_v.parent.mkdir(parents=True, exist_ok=True)
-                try:
-                    page_video.save_as(str(out_v))
-                    saved_video_path = str(out_v)
-                except Exception:
-                    pass
-            elif page_video:
-                temp_video = Path(temp_dir) / "recording.webm"
-                try:
-                    page_video.save_as(str(temp_video))
-                    saved_video_path = str(temp_video)
-                except Exception:
-                    pass
-
-            browser.close()
-
-        if not saved_video_path:
-            video_files = list(Path(temp_dir).glob("*.webm"))
-            if video_files and video_path:
-                out_v = Path(video_path).resolve()
-                out_v.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(video_files[0], out_v)
-                saved_video_path = str(out_v)
-            elif video_files:
-                saved_video_path = str(video_files[0])
-
-        if not app_marks:
-            try:
-                import urllib.request
-
-                req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
-                with urllib.request.urlopen(req, timeout=3.0) as resp:
-                    mark_data = json.loads(resp.read().decode())
-                    if isinstance(mark_data, dict) and "marks" in mark_data:
-                        raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
-                        for rm in raw_marks:
-                            item = dict(rm)
-                            raw_t = float(item.get("time") or 0.0)
-                            if raw_t > 1_000_000_000:
-                                rel_sec = max(0.0, round(raw_t - page_start_time, 2))
-                                item["time"] = rel_sec
-                                item["timestamp"] = int(rel_sec * 1000)
-                            app_marks.append(item)
-            except Exception:
-                pass
-
-        return {
-            "success": True,
-            "actions": recorded_actions,
-            "marks": app_marks,
-            "video_path": saved_video_path,
-            "duration_secs": round(time.time() - start_time, 2),
-        }
-
-    finally:
-        sa.close()
-        try:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        except Exception:
-            pass
-
-
-def record_shiny_session(
-    app_path: str,
-    video_path: Optional[str] = "recording.webm",
-    headless: bool = False,
-    record_script: Optional[Callable[[Any], None]] = None,
-    timeout_secs: float = 60.0,
-    auto_interact: bool = False,
-    redact_inputs: bool = False,
-    viewport_size: Optional[Dict[str, int]] = None,
-) -> Dict[str, Any]:
-    try:
-        asyncio.get_running_loop()
-        has_running_loop = True
-    except RuntimeError:
-        has_running_loop = False
-
-    if has_running_loop:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                _record_session_sync,
-                app_path,
-                video_path,
-                headless,
-                record_script,
-                timeout_secs,
-                auto_interact,
-                redact_inputs,
-                viewport_size,
-            )
-            return future.result()
-    return _record_session_sync(
-        app_path,
-        video_path,
-        headless,
-        record_script,
-        timeout_secs,
-        auto_interact,
-        redact_inputs,
-        viewport_size,
-    )
 
 
 def format_graph_mermaid(graph: Dict[str, Any]) -> str:
@@ -2284,7 +527,7 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
             lines.append(f'    {syn_id}["{label}"]:::inputClass')
         elif ntype == "calc":
             lines.append(f'    {syn_id}["{label}"]:::calcClass')
-        elif ntype == "effect":
+        elif ntype in ("effect", "observer"):
             lines.append(f'    {syn_id}["{label}"]:::effectClass')
         else:
             lines.append(f'    {syn_id}["{label}"]:::outputClass')
@@ -2293,7 +536,8 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
         f = node_id_map.get(str(edge["from"]))
         t = node_id_map.get(str(edge["to"]))
         if f and t:
-            lines.append(f"    {f} --> {t}")
+            arrow = "-.->" if edge.get("isolated") else "-->"
+            lines.append(f"    {f} {arrow} {t}")
 
     lines.append(
         "    classDef inputClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;"
@@ -2305,39 +549,6 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
     lines.append(
         "    classDef outputClass fill:#dcfce7,stroke:#16a34a,stroke-width:2px;"
     )
-    return "\n".join(lines)
-
-
-def format_graph_dot(graph: Dict[str, Any]) -> str:
-    lines = [
-        "digraph ReactiveGraph {",
-        "    rankdir=LR;",
-        "    node [shape=box, style=rounded];",
-    ]
-    node_id_map: Dict[str, str] = {}
-    for idx, node in enumerate(graph.get("nodes", [])):
-        raw_id = str(node["id"])
-        syn_id = f"n{idx}"
-        node_id_map[raw_id] = syn_id
-        label = str(node.get("label", raw_id)).replace('"', '\\"')
-        ntype = node.get("type", "")
-        if ntype == "input":
-            color = "#0284c7"
-        elif ntype == "calc":
-            color = "#d97706"
-        elif ntype == "effect":
-            color = "#9333ea"
-        else:
-            color = "#16a34a"
-        lines.append(f'    "{syn_id}" [label="{label}", color="{color}"];')
-
-    for edge in graph.get("edges", []):
-        f = node_id_map.get(str(edge["from"]))
-        t = node_id_map.get(str(edge["to"]))
-        if f and t:
-            lines.append(f'    "{f}" -> "{t}";')
-
-    lines.append("}")
     return "\n".join(lines)
 
 
@@ -2458,6 +669,13 @@ def format_reactlog_html(
           <p class="video-help">Play, pause, or seek here—the graph, causal explanations, and timeline follow the video.</p>
         </div>
         """
+
+    video_sync_indicator = (
+        '<span class="video-sync-status" id="video-sync-status" role="status" '
+        'aria-live="polite">● Graph follows recording</span>'
+        if actual_video
+        else ""
+    )
 
     source_tab = (
         '<button class="sidebar-tab" id="source-tab" role="tab" '
@@ -2634,15 +852,7 @@ def format_reactlog_html(
     .summary-card-icon {{ color: var(--text-muted); opacity: 0.8; }}
     .summary-card-val {{ font: 800 1.35rem/1 var(--mono); color: var(--text); letter-spacing: -0.02em; }}
     .summary-card.card-observed .summary-card-val {{ color: var(--source); }}
-    .summary-card.card-inferred .summary-card-val {{ color: var(--effect); }}
     .summary-card-subtext {{ font: 500 0.64rem var(--mono); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-    .summary-breakdown-section {{ display: flex; flex-direction: column; gap: 0.4rem; background: var(--surface-2); padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); }}
-    .summary-breakdown-header {{ display: flex; justify-content: space-between; font: 700 0.65rem var(--mono); }}
-    .breakdown-legend-obs {{ color: var(--source); display: inline-flex; align-items: center; gap: 0.3rem; }}
-    .breakdown-legend-inf {{ color: var(--effect); display: inline-flex; align-items: center; gap: 0.3rem; }}
-    .summary-breakdown-bar {{ width: 100%; height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; display: flex; }}
-    .breakdown-seg-obs {{ background: var(--source); height: 100%; transition: width 200ms ease; }}
-    .breakdown-seg-inf {{ background: var(--effect); height: 100%; transition: width 200ms ease; }}
     .summary-meta-note {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }}
 
     /* Header Center Controls */
@@ -3116,36 +1326,16 @@ def format_reactlog_html(
             <div class="summary-card-val" id="stat-edges">0</div>
             <div class="summary-card-subtext">Causal links</div>
           </div>
-          <div class="summary-card card-observed">
+          <div class="summary-card card-observed" style="grid-column: 1 / -1">
             <div class="summary-card-header">
-              <span class="summary-card-label">Observed:</span>
+              <span class="summary-card-label">Events</span>
               <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--source)" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
             </div>
             <div class="summary-card-val" id="stat-observed">0</div>
-            <div class="summary-card-subtext">Browser events</div>
-          </div>
-          <div class="summary-card card-inferred">
-            <div class="summary-card-header">
-              <span class="summary-card-label">Inferred:</span>
-              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--effect)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            </div>
-            <div class="summary-card-val" id="stat-inferred">0</div>
-            <div class="summary-card-subtext">Cascade steps</div>
+            <div class="summary-card-subtext">Recorded reactive events</div>
           </div>
         </div>
-        <div class="summary-breakdown-section">
-          <div class="summary-breakdown-header">
-            <span class="breakdown-legend-obs" id="legend-obs-text"><span class="chip-dot" style="background:var(--source)"></span> 0% Observed</span>
-            <span class="breakdown-legend-inf" id="legend-inf-text"><span class="chip-dot" style="background:var(--effect)"></span> 0% Inferred</span>
-          </div>
-          <div class="summary-breakdown-bar" id="summary-breakdown-bar" title="Observed vs Inferred events">
-            <div class="breakdown-seg-obs" id="seg-obs" style="width: 50%"></div>
-            <div class="breakdown-seg-inf" id="seg-inf" style="width: 50%"></div>
-          </div>
-        </div>
-        <div class="summary-meta-note" id="summary-meta-note">
-          Simulated dependency steps from AST static analysis.
-        </div>
+        <div class="summary-meta-note" id="summary-meta-note"></div>
       </div>
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
       <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
@@ -3404,6 +1594,7 @@ def format_reactlog_html(
         <span class="trace-sep">/</span>
         <span class="trace-total" id="trace-total-time">0.0s</span>
       </div>
+      {video_sync_indicator}
       <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
       <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
       <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
@@ -3810,7 +2001,7 @@ def format_reactlog_html(
       return String(val);
     }}
 
-    // Maps a server-built wave (see action_waves in generate_reactlog) to a burst.
+    // Maps a server-built wave to a burst.
     function waveToBurst(w, idx) {{
       const inputs = [];
       if (w.trigger_node_id) {{
@@ -3898,6 +2089,9 @@ def format_reactlog_html(
       }});
       let initWave = null;
       let curWave = null;
+      // Recorded ids (`r3`) carry no name; use the node's label instead.
+      const nodeLabels = new Map((reactlogData.nodes || []).map(n => [n.id, n.label]));
+      const waveNodeName = nId => cleanName(nId.includes(':') ? nId : (nodeLabels.get(nId) || nId));
 
       events.forEach((ev, idx) => {{
         const evAction = ev.action || ev.event || '';
@@ -3906,7 +2100,9 @@ def format_reactlog_html(
 
         if (isInit) {{
           if (ev.value !== undefined && ev.value !== null) {{
-            const raw = ev.node_id || ev.id || ev.node_label || ev.label || '';
+            const initId = ev.node_id || ev.id || '';
+            // Recorded inputs are named by label, as in the interaction branch below.
+            const raw = ((ev.type === 'input' || ev.node_type === 'input') && !initId.startsWith('input:') ? (ev.node_label || ev.label) : '') || initId || ev.node_label || ev.label || '';
             const name = cleanName(raw);
             if (name) lastKnownValues.set(name, ev.value);
           }}
@@ -3934,6 +2130,15 @@ def format_reactlog_html(
           initWave.endStep = idx;
           initWave.endTime = t;
           initWave.totalEvents++;
+          const initType = ev.type || ev.node_type;
+          if (evAction === 'enter' && (initType === 'calc' || initType === 'output')) {{
+            const nId = ev.node_id || ev.id || '';
+            const name = waveNodeName(nId);
+            const ran = initType === 'calc' ? initWave.calcs : initWave.outputs;
+            if (name && !ran.some(item => item.name === name)) {{
+              ran.push({{ name, nodeId: nId, step: idx, details: ev.details }});
+            }}
+          }}
         }} else {{
           if (evAction === 'userMark' && ev.mark_wave) {{
             // Same bookmark wave the server builds for generated reactlogs.
@@ -4008,12 +2213,12 @@ def format_reactlog_html(
               }}
             }}
           }} else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor'))) {{
-            const name = cleanName(nId);
+            const name = waveNodeName(nId);
             if (name && !curWave.calcs.some(item => item.name === name)) {{
               curWave.calcs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
           }} else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer'))) {{
-            const name = cleanName(nId);
+            const name = waveNodeName(nId);
             if (name && !curWave.outputs.some(item => item.name === name)) {{
               curWave.outputs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
@@ -4274,7 +2479,8 @@ def format_reactlog_html(
       laneCalcs.innerHTML = '';
       laneOutputs.innerHTML = '';
 
-      const displayWaves = allBursts;
+      // Lanes chart what each action caused; the Init anchor covers startup.
+      const displayWaves = filterItems(allBursts, w => !w.isInit);
       displayWaves.forEach(wave => {{
         const wavePct = calculateTimePct(wave.time);
 
@@ -4463,16 +2669,23 @@ def format_reactlog_html(
     function updateCausalSummary(curWave) {{
       const banner = document.getElementById('causal-summary-text');
       if (!banner) return;
+      banner.style.display = (reactlogData.nodes || []).length === 0 ? '' : 'none';
 
+      if ((reactlogData.nodes || []).length === 0 && reactlogData.summary) {{
+        banner.textContent = reactlogData.summary;
+        return;
+      }}
       if (!curWave) {{
-        banner.textContent = 'Ready to trace reactive causality';
+        // An empty graph says why (e.g. no session selected) where it is seen.
+        const empty = (reactlogData.nodes || []).length === 0 && reactlogData.summary;
+        banner.textContent = empty ? reactlogData.summary : 'Ready to trace reactive causality';
         return;
       }}
 
       if (curWave.isInit) {{
         const cLen = curWave.calcs.length;
         const oLen = curWave.outputs.length;
-        banner.innerHTML = `<strong>App Initialized.</strong> Evaluated ${{cLen}} calcs and rendered ${{oLen}} outputs.`;
+        banner.innerHTML = `<strong>App Initialized.</strong> Evaluated ${{cLen}} calc${{cLen === 1 ? '' : 's'}} and rendered ${{oLen}} output${{oLen === 1 ? '' : 's'}}.`;
         return;
       }}
 
@@ -5108,10 +3321,8 @@ def format_reactlog_html(
 
       document.getElementById('stat-nodes').textContent = String(nodes.length);
       document.getElementById('stat-edges').textContent = String(edges.length);
-      const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
-      const infCount = reactlogData.inferred_events_count !== undefined ? reactlogData.inferred_events_count : events.reduce((acc, e) => acc + (e.provenance === 'inferred' ? 1 : 0), 0);
+      const obsCount = events.length;
       document.getElementById('stat-observed').textContent = String(obsCount);
-      document.getElementById('stat-inferred').textContent = String(infCount);
 
       const inCount = filterItems(nodes, n => n.role === 'source' || n.type === 'input').length;
       const calcCount = filterItems(nodes, n => n.role === 'conductor' || n.type === 'calc').length;
@@ -5119,22 +3330,9 @@ def format_reactlog_html(
       const nodesSubtext = document.getElementById('stat-nodes-subtext');
       if (nodesSubtext) nodesSubtext.textContent = `${{inCount}} in · ${{calcCount}} calc · ${{outCount}} out`;
 
-      const totEvents = Math.max(1, obsCount + infCount);
-      const obsPct = Math.round((obsCount / totEvents) * 100);
-      const infPct = 100 - obsPct;
-      const segObs = document.getElementById('seg-obs');
-      const segInf = document.getElementById('seg-inf');
-      if (segObs) segObs.style.width = `${{obsPct}}%`;
-      if (segInf) segInf.style.width = `${{infPct}}%`;
-
-      const legObs = document.getElementById('legend-obs-text');
-      if (legObs) legObs.innerHTML = `<span class="chip-dot" style="background:var(--source)"></span> ${{obsPct}}% Observed`;
-      const legInf = document.getElementById('legend-inf-text');
-      if (legInf) legInf.innerHTML = `<span class="chip-dot" style="background:var(--effect)"></span> ${{infPct}}% Inferred`;
-
       const metaNote = document.getElementById('summary-meta-note');
       if (metaNote) {{
-        metaNote.textContent = reactlogData.summary || `Captured ${{obsCount}} browser interactions triggering ${{infCount}} reactive cascade evaluations across ${{nodes.length}} graph nodes.`;
+        metaNote.textContent = reactlogData.summary || `Recorded ${{obsCount}} events across ${{nodes.length}} graph nodes.`;
       }}
 
       const scrubber = document.getElementById('scrubber-range');
@@ -5356,7 +3554,7 @@ def format_reactlog_html(
         }}
 
         const provBadge = document.createElement('span');
-        const prov = ev.provenance || 'inferred';
+        const prov = ev.provenance || 'observed';
         provBadge.className = `event-badge provenance-${{prov}}`;
         provBadge.innerHTML = `${{prov === 'observed' ? ICONS.eye : ICONS.zap}} ${{prov.toUpperCase()}}`;
         badgesWrap.appendChild(provBadge);
@@ -5398,6 +3596,8 @@ def format_reactlog_html(
 
       const cleanTargetName = cleanName(targetNode.name || targetNode.id);
       const burstEventForNode = burstEvents.find(e => {{
+        // Dropping a dependency (e.g. an isolated read being invalidated) is not a run.
+        if (e.event === 'dependsOnRemove') return false;
         const eid = e.node_id || e.id || '';
         return eid === nodeId || cleanName(eid) === cleanTargetName || (e.node_label && cleanName(e.node_label) === cleanTargetName);
       }});
@@ -5469,7 +3669,7 @@ def format_reactlog_html(
             upstreamNote = `Upstream dependencies invalidated: ${{invParents.map(p => escapeHTML(p.label)).join(', ')}}`;
           }}
         }}
-        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was observed or inferred during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
+        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was recorded during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
         if (lastExec) {{
           const lastTime = lastExec.time_sec !== undefined ? lastExec.time_sec : (lastExec.time || 0);
           narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${{escapeHTML(formatTime(lastTime))}}</span><button type="button" class="btn mini" data-seek-step="${{lastExec.step}}">Jump to run</button></div>`;
@@ -5838,7 +4038,7 @@ def format_reactlog_html(
       events.forEach(ev => {{
         const nid = ev.node_id || ev.id;
         if (!nid) return;
-        if (ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
+        if (ev.event === 'enter' || ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
           counts.set(nid, (counts.get(nid) || 0) + 1);
         }}
       }});
@@ -6602,7 +4802,7 @@ def format_reactlog_html(
           const rawT = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
           const tSec = Math.max(0, baseEpoch > 0 ? (rawT - baseEpoch) : rawT);
           const tMs = Number(item.timestamp || (tSec * 1000));
-          const prov = item.provenance || (['valueChange', 'inputChange', 'userClick', 'userAction'].includes(act) ? 'observed' : 'inferred');
+          const prov = item.provenance || 'observed';
           const phase = item.phase || (['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act) ? 'init' : 'interaction');
 
           if (act === 'dependsOn' && depFrom && depTo) {{

@@ -163,9 +163,14 @@ class Value(Generic[T]):
 
     _node_kind: NodeKind = "value"
     _node_fn: Callable[..., object] | None = None
+    _node_render_type: str | None = None
     # Values are not owned by a session's reactive graph node; events on them are
     # attributed to the session that is current when they happen.
     _node_session_id: str | None = None
+
+    @property
+    def _node_namespace(self) -> str | None:
+        return self._node_module
 
     @property
     def _node_label(self) -> str:
@@ -229,6 +234,9 @@ class Value(Generic[T]):
             ns_str = str(session.ns)
             if ns_str:  # Only use non-empty namespaces
                 self._otel_namespace = ns_str
+        # The module reactlog groups this value under; `Inputs` corrects it for
+        # values created by another session than the one they belong to.
+        self._node_module: str | None = self._otel_namespace
         # Lazily initialized OTel label for value updates; Allows for `_name` to be adjusted manually after init (ex: Inputs class)
         self._otel_label: str | None = None
         # Guards destroy() idempotency — _set(MISSING) should only run once
@@ -674,6 +682,7 @@ class Calc_(Generic[T]):
     """
 
     _node_kind: NodeKind = "calc"
+    _node_render_type: str | None = None
 
     @property
     def _node_label(self) -> str:
@@ -682,6 +691,11 @@ class Calc_(Generic[T]):
     @property
     def _node_session_id(self) -> str | None:
         return None if self._session is None else self._session.id
+
+    @property
+    def _node_namespace(self) -> str | None:
+        ns = "" if self._session is None else str(self._session.ns)
+        return ns or None
 
     def __init__(
         self,
@@ -1024,8 +1038,17 @@ class Effect_:
         return self._trace_label or self._otel_label
 
     @property
+    def _node_render_type(self) -> str | None:
+        return self._trace_render_type
+
+    @property
     def _node_session_id(self) -> str | None:
         return None if self._session is None else self._session.id
+
+    @property
+    def _node_namespace(self) -> str | None:
+        ns = "" if self._session is None else str(self._session.ns)
+        return ns or None
 
     def __init__(
         self,
@@ -1042,6 +1065,7 @@ class Effect_:
         # Overridden by `Outputs.set_renderer` so output effects trace as outputs.
         self._trace_kind: NodeKind = "effect"
         self._trace_label: str | None = None
+        self._trace_render_type: str | None = None
 
         from ..render.renderer import Renderer
         from ..session import Session
