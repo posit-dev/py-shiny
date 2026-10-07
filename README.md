@@ -66,12 +66,13 @@ dependency taken, and every invalidation and re-execution in the recorded sessio
 with each node's source file and line.
 
 To view the Reactlog while an app runs, enable it with `App(..., reactlog=True)`,
-`shiny run --reactlog app.py`, or `SHINY_REACTLOG=1`, then press Cmd/Ctrl+F3 in the
+`shiny run --reactlog app.py`, or `SHINY_REACTLOG=1`, then press Cmd/Ctrl+F8 in the
 app. `--no-reactlog` disables the environment-based default.
 
 Recorded input values appear in the viewer and in exported files. Pass
 `--redact-inputs` to `shiny reactlog` to replace them with `[REDACTED]` before
 sharing an export.
+Add Shift to the shortcut to mark a time point in the Reactlog.
 
 ## Development
 
