@@ -174,7 +174,7 @@ any of the following will work:
     "--reactlog/--no-reactlog",
     is_flag=True,
     default=None,
-    help="Enable Reactlog visualizer (Cmd+F3 / Ctrl+F3, or /__reactlog__). By default, respect SHINY_REACTLOG and the app's configuration.",
+    help="Enable Reactlog visualizer (Cmd+F8 / Ctrl+F8, or /__reactlog__). By default, respect SHINY_REACTLOG and the app's configuration.",
     show_default=True,
 )
 @no_example()
