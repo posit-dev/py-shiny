@@ -1287,9 +1287,9 @@ def generate_reactlog(
 
         obs_count = len([e for e in events if e.get("provenance") == "observed"])
         inf_count = len([e for e in events if e.get("provenance") == "inferred"])
-        events[-1]["details"] = (
-            f"Playwright recording finished: {obs_count} observed browser event(s), {inf_count} inferred dependency step(s)"
-        )
+        events[-1][
+            "details"
+        ] = f"Playwright recording finished: {obs_count} observed browser event(s), {inf_count} inferred dependency step(s)"
 
         init_count = len([e for e in events if e.get("phase") == "init"])
         interact_count = len([e for e in events if e.get("phase") == "interaction"])
@@ -2550,6 +2550,7 @@ def format_reactlog_html(
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     button, input, select {{ font: inherit; }}
     button:focus-visible, input:focus-visible, select:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
+    [hidden] {{ display:none !important; }}
     body {{ background: var(--bg); color: var(--text); font-family: var(--sans); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }}
     .app-header {{ min-height: 50px; background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 0.5rem 1.1rem; display: flex; justify-content: space-between; gap: 1rem; align-items: center; z-index: 20; position: relative; }}
     .brand {{ display: flex; align-items: center; gap: 0.7rem; min-width: 0; }}
@@ -2687,6 +2688,7 @@ def format_reactlog_html(
     /* Bottom Status Bar (VS Code Style) */
     .bottom-timeline-bar {{ flex-shrink: 0; height: 38px; min-height: 38px; background: var(--surface-2); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 0.75rem; gap: 0.6rem; z-index: 30; user-select: none; }}
     .status-left, .status-center, .status-right {{ display: flex; align-items: center; gap: 0.4rem; }}
+    .trace-status-line {{ font: 650 0.72rem var(--sans); color: var(--text-muted); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
     .status-time-group {{ display: flex; align-items: center; gap: 0.25rem; font: 700 0.68rem var(--mono); color: var(--accent); }}
 
     /* Main View & Graph */
@@ -2843,6 +2845,8 @@ def format_reactlog_html(
     [data-theme="light"] .syntax-number {{ color: #b45309; }}
     .syntax-operator {{ color: var(--text-muted); }}
     .syntax-comment {{ color: var(--text-muted); font-style: italic; }}
+    .event-history {{ overflow-y:auto; padding:.5rem; }}
+    .event-history summary {{ cursor:pointer; font-size:.75rem; }}
     .event-list {{ flex: 1; overflow-y: auto; padding: 0 0.6rem 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; overscroll-behavior: contain; }}
     .event-phase-label {{ position: sticky; top: 0; z-index: 2; margin: 0 -0.6rem; padding: 0.65rem 0.75rem 0.4rem; color: var(--text-muted); background: linear-gradient(var(--surface) 78%, transparent); font: 800 0.64rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }}
     .event-item {{ width: 100%; padding: 0.55rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); border-left: 3px solid var(--border-strong); background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 0.25rem; }}
@@ -2894,20 +2898,36 @@ def format_reactlog_html(
     /* Module Overview Panel (Overview First) */
     .module-overview-panel {{ position: absolute; inset: 0; background: var(--bg); z-index: 2; overflow-y: auto; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }}
     .module-overview-panel[hidden] {{ display: none; }}
+    .filter-state {{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; padding:.5rem 1rem; border-bottom:1px solid var(--border); font-size:.75rem; }}
+    #active-filters, .overview-activity {{ display:flex; flex-wrap:wrap; gap:.5rem; }}
+    .overview-section h3 {{ margin:0 0 .5rem; font-size:.9rem; }}
+    .overview-section p {{ color:var(--text-muted); font-size:.75rem; }}
+    .overview-section select {{ background:var(--bg); color:var(--text); border:1px solid var(--border); padding:.3rem; max-width:240px; }}
+    .overview-section {{ border-top:1px solid var(--border); padding-top:.75rem; }}
+    .overview-section > summary {{ cursor:pointer; font:600 .8rem var(--sans); }}
+    .overview-section > summary span {{ color:var(--text-muted); font-weight:400; }}
+    .overview-activity {{ margin-top:.75rem; max-height:240px; overflow-y:auto; padding:.25rem; }}
+    .module-execution-details {{ font-size:.7rem; color:var(--text-muted); }}
+    .module-execution-details summary {{ cursor:pointer; }}
+    .module-execution-details .btn {{ display:flex; margin-top:.4rem; width:100%; }}
+    .overview-activity button {{ white-space:normal; text-align:left; }}
+    .is-outside-scope {{ opacity:.35; }}
+    #why-card {{ order:-2; }}
+    #node-details-card {{ order:-1; }}
     .overview-header {{ display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 0.85rem; }}
     .overview-title {{ font: 800 1.15rem var(--sans); color: var(--text); letter-spacing: -0.01em; }}
     .overview-subtitle {{ font: 600 0.75rem var(--mono); color: var(--text-muted); }}
     .overview-actions {{ display: flex; gap: 0.4rem; align-items: center; }}
-    .overview-cards-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1rem; }}
-    .module-card {{ background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem; transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease; position: relative; }}
+    .overview-cards-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: .75rem; }}
+    .module-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .85rem; display: flex; flex-direction: column; gap: 0.7rem; transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease; position: relative; }}
     .module-card:hover {{ border-color: var(--border-strong); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.18); }}
     .module-card.is-active-in-flush {{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--surface)); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }}
     .module-card-header {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
-    .module-card-title {{ font: 750 0.88rem var(--mono); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+    .module-card-title {{ font: 750 0.88rem var(--mono); color: var(--text); overflow-wrap:anywhere; }}
     .module-flush-badge {{ font: 700 0.62rem var(--mono); padding: 0.15rem 0.45rem; border-radius: 999px; text-transform: uppercase; }}
     .module-flush-badge.badge-active {{ background: color-mix(in srgb, var(--accent) 20%, var(--surface)); color: var(--accent); border: 1px solid var(--accent); }}
     .module-flush-badge.badge-idle {{ background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }}
-    .module-card-stats {{ display: flex; gap: 0.4rem; flex-wrap: wrap; }}
+    .module-card-stats {{ font:.72rem var(--sans); color:var(--text-muted); }}
     .mod-stat-pill {{ font: 600 0.64rem var(--mono); padding: 0.12rem 0.4rem; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); }}
     .mod-stat-pill.stat-inputs {{ color: var(--source); }}
     .mod-stat-pill.stat-calcs {{ color: var(--calc); }}
@@ -2995,8 +3015,8 @@ def format_reactlog_html(
         <option value="">Module: All modules</option>
       </select>
       <select class="filter-select phase-selector" id="phase-filter-select" onchange="handlePhaseSelect(this.value)" aria-label="Filter events by phase">
-        <option value="all">Phase: All events</option>
-        <option value="interaction" selected>Phase: User actions</option>
+        <option value="all" selected>Phase: All events</option>
+        <option value="interaction">Phase: User actions</option>
         <option value="init">Phase: Init only</option>
       </select>
       <button class="btn mini" id="btn-skip-init" onclick="skipToInteractions()" title="Skip to user interaction actions">Skip to Actions</button>
@@ -3075,6 +3095,12 @@ def format_reactlog_html(
     </div>
   </header>
 
+  <div class="filter-state" aria-label="Current exploration scope">
+      <button class="btn mini" id="btn-back-overview" onclick="setViewMode('overview')" hidden>Back to overview</button>
+      <span id="filter-node-count" role="status" aria-live="polite"></span>
+      <div id="active-filters"></div>
+      <button class="btn mini" onclick="resetGraphView()" aria-label="Clear all filters">Clear all</button>
+    </div>
   <div class="workspace-layout">
     <!-- Left Sidebar: Vertical Timeline Markers -->
     <aside class="timeline-sidebar trace-burst-ribbon" id="timeline-sidebar" aria-label="Timeline Flushes">
@@ -3151,6 +3177,17 @@ def format_reactlog_html(
             </div>
           </div>
           <div class="overview-cards-grid" id="overview-cards-grid"></div>
+          <details class="overview-section" id="overview-activity-section">
+            <summary>Recording activity <span id="overview-activity-count"></span></summary>
+            <p>Select an action to inspect its reactive chain, or narrow the interval.</p>
+            <label>From <select id="activity-start" aria-label="Activity interval start" onchange="setActivityInterval('start', this.value)"></select></label>
+            <label>To <select id="activity-end" aria-label="Activity interval end" onchange="setActivityInterval('end', this.value)"></select></label>
+            <div id="overview-activity" class="overview-activity"></div>
+          </details>
+          <details class="overview-section" id="overview-connections-section">
+            <summary>Module connections <span id="overview-connections-count"></span></summary>
+            <div id="overview-connections"></div>
+          </details>
         </div>
 
         <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
@@ -3172,11 +3209,11 @@ def format_reactlog_html(
         </svg>
       </div>
 
-      <div class="split-resizer" id="split-resizer" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize sidebar panel" aria-valuenow="420" aria-valuemin="300" aria-valuemax="1200" title="Drag to resize sidebar, double-click to reset (or use Left/Right arrows)">
+      <div class="split-resizer" id="split-resizer" style="display:none" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize sidebar panel" aria-valuenow="420" aria-valuemin="300" aria-valuemax="1200" title="Drag to resize sidebar, double-click to reset (or use Left/Right arrows)">
         <div class="resizer-handle"></div>
       </div>
 
-      <aside class="sidebar" id="sidebar" aria-label="Details and events">
+      <aside class="sidebar" id="sidebar" aria-label="Details and events" hidden>
         <div class="sidebar-header">
           <div class="sidebar-tabs" role="tablist" aria-label="Sidebar views">
             <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Inspector</button>
@@ -3189,11 +3226,11 @@ def format_reactlog_html(
 
         <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-labelledby="timeline-tab">
           <div class="inspector-container">
-            <div class="flush-card" id="flush-card">
-              <div class="flush-card-header">
+            <details class="flush-card" id="flush-card">
+              <summary class="flush-card-header">
                 <div class="flush-card-title" id="flush-card-title">Flush 0: Init</div>
                 <span class="flush-card-time" id="flush-card-time">0.0s</span>
-              </div>
+              </summary>
               <div class="flush-card-body">
                 <div class="flush-stage-row">
                   <span class="stage-tag tag-trigger">Trigger</span>
@@ -3213,7 +3250,7 @@ def format_reactlog_html(
                 </div>
                 <div class="flush-execution-order" id="flush-execution-order"></div>
               </div>
-            </div>
+            </details>
 
             <div class="why-card" id="why-card">
               <div class="why-header">
@@ -3257,7 +3294,7 @@ def format_reactlog_html(
               <div class="source-drawer-refs" id="insp-source-refs" hidden></div>
             </div>
           </div>
-          <div class="event-list" id="event-list"></div>
+          <details class="event-history" id="event-history"><summary>Event history</summary><div class="event-list" id="event-list"></div></details>
         </div>
 
         <div class="actions-panel sidebar-panel" id="actions-panel" role="tabpanel" aria-labelledby="actions-tab" hidden>
@@ -3335,20 +3372,20 @@ def format_reactlog_html(
       <div class="scrubber">
         <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
       </div>
-      <select class="timeline-mode-select" id="timeline-mode-select" onchange="setTimelineMode(this.value)" aria-label="Timeline display mode">
+      <select class="timeline-mode-select filter-select" id="timeline-mode-select" onchange="setTimelineMode(this.value)" aria-label="Timeline display mode">
         <option value="activity">Activity</option>
         <option value="realtime">Realtime</option>
       </select>
     </div>
     <div class="status-right">
       <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
-        <button class="btn mini view-mode-btn is-active" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show only nodes active in this flush cycle">
+        <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show only nodes active in this flush cycle">
           <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Flush Cycle
         </button>
         <button class="btn mini view-mode-btn" id="btn-mode-full" onclick="setViewMode('full')" title="Show the complete reactive DAG">
           <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> Full DAG
         </button>
-        <button class="btn mini view-mode-btn" id="btn-mode-overview" onclick="setViewMode('overview')" title="System architecture overview">
+        <button class="btn mini view-mode-btn is-active" id="btn-mode-overview" onclick="setViewMode('overview')" title="System architecture overview">
           <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> Overview
         </button>
       </div>
@@ -3395,7 +3432,12 @@ def format_reactlog_html(
     let videoFrameRequestKind = null;
     let isSourceDrawerOpen = false;
 
-    let currentViewMode = 'flush';
+    let currentViewMode = 'overview';
+    let eventListScope = null;
+    let activityStart = null;
+    let activityEnd = null;
+    const graphViewports = new Map();
+    const expandedModuleDetails = new Set();
     let selectedModuleFilter = '';
     let selectedStageFilter = null;
 
@@ -3620,9 +3662,8 @@ def format_reactlog_html(
       if (!searchQuery || !searchQuery.startsWith('id:')) return null;
       const needle = searchQuery.slice(3).trim().toLowerCase();
       if (!needle) return null;
-      const rawNodes = reactlogData.nodes || [];
       const matchingIds = [];
-      rawNodes.forEach(n => {{
+      (reactlogData.nodes || []).forEach(n => {{
         const nid = String(n.id || '').toLowerCase();
         const nlabel = String(n.label || '').toLowerCase();
         const nname = String(n.name || '').toLowerCase();
@@ -4432,6 +4473,7 @@ def format_reactlog_html(
         statusLine.textContent = nodeLabel
           ? `Selected: ${{nodeLabel}} · ${{waveLabel}}`
           : `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}} · ${{waveLabel}}`;
+        statusLine.title = statusLine.textContent;
       }}
 
       document.querySelectorAll('.burst-anchor').forEach(anchor => {{
@@ -4590,21 +4632,28 @@ def format_reactlog_html(
     }}
 
     function setViewMode(mode) {{
+      if (mode === 'overview' && currentViewMode !== 'overview') graphViewports.set(currentViewMode + ':' + selectedModuleFilter, {{ zoom: zoomLevel, pan: {{ ...panOffset }} }});
       currentViewMode = mode;
       document.querySelectorAll('.view-mode-btn').forEach(btn => {{
         btn.classList.toggle('is-active', btn.id === `btn-mode-${{mode}}`);
       }});
+      document.querySelector('.graph-topbar').hidden = mode === 'overview';
+      document.getElementById('timeline-sidebar').hidden = mode === 'overview';
+      document.getElementById('trace-timeline-bar').hidden = mode === 'overview';
       const overviewPanel = document.getElementById('module-overview-panel');
       const svg = document.getElementById('reactlog-svg');
       if (mode === 'overview') {{
         if (overviewPanel) overviewPanel.hidden = false;
         if (svg) svg.style.display = 'none';
+        toggleInspector(false);
         renderModuleOverview();
+        updateFilterState(getScopedNodes());
       }} else {{
         if (overviewPanel) overviewPanel.hidden = true;
         if (svg) svg.style.display = 'block';
         renderGraph();
-        fitGraph();
+        const saved = graphViewports.get(mode + ':' + selectedModuleFilter);
+        if (saved) {{ zoomLevel = saved.zoom; panOffset = {{ ...saved.pan }}; applyZoom(); }} else fitGraph();
       }}
     }}
 
@@ -4612,12 +4661,13 @@ def format_reactlog_html(
       selectedModuleFilter = modName || '';
       const select = document.getElementById('module-filter-select');
       if (select) select.value = selectedModuleFilter;
+      collapsedModules.delete(modName);
       setViewMode('full');
     }}
 
     function filterByModule(modName) {{
       selectedModuleFilter = modName || '';
-      renderGraph();
+      refreshExploration();
       fitGraph();
     }}
 
@@ -4639,7 +4689,7 @@ def format_reactlog_html(
     }}
 
     function toggleCollapseAllModules() {{
-      const allMods = new Set((reactlogData.nodes || []).map(n => n.module).filter(Boolean));
+      const allMods = new Set(filterItems((reactlogData.nodes || []).map(n => n.module), Boolean));
       if (collapsedModules.size >= allMods.size) {{
         collapsedModules.clear();
       }} else {{
@@ -4667,8 +4717,8 @@ def format_reactlog_html(
     function populateModuleSelect() {{
       const select = document.getElementById('module-filter-select');
       if (!select) return;
-      select.innerHTML = '<option value="">Module: All modules</option>';
-      const mods = Array.from(new Set((reactlogData.nodes || []).map(n => n.module).filter(Boolean))).sort();
+      select.innerHTML = '<option value="">Module: All modules</option><option value="__root__">Module: App (Root)</option>';
+      const mods = Array.from(new Set(filterItems((reactlogData.nodes || []).map(n => n.module), Boolean))).sort();
       mods.forEach(mod => {{
         const opt = document.createElement('option');
         opt.value = mod;
@@ -4757,6 +4807,94 @@ def format_reactlog_html(
       }}
     }}
 
+    function getScopedNodes() {{
+      const lineage = getActiveLineageSet();
+      const wave = allBursts[getCurrentFlushIndex()] || allBursts[0];
+      const active = currentViewMode === 'flush' && !focusedNodeId && wave ? getActiveFlushNodeIds(wave) : null;
+      let intervalNodes = null;
+      if (activityStart !== null || activityEnd !== null || currentPhaseFilter !== 'all') {{
+        intervalNodes = new Set();
+        allBursts.forEach((burst, i) => {{
+          if (!burstInScope(burst, i)) return;
+          getActiveFlushNodeIds(burst).forEach(id => intervalNodes.add(id));
+        }});
+      }}
+      return filterItems(reactlogData.nodes || [], n => {{
+        if (lineage ? !lineage.has(n.id) : (!activeRoles.has(n.role) || (searchQuery && !Number.isFinite(nodeSearchScore(n, searchQuery))))) return false;
+        if (selectedModuleFilter && (n.module || '__root__') !== selectedModuleFilter) return false;
+        if (active && active.size && !active.has(n.id) && !active.has(cleanName(n.id))) return false;
+        if (intervalNodes && !intervalNodes.has(n.id) && !intervalNodes.has(cleanName(n.id))) return false;
+        if (selectedStageFilter && wave) {{
+          const members = selectedStageFilter === 'invalidated' ? wave.invalidatedNodes || new Set()
+            : new Set((selectedStageFilter === 'calcs' ? wave.calcs || [] : wave.outputs || []).map(x => x.nodeId || x.name));
+          if (!members.has(n.id) && !members.has(cleanName(n.id))) return false;
+        }}
+        return true;
+      }});
+    }}
+
+    function burstInScope(wave, index) {{
+      return (activityStart === null || index >= activityStart) && (activityEnd === null || index <= activityEnd)
+        && (currentPhaseFilter === 'all' || (wave.isInit ? 'init' : 'interaction') === currentPhaseFilter);
+    }}
+
+    function setActivityInterval(side, value) {{
+      const index = value === '' ? null : Number(value);
+      if (side === 'start') activityStart = index; else activityEnd = index;
+      if (activityStart !== null && activityEnd !== null && activityStart > activityEnd) {{
+        if (side === 'start') activityEnd = activityStart; else activityStart = activityEnd;
+      }}
+      refreshExploration();
+    }}
+
+    function refreshExploration() {{
+      renderGraph();
+      if (currentViewMode === 'overview') renderModuleOverview();
+      renderEventList();
+    }}
+
+    function updateFilterState(nodes) {{
+      document.getElementById('filter-node-count').textContent = `${{nodes.length}} of ${{(reactlogData.nodes || []).length}} nodes`;
+      document.getElementById('btn-back-overview').hidden = currentViewMode === 'overview';
+      const chips = document.getElementById('active-filters');
+      chips.replaceChildren();
+      const add = (kind, label, clear) => {{
+        const button = document.createElement('button');
+        button.className = 'btn mini'; button.type = 'button';
+        button.textContent = label + ' ×'; button.setAttribute('aria-label', `Remove ${{kind}} filter`);
+        button.onclick = () => {{ clear(); refreshExploration(); }};
+        chips.appendChild(button);
+      }};
+      if (currentViewMode === 'flush') add('flush', 'Active flush', () => setViewMode('full'));
+      if (selectedModuleFilter) add('module', selectedModuleFilter === '__root__' ? 'App (Root)' : selectedModuleFilter, () => {{
+        selectedModuleFilter = ''; document.getElementById('module-filter-select').value = '';
+      }});
+      if (searchQuery) add('search', searchQuery, () => {{
+        searchQuery = ''; document.getElementById('search-input').value = ''; document.getElementById('search-results').hidden = true;
+      }});
+      if (currentPhaseFilter !== 'all') add('phase', currentPhaseFilter, () => {{
+        currentPhaseFilter = 'all'; document.getElementById('phase-filter-select').value = 'all';
+      }});
+      if (selectedStageFilter) add('stage', selectedStageFilter, () => {{ selectedStageFilter = null; }});
+      if (activityStart !== null || activityEnd !== null) add('interval', `Flushes ${{activityStart ?? 0}}–${{activityEnd ?? allBursts.length - 1}}`, () => {{
+        activityStart = null; activityEnd = null;
+      }});
+      document.querySelectorAll('.pipeline-step-item').forEach(el => el.classList.toggle('is-selected-stage', el.id === `pipe-${{selectedStageFilter}}`));
+      const ids = new Set(nodes.map(n => n.id));
+      document.querySelectorAll('[data-wave-idx]').forEach(el => {{
+        const i = Number(el.dataset.waveIdx), wave = allBursts[i];
+        const relevant = wave && burstInScope(wave, i) && [...getActiveFlushNodeIds(wave)].some(id => ids.has(id));
+        el.classList.toggle('is-outside-scope', !relevant);
+      }});
+      document.querySelectorAll('.trace-chip').forEach(chip => {{
+        const step = Number(chip.dataset.step), id = chip.dataset.nodeId;
+        const inInterval = (activityStart === null || step >= allBursts[activityStart]?.startStep)
+          && (activityEnd === null || !allBursts[activityEnd + 1] || step < allBursts[activityEnd + 1].startStep);
+        chip.classList.toggle('is-outside-scope', !inInterval || (id && !ids.has(id)));
+      }});
+      renderEventList();
+    }}
+
     function renderModuleOverview() {{
       const grid = document.getElementById('overview-cards-grid');
       const subtitle = document.getElementById('overview-subtitle');
@@ -4764,8 +4902,9 @@ def format_reactlog_html(
       grid.innerHTML = '';
 
       const nodes = reactlogData.nodes || [];
+      const scopedIds = new Set(getScopedNodes().map(n => n.id));
       const curIdx = getCurrentFlushIndex();
-      const curWave = allBursts[curIdx] || allBursts[0];
+      const curWave = allBursts[curIdx] || {{}};
       const activeFlushNodeIds = getActiveFlushNodeIds(curWave);
 
       const modulesMap = new Map();
@@ -4794,38 +4933,81 @@ def format_reactlog_html(
       }});
 
       if (subtitle) {{
-        subtitle.textContent = `${{modulesMap.size}} Modules · ${{nodes.length}} Nodes · Flush ${{curIdx + 1}} of ${{allBursts.length}} (${{curWave.humanAction || curWave.triggerLabel || 'Init'}})`;
+        subtitle.textContent = `${{modulesMap.size}} Modules · ${{nodes.length}} Nodes · ${{allBursts.length}} flushes`;
       }}
+
+      const activity = document.getElementById('overview-activity');
+      activity.replaceChildren();
+      document.getElementById('overview-activity-count').textContent = `(${{allBursts.length}} flushes)`;
+      for (const side of ['start', 'end']) {{
+        const select = document.getElementById('activity-' + side);
+        select.replaceChildren(new Option(side === 'start' ? 'Recording start' : 'Recording end', ''));
+        allBursts.forEach((wave, i) => select.add(new Option(`${{i}}: ${{wave.humanAction || wave.triggerLabel || 'Initialization'}}`, String(i))));
+        select.value = String((side === 'start' ? activityStart : activityEnd) ?? '');
+      }}
+      allBursts.forEach((wave, i) => {{
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'btn';
+        const relevant = burstInScope(wave, i) && [...getActiveFlushNodeIds(wave)].some(id => scopedIds.has(id));
+        button.classList.toggle('is-outside-scope', !relevant);
+        button.setAttribute('aria-pressed', String(i === curIdx));
+        const activeIds = getActiveFlushNodeIds(wave);
+        const activeCount = nodes.reduce((count, n) => count + (activeIds.has(n.id) || activeIds.has(cleanName(n.id)) ? 1 : 0), 0);
+        button.textContent = `${{formatTime(wave.time)}} · ${{wave.humanAction || wave.triggerLabel || 'Initialization'}} · ${{activeCount}} active nodes`;
+        button.onclick = () => {{ selectFlush(i); setViewMode('flush'); }};
+        activity.appendChild(button);
+      }});
+      const connections = document.getElementById('overview-connections'); connections.replaceChildren();
+      const links = new Map();
+      (reactlogData.edges || []).forEach(edge => {{
+        const from = nodeIndex.get(edge.from)?.module || 'Root App';
+        const to = nodeIndex.get(edge.to)?.module || 'Root App';
+        if (from === to) return;
+        const key = JSON.stringify([from, to, Boolean(edge.isolated)]);
+        if (!links.has(key)) links.set(key, {{ from, to, isolated: edge.isolated, count: 0 }});
+        links.get(key).count++;
+      }});
+      for (const link of links.values()) {{
+        const button = document.createElement('button'); button.className = 'btn mini'; button.type = 'button';
+        const label = name => name === 'Root App' ? 'App (Root)' : name;
+        button.textContent = `${{label(link.from)}} → ${{label(link.to)}} · ${{link.count}} ${{link.isolated ? 'isolated reads' : 'dependencies'}}`;
+        button.onclick = () => zoomToModule(link.to === 'Root App' ? '__root__' : link.to);
+        connections.appendChild(button);
+      }}
+      document.getElementById('overview-connections-section').hidden = !links.size;
+      document.getElementById('overview-connections-count').textContent = `(${{links.size}})`;
+      if (!links.size) connections.textContent = 'No dependencies between modules. Zoom into a module to explore its internal chain.';
 
       Array.from(modulesMap.values()).forEach(modInfo => {{
         const card = document.createElement('div');
-        const isActive = modInfo.activeNodes.length > 0;
-        card.className = `module-card${{isActive ? ' is-active-in-flush' : ' is-idle-in-flush'}}`;
+        const isActive = modInfo.nodes.some(n => scopedIds.has(n.id));
+        card.className = 'module-card';
         card.setAttribute('data-module', modInfo.id);
-
-        const activeTag = isActive
-          ? `<span class="module-flush-badge badge-active">● Active (${{modInfo.activeNodes.length}} ran)</span>`
-          : '<span class="module-flush-badge badge-idle">○ Idle</span>';
-
-        const activePills = isActive
-          ? `<div class="module-active-nodes-list">${{modInfo.activeNodes.slice(0, 6).map(n => `<span class="mod-active-node-tag">${{escapeHTML(cleanName(n.label || n.id))}}</span>`).join('')}}${{modInfo.activeNodes.length > 6 ? `<span style="font-size:0.6rem;color:var(--text-muted);align-self:center;">+${{modInfo.activeNodes.length - 6}} more</span>` : ''}}</div>`
-          : '<div class="module-idle-note">No recalculations in this flush</div>';
+        card.classList.toggle('is-outside-scope', !isActive);
 
         card.innerHTML = `
           <div class="module-card-header">
             <div class="module-card-title">${{escapeHTML(modInfo.name)}}</div>
-            ${{activeTag}}
           </div>
-          <div class="module-card-stats">
-            <span class="mod-stat-pill stat-inputs">${{modInfo.inputs}} inputs</span>
-            <span class="mod-stat-pill stat-calcs">${{modInfo.calcs}} calcs</span>
-            <span class="mod-stat-pill stat-outputs">${{modInfo.outputs}} outputs</span>
-          </div>
-          ${{activePills}}
+          <div class="module-card-stats">${{modInfo.nodes.length}} nodes · ${{modInfo.inputs}} inputs · ${{modInfo.calcs}} calcs · ${{modInfo.outputs}} outputs</div>
           <div class="module-card-actions">
-            <button type="button" class="btn mini primary" onclick="zoomToModule('${{modInfo.id === 'Root App' ? '' : escapeHTML(modInfo.id)}}')">Zoom into Module →</button>
+            <button type="button" class="btn mini primary">Zoom into Module →</button>
           </div>
         `;
+        card.querySelector('.module-card-actions button').onclick = () => zoomToModule(modInfo.id === 'Root App' ? '__root__' : modInfo.id);
+        const repeated = filterItems(modInfo.nodes, n => (executionCounts.get(n.id) || 0) > 1).sort((a, b) => executionCounts.get(b.id) - executionCounts.get(a.id));
+        const details = document.createElement('details'); details.className = 'module-execution-details';
+        details.open = expandedModuleDetails.has(modInfo.id);
+        const summary = document.createElement('summary');
+        summary.textContent = `${{modInfo.nodes.reduce((sum, n) => sum + (executionCounts.get(n.id) || 0), 0)}} executions across recording`;
+        details.appendChild(summary);
+        details.ontoggle = () => {{ if (details.isConnected) {{ if (details.open) expandedModuleDetails.add(modInfo.id); else expandedModuleDetails.delete(modInfo.id); }} }};
+        repeated.slice(0, 3).forEach(node => {{
+          const button = document.createElement('button'); button.type = 'button'; button.className = 'btn mini';
+          button.textContent = `${{cleanName(node.label || node.id)}} · ${{executionCounts.get(node.id)}} executions`;
+          button.onclick = () => {{ zoomToModule(modInfo.id === 'Root App' ? '__root__' : modInfo.id); selectNode(node.id); }};
+          details.appendChild(button);
+        }});
+        card.appendChild(details);
         grid.appendChild(card);
       }});
     }}
@@ -4900,6 +5082,7 @@ def format_reactlog_html(
       fitGraph();
       setupVideoSync();
       initSplitResizer();
+      setViewMode('overview');
     }}
 
     function nodeKind(n) {{
@@ -4919,9 +5102,9 @@ def format_reactlog_html(
       sidebar.hidden = !shouldOpen;
       if (resizer) resizer.style.display = shouldOpen ? '' : 'none';
       const btnHeader = document.getElementById('btn-toggle-inspector');
-      if (btnHeader) btnHeader.classList.toggle('is-active', shouldOpen);
+      if (btnHeader) {{ btnHeader.classList.toggle('is-active', shouldOpen); btnHeader.setAttribute('aria-expanded', String(shouldOpen)); }}
       const btnBottom = document.getElementById('btn-toggle-inspector-bottom');
-      if (btnBottom) btnBottom.classList.toggle('is-active', shouldOpen);
+      if (btnBottom) {{ btnBottom.classList.toggle('is-active', shouldOpen); btnBottom.setAttribute('aria-expanded', String(shouldOpen)); }}
       fitGraph();
     }}
 
@@ -4951,7 +5134,7 @@ def format_reactlog_html(
 
     function handlePhaseSelect(val) {{
       currentPhaseFilter = val;
-      renderEventList();
+      refreshExploration();
     }}
 
     function skipToInteractions() {{
@@ -5034,11 +5217,19 @@ def format_reactlog_html(
     function renderEventList() {{
       const list = document.getElementById('event-list');
       if (!list) return;
+      const events = reactlogData.events || reactlogData.log || [];
+      const scopedIds = new Set(getScopedNodes().map(n => n.id));
+      const scope = JSON.stringify([currentPhaseFilter, activityStart, activityEnd, selectedModuleFilter, searchQuery, selectedStageFilter, currentViewMode, [...scopedIds]]);
+      if (eventListScope === scope) return;
+      eventListScope = scope;
       list.innerHTML = '';
       let visiblePhase = null;
-      const events = reactlogData.events || reactlogData.log || [];
-
+      const filtered = selectedModuleFilter || searchQuery || selectedStageFilter || activityStart !== null || activityEnd !== null || currentViewMode === 'flush';
       events.forEach((ev, idx) => {{
+        if (activityStart !== null && idx < allBursts[activityStart]?.startStep) return;
+        if (activityEnd !== null && allBursts[activityEnd + 1] && idx >= allBursts[activityEnd + 1].startStep) return;
+        const eventIds = filterItems([ev.node_id || ev.id, ev.edge_from, ev.edge_to], Boolean);
+        if (filtered && eventIds.length && !eventIds.some(id => scopedIds.has(id))) return;
         if (currentPhaseFilter !== 'all' && ev.phase && ev.phase !== currentPhaseFilter) {{
           return;
         }}
@@ -5492,7 +5683,8 @@ def format_reactlog_html(
     function selectNode(nodeId) {{
       selectedNodeId = nodeId;
       focusedNodeId = nodeId;
-      toggleInspector(true);
+      if (currentViewMode === 'overview') setViewMode('full');
+      showSidebarPanel('timeline');
       renderInspector();
       renderGraph();
       updateSourceHighlight();
@@ -5596,40 +5788,17 @@ def format_reactlog_html(
       if (!svg) return;
       svg.innerHTML = '';
       const isLight = getActiveTheme() === 'light';
-      const rawNodes = reactlogData.nodes || [];
       const visibleNodes = [];
       const representatives = new Map();
       const moduleNodes = new Map();
-      const lineageSet = getActiveLineageSet();
       const focusedNodes = focusedNodeId ? new Set([
         focusedNodeId, ...getUpstreamNodes(focusedNodeId), ...getDownstreamNodes(focusedNodeId)
       ]) : null;
       document.getElementById('btn-clear-selection').hidden = !focusedNodeId;
-      const curIdx = getCurrentFlushIndex();
-      let curWave = allBursts[curIdx] || allBursts[0];
-      const activeFlushNodes = (currentViewMode === 'flush' && curWave) ? getActiveFlushNodeIds(curWave) : null;
 
-      rawNodes.forEach(n => {{
-        if (lineageSet) {{
-          if (!lineageSet.has(n.id)) return;
-        }} else {{
-          if (!activeRoles.has(n.role)) return;
-          if (searchQuery && nodeSearchScore(n, searchQuery) === Infinity) return;
-        }}
-        if (selectedModuleFilter && n.module !== selectedModuleFilter) return;
-        if (!focusedNodeId && activeFlushNodes && activeFlushNodes.size > 0 && !activeFlushNodes.has(n.id) && !activeFlushNodes.has(cleanName(n.id))) return;
-        if (selectedStageFilter && curWave) {{
-          if (selectedStageFilter === 'invalidated') {{
-            const inv = curWave.invalidatedNodes || new Set();
-            if (!inv.has(n.id) && !inv.has(cleanName(n.id))) return;
-          }} else if (selectedStageFilter === 'calcs') {{
-            const calcs = new Set((curWave.calcs || []).map(c => c.nodeId || c.name));
-            if (!calcs.has(n.id) && !calcs.has(cleanName(n.id))) return;
-          }} else if (selectedStageFilter === 'outputs') {{
-            const outs = new Set((curWave.outputs || []).map(o => o.nodeId || o.name));
-            if (!outs.has(n.id) && !outs.has(cleanName(n.id))) return;
-          }}
-        }}
+      const scopedNodes = getScopedNodes();
+      updateFilterState(scopedNodes);
+      scopedNodes.forEach(n => {{
         if (n.module && collapsedModules.has(n.module)) {{
           const id = `module:${{n.module}}`;
           representatives.set(n.id, id);
@@ -6221,8 +6390,7 @@ def format_reactlog_html(
             searchQuery = filterVal.toLowerCase();
             document.getElementById('search-input').value = filterVal;
             results.hidden = true;
-            selectedNodeId = node.id;
-            focusedNodeId = node.id;
+            selectNode(node.id);
             activeRoles = new Set(['source', 'conductor', 'observer']);
             renderGraph();
             renderInspector();
@@ -6233,7 +6401,7 @@ def format_reactlog_html(
           results.appendChild(button);
         }});
       }}
-      renderGraph();
+      refreshExploration();
       fitGraph();
     }}
 
@@ -6241,10 +6409,18 @@ def format_reactlog_html(
       selectedNodeId = null;
       focusedNodeId = null;
       searchQuery = '';
+      selectedModuleFilter = '';
+      selectedStageFilter = null;
+      currentPhaseFilter = 'all';
+      activityStart = null;
+      activityEnd = null;
+      document.getElementById('module-filter-select').value = '';
+      document.getElementById('phase-filter-select').value = 'all';
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
       activeRoles = new Set(['source', 'conductor', 'observer']);
-      renderGraph();
+      if (currentViewMode === 'flush') setViewMode('full');
+      refreshExploration();
       renderInspector();
       updateTraceTimelineScrubber(getCurrentStepTime());
       fitGraph();
@@ -6431,9 +6607,19 @@ def format_reactlog_html(
       graphSeekTime = null;
       currentStep = 0;
       searchQuery = '';
+      selectedModuleFilter = '';
+      selectedStageFilter = null;
+      currentPhaseFilter = 'all';
+      activityStart = null;
+      activityEnd = null;
+      document.getElementById('module-filter-select').value = '';
+      document.getElementById('phase-filter-select').value = 'all';
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
       activeRoles = new Set(['source', 'conductor', 'observer']);
+      expandedModuleDetails.clear();
+      graphViewports.clear();
+      eventListScope = null;
       init();
       renderGraph();
     }}
@@ -6524,7 +6710,7 @@ def format_reactlog_html(
 
     window.addEventListener('DOMContentLoaded', () => {{
       init();
-      new ResizeObserver(() => fitGraph()).observe(document.getElementById('reactlog-svg'));
+      new ResizeObserver(() => {{ if (currentViewMode !== 'overview') fitGraph(); }}).observe(document.getElementById('graph-container'));
     }});
   </script>
   <div id="shortcuts-modal" class="modal-backdrop" hidden onclick="if(event.target===this)toggleShortcutsModal()">

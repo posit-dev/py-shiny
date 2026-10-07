@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Literal
 
 from playwright.sync_api import Page, expect
 
@@ -10,6 +11,20 @@ from shiny._inspect import (
     generate_reactlog,
     record_shiny_session,
 )
+
+
+def load_graph_report(
+    page: Page,
+    html: str,
+    *,
+    wait_until: Literal["load", "domcontentloaded", "networkidle", "commit"] = "load",
+) -> None:
+    """Open the graph and inspector explicitly for tests of those surfaces."""
+    page.set_content(html, wait_until=wait_until)
+    page.locator("#btn-mode-full").click()
+    page.locator("#btn-toggle-inspector").click()
+    page.locator("#event-history").evaluate("el => el.open = true")
+    page.locator("#flush-card").evaluate("el => el.open = true")
 
 
 def test_graph_elements_visible_on_initialization(page: Page) -> None:
@@ -32,7 +47,8 @@ def other():
     return str(input.y())
 """
     reactlog = generate_reactlog(code, inputs={"x": 1, "y": 2})
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -68,7 +84,8 @@ def other():
     return str(input.y())
 """
     reactlog = generate_reactlog(code, inputs={"x": 1, "y": 2})
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -101,7 +118,7 @@ def other():
     return input.y()
 """
     report = generate_reactlog(code)
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     page.locator('.graph-node[data-id="calc:doubled"]').click()
     page.locator(".toolbar").hover()
     expect(page.locator(".graph-node.is-dimmed")).to_have_count(3)
@@ -162,7 +179,7 @@ def chart():
         ],
     )
     steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     expect(page.locator(".app-box")).to_contain_text("App (no namespace)")
     page.locator('.graph-node[data-id="output:chart"]').click()
     expect(page.locator("#insp-plot-image")).to_be_hidden()
@@ -199,7 +216,8 @@ def greeting():
         if event["event"] == "define" and event["node_id"] == "input:name"
     )
 
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -224,7 +242,8 @@ def greeting():
     return f"Hello, {input.name()}"
 """
     reactlog = generate_reactlog(code, video_path="demo.webm")
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(
             reactlog, source_code=code, video_path="/path/to/demo.webm"
         ),
@@ -298,7 +317,8 @@ def out_txt():
     reactlog = generate_reactlog(
         code, recorded_actions=recorded_actions, video_path="demo.webm"
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -326,7 +346,8 @@ def out():
     return f"V={input.val()}"
 """
     reactlog = generate_reactlog(code, video_path="demo.webm")
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -360,7 +381,8 @@ def res():
     reactlog = generate_reactlog(
         code, recorded_actions=recorded_actions, video_path="demo.webm"
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -391,7 +413,8 @@ def res():
         ],
         video_path="demo.webm",
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -410,7 +433,8 @@ def res():
     return str(input.multiplier() * 10)
 """
     reactlog = generate_reactlog(code, inputs={"multiplier": 8})
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -434,7 +458,8 @@ def res():
     return str(input.multiplier() * 10)
 """
     reactlog = generate_reactlog(code, inputs={"multiplier": 8})
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -461,7 +486,8 @@ def res():
         ],
         video_path="demo.webm",
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -505,7 +531,8 @@ def res():
         ],
         video_path="demo.webm",
     )
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
         wait_until="domcontentloaded",
     )
@@ -537,7 +564,8 @@ def out():
     return f"V={input.val()}"
 """
     reactlog = generate_reactlog(code)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code, theme="dark"),
         wait_until="domcontentloaded",
     )
@@ -563,7 +591,8 @@ def out():
     return f"V={input.val()}"
 """
     reactlog = generate_reactlog(code)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -632,7 +661,8 @@ def result():
     return str(doubled())
 """
     reactlog = generate_reactlog(code, inputs={"x": 10, "y": 20})
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -680,7 +710,8 @@ def other():
     return str(input.y())
 """
     reactlog = generate_reactlog(code, inputs={"x": 1, "y": 2})
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -710,7 +741,8 @@ def out():
     return f"A={input.a()}"
 """
     reactlog = generate_reactlog(code)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -746,7 +778,8 @@ def out():
         {"type": "output", "name": "out", "timestamp": 1200},
     ]
     reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -791,7 +824,8 @@ def separate_out():
     return str(input.y())
 """
     reactlog = generate_reactlog(code)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -827,7 +861,8 @@ def out():
         {"type": "input", "name": "val", "value": 20, "timestamp": 1500},
     ]
     reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -856,7 +891,8 @@ def result():
         {"type": "input", "name": "value", "value": 2, "timestamp": 1000},
     ]
     reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -894,7 +930,8 @@ def res():
         {"type": "input", "name": "x", "value": 5, "timestamp": 1200},
     ]
     reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -932,7 +969,8 @@ def merged():
     return f"Sum: {calc_a() + calc_b()}"
 """
     reactlog = generate_reactlog(code)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -976,7 +1014,8 @@ def out_b():
         {"type": "input", "name": "units", "value": 20, "timestamp": 1200},
     ]
     reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -1011,7 +1050,8 @@ def summary():
         {"type": "input", "name": "price", "value": 30, "timestamp": 1200},
     ]
     reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -1074,7 +1114,8 @@ def client_badge():
         {"type": "input", "name": "price", "value": 30, "timestamp": 1200},
     ]
     reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -1175,11 +1216,13 @@ def out():
         ],
     }
 
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
     page.evaluate("data => loadReactlogObject(data)", malicious_json)
+    page.locator("#btn-mode-full").click()
 
     # Click nodes and buttons to trigger any handlers
     page.locator('.graph-node[data-id="calc:safe_node"]').click()
@@ -1202,7 +1245,8 @@ def out():
     return f"Result: {double_val()}"
 """
     reactlog = generate_reactlog(code)
-    page.set_content(
+    load_graph_report(
+        page,
         format_reactlog_html(reactlog, source_code=code),
         wait_until="domcontentloaded",
     )
@@ -1253,7 +1297,9 @@ def test_r_import_search_preserves_all_nodes(page: Page) -> None:
         {"action": "dependsOn", "reactId": "r3", "depOnReactId": "r2"},
         {"action": "dependsOn", "reactId": "r4", "depOnReactId": "r1$x"},
     ]
-    page.set_content(format_reactlog_html(load_reactlog_json(raw), source_code=""))
+    load_graph_report(
+        page, format_reactlog_html(load_reactlog_json(raw), source_code="")
+    )
     # Exercise the separate browser file-import normalizer as well.
     page.evaluate("raw => loadReactlogObject(raw)", raw)
     expect(page.locator('.graph-node[data-id="r1$x"]')).to_have_attribute(
@@ -1292,7 +1338,9 @@ def test_fit_large_graph(page: Page) -> None:
         }
         for i in range(200)
     ]
-    page.set_content(format_reactlog_html(load_reactlog_json(raw), source_code=""))
+    load_graph_report(
+        page, format_reactlog_html(load_reactlog_json(raw), source_code="")
+    )
     page.get_by_role("button", name="Fit graph to view", exact=True).click()
     bounds = page.evaluate("""() => {
         const svg = document.getElementById('reactlog-svg').getBoundingClientRect();
@@ -1310,7 +1358,7 @@ ui.input_numeric("x", "X", 1)
 def result():
     return str(input.x())
 """
-    page.set_content(format_reactlog_html(generate_reactlog(code), code))
+    load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
     search = page.locator("#search-input")
     search.fill("id:output:result")
     search.press("ArrowDown")
@@ -1339,7 +1387,7 @@ def result():
     try:
         for width in (390, 768):
             page.set_viewport_size({"width": width, "height": 844})
-            page.set_content(format_reactlog_html(generate_reactlog(code), code))
+            load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
             bounds = page.evaluate("""() => {
                 const graph = document.getElementById('graph-container').getBoundingClientRect();
                 const sidebar = document.getElementById('sidebar').getBoundingClientRect();
@@ -1377,7 +1425,7 @@ def result():
     return total_revenue()
 """
     report = generate_reactlog(code)
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     positions = page.locator(".graph-node").evaluate_all(
         "nodes => Object.fromEntries(nodes.map(n => [n.dataset.id, +n.querySelector('rect').getAttribute('x')]))"
     )
@@ -1407,7 +1455,7 @@ def server(input, output, session):
     def combined():
         return west() + east()
 """
-    page.set_content(format_reactlog_html(generate_reactlog(code), code))
+    load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
     assert page.locator(".module-box").count() == 2
     page.locator('.module-box[data-module="west"] text').dblclick()
     expect(page.locator('.graph-node[data-id="module:west"]')).to_have_attribute(
@@ -1457,7 +1505,7 @@ def chart():
         ],
     )
     steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     page.evaluate("selectNode('output:chart')")
     expect(page.locator("#insp-plot-image")).to_be_hidden()
     page.evaluate(f"seekTo({steps[0]})")
@@ -1490,7 +1538,7 @@ def summary():
     step = next(
         i for i, e in enumerate(report["events"]) if e["event"] == "outputUpdated"
     )
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     page.evaluate(
         f"seekTo({step}); document.getElementById('session-video').dispatchEvent(new Event('timeupdate'))"
     )
@@ -1521,7 +1569,7 @@ def result():
     app = tmp_path / "app.py"
     app.write_text(code)
     report = generate_reactlog(code, source_path=app)
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     page.locator('.graph-node[data-id="calc:west-revenue"]').click()
     expect(page.locator("#insp-meta-line")).to_have_text("sales.py · Line 5")
     page.locator("#btn-toggle-source-drawer").click()
@@ -1546,6 +1594,7 @@ def result():
         "def result():"
     )
     page.evaluate("data => loadReactlogObject(data)", report)
+    page.locator("#btn-mode-full").click()
     page.locator('.graph-node[data-id="calc:west-revenue"]').click()
     expect(page.get_by_label("Source file")).to_have_value("sales.py")
 
@@ -1557,7 +1606,7 @@ def test_source_highlighting_survives_file_switches_and_json_import(page: Page) 
     }
     report = generate_reactlog(sources["app.py"])
     report.update(sources=sources, entry_file="app.py")
-    page.set_content(format_reactlog_html(report, sources["app.py"]))
+    load_graph_report(page, format_reactlog_html(report, sources["app.py"]))
     page.get_by_role("tab", name="App code").click()
     source = page.locator("#source-panel code")
     expect(source.locator(".syntax-keyword").first).to_have_text("from")
@@ -1586,6 +1635,7 @@ def test_source_highlighting_survives_file_switches_and_json_import(page: Page) 
         entry_file="other.py",
     )
     page.evaluate("report => loadReactlogObject(report)", replacement)
+    page.locator("#btn-toggle-inspector").click()
     page.get_by_role("tab", name="App code").click()
     expect(source.locator(".syntax-comment")).to_have_text("# Imported")
     expect(source.locator(".syntax-string")).to_have_text('"New file"')
@@ -1593,7 +1643,7 @@ def test_source_highlighting_survives_file_switches_and_json_import(page: Page) 
 
 def test_inline_source_snippet_has_syntax_highlighting(page: Page) -> None:
     code = "from shiny import reactive\n@reactive.calc\ndef amount():\n    return input.units() * 25\n"
-    page.set_content(format_reactlog_html(generate_reactlog(code), code))
+    load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
     page.locator('.graph-node[data-id="calc:amount"]').click()
     page.locator("#btn-toggle-source-drawer").click()
     snippet = page.locator("#insp-source-code")
@@ -1611,7 +1661,7 @@ def test_reactlog_keyboard_navigation_and_shortcuts_modal(page: Page) -> None:
             {"type": "input", "name": "x", "value": 2, "timestamp": 20},
         ],
     )
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     modal = page.locator("#shortcuts-modal")
     expect(modal).to_be_hidden()
@@ -1643,7 +1693,7 @@ def txt():
     return f"{isolated_calc()}"
 """
     rlog = generate_reactlog(code)
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     isolated_edges = page.locator(".graph-edge.is-isolated")
     expect(isolated_edges).to_have_count(1)
@@ -1667,7 +1717,7 @@ def out():
             {"type": "input", "name": "a", "value": 3, "timestamp": 2000},
         ],
     )
-    page.set_content(format_reactlog_html(report, code))
+    load_graph_report(page, format_reactlog_html(report, code))
     page.locator("#btn-skip-init").click()
     page.locator('.graph-node[data-id="output:out"]').click()
     expect(page.locator("#why-title")).to_contain_text("did not render")
@@ -1699,11 +1749,9 @@ def txt():
         {"type": "input", "name": "val", "value": 4, "timestamp": 40},
     ]
     rlog = generate_reactlog(code, recorded_actions=actions)
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
-    badge = page.locator(
-        '.graph-node[data-id="calc:compute"] .node-exec-badge'
-    )
+    badge = page.locator('.graph-node[data-id="calc:compute"] .node-exec-badge')
     expect(badge).to_be_visible()
     expect(badge).to_contain_text("4×")
 
@@ -1727,7 +1775,7 @@ def out():
         {"type": "input", "name": "val", "value": 5, "timestamp": 100},
     ]
     rlog = generate_reactlog(code, recorded_actions=actions)
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     expect(page.locator("#flush-select")).to_be_visible()
     expect(page.locator("#flush-pipeline-bar")).to_be_visible()
@@ -1757,7 +1805,7 @@ def mod1_server(input, output, session):
 mod1_server("sub1")
 """
     rlog = generate_reactlog(code)
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     overview_btn = page.locator("#btn-mode-overview")
     expect(overview_btn).to_be_visible()
@@ -1770,7 +1818,9 @@ mod1_server("sub1")
     expect(cards.first).to_contain_text("sub1")
 
     # Zoom into module from card
-    page.locator('.module-card[data-module="sub1"] button').click()
+    page.locator('.module-card[data-module="sub1"]').get_by_role(
+        "button", name="Zoom into Module"
+    ).click()
     expect(panel).not_to_be_visible()
     expect(page.locator(".graph-node")).to_have_count(3)
 
@@ -1792,7 +1842,7 @@ def out():
         {"type": "input", "name": "val", "value": 10, "timestamp": 200},
     ]
     rlog = generate_reactlog(code, recorded_actions=actions)
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     expect(page.locator("#bottom-timeline-bar")).to_be_visible()
     expect(page.locator("#timeline-sidebar")).to_be_visible()
@@ -1825,7 +1875,7 @@ def out():
         {"type": "input", "name": "val", "value": 4, "timestamp": 40},
     ]
     rlog = generate_reactlog(code, recorded_actions=actions)
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     badge = page.locator('.graph-node[data-id="calc:compute"] .node-exec-badge')
     expect(badge).to_be_visible()
@@ -1843,7 +1893,7 @@ def out():
     return f"{input.x()}"
 """
     rlog = generate_reactlog(code)
-    page.set_content(format_reactlog_html(rlog, code))
+    load_graph_report(page, format_reactlog_html(rlog, code))
 
     sidebar = page.locator("#sidebar")
     close_btn = page.locator('button[aria-label="Close Inspector"]')
@@ -1855,5 +1905,3 @@ def out():
 
     toggle_btn.click()
     expect(sidebar).to_be_visible()
-
-
