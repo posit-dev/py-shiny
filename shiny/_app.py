@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import inspect
 import os
 import secrets
+import textwrap
+import time
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import signature
 from pathlib import Path
@@ -180,10 +183,13 @@ class App:
         bookmark_store: Literal["url", "server", "disable"] = "disable",
         debug: bool = False,
         test_mode: bool | None = None,
+        reactlog: bool | None = None,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
         # to the ASGI lifespan protocol)
         self._exit_stack = AsyncExitStack()
+        self._raw_server_fn = server
+        self._reactlog_source_path: Path | None = None
 
         if server is None:
             self.server = noop_server_fn
@@ -202,10 +208,14 @@ class App:
 
         self._debug: bool = debug
         self._test_mode: bool = is_test_mode() if test_mode is None else test_mode
-        """Whether Shiny test mode is enabled.
-
-        Defaults to the ``SHINY_TESTMODE`` env var when ``test_mode`` is ``None``.
-        """
+        self._reactlog_enabled: bool = (
+            reactlog if reactlog is not None else (os.getenv("SHINY_REACTLOG") == "1")
+        )
+        # Note: this token is embedded in every page the app serves (for the Cmd+F8
+        # hotkey), so it only proves the requester can load the app; it is not a
+        # secret. Anyone who can reach an app with reactlog enabled can view its
+        # reactive graph. App source is additionally gated to direct local requests.
+        self._reactlog_token: str = secrets.token_urlsafe(16)
 
         # Settings that the user can change after creating the App object.
         self.lib_prefix: str = LIB_PREFIX
@@ -239,6 +249,7 @@ class App:
         self._static_assets: dict[str, Path] = static_assets_map
 
         self._sessions: dict[str, AppSession] = {}
+        self._app_marks: list[dict[str, Any]] = []
 
         # self._sessions_needing_flush: dict[int, AppSession] = {}
 
@@ -285,6 +296,25 @@ class App:
             ),
             starlette.routing.Mount("/", app=self._dependency_handler),
         ]
+        # Always routed; the handlers check `reactlog_enabled` per request so that
+        # enabling/disabling it after the App is built (e.g. `run_app(reactlog=)`)
+        # takes effect.
+        routes.insert(
+            0,
+            starlette.routing.Route(
+                "/__reactlog__",
+                self._on_reactlog_request_cb,
+                methods=["GET"],
+            ),
+        )
+        routes.insert(
+            0,
+            starlette.routing.Route(
+                "/__reactlog__/mark",
+                self._on_reactlog_mark_cb,
+                methods=["GET", "POST"],
+            ),
+        )
         middleware: list[starlette.middleware.Middleware] = []
         if autoreload_url():
             shared_dir = os.path.join(os.path.dirname(__file__), "www", "shared")
@@ -440,7 +470,184 @@ class App:
                 ui = self._render_page(self.ui(request), self.lib_prefix)
         else:
             ui = self.ui
-        return HTMLResponse(content=ui["html"])
+
+        html_content = ui["html"]
+        if self._reactlog_enabled:
+            token = self._reactlog_token
+            script = f"""<script>
+window.addEventListener('keydown', function(e) {{
+  if ((e.metaKey || e.ctrlKey) && e.key === 'F8') {{
+    e.preventDefault();
+    var token = '{token}';
+    var sessId = (window.Shiny && window.Shiny.shinyapp && window.Shiny.shinyapp.config) ? window.Shiny.shinyapp.config.sessionId : '';
+    if (e.shiftKey) {{
+      var label = prompt('Enter mark label:', 'Bookmark');
+      if (label) {{
+        fetch('__reactlog__/mark?token=' + encodeURIComponent(token), {{
+          method: 'POST',
+          headers: {{'Content-Type': 'application/json'}},
+          body: JSON.stringify({{label: label, session_id: sessId}})
+        }}).then(function() {{
+          console.log('[Reactlog] Bookmark added: ' + label);
+        }});
+      }}
+    }} else {{
+      var url = '__reactlog__?token=' + encodeURIComponent(token) + (sessId ? '&session_id=' + encodeURIComponent(sessId) : '');
+      window.open(url, '_blank');
+    }}
+  }}
+}});
+</script>"""
+            if "</head>" in html_content:
+                html_content = html_content.replace("</head>", f"{script}\n</head>", 1)
+            else:
+                html_content += script
+
+        return HTMLResponse(content=html_content)
+
+    @staticmethod
+    def _is_direct_local_request(request: Request) -> bool:
+        """
+        True only for a loopback client that did not come through a proxy.
+
+        A reverse proxy on the same host (nginx, Workbench, Connect) makes every
+        remote user's request arrive from 127.0.0.1, so a loopback address alone
+        does not mean the user is local.
+        """
+        client_host = request.client.host if request.client else ""
+        if client_host not in ("127.0.0.1", "::1", "localhost", "testclient"):
+            return False
+        return not any(
+            h in request.headers
+            for h in ("forwarded", "x-forwarded-for", "x-forwarded-host", "x-real-ip")
+        )
+
+    def _check_reactlog_access(self, request: Request) -> Response | None:
+        """Return an error response if the request may not use Reactlog."""
+        if not self._reactlog_enabled:
+            return Response("Not Found", status_code=404)
+        token = (
+            request.query_params.get("token")
+            or request.headers.get("X-Reactlog-Token")
+            or ""
+        )
+        if secrets.compare_digest(token, self._reactlog_token):
+            return None
+        if self._is_direct_local_request(request):
+            return None
+        return Response(
+            "Forbidden: Reactlog endpoint is restricted to authenticated or local requests.",
+            status_code=403,
+        )
+
+    async def _on_reactlog_request_cb(self, request: Request) -> Response:
+        from . import reactive
+        from ._inspect import format_reactlog_html, generate_reactlog
+
+        if (err := self._check_reactlog_access(request)) is not None:
+            return err
+
+        target_fn = self._raw_server_fn
+        source_code = ""
+        app_file: Path | None = None
+        # The token is in every page the app serves, so it only proves the
+        # requester can load the app. App source is only shown to local users.
+        if self._is_direct_local_request(request):
+            app_file = self._reactlog_source_path
+            if app_file is None and target_fn is not None:
+                try:
+                    app_file = Path(inspect.getfile(target_fn))
+                except (TypeError, OSError):
+                    pass
+
+            if app_file is not None:
+                try:
+                    source_code = app_file.read_text(encoding="utf-8")
+                except (OSError, UnicodeError):
+                    app_file = None
+
+            if not source_code and target_fn is not None:
+                # A snippet has its own line numbers and is not the file's contents.
+                app_file = None
+                try:
+                    source_code = textwrap.dedent(inspect.getsource(target_fn))
+                except (TypeError, OSError):
+                    pass
+
+        session_id = request.query_params.get("session_id")
+        target_session = None
+        if session_id and session_id in self._sessions:
+            target_session = self._sessions[session_id]
+        elif len(self._sessions) == 1:
+            target_session = next(iter(self._sessions.values()))
+
+        if target_session:
+            marks = reactive.get_marks(target_session)
+        else:
+            marks = list(self._app_marks) + reactive.get_marks()
+
+        reactlog_data = generate_reactlog(
+            source_code, source_path=app_file, marks=marks
+        )
+        app_name = os.path.basename(app_file) if app_file else "Shiny App"
+        html = format_reactlog_html(reactlog_data, source_code, title=app_name)
+        return HTMLResponse(content=html)
+
+    async def _on_reactlog_mark_cb(self, request: Request) -> Response:
+        from . import reactive
+
+        if (err := self._check_reactlog_access(request)) is not None:
+            return err
+
+        session_id = request.query_params.get("session_id")
+        body_dict: dict[str, object] = {}
+        if request.method == "POST":
+            try:
+                body = await request.json()
+                if isinstance(body, dict):
+                    body_dict = cast(dict[str, object], body)
+                    if not session_id and "session_id" in body_dict:
+                        session_id = str(body_dict["session_id"])
+            except Exception:
+                pass
+
+        target_session = None
+        if session_id and session_id in self._sessions:
+            target_session = self._sessions[session_id]
+        elif len(self._sessions) == 1:
+            target_session = next(iter(self._sessions.values()))
+
+        if request.method == "GET":
+            if target_session:
+                marks = reactive.get_marks(target_session)
+            else:
+                marks = list(self._app_marks) + reactive.get_marks()
+            return JSONResponse({"status": "ok", "marks": marks})
+
+        label = "User mark"
+        raw_label = body_dict.get("label")
+        if isinstance(raw_label, str):
+            label = raw_label
+        elif raw_label is not None:
+            label = str(raw_label)
+
+        mark_entry = {
+            "action": "userMark",
+            "label": label,
+            "details": label,
+            "time": time.time(),
+            "phase": "mark",
+        }
+
+        if target_session is not None:
+            target_session._reactlog_marks.append(mark_entry)
+            count = len(target_session._reactlog_marks)
+        else:
+            self._app_marks.append(mark_entry)
+            reactive.mark(label)
+            count = len(self._app_marks)
+
+        return JSONResponse({"status": "ok", "marks_count": count})
 
     async def _on_connect_cb(self, ws: starlette.websockets.WebSocket) -> None:
         """
@@ -610,6 +817,18 @@ class App:
 
     def set_bookmark_restore_dir_fn(self, bookmark_restore_dir_fn: BookmarkDirFn):
         self._bookmark_restore_dir_fn = as_bookmark_dir_fn(bookmark_restore_dir_fn)
+
+    @property
+    def reactlog_enabled(self) -> bool:
+        return self._reactlog_enabled
+
+    @reactlog_enabled.setter
+    def reactlog_enabled(self, value: bool) -> None:
+        self._reactlog_enabled = bool(value)
+
+    @property
+    def reactlog_token(self) -> str:
+        return self._reactlog_token
 
 
 def is_uifunc(

@@ -170,6 +170,13 @@ any of the following will work:
     help="Dev mode",
     show_default=True,
 )
+@click.option(
+    "--reactlog/--no-reactlog",
+    is_flag=True,
+    default=None,
+    help="Enable Reactlog visualizer (Cmd+F8 / Ctrl+F8, or /__reactlog__). By default, respect SHINY_REACTLOG and the app's configuration.",
+    show_default=True,
+)
 @no_example()
 def run(
     app: str | shiny.App,
@@ -187,6 +194,7 @@ def run(
     factory: bool,
     launch_browser: bool,
     dev_mode: bool,
+    reactlog: bool | None = None,
     **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
@@ -206,6 +214,7 @@ def run(
         factory=factory,
         launch_browser=launch_browser,
         dev_mode=dev_mode,
+        reactlog=reactlog,
         **kwargs,
     )
 
@@ -226,6 +235,7 @@ def run_app(
     factory: bool = False,
     launch_browser: bool = False,
     dev_mode: bool = True,
+    reactlog: bool | None = None,
     **kwargs: object,
 ) -> None:
     """
@@ -270,6 +280,10 @@ def run_app(
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    reactlog
+        Enable or disable the Reactlog visualizer. If ``None`` (the default), preserve
+        the app's configuration and ``SHINY_REACTLOG`` environment variable. An explicit
+        value overrides an existing App object or sets the environment for a loaded app.
     **kwargs
         Additional keyword arguments which are passed to ``uvicorn.run``. For more
         information see [Uvicorn documentation](https://www.uvicorn.org/).
@@ -418,23 +432,35 @@ def run_app(
 
     _set_workbench_kwargs(kwargs)
 
-    _run_uvicorn(
-        app,
-        host=host,
-        port=port,
-        ws_max_size=ws_max_size,
-        log_level=log_level,
-        log_config=log_config,
-        app_dir=app_dir,
-        on_started=on_started,
-        factory=factory,
-        lifespan="on",
-        # Don't allow shiny to use uvloop!
-        # https://github.com/posit-dev/py-shiny/issues/1373
-        loop="asyncio",
-        **reload_args,  # pyright: ignore[reportArgumentType]
-        **kwargs,
-    )
+    orig_reactlog = os.environ.get("SHINY_REACTLOG")
+    if reactlog is not None:
+        os.environ["SHINY_REACTLOG"] = "1" if reactlog else "0"
+        if not isinstance(app, str):
+            app.reactlog_enabled = reactlog
+
+    try:
+        _run_uvicorn(
+            app,
+            host=host,
+            port=port,
+            ws_max_size=ws_max_size,
+            log_level=log_level,
+            log_config=log_config,
+            app_dir=app_dir,
+            on_started=on_started,
+            factory=factory,
+            lifespan="on",
+            # Don't allow shiny to use uvloop!
+            # https://github.com/posit-dev/py-shiny/issues/1373
+            loop="asyncio",
+            **reload_args,  # pyright: ignore[reportArgumentType]
+            **kwargs,
+        )
+    finally:
+        if orig_reactlog is not None:
+            os.environ["SHINY_REACTLOG"] = orig_reactlog
+        elif "SHINY_REACTLOG" in os.environ:
+            del os.environ["SHINY_REACTLOG"]
 
 
 def is_file(app: str) -> bool:

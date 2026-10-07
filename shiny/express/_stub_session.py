@@ -56,6 +56,14 @@ class ExpressStubSession(Session):
     def groups(self) -> list[str] | None:
         return None
 
+    @property
+    def _reactlog_marks(self) -> list[dict[str, Any]]:
+        return []
+
+    @_reactlog_marks.setter
+    def _reactlog_marks(self, value: list[dict[str, Any]]) -> None:
+        pass
+
     def is_stub_session(self) -> Literal[True]:
         return True
 
