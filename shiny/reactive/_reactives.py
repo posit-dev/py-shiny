@@ -818,6 +818,15 @@ class Calc_(Generic[T]):
         try:
             val = await self._fn()
 
+            # Clear before appending: a reentrant recursive call to this same
+            # `Calc_` (the calc calling itself) re-enters `_run_func` while an
+            # outer frame's call is still pending, so without clearing first,
+            # each level's value just piles onto the same list and the very
+            # first (deepest/base-case) entry -- not this call's own result --
+            # would be whatever a stale index read back. Clearing keeps
+            # exactly one entry: the one this call just computed, read
+            # immediately afterward with no other call able to interleave.
+            self._value.clear()
             self._value.append(val)
         except Exception as err:
             self._error.append(err)

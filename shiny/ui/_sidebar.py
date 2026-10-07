@@ -19,7 +19,7 @@ from htmltools import (
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id_or_none
 from .._typing_extensions import TypedDict
-from .._utils import private_random_id
+from .._utils import private_random_id, private_random_int
 from ..bookmark import restore_input
 from ..module import ResolvedId
 from ..session import require_active_session
@@ -43,6 +43,12 @@ __all__ = (
     "layout_sidebar",
     "update_sidebar",
 )
+
+SidebarRole = Literal["form", "search", "complementary", "region"]
+"""
+An ARIA landmark role for :func:`~shiny.ui.sidebar`, describing the sidebar's
+purpose. See the `role` parameter of :func:`~shiny.ui.sidebar` for details.
+"""
 
 SidebarOpenValue = Literal["open", "closed", "always"]
 """
@@ -183,6 +189,10 @@ class Sidebar:
         `<div>` element with class `sidebar-title`. You can also provide a custom
         :class:`~htmltools.Tag` for the title element, in which case you'll
         likely want to give this element `class = "sidebar-title"`.
+    role
+        An ARIA landmark role describing the sidebar's purpose, one of `"form"`,
+        `"search"`, `"complementary"`, or `"region"`, or `None` (the default) for
+        neutral markup. See :func:`~shiny.ui.sidebar` for details.
     color
         A dictionary with items `"bg"` for background or `"fg"` for foreground color.
     class_
@@ -250,6 +260,10 @@ class Sidebar:
         `<div>` element with class `sidebar-title`. You can also provide a custom
         :class:`~htmltools.Tag` for the title element, in which case you'll
         likely want to give this element `class = "sidebar-title"`.
+    role
+        An ARIA landmark role describing the sidebar's purpose, one of `"form"`,
+        `"search"`, `"complementary"`, or `"region"`, or `None` (the default) for
+        neutral markup. See :func:`~shiny.ui.sidebar` for details.
     bg,fg
         A background or foreground color.
     class_
@@ -291,6 +305,7 @@ class Sidebar:
         width: CssUnit = 250,
         id: Optional[str] = None,
         title: TagChild | str = None,
+        role: Optional[SidebarRole] = None,
         fg: Optional[str] = None,
         bg: Optional[str] = None,
         class_: Optional[str] = None,
@@ -303,8 +318,19 @@ class Sidebar:
         if isinstance(title, (str, int, float)):
             title = tags.header(str(title), class_="sidebar-title")
 
+        if role is not None:
+            valid_roles: tuple[SidebarRole, ...] = (
+                "form",
+                "search",
+                "complementary",
+                "region",
+            )
+            if role not in valid_roles:
+                raise ValueError(f"`role` must be one of: {valid_roles}.")
+
         self.id: ResolvedId | None = resolve_id_or_none(id)
         self.title = title
+        self.role = role
         self.class_ = class_
         self.gap = as_css_unit(gap)
         self.padding = as_css_padding(padding)
@@ -416,10 +442,44 @@ class Sidebar:
         )
 
     def _sidebar_tag(self, id: str | None) -> Tag:
-        """Create the `<aside>` tag for the sidebar."""
+        """Create the container tag for the sidebar.
+
+        The container is a neutral `<div>` by default, an `<aside>` when
+        `role="complementary"`, or a `<div>` with the corresponding `role`
+        attribute for other landmark roles.
+        """
         is_hidden_initially = (
             self.open().desktop == "closed" or self.open().mobile == "closed"
         )
+
+        is_landmark = self.role is not None
+
+        label_attrs: TagAttrs = {}
+        content_extra_attrs: TagAttrs = dict(self.attrs)
+
+        if is_landmark:
+            # Accessible-name attributes label the landmark, not the content
+            for key in ("aria-label", "aria-labelledby"):
+                if key in content_extra_attrs:
+                    label_attrs[key] = content_extra_attrs.pop(key)
+
+        title = self.title
+
+        # An explicit `aria-label`/`aria-labelledby` always wins; otherwise label
+        # the landmark with the sidebar's title.
+        if (
+            is_landmark
+            and not _sidebar_has_accessible_name(label_attrs)
+            and title is not None
+        ):
+            title, label_id = _sidebar_label_from_title(title, id)
+            label_attrs = {"aria-labelledby": label_id}
+
+        if is_landmark and not _sidebar_has_accessible_name(label_attrs):
+            raise ValueError(
+                f'`sidebar(role="{self.role}")` requires an accessible name. '
+                "Provide `title`, `aria_label`, or `aria_labelledby`."
+            )
 
         # Create the sidebar content div
         content_attrs: TagAttrs = {
@@ -431,9 +491,9 @@ class Sidebar:
         }
         sidebar_content = div(
             content_attrs,
-            self.title,
+            title,
             *self.children,
-            self.attrs,
+            content_extra_attrs,
         )
 
         # Apply fill_item to the content div if fillable
@@ -441,19 +501,25 @@ class Sidebar:
             sidebar_content = as_fill_item(sidebar_content)
             sidebar_content = as_fillable_container(sidebar_content)
 
+        # `"complementary"` uses the native `<aside>` element; other roles (and
+        # the neutral default) use a `<div>`.
+        sidebar_tag_fn = tags.aside if self.role == "complementary" else div
+
         # Create the sidebar tag
-        aside_attrs: TagAttrs = {
+        sidebar_attrs: TagAttrs = {
             "id": id,
             "class": "sidebar",
             "hidden": "true" if is_hidden_initially else None,
             "data-resizable": "" if self.resizable else None,
+            "role": None if self.role in (None, "complementary") else self.role,
+            **label_attrs,
         }
         # If the user provided an id, we make the sidebar an input to report state
         input_attrs: TagAttrs | None = (
             {"class": "bslib-sidebar-input"} if self.id is not None else None
         )
-        sidebar_tag = tags.aside(
-            aside_attrs,
+        sidebar_tag = sidebar_tag_fn(
+            sidebar_attrs,
             input_attrs,
             sidebar_content,
             class_=self.class_,
@@ -471,6 +537,33 @@ class Sidebar:
         return taglist.tagify()
 
 
+def _sidebar_has_accessible_name(attrs: TagAttrs) -> bool:
+    return any(isinstance(value, str) and len(value) > 0 for value in attrs.values())
+
+
+def _sidebar_label_from_title(
+    title: TagChild, sidebar_id: str | None
+) -> tuple[TagChild, str]:
+    if isinstance(title, Tag):
+        label_id = title.attrs.get("id", None)
+        if label_id is None:
+            label_id = _sidebar_title_id(sidebar_id)
+            title.attrs["id"] = label_id
+        return title, str(label_id)
+
+    # Non-tag titles (e.g. `HTML()`) can't hold an `id`, so wrap them in one.
+    # The wrapper is display:contents so the title still participates directly
+    # in the sidebar's flex layout, and a `div` keeps block-level titles valid.
+    label_id = _sidebar_title_id(sidebar_id)
+    return div(title, id=label_id, style="display:contents"), label_id
+
+
+def _sidebar_title_id(sidebar_id: str | None) -> str:
+    if sidebar_id is None:
+        sidebar_id = f"bslib-sidebar-{private_random_int(1000, 10000)}"
+    return f"{sidebar_id}-title"
+
+
 @add_example()
 def sidebar(
     *args: TagChild | TagAttrs,
@@ -479,6 +572,7 @@ def sidebar(
     width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
+    role: Optional[SidebarRole] = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
     class_: Optional[str] = None,
@@ -537,6 +631,33 @@ def sidebar(
         `<div>` element with class `sidebar-title`. You can also provide a custom
         :class:`~htmltools.Tag` for the title element, in which case you'll
         likely want to give this element `class = "sidebar-title"`.
+    role
+        An `ARIA role <https://www.w3.org/TR/wai-aria-1.2/#role_definitions>`__
+        that describes the sidebar's purpose. The default, `None`, adds no
+        landmark. Choose a role based on the content in the sidebar and its
+        relationship with your app:
+
+        * ``"form"``: for controls that work together on the page's main task.
+          For example, use it for dashboard filters that change the displayed
+          data. In :func:`~shiny.ui.page_sidebar`, the form is inside the page's
+          main landmark.
+        * ``"search"``: only for controls that search an app, site, or dataset.
+        * ``"complementary"``: for help text, related links, or other secondary
+          content that still makes sense without the main content. Do not use it
+          for controls that drive the main output.
+        * ``"region"``: for an important, named section when another landmark
+          does not fit. Use regions sparingly because each one is a navigation
+          destination for screen reader users.
+
+        ``sidebar()`` uses native HTML when possible: ``"complementary"`` creates
+        an ``<aside>``. Other roles create a ``<div>`` with the corresponding
+        ``role`` attribute, e.g. ``<div role="form">``.
+
+        Landmark roles require an accessible name. Provide a visible ``title``,
+        such as ``title="Filters"``, or provide a name without a visible title
+        by setting ``aria_label="Filters"`` in ``**kwargs``. To use an existing
+        label, set ``aria_labelledby="filter-heading"``, where
+        ``"filter-heading"`` is the ``id`` of the labeling element.
     bg,fg
         A background or foreground color.
     class_
@@ -610,6 +731,7 @@ def sidebar(
         open=open,
         id=resolved_id,
         title=title,
+        role=role,
         fg=fg,
         bg=bg,
         class_=class_,
