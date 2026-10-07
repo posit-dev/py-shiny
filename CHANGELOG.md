@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed an issue where data frames containing Polars `Categorical` or `Enum` columns raised `AttributeRemovedError: get_categories was removed in version 2.0` when serialized with Polars >= 2.0. (#2529)
+
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
 
 * `near_points()` and `brushed_points()` now map a non-string categorical column (e.g. one of integers) to its category codes, instead of raising `ValueError: to_float: unsupported dtype for x`. `to_float()` tested the Series itself against `CategoricalDtype`, which no Series ever is, so the categorical branch never ran. (#2505)

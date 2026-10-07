@@ -166,10 +166,29 @@ def assert_frame_equal2(
             ("categorical", ["a", "b", "c"]),
         ),
         (
+            pl.Series(["b", None, "a", "b"], dtype=pl.Categorical),
+            ("categorical", ["b", "a"]),
+        ),
+        (
+            pl.Series([None, None], dtype=pl.Categorical),
+            ("categorical", []),
+        ),
+        (
             pl.Series(
                 ["Panda", "Polar", "Brown", "Brown", "Polar"],
                 dtype=pl.Enum(["Polar", "Panda", "Brown"]),
             ),
+            ("categorical", ["Polar", "Panda", "Brown"]),
+        ),
+        (
+            pl.Series(
+                ["Panda", None, "Polar"],
+                dtype=pl.Enum(["Polar", "Panda", "Brown"]),
+            ),
+            ("categorical", ["Polar", "Panda", "Brown"]),
+        ),
+        (
+            pl.Series([], dtype=pl.Enum(["Polar", "Panda", "Brown"])),
             ("categorical", ["Polar", "Panda", "Brown"]),
         ),
         (pl.Series([{"x": 1}]), "object"),
@@ -211,6 +230,18 @@ def assert_frame_equal2(
                 )
             ),
             ("categorical", ["Polar", "Panda", "Brown"]),
+        ),
+        (
+            pd.Series(pd.Categorical(["a", None, "b"], categories=["a", "b", "c"])),
+            ("categorical", ["a", "b", "c"]),
+        ),
+        (
+            pd.Series(pd.Categorical([], categories=["Polar", "Panda", "Brown"])),
+            ("categorical", ["Polar", "Panda", "Brown"]),
+        ),
+        (
+            pd.Series(pd.Categorical([None, None], categories=["a", "b"])),
+            ("categorical", ["a", "b"]),
         ),
         (pd.Series([{"x": 1}]), "object"),
         (pd.Series([h1("yo")]), "html"),
