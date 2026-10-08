@@ -7,6 +7,7 @@
   // Sets the height/width (toolbar buttons are square) for toolbar buttons
   // Icon size is controlled by font-size
   --_toolbar-btn-size: var(--bslib-toolbar-btn-size, 1.75rem);
+  --_toolbar-font-size: var(--bslib-toolbar-font-size, 0.9rem);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -130,7 +131,7 @@
   // as part of the toolbar, and shouldn't inherit the toolbar's compact styling.
   &,
   & :not(bslib-offcanvas, bslib-offcanvas *) {
-    font-size: 0.9rem;
+    font-size: var(--_toolbar-font-size);
   }
 
   &>:not(bslib-offcanvas, .offcanvas-backdrop) {
