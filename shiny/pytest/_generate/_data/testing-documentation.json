@@ -384,7 +384,7 @@
       },
       {
         "name": "expect_datesdisabled",
-        "description": "Asserts that the input element has the expected `data-date-dates-disabled` attribute value.",
+        "description": "Asserts that the input element has the expected `data-dates-disabled` attribute value.",
         "parameters": "value (list\\[str\\] \\), timeout (Timeout)"
       },
       {
