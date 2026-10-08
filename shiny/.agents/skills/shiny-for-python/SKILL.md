@@ -41,7 +41,7 @@ reference file before writing code** for that area.
 |---|---|---|
 | Layouts | Arranging a page into cards, columns, sidebars, value boxes, or accordions (bslib containers) | `references/layouts.md` |
 | Navigation | Tabs, pills, or a navbar with multiple pages; reading/switching the active tab; runtime nav panels | `references/navigation.md` |
-| Dynamic UI | UI that changes after render — `@render.ui`, `ui.update_*`, `insert_ui`/`remove_ui`, `panel_conditional` | `references/dynamic-ui.md` |
+| Dynamic UI | Wiring Core output IDs, keeping UI IDs unique, or UI that changes after render — `@render.ui`, `ui.update_*`, `insert_ui`/`remove_ui`, `panel_conditional` | `references/dynamic-ui.md` |
 | Theming | Colors, fonts, Bootswatch presets, Sass variables, brand.yml, light/dark mode via `ui.Theme` | `references/theming.md` |
 
 ## Outputs & rendering

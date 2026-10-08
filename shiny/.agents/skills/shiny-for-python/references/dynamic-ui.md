@@ -133,7 +133,8 @@ app = App(app_ui, server)
 - `ui.update_*` called at server top level (not in an effect) -> runs once and
   never reacts. Wrap it in `@reactive.effect`.
 - `@render.ui` function name does not match its `ui.output_ui(id)` -> nothing
-  renders. The function name (or `@output(id=...)`) must equal the id.
+  renders. Match the effective renderer ID to the placeholder; see
+  [Output IDs in Core](#output-ids-in-core) below.
 - Reaching for `insert_ui` to swap between input variants -> use `@render.ui`;
   `insert_ui` UI accumulates and must be removed manually.
 - `remove_ui("#txt")` targets the input, not its wrapper `<div>`, and leaves the
@@ -141,3 +142,31 @@ app = App(app_ui, server)
 - Using `panel_conditional` when the shown/hidden content depends on server-side
   data -> that's a `@render.ui` job; `panel_conditional` only tests client-side
   input values in JavaScript (`input.x`, `&&`, `===`), not Python.
+
+### Output IDs in Core
+
+A Core renderer registers under its function name unless `@output(id=...)`
+overrides it. The effective ID must match the UI placeholder. This example
+keeps a descriptive function name while binding to `summary_output`:
+
+```python
+from shiny import App, render, ui
+
+app_ui = ui.page_fluid(ui.output_text("summary_output"))
+
+def server(input, output, session):
+    @output(id="summary_output")
+    @render.text
+    def make_summary():
+        return "Calculation finished."
+
+app = App(app_ui, server)
+```
+
+Alternatively, name the renderer `summary_output` and omit `@output(id=...)`.
+Without either fix, `make_summary` does not populate `summary_output`.
+Input and output IDs must also be unique within their namespace: use
+`product_query` and `customer_query` for two search fields, rather than `query`
+for both. Modules namespace their inner IDs automatically; see the module
+guides for instance IDs. Express renderers display in place and do not need
+Core output placeholders.

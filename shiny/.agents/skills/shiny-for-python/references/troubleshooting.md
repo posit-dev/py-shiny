@@ -15,7 +15,7 @@ a connected browser; [test-server](test-server.md) covers server logic in memory
 
 | Symptom | Likely cause and fix | Reference |
 |---|---|---|
-| Blank output in a Core app | Renderer ID differs from the UI placeholder. Match the function name or use `@output(id=...)`. | [Output IDs](#output-ids-in-core) |
+| Blank output in a Core app | Renderer ID differs from the UI placeholder. Match the function name or use `@output(id=...)`. | [Core output IDs](dynamic-ui.md#output-ids-in-core) |
 | Output shows a function object, or a condition is always truthy | Reactive value or calculation was referenced without calling it. Read with `val()`. | [Reactivity](reactivity.md#common-mistakes) |
 | One user's state appears in another session | User state was placed in shared scope. In Core, create it in `server()`; in Express, use `app.py`'s per-session scope. | [Session lifecycle](session-lifecycle.md#common-mistakes), [Express shared objects](express.md#shared-objects-and-startup-cost) |
 | Session freezes during slow work | A callback holds up reactive processing, or synchronous work blocks the event loop. Use an extended task and offload blocking work. | [Extended tasks](extended-tasks.md#common-mistakes) |
@@ -23,37 +23,9 @@ a connected browser; [test-server](test-server.md) covers server logic in memory
 | A list or dictionary changes but outputs stay stale | In-place mutation does not invalidate readers. Set a new copy. | [Reactivity](reactivity.md#updating-collections) |
 | `RuntimeError: No current reactive context` | A reactive was read outside a render, calc, effect, or `isolate()` block. | [Reactivity](reactivity.md#common-mistakes) |
 | Module outputs stay blank or instances collide | Core UI/server instance IDs differ, or instance IDs are reused. | [Core modules](modules-core.md#common-mistakes), [Express modules](modules-express.md#common-mistakes) |
-| Duplicate element IDs or unexpected input/output overrides | IDs must be unique within each namespace. | [Output IDs](#output-ids-in-core), [Core modules](modules-core.md#common-mistakes), [Express modules](modules-express.md#common-mistakes) |
+| Duplicate element IDs or unexpected input/output overrides | IDs must be unique within each namespace. | [Core UI IDs](dynamic-ui.md#output-ids-in-core), [Core modules](modules-core.md#common-mistakes), [Express modules](modules-express.md#common-mistakes) |
 | `App(...)` in Express, duplicate UI, or mode syntax errors | Core and Express patterns were mixed. Pick the app's mode and use its API. | [Express](express.md#common-mistakes) |
 | R syntax such as `shinyApp`, `fluidPage`, or `observeEvent` | R idioms were copied into Python. Use the Python equivalents. | [Express](express.md#r-shiny-syntax-in-python) |
-
-## Output IDs in Core
-
-A Core renderer registers under its function name unless `@output(id=...)`
-overrides it. The effective ID must match the UI placeholder. This example
-keeps a descriptive function name while binding to `summary_output`:
-
-```python
-from shiny import App, render, ui
-
-app_ui = ui.page_fluid(ui.output_text("summary_output"))
-
-def server(input, output, session):
-    @output(id="summary_output")
-    @render.text
-    def make_summary():
-        return "Calculation finished."
-
-app = App(app_ui, server)
-```
-
-Alternatively, name the renderer `summary_output` and omit `@output(id=...)`.
-Without either fix, `make_summary` does not populate `summary_output`.
-Input and output IDs must also be unique within their namespace: use
-`product_query` and `customer_query` for two search fields, rather than `query`
-for both. Modules namespace their inner IDs automatically; see the module
-guides for instance IDs. Express renderers display in place and do not need
-Core output placeholders.
 
 ## Repair and verification workflow
 
