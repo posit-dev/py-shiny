@@ -84,7 +84,7 @@ class TestReactiveFlushInstrumentation:
         with patch_otel_tracing_state(tracing_enabled=True):
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "all"}):
                 env = ReactiveEnvironment()
-                await env.run_round()
+                await env.start_round()
 
         spans = get_exported_spans(provider, memory_exporter)
         assert not [s for s in spans if s.name == "reactive_update"]
@@ -99,7 +99,7 @@ class TestReactiveFlushInstrumentation:
 
                 # Mock the tracer to verify it's not called at span creation level
                 with patch("shiny.otel._core.get_otel_tracer") as mock_get_tracer:
-                    await env.run_round()
+                    await env.start_round()
 
                     # Tracer should not be retrieved since collection level is too low
                     mock_get_tracer.assert_not_called()
