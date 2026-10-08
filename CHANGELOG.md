@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* On Windows, an output's busy indicator now shows while the output renders. Before, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it. (#1381)
+
 * Setting a reactive value from a download handler (`@render.download_button`) now updates the outputs and effects that read it right away, including while a streamed download is still sending. The session also keeps handling input during a streamed download. Before, they updated only after the next message from the client. (#1785)
 
 * `Progress.set(0)` now places the bar at `0` relative to `min` and `max`, instead of sending `0` unnormalized. With a negative `min`, such as `Progress(min=-10, max=10)`, a value of `0` showed an empty bar rather than a half-full one. (#2518)

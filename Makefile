@@ -189,6 +189,8 @@ clean-js: FORCE
 SUB_FILE:=
 PYTEST_BROWSERS:= --browser webkit --browser firefox --browser chromium
 PYTEST_DEPLOYS_BROWSERS:= --browser chromium
+# Arguments for `playwright install`, besides the browsers.
+PLAYWRIGHT_INSTALL_ARGS:= --with-deps
 # Per-test timeout (seconds) so a single hung test fails fast with a full
 # thread-stack dump instead of silently consuming the whole CI job.
 PLAYWRIGHT_TEST_TIMEOUT:= 120
@@ -236,7 +238,7 @@ install-playwright: FORCE
 	@if [ -n "$$PW_TEST_CONNECT_WS_ENDPOINT" ]; then \
 		echo "Using remote Playwright server at $$PW_TEST_CONNECT_WS_ENDPOINT"; \
 	else \
-		playwright install --with-deps $(PLAYWRIGHT_BROWSERS); \
+		playwright install $(PLAYWRIGHT_INSTALL_ARGS) $(PLAYWRIGHT_BROWSERS); \
 	fi
 
 install-rsconnect: FORCE

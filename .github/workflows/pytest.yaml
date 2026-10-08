@@ -252,6 +252,28 @@ jobs:
           docker inspect --format '{{json .State}}' playwright || true
           docker logs playwright || true
 
+  # End-to-end tests for behavior that differs on Windows. The other Playwright
+  # jobs run on Ubuntu, where these tests pass either way. For example, on
+  # Windows a websocket write made while an earlier write is still in flight goes
+  # out only when the event loop runs again (#1381).
+  playwright-windows:
+    if: github.event_name != 'release'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Setup py-shiny
+        uses: ./.github/py-shiny/setup
+
+      - name: Run Windows-specific End-to-End tests
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          # No `--with-deps`: on Windows it only adds the Media Foundation feature,
+          # which headless Chromium doesn't need, and that takes about 3 minutes.
+          make playwright-shiny SUB_FILE="bugs/1381-busy-indicator-progress" PLAYWRIGHT_BROWSERS=chromium PLAYWRIGHT_INSTALL_ARGS=--only-shell PYTEST_BROWSERS="--browser chromium"
+
   playwright-examples:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
@@ -467,6 +489,7 @@ jobs:
       - pyright
       - oldest-deps
       - playwright-shiny
+      - playwright-windows
       - playwright-examples
       - playwright-ai
       - playwright-deploys-precheck
