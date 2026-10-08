@@ -19,9 +19,9 @@ def test_skills_list_shows_names_and_descriptions() -> None:
 
     assert result.exit_code == 0
     assert SKILL_NAME in result.output
-    skill_line = next(
-        line for line in result.output.splitlines() if line.startswith(SKILL_NAME)
-    )
+    # The one-line description from the skill's frontmatter is shown (with any
+    # wrapping YAML quotes stripped).
+    skill_line = next(line for line in result.output.splitlines() if SKILL_NAME in line)
     skill_md = (SKILLS_DIR / SKILL_NAME / "SKILL.md").read_text()
     match = re.search(r'^description: "?(.+?)"?$', skill_md, re.MULTILINE)
     assert match is not None
