@@ -215,9 +215,13 @@ Only session lifecycle spans (session start/end, HTTP/WebSocket connections).
 **Use case**: Basic session tracking in production
 
 ### `reactive_update`
-Session spans + reactive update cycle spans (one span per flush cycle).
+Session spans + reactive update cycle spans: one `reactive_update` span per session
+cycle, from when the session turns busy until all of its effects (including async
+ones) have finished. It carries the session's `session.id`, and the session's
+calc, effect, and output spans are its children. The first cycle's span is a child
+of `session_start`; later cycles each start a trace of their own.
 
-**Overhead**: Low (1 span per reactive flush)
+**Overhead**: Low (1 span per session cycle)
 **Use case**: Understanding how many update cycles occur
 
 ### `reactivity`
