@@ -9,7 +9,7 @@ from shiny.express import input, ui
 # ChatOllama() requires an Ollama model server to be running locally.
 # See the docs for more information on how to set up a local Ollama server.
 # https://posit-dev.github.io/chatlas/reference/ChatOllama.html
-chat_client = ChatOllama()
+chat_client = ChatOllama(model="llama3.2")
 
 # Some sidebar input controls to populate a prompt and trigger the stream
 with ui.sidebar():
