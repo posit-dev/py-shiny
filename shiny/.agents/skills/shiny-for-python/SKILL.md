@@ -14,7 +14,7 @@ context registers a dependency, so changing that source re-runs everything that
 read it — you never call outputs or schedule updates yourself.
 
 This skill is an **index**. Find your task below and **read the linked
-reference file before writing code** for that area. To audit or repair an existing app, start with [Shiny Doctor](references/doctor.md): inspect the app first, then read the relevant topic guides.
+reference file before writing code** for that area.
 
 ## Foundations
 
@@ -78,9 +78,7 @@ reference file before writing code** for that area. To audit or repair an existi
 
 | Topic | Use when | Reference |
 |---|---|---|
-| App audit & repair (Shiny Doctor) | Diagnosing or repairing an existing app: reactive bugs, UI/output mismatches, concurrency blocks, or session leaks | `references/doctor.md` |
-| Antipatterns | A diagnosed symptom needs a focused bad/good example and prescription | `references/antipatterns.md` |
-| Diagnostic checklist | Performing a broad audit of architecture, reactivity, concurrency, session scope, and runtime behavior | `references/diagnostics-checklist.md` |
+| Troubleshooting | An existing app misbehaves: blank outputs, stale values, cross-session leakage, frozen sessions, or ID mismatches; auditing an app for these issues | `references/troubleshooting.md` |
 | Test server | Testing server logic in memory with the `local_server` fixture / `test_server()` — set inputs, assert on outputs/exports, module scopes; no browser | `references/test-server.md` |
 | Testing | End-to-end Playwright tests — launching an app under pytest, locating and asserting on UI | `references/testing.md` |
 | Debugging | Inspecting server-side reactive/input/output state; exposing values to a test harness | `references/debugging.md` |

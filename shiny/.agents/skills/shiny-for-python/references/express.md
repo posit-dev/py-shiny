@@ -220,3 +220,23 @@ shared objects and automatic display behavior.
 - Calling `ui.page_opts()` or importing `shiny.ui`'s `page_*()` functions in
   Express → page layout is automatic; use `ui.page_opts()` only.
 - Mixing Core and Express imports in one file → pick one mode per file.
+
+### R Shiny syntax in Python
+
+R names such as `shinyApp`, `fluidPage`, and `reactiveVal` raise `NameError`
+in Python. Use these equivalents, choosing Core or Express for the app:
+
+| R Shiny | Shiny for Python |
+|---|---|
+| `shinyApp(ui, server)` | Core: `app = App(app_ui, server)`; Express: top-level UI and renderers |
+| `fluidPage(...)` | Core: `ui.page_fluid(...)`; Express: top-level UI with `ui.page_opts(...)` |
+| `reactiveVal(0)` | `reactive.value(0)` |
+| `reactiveValues(...)` | Per-session `reactive.value()` objects; copy collections when updating |
+| `observeEvent(input$btn, { ... })` | `@reactive.effect` with `@reactive.event(input.btn)` |
+| `renderPlot({ ... })` / `renderUI({ ... })` | `@render.plot` / `@render.ui` on a Python function |
+| `req(input$x)` | `req(input.x())` |
+| `isolate(input$x)` | `with reactive.isolate(): input.x()` |
+| `input$x` / `output$y` | `input.x()` / a renderer named `y` (or a Core output ID override) |
+
+See [Reactivity](reactivity.md) for reactive contexts, event decorators, and
+collection updates.

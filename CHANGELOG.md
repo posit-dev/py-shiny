@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* The bundled `shiny-for-python` Agent Skill now includes guidance for auditing and repairing apps, covering reactive code, background tasks, UI/server bindings, session isolation, and runtime verification. (#2469)
+* The bundled `shiny-for-python` Agent Skill now includes symptom-based troubleshooting and repair guidance, with examples in the reactivity, background task, session lifecycle, and Express references, plus a workflow for runtime verification. (#2469)
 
 ### Bug fixes
 

@@ -8,9 +8,11 @@ when *that* user disconnects, not at process exit. Get the session as the
 `server` function's third argument, or call
 `require_active_session()` anywhere a reactive context is active.
 
-Do NOT store per-user state in a module-level global (it is shared across every
-connected session) and do NOT rely on `atexit`/module teardown for cleanup (it
-fires once at process shutdown, never per user). Use `session.on_ended` instead.
+In Core, do NOT store per-user state in a module-level global (it is shared
+across every connected session). Express has a per-session `app.py` scope;
+see [Express shared objects](express.md#shared-objects-and-startup-cost).
+Do NOT rely on `atexit`/module teardown for per-user cleanup; use
+`session.on_ended` instead.
 
 ```python
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
@@ -127,7 +129,8 @@ def server(input, output, session):
 ## Common mistakes
 
 - Per-user state in a module-level global -> shared across all sessions; create
-  it inside `server` (or a `reactive.value`) so each session gets its own.
+  it inside Core `server()` or Express `app.py` so each session gets its own.
+  Wrapping a global in `reactive.value` does not make it per-session.
 - Cleanup in `atexit`/module teardown -> fires once at shutdown, not per user;
   register it with `session.on_ended`.
 - Reading `session.clientdata.url_*()` at module scope or in a plain helper ->
@@ -137,6 +140,30 @@ def server(input, output, session):
   it from an async `@reactive.effect`.
 - Passing a coroutine function to `on_ended`/`on_flush` -> fine, they accept
   sync *or* async callbacks; just don't call the function yourself.
+
+### Keep user state per session
+
+Create authentication state, preferences, and user-specific database resources
+in the session's scope. This Core example gives each user their own value:
+
+```python
+from shiny import reactive, render
+
+# Bad: user_state = reactive.value({"logged_in": False}) at module scope.
+
+def server(input, output, session):
+    user_state = reactive.value({"logged_in": False})
+
+    @render.text
+    def status():
+        return f"Logged in: {user_state()['logged_in']}"
+```
+
+Global reactive values are valid for intentional shared counters or broadcast
+state. Shared `reactive.file_reader()` caches are also appropriate for data
+every user may read; see [Reactivity](reactivity.md#timers-and-streaming-invalidate_later-poll-file_reader).
+Keep user-specific state out of those caches and server credentials out of
+rendered UI.
 
 ## Related references
 
