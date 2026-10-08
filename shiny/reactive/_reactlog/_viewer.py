@@ -1983,7 +1983,9 @@ def format_reactlog_html(
       const curWave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
       activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
       const activeLabel = document.getElementById('active-flush-label');
-      activeLabel.textContent = curWave
+      activeLabel.textContent = !events.length
+        ? (reactlogData.summary || 'No recorded activity')
+        : curWave
         ? `Flush ${{activeBurstIndex + 1}} / ${{allBursts.length}} · ${{curWave.humanAction || curWave.triggerLabel || 'Initial render'}}`
         : 'No recorded activity';
       activeLabel.title = activeLabel.textContent;

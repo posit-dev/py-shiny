@@ -834,17 +834,18 @@ def server(input, output, session):
     reactlog = _record(tmp_path, code, [{"x": 1, **_visible("result")}, {"x": 2}])
     page.set_content(format_reactlog_html(reactlog, source_code=code))
     page.evaluate(f"seekTo({_step(reactlog, 'enter', 'output result')})")
-    expect(page.locator("#causal-summary-text")).to_have_text(
-        "App Initialized. Evaluated 1 calc and rendered 1 output."
-    )
+    page.get_by_role("button", name="Node details", exact=True).click()
+    page.locator("#flush-card").evaluate("el => el.open = true")
+    expect(page.locator("#flush-card-calcs")).to_have_text("1 calcs re-evaluated")
+    expect(page.locator("#flush-card-outputs")).to_have_text("1 outputs flushed")
 
 
 def test_empty_graph_shows_summary_notice(page: Page) -> None:
     reactlog = load_reactlog_json({"log": []})
     reactlog["summary"] = "No session selected."
     page.set_content(format_reactlog_html(reactlog, ""))
-    expect(page.locator("#causal-summary-text")).to_have_text("No session selected.")
-    expect(page.locator("#causal-summary-text")).to_be_visible()
+    expect(page.locator("#active-flush-label")).to_have_text("No session selected.")
+    expect(page.locator("#active-flush-label")).to_be_visible()
 
 
 def test_action_scoped_causal_story_and_did_not_run_explanation(
