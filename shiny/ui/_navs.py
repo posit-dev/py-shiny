@@ -90,6 +90,7 @@ class NavPanel:
             id = f"tab-{context['tabsetid']}-{context['index']}"
             content.attrs["id"] = id
             a_tag.attrs["href"] = f"#{id}"
+            a_tag.attrs["aria-controls"] = id
 
         # Mark the nav/content as active if it should be
         if isinstance(selected, str) and selected == self.get_value():
