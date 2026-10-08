@@ -213,8 +213,6 @@ def out():
     html = format_reactlog_html(reactlog, source_code=code)
     assert "provenance-observed" in html
     assert "provenance-inferred" in html
-    assert "Observed:" in html
-    assert "Inferred:" in html
 
 
 def test_relative_video_path_different_directories():
@@ -497,7 +495,7 @@ def out():
     )
 
 
-def test_format_reactlog_html_has_draggable_splitter():
+def test_format_reactlog_html_has_compact_sidebar():
     code = """from shiny.express import input, render, ui
 ui.input_numeric("val", "Val", 10)
 @render.text
@@ -506,11 +504,9 @@ def out():
 """
     reactlog = generate_reactlog(code)
     html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="split-resizer"' in html
-    assert 'class="resizer-handle"' in html
-    assert 'aria-label="Resize sidebar panel"' in html
-    assert "initSplitResizer()" in html
-    assert "--sidebar-width" in html
+    assert 'id="sidebar-rail"' in html
+    assert 'id="split-resizer"' not in html
+    assert "width: 40px" in html
 
 
 def test_html_trace_timeline_ribbon():
@@ -524,7 +520,8 @@ def out():
     html = format_reactlog_html(reactlog, source_code=code)
     assert 'id="trace-timeline-bar"' in html
     assert 'id="trace-track-wrap"' in html
-    assert 'id="trace-playhead"' in html
+    assert 'id="scrubber-range"' in html
+    assert 'id="trace-markers"' in html
     assert "initTraceTimeline()" in html
 
 
@@ -1074,11 +1071,11 @@ def out():
     assert "btn-focus-upstream" not in html
     assert "btn-focus-downstream" not in html
     assert "btn-focus-all" not in html
-    assert "btn-summary-toggle" in html
-    assert "recording-summary-popover" in html
-    assert "actions-tab" in html
-    assert "actions-panel" in html
-    assert "action-list" in html
+    assert 'id="btn-summary-toggle"' not in html
+    assert 'id="recording-summary-popover"' not in html
+    assert 'id="actions-tab"' not in html
+    assert 'id="actions-panel"' not in html
+    assert 'id="action-list"' not in html
     assert "insp-source-drawer" in html
     assert "insp-upstream-list" in html
     assert "insp-downstream-list" in html
@@ -1088,19 +1085,10 @@ def out():
     assert "getDownstreamNodes" in html
     assert "setFocusMode" not in html
     assert "renderInspector" in html
-    assert "toggleSummaryPopover" in html
     assert "role-filter-dropdown" not in html
     assert "getActiveLineageSet" in html
     assert "filterLineageForNode" in html
-    assert "timeline-mode-select" in html
-    assert "trace-burst-ribbon" in html
-    assert "trace-burst-track" in html
-    assert "trace-seismograph" in html
-    assert "playhead-pin" in html
     assert "trace-status-line" in html
-    assert "setTimelineMode" in html
-    assert "calculateTimePct" in html
-    assert "renderSeismographLines" in html
 
 
 def test_password_and_secret_inputs_redacted_at_ast_visitor():
@@ -1746,7 +1734,9 @@ def test_reactlog_remote_security_access_control():
 
         return remote_app
 
-    remote_client = TestClient(make_remote(client_app))  # pyright: ignore[reportArgumentType]
+    remote_client = TestClient(
+        make_remote(client_app)
+    )  # pyright: ignore[reportArgumentType]
     assert remote_client.get("/__reactlog__").status_code == 403
     assert remote_client.get("/__reactlog__/mark").status_code == 403
 
@@ -1991,15 +1981,15 @@ def out():
 """
     reactlog = generate_reactlog(code)
     html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="flush-select"' in html
+    assert 'id="flush-select"' not in html
     assert 'id="btn-prev-flush"' in html
     assert 'id="btn-next-flush"' in html
     assert 'id="flush-counter-badge"' in html
-    assert 'id="flush-pipeline-bar"' in html
-    assert 'id="pipe-trigger"' in html
-    assert 'id="pipe-invalidated"' in html
-    assert 'id="pipe-calcs"' in html
-    assert 'id="pipe-outputs"' in html
+    assert 'id="flush-pipeline-bar"' not in html
+    assert 'id="pipe-trigger"' not in html
+    assert 'id="pipe-invalidated"' not in html
+    assert 'id="pipe-calcs"' not in html
+    assert 'id="pipe-outputs"' not in html
     assert "selectFlush(" in html
     assert "updateFlushUI(" in html
 

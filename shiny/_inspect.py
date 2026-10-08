@@ -2379,30 +2379,31 @@ def format_reactlog_html(
             rel_video = html_lib.escape(os.path.basename(actual_video))
 
         video_tab_btn = (
-            '<button class="sidebar-tab" id="video-tab" role="tab" '
-            'aria-selected="false" aria-controls="video-panel" '
-            "onclick=\"showSidebarPanel('video')\">Recording</button>"
+            '<button class="btn icon" id="video-tab" '
+            'aria-label="Toggle recording" title="Toggle recording" aria-expanded="true" '
+            'onclick="toggleRecording()"><svg width="16" height="16" viewBox="0 0 24 24" '
+            'fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" '
+            'width="14" height="14" rx="2"/><path d="m16 10 6-4v12l-6-4"/></svg></button>'
         )
         video_panel = f"""
-        <div class="video-panel sidebar-panel" id="video-panel" role="tabpanel" aria-labelledby="video-tab" hidden>
+        <section class="video-panel" id="video-panel" aria-label="Recording">
+          <div class="video-meta">
+            <span id="video-sync-status" class="video-sync-status" role="status">Recording</span>
+            <button class="btn icon mini" onclick="toggleRecording(false)" aria-label="Hide recording" title="Hide recording">×</button>
+          </div>
           <div class="video-container">
             <video id="session-video" controls preload="metadata" playsinline>
               <source src="{rel_video}" type="video/webm">
               Your browser does not support the video tag.
             </video>
           </div>
-          <div class="video-meta">
-            <span class="video-badge">Playwright Video Recording</span>
-            <span class="video-filename">{rel_video}</span>
-          </div>
-          <p class="video-help">Play, pause, or seek here—the graph, causal explanations, and timeline follow the video.</p>
-        </div>
+        </section>
         """
 
     source_tab = (
-        '<button class="sidebar-tab" id="source-tab" role="tab" '
+        '<button class="btn icon" id="source-tab" aria-label="App code" title="App code" role="tab" '
         'aria-selected="false" aria-controls="source-panel" '
-        "onclick=\"showSidebarPanel('source')\">App code</button>"
+        'onclick="showSidebarPanel(\'source\')"><span aria-hidden="true">&lt;/&gt;</span></button>'
     )
     source_panel = (
         '<pre class="source-panel sidebar-panel" id="source-panel" role="tabpanel" '
@@ -2559,35 +2560,6 @@ def format_reactlog_html(
     .brand-title {{ font-weight: 760; font-size: 0.9rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
     .brand-subtitle {{ color: var(--text-muted); font-size: 0.68rem; }}
     .header-actions {{ display: flex; align-items: center; gap: 0.45rem; position: relative; }}
-    .summary-toggle-btn {{ background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.32rem 0.6rem; border-radius: 7px; font: 600 0.7rem var(--mono); cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 120ms ease, border-color 120ms ease; }}
-    .summary-toggle-btn:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
-    .summary-popover {{ position: absolute; top: calc(100% + 10px); right: 0; width: 360px; background: var(--surface-elevated); border: 1px solid var(--border-strong); border-radius: 12px; padding: 1.1rem; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4); z-index: 50; display: flex; flex-direction: column; gap: 0.85rem; animation: popover-fade 140ms ease; }}
-    .summary-popover[hidden] {{ display: none; }}
-    @keyframes popover-fade {{ from {{ opacity: 0; transform: translateY(-4px); }} to {{ opacity: 1; transform: translateY(0); }} }}
-    .summary-title {{ font: 700 0.86rem var(--sans); color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }}
-    .summary-title-text {{ display: flex; align-items: center; gap: 0.45rem; }}
-    .summary-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }}
-    .summary-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; transition: border-color 120ms ease; }}
-    .summary-card:hover {{ border-color: var(--border-strong); }}
-    .summary-card-header {{ display: flex; align-items: center; justify-content: space-between; }}
-    .summary-card-label {{ font: 700 0.64rem var(--sans); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }}
-    .summary-card-icon {{ color: var(--text-muted); opacity: 0.8; }}
-    .summary-card-val {{ font: 800 1.35rem/1 var(--mono); color: var(--text); letter-spacing: -0.02em; }}
-    .summary-card.card-observed .summary-card-val {{ color: var(--source); }}
-    .summary-card.card-inferred .summary-card-val {{ color: var(--effect); }}
-    .summary-card-subtext {{ font: 500 0.64rem var(--mono); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-    .summary-breakdown-section {{ display: flex; flex-direction: column; gap: 0.4rem; background: var(--surface-2); padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); }}
-    .summary-breakdown-header {{ display: flex; justify-content: space-between; font: 700 0.65rem var(--mono); }}
-    .breakdown-legend-obs {{ color: var(--source); display: inline-flex; align-items: center; gap: 0.3rem; }}
-    .breakdown-legend-inf {{ color: var(--effect); display: inline-flex; align-items: center; gap: 0.3rem; }}
-    .summary-breakdown-bar {{ width: 100%; height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; display: flex; }}
-    .breakdown-seg-obs {{ background: var(--source); height: 100%; transition: width 200ms ease; }}
-    .breakdown-seg-inf {{ background: var(--effect); height: 100%; transition: width 200ms ease; }}
-    .summary-meta-note {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }}
-
-    /* Header Center Controls */
-    .header-center {{ display: flex; align-items: center; gap: 0.5rem; flex: 1; max-width: 680px; min-width: 0; }}
-
     /* Streamlined Toolbar & Buttons */
     .toolbar {{ position: relative; z-index: 19; min-height: 38px; background: var(--surface-2); border-top: 1px solid var(--border); padding: 0.2rem 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }}
     .toolbar-group {{ display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; min-width: 0; }}
@@ -2610,80 +2582,10 @@ def format_reactlog_html(
     .search-icon {{ position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
     .search-input {{ width: 100%; height: 28px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 0.55rem 0 1.75rem; font-size: 0.72rem; }}
     .search-input::placeholder {{ color: var(--text-muted); }}
-    .scrubber {{ display: flex; align-items: center; gap: 0.5rem; min-width: 140px; flex: 1; max-width: 280px; }}
-    .scrubber input[type="range"] {{ width: 100%; accent-color: var(--accent); cursor: pointer; height: 4px; }}
     .step-display {{ white-space: nowrap; flex-shrink: 0; font: 700 0.68rem var(--mono); color: var(--accent); min-width: 72px; text-align: right; font-variant-numeric: tabular-nums; }}
 
     /* Workspace Layout: Left Sidebar + Center Canvas + On Demand Right Sidebar */
     .workspace-layout {{ display: flex; flex: 1; min-height: 0; overflow: hidden; position: relative; }}
-
-    /* Left Sidebar: Vertical Timeline Flushes */
-    .timeline-sidebar {{ width: 240px; min-width: 240px; max-width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; user-select: none; z-index: 10; flex-shrink: 0; }}
-    .timeline-sidebar-header {{ padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--surface-2); }}
-    .timeline-sidebar-title {{ display: flex; align-items: center; gap: 0.35rem; font-weight: 750; font-size: 0.72rem; color: var(--text); text-transform: uppercase; letter-spacing: 0.05em; }}
-    .timeline-flush-count {{ font: 700 0.62rem var(--mono); color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, var(--surface)); padding: 0.08rem 0.38rem; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }}
-    .timeline-sidebar-list {{ flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0.45rem; display: flex; flex-direction: column; gap: 0.35rem; }}
-
-    /* Vertical Flush Markers (Replacing horizontal burst pills) */
-    .burst-anchor {{ position: static; transform: none; width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 0.22rem; padding: 0.45rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; text-align: left; transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease; white-space: normal; font-family: var(--sans); box-sizing: border-box; }}
-    .burst-anchor:hover {{ background: var(--surface-3); border-color: var(--border-strong); transform: none; }}
-    .burst-anchor.is-active {{ background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); border: 1.5px solid var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 25%, transparent); transform: none; }}
-    .burst-anchor-top {{ display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; width: 100%; }}
-    .burst-anchor-badge {{ font: 750 0.62rem var(--mono); color: var(--accent); background: var(--surface-3); padding: 0.06rem 0.32rem; border-radius: 4px; }}
-    .burst-anchor.is-init .burst-anchor-badge {{ color: var(--calc); }}
-    .burst-anchor-time {{ font: 600 0.6rem var(--mono); color: var(--text-muted); font-variant-numeric: tabular-nums; }}
-    .burst-anchor-count {{ font: 700 0.58rem var(--mono); color: var(--text-muted); background: var(--surface); padding: 0.06rem 0.28rem; border-radius: 4px; white-space: nowrap; }}
-    .burst-anchor.is-active .burst-anchor-count {{ color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }}
-    .burst-anchor .burst-anchor-label {{ font: 700 0.72rem var(--mono); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; max-width: 100%; }}
-    .burst-anchor:hover .burst-anchor-label {{ max-width: 100%; }}
-    .burst-anchor.is-active .burst-anchor-label {{ max-width: 100%; }}
-    .burst-anchor-meta {{ font: 500 0.62rem var(--sans); color: var(--text-muted); display: flex; align-items: center; gap: 0.3rem; }}
-    .burst-anchor-dot {{ width: 5px; height: 5px; min-width: 5px; border-radius: 50%; background: var(--text-muted); }}
-    .burst-anchor.is-active .burst-anchor-dot {{ background: var(--accent); box-shadow: 0 0 6px var(--accent); }}
-    .burst-anchor.is-init .burst-anchor-dot {{ background: var(--calc); }}
-    .burst-anchor.is-mark {{ border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); color: #b45309; }}
-    [data-theme="dark"] .burst-anchor.is-mark {{ color: #fbbf24; }}
-    .burst-anchor.is-mark .burst-anchor-dot {{ background: #f59e0b; }}
-
-    /* Compact Micro-Cascade Seismograph Track (above bottom status bar) */
-    .trace-timeline-bar {{ height: 38px; min-height: 38px; flex-shrink: 0; padding: 2px 0.75rem; background: var(--trace-bg); border-top: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; user-select: none; }}
-    .trace-main-wrap {{ display: flex; align-items: stretch; gap: 0.4rem; position: relative; height: 32px; }}
-    .trace-lanes-labels {{ display: flex; flex-direction: column; justify-content: space-between; width: 44px; padding: 2px 0; }}
-    .lane-label {{ font: 700 0.54rem var(--mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; height: 9px; line-height: 9px; display: flex; align-items: center; }}
-    .trace-track-wrap {{ flex: 1; position: relative; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; outline: none; border-radius: 5px; height: 100%; }}
-    .trace-track-wrap:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
-    .trace-ruler {{ position: relative; height: 6px; width: 100%; pointer-events: none; }}
-    .trace-ruler-tick {{ position: absolute; bottom: 0; width: 1px; height: 3px; background: var(--border-strong); }}
-    .trace-ruler-tick.major {{ height: 5px; background: var(--text-muted); }}
-    .trace-ruler-label {{ position: absolute; bottom: 1px; transform: translateX(-50%); font: 600 0.5rem var(--mono); color: var(--text-muted); pointer-events: none; }}
-    .trace-lanes {{ position: relative; height: 26px; background: var(--trace-lane-bg); border: 1px solid var(--border); border-radius: 5px; display: flex; flex-direction: column; overflow-x: clip; overflow-y: visible; }}
-    .trace-lane {{ position: relative; height: 8.5px; width: 100%; border-bottom: 1px dashed var(--border); z-index: 2; }}
-    .trace-lane:last-of-type {{ border-bottom: none; }}
-    .burst-region-column {{ position: absolute; top: 0; bottom: 0; transform: translateX(-50%); background: var(--burst-column-bg); pointer-events: auto; z-index: 0; transition: background 120ms ease; }}
-    .burst-region-column:hover, .burst-region-column.is-active {{ background: var(--burst-column-active); border-left: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-right: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }}
-    .trace-seismograph-svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }}
-    .seismograph-branch {{ stroke: var(--border-strong); stroke-width: 1px; fill: none; stroke-dasharray: 2 2; }}
-    .seismograph-branch.is-active {{ stroke: var(--accent); stroke-width: 1.5px; stroke-dasharray: none; }}
-    .trace-fill {{ position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 4px 0 0 4px; pointer-events: none; z-index: 0; }}
-
-    /* Semantic Event Chips */
-    .trace-chip {{ position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; height: 12px; max-width: 100px; padding: 0 4px; border-radius: 3px; font: 700 0.52rem var(--mono); display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; z-index: 3; }}
-    .trace-chip:hover, .trace-chip.is-active {{ transform: translate(-50%, -50%) scale(1.08); z-index: 10; box-shadow: 0 0 8px var(--accent); }}
-    .trace-chip.kind-input {{ background: color-mix(in srgb, var(--source) 18%, var(--surface)); color: var(--source); border: 1px solid var(--source); }}
-    .trace-chip.kind-click {{ background: color-mix(in srgb, var(--effect) 18%, var(--surface)); color: var(--effect); border: 1px solid var(--effect); }}
-    .trace-chip.kind-calc {{ background: color-mix(in srgb, var(--calc) 18%, var(--surface)); color: var(--calc); border: 1px solid var(--calc); }}
-    .trace-chip.kind-output {{ background: color-mix(in srgb, var(--output) 18%, var(--surface)); color: var(--output); border: 1px solid var(--output); }}
-    .trace-chip.is-grouped {{ border-style: double; font-weight: 800; }}
-
-    /* Playhead with pin */
-    .trace-playhead {{ position: absolute; top: -3px; bottom: -2px; left: 0%; width: 2px; background: var(--accent); box-shadow: 0 0 8px var(--accent); pointer-events: none; z-index: 15; transition: left 40ms linear; }}
-    .playhead-pin {{ position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #07111c; font: 800 0.54rem var(--mono); padding: 0.02rem 0.25rem; border-radius: 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none; white-space: nowrap; }}
-    .playhead-handle {{ position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 6px; height: 6px; background: var(--accent); border-radius: 1px; box-shadow: 0 0 4px var(--accent); }}
-    .playhead-line {{ width: 100%; height: 100%; }}
-    .trace-tooltip {{ position: absolute; bottom: calc(100% + 6px); transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent); border-radius: 5px; padding: 0.3rem 0.5rem; font: 600 0.64rem var(--mono); color: var(--text); white-space: nowrap; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,0.3); z-index: 25; display: flex; flex-direction: column; gap: 0.1rem; }}
-    .trace-tooltip[hidden] {{ display: none; }}
-    .tooltip-time {{ color: var(--accent); font-weight: 800; font-size: 0.68rem; display: inline-flex; align-items: center; gap: 0.2rem; }}
-    .tooltip-title {{ color: var(--text); font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem; flex-wrap: wrap; }}
 
     /* Bottom Status Bar (VS Code Style) */
     .bottom-timeline-bar {{ flex-shrink: 0; height: 38px; min-height: 38px; background: var(--surface-2); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 0.75rem; gap: 0.6rem; z-index: 30; user-select: none; }}
@@ -2693,10 +2595,6 @@ def format_reactlog_html(
 
     /* Main View & Graph */
     .main-view {{ display: flex; flex: 1; min-height: 0; min-width: 0; overflow: hidden; position: relative; }}
-    .split-resizer {{ width: 6px; background: var(--surface); border-left: 1px solid var(--border); border-right: 1px solid var(--border); cursor: col-resize; display: flex; align-items: center; justify-content: center; user-select: none; transition: background 120ms ease; z-index: 15; flex-shrink: 0; }}
-    .split-resizer:hover, .split-resizer:focus-visible, .split-resizer.is-dragging {{ background: var(--surface-3); border-color: var(--accent); outline: none; }}
-    .resizer-handle {{ width: 2px; height: 28px; border-radius: 1px; background: var(--border-strong); }}
-    .split-resizer:hover .resizer-handle, .split-resizer.is-dragging .resizer-handle {{ background: var(--accent); }}
     .graph-container {{ flex: 1; min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 24px 24px; display: flex; flex-direction: column; }}
 
     /* Graph Topbar */
@@ -2760,10 +2658,6 @@ def format_reactlog_html(
     .sidebar {{ min-width: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }}
     .sidebar[hidden] {{ display: none !important; }}
     .sidebar-header {{ min-height: 42px; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
-    .sidebar-tabs {{ display: flex; align-items: center; gap: 0.2rem; flex-wrap: wrap; }}
-    .sidebar-tab {{ color: var(--text-muted); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 0.28rem 0.48rem; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }}
-    .sidebar-tab:hover {{ color: var(--text); background: var(--surface-2); }}
-    .sidebar-tab[aria-selected="true"] {{ color: var(--accent); background: var(--surface-3); border-color: var(--border); }}
     .sidebar-panel {{ min-height: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }}
     .sidebar-panel[hidden] {{ display: none; }}
     .inspector-container {{ padding: 0.8rem; display: flex; flex-direction: column; gap: 0.75rem; }}
@@ -2807,15 +2701,6 @@ def format_reactlog_html(
     .source-drawer-code .source-line-num {{ width: 2.2rem; min-width: 2.2rem; padding-right: 0.6rem; text-align: right; color: var(--text-muted); user-select: none; -webkit-user-select: none; opacity: 0.6; font-size: 0.68rem; }}
     .source-drawer-refs {{ padding: 0.4rem 0.65rem; font: 600 0.66rem var(--mono); color: var(--text-muted); border-top: 1px solid var(--border); background: var(--surface-2); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }}
 
-    .actions-panel {{ padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; }}
-    .action-story-item {{ width: 100%; padding: 0.55rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); border-left: 3px solid var(--source); background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 0.25rem; transition: background 120ms ease, border-color 120ms ease; }}
-    .action-story-item:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
-    .action-story-item.is-active {{ border-color: var(--accent); border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }}
-    .action-story-header {{ display: flex; align-items: center; justify-content: space-between; }}
-    .action-story-title {{ font: 750 0.76rem var(--mono); color: var(--text); display: flex; align-items: center; gap: 0.35rem; }}
-    .action-story-time {{ font: 700 0.62rem var(--mono); color: var(--accent); background: var(--surface-3); padding: 0.08rem 0.3rem; border-radius: 4px; }}
-    .action-story-desc {{ font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; }}
-    .action-story-cascade {{ font: 600 0.66rem var(--mono); color: var(--text-muted); background: var(--surface); padding: 0.25rem 0.4rem; border-radius: 4px; margin-top: 0.15rem; border-left: 2px solid var(--calc); }}
 
     .timeline-panel {{ display: flex; flex-direction: column; }}
     .source-panel {{ position: relative; overflow: auto; padding: 0.75rem 0; background: var(--source-panel-bg); color: var(--source-panel-text); font: 500 0.76rem/1.62 var(--mono); white-space: pre; tab-size: 4; }}
@@ -2885,15 +2770,6 @@ def format_reactlog_html(
     .flush-counter-badge {{ font: 700 0.68rem var(--mono); color: var(--text-muted); background: var(--surface-2); padding: 0.18rem 0.45rem; border-radius: 5px; border: 1px solid var(--border); white-space: nowrap; }}
 
     /* Flush Pipeline Bar */
-    .flush-pipeline-bar {{ display: flex; align-items: center; gap: 0.45rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.3rem 0.6rem; pointer-events: auto; flex-wrap: wrap; }}
-    .pipeline-step-item {{ display: inline-flex; align-items: center; gap: 0.3rem; font: 700 0.66rem var(--mono); padding: 0.16rem 0.45rem; border-radius: 5px; background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; transition: all 120ms ease; }}
-    .pipeline-step-item:hover {{ border-color: var(--accent); transform: translateY(-1px); }}
-    .pipeline-step-item.is-selected-stage {{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--accent); }}
-    .pipeline-icon {{ font-size: 0.76rem; }}
-    .pipeline-label {{ font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }}
-    .pipeline-val {{ color: var(--text); font-weight: 800; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-    .pipeline-count {{ font-weight: 800; color: var(--accent); }}
-    .pipeline-arrow {{ color: var(--text-muted); font-size: 0.68rem; }}
 
     /* Module Overview Panel (Overview First) */
     .module-overview-panel {{ position: absolute; inset: 0; background: var(--bg); z-index: 2; overflow-y: auto; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }}
@@ -2975,13 +2851,10 @@ def format_reactlog_html(
       html, body {{ overflow-x: hidden; max-width: 100vw; }}
       body {{ height: auto; min-height: 100vh; overflow: auto; }}
       .workspace-layout {{ display: flex; flex-direction: column; overflow: visible; flex: none; width: 100%; }}
-      .timeline-sidebar {{ display: none; }}
       .main-view {{ display: flex; flex-direction: column; overflow: visible; flex: none; width: 100%; }}
       .graph-container {{ height: 520px; flex: none; width: 100%; }}
-      .split-resizer {{ display: none; }}
       .sidebar {{ width: 100%; height: 560px; border-top: 1px solid var(--border); }}
       .toolbar-group {{ width: 100%; }}
-      .scrubber {{ flex: 1; min-width: 80px; }}
       .bottom-timeline-bar.toolbar {{ width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: auto; flex-wrap: wrap; height: auto; min-height: 38px; }}
     }}
     @media (max-width: 520px) {{
@@ -2990,12 +2863,37 @@ def format_reactlog_html(
       .brand {{ width: 100%; }}
       .header-center {{ flex-wrap: wrap; max-width: 100%; }}
       .header-actions {{ width: 100%; justify-content: flex-end; }}
-      .summary-popover {{ width: min(360px, calc(100vw - 24px)); }}
       .search-wrap {{ flex-basis: 100%; max-width: none; }}
       .graph-container {{ height: 440px; }}
       .graph-top-row {{ grid-template-columns: 1fr; }}
       .zoom-controls {{ justify-content: flex-end; }}
       .trace-controls {{ flex-wrap: wrap; }}
+    }}
+
+    .sidebar-rail {{ width: 40px; min-width: 40px; flex: 0 0 40px; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; box-sizing: border-box; z-index: 20; }}
+    .sidebar {{ position: absolute; top: 56px; right: 48px; bottom: 8px; width: min(420px, calc(100% - 64px)); min-width: 0; height: auto; z-index: 25; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 32px #0004; }}
+    .sidebar-header {{ justify-content: space-between; font: 650 .75rem var(--sans); }}
+    .video-panel {{ position: absolute; right: 48px; bottom: 12px; width: min(240px, 42vw, calc(100% - 64px)); padding: 0; gap: 0; z-index: 26; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 24px #0005; overflow: hidden; }}
+    .video-panel[hidden] {{ display: none; }}
+    .video-meta {{ padding: 3px 6px; flex-wrap: nowrap; }}
+    .video-sync-status {{ font: 600 .65rem var(--sans); }}
+    .video-container {{ border: 0; border-radius: 0; aspect-ratio: 16 / 9; }}
+    .video-container video {{ width: 100%; height: 100%; object-fit: contain; }}
+    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); height: 56px; min-height: 56px; padding: 5px 16px; gap: 4px; }}
+    .timeline-current {{ display: flex; justify-content: space-between; gap: 12px; font: 650 .72rem var(--sans); }}
+    #active-flush-label, .trace-status-line {{ max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+    .trace-track-wrap {{ position: relative; height: 24px; flex: none; display: block; }}
+    #scrubber-range {{ position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; accent-color: var(--accent); cursor: pointer; }}
+    #trace-markers {{ position: absolute; inset: 0 8px; pointer-events: none; z-index: 1; }}
+    .timeline-marker {{ position: absolute; bottom: 0; width: 2px; height: 5px; background: var(--output); }}
+    .timeline-marker.is-flush {{ height: 9px; }}
+    .timeline-marker.is-mark {{ height: 12px; width: 3px; background: #f59e0b; }}
+    .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
+    .status-left, .status-center, .status-right {{ flex-wrap: wrap; }}
+    @media (max-width: 1000px) {{
+      .workspace-layout {{ flex: 1; min-height: 350px; overflow: hidden; }}
+      .main-view {{ flex: 1; flex-direction: row; min-height: 350px; overflow: hidden; }}
+      .graph-container {{ flex: 1; width: auto; height: auto; min-height: 350px; }}
     }}
   </style>
 </head>
@@ -3027,71 +2925,11 @@ def format_reactlog_html(
       </div>
     </div>
     <div class="header-actions">
-      <button class="summary-toggle-btn" id="btn-summary-toggle" onclick="toggleSummaryPopover()" aria-expanded="false" aria-haspopup="dialog" title="View recording summary and execution diagnostics">
-        <svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-        <span>Summary ▾</span>
-      </button>
-      <div class="summary-popover" id="recording-summary-popover" role="dialog" aria-label="Recording summary details" hidden>
-        <div class="summary-title">
-          <div class="summary-title-text">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-            <span>Session Summary</span>
-          </div>
-          <button class="btn icon mini" onclick="toggleSummaryPopover(false)" aria-label="Close summary" title="Close">✕</button>
-        </div>
-        <div class="summary-grid">
-          <div class="summary-card">
-            <div class="summary-card-header">
-              <span class="summary-card-label">Nodes</span>
-              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>
-            </div>
-            <div class="summary-card-val" id="stat-nodes">0</div>
-            <div class="summary-card-subtext" id="stat-nodes-subtext">Reactive DAG</div>
-          </div>
-          <div class="summary-card">
-            <div class="summary-card-header">
-              <span class="summary-card-label">Edges</span>
-              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </div>
-            <div class="summary-card-val" id="stat-edges">0</div>
-            <div class="summary-card-subtext">Causal links</div>
-          </div>
-          <div class="summary-card card-observed">
-            <div class="summary-card-header">
-              <span class="summary-card-label">Observed:</span>
-              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--source)" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-            </div>
-            <div class="summary-card-val" id="stat-observed">0</div>
-            <div class="summary-card-subtext">Browser events</div>
-          </div>
-          <div class="summary-card card-inferred">
-            <div class="summary-card-header">
-              <span class="summary-card-label">Inferred:</span>
-              <svg class="summary-card-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--effect)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            </div>
-            <div class="summary-card-val" id="stat-inferred">0</div>
-            <div class="summary-card-subtext">Cascade steps</div>
-          </div>
-        </div>
-        <div class="summary-breakdown-section">
-          <div class="summary-breakdown-header">
-            <span class="breakdown-legend-obs" id="legend-obs-text"><span class="chip-dot" style="background:var(--source)"></span> 0% Observed</span>
-            <span class="breakdown-legend-inf" id="legend-inf-text"><span class="chip-dot" style="background:var(--effect)"></span> 0% Inferred</span>
-          </div>
-          <div class="summary-breakdown-bar" id="summary-breakdown-bar" title="Observed vs Inferred events">
-            <div class="breakdown-seg-obs" id="seg-obs" style="width: 50%"></div>
-            <div class="breakdown-seg-inf" id="seg-inf" style="width: 50%"></div>
-          </div>
-        </div>
-        <div class="summary-meta-note" id="summary-meta-note">
-          Simulated dependency steps from AST static analysis.
-        </div>
-      </div>
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
       <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
       <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open Reactlog JSON recording"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
       <button class="btn" id="btn-shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg>Shortcuts</button>
-      <button class="btn mini" id="btn-toggle-inspector" onclick="toggleInspector()" aria-label="Toggle inspector details" title="Toggle inspector details panel"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>Details</button>
+      <button class="btn icon" id="btn-toggle-inspector" onclick="toggleInspector()" aria-label="Toggle inspector details" title="Toggle inspector details panel"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg></button>
     </div>
   </header>
 
@@ -3102,49 +2940,11 @@ def format_reactlog_html(
       <button class="btn mini" onclick="resetGraphView()" aria-label="Clear all filters">Clear all</button>
     </div>
   <div class="workspace-layout">
-    <!-- Left Sidebar: Vertical Timeline Markers -->
-    <aside class="timeline-sidebar trace-burst-ribbon" id="timeline-sidebar" aria-label="Timeline Flushes">
-      <div class="timeline-sidebar-header">
-        <div class="timeline-sidebar-title">
-          <svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          <span>Flushes</span>
-        </div>
-        <span class="timeline-flush-count" id="timeline-flush-count">0</span>
-      </div>
-      <div class="timeline-sidebar-list" id="trace-burst-track" role="tablist" aria-label="Timeline flush markers"></div>
-    </aside>
-
     <!-- Main View & Graph Canvas -->
     <main class="main-view" id="main-view">
       <div class="graph-container" id="graph-container">
         <div class="graph-topbar">
           <div class="graph-top-row">
-            <span id="causal-summary-text" style="display:none">Ready to trace causality</span>
-            <div class="flush-pipeline-bar" id="flush-pipeline-bar" aria-label="Flush execution pipeline">
-              <div class="pipeline-step-item pipeline-trigger" id="pipe-trigger" title="Trigger event for this flush">
-                <svg class="pipeline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                <span class="pipeline-label">Trigger:</span>
-                <span class="pipeline-val" id="pipe-trigger-val">Init</span>
-              </div>
-              <svg class="pipeline-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              <button type="button" class="pipeline-step-item pipeline-invalidated" id="pipe-invalidated" onclick="filterFlushStage('invalidated')" title="Filter to invalidated nodes">
-                <svg class="pipeline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                <span class="pipeline-label">Invalidated:</span>
-                <span class="pipeline-count" id="pipe-invalidated-count">0</span>
-              </button>
-              <svg class="pipeline-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              <button type="button" class="pipeline-step-item pipeline-calcs" id="pipe-calcs" onclick="filterFlushStage('calcs')" title="Filter to recalculated conductors">
-                <svg class="pipeline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                <span class="pipeline-label">Recalculated:</span>
-                <span class="pipeline-count" id="pipe-calcs-count">0</span>
-              </button>
-              <svg class="pipeline-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              <button type="button" class="pipeline-step-item pipeline-outputs" id="pipe-outputs" onclick="filterFlushStage('outputs')" title="Filter to rendered observers">
-                <svg class="pipeline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-                <span class="pipeline-label">Rendered:</span>
-                <span class="pipeline-count" id="pipe-outputs-count">0</span>
-              </button>
-            </div>
             <div class="legend" aria-label="Node types legend">
               <div class="legend-item"><span class="legend-dot" style="--role-color: var(--source)"></span> Inputs</div>
               <div class="legend-item"><span class="legend-dot" style="--role-color: var(--calc)"></span> Calcs</div>
@@ -3162,7 +2962,7 @@ def format_reactlog_html(
           </div>
         </div>
         <div id="live-action-toast" class="action-toast" role="status" aria-live="polite" hidden></div>
-        <button class="btn mini" id="btn-clear-selection" onclick="clearNodeSelection()" aria-label="Clear node selection" hidden style="position:absolute;right:1rem;bottom:1rem;z-index:5;">Clear selection · Esc</button>
+        <button class="btn mini" id="btn-clear-selection" onclick="clearNodeSelection()" aria-label="Clear node selection" hidden style="position:absolute;left:1rem;bottom:1rem;z-index:28;">Clear selection · Esc</button>
 
         <!-- Overview First Panel -->
         <div class="module-overview-panel" id="module-overview-panel" hidden>
@@ -3209,22 +3009,20 @@ def format_reactlog_html(
         </svg>
       </div>
 
-      <div class="split-resizer" id="split-resizer" style="display:none" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize sidebar panel" aria-valuenow="420" aria-valuemin="300" aria-valuemax="1200" title="Drag to resize sidebar, double-click to reset (or use Left/Right arrows)">
-        <div class="resizer-handle"></div>
-      </div>
+      <nav class="sidebar-rail" id="sidebar-rail" aria-label="Graph tools">
+        <button class="btn icon" id="btn-toggle-inspector-bottom" onclick="showSidebarPanel('timeline')" aria-label="Node details" title="Node details"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg></button>
+        {source_tab}
+        {video_tab_btn}
+      </nav>
+      {video_panel}
 
       <aside class="sidebar" id="sidebar" aria-label="Details and events" hidden>
         <div class="sidebar-header">
-          <div class="sidebar-tabs" role="tablist" aria-label="Sidebar views">
-            <button class="sidebar-tab" id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-panel" onclick="showSidebarPanel('timeline')">Inspector</button>
-            <button class="sidebar-tab" id="actions-tab" role="tab" aria-selected="false" aria-controls="actions-panel" onclick="showSidebarPanel('actions')">Actions</button>
-            {source_tab}
-            {video_tab_btn}
-          </div>
+          <span id="detail-panel-title">Node details</span>
           <button class="btn icon mini" onclick="toggleInspector(false)" aria-label="Close Inspector" title="Close Inspector">✕</button>
         </div>
 
-        <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-labelledby="timeline-tab">
+        <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-label="Node details">
           <div class="inspector-container">
             <details class="flush-card" id="flush-card">
               <summary class="flush-card-header">
@@ -3297,41 +3095,19 @@ def format_reactlog_html(
           <details class="event-history" id="event-history"><summary>Event history</summary><div class="event-list" id="event-list"></div></details>
         </div>
 
-        <div class="actions-panel sidebar-panel" id="actions-panel" role="tabpanel" aria-labelledby="actions-tab" hidden>
-          <div class="actions-panel" id="action-list"></div>
-        </div>
-
         {source_panel}
-        {video_panel}
       </aside>
     </main>
   </div>
 
-  <!-- Micro-Cascade Seismograph Track (above bottom status bar) -->
-  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Micro-Cascade Seismograph">
-    <div class="trace-main-wrap">
-      <div class="trace-lanes-labels">
-        <div class="lane-label">Inputs</div>
-        <div class="lane-label">Calcs</div>
-        <div class="lane-label">Outputs</div>
-      </div>
-      <div class="trace-track-wrap" id="trace-track-wrap" tabindex="0" role="slider" aria-label="Scrub execution timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <div class="trace-ruler" id="trace-ruler"></div>
-        <div class="trace-lanes" id="trace-lanes">
-          <svg class="trace-seismograph-svg" id="trace-seismograph"></svg>
-          <div class="trace-fill" id="trace-fill"></div>
-          <div class="trace-lane" id="lane-inputs"></div>
-          <div class="trace-lane" id="lane-calcs"></div>
-          <div class="trace-lane" id="lane-outputs"></div>
-          <div class="trace-playhead" id="trace-playhead">
-            <div class="playhead-pin" id="playhead-pin">0.0s</div>
-            <div class="playhead-handle"></div>
-            <div class="playhead-line"></div>
-          </div>
-        </div>
-        <div class="trace-tooltip" id="trace-tooltip" hidden></div>
-        <div class="group-chip-popover" id="group-chip-popover" hidden></div>
-      </div>
+  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
+    <div class="timeline-current">
+      <span id="active-flush-label" role="status"></span>
+      <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
+    </div>
+    <div id="trace-track-wrap" class="trace-track-wrap">
+      <div id="trace-markers" aria-hidden="true"></div>
+      <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
     </div>
   </div>
 
@@ -3344,7 +3120,6 @@ def format_reactlog_html(
         <span class="trace-sep">/</span>
         <span class="trace-total" id="trace-total-time">0.0s</span>
       </div>
-      <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
       <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
       <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
       <span class="step-display" id="step-display">Step 0 / 0</span>
@@ -3369,13 +3144,6 @@ def format_reactlog_html(
       <button class="btn icon mini" id="btn-next-flush" onclick="nextFlush()" aria-label="Next flush" title="Next flush (Shift+Right)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
       </button>
-      <div class="scrubber">
-        <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
-      </div>
-      <select class="timeline-mode-select filter-select" id="timeline-mode-select" onchange="setTimelineMode(this.value)" aria-label="Timeline display mode">
-        <option value="activity">Activity</option>
-        <option value="realtime">Realtime</option>
-      </select>
     </div>
     <div class="status-right">
       <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
@@ -3389,10 +3157,6 @@ def format_reactlog_html(
           <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> Overview
         </button>
       </div>
-      <select class="filter-select flush-selector" id="flush-select" onchange="selectFlush(Number(this.value))"></select>
-      <button class="btn mini" id="btn-toggle-inspector-bottom" onclick="toggleInspector()" aria-label="Toggle inspector panel" title="Toggle node inspector & details">
-        <svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg> Inspector
-      </button>
     </div>
   </footer>
 
@@ -3418,21 +3182,18 @@ def format_reactlog_html(
     let searchQuery = "";
     let activeRoles = new Set(['source', 'conductor', 'observer']);
     let currentPhaseFilter = 'all';
-    let timelineMode = 'activity';
     let activeBurstIndex = 0;
     let zoomLevel = 1;
     let panOffset = {{ x: 0, y: 0 }};
     let isPanning = false;
     let startPan = {{ x: 0, y: 0 }};
-    let hasUserCustomWidth = false;
     let maxSessionDuration = 1.0;
-    let isDraggingTrace = false;
     let videoFrameRequest = null;
     let graphSeekTime = null;
     let videoFrameRequestKind = null;
     let isSourceDrawerOpen = false;
 
-    let currentViewMode = 'overview';
+    let currentViewMode = 'flush';
     let eventListScope = null;
     let activityStart = null;
     let activityEnd = null;
@@ -3473,7 +3234,6 @@ def format_reactlog_html(
       try {{ localStorage.setItem('shiny_reactlog_theme', next); }} catch (e) {{}}
       updateThemeButton();
       renderGraph();
-      renderSeismographLines();
     }}
 
     function initTheme() {{
@@ -3483,115 +3243,6 @@ def format_reactlog_html(
         document.documentElement.setAttribute('data-theme', saved);
       }}
       updateThemeButton();
-    }}
-
-    function toggleSummaryPopover(forcedState) {{
-      const popover = document.getElementById('recording-summary-popover');
-      const btn = document.getElementById('btn-summary-toggle');
-      if (!popover) return;
-      const isHidden = forcedState !== undefined ? !forcedState : !popover.hidden;
-      popover.hidden = isHidden;
-      if (btn) btn.setAttribute('aria-expanded', String(!isHidden));
-    }}
-
-    document.addEventListener('click', (e) => {{
-      const popover = document.getElementById('recording-summary-popover');
-      const btn = document.getElementById('btn-summary-toggle');
-      if (popover && !popover.hidden && !popover.contains(e.target) && btn && !btn.contains(e.target)) {{
-        popover.hidden = true;
-        btn.setAttribute('aria-expanded', 'false');
-      }}
-
-      const groupPop = document.getElementById('group-chip-popover');
-      if (groupPop && !groupPop.hidden && !groupPop.contains(e.target) && !e.target.closest('.trace-chip')) {{
-        groupPop.hidden = true;
-      }}
-    }});
-
-    function setSidebarWidth(widthPx) {{
-      const minW = 300;
-      const maxW = Math.max(minW, Math.min(window.innerWidth * 0.65, 1200));
-      const clamped = Math.max(minW, Math.min(widthPx, maxW));
-      document.documentElement.style.setProperty('--sidebar-width', `${{clamped}}px`);
-      const resizer = document.getElementById('split-resizer');
-      if (resizer) resizer.setAttribute('aria-valuenow', String(Math.round(clamped)));
-    }}
-
-    function initSplitResizer() {{
-      const resizer = document.getElementById('split-resizer');
-      const mainView = document.getElementById('main-view');
-      if (!resizer || !mainView) return;
-
-      let isDragging = false;
-
-      const onMouseDown = (e) => {{
-        isDragging = true;
-        hasUserCustomWidth = true;
-        resizer.classList.add('is-dragging');
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        e.preventDefault();
-      }};
-
-      const onMouseMove = (e) => {{
-        if (!isDragging) return;
-        const newW = window.innerWidth - e.clientX;
-        setSidebarWidth(newW);
-      }};
-
-      const onMouseUp = () => {{
-        if (!isDragging) return;
-        isDragging = false;
-        resizer.classList.remove('is-dragging');
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      }};
-
-      resizer.addEventListener('mousedown', onMouseDown);
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-
-      resizer.addEventListener('touchstart', (e) => {{
-        if (e.touches.length === 1) {{
-          isDragging = true;
-          hasUserCustomWidth = true;
-          resizer.classList.add('is-dragging');
-        }}
-      }}, {{ passive: true }});
-      window.addEventListener('touchmove', (e) => {{
-        if (isDragging && e.touches.length === 1) {{
-          const newW = window.innerWidth - e.touches[0].clientX;
-          setSidebarWidth(newW);
-        }}
-      }}, {{ passive: true }});
-      window.addEventListener('touchend', () => {{
-        if (isDragging) {{
-          isDragging = false;
-          resizer.classList.remove('is-dragging');
-        }}
-      }});
-
-      resizer.addEventListener('dblclick', () => {{
-        hasUserCustomWidth = false;
-        setSidebarWidth(420);
-      }});
-
-      resizer.addEventListener('keydown', (e) => {{
-        const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || 420;
-        if (e.key === 'ArrowLeft') {{
-          hasUserCustomWidth = true;
-          setSidebarWidth(curW + 44);
-          e.preventDefault();
-        }} else if (e.key === 'ArrowRight') {{
-          hasUserCustomWidth = true;
-          setSidebarWidth(curW - 44);
-          e.preventDefault();
-        }} else if (e.key === 'Home') {{
-          hasUserCustomWidth = false;
-          setSidebarWidth(420);
-          e.preventDefault();
-        }}
-      }});
     }}
 
     function buildGraphIndices() {{
@@ -4002,41 +3653,6 @@ def format_reactlog_html(
       }}
     }}
 
-    function calculateTimePct(tSec) {{
-      if (timelineMode === 'realtime') {{
-        return Math.min(94, Math.max(6, (tSec / maxSessionDuration) * 100));
-      }}
-
-      if (allBursts.length === 0) return 50;
-      if (allBursts.length === 1) return 50;
-
-      let burstIdx = 0;
-      let minDiff = Infinity;
-      for (let i = 0; i < allBursts.length; i++) {{
-        const b = allBursts[i];
-        if (tSec >= b.startTime && tSec <= b.endTime) {{
-          burstIdx = i;
-          break;
-        }}
-        const diff = Math.abs(b.startTime - tSec);
-        if (diff < minDiff) {{
-          minDiff = diff;
-          burstIdx = i;
-        }}
-      }}
-
-      const segWidth = 100 / allBursts.length;
-      return Math.min(96, Math.max(4, (burstIdx + 0.5) * segWidth));
-    }}
-
-    function setTimelineMode(mode) {{
-      timelineMode = mode;
-      const select = document.getElementById('timeline-mode-select');
-      if (select) select.value = mode;
-      initTraceTimeline();
-      updateTraceTimelineScrubber(getCurrentStepTime());
-    }}
-
     function getCurrentStepTime() {{
       const events = reactlogData.events || reactlogData.log || [];
       const ev = events[currentStep];
@@ -4044,454 +3660,42 @@ def format_reactlog_html(
     }}
 
     function initTraceTimeline() {{
-      const bar = document.getElementById('trace-timeline-bar');
-      const trackWrap = document.getElementById('trace-track-wrap');
-      const ruler = document.getElementById('trace-ruler');
-      const laneInputs = document.getElementById('lane-inputs');
-      const laneCalcs = document.getElementById('lane-calcs');
-      const laneOutputs = document.getElementById('lane-outputs');
-      const burstTrack = document.getElementById('trace-burst-track');
-      const lanesContainer = document.getElementById('trace-lanes');
-      if (!bar || !trackWrap || !ruler || !laneInputs || !laneCalcs || !laneOutputs || !burstTrack || !lanesContainer) return;
-
       const events = reactlogData.events || reactlogData.log || [];
-      let maxTime = 0;
-      for (const ev of events) {{
-        const tVal = ev.time_sec !== undefined ? ev.time_sec : ev.time;
-        if (tVal !== undefined && tVal > maxTime) maxTime = tVal;
-        if (ev.effective_time !== undefined && ev.effective_time > maxTime) maxTime = ev.effective_time;
-      }}
       const video = document.getElementById('session-video');
-      if (video && video.duration && !isNaN(video.duration)) {{
-        maxTime = Math.max(maxTime, video.duration);
-      }}
-      maxSessionDuration = Math.max(1.0, maxTime);
-
-      const totalDisplay = document.getElementById('trace-total-time');
-      if (totalDisplay) totalDisplay.textContent = formatTime(maxSessionDuration);
-      const curDisplay = document.getElementById('trace-current-time');
-      if (curDisplay) curDisplay.textContent = formatTime(0);
-
-      document.querySelectorAll('.burst-region-column').forEach(el => el.remove());
-      burstTrack.innerHTML = '';
-      const countBadgeEl = document.getElementById('timeline-flush-count');
-      if (countBadgeEl) {{
-        countBadgeEl.textContent = `${{allBursts.length}} flushes`;
-      }}
-      const colWidthPct = Math.max(12, (100 / Math.max(1, allBursts.length)) - 2);
-
-      allBursts.forEach((wave, wIdx) => {{
-        const wavePct = calculateTimePct(wave.time);
-
-        const col = document.createElement('div');
-        col.className = 'burst-region-column' + (wIdx === activeBurstIndex ? ' is-active' : '');
-        col.style.left = `${{wavePct}}%`;
-        col.style.width = `${{colWidthPct}}%`;
-        col.setAttribute('data-wave-idx', String(wIdx));
-        col.onclick = (e) => {{
-          e.stopPropagation();
-          activeBurstIndex = wIdx;
-          seekTo(wave.startStep);
-        }};
-        lanesContainer.insertBefore(col, lanesContainer.firstChild);
-
-        const anchor = document.createElement('button');
-        anchor.type = 'button';
-        anchor.className = 'burst-anchor' + (wave.isInit ? ' is-init' : '') + (wave.isMark ? ' is-mark' : '') + (wIdx === activeBurstIndex ? ' is-active' : '');
-        anchor.setAttribute('data-wave-idx', String(wIdx));
-        anchor.setAttribute('data-step', String(wave.startStep));
-
-        const topRow = document.createElement('div');
-        topRow.className = 'burst-anchor-top';
-
-        const badge = document.createElement('span');
-        badge.className = 'burst-anchor-badge';
-        badge.textContent = wave.isInit ? 'INIT' : `FLUSH ${{wIdx}}`;
-        topRow.appendChild(badge);
-
-        const time = document.createElement('span');
-        time.className = 'burst-anchor-time';
-        time.textContent = formatTime(wave.time);
-        topRow.appendChild(time);
-
-        const countBadge = document.createElement('span');
-        countBadge.className = 'burst-anchor-count';
-        countBadge.textContent = wave.isMark ? 'mark' : `${{wave.totalEvents}} ev`;
-        topRow.appendChild(countBadge);
-
-        anchor.appendChild(topRow);
-
-        const lbl = document.createElement('div');
-        lbl.className = 'burst-anchor-label';
-        lbl.textContent = wave.shortLabel || wave.triggerLabel || (wave.isInit ? 'Initial Render' : 'Action');
-        anchor.appendChild(lbl);
-
-        const meta = document.createElement('div');
-        meta.className = 'burst-anchor-meta';
-        const dot = document.createElement('span');
-        dot.className = 'burst-anchor-dot';
-        meta.appendChild(dot);
-        const metaText = document.createElement('span');
-        metaText.textContent = wave.humanAction || wave.triggerLabel || '';
-        meta.appendChild(metaText);
-        anchor.appendChild(meta);
-
-        const eventSubtext = `${{wave.userChanges > 0 ? wave.userChanges + ' user change · ' : ''}}${{wave.totalEvents}} internal events`;
-        anchor.title = `[${{formatTime(wave.time)}}] ${{wave.humanAction || wave.triggerLabel}}\n${{eventSubtext}}`;
-
-        anchor.onclick = (e) => {{
-          e.stopPropagation();
-          selectFlush(wIdx);
-        }};
-        burstTrack.appendChild(anchor);
-
-        if (wIdx < allBursts.length - 1 && timelineMode === 'realtime') {{
-          const nextWave = allBursts[wIdx + 1];
-          const idleGap = nextWave.startTime - wave.endTime;
-          const nextPct = calculateTimePct(nextWave.startTime);
-          const gapPct = nextPct - wavePct;
-          if (idleGap >= 1.5 && gapPct >= 18) {{
-            const midPct = (wavePct + nextPct) / 2;
-            const breakIndicator = document.createElement('div');
-            breakIndicator.className = 'time-break-indicator';
-            breakIndicator.style.left = `${{midPct}}%`;
-            breakIndicator.textContent = `// ${{idleGap.toFixed(1)}}s idle //`;
-            burstTrack.appendChild(breakIndicator);
-          }}
-        }}
+      maxSessionDuration = events.reduce((max, ev) => Math.max(max, ev.effective_time ?? ev.time_sec ?? ev.time ?? 0), Number.isFinite(video?.duration) ? video.duration : 1);
+      document.getElementById('trace-total-time').textContent = formatTime(maxSessionDuration);
+      const markers = document.getElementById('trace-markers');
+      markers.replaceChildren();
+      const flushSteps = new Map(allBursts.map(wave => [wave.startStep, wave]));
+      events.forEach((ev, step) => {{
+        const wave = flushSteps.get(step);
+        const action = ev.action || ev.event || '';
+        const isMark = wave?.isMark || action === 'mark';
+        if (!wave && !['exit', 'outputUpdated', 'execEnd'].includes(action) && !isMark) return;
+        const marker = document.createElement('span');
+        marker.className = 'timeline-marker' + (wave ? ' is-flush' : '') + (isMark ? ' is-mark' : '');
+        marker.style.left = `${{100 * step / Math.max(1, events.length - 1)}}%`;
+        markers.appendChild(marker);
       }});
-
-      ruler.innerHTML = '';
-      if (timelineMode === 'realtime') {{
-        const safeDuration = Math.min(7200, Math.max(1.0, maxSessionDuration));
-        const stepSec = safeDuration <= 5 ? 0.5 : (safeDuration <= 20 ? 1.0 : (safeDuration <= 120 ? 5.0 : Math.max(10.0, safeDuration / 20)));
-        for (let sec = 0; sec <= safeDuration + 0.001; sec += stepSec) {{
-          const pct = (sec / maxSessionDuration) * 100;
-          if (pct > 100) break;
-          const isMajor = Math.abs(sec - Math.round(sec)) < 0.01;
-          const tick = document.createElement('div');
-          tick.className = `trace-ruler-tick ${{isMajor ? 'major' : ''}}`;
-          tick.style.left = `${{pct}}%`;
-          ruler.appendChild(tick);
-
-          if (isMajor || sec === 0) {{
-            const lbl = document.createElement('span');
-            lbl.className = 'trace-ruler-label';
-            lbl.style.left = `${{pct}}%`;
-            lbl.textContent = `${{Math.round(sec)}}s`;
-            ruler.appendChild(lbl);
-          }}
-        }}
-      }} else {{
-        allBursts.forEach(wave => {{
-          const pct = calculateTimePct(wave.time);
-          const tick = document.createElement('div');
-          tick.className = 'trace-ruler-tick major';
-          tick.style.left = `${{pct}}%`;
-          ruler.appendChild(tick);
-
-          const lbl = document.createElement('span');
-          lbl.className = 'trace-ruler-label';
-          lbl.style.left = `${{pct}}%`;
-          lbl.textContent = `${{wave.time.toFixed(2)}}s`;
-          ruler.appendChild(lbl);
-        }});
-      }}
-
-      laneInputs.innerHTML = '';
-      laneCalcs.innerHTML = '';
-      laneOutputs.innerHTML = '';
-
-      const displayWaves = allBursts;
-      displayWaves.forEach(wave => {{
-        const wavePct = calculateTimePct(wave.time);
-
-        if (wave.inputs.length > 0) {{
-          const isClick = wave.inputs.some(i => i.isClick);
-          const chip = document.createElement('button');
-          chip.type = 'button';
-          chip.className = `trace-chip ${{isClick ? 'kind-click' : 'kind-input'}}`;
-          chip.style.left = `${{wavePct}}%`;
-          chip.setAttribute('data-step', String(wave.inputs[0].step));
-          chip.setAttribute('data-time', String(wave.time));
-          chip.setAttribute('data-node-id', wave.inputs[0].nodeId || `input:${{wave.inputs[0].name}}`);
-          chip.textContent = wave.inputs.length === 1 ? wave.inputs[0].name : `${{wave.inputs.length}} inputs`;
-          chip.title = `[${{formatTime(wave.time)}}] ${{wave.inputs.map(i => i.details || i.name).join(', ')}}`;
-          chip.onclick = (e) => {{
-            e.stopPropagation();
-            if (wave.inputs[0].nodeId) selectNode(wave.inputs[0].nodeId);
-            seekTo(wave.inputs[0].step);
-          }};
-          laneInputs.appendChild(chip);
-        }}
-
-        if (wave.calcs.length > 0) {{
-          const chip = document.createElement('button');
-          chip.type = 'button';
-          const isGroup = wave.calcs.length > 2;
-          chip.className = `trace-chip kind-calc ${{isGroup ? 'is-grouped' : ''}}`;
-          chip.style.left = `${{wavePct}}%`;
-          chip.setAttribute('data-step', String(wave.calcs[0].step));
-          chip.setAttribute('data-time', String(wave.time));
-          chip.setAttribute('data-node-id', wave.calcs[0].nodeId || `calc:${{wave.calcs[0].name}}`);
-          chip.textContent = wave.calcs.length === 1 ? wave.calcs[0].name : `${{wave.calcs.length}} calcs`;
-          chip.title = `[${{formatTime(wave.time)}}] Recalculates: ${{wave.calcs.map(c => c.name).join(', ')}}`;
-          chip.onclick = (e) => {{
-            e.stopPropagation();
-            if (wave.calcs.length > 1) {{
-              showGroupPopover(chip, wave.calcs, 'Calcs');
-            }} else {{
-              if (wave.calcs[0].nodeId) selectNode(wave.calcs[0].nodeId);
-              seekTo(wave.calcs[0].step);
-            }}
-          }};
-          laneCalcs.appendChild(chip);
-        }}
-
-        if (wave.outputs.length > 0) {{
-          const chip = document.createElement('button');
-          chip.type = 'button';
-          const isGroup = wave.outputs.length > 1;
-          chip.className = `trace-chip kind-output ${{isGroup ? 'is-grouped' : ''}}`;
-          chip.style.left = `${{wavePct}}%`;
-          chip.setAttribute('data-step', String(wave.outputs[0].step));
-          chip.setAttribute('data-time', String(wave.time));
-          chip.setAttribute('data-node-id', wave.outputs[0].nodeId || `output:${{wave.outputs[0].name}}`);
-          chip.textContent = wave.outputs.length === 1 ? wave.outputs[0].name : `${{wave.outputs.length}} outputs`;
-          chip.title = `[${{formatTime(wave.time)}}] Updates: ${{wave.outputs.map(o => o.name).join(', ')}}`;
-          chip.onclick = (e) => {{
-            e.stopPropagation();
-            if (wave.outputs.length > 1) {{
-              showGroupPopover(chip, wave.outputs, 'Outputs');
-            }} else {{
-              if (wave.outputs[0].nodeId) selectNode(wave.outputs[0].nodeId);
-              seekTo(wave.outputs[0].step);
-            }}
-          }};
-          laneOutputs.appendChild(chip);
-        }}
-      }});
-
-      renderSeismographLines();
-
-      const tooltip = document.getElementById('trace-tooltip');
-      const seekFromPointer = (e) => {{
-        const rect = trackWrap.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-
-        let matchIdx = 0;
-        if (timelineMode === 'realtime') {{
-          const targetSec = ratio * maxSessionDuration;
-          for (let i = 0; i < events.length; i++) {{
-            const ev = events[i];
-            const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
-            if (t <= targetSec) matchIdx = i;
-          }}
-          if (video) {{
-            try {{ video.currentTime = targetSec; }} catch (err) {{}}
-          }}
-        }} else {{
-          const burstIdx = Math.min(allBursts.length - 1, Math.floor(ratio * allBursts.length));
-          const targetBurst = allBursts[burstIdx] || allBursts[0];
-          matchIdx = targetBurst ? targetBurst.startStep : 0;
-          if (video && targetBurst) {{
-            try {{ video.currentTime = targetBurst.startTime; }} catch (err) {{}}
-          }}
-        }}
-        seekTo(matchIdx);
-      }};
-
-      trackWrap.addEventListener('pointerdown', (e) => {{
-        if (e.target.closest('.trace-chip') || e.target.closest('.group-chip-popover') || e.target.closest('.burst-anchor')) {{
-          return;
-        }}
-        isDraggingTrace = true;
-        try {{ trackWrap.setPointerCapture(e.pointerId); }} catch (err) {{}}
-        seekFromPointer(e);
-      }});
-
-      trackWrap.addEventListener('pointermove', (e) => {{
-        const rect = trackWrap.getBoundingClientRect();
-        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-
-        if (isDraggingTrace) {{
-          seekFromPointer(e);
-        }}
-
-        if (tooltip && isDraggingTrace) {{
-          tooltip.hidden = false;
-          const leftPx = Math.max(80, Math.min(rect.width - 80, ratio * rect.width));
-          tooltip.style.left = `${{leftPx}}px`;
-          const targetSec = ratio * maxSessionDuration;
-          tooltip.innerHTML = `<span class="tooltip-time">${{ICONS.clock}} ${{escapeHTML(formatTime(targetSec))}}</span>`;
-        }}
-      }});
-
-      trackWrap.addEventListener('pointerleave', () => {{
-        if (!isDraggingTrace && tooltip) tooltip.hidden = true;
-      }});
-
-      trackWrap.addEventListener('pointerup', (e) => {{
-        isDraggingTrace = false;
-        try {{ trackWrap.releasePointerCapture(e.pointerId); }} catch (err) {{}}
-        if (tooltip) tooltip.hidden = true;
-      }});
-    }}
-
-    function showGroupPopover(chipEl, items, typeLabel) {{
-      const popover = document.getElementById('group-chip-popover');
-      if (!popover) return;
-      popover.innerHTML = `<div class="group-popover-title">${{items.length}} ${{typeLabel}} in burst</div>`;
-      items.forEach(item => {{
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'group-popover-item';
-        btn.textContent = item.name;
-        btn.onclick = (e) => {{
-          e.stopPropagation();
-          popover.hidden = true;
-          if (item.nodeId) selectNode(item.nodeId);
-          if (item.step !== undefined) seekTo(item.step);
-        }};
-        popover.appendChild(btn);
-      }});
-
-      const rect = chipEl.getBoundingClientRect();
-      const parentRect = chipEl.closest('#trace-track-wrap').getBoundingClientRect();
-      popover.style.left = `${{Math.max(10, Math.min(parentRect.width - 160, rect.left - parentRect.left))}}px`;
-      popover.style.bottom = '30px';
-      popover.hidden = false;
-    }}
-
-    function renderSeismographLines() {{
-      const svg = document.getElementById('trace-seismograph');
-      if (!svg) return;
-      svg.innerHTML = '';
-
-      allBursts.forEach((wave, wIdx) => {{
-        const wavePct = calculateTimePct(wave.time);
-        const hasInputs = wave.inputs.length > 0;
-        const hasCalcs = wave.calcs.length > 0;
-        const hasOutputs = wave.outputs.length > 0;
-
-        if (hasInputs && (hasCalcs || hasOutputs)) {{
-          const isSelectedBurst = wIdx === activeBurstIndex;
-          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          line.setAttribute('x1', `${{wavePct}}%`);
-          line.setAttribute('y1', '9');
-          line.setAttribute('x2', `${{wavePct}}%`);
-          line.setAttribute('y2', hasOutputs ? '46' : '28');
-          line.setAttribute('class', 'seismograph-branch' + (isSelectedBurst ? ' is-active' : ''));
-          svg.appendChild(line);
-        }}
-      }});
-    }}
-
-    function updateCausalSummary(curWave) {{
-      const banner = document.getElementById('causal-summary-text');
-      if (!banner) return;
-
-      if (!curWave) {{
-        banner.textContent = 'Ready to trace reactive causality';
-        return;
-      }}
-
-      if (curWave.isInit) {{
-        const cLen = curWave.calcs.length;
-        const oLen = curWave.outputs.length;
-        banner.innerHTML = `<strong>App Initialized.</strong> Evaluated ${{cLen}} calcs and rendered ${{oLen}} outputs.`;
-        return;
-      }}
-
-      if (curWave.isMark) {{
-        const markText = (curWave.humanAction || curWave.triggerLabel || '').replace(/^(Mark|Bookmark):\\s*/i, '').replace(/^[🔖🏷️]\\s*/, '');
-        banner.innerHTML = `<strong>Bookmark:</strong> ${{escapeHTML(markText)}}. Timeline milestone recorded.`;
-        return;
-      }}
-
-      const triggerInputs = curWave.inputs || [];
-      const triggerNodeIds = filterItems(triggerInputs.map(i => i.nodeId), Boolean);
-
-      const downstreamSet = new Set();
-      triggerNodeIds.forEach(tid => {{
-        getDownstreamNodes(tid).forEach(nid => {{
-          downstreamSet.add(nid);
-          downstreamSet.add(cleanName(nid));
-        }});
-      }});
-
-      const causalCalcs = filterItems(curWave.calcs, c => triggerNodeIds.length === 0 || downstreamSet.has(c.nodeId) || downstreamSet.has(cleanName(c.name)));
-      const causalOutputs = filterItems(curWave.outputs, o => triggerNodeIds.length === 0 || downstreamSet.has(o.nodeId) || downstreamSet.has(cleanName(o.name)));
-
-      let actionDesc = curWave.humanAction || curWave.triggerLabel || 'User action';
-      if (actionDesc.includes(':')) {{
-        const parts = actionDesc.split(':');
-        const k = parts[0].trim();
-        const v = parts[1].trim();
-        actionDesc = `${{k.charAt(0).toUpperCase() + k.slice(1)}} changed ${{v}}`;
-      }}
-
-      let summaryHtml = `<strong>${{escapeHTML(actionDesc)}}.</strong>`;
-      if (causalCalcs.length > 0) {{
-        const calcPills = causalCalcs.map(c => `<button type="button" class="causal-step-pill" data-node-id="${{escapeHTML(c.nodeId || 'calc:' + c.name)}}">${{escapeHTML(cleanName(c.name))}}</button>`).join(' and ');
-        summaryHtml += ` This recalculated ${{calcPills}}`;
-      }}
-      if (causalOutputs.length > 0) {{
-        const outPills = causalOutputs.map(o => `<button type="button" class="causal-step-pill" data-node-id="${{escapeHTML(o.nodeId || 'output:' + o.name)}}">${{escapeHTML(cleanName(o.name))}}</button>`).join(' and ');
-        summaryHtml += (causalCalcs.length > 0 ? ', then rendered ' : ' This rendered ') + `${{outPills}}.`;
-      }} else if (causalCalcs.length > 0) {{
-        summaryHtml += '.';
-      }}
-
-      banner.innerHTML = summaryHtml;
+      updateTraceTimelineScrubber(getCurrentStepTime());
     }}
 
     function updateTraceTimelineScrubber(curSec) {{
-      const playhead = document.getElementById('trace-playhead');
-      const fill = document.getElementById('trace-fill');
-      const curDisplay = document.getElementById('trace-current-time');
-      const playheadPin = document.getElementById('playhead-pin');
-      const statusLine = document.getElementById('trace-status-line');
-      const pct = calculateTimePct(curSec);
-
-      if (playhead) playhead.style.left = `${{pct}}%`;
-      if (fill) fill.style.width = `${{pct}}%`;
-      if (curDisplay) curDisplay.textContent = formatTime(curSec);
-      if (playheadPin) playheadPin.textContent = `${{curSec.toFixed(2)}}s`;
-
+      document.getElementById('trace-current-time').textContent = formatTime(curSec);
       const events = reactlogData.events || reactlogData.log || [];
-      let curWave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
+      const curWave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
       activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
-
-      updateCausalSummary(curWave);
-
-      if (statusLine) {{
-        const targetNode = selectedNodeId ? nodeIndex.get(selectedNodeId) : null;
-        const nodeLabel = targetNode ? (targetNode.label || selectedNodeId) : null;
-        const waveLabel = curWave ? (curWave.humanAction || curWave.triggerLabel) : 'Ready';
-        statusLine.textContent = nodeLabel
-          ? `Selected: ${{nodeLabel}} · ${{waveLabel}}`
-          : `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}} · ${{waveLabel}}`;
-        statusLine.title = statusLine.textContent;
-      }}
-
-      document.querySelectorAll('.burst-anchor').forEach(anchor => {{
-        const idx = Number(anchor.getAttribute('data-wave-idx') || '0');
-        anchor.classList.toggle('is-active', idx === activeBurstIndex);
-      }});
-      document.querySelectorAll('.burst-region-column').forEach(col => {{
-        const idx = Number(col.getAttribute('data-wave-idx') || '0');
-        col.classList.toggle('is-active', idx === activeBurstIndex);
-      }});
-
-      document.querySelectorAll('.trace-chip').forEach(chip => {{
-        const chipNodeId = chip.getAttribute('data-node-id');
-        const isSelectedNode = selectedNodeId && (chipNodeId === selectedNodeId || chipNodeId === `calc:${{selectedNodeId}}` || chipNodeId === `output:${{selectedNodeId}}` || chipNodeId === `input:${{selectedNodeId}}`);
-        chip.classList.toggle('is-active', isSelectedNode);
-      }});
-
-      renderSeismographLines();
+      const activeLabel = document.getElementById('active-flush-label');
+      activeLabel.textContent = curWave
+        ? `Flush ${{activeBurstIndex + 1}} / ${{allBursts.length}} · ${{curWave.humanAction || curWave.triggerLabel || 'Initial render'}}`
+        : 'No recorded activity';
+      activeLabel.title = activeLabel.textContent;
+      const ev = events[currentStep];
+      const status = document.getElementById('trace-status-line');
+      status.textContent = ev ? (ev.details || ev.action || ev.event || '') : 'No events';
+      status.title = status.textContent;
+      const range = document.getElementById('scrubber-range');
+      range.setAttribute('aria-valuetext', `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}}. ${{activeLabel.textContent}}. ${{status.textContent}}`);
     }}
 
     function nextAction() {{
@@ -4638,7 +3842,6 @@ def format_reactlog_html(
         btn.classList.toggle('is-active', btn.id === `btn-mode-${{mode}}`);
       }});
       document.querySelector('.graph-topbar').hidden = mode === 'overview';
-      document.getElementById('timeline-sidebar').hidden = mode === 'overview';
       document.getElementById('trace-timeline-bar').hidden = mode === 'overview';
       const overviewPanel = document.getElementById('module-overview-panel');
       const svg = document.getElementById('reactlog-svg');
@@ -4699,21 +3902,6 @@ def format_reactlog_html(
       fitGraph();
     }}
 
-    function populateFlushSelect() {{
-      const select = document.getElementById('flush-select');
-      if (!select) return;
-      select.innerHTML = '';
-      allBursts.forEach((wave, idx) => {{
-        const opt = document.createElement('option');
-        opt.value = idx;
-        const label = wave.isInit
-          ? `Flush 0: Initial Render (${{(reactlogData.nodes || []).length}} nodes)`
-          : `Flush ${{idx}}: ${{wave.humanAction || wave.triggerLabel || 'Action'}}`;
-        opt.textContent = label;
-        select.appendChild(opt);
-      }});
-    }}
-
     function populateModuleSelect() {{
       const select = document.getElementById('module-filter-select');
       if (!select) return;
@@ -4733,28 +3921,13 @@ def format_reactlog_html(
       const curWave = allBursts[curIdx] || allBursts[0];
       if (!curWave) return;
 
-      const flushSelect = document.getElementById('flush-select');
-      if (flushSelect && flushSelect.value !== String(curIdx)) flushSelect.value = curIdx;
 
       const badge = document.getElementById('flush-counter-badge');
       if (badge) badge.textContent = `Flush ${{curIdx + 1}} / ${{allBursts.length}}`;
 
-      const pipeTrigger = document.getElementById('pipe-trigger-val');
-      if (pipeTrigger) {{
-        pipeTrigger.textContent = curWave.isInit ? 'Init' : (curWave.shortLabel || curWave.triggerLabel || 'Action');
-        pipeTrigger.title = curWave.humanAction || curWave.triggerLabel || 'Trigger';
-      }}
-
       const invCount = curWave.invalidatedNodes ? curWave.invalidatedNodes.size : 0;
       const calcCount = curWave.calcs ? curWave.calcs.length : 0;
       const outCount = curWave.outputs ? curWave.outputs.length : 0;
-
-      const pipeInv = document.getElementById('pipe-invalidated-count');
-      if (pipeInv) pipeInv.textContent = String(invCount);
-      const pipeCalc = document.getElementById('pipe-calcs-count');
-      if (pipeCalc) pipeCalc.textContent = String(calcCount);
-      const pipeOut = document.getElementById('pipe-outputs-count');
-      if (pipeOut) pipeOut.textContent = String(outCount);
 
       const cardTitle = document.getElementById('flush-card-title');
       if (cardTitle) {{
@@ -4855,7 +4028,7 @@ def format_reactlog_html(
 
     function updateFilterState(nodes) {{
       document.getElementById('filter-node-count').textContent = `${{nodes.length}} of ${{(reactlogData.nodes || []).length}} nodes`;
-      document.getElementById('btn-back-overview').hidden = currentViewMode === 'overview';
+      document.getElementById('btn-back-overview').hidden = currentViewMode === 'overview' || (!selectedModuleFilter && activityStart === null && activityEnd === null);
       const chips = document.getElementById('active-filters');
       chips.replaceChildren();
       const add = (kind, label, clear) => {{
@@ -5034,45 +4207,12 @@ def format_reactlog_html(
       const nodes = reactlogData.nodes || [];
       const edges = reactlogData.edges || [];
 
-      document.getElementById('stat-nodes').textContent = String(nodes.length);
-      document.getElementById('stat-edges').textContent = String(edges.length);
-      const obsCount = reactlogData.observed_events_count !== undefined ? reactlogData.observed_events_count : events.reduce((acc, e) => acc + (e.provenance === 'observed' ? 1 : 0), 0);
-      const infCount = reactlogData.inferred_events_count !== undefined ? reactlogData.inferred_events_count : events.reduce((acc, e) => acc + (e.provenance === 'inferred' ? 1 : 0), 0);
-      document.getElementById('stat-observed').textContent = String(obsCount);
-      document.getElementById('stat-inferred').textContent = String(infCount);
-
-      const inCount = filterItems(nodes, n => n.role === 'source' || n.type === 'input').length;
-      const calcCount = filterItems(nodes, n => n.role === 'conductor' || n.type === 'calc').length;
-      const outCount = filterItems(nodes, n => n.role === 'observer' || n.type === 'output' || n.type === 'effect').length;
-      const nodesSubtext = document.getElementById('stat-nodes-subtext');
-      if (nodesSubtext) nodesSubtext.textContent = `${{inCount}} in · ${{calcCount}} calc · ${{outCount}} out`;
-
-      const totEvents = Math.max(1, obsCount + infCount);
-      const obsPct = Math.round((obsCount / totEvents) * 100);
-      const infPct = 100 - obsPct;
-      const segObs = document.getElementById('seg-obs');
-      const segInf = document.getElementById('seg-inf');
-      if (segObs) segObs.style.width = `${{obsPct}}%`;
-      if (segInf) segInf.style.width = `${{infPct}}%`;
-
-      const legObs = document.getElementById('legend-obs-text');
-      if (legObs) legObs.innerHTML = `<span class="chip-dot" style="background:var(--source)"></span> ${{obsPct}}% Observed`;
-      const legInf = document.getElementById('legend-inf-text');
-      if (legInf) legInf.innerHTML = `<span class="chip-dot" style="background:var(--effect)"></span> ${{infPct}}% Inferred`;
-
-      const metaNote = document.getElementById('summary-meta-note');
-      if (metaNote) {{
-        metaNote.textContent = reactlogData.summary || `Captured ${{obsCount}} browser interactions triggering ${{infCount}} reactive cascade evaluations across ${{nodes.length}} graph nodes.`;
-      }}
-
       const scrubber = document.getElementById('scrubber-range');
       scrubber.max = Math.max(0, events.length - 1);
       scrubber.value = 0;
 
       showSourceFile(reactlogData.entry_file || Object.keys(reactlogData.sources || {{}})[0]);
-      renderActionsList();
       renderEventList();
-      populateFlushSelect();
       populateModuleSelect();
       renderGraph();
       initTraceTimeline();
@@ -5081,8 +4221,8 @@ def format_reactlog_html(
       setupPanZoom();
       fitGraph();
       setupVideoSync();
-      initSplitResizer();
-      setViewMode('overview');
+      toggleInspector(false);
+      setViewMode('flush');
     }}
 
     function nodeKind(n) {{
@@ -5096,40 +4236,29 @@ def format_reactlog_html(
 
     function toggleInspector(forceState) {{
       const sidebar = document.getElementById('sidebar');
-      const resizer = document.getElementById('split-resizer');
-      if (!sidebar) return;
       const shouldOpen = forceState !== undefined ? Boolean(forceState) : sidebar.hidden;
       sidebar.hidden = !shouldOpen;
-      if (resizer) resizer.style.display = shouldOpen ? '' : 'none';
-      const btnHeader = document.getElementById('btn-toggle-inspector');
-      if (btnHeader) {{ btnHeader.classList.toggle('is-active', shouldOpen); btnHeader.setAttribute('aria-expanded', String(shouldOpen)); }}
-      const btnBottom = document.getElementById('btn-toggle-inspector-bottom');
-      if (btnBottom) {{ btnBottom.classList.toggle('is-active', shouldOpen); btnBottom.setAttribute('aria-expanded', String(shouldOpen)); }}
-      fitGraph();
+      for (const id of ['btn-toggle-inspector', 'btn-toggle-inspector-bottom']) {{
+        const button = document.getElementById(id);
+        button.classList.toggle('is-active', shouldOpen);
+        button.setAttribute('aria-expanded', String(shouldOpen));
+      }}
     }}
 
     function showSidebarPanel(panelName) {{
       toggleInspector(true);
-      const tabs = ['timeline', 'actions', 'source', 'video'];
-      tabs.forEach(t => {{
-        const btn = document.getElementById(`${{t}}-tab`);
-        const panel = document.getElementById(`${{t}}-panel`);
-        if (btn && panel) {{
-          const isTarget = t === panelName;
-          btn.setAttribute('aria-selected', isTarget ? 'true' : 'false');
-          panel.hidden = !isTarget;
-        }}
-      }});
-
-      if (!hasUserCustomWidth) {{
-        if (panelName === 'video') {{
-          setSidebarWidth(Math.max(480, Math.round(window.innerWidth * 0.45)));
-        }} else if (panelName === 'source') {{
-          setSidebarWidth(Math.max(480, Math.min(window.innerWidth * 0.52, 680)));
-        }} else {{
-          setSidebarWidth(420);
-        }}
+      for (const name of ['timeline', 'source']) {{
+        document.getElementById(`${{name}}-panel`).hidden = name !== panelName;
       }}
+      document.getElementById('source-tab').setAttribute('aria-selected', String(panelName === 'source'));
+      document.getElementById('detail-panel-title').textContent = panelName === 'source' ? 'App code' : 'Node details';
+    }}
+
+    function toggleRecording(forceState) {{
+      const panel = document.getElementById('video-panel');
+      if (!panel) return;
+      panel.hidden = forceState !== undefined ? !forceState : !panel.hidden;
+      document.getElementById('video-tab').setAttribute('aria-expanded', String(!panel.hidden));
     }}
 
     function handlePhaseSelect(val) {{
@@ -5158,60 +4287,6 @@ def format_reactlog_html(
       const mins = Math.floor(s / 60);
       const rem = (s % 60).toFixed(1);
       return `${{mins > 0 ? mins + 'm ' : ''}}${{rem}}s`;
-    }}
-
-    function renderActionsList() {{
-      const list = document.getElementById('action-list');
-      if (!list) return;
-      list.innerHTML = '';
-
-      if (actionWaves.length === 0) {{
-        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.75rem;padding:0.5rem">No user interaction actions recorded in this session.</p>';
-        return;
-      }}
-
-      actionWaves.forEach((wave) => {{
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'action-story-item';
-        item.setAttribute('data-wave-step', String(wave.startStep));
-
-        const isCurrentWave = currentStep >= wave.startStep && currentStep <= wave.endStep;
-        if (isCurrentWave) item.classList.add('is-active');
-
-        const header = document.createElement('div');
-        header.className = 'action-story-header';
-
-        const title = document.createElement('div');
-        title.className = 'action-story-title';
-        title.textContent = `${{wave.index}}. ${{wave.humanAction || wave.triggerLabel}}`;
-
-        const time = document.createElement('span');
-        time.className = 'action-story-time';
-        time.textContent = formatTime(wave.time);
-
-        header.appendChild(title);
-        header.appendChild(time);
-        item.appendChild(header);
-
-        const desc = document.createElement('div');
-        desc.className = 'action-story-desc';
-        desc.textContent = `${{wave.userChanges > 0 ? wave.userChanges + ' user change · ' : ''}}${{wave.totalEvents}} internal reactive events`;
-        item.appendChild(desc);
-
-        if (wave.calcs.length > 0 || wave.outputs.length > 0) {{
-          const cascade = document.createElement('div');
-          cascade.className = 'action-story-cascade';
-          const names = [...wave.calcs.map(c => c.name), ...wave.outputs.map(o => o.name)];
-          cascade.textContent = `➔ ${{names.join(' ➔ ')}}`;
-          item.appendChild(cascade);
-        }}
-
-        item.onclick = () => {{
-          seekTo(wave.startStep);
-        }};
-        list.appendChild(item);
-      }});
     }}
 
     function renderEventList() {{
@@ -6095,12 +5170,6 @@ def format_reactlog_html(
         }}
       }});
 
-      document.querySelectorAll('.action-story-item').forEach(item => {{
-        const s = Number(item.getAttribute('data-wave-step'));
-        const isCur = Math.abs(s - currentStep) < 4;
-        item.classList.toggle('is-active', isCur);
-      }});
-
       const ev = events[currentStep];
       if (!focusedNodeId && ev && (ev.node_id || ev.id)) {{
         const evNodeId = ev.node_id || ev.id;
@@ -6218,6 +5287,7 @@ def format_reactlog_html(
       }};
 
       video.addEventListener('loadedmetadata', () => {{
+        updateSyncStatus(`Paused at ${{formatTime(video.currentTime)}}`);
         if (video.duration && !isNaN(video.duration)) {{
           maxSessionDuration = Math.max(maxSessionDuration, video.duration);
           const totalDisplay = document.getElementById('trace-total-time');

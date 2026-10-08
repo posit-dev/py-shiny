@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Literal
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from shiny._inspect import (
     format_reactlog_html,
@@ -20,11 +20,18 @@ def load_graph_report(
     wait_until: Literal["load", "domcontentloaded", "networkidle", "commit"] = "load",
 ) -> None:
     """Open the graph and inspector explicitly for tests of those surfaces."""
+    page.set_default_timeout(5000)
     page.set_content(html, wait_until=wait_until)
     page.locator("#btn-mode-full").click()
     page.locator("#btn-toggle-inspector").click()
     page.locator("#event-history").evaluate("el => el.open = true")
     page.locator("#flush-card").evaluate("el => el.open = true")
+
+
+def graph_node(page: Page, selector: str) -> Locator:
+    if page.locator("#sidebar").is_visible():
+        page.get_by_role("button", name="Close Inspector", exact=True).click()
+    return page.locator(selector)
 
 
 def test_graph_elements_visible_on_initialization(page: Page) -> None:
@@ -90,7 +97,7 @@ def other():
         wait_until="domcontentloaded",
     )
 
-    page.locator('.graph-node[data-id="calc:doubled"]').hover()
+    graph_node(page, '.graph-node[data-id="calc:doubled"]').hover()
     page.wait_for_function(
         "() => Array.from(document.querySelectorAll('.graph-edge')).some(edge => parseFloat(edge.style.opacity) === 1)"
     )
@@ -119,14 +126,14 @@ def other():
 """
     report = generate_reactlog(code)
     load_graph_report(page, format_reactlog_html(report, code))
-    page.locator('.graph-node[data-id="calc:doubled"]').click()
+    graph_node(page, '.graph-node[data-id="calc:doubled"]').click()
     page.locator(".toolbar").hover()
     expect(page.locator(".graph-node.is-dimmed")).to_have_count(3)
     expect(page.locator(".graph-edge.is-dimmed")).to_have_count(2)
     expect(page.locator('.graph-node[data-id="input:x"]')).not_to_have_class(
         re.compile("is-dimmed")
     )
-    page.locator('.graph-node[data-id="output:other"]').hover()
+    graph_node(page, '.graph-node[data-id="output:other"]').hover()
     expect(page.locator(".graph-node.is-dimmed")).to_have_count(3)
     # An unrelated active edge must not override the selection's muted styling.
     step = next(
@@ -142,7 +149,7 @@ def other():
     expect(page.locator("#insp-title")).to_contain_text("other")
     page.keyboard.press("Escape")
     expect(page.locator(".is-dimmed")).to_have_count(0)
-    page.locator('.graph-node[data-id="calc:doubled"]').click()
+    graph_node(page, '.graph-node[data-id="calc:doubled"]').click()
     page.get_by_role("button", name="Clear node selection", exact=True).click()
     expect(page.locator(".is-dimmed")).to_have_count(0)
 
@@ -181,7 +188,7 @@ def chart():
     steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
     load_graph_report(page, format_reactlog_html(report, code))
     expect(page.locator(".app-box")).to_contain_text("App (no namespace)")
-    page.locator('.graph-node[data-id="output:chart"]').click()
+    graph_node(page, '.graph-node[data-id="output:chart"]').click()
     expect(page.locator("#insp-plot-image")).to_be_hidden()
     page.evaluate(f"seekTo({steps[1]})")
     expect(page.locator("#insp-plot-image")).to_have_attribute("alt", "App plot")
@@ -197,7 +204,7 @@ def chart():
     page.evaluate("seekTo(0)")
     expect(page.locator("#insp-plot-image")).to_be_hidden()
     page.locator('.graph-node[data-id="module:sales"]').dblclick()
-    page.locator('.graph-node[data-id="output:sales-chart"]').click()
+    graph_node(page, '.graph-node[data-id="output:sales-chart"]').click()
     page.evaluate(f"seekTo({steps[1]})")
     expect(page.locator("#insp-plot-image")).to_have_attribute("alt", "Module plot")
 
@@ -232,31 +239,6 @@ def greeting():
     source_highlight = page.locator("#source-line-highlight")
     expect(source_highlight).to_be_visible()
     expect(source_highlight).to_have_attribute("data-line", "2")
-
-
-def test_recording_video_tab(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}"
-"""
-    reactlog = generate_reactlog(code, video_path="demo.webm")
-    load_graph_report(
-        page,
-        format_reactlog_html(
-            reactlog, source_code=code, video_path="/path/to/demo.webm"
-        ),
-        wait_until="domcontentloaded",
-    )
-
-    video_tab = page.get_by_role("tab", name="Recording")
-    expect(video_tab).to_be_visible()
-
-    video_tab.click()
-    video_panel = page.get_by_role("tabpanel", name="Recording")
-    expect(video_panel).to_be_visible()
-    expect(page.locator("video")).to_be_visible()
 
 
 def test_headless_recording_session(tmp_path: Path) -> None:
@@ -336,64 +318,6 @@ def out_txt():
     expect(phase_select).to_be_visible()
     phase_select.select_option("init")
     expect(page.locator(".event-item.is-current")).to_have_count(0)
-
-
-def test_draggable_splitter_and_video_tab_resize(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("val", "Val", 10)
-@render.text
-def out():
-    return f"V={input.val()}"
-"""
-    reactlog = generate_reactlog(code, video_path="demo.webm")
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
-        wait_until="domcontentloaded",
-    )
-
-    resizer = page.locator("#split-resizer")
-    expect(resizer).to_be_visible()
-
-    # Keyboard resizing
-    resizer.focus()
-    page.keyboard.press("ArrowLeft")
-    expect(resizer).to_have_attribute("aria-valuenow", "464")
-
-    # Switching to recording tab widens sidebar
-    video_tab = page.locator("#video-tab")
-    video_tab.click()
-    expect(page.locator("#video-panel")).to_be_visible()
-    expect(page.locator("video")).to_be_visible()
-
-
-def test_trace_timeline_scrubber_and_action_chips(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("multiplier", "Mult", 5)
-@render.text
-def res():
-    return str(input.multiplier() * 10)
-"""
-    recorded_actions = [
-        {"type": "input", "name": "multiplier", "value": 8, "timestamp": 1200},
-        {"type": "output", "name": "res", "timestamp": 1600},
-    ]
-    reactlog = generate_reactlog(
-        code, recorded_actions=recorded_actions, video_path="demo.webm"
-    )
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
-        wait_until="domcontentloaded",
-    )
-
-    trace_bar = page.locator("#trace-timeline-bar")
-    expect(trace_bar).to_be_visible()
-    expect(page.locator("#trace-playhead")).to_be_visible()
-    expect(page.locator("#lane-inputs .trace-chip")).to_have_count(1)
-    expect(page.locator("#lane-outputs .trace-chip")).to_have_count(2)
-    expect(page.locator("#lane-calcs .trace-chip")).to_have_count(0)
-    expect(page.locator(".trace-chip")).to_have_count(3)
 
 
 def test_event_timeline_labels_initialization_and_recorded_actions(
@@ -639,8 +563,8 @@ def out():
 
     page.evaluate("data => loadReactlogObject(data)", r_reactlog_data)
 
-    expect(page.locator("#stat-nodes")).to_have_text("3")
-    expect(page.locator("#stat-edges")).to_have_text("2")
+    expect(page.locator("#filter-node-count")).to_have_text("3 of 3 nodes")
+    expect(page.locator(".graph-edge")).to_have_count(2)
     expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator(".graph-edge")).to_have_count(2)
 
@@ -718,47 +642,19 @@ def other():
 
     expect(page.locator(".graph-node")).to_have_count(5)
 
-    page.locator('.graph-node[data-id="calc:doubled"]').click()
+    graph_node(page, '.graph-node[data-id="calc:doubled"]').click()
 
     expect(page.locator(".path-controls")).to_have_count(0)
     expect(page.locator(".graph-node")).to_have_count(5)
     expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(3)
-    page.locator('.graph-node[data-id="input:x"]').click()
+    graph_node(page, '.graph-node[data-id="input:x"]').click()
     expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(3)
-    page.locator('.graph-node[data-id="output:other"]').click()
+    graph_node(page, '.graph-node[data-id="output:other"]').click()
     expect(page.locator(".graph-node:not(.is-dimmed)")).to_have_count(2)
     expect(page.locator(".graph-node")).to_have_count(5)
     expect(page.locator('.graph-node[data-id="output:other"]')).to_have_class(
         re.compile("is-selected")
     )
-
-
-def test_recording_summary_popover_toggle(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("a", "A", 10)
-@render.text
-def out():
-    return f"A={input.a()}"
-"""
-    reactlog = generate_reactlog(code)
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code),
-        wait_until="domcontentloaded",
-    )
-
-    popover = page.locator("#recording-summary-popover")
-    expect(popover).to_be_hidden()
-
-    summary_btn = page.locator("#btn-summary-toggle")
-    summary_btn.click()
-    expect(popover).to_be_visible()
-    expect(page.locator("#stat-nodes")).to_have_text("2")
-    expect(page.locator("#stat-edges")).to_have_text("1")
-
-    close_btn = popover.locator("button.mini")
-    close_btn.click()
-    expect(popover).to_be_hidden()
 
 
 def test_actions_story_tab_and_inline_code_drawer(page: Page) -> None:
@@ -784,18 +680,9 @@ def out():
         wait_until="domcontentloaded",
     )
 
-    actions_tab = page.locator("#actions-tab")
-    actions_tab.click()
-    actions_panel = page.locator("#actions-panel")
-    expect(actions_panel).to_be_visible()
+    expect(page.locator("#actions-tab, #timeline-tab")).to_have_count(0)
 
-    action_items = page.locator(".action-story-item")
-    expect(action_items).to_have_count(1)
-
-    events_tab = page.locator("#timeline-tab")
-    events_tab.click()
-
-    page.locator('.graph-node[data-id="calc:calc_b"]').click()
+    graph_node(page, '.graph-node[data-id="calc:calc_b"]').click()
     drawer_toggle = page.locator("#btn-toggle-source-drawer")
     expect(drawer_toggle).to_be_visible()
 
@@ -848,107 +735,6 @@ def separate_out():
     expect(page.locator(".graph-node")).to_have_count(5)
 
 
-def test_timeline_activity_mode_and_realtime_toggle(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("val", "Val", 10)
-@render.text
-def out():
-    return f"V={input.val()}"
-"""
-    recorded_actions = [
-        {"type": "input", "name": "val", "value": 20, "timestamp": 1500},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code),
-        wait_until="domcontentloaded",
-    )
-
-    mode_select = page.locator("#timeline-mode-select")
-    expect(mode_select).to_be_visible()
-
-    burst_anchors = page.locator("#trace-burst-track .burst-anchor")
-    expect(burst_anchors).to_have_count(2)
-
-    mode_select.select_option("realtime")
-    expect(mode_select).to_have_value("realtime")
-
-    mode_select.select_option("activity")
-    expect(mode_select).to_have_value("activity")
-
-
-def test_trace_tooltip_is_hidden_until_timeline_drag(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("value", "Value", 1)
-@render.text
-def result():
-    return str(input.value())
-"""
-    recorded_actions = [
-        {"type": "input", "name": "value", "value": 2, "timestamp": 1000},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code),
-        wait_until="domcontentloaded",
-    )
-
-    tooltip = page.locator("#trace-tooltip")
-    expect(tooltip).to_be_hidden()
-
-    track = page.locator("#trace-track-wrap")
-    track_box = track.bounding_box()
-    assert track_box is not None
-    start_x = track_box["x"] + track_box["width"] * 0.75
-    drag_y = track_box["y"] + 2
-    page.mouse.move(start_x, drag_y)
-    page.mouse.down()
-    page.mouse.move(start_x + 10, drag_y)
-    expect(tooltip).to_be_visible()
-    expect(tooltip).to_contain_text("s")
-    page.mouse.up()
-    expect(tooltip).to_be_hidden()
-
-
-def test_timeline_seismograph_and_burst_anchors(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("x", "X", 1)
-@reactive.calc
-def doubled():
-    return input.x() * 2
-@render.text
-def res():
-    return str(doubled())
-"""
-    recorded_actions = [
-        {"type": "input", "name": "x", "value": 5, "timestamp": 1200},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code),
-        wait_until="domcontentloaded",
-    )
-
-    seismograph = page.locator("#trace-seismograph")
-    expect(seismograph).to_be_visible()
-
-    next_btn = page.locator("#btn-next-action")
-    prev_btn = page.locator("#btn-prev-action")
-    expect(next_btn).to_be_visible()
-    expect(prev_btn).to_be_visible()
-
-    next_btn.click()
-    status_line = page.locator("#trace-status-line")
-    expect(status_line).to_be_visible()
-
-
 def test_multi_parent_dag_tree_and_single_target_synchronization(page: Page) -> None:
     code = """from shiny.express import input, render, ui
 from shiny import reactive
@@ -978,8 +764,7 @@ def merged():
     merged_node = page.locator('.graph-node[data-id="output:merged"]')
     merged_node.click()
 
-    status_line = page.locator("#trace-status-line")
-    expect(status_line).to_contain_text("Selected: output:merged")
+    expect(page.locator("#insp-title")).to_contain_text("merged")
 
     why_title = page.locator("#why-title")
     expect(why_title).to_contain_text("Why did output:merged render?")
@@ -991,46 +776,6 @@ def merged():
     expect(why_story).to_contain_text("Immediate causes:")
     expect(why_story).to_contain_text("calc:calc_a")
     expect(why_story).to_contain_text("calc:calc_b")
-
-
-def test_activity_mode_equidistant_distribution_and_group_popover(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("units", "Units", 10)
-@reactive.calc
-def subtotal():
-    return input.units() * 5
-
-@render.text
-def out_a():
-    return f"A: {subtotal()}"
-
-@render.text
-def out_b():
-    return f"B: {subtotal()}"
-"""
-    recorded_actions = [
-        {"type": "input", "name": "units", "value": 20, "timestamp": 1200},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code),
-        wait_until="domcontentloaded",
-    )
-
-    burst_cols = page.locator(".burst-region-column")
-    expect(burst_cols).to_have_count(2)
-
-    group_chip = page.locator("#lane-outputs .trace-chip.is-grouped").first
-    expect(group_chip).to_be_visible()
-    expect(group_chip).to_contain_text("2 outputs")
-
-    group_chip.click()
-    popover = page.locator("#group-chip-popover")
-    expect(popover).to_be_visible()
-    expect(popover).to_contain_text("2 Outputs in burst")
 
 
 def test_humanized_timeline_dynamic_verbs_and_causal_summary(page: Page) -> None:
@@ -1056,29 +801,24 @@ def summary():
         wait_until="domcontentloaded",
     )
 
-    # 1. Humanized Timeline Anchor
-    burst_anchors = page.locator(".burst-anchor")
-    expect(burst_anchors).to_have_count(2)
-    expect(burst_anchors.nth(1)).to_contain_text("price")
-    expect(burst_anchors.nth(1)).to_have_attribute(
-        "title", re.compile(r"price: 25 → 30")
-    )
+    page.locator("#btn-next-flush").click()
+    expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
 
     # 2. Causal Story Banner above graph is removed as requested
     causal_banner = page.locator("#causal-summary-banner")
     expect(causal_banner).to_be_hidden()
 
     # 3. Dynamic Why Question for Input
-    page.locator('.graph-node[data-id="input:price"]').click()
+    graph_node(page, '.graph-node[data-id="input:price"]').click()
     why_title = page.locator("#why-title")
     expect(why_title).to_contain_text("Why did input.price change?")
 
     # 4. Dynamic Why Question for Calc
-    page.locator('.graph-node[data-id="calc:subtotal"]').click()
+    graph_node(page, '.graph-node[data-id="calc:subtotal"]').click()
     expect(why_title).to_contain_text("Why did calc:subtotal run?")
 
     # 5. Dynamic Why Question for Output
-    page.locator('.graph-node[data-id="output:summary"]').click()
+    graph_node(page, '.graph-node[data-id="output:summary"]').click()
     expect(why_title).to_contain_text("Why did output:summary render?")
 
     # 6. Streamlined Toolbar & Phase Filter
@@ -1123,17 +863,10 @@ def client_badge():
     # 1. Skip to the price action burst
     page.locator("#btn-skip-init").click()
 
-    # 2. Live story contains only nodes downstream of price (subtotal, order_summary)
-    causal_text = page.locator("#causal-summary-text")
-    expect(causal_text).to_contain_text("Price changed 25 → 30")
-    expect(causal_text).to_contain_text("subtotal")
-    expect(causal_text).to_contain_text("order_summary")
-    causal_str = causal_text.text_content() or ""
-    assert "discount" not in causal_str
-    assert "client_badge" not in causal_str
+    expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
 
     # 3. Clicking output:order_summary shows why it rendered in this burst
-    page.locator('.graph-node[data-id="output:order_summary"]').click()
+    graph_node(page, '.graph-node[data-id="output:order_summary"]').click()
     why_title = page.locator("#why-title")
     expect(why_title).to_contain_text("Why did output:order_summary render?")
     why_story = page.locator("#why-story")
@@ -1144,7 +877,7 @@ def client_badge():
     expect(page.locator(".graph-node.is-dimmed")).to_have_count(3)
 
     # 5. Clicking unaffected node (client) shows did not change in this action
-    page.locator('.graph-node[data-id="input:client"]').click()
+    graph_node(page, '.graph-node[data-id="input:client"]').click()
     expect(why_title).to_contain_text("input.client did not change")
     expect(page.locator("#why-story")).to_contain_text("Did not change during")
 
@@ -1225,7 +958,7 @@ def out():
     page.locator("#btn-mode-full").click()
 
     # Click nodes and buttons to trigger any handlers
-    page.locator('.graph-node[data-id="calc:safe_node"]').click()
+    graph_node(page, '.graph-node[data-id="calc:safe_node"]').click()
     is_pwned = page.evaluate("() => Boolean(window.__pwned)")
     assert is_pwned is False
 
@@ -1261,8 +994,8 @@ def out():
     expect(line_nums.nth(3)).to_have_text("4")
 
     # 2. Check inline drawer line numbers
-    page.get_by_role("tab", name="Inspector").click()
-    page.locator('.graph-node[data-id="calc:double_val"]').click()
+    page.get_by_role("button", name="Node details", exact=True).click()
+    graph_node(page, '.graph-node[data-id="calc:double_val"]').click()
     page.locator("#btn-toggle-source-drawer").click()
 
     drawer_line_nums = page.locator("#insp-source-code .source-line-num")
@@ -1394,12 +1127,12 @@ def result():
                 const controls = document.querySelector('.toolbar').getBoundingClientRect();
                 return {width: document.documentElement.scrollWidth,
                     viewport: innerWidth, graphWidth: graph.width,
-                    stacked: sidebar.top >= graph.bottom,
+                    overlay: sidebar.top >= graph.top && sidebar.bottom <= graph.bottom,
                     controlsFit: controls.right <= innerWidth};
             }""")
             assert bounds["width"] <= bounds["viewport"]
-            assert bounds["graphWidth"] == width
-            assert bounds["stacked"]
+            assert bounds["graphWidth"] == width - 40
+            assert bounds["overlay"]
             assert bounds["controlsFit"]
             page.locator("#search-input").fill("result")
             expect(page.locator("#search-results button")).to_have_count(1)
@@ -1570,7 +1303,7 @@ def result():
     app.write_text(code)
     report = generate_reactlog(code, source_path=app)
     load_graph_report(page, format_reactlog_html(report, code))
-    page.locator('.graph-node[data-id="calc:west-revenue"]').click()
+    graph_node(page, '.graph-node[data-id="calc:west-revenue"]').click()
     expect(page.locator("#insp-meta-line")).to_have_text("sales.py · Line 5")
     page.locator("#btn-toggle-source-drawer").click()
     expect(page.locator("#insp-source-code")).to_contain_text(
@@ -1588,14 +1321,14 @@ def result():
     expect(page.locator("#source-panel code")).to_contain_text(
         "from sales import sales"
     )
-    page.locator('.graph-node[data-id="output:result"]').click()
+    graph_node(page, '.graph-node[data-id="output:result"]').click()
     expect(page.get_by_label("Source file")).to_have_value("app.py")
     expect(page.locator("#source-panel .source-line.is-active")).to_contain_text(
         "def result():"
     )
     page.evaluate("data => loadReactlogObject(data)", report)
     page.locator("#btn-mode-full").click()
-    page.locator('.graph-node[data-id="calc:west-revenue"]').click()
+    graph_node(page, '.graph-node[data-id="calc:west-revenue"]').click()
     expect(page.get_by_label("Source file")).to_have_value("sales.py")
 
 
@@ -1644,7 +1377,7 @@ def test_source_highlighting_survives_file_switches_and_json_import(page: Page) 
 def test_inline_source_snippet_has_syntax_highlighting(page: Page) -> None:
     code = "from shiny import reactive\n@reactive.calc\ndef amount():\n    return input.units() * 25\n"
     load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
-    page.locator('.graph-node[data-id="calc:amount"]').click()
+    graph_node(page, '.graph-node[data-id="calc:amount"]').click()
     page.locator("#btn-toggle-source-drawer").click()
     snippet = page.locator("#insp-source-code")
     expect(snippet.locator(".syntax-keyword").first).to_have_text("def")
@@ -1719,7 +1452,7 @@ def out():
     )
     load_graph_report(page, format_reactlog_html(report, code))
     page.locator("#btn-skip-init").click()
-    page.locator('.graph-node[data-id="output:out"]').click()
+    graph_node(page, '.graph-node[data-id="output:out"]').click()
     expect(page.locator("#why-title")).to_contain_text("did not render")
     expect(page.locator("#insp-upstream-list")).not_to_contain_text("input.b")
     page.evaluate(f"seekTo({report['steps_total'] - 1})")
@@ -1755,7 +1488,7 @@ def txt():
     expect(badge).to_be_visible()
     expect(badge).to_contain_text("4×")
 
-    page.locator('.graph-node[data-id="calc:compute"]').click()
+    graph_node(page, '.graph-node[data-id="calc:compute"]').click()
     expect(page.locator("#insp-runs-badge")).to_contain_text("Runs: 4×")
     expect(page.locator("#insp-runs-badge svg.flame-icon")).not_to_be_attached()
 
@@ -1777,16 +1510,16 @@ def out():
     rlog = generate_reactlog(code, recorded_actions=actions)
     load_graph_report(page, format_reactlog_html(rlog, code))
 
-    expect(page.locator("#flush-select")).to_be_visible()
-    expect(page.locator("#flush-pipeline-bar")).to_be_visible()
+    expect(page.locator("#flush-select")).to_have_count(0)
+    expect(page.locator("#flush-pipeline-bar")).to_have_count(0)
     expect(page.locator("#flush-card")).to_be_visible()
 
     # Step to flush 1
     page.locator("#btn-next-flush").click()
     expect(page.locator("#flush-counter-badge")).to_contain_text("Flush 2")
-    expect(page.locator("#pipe-invalidated-count")).to_have_text("2")
-    expect(page.locator("#pipe-calcs-count")).to_have_text("1")
-    expect(page.locator("#pipe-outputs-count")).to_have_text("1")
+    expect(page.locator("#flush-card-invalidated")).to_contain_text("2 nodes")
+    expect(page.locator("#flush-card-calcs")).to_contain_text("1 calcs")
+    expect(page.locator("#flush-card-outputs")).to_contain_text("1 outputs")
 
 
 def test_reactlog_overview_mode_and_module_cards(page: Page) -> None:
@@ -1823,37 +1556,6 @@ mod1_server("sub1")
     ).click()
     expect(panel).not_to_be_visible()
     expect(page.locator(".graph-node")).to_have_count(3)
-
-
-def test_reactlog_bottom_timeline_bar_and_sidebar_markers(page: Page) -> None:
-    code = """from shiny import reactive
-from shiny.express import input, render
-
-@reactive.calc
-def calc_val():
-    return input.val() * 2
-
-@render.text
-def out():
-    return f"{calc_val()}"
-"""
-    actions = [
-        {"type": "input", "name": "val", "value": 5, "timestamp": 100},
-        {"type": "input", "name": "val", "value": 10, "timestamp": 200},
-    ]
-    rlog = generate_reactlog(code, recorded_actions=actions)
-    load_graph_report(page, format_reactlog_html(rlog, code))
-
-    expect(page.locator("#bottom-timeline-bar")).to_be_visible()
-    expect(page.locator("#timeline-sidebar")).to_be_visible()
-    expect(page.locator("#timeline-sidebar .burst-anchor")).to_have_count(3)
-
-    markers = page.locator("#timeline-sidebar .burst-anchor")
-    markers.nth(1).click()
-    expect(page.locator("#flush-counter-badge")).to_contain_text("Flush 2")
-
-    page.locator("#btn-step-forward").click()
-    expect(page.locator("#step-display")).not_to_have_text("Step 0 /")
 
 
 def test_reactlog_repeat_execution_badge_uniform(page: Page) -> None:
