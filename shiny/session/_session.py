@@ -67,11 +67,8 @@ from ..otel._decorators import suppress as otel_suppress
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_label, create_otel_span_name
 from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
-from ..reactive import Effect_, Value, effect
-from ..reactive import flush as reactive_flush
-from ..reactive import isolate
-from ..reactive._core import lock
-from ..reactive._core import on_flushed as reactive_on_flushed
+from ..reactive import Effect_, Value, effect, isolate
+from ..reactive._core import _enclosing_run, _reactive_environment
 from ..render.renderer import Renderer, RendererT
 from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
@@ -188,6 +185,9 @@ class OutBoundMessageQueues:
         to the client and blanked the output. Cleared for an output as soon as it
         computes a value or errors again.
         """
+
+    def is_empty(self) -> bool:
+        return not self.values and not self.errors and not self.input_messages
 
     def reset(self) -> None:
         self.values.clear()
@@ -624,7 +624,13 @@ class Session(ABC):
         once: bool = True,
     ) -> Callable[[], None]:
         """
-        Register a function to call before the next reactive flush.
+        Register a function to call before this session next sends its outputs.
+
+        A session sends its outputs (values, errors, and input messages) in one
+        message once each cycle ends, i.e. once all of its effects have finished. It
+        sends them in a task of its own, so a slow callback here (or a slow client)
+        delays only this session. Anything the callback queues, such as a
+        `send_input_message()`, goes out in that same message.
 
         Parameters
         ----------
@@ -647,7 +653,9 @@ class Session(ABC):
         once: bool = True,
     ) -> Callable[[], None]:
         """
-        Register a function to call after the next reactive flush.
+        Register a function to call after this session next sends its outputs.
+
+        See :meth:`on_flush` for when a session sends its outputs.
 
         Parameters
         ----------
@@ -818,6 +826,10 @@ class Session(ABC):
     @abstractmethod
     def _decrement_busy_count(self) -> None: ...
 
+    def _cycle_start_action(self, action: Callable[[], None]) -> None:
+        """Run `action` once the session is idle. Sessions without cycles run it now."""
+        action()
+
 
 def _print_exception(e: Exception) -> None:
     traceback.print_exception(type(e), e, e.__traceback__)
@@ -913,6 +925,21 @@ class AppSession(Session):
         self._conn: Connection = conn
         self._debug: bool = debug
         self._busy_count: int = 0
+        # Actions (input updates, timer invalidations) waiting for the session to be
+        # idle.
+        self._cycle_start_action_queue: list[Callable[[], None]] = []
+        # Whether a cycle has finished since outputs were last sent. Every cycle ends
+        # with a message, even an empty one. True so the first output flush always
+        # sends.
+        self._cycle_ended: bool = True
+        # Whether output flush requests are honored: from init until the session loop
+        # exits.
+        self._output_flush_enabled: bool = False
+        self._dispatch_tasks: set[asyncio.Task[None]] = set()
+        self._running_flush_callbacks: bool = False
+        # The task sending this session's outputs, and whether to run it once more.
+        self._output_flush_task: Optional[asyncio.Task[None]] = None
+        self._output_flush_again: bool = False
         self._message_handlers: dict[
             str,
             tuple[Callable[..., Awaitable[Jsonifiable]], Session],
@@ -1076,86 +1103,86 @@ class AppSession(Session):
                         )
                         return
 
-                    async with lock():
-                        if message_obj["method"] == "init":
-                            verify_state(ConnectionState.Start)
+                    if message_obj["method"] == "init":
+                        verify_state(ConnectionState.Start)
 
-                            # BOOKMARKS!
-                            if not isinstance(self.bookmark, BookmarkApp):
-                                raise RuntimeError("`.bookmark` must be a BookmarkApp")
+                        # BOOKMARKS!
+                        if not isinstance(self.bookmark, BookmarkApp):
+                            raise RuntimeError("`.bookmark` must be a BookmarkApp")
 
-                            if ".clientdata_url_search" in message_obj["data"]:
-                                self.bookmark._set_restore_context(
-                                    await RestoreContext.from_query_string(
-                                        message_obj["data"][".clientdata_url_search"],
-                                        app=self.app,
-                                    )
+                        if ".clientdata_url_search" in message_obj["data"]:
+                            self.bookmark._set_restore_context(
+                                await RestoreContext.from_query_string(
+                                    message_obj["data"][".clientdata_url_search"],
+                                    app=self.app,
                                 )
-                            else:
-                                self.bookmark._set_restore_context(RestoreContext())
+                            )
+                        else:
+                            self.bookmark._set_restore_context(RestoreContext())
 
-                            # When a reactive flush occurs, flush the session's outputs,
-                            # errors, etc. to the client. Note that this is
-                            # `reactive._core.on_flushed`, not `self.on_flushed`.
-                            unreg = reactive_on_flushed(self._flush)
-                            # When the session ends, stop flushing outputs on reactive
-                            # flush.
-                            stack.callback(unreg)
+                        # From now on, output flush requests send this session's
+                        # outputs, errors, etc. to the client after the next round.
+                        # When the session ends, stop.
+                        self._output_flush_enabled = True
+                        stack.callback(self._disable_output_flush)
 
-                            # Set up bookmark callbacks here
-                            self.bookmark._create_effects()
+                        # Set up bookmark callbacks here
+                        self.bookmark._create_effects()
 
-                            conn_state = ConnectionState.Running
-                            message_obj = typing.cast(ClientMessageInit, message_obj)
-                            self._manage_inputs(message_obj["data"])
+                        conn_state = ConnectionState.Running
+                        message_obj = typing.cast(ClientMessageInit, message_obj)
+                        self._manage_inputs(message_obj["data"])
 
-                            # Wrap server function initialization in session_start span
-                            with session_context(self):
-                                async with shiny_otel_span(
-                                    "session_start",
-                                    attributes=lambda: extract_http_attributes(
-                                        self.http_conn
-                                    ),
-                                    required_level=OtelCollectLevel.SESSION,
-                                    collection_level=_get_env_level(),
-                                    infer_session_id=True,
-                                ):
-                                    self.app.server(self.input, self.output, self)
+                        # Wrap server function initialization in session_start span
+                        with session_context(self):
+                            async with shiny_otel_span(
+                                "session_start",
+                                attributes=lambda: extract_http_attributes(
+                                    self.http_conn
+                                ),
+                                required_level=OtelCollectLevel.SESSION,
+                                collection_level=_get_env_level(),
+                                infer_session_id=True,
+                            ):
+                                self.app.server(self.input, self.output, self)
 
-                                    # Flush here to attempt a reactive_update within `session_start` otel span.
-                                    # Might also fix https://github.com/posit-dev/py-shiny/issues/1889
-                                    await reactive_flush()
+                                # Start the first cycle within the `session_start`
+                                # span. This doesn't wait for async effects.
+                                self._request_output_flush()
+                                await _reactive_environment.start_round()
 
-                        elif message_obj["method"] == "update":
-                            verify_state(ConnectionState.Running)
+                    elif message_obj["method"] == "update":
+                        verify_state(ConnectionState.Running)
 
-                            message_obj = typing.cast(ClientMessageUpdate, message_obj)
+                        data = typing.cast(ClientMessageUpdate, message_obj)["data"]
+
+                        def manage_inputs(data: dict[str, object] = data) -> None:
                             # Set the session context for otel logging purposes
                             with session_context(self):
-                                self._manage_inputs(message_obj["data"])
+                                self._manage_inputs(data)
 
-                        elif "tag" in message_obj and "args" in message_obj:
-                            verify_state(ConnectionState.Running)
+                        # Inputs change only between cycles, so effects that are
+                        # still running keep seeing stable input values.
+                        self._cycle_start_action(manage_inputs)
 
-                            message_obj = typing.cast(ClientMessageOther, message_obj)
-                            await self._dispatch(message_obj)
+                    elif "tag" in message_obj and "args" in message_obj:
+                        verify_state(ConnectionState.Running)
 
-                        else:
-                            raise ProtocolError(
-                                f"Unrecognized method {message_obj['method']}"
-                            )
+                        # Handlers can be slow; run them in their own task so the
+                        # receive loop stays responsive. Responses carry the tag.
+                        # `reactive.flush()` doesn't wait on these tasks.
+                        task = asyncio.create_task(
+                            self._dispatch(typing.cast(ClientMessageOther, message_obj))
+                        )
+                        self._dispatch_tasks.add(task)
+                        task.add_done_callback(self._dispatch_tasks.discard)
 
-                        # Progress messages (of the "{binding: {id: xxx}}"" variety) may
-                        # have queued up at this point; let them drain before we send
-                        # the next message.
-                        # https://github.com/posit-dev/py-shiny/issues/1381
-                        await asyncio.sleep(0)
+                    else:
+                        raise ProtocolError(
+                            f"Unrecognized method {message_obj['method']}"
+                        )
 
-                        # Keep session context active for reactive flush so
-                        # reactive_update spans can consistently include session.id.
-                        with session_context(self):
-                            self._request_flush()
-                            await reactive_flush()
+                    self._request_output_flush()
 
             except ConnectionClosed:
                 ...
@@ -1308,11 +1335,19 @@ class AppSession(Session):
     async def _handle_request(
         self, request: Request, action: str, subpath: Optional[str]
     ) -> ASGIApp:
-        self._increment_busy_count()
+        # Busy pauses this session's cycle (no input updates, timers, or outputs), so
+        # only downloads take it, as in R; not uploads or dynamic routes. It covers
+        # only the call to the download handler: a streamed body is read after this
+        # returns, so values the stream sets reach the client while it streams, and
+        # the session keeps handling input during a long download.
+        busy = action == "download"
+        if busy:
+            self._increment_busy_count()
         try:
             return await self._handle_request_impl(request, action, subpath)
         finally:
-            self._decrement_busy_count()
+            if busy:
+                self._decrement_busy_count()
 
     async def _handle_request_impl(
         self, request: Request, action: str, subpath: Optional[str]
@@ -1572,7 +1607,7 @@ class AppSession(Session):
 
     def send_input_message(self, id: str, message: dict[str, object]) -> None:
         self._outbound_message_queues.add_input_message(id, message)
-        self._request_flush()
+        self._request_output_flush()
 
     def _send_insert_ui(
         self, selector: str, multiple: bool, where: str, content: RenderedDeps
@@ -1634,7 +1669,9 @@ class AppSession(Session):
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         once: bool = True,
     ) -> Callable[[], None]:
-        return self._flush_callbacks.register(wrap_async(fn), once)
+        unregister = self._flush_callbacks.register(wrap_async(fn), once)
+        self._request_output_flush()
+        return unregister
 
     def on_flushed(
         self,
@@ -1643,33 +1680,97 @@ class AppSession(Session):
     ) -> Callable[[], None]:
         return self._flushed_callbacks.register(wrap_async(fn), once)
 
-    def _request_flush(self) -> None:
-        self.app._request_flush(self)
+    def _request_output_flush(self) -> None:
+        """Send this session's outputs after the next round."""
+        # Anything queued by this session's own `on_flush` callbacks goes out in the
+        # message being built, so it needs no further output flush (which could loop).
+        if self._output_flush_enabled and not self._running_flush_callbacks:
+            self.app._request_output_flush(self)
 
-    async def _flush(self) -> None:
+    def _disable_output_flush(self) -> None:
+        self._output_flush_enabled = False
+        self.app._sessions_needing_output_flush.pop(self.id, None)
+
+    def _start_output_flush(self) -> None:
+        """
+        Send this session's outputs in a task of its own.
+
+        At most one runs per session: if an output flush is requested while one is
+        still sending, it runs once more when that one finishes, so messages stay in
+        order. An error closes this session only. `reactive.flush()` waits for these
+        tasks, so after it returns the messages have been sent.
+        """
+        if self._output_flush_task is not None and not self._output_flush_task.done():
+            self._output_flush_again = True
+            return
+        self._output_flush_task = _reactive_environment._spawn(self._run_output_flush())
+
+    async def _run_output_flush(self) -> None:
+        # `reactive.flush()` from this session's flush callbacks (or tasks they
+        # start) returns right away rather than waiting on this task.
+        _enclosing_run.set(asyncio.current_task())
+        while self._output_flush_enabled:
+            self._output_flush_again = False
+            try:
+                await self._output_flush()
+            except Exception as e:
+                await self._unhandled_error(e)
+            if not self._output_flush_again:
+                return
+
+    async def _output_flush(self) -> None:
+        # Outputs go out once per cycle: while any of this session's effects are
+        # still running, hold everything. The idle transition requests an output flush.
+        if self._busy_count > 0:
+            return
+        if (
+            self._cycle_start_action_queue
+            and not self._cycle_ended
+            and self._outbound_message_queues.is_empty()
+        ):
+            # Nothing to report before the queued action (e.g. an input update) runs.
+            self._start_cycle()
+            return
+
         with session_context(self):
             # This is the only place in the session where the RestoreContext is flushed.
             if self.bookmark._restore_context:
                 self.bookmark._restore_context.flush_pending()
-            # Flush the callbacks
-            await self._flush_callbacks.invoke()
+            # Run the `on_flush` callbacks
+            self._running_flush_callbacks = True
+            try:
+                await self._flush_callbacks.invoke()
+            finally:
+                self._running_flush_callbacks = False
+
+        # Async flush callbacks yield, and an effect may have started meanwhile; its
+        # cycle's idle transition sends everything still queued.
+        if self._busy_count > 0:
+            return
 
         try:
             omq = self._outbound_message_queues
-
-            message: dict[str, object] = {
-                "values": omq.values,
-                "inputMessages": omq.input_messages,
-                "errors": omq.errors,
-            }
-
-            try:
+            # Send only when a cycle has ended or something is queued (R's
+            # `hasPendingUpdates()`). A cycle's message is sent even when empty: the
+            # client uses it to settle outputs still showing progress (e.g. after
+            # `req(False, cancel_output=True)`).
+            if self._cycle_ended or not omq.is_empty():
+                # Take the queued values before awaiting the send, so a value
+                # written during the send stays queued for the next message.
+                message: dict[str, object] = {
+                    "values": dict(omq.values),
+                    "inputMessages": list(omq.input_messages),
+                    "errors": dict(omq.errors),
+                }
+                omq.reset()
+                self._cycle_ended = False
                 await self._send_message(message)
-            finally:
-                self._outbound_message_queues.reset()
         finally:
             with session_context(self):
                 await self._flushed_callbacks.invoke()
+
+        # This cycle's outputs are out; start the next one.
+        self._start_cycle()
 
     def _increment_busy_count(self) -> None:
         self._busy_count += 1
@@ -1680,6 +1781,36 @@ class AppSession(Session):
         self._busy_count -= 1
         if self._busy_count == 0:
             self._send_message_sync({"busy": "idle"})
+            # `_output_flush` sends this cycle's outputs, then starts the next action.
+            self._cycle_ended = True
+            self._request_output_flush()
+
+    def _cycle_start_action(self, action: Callable[[], None]) -> None:
+        """
+        Run `action` at the start of the next cycle, once this session is idle and
+        its outputs have been sent.
+
+        Actions are sync, so they can't be interrupted partway, and only `_output_flush`
+        runs them (never whichever task happened to queue one).
+        """
+        self._cycle_start_action_queue.append(action)
+        self._request_output_flush()
+
+    def _start_cycle(self) -> None:
+        # One action per cycle; the next runs after the outputs this one causes.
+        if self._busy_count != 0 or not self._cycle_start_action_queue:
+            return
+        if self._has_run_session_ended_tasks:
+            self._cycle_start_action_queue.clear()
+            return
+        action = self._cycle_start_action_queue.pop(0)
+        try:
+            action()
+        finally:
+            # The cycle this action starts ends when its effects finish (the idle
+            # transition), or right away if it started none.
+            self._cycle_ended = True
+            self._request_output_flush()
 
     # ==========================================================================
     # On session ended
@@ -1973,6 +2104,9 @@ class SessionProxy(Session):
 
     def _decrement_busy_count(self) -> None:
         self._root_session._decrement_busy_count()
+
+    def _cycle_start_action(self, action: Callable[[], None]) -> None:
+        self._root_session._cycle_start_action(action)
 
     def set_message_handler(
         self,

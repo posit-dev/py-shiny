@@ -51,6 +51,7 @@ from .bookmark._types import (
 )
 from .html_dependencies import _page_deps
 from .http_staticfiles import FileResponse, StaticFiles
+from .reactive._core import _reactive_environment
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
 from .ui._page import DEPS_PLACEHOLDER, PageHtmlDocument, page_html
@@ -240,7 +241,10 @@ class App:
 
         self._sessions: dict[str, AppSession] = {}
 
-        # self._sessions_needing_flush: dict[int, AppSession] = {}
+        # Sessions with outputs, errors, or input messages to send after the next
+        # round (R's `appsNeedingFlush`).
+        self._sessions_needing_output_flush: dict[str, AppSession] = {}
+        self._unregister_output_flush_hook: Optional[Callable[[], None]] = None
 
         self._registered_dependencies: dict[str, HTMLDependency] = {}
         self._dependency_handler = starlette.routing.Router()
@@ -469,13 +473,28 @@ class App:
         return JSONResponse({"detail": "Not Found"}, status_code=404)
 
     # ==========================================================================
-    # Flush
+    # Output flush
     # ==========================================================================
-    def _request_flush(self, session: AppSession) -> None:
-        # TODO: Until we have reactive domains, because we can't yet keep track
-        # of which sessions need a flush.
-        pass
-        # self._sessions_needing_flush[session.id] = session
+    def _request_output_flush(self, session: AppSession) -> None:
+        self._sessions_needing_output_flush[session.id] = session
+        if self._unregister_output_flush_hook is None:
+            self._unregister_output_flush_hook = (
+                _reactive_environment.on_round_finished(self._start_output_flushes)
+            )
+        _reactive_environment.request_round()
+
+    async def _start_output_flushes(self) -> None:
+        """
+        After each round, start an output flush for each requesting session.
+
+        Each session flushes in its own task (see `AppSession._start_output_flush()`),
+        so a slow client, or a slow `on_flush` callback, delays only its own session:
+        other sessions' output and the next round don't wait for it.
+        """
+        sessions = list(self._sessions_needing_output_flush.values())
+        self._sessions_needing_output_flush.clear()
+        for session in sessions:
+            session._start_output_flush()
 
     # ==========================================================================
     # HTML Dependency stuff

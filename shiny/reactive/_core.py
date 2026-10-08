@@ -13,8 +13,10 @@ __all__ = (
 
 import asyncio
 import contextlib
+import contextvars
 import time
 import traceback
+import types
 import typing
 import warnings
 from contextvars import ContextVar
@@ -23,8 +25,8 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Generator, Optional, Type
 from .. import _utils
 from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
+from .._typing_extensions import TypeGuard
 from ..otel._collect import OtelCollectLevel, _get_env_level
-from ..otel._core import detached_otel_context
 from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
 
@@ -76,12 +78,12 @@ class Context:
             self._invalidate_callbacks.append(func)
 
     def add_pending_flush(self, priority: int) -> None:
-        """Tell the reactive environment that this context should be flushed the
-        next time flushReact() called."""
-        _reactive_environment.add_pending_flush(self, priority)
+        """Add this context to the reactive effect queue, to run in the next round."""
+        _reactive_environment.enqueue_effect(self, priority)
 
     def on_flush(self, func: Callable[[], Awaitable[None]]) -> None:
-        """Register a function to be called when this context is flushed."""
+        """Register a function to be called when a round takes this context from the
+        reactive effect queue."""
         self._flush_callbacks.append(func)
 
     async def execute_flush_callbacks(self) -> None:
@@ -122,17 +124,67 @@ class Dependents:
             dep_ctx.invalidate()
 
 
+@types.coroutine
+def _yield_to_loop() -> Generator[None, None, None]:
+    # What `asyncio.sleep(0)` does, without going through a patchable function.
+    yield
+
+
+# The task running the current round, effect, or session output flush. Tasks created
+# from it inherit this value, which lets `run_until_idle()` tell whether it was called
+# from within a run that is still going (directly or through a task it started).
+_enclosing_run: ContextVar[Optional["asyncio.Task[object]"]] = ContextVar(
+    "enclosing_run", default=None
+)
+
+
+def _is_alive(
+    loop: Optional[asyncio.AbstractEventLoop],
+) -> TypeGuard[asyncio.AbstractEventLoop]:
+    return loop is not None and not loop.is_closed() and loop.is_running()
+
+
 class ReactiveEnvironment:
-    """The reactive environment"""
+    """
+    The reactive environment.
+
+    Terms used throughout the reactive system:
+
+    * **Reactive effect queue**: the single, process-wide priority queue of reactive
+      effect contexts waiting to run. Invalidating an effect adds it to this queue.
+    * **Round**: one drain of the reactive effect queue, followed by the
+      round-finished callbacks. A round starts each effect in its own task and does
+      not wait for any effect's async part.
+    * **Idle**: the reactive effect queue is empty, and no round, effect, or session
+      output flush task is running. `reactive.flush()` runs rounds until idle.
+    * **Cycle** (per session): one action (such as an input change), the effects it
+      starts, and the output flush that ends it. One cycle can span several rounds,
+      and one round can advance the cycles of several sessions.
+    * **Output flush** (per session): sending a session's outputs to the client,
+      once that session's effects have finished.
+    """
 
     def __init__(self) -> None:
         self._current_context: ContextVar[Optional[Context]] = ContextVar(
             "current_context", default=None
         )
         self._next_id: int = 0
-        self._pending_flush_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
+        self._effect_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
         self._lock: Optional[asyncio.Lock] = None
-        self._flushed_callbacks = _utils.AsyncCallbacks()
+        self._round_finished_callbacks = _utils.AsyncCallbacks()
+        self._round_requested: bool = False
+        # The event loop Shiny runs on, for requests made from other threads.
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._round_running: bool = False
+        # Resolved by the next round to start (see `run_next_round()`).
+        self._next_round_waiters: list[asyncio.Future[None]] = []
+        # Set when a round is requested while one is running.
+        self._rerun_round: bool = False
+        # Strong references to fire-and-forget tasks (rounds, effect runs, and session
+        # output flushes); the event loop only keeps weak ones.
+        self._tasks: set[asyncio.Task[None]] = set()
+        # Tasks stranded on an event loop that stopped (see `_adopt_loop()`).
+        self._abandoned_tasks: set[asyncio.Task[None]] = set()
 
     @property
     def lock(self) -> asyncio.Lock:
@@ -170,32 +222,186 @@ class ReactiveEnvironment:
             raise RuntimeError("No current reactive context")
         return ctx
 
-    def on_flushed(
+    def on_round_finished(
         self, func: Callable[[], Awaitable[None]], once: bool = False
     ) -> Callable[[], None]:
-        return self._flushed_callbacks.register(func, once=once)
+        """Register a function to be called at the end of every round."""
+        return self._round_finished_callbacks.register(func, once=once)
 
-    async def flush(self) -> None:
-        """Flush all pending operations"""
-        # Wrap entire flush cycle in reactive_update span (or no-op if not collecting)
-        async with shiny_otel_span(
-            "reactive_update",
-            infer_session_id=True,
-            required_level=OtelCollectLevel.REACTIVE_UPDATE,
-            collection_level=_get_env_level(),
-        ):
-            await self._flush_sequential()
-            await self._flushed_callbacks.invoke()
+    async def start_round(self) -> None:
+        """
+        Start one round: start every context in the reactive effect queue, then
+        invoke the round-finished callbacks. If a round is already running, return
+        right away; the running round starts another when it finishes.
 
-    async def _flush_sequential(self) -> None:
-        # Sequential flush: instead of storing the tasks in a list and calling gather()
-        # on them later, just run each effect in sequence.
-        while not self._pending_flush_queue.empty():
-            ctx = self._pending_flush_queue.get()
-            await ctx.execute_flush_callbacks()
+        This never waits for an effect's async part: each context runs in its own
+        task. Priority orders when effects start, not when they finish.
+        """
+        # Don't start a second round while one is running; the running one requests
+        # another when it finishes.
+        self._adopt_loop(asyncio.get_running_loop())
+        if self._round_running:
+            self._rerun_round = True
+            return
+        self._round_running = True
+        self._rerun_round = False
+        self._round_requested = False
+        self._loop = asyncio.get_running_loop()
+        waiters = self._next_round_waiters
+        self._next_round_waiters = []
+        token = _enclosing_run.set(asyncio.current_task())
+        try:
+            # Wrap the round in a reactive_update span (or no-op if not collecting)
+            async with shiny_otel_span(
+                "reactive_update",
+                infer_session_id=True,
+                required_level=OtelCollectLevel.REACTIVE_UPDATE,
+                collection_level=_get_env_level(),
+            ):
+                while not self._effect_queue.empty():
+                    ctx = self._effect_queue.get()
+                    self._spawn(self._run_context(ctx))
+                    # CPython runs ready callbacks FIFO, so the task's sync part runs
+                    # now, and anything it invalidates is queued before we take the
+                    # next ctx.
+                    await _yield_to_loop()
+                await self._round_finished_callbacks.invoke()
+        finally:
+            _enclosing_run.reset(token)
+            self._round_running = False
+            for waiter in waiters:
+                if not waiter.done():
+                    waiter.set_result(None)
+            if (
+                self._rerun_round
+                or self._next_round_waiters
+                or not self._effect_queue.empty()
+            ):
+                self._round_requested = False
+                self.request_round()
 
-    def add_pending_flush(self, ctx: Context, priority: int) -> None:
-        self._pending_flush_queue.put(priority, ctx)
+    async def _run_context(self, ctx: Context) -> None:
+        _enclosing_run.set(asyncio.current_task())
+        await ctx.execute_flush_callbacks()
+
+    async def run_next_round(self) -> None:
+        """
+        Cause a round that starts after this call, and return once it has finished.
+
+        Runs that round itself when none is running. Otherwise, requests another
+        round from the running one, and waits for that round to finish.
+        """
+        self._adopt_loop(asyncio.get_running_loop())
+        if not self._round_running:
+            await self.start_round()
+            return
+        waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        self._next_round_waiters.append(waiter)
+        self._rerun_round = True
+        await waiter
+
+    async def run_until_idle(self) -> None:
+        """
+        Run rounds until idle: the reactive effect queue is empty and no round,
+        effect, or session output flush task is running.
+
+        Returns right away, without running anything, when called from within a
+        round, effect, or output flush that is still going, including from a task it
+        started (e.g. via `asyncio.gather()` or `asyncio.wait_for()`): that run may
+        be waiting on the caller, so waiting here could deadlock. A task started by an effect that has since finished
+        (e.g. an extended task's body) waits as usual.
+        """
+        owner = _enclosing_run.get()
+        if owner is not None and not owner.done():
+            return
+        current = asyncio.current_task()
+        while True:
+            await self.run_next_round()
+            running = {t for t in self._tasks if not t.done() and t is not current}
+            if not running and self._effect_queue.empty():
+                return
+            if running:
+                await asyncio.wait(running)
+
+    def request_round(self) -> None:
+        """
+        Schedule a single round on the next event-loop iteration. Requests made before
+        it runs are merged into it.
+
+        Safe to call from another thread: the request is handed to the event loop
+        Shiny runs on. (That makes only the *request* thread-safe. Reactive state
+        itself must be changed on the loop's thread, e.g. with
+        `loop.call_soon_threadsafe(value.set, x)`.)
+        """
+        try:
+            loop: Optional[asyncio.AbstractEventLoop] = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        home = self._loop
+        if _is_alive(home) and loop is not home:
+            # Another thread: retry on the loop's own thread, so only that thread
+            # touches `_round_requested` and schedules the round.
+            try:
+                home.call_soon_threadsafe(self.request_round)
+            except RuntimeError:
+                pass  # The loop closed in the meantime.
+            return
+        if loop is None:
+            # No loop at all (e.g. a reactive graph built synchronously); whoever
+            # runs the graph will call `start_round()` explicitly.
+            return
+        self._adopt_loop(loop)
+        self._loop = loop
+        if self._round_requested:
+            return
+        self._round_requested = True
+        # A fresh context keeps the requester's session and OTel span out of the round.
+        loop.call_soon(self._start_requested_round, context=contextvars.Context())
+
+    def _adopt_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        """
+        Discard round state left by an event loop that has stopped.
+
+        A round (or request) stranded on a loop that stopped mid-round, such as a
+        previous `test_server()` run's, can never finish. Without this, later rounds
+        would return as if one were running, and `run_next_round()` would wait
+        forever.
+        """
+        old = self._loop
+        if old is None or old is loop or _is_alive(old):
+            return
+        self._round_running = False
+        self._rerun_round = False
+        self._round_requested = False
+        self._next_round_waiters = []
+        # Stop waiting on the dead loop's tasks, but keep them: if collected, their
+        # coroutines' `finally` blocks would run (and fail) in whatever runs then.
+        # ponytail: never freed; only loops that stop mid-round (tests, repeated
+        # `test_server()` runs) leave any.
+        self._abandoned_tasks |= self._tasks
+        self._tasks = set()
+        self._loop = loop
+
+    def _start_requested_round(self) -> None:
+        if self._round_requested:
+            self._spawn(self.start_round())
+
+    def _spawn(self, coro: Awaitable[None]) -> "asyncio.Task[None]":
+        task = asyncio.ensure_future(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._on_task_done)
+        return task
+
+    def _on_task_done(self, task: asyncio.Task[None]) -> None:
+        self._tasks.discard(task)
+        if not task.cancelled() and (err := task.exception()) is not None:
+            # Effects report their own errors; this only catches bugs in a round or
+            # output flush.
+            traceback.print_exception(type(err), err, err.__traceback__)
+
+    def enqueue_effect(self, ctx: Context, priority: int) -> None:
+        self._effect_queue.put(priority, ctx)
+        self.request_round()
 
     @contextlib.contextmanager
     def isolate(self) -> Generator[None, None, None]:
@@ -266,8 +472,21 @@ async def flush() -> None:
     -------
     You shouldn't ever need to call this function inside of a Shiny app. It's only
     useful for testing and running reactive code interactively in the console.
+
+    Runs rounds until the reactive environment is idle: the reactive effect queue is
+    empty, every started effect (including its async part) has finished, and each
+    session's resulting outputs have been sent.
+
+    Note
+    ----
+    Called from within an effect, or from a task started by an effect that is still
+    running (e.g. via `asyncio.create_task()` or `asyncio.gather()`), this returns
+    right away without waiting: the effect may be waiting on the caller, so waiting
+    could deadlock. Dependents still run in the next round, but code right after
+    this call can't rely on them having run yet. A task that outlives the effect
+    that started it (such as an extended task's body) waits as usual.
     """
-    await _reactive_environment.flush()
+    await _reactive_environment.run_until_idle()
 
 
 @no_example()
@@ -275,12 +494,16 @@ def on_flushed(
     func: Callable[[], Awaitable[None]], once: bool = False
 ) -> Callable[[], None]:
     """
-    Register a function to be called when the reactive environment is flushed.
+    Register a function to be called at the end of every round.
+
+    A round starts every effect in the reactive effect queue, without waiting for
+    their async parts. One call to :func:`~shiny.reactive.flush` can run several
+    rounds.
 
     Parameters
     ----------
     func
-        The function to be called when the reactive environment is flushed
+        The function to be called at the end of every round.
     once
         Should the function be run once, and then cleared, or should it
         re-run each time the event occurs.
@@ -295,20 +518,28 @@ def on_flushed(
     * :func:`~shiny.reactive.flush`
     """
 
-    return _reactive_environment.on_flushed(func, once)
+    return _reactive_environment.on_round_finished(func, once)
 
 
 @no_example()
 def lock() -> asyncio.Lock:
     """
-    A lock that should be held whenever manipulating the reactive graph.
+    A process-wide lock, kept for backward compatibility.
 
-    For example, :func:`~shiny.reactive.lock` makes it safe to set a
-    :class:`~reactive.value` and call :func:`~shiny.reactive.flush` from a different
-    :class:`~asyncio.Task` than the one that is running the Shiny
-    :class:`~shiny.Session`.
+    Shiny no longer takes this lock itself, so holding it doesn't pause reactive
+    processing or serialize effects. Code that holds it only excludes other code
+    that also holds it.
+
+    To change reactive state from a different :class:`~asyncio.Task` than the one
+    running the Shiny :class:`~shiny.Session`, set the :class:`~reactive.value`
+    directly; a round is scheduled automatically. Await
+    :func:`~shiny.reactive.flush` to wait until the resulting reactive work has
+    finished.
     """
     return _reactive_environment.lock
+
+
+_timer_tasks: set[asyncio.Task[None]] = set()
 
 
 @add_example()
@@ -369,18 +600,18 @@ def invalidate_later(
                 # only be a no-op.
                 return
 
-            async with lock():
-                # Prevent the ctx.invalidate() from killing our own task. (Another way
-                # to accomplish this is to unregister our ctx.on_invalidate handler, but
-                # ctx.on_invalidate doesn't currently allow unregistration.)
-                cancellable = False
+            # Prevent the ctx.invalidate() from killing our own task. (Another way
+            # to accomplish this is to unregister our ctx.on_invalidate handler, but
+            # ctx.on_invalidate doesn't currently allow unregistration.)
+            cancellable = False
 
-                # Detach from any active OTel span so the flush's reactive_update
-                # span starts as a root span. The flush is timer-driven, not
-                # caused by a user action, so it should have no parent.
-                with detached_otel_context():
-                    ctx.invalidate()
-                    await flush()
+            # Like an input change, the invalidation waits until the session is idle.
+            # The resulting round is requested with a fresh context, so its
+            # reactive_update span has no parent.
+            if session:
+                session._cycle_start_action(ctx.invalidate)
+            else:
+                ctx.invalidate()
 
         except BaseException:
             traceback.print_exc()
@@ -390,6 +621,10 @@ def invalidate_later(
                 unsub()
 
     task = asyncio.create_task(_task(ctx, deadline))
+    # Keep a strong reference; not in `_reactive_environment._tasks`, since a timer
+    # that re-arms itself would keep `run_until_idle()` running forever.
+    _timer_tasks.add(task)
+    task.add_done_callback(_timer_tasks.discard)
 
     def cancel_task():
         if cancellable and not task.cancelled():
