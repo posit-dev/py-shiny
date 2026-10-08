@@ -1104,7 +1104,7 @@ class Effect_:
         # Extract collection level from function attribute (e.g., set by `@otel.suppress` or `@otel.collect` decorators)
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
-        # Defer the first running of this until flushReact is called
+        # Defer the first run to the next round
         self._create_context().invalidate()
 
     def _create_context(self) -> Context:
@@ -1244,10 +1244,10 @@ class Effect_:
         """
         Suspend the effect.
 
-        Pauses scheduling of flushes (re-executions) in response to invalidations. If
-        the effect was invalidated prior to this call but it has not re-executed yet
-        (because it waits until on_flush is called) then that re-execution will still
-        occur, because the flush is already scheduled.
+        Stops adding the effect to the reactive effect queue in response to
+        invalidations. If the effect was invalidated prior to this call but it has not
+        re-executed yet (because it waits for the next round), then that re-execution
+        will still occur, because the effect is already in the queue.
         """
         self._suspended = True
 
@@ -1256,8 +1256,8 @@ class Effect_:
         Resume the effect.
 
         Causes this effect to start re-executing in response to invalidations. If the
-        effect was invalidated while suspended, then it will schedule itself for
-        re-execution (pending flush).
+        effect was invalidated while suspended, then it adds itself to the reactive
+        effect queue, to re-execute in the next round.
         """
         if self._suspended:
             self._suspended = False
