@@ -214,8 +214,9 @@ class ExtendedTask(Generic[P, R]):
 
             # Start the dependents (without waiting for their async parts) so they
             # see this result before the next invocation replaces it. If a round is
-            # already running, it may have passed them already; wait for the next.
-            await _reactive_environment.wait_for_next_round()
+            # already running, it may have passed them already, so this requests
+            # another round and waits for it.
+            await _reactive_environment.run_next_round()
 
             if len(self._invocation_queue) > 0:
                 next_invocation = self._invocation_queue.pop(0)

@@ -1255,9 +1255,9 @@ async def test_concurrent_rounds_do_not_overlap():
     try:
         await asyncio.wait_for(
             asyncio.gather(
-                _reactive_environment.run_round(),
-                _reactive_environment.run_round(),
-                _reactive_environment.run_round(),
+                _reactive_environment.start_round(),
+                _reactive_environment.start_round(),
+                _reactive_environment.start_round(),
             ),
             TIMEOUT,
         )
@@ -1961,7 +1961,7 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
     # A round stranded on an event loop that has stopped (e.g. a previous
     # `test_server()` run, or a test whose loop closed mid-round) used to leave the
     # environment "in a round" forever: later rounds returned without running, and
-    # `wait_for_next_round()` (used by ExtendedTask) waited forever.
+    # `run_next_round()` (used by ExtendedTask) waited forever.
     env = ReactiveEnvironment()
     stuck = asyncio.Event()
 
@@ -1983,7 +1983,7 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
     async def strand_a_round() -> None:
         env._round_finished_callbacks.register(wait_forever)
         env._spawn(stranded_run())
-        env._spawn(env.run_round())
+        env._spawn(env.start_round())
         await asyncio.sleep(0.01)  # the round is now waiting on `stuck`
         assert env._round_running
         env.request_round()  # also leaves a request pending
@@ -2000,7 +2000,7 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
 
     async def use_a_new_loop() -> None:
         env._round_finished_callbacks.register(record)
-        await asyncio.wait_for(env.wait_for_next_round(), TIMEOUT)
+        await asyncio.wait_for(env.run_next_round(), TIMEOUT)
         assert ran == [True]
         env.request_round()
         # The dead loop's tasks no longer count as running. (Wait for the round
