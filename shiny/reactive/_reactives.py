@@ -54,7 +54,7 @@ from ..types import (
     NotifyException,
     SilentException,
 )
-from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._core import Context, Dependents, ReactiveWarning, _enclosing_run, isolate
 from ._utils import is_user_code_frame
 
 
@@ -830,7 +830,13 @@ class Calc_(Generic[T]):
         self._ctx = ctx
         self._most_recent_ctx_id = ctx.id
 
-        ctx.on_invalidate(self._on_invalidate_cb)
+        def on_invalidate() -> None:
+            # A superseded run (e.g. a cancelled one) stays subscribed to what it
+            # read; only the most recent run's sources should invalidate the calc.
+            if ctx.id == self._most_recent_ctx_id:
+                self._on_invalidate_cb()
+
+        ctx.on_invalidate(on_invalidate)
 
         self._exec_count += 1
         self._invalidated = False
@@ -862,6 +868,10 @@ class Calc_(Generic[T]):
                         # the next read recompute anyway.
                         self._value[:] = value
                         self._error[:] = error
+                        if not value and not error:
+                            # Cancelled before it finished: there's nothing to cache,
+                            # so the next read (or a waiting one) recomputes.
+                            self._invalidated = True
                         self._running = False
                         self._running_task = None
                         waiters = self._run_waiters
@@ -1052,6 +1062,8 @@ class Effect_:
         self._on_resume: Callable[[], None] = lambda: None
         # Resolved when the latest run finishes (see `on_flush_cb`).
         self._run_done: Optional[asyncio.Future[None]] = None
+        # Tasks running (or waiting to run) this effect; `destroy()` cancels them.
+        self._run_tasks: set[asyncio.Task[object]] = set()
 
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
@@ -1141,6 +1153,9 @@ class Effect_:
             previous = self._run_done
             done: asyncio.Future[None] = asyncio.get_running_loop().create_future()
             self._run_done = done
+            task = _current_task()
+            if task is not None:
+                self._run_tasks.add(task)
             try:
                 if previous is not None and not previous.done():
                     await asyncio.shield(previous)
@@ -1152,6 +1167,8 @@ class Effect_:
                     raise
                 await self._session._unhandled_error(e)
             finally:
+                if task is not None:
+                    self._run_tasks.discard(task)
                 done.set_result(None)
                 # Every exit path (raised, cancelled) must end the busy period.
                 if self._session:
@@ -1207,7 +1224,9 @@ class Effect_:
                     warnings.warn(
                         "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
                     )
-                    if self._session:
+                    # A destroyed effect has no session to protect. (E.g. cleanup
+                    # in a cancelled run reads its destroyed scope's values.)
+                    if self._session and not self._destroyed:
                         await self._session._unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
@@ -1227,7 +1246,19 @@ class Effect_:
         Destroy this reactive effect.
 
         Stops the effect from executing ever again, even if it is currently scheduled
-        for re-execution.
+        for re-execution. A run that is still in progress (e.g., paused at an `await`)
+        is cancelled: `asyncio.CancelledError` is raised at its current `await`, so
+        its `finally` blocks run but the rest of its body doesn't. The exception is
+        the run that calls `destroy()` (directly, or from a task it started), as when
+        an effect closes its own session; that run continues.
+
+        An error raised by an effect after it has been destroyed is logged rather
+        than closing the session. (E.g., cleanup in a cancelled run that reads its
+        destroyed scope's values raises `DestroyedReactiveError`.)
+
+        Effects are destroyed when their session ends, and when their scope is
+        destroyed with :meth:`~shiny.Session.destroy`, so both cancel the effect's
+        in-progress runs.
 
         Note
         ----
@@ -1236,6 +1267,13 @@ class Effect_:
         that would happen if this object were garbage collected.
         """
         self._destroyed = True
+
+        # Cancel in-progress runs now, before the caller tears down what they read
+        # (e.g. a destroyed scope's values). Skip the run calling us, so it finishes.
+        caller = _enclosing_run.get()
+        for task in self._run_tasks:
+            if task is not caller:
+                task.cancel()
 
         if self._ctx is not None:
             self._ctx.invalidate()
