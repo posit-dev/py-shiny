@@ -827,9 +827,41 @@ class Session(ABC):
     @abstractmethod
     def _decrement_busy_count(self) -> None: ...
 
-    def _cycle_start_action(self, action: Callable[[], None]) -> None:
-        """Run `action` once the session is idle. Sessions without cycles run it now."""
-        action()
+    def run_once_when_idle(self, fn: Callable[[], object]) -> None:
+        """
+        Run a function once, at the start of this session's next cycle.
+
+        A session's cycle lasts until all of its effects have finished. Shiny holds
+        input changes from the client and :func:`~shiny.reactive.invalidate_later`
+        timers until then, so effects that are still running (e.g. paused at an
+        ``await``) keep seeing the same values. Use this to change reactive state the
+        same way, for example from a background task or a custom timer:
+
+        ```python
+        session.run_once_when_idle(lambda: latest.set(new_value))
+        ```
+
+        ``fn`` runs once this session is idle and its outputs have been sent; if it is
+        idle already, on the next pass of the event loop. Functions queued while the
+        session is busy run in order, each starting a cycle of its own, so the
+        effects one of them triggers finish before the next runs. If the session
+        ends first, ``fn`` doesn't run.
+
+        Parameters
+        ----------
+        fn
+            A synchronous function with no arguments; its return value is ignored.
+            It runs with this session as the current session. An error it raises
+            closes the session, as an error in an effect does.
+
+        Raises
+        ------
+        TypeError
+            If ``fn`` is an async function: it must run without yielding, so that
+            the cycle it starts can't be interrupted partway.
+        """
+        _validate_idle_action(fn)
+        fn()
 
 
 def _print_exception(e: Exception) -> None:
@@ -886,6 +918,15 @@ async def _invoke_destroy_callbacks(
         callbacks = callbacks_by_ns.pop(ns_key, None)
         if callbacks is not None:
             await callbacks.invoke()
+
+
+def _validate_idle_action(fn: Callable[[], object]) -> None:
+    """Reject an async `fn` for `run_once_when_idle()`, which calls it without awaiting."""
+    if _utils.is_async_callable(fn):
+        raise TypeError(
+            "`session.run_once_when_idle()` takes a synchronous function. To do async "
+            "work, start it from an effect, or from `fn` with `asyncio.create_task()`."
+        )
 
 
 def _validate_destroy_id(id: Id) -> None:
@@ -1157,14 +1198,11 @@ class AppSession(Session):
 
                         data = typing.cast(ClientMessageUpdate, message_obj)["data"]
 
-                        def manage_inputs(data: dict[str, object] = data) -> None:
-                            # Set the session context for otel logging purposes
-                            with session_context(self):
-                                self._manage_inputs(data)
-
                         # Inputs change only between cycles, so effects that are
                         # still running keep seeing stable input values.
-                        self._cycle_start_action(manage_inputs)
+                        self.run_once_when_idle(
+                            functools.partial(self._manage_inputs, data)
+                        )
 
                     elif "tag" in message_obj and "args" in message_obj:
                         verify_state(ConnectionState.Running)
@@ -1786,14 +1824,15 @@ class AppSession(Session):
             self._cycle_ended = True
             self._request_output_flush()
 
-    def _cycle_start_action(self, action: Callable[[], None]) -> None:
-        """
-        Run `action` at the start of the next cycle, once this session is idle and
-        its outputs have been sent.
+    def run_once_when_idle(self, fn: Callable[[], object]) -> None:
+        # Actions are sync, so they can't be interrupted partway, and only
+        # `_output_flush` runs them (never whichever task happened to queue one).
+        _validate_idle_action(fn)
 
-        Actions are sync, so they can't be interrupted partway, and only `_output_flush`
-        runs them (never whichever task happened to queue one).
-        """
+        def action() -> None:
+            with session_context(self):
+                fn()
+
         self._cycle_start_action_queue.append(action)
         self._request_output_flush()
 
@@ -2106,8 +2145,14 @@ class SessionProxy(Session):
     def _decrement_busy_count(self) -> None:
         self._root_session._decrement_busy_count()
 
-    def _cycle_start_action(self, action: Callable[[], None]) -> None:
-        self._root_session._cycle_start_action(action)
+    def run_once_when_idle(self, fn: Callable[[], object]) -> None:
+        _validate_idle_action(fn)
+
+        def action() -> None:
+            with session_context(self):
+                fn()
+
+        self._root_session.run_once_when_idle(action)
 
     def set_message_handler(
         self,

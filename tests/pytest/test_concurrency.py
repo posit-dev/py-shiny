@@ -1439,7 +1439,7 @@ async def test_queued_update_waits_if_session_turns_busy_during_flushed_callback
         # callbacks, then starts the update.
         armed.set()
         session.send_input_message("t", {"value": 1})
-        session._cycle_start_action(lambda: session._manage_inputs({"x": 1}))
+        session.run_once_when_idle(lambda: session._manage_inputs({"x": 1}))
         await asyncio.wait_for(in_callback.wait(), TIMEOUT)
         shared.set(1)  # the session turns busy while the callback awaits
         await asyncio.sleep(0.01)
@@ -2494,3 +2494,167 @@ async def test_cancelled_calc_run_does_not_react_to_sources_only_it_read():
     await asyncio.wait_for(reactive.flush(), TIMEOUT)
     assert (len(calc_runs), effect_runs) == (3, [1, 1])
     e.destroy()
+
+
+# ----------------------------------------------------------------------------
+# session.run_once_when_idle()
+# ----------------------------------------------------------------------------
+
+
+async def started_client(server: Callable[[Inputs, Outputs, Session], None]) -> Client:
+    c = Client(server)
+    c.send({"method": "init", "data": {}})
+    assert await wait_until(lambda: c.session._output_flush_enabled)
+    assert await wait_until(lambda: c.session._busy_count == 0)
+    return c
+
+
+@pytest.mark.asyncio
+async def test_run_once_when_idle_runs_on_next_loop_pass_with_session_current():
+    c = await started_client(lambda input, output, session: None)
+    try:
+        ran: list[object] = []
+        c.session.run_once_when_idle(lambda: ran.append(get_current_session()))
+        assert ran == []  # never synchronously, even when idle
+        assert await wait_until(lambda: ran == [c.session])
+        await asyncio.sleep(0.02)
+        assert len(ran) == 1  # once
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_run_once_when_idle_waits_for_running_effects():
+    v = reactive.value(0)
+    release = asyncio.Event()
+    seen: list[tuple[int, int]] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        @reactive.event(input.go, ignore_init=True)
+        async def _slow():
+            before = v()
+            await release.wait()
+            seen.append((before, v()))
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {"go": 0}})
+        c.update(go=1)
+        assert await wait_until(lambda: c.session._busy_count == 1)
+        c.session.run_once_when_idle(lambda: v.set(1))
+        await asyncio.sleep(0.05)
+        assert v._value == 0  # held while the effect runs
+        release.set()
+        assert await wait_until(lambda: v._value == 1)
+        assert seen == [(0, 0)]  # the effect saw a stable value
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_run_once_when_idle_runs_queued_functions_one_cycle_each():
+    v = reactive.value(0)
+    log: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        async def _slow():
+            n = v()
+            log.append(f"effect {n} start")
+            await asyncio.sleep(0.02)
+            log.append(f"effect {n} end")
+
+    c = await started_client(server)
+    try:
+        log.clear()
+
+        def set_to(n: int) -> Callable[[], None]:
+            def fn() -> None:
+                log.append(f"set {n}")
+                v.set(n)
+
+            return fn
+
+        c.session.run_once_when_idle(set_to(1))
+        c.session.run_once_when_idle(set_to(2))
+        assert await wait_until(lambda: "effect 2 end" in log)
+        assert log == [
+            "set 1",
+            "effect 1 start",
+            "effect 1 end",
+            "set 2",
+            "effect 2 start",
+            "effect 2 end",
+        ]
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_run_once_when_idle_from_a_module_runs_in_the_module_session():
+    sessions: dict[str, Session] = {}
+    ran: list[object] = []
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session) -> None:
+        sessions["mod"] = session
+        session.run_once_when_idle(lambda: ran.append(get_current_session()))
+
+    c = await started_client(lambda input, output, session: mod("mod"))
+    try:
+        assert await wait_until(lambda: len(ran) == 1)
+        assert ran == [sessions["mod"]]
+        assert sessions["mod"].ns == "mod"
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_run_once_when_idle_rejects_async_functions():
+    c = await started_client(lambda input, output, session: None)
+    try:
+
+        async def fn() -> None:
+            pass
+
+        with pytest.raises(TypeError, match="synchronous"):
+            c.session.run_once_when_idle(fn)  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match="synchronous"):
+            c.session.make_scope("mod").run_once_when_idle(fn)  # type: ignore
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_run_once_when_idle_is_dropped_if_the_session_ends_first():
+    release = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        async def _slow():
+            await release.wait()
+
+    c = Client(server)
+    c.send({"method": "init", "data": {}})
+    assert await wait_until(lambda: c.session._busy_count == 1)
+    ran: list[bool] = []
+    c.session.run_once_when_idle(lambda: ran.append(True))
+    await c.close()
+    release.set()
+    await asyncio.sleep(0.05)
+    assert ran == []
+
+
+@pytest.mark.asyncio
+async def test_run_once_when_idle_error_closes_the_session():
+    c = await started_client(lambda input, output, session: None)
+    try:
+
+        def boom() -> None:
+            raise RuntimeError("boom")
+
+        c.session.run_once_when_idle(boom)
+        assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
+    finally:
+        await c.close()

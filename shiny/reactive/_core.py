@@ -609,7 +609,7 @@ def invalidate_later(
             # The resulting round is requested with a fresh context, so its
             # reactive_update span has no parent.
             if session:
-                session._cycle_start_action(ctx.invalidate)
+                session.run_once_when_idle(ctx.invalidate)
             else:
                 ctx.invalidate()
 
