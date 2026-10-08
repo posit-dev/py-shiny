@@ -54,7 +54,7 @@ from ..types import (
     NotifyException,
     SilentException,
 )
-from ._core import Context, Dependents, ReactiveWarning, _flush_owner, isolate
+from ._core import Context, Dependents, ReactiveWarning, _enclosing_run, isolate
 from ._utils import is_user_code_frame
 
 
@@ -1270,7 +1270,7 @@ class Effect_:
 
         # Cancel in-progress runs now, before the caller tears down what they read
         # (e.g. a destroyed scope's values). Skip the run calling us, so it finishes.
-        caller = _flush_owner.get()
+        caller = _enclosing_run.get()
         for task in self._run_tasks:
             if task is not caller:
                 task.cancel()
