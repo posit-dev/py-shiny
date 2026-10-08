@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* Integrated Shiny Doctor into the bundled `shiny-for-python` Agent Skill so app audits and repairs share its reactivity, concurrency, debugging, and testing references. The separate `shiny-doctor` skill is no longer bundled. (#2469)
+* The bundled `shiny-for-python` Agent Skill now includes guidance for auditing and repairing apps, covering reactive code, background tasks, UI/server bindings, session isolation, and runtime verification. (#2469)
 
 ### Bug fixes
 
