@@ -1150,7 +1150,7 @@ class AppSession(Session):
                                 # Start the first cycle within the `session_start`
                                 # span. This doesn't wait for async effects.
                                 self._request_output_flush()
-                                await _reactive_environment.run_round()
+                                await _reactive_environment.start_round()
 
                     elif message_obj["method"] == "update":
                         verify_state(ConnectionState.Running)
