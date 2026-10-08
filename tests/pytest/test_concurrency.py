@@ -214,11 +214,11 @@ async def test_output_set_during_send_is_kept():
     omq = session._outbound_message_queues
 
     omq.set_value("x", 1)
-    first = asyncio.create_task(session._flush())
+    first = asyncio.create_task(session._output_flush())
     await asyncio.sleep(0)  # `first` is now awaiting the send
     omq.set_value("y", 2)
     await first
-    await session._flush()
+    await session._output_flush()
 
     assert [m["values"] for m in conn.sent if "values" in m] == [{"x": 1}, {"y": 2}]
 
@@ -379,7 +379,7 @@ async def test_flush_from_task_started_by_effect_waits_for_dependents():
 @pytest.mark.asyncio
 async def test_flush_during_active_flush_returns():
     # With a flushed callback that keeps yielding, reactive.flush() used to keep
-    # re-running flushes and never return.
+    # re-running rounds and never return.
     flushes = 0
 
     async def slow_flushed() -> None:
@@ -397,7 +397,7 @@ async def test_flush_during_active_flush_returns():
 
         await reactive.flush()
         v.set(1)
-        await asyncio.sleep(0.002)  # the requested flush is now mid-callback
+        await asyncio.sleep(0.002)  # the requested round is now mid-callback
         await asyncio.wait_for(reactive.flush(), TIMEOUT)
         assert flushes < 10
         _e.destroy()
@@ -607,7 +607,7 @@ async def test_queued_actions_dropped_when_session_ends():
     ran: list[bool] = []
     c = Client(lambda input, output, session: None)
     c.send({"method": "init", "data": {}})
-    assert await wait_until(lambda: c.session._flush_enabled)
+    assert await wait_until(lambda: c.session._output_flush_enabled)
     await c.close()
 
     c.session._cycle_start_action_queue.append(lambda: ran.append(True))
@@ -751,7 +751,7 @@ async def test_session_handles_input_while_a_download_streams():
     c = RecordingClient(server)
     try:
         c.send({"method": "init", "data": {"release": 0}})
-        assert await wait_until(lambda: c.session._flush_enabled)
+        assert await wait_until(lambda: c.session._output_flush_enabled)
         response = await c.session._handle_request(download_request(), "download", "dl")
 
         async def read_body() -> bytes:
@@ -872,7 +872,7 @@ async def test_priority_orders_effect_starts():
 
 
 @pytest.mark.asyncio
-async def test_many_invalidations_in_one_tick_share_one_flush():
+async def test_many_invalidations_in_one_tick_share_one_round():
     flushes = 0
 
     async def count() -> None:
@@ -1031,13 +1031,13 @@ async def test_message_handler_error_returns_error_response():
 
 
 @pytest.mark.asyncio
-async def test_no_flush_requests_after_session_ends():
+async def test_no_output_flush_requests_after_session_ends():
     c = Client(lambda input, output, session: None)
     c.send({"method": "init", "data": {}})
-    assert await wait_until(lambda: c.session._flush_enabled)
+    assert await wait_until(lambda: c.session._output_flush_enabled)
     await c.close()
     c.session.send_input_message("t", {"value": 1})
-    assert c.session.id not in c.session.app._sessions_needing_flush
+    assert c.session.id not in c.session.app._sessions_needing_output_flush
 
 
 @pytest.mark.asyncio
@@ -1112,7 +1112,7 @@ async def test_flush_through_child_task_of_flush_callback_returns():
     try:
         c.send({"method": "init", "data": {}})
         assert await wait_until(lambda: done == [True])
-        assert await wait_until(lambda: not _reactive_environment._in_flush)
+        assert await wait_until(lambda: not _reactive_environment._round_running)
     finally:
         await c.close()
 
@@ -1240,7 +1240,7 @@ async def test_cancelled_effect_run_ends_busy_period():
 
 
 @pytest.mark.asyncio
-async def test_concurrent_flush_calls_do_not_overlap():
+async def test_concurrent_rounds_do_not_overlap():
     active = 0
     most_active = 0
 
@@ -1255,9 +1255,9 @@ async def test_concurrent_flush_calls_do_not_overlap():
     try:
         await asyncio.wait_for(
             asyncio.gather(
-                _reactive_environment.flush(),
-                _reactive_environment.flush(),
-                _reactive_environment.flush(),
+                _reactive_environment.run_round(),
+                _reactive_environment.run_round(),
+                _reactive_environment.run_round(),
             ),
             TIMEOUT,
         )
@@ -1299,7 +1299,7 @@ async def test_on_flush_registered_outside_a_cycle_runs():
     c = Client(lambda input, output, session: None)
     try:
         c.send({"method": "init", "data": {}})
-        assert await wait_until(lambda: c.session._flush_enabled)
+        assert await wait_until(lambda: c.session._output_flush_enabled)
         await asyncio.sleep(0.02)
 
         ran: list[bool] = []
@@ -1647,7 +1647,7 @@ async def test_a_sessions_sends_never_overlap_and_stay_in_order():
         a.gated.gate.set()
         assert await wait_until(lambda: texts(a) == ["0", "1", "2", "3", "4"])
         assert a.gated.most_sending == 1
-        # The requests made while blocked were merged into one more flush.
+        # The requests made while blocked were merged into one more output flush.
         assert sum("values" in m for m in a.sent[-3:]) <= 2
     finally:
         a.gated.gate.set()
@@ -1683,7 +1683,7 @@ async def test_flush_callbacks_in_two_sessions_calling_reactive_flush_return():
         a.send({"method": "init", "data": {}})
         b.send({"method": "init", "data": {}})
         assert await wait_until(
-            lambda: a.session._flush_enabled and b.session._flush_enabled
+            lambda: a.session._output_flush_enabled and b.session._output_flush_enabled
         )
         await asyncio.sleep(0.02)
 
@@ -1712,14 +1712,14 @@ async def test_session_closed_while_its_send_is_stuck():
     # Queued while the send is stuck, so a re-run is pending when the session ends.
     a.session.send_input_message("t", {"value": "queued"})
     a.conn.cause_disconnect()
-    assert await wait_until(lambda: not a.session._flush_enabled)
-    flush_task = a.session._flush_task
+    assert await wait_until(lambda: not a.session._output_flush_enabled)
+    flush_task = a.session._output_flush_task
     a.gated.gate.set()
     assert flush_task is not None
     await asyncio.wait_for(flush_task, TIMEOUT)
     # The session is gone: the pending re-run doesn't send.
     assert "queued" not in texts(a)
-    # ...and later requests don't start a flush at all.
+    # ...and later requests don't start an output flush at all.
     a.session.send_input_message("t", {"value": "late"})
     await asyncio.sleep(0.02)
     assert "late" not in texts(a)
@@ -1829,7 +1829,7 @@ async def test_call_soon_threadsafe_set_from_another_thread():
 
 
 @pytest.mark.asyncio
-async def test_flush_request_from_a_thread_with_its_own_loop_goes_to_shinys_loop():
+async def test_round_request_from_a_thread_with_its_own_loop_goes_to_shinys_loop():
     main_loop = asyncio.get_running_loop()
     loops: list[object] = []
     v = reactive.value(0)
@@ -1851,7 +1851,7 @@ async def test_flush_request_from_a_thread_with_its_own_loop_goes_to_shinys_loop
 
 
 @pytest.mark.asyncio
-async def test_many_flush_requests_from_threads_are_merged():
+async def test_many_round_requests_from_threads_are_merged():
     flushes = 0
 
     async def count() -> None:
@@ -1862,7 +1862,7 @@ async def test_many_flush_requests_from_threads_are_merged():
     unregister = reactive.on_flushed(count)
     try:
         threads = [
-            threading.Thread(target=_reactive_environment.request_flush)
+            threading.Thread(target=_reactive_environment.request_round)
             for _ in range(20)
         ]
         for t in threads:
@@ -1876,13 +1876,13 @@ async def test_many_flush_requests_from_threads_are_merged():
         unregister()
 
 
-def test_flush_request_from_a_thread_with_no_loop_yet_is_ignored():
+def test_round_request_from_a_thread_with_no_loop_yet_is_ignored():
     env = ReactiveEnvironment()
-    in_thread(env.request_flush)
-    assert env._loop is None and not env._flush_requested
+    in_thread(env.request_round)
+    assert env._loop is None and not env._round_requested
 
 
-def test_flush_request_on_a_new_loop_after_the_old_one_closed():
+def test_round_request_on_a_new_loop_after_the_old_one_closed():
     # E.g. `asyncio.run()` twice: the new loop takes over.
     env = ReactiveEnvironment()
     flushed: list[bool] = []
@@ -1890,10 +1890,10 @@ def test_flush_request_on_a_new_loop_after_the_old_one_closed():
     async def mark() -> None:
         flushed.append(True)
 
-    env.on_flushed(mark)
+    env.on_round_finished(mark)
 
     async def use() -> None:
-        env.request_flush()
+        env.request_round()
         await asyncio.sleep(0.01)
 
     asyncio.run(use())
@@ -1902,11 +1902,11 @@ def test_flush_request_on_a_new_loop_after_the_old_one_closed():
     assert flushed == [True]
 
 
-def test_flush_request_after_the_loop_closed_is_ignored():
+def test_round_request_after_the_loop_closed_is_ignored():
     env = ReactiveEnvironment()
 
     async def use() -> None:
-        env.request_flush()
+        env.request_round()
         await asyncio.sleep(0.01)
 
     asyncio.run(use())  # env now remembers a loop that is closed
@@ -1915,7 +1915,7 @@ def test_flush_request_after_the_loop_closed_is_ignored():
 
     def call() -> None:
         try:
-            env.request_flush()
+            env.request_round()
         except Exception as e:  # pragma: no cover
             errors.append(e)
 
@@ -1945,7 +1945,7 @@ async def test_on_flush_outside_a_cycle_runs_without_sending_an_empty_message():
     c = RecordingClient(lambda input, output, session: None)
     try:
         c.send({"method": "init", "data": {}})
-        assert await wait_until(lambda: c.session._flush_enabled)
+        assert await wait_until(lambda: c.session._output_flush_enabled)
         await asyncio.sleep(0.05)
         start = len(c.sent)
         ran: list[bool] = []
@@ -1957,11 +1957,11 @@ async def test_on_flush_outside_a_cycle_runs_without_sending_an_empty_message():
         await c.close()
 
 
-def test_flush_state_from_a_dead_event_loop_is_discarded():
-    # A flush stranded on an event loop that has stopped (e.g. a previous
-    # `test_server()` run, or a test whose loop closed mid-flush) used to leave the
-    # environment "in a flush" forever: later flushes returned without running, and
-    # `flush_pass()` (used by ExtendedTask) waited forever.
+def test_round_state_from_a_dead_event_loop_is_discarded():
+    # A round stranded on an event loop that has stopped (e.g. a previous
+    # `test_server()` run, or a test whose loop closed mid-round) used to leave the
+    # environment "in a round" forever: later rounds returned without running, and
+    # `wait_for_next_round()` (used by ExtendedTask) waited forever.
     env = ReactiveEnvironment()
     stuck = asyncio.Event()
 
@@ -1980,18 +1980,18 @@ def test_flush_state_from_a_dead_event_loop_is_discarded():
             # context, which raised (and failed whichever test was running).
             finalized.append(True)
 
-    async def strand_a_flush() -> None:
-        env._flushed_callbacks.register(wait_forever)
+    async def strand_a_round() -> None:
+        env._round_finished_callbacks.register(wait_forever)
         env._spawn(stranded_run())
-        env._spawn(env.flush())
-        await asyncio.sleep(0.01)  # the flush is now waiting on `stuck`
-        assert env._in_flush
-        env.request_flush()  # also leaves a request pending
+        env._spawn(env.run_round())
+        await asyncio.sleep(0.01)  # the round is now waiting on `stuck`
+        assert env._round_running
+        env.request_round()  # also leaves a request pending
 
     old = asyncio.new_event_loop()
-    old.run_until_complete(strand_a_flush())
-    old.close()  # without letting the flush finish
-    env._flushed_callbacks = type(env._flushed_callbacks)()
+    old.run_until_complete(strand_a_round())
+    old.close()  # without letting the round finish
+    env._round_finished_callbacks = type(env._round_finished_callbacks)()
 
     ran: list[bool] = []
 
@@ -1999,11 +1999,11 @@ def test_flush_state_from_a_dead_event_loop_is_discarded():
         ran.append(True)
 
     async def use_a_new_loop() -> None:
-        env._flushed_callbacks.register(record)
-        await asyncio.wait_for(env.flush_pass(), TIMEOUT)
+        env._round_finished_callbacks.register(record)
+        await asyncio.wait_for(env.wait_for_next_round(), TIMEOUT)
         assert ran == [True]
-        env.request_flush()
-        # The dead loop's tasks no longer count as running. (Wait for the flush
+        env.request_round()
+        # The dead loop's tasks no longer count as running. (Wait for the round
         # task's done callback; a timed sleep may not cover it on Windows.)
         assert await wait_until(lambda: ran == [True, True] and not env._tasks)
 
@@ -2505,7 +2505,7 @@ async def test_cancelled_calc_run_does_not_react_to_sources_only_it_read():
 async def started_client(server: Callable[[Inputs, Outputs, Session], None]) -> Client:
     c = Client(server)
     c.send({"method": "init", "data": {}})
-    assert await wait_until(lambda: c.session._flush_enabled)
+    assert await wait_until(lambda: c.session._output_flush_enabled)
     assert await wait_until(lambda: c.session._busy_count == 0)
     return c
 
