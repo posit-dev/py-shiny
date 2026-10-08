@@ -131,7 +131,7 @@ def _yield_to_loop() -> Generator[None, None, None]:
 
 
 # The task running the current round, effect, or session output flush. Tasks created
-# from it inherit this value, which lets `wait_for_idle()` tell whether it was called
+# from it inherit this value, which lets `run_until_idle()` tell whether it was called
 # from within a run that is still going (directly or through a task it started).
 _enclosing_run: ContextVar[Optional["asyncio.Task[object]"]] = ContextVar(
     "enclosing_run", default=None
@@ -156,7 +156,7 @@ class ReactiveEnvironment:
       round-finished callbacks. A round starts each effect in its own task and does
       not wait for any effect's async part.
     * **Idle**: the reactive effect queue is empty, and no round, effect, or session
-      output flush task is running. `reactive.flush()` waits until idle.
+      output flush task is running. `reactive.flush()` runs rounds until idle.
     * **Cycle** (per session): one action (such as an input change), the effects it
       starts, and the output flush that ends it. One cycle can span several rounds,
       and one round can advance the cycles of several sessions.
@@ -176,7 +176,7 @@ class ReactiveEnvironment:
         # The event loop Shiny runs on, for requests made from other threads.
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._round_running: bool = False
-        # Resolved by the next round to start (see `wait_for_next_round()`).
+        # Resolved by the next round to start (see `run_next_round()`).
         self._next_round_waiters: list[asyncio.Future[None]] = []
         # Set when a round is requested while one is running.
         self._rerun_round: bool = False
@@ -228,10 +228,11 @@ class ReactiveEnvironment:
         """Register a function to be called at the end of every round."""
         return self._round_finished_callbacks.register(func, once=once)
 
-    async def run_round(self) -> None:
+    async def start_round(self) -> None:
         """
-        Run one round: start every context in the reactive effect queue, then invoke
-        the round-finished callbacks.
+        Start one round: start every context in the reactive effect queue, then
+        invoke the round-finished callbacks. If a round is already running, return
+        right away; the running round starts another when it finishes.
 
         This never waits for an effect's async part: each context runs in its own
         task. Priority orders when effects start, not when they finish.
@@ -283,32 +284,31 @@ class ReactiveEnvironment:
         _enclosing_run.set(asyncio.current_task())
         await ctx.execute_flush_callbacks()
 
-    async def wait_for_next_round(self) -> None:
+    async def run_next_round(self) -> None:
         """
-        Return once a complete round that starts after this call has finished.
+        Cause a round that starts after this call, and return once it has finished.
 
-        Runs that round itself when none is running; otherwise waits for the round
-        that the running one requests when it finishes.
+        Runs that round itself when none is running. Otherwise, requests another
+        round from the running one, and waits for that round to finish.
         """
         self._adopt_loop(asyncio.get_running_loop())
         if not self._round_running:
-            await self.run_round()
+            await self.start_round()
             return
         waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         self._next_round_waiters.append(waiter)
         self._rerun_round = True
         await waiter
 
-    async def wait_for_idle(self) -> None:
+    async def run_until_idle(self) -> None:
         """
         Run rounds until idle: the reactive effect queue is empty and no round,
         effect, or session output flush task is running.
 
-        Returns right away when called from within a round, effect, or output flush
-        that is
-        still going, including from a task it started (e.g. via `asyncio.gather()`
-        or `asyncio.wait_for()`): that run may be waiting on the caller, so waiting
-        here could deadlock. A task started by an effect that has since finished
+        Returns right away, without running anything, when called from within a
+        round, effect, or output flush that is still going, including from a task it
+        started (e.g. via `asyncio.gather()` or `asyncio.wait_for()`): that run may
+        be waiting on the caller, so waiting here could deadlock. A task started by an effect that has since finished
         (e.g. an extended task's body) waits as usual.
         """
         owner = _enclosing_run.get()
@@ -316,7 +316,7 @@ class ReactiveEnvironment:
             return
         current = asyncio.current_task()
         while True:
-            await self.wait_for_next_round()
+            await self.run_next_round()
             running = {t for t in self._tasks if not t.done() and t is not current}
             if not running and self._effect_queue.empty():
                 return
@@ -348,7 +348,7 @@ class ReactiveEnvironment:
             return
         if loop is None:
             # No loop at all (e.g. a reactive graph built synchronously); whoever
-            # runs the graph will call `run_round()` explicitly.
+            # runs the graph will call `start_round()` explicitly.
             return
         self._adopt_loop(loop)
         self._loop = loop
@@ -364,7 +364,7 @@ class ReactiveEnvironment:
 
         A round (or request) stranded on a loop that stopped mid-round, such as a
         previous `test_server()` run's, can never finish. Without this, later rounds
-        would return as if one were running, and `wait_for_next_round()` would wait
+        would return as if one were running, and `run_next_round()` would wait
         forever.
         """
         old = self._loop
@@ -384,7 +384,7 @@ class ReactiveEnvironment:
 
     def _start_requested_round(self) -> None:
         if self._round_requested:
-            self._spawn(self.run_round())
+            self._spawn(self.start_round())
 
     def _spawn(self, coro: Awaitable[None]) -> "asyncio.Task[None]":
         task = asyncio.ensure_future(coro)
@@ -486,7 +486,7 @@ async def flush() -> None:
     this call can't rely on them having run yet. A task that outlives the effect
     that started it (such as an extended task's body) waits as usual.
     """
-    await _reactive_environment.wait_for_idle()
+    await _reactive_environment.run_until_idle()
 
 
 @no_example()
@@ -622,7 +622,7 @@ def invalidate_later(
 
     task = asyncio.create_task(_task(ctx, deadline))
     # Keep a strong reference; not in `_reactive_environment._tasks`, since a timer
-    # that re-arms itself would keep `wait_for_idle()` waiting forever.
+    # that re-arms itself would keep `run_until_idle()` running forever.
     _timer_tasks.add(task)
     task.add_done_callback(_timer_tasks.discard)
 

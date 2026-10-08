@@ -192,8 +192,8 @@ class TestConcurrentReactiveExecutions:
 
             # Flush them in parallel
             await asyncio.gather(
-                env1.run_round(),
-                env2.run_round(),
+                env1.start_round(),
+                env2.start_round(),
             )
 
         # Get exported spans
