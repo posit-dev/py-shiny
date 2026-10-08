@@ -1,3 +1,4 @@
+import re
 from collections.abc import Generator
 
 import pytest
@@ -48,6 +49,7 @@ def report():
 
 def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-mode-overview").click()
     expect(page.locator("#module-overview-panel")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
     expect(page.get_by_role("button", name="Back to overview")).to_be_hidden()
@@ -103,6 +105,7 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
 
 def test_activity_interval_filters_graph_and_preserves_selected_action(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-mode-overview").click()
     page.locator("#overview-activity-section > summary").click()
     page.get_by_label("Activity interval start").select_option("1")
     page.get_by_label("Activity interval end").select_option("1")
@@ -124,8 +127,7 @@ def test_phase_stage_and_root_filters_share_scope_and_clear_together(page: Page)
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
     page.locator("#phase-filter-select").select_option("interaction")
     page.locator("#btn-mode-full").click()
-    page.locator("#pipe-calcs").click()
-    expect(page.locator("#filter-node-count")).to_have_text("0 of 5 nodes")
+    expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
     page.get_by_role("button", name="Clear all filters").click()
     expect(page.locator("#module-filter-select")).to_have_value("")
     expect(page.locator("#phase-filter-select")).to_have_value("all")
@@ -138,7 +140,7 @@ def test_empty_recording_can_open_overview_and_graph(page: Page):
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
-    expect(page.locator("#module-overview-panel")).to_be_visible()
+    expect(page.locator("#module-overview-panel")).to_be_hidden()
     expect(page.locator("#filter-node-count")).to_have_text("0 of 0 nodes")
     page.locator("#btn-mode-full").click()
     expect(page.locator(".graph-node")).to_have_count(0)
@@ -147,6 +149,7 @@ def test_empty_recording_can_open_overview_and_graph(page: Page):
 
 def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-mode-overview").click()
     page.locator("#overview-activity-section > summary").click()
     page.locator("#overview-activity button").nth(1).click()
     expect(page.locator(".graph-node")).to_have_count(3)
@@ -173,6 +176,7 @@ def test_large_overview_prioritizes_modules_and_reveals_activity_on_demand(page:
             }
         )
     page.set_content(format_reactlog_html(data, CODE))
+    page.locator("#btn-mode-overview").click()
     expect(page.locator(".module-card")).to_have_count(18)
     expect(page.locator(".module-card").first).to_be_visible()
     expect(page.locator("#overview-activity")).to_be_hidden()
@@ -186,4 +190,80 @@ def test_large_overview_prioritizes_modules_and_reveals_activity_on_demand(page:
     expect(page.locator("#overview-activity")).to_be_visible()
     page.locator("#overview-activity button").nth(1).click()
     expect(page.locator("#reactlog-svg")).to_be_visible()
-    expect(page.locator("#timeline-sidebar")).to_be_visible()
+    expect(page.locator("#timeline-sidebar")).to_have_count(0)
+
+
+def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.locator("#module-overview-panel")).to_be_hidden()
+    expect(page.locator("#reactlog-svg")).to_be_visible()
+    expect(page.locator("#sidebar")).to_be_hidden()
+    expect(page.locator("#sidebar-rail")).to_have_css("width", "40px")
+    expect(page.locator("#btn-toggle-inspector")).to_have_text("")
+    expect(
+        page.locator(
+            "#timeline-tab, #actions-tab, #btn-summary-toggle, #flush-pipeline-bar, #timeline-sidebar, #flush-select"
+        )
+    ).to_have_count(0)
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 1 / 3")
+    page.locator("#btn-next-flush").click()
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 3 · x")
+    expect(page.locator(".graph-node")).to_have_count(3)
+    page.locator("#btn-next-flush").click()
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 3 · y")
+    expect(page.locator(".graph-node")).to_have_count(2)
+    page.locator("#btn-prev-flush").click()
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 3 · x")
+
+
+def test_progress_bar_supports_pointer_keyboard_and_flush_markers(page: Page):
+    data = report()
+    page.set_content(format_reactlog_html(data, CODE))
+    expect(page.locator(".timeline-marker.is-flush")).to_have_count(3)
+    slider = page.get_by_role("slider", name="Timeline step scrubber")
+    slider.focus()
+    page.keyboard.press("ArrowRight")
+    expect(slider).to_have_value("1")
+    box = slider.bounding_box()
+    assert box is not None
+    page.mouse.click(box["x"] + box["width"] - 8, box["y"] + box["height"] / 2)
+    expect(slider).to_have_value(str(len(data["events"]) - 1))
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 3")
+    expect(slider).to_have_attribute("aria-valuetext", re.compile("Flush 3 / 3"))
+    page.keyboard.press("Home")
+    expect(slider).to_have_value("0")
+
+
+def test_recording_floats_above_timeline_and_rail_stays_40px(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE, video_path="demo.webm"))
+    player = page.get_by_role("region", name="Recording")
+    expect(player).to_be_visible()
+    for width in [1440, 800, 390]:
+        page.set_viewport_size({"width": width, "height": 900})
+        rail = page.locator("#sidebar-rail").bounding_box()
+        video = player.bounding_box()
+        timeline = page.locator("#trace-timeline-bar").bounding_box()
+        graph = page.locator("#graph-container").bounding_box()
+        assert rail and video and timeline and graph
+        assert rail["width"] == 40
+        assert video["width"] <= 240
+        assert video["x"] + video["width"] < rail["x"]
+        assert video["y"] + video["height"] < timeline["y"]
+        assert graph["width"] == width - 40
+    page.get_by_role("button", name="Hide recording", exact=True).click()
+    expect(player).to_be_hidden()
+    page.get_by_role("button", name="Toggle recording").click()
+    expect(player).to_be_visible()
+
+
+def test_details_overlay_does_not_resize_graph(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    graph = page.locator("#graph-container")
+    before = graph.bounding_box()
+    page.get_by_role("button", name="Node details", exact=True).click()
+    expect(page.locator("#sidebar")).to_be_visible()
+    assert graph.bounding_box() == before
+    page.get_by_role("tab", name="App code").click()
+    expect(page.locator("#source-panel")).to_be_visible()
+    expect(page.locator("#timeline-panel")).to_be_hidden()
+    assert graph.bounding_box() == before
