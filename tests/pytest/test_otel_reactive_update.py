@@ -51,7 +51,7 @@ class Client:
         self.conn.cause_receive(json.dumps(msg))
 
     async def idle(self) -> None:
-        assert await wait_until(lambda: self.session._flush_enabled)
+        assert await wait_until(lambda: self.session._output_flush_enabled)
         assert await wait_until(lambda: self.session._busy_count == 0)
 
     async def close(self) -> None:

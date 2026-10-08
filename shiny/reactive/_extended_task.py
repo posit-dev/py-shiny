@@ -43,7 +43,7 @@ Status = Literal["initial", "running", "success", "error", "cancelled"]
 class DenialContext(Context):
     """
     A context that denies all requests to read reactive sources. We use this to ensure
-    that an extended task's body, which runs outside the reactive flush, doesn't
+    that an extended task's body, which runs outside any round, doesn't
     inadvertently read reactive sources.
     """
 
@@ -191,7 +191,7 @@ class ExtendedTask(Generic[P, R]):
         """
         Several things must happen when a task finishes:
         1. Update the status and value/error.
-        2. Reactive flush, so that reactive dependencies can move forward.
+        2. Wait for the next round, so that reactive dependencies can move forward.
         3. If there are queued up invocations, run the next one.
         """
 
@@ -213,9 +213,9 @@ class ExtendedTask(Generic[P, R]):
                 self.status.set("success")
 
             # Start the dependents (without waiting for their async parts) so they
-            # see this result before the next invocation replaces it. If a flush is
+            # see this result before the next invocation replaces it. If a round is
             # already running, it may have passed them already; wait for the next.
-            await _reactive_environment.flush_pass()
+            await _reactive_environment.wait_for_next_round()
 
             if len(self._invocation_queue) > 0:
                 next_invocation = self._invocation_queue.pop(0)

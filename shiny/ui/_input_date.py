@@ -124,7 +124,12 @@ def input_date(
             weekstart=weekstart,
             language=language,
             autoclose=autoclose,
-            data_date_dates_disabled=json.dumps(datesdisabled),
+            # Not `data-date-*`: bootstrap-datepicker would parse the dates with the
+            # display `format`, but `datesdisabled` is always `yyyy-mm-dd`. The
+            # client-side binding reads `data-dates-disabled` instead (rstudio/shiny#4281).
+            data_dates_disabled=(
+                json.dumps(datesdisabled) if datesdisabled is not None else None
+            ),
             data_date_days_of_week_disabled=json.dumps(daysofweekdisabled),
         ),
         id=resolved_id,
