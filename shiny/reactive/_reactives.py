@@ -1125,6 +1125,9 @@ class Effect_:
         # Store the context explicitly in Effect object
         # TODO: More explanation here
         self._ctx = ctx
+        # The priority this context's run was queued at; `set_priority()` doesn't
+        # change it.
+        queued_priority = self._priority
 
         def on_invalidate_cb() -> None:
             # Context is invalidated, so we don't need to store a reference to it
@@ -1138,7 +1141,9 @@ class Effect_:
                 return
 
             def _continue() -> None:
-                ctx.add_pending_flush(self._priority)
+                nonlocal queued_priority
+                queued_priority = self._priority
+                ctx.add_pending_flush(queued_priority)
                 if self._session:
                     self._session._increment_busy_count()
 
@@ -1159,6 +1164,15 @@ class Effect_:
             try:
                 if previous is not None and not previous.done():
                     await asyncio.shield(previous)
+                # While the session restores its bookmarked state, wait for the
+                # `on_restore` callbacks to finish.
+                restore = (
+                    self._session._restore_gate(queued_priority)
+                    if self._session
+                    else None
+                )
+                if restore is not None and not restore.done():
+                    await asyncio.shield(restore)
                 if not self._destroyed:
                     await self._run()
             except Exception as e:

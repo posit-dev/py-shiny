@@ -836,6 +836,13 @@ class Session(ABC):
         """The `reactive_update` span of this session's current cycle, if any."""
         return None
 
+    def _restore_gate(self, priority: int) -> Optional[asyncio.Future[None]]:
+        """
+        The future that this session's effect with `priority` waits on before it runs,
+        while the session restores its bookmarked state; `None` if it can run now.
+        """
+        return None
+
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
         """
         Run a function once, at the start of this session's next cycle.
@@ -1852,6 +1859,11 @@ class AppSession(Session):
     def _otel_reactive_update_span(self) -> Optional[Span]:
         return self._otel_cycle_span
 
+    def _restore_gate(self, priority: int) -> Optional[asyncio.Future[None]]:
+        if isinstance(self.bookmark, BookmarkApp):
+            return self.bookmark._restore_gate(priority)
+        return None
+
     def _end_otel_cycle_span(self) -> None:
         span, self._otel_cycle_span = self._otel_cycle_span, None
         if span is not None:
@@ -2181,6 +2193,9 @@ class SessionProxy(Session):
 
     def _otel_reactive_update_span(self) -> Optional[Span]:
         return self._root_session._otel_reactive_update_span()
+
+    def _restore_gate(self, priority: int) -> Optional[asyncio.Future[None]]:
+        return self._root_session._restore_gate(priority)
 
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
         _validate_idle_action(fn)
