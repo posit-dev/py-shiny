@@ -142,7 +142,10 @@ def data2():
 ```
 
 Declare `poll`/`file_reader` at module top level to share one cache across
-sessions.
+sessions in Core, or in an imported module in Express. Keep the cached data
+read-only or copy it before mutation, and share only data appropriate for all
+users. See [Express shared objects](express.md#shared-objects-and-startup-cost)
+for initialization scope.
 
 (For long-running async work that must not block the session, see
 `reactive.extended_task` - out of scope here.)
@@ -170,9 +173,59 @@ sessions.
   `@reactive.calc` and call that from each output.
 - Using a `@reactive.effect` to compute a displayed value -> effects return
   nothing; use a `calc` or `@render.*` function.
+- Writing reactive state, files, or database records inside `@reactive.calc`
+  -> repeated writes or reactive loops when the calc re-runs. Keep calcs pure;
+  put writes in an effect. If an effect writes a value it also reads, isolate
+  the read or gate the effect on an explicit event.
 - Effect re-runs on every incidental input change -> add
   `@reactive.event(...)` (below the effect decorator) to pin the trigger.
 - Reading a `reactive.value` you also `.set()` in the same effect without
   `isolate()` -> self-invalidating loop; wrap the read in `reactive.isolate()`.
 - `while`/`sleep` loop to watch a DB or file -> use `reactive.poll` or
   `reactive.file_reader`.
+
+### Call reactives when reading
+
+Referencing a reactive without `()` returns a callable object. It can display
+as `<function ...>` or make a condition truthy regardless of the underlying
+value. Call the reactive inside the rendering or reactive context:
+
+```python
+from shiny import reactive, render
+
+@reactive.calc
+def total_cost():
+    return 100
+
+@render.text
+def display():
+    # Bad: f"Total: ${total_cost}" displays the callable.
+    return f"Total: ${total_cost():,.2f}"
+```
+
+### Updating collections
+
+`items().append(...)` and `settings()[key] = value` mutate the existing object
+without notifying readers. Calling `.set()` with that same object also does
+not invalidate it. Set a new list or dictionary instead:
+
+```python
+from shiny import reactive, render
+
+def server(input, output, session):
+    items = reactive.value([])
+
+    @reactive.effect
+    @reactive.event(input.add_btn)
+    def _():
+        # Bad: items().append("new_item") leaves outputs stale.
+        items.set([*items(), "new_item"])
+
+    @render.text
+    def item_count():
+        return f"Total items: {len(items())}"
+```
+
+The event decorator isolates the `items()` read, so the write does not make
+the effect trigger itself. For a dictionary use `settings.set({**settings(),
+key: value})` inside an event-gated effect, or isolate the read explicitly.

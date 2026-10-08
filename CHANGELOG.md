@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Navigation links that target a tab panel (e.g. in `ui.navset_tab()`) now carry `aria-controls` pointing at the panel's `id`, alongside the existing `href` (rstudio/bslib#1355). (#2526)
 
+* The bundled `shiny-for-python` Agent Skill now includes symptom-based troubleshooting and repair guidance, with examples in the reactivity, background task, session lifecycle, and Express references, plus a workflow for runtime verification. (#2469)
+
 ### Bug fixes
 
 * `Progress.set(0)` now places the bar at `0` relative to `min` and `max`, instead of sending `0` unnormalized. With a negative `min`, such as `Progress(min=-10, max=10)`, a value of `0` showed an empty bar rather than a half-full one. (#2518)
