@@ -353,3 +353,14 @@ def test_secondary_timeline_flush_milestones_and_seeking(page: Page):
 
     page.locator("#btn-close-secondary-timeline").click()
     expect(sec_bar).to_be_hidden()
+
+
+def test_filtered_module_box_shows_fractional_node_count(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.locator(".app-box text")).to_have_text("App · 3 nodes")
+    expect(page.locator('.module-box[data-module="analysis"] text')).to_have_text(
+        "analysis · 2 nodes · double-click to collapse"
+    )
+
+    page.locator("#search-input").fill("other")
+    expect(page.locator(".app-box text")).to_have_text("App · 1/3 nodes")
