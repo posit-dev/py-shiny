@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import secrets
 from contextlib import AsyncExitStack, asynccontextmanager
+from copy import copy
 from inspect import signature
 from pathlib import Path
 from typing import (
@@ -36,6 +37,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from . import webmcp as _webmcp
 from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
@@ -105,6 +107,11 @@ class App:
         the ``SHINY_TESTMODE`` environment variable. When test mode is enabled, the
         session records output values and serves a JSON snapshot at
         ``/session/{id}/dataobj/shinytest``.
+
+    webmcp
+        Enable experimental browser-agent tools. When ``None``, follows
+        ``SHINY_WEBMCP=1``. Standard components are exposed automatically;
+        custom tools can be registered with :func:`shiny.webmcp.tool`.
 
     Examples
     --------
@@ -180,6 +187,7 @@ class App:
         bookmark_store: Literal["url", "server", "disable"] = "disable",
         debug: bool = False,
         test_mode: bool | None = None,
+        webmcp: bool | None = None,
     ) -> None:
         # Used to store callbacks to be called when the app is shutting down (according
         # to the ASGI lifespan protocol)
@@ -200,6 +208,9 @@ class App:
 
         self._init_bookmarking(bookmark_store=bookmark_store, ui=ui)
 
+        self._webmcp_enabled = (
+            (os.getenv("SHINY_WEBMCP") == "1") if webmcp is None else webmcp
+        )
         self._debug: bool = debug
         self._test_mode: bool = is_test_mode() if test_mode is None else test_mode
         """Whether Shiny test mode is enabled.
@@ -557,6 +568,9 @@ class App:
 
             # Render the document as-is: wrapping it in an HTMLDocument would nest
             # <html> inside <html>.
+            if self._webmcp_enabled:
+                ui = copy(ui)
+                ui._deps = [*ui._deps, _webmcp._dependency()]
             rendered = ui.render(lib_prefix=lib_prefix)
 
             # `render()` replaces `deps_replace_pattern` with the dependency markup,
@@ -582,6 +596,8 @@ class App:
             # pre-tagified (and immutable) TagifiedTag/TagifiedTagList values that
             # express mode produces (`run_express(...).tagify()` in `express/_run.py`).
             ui_res = TagList(*_page_deps(include_css=not has_bootstrap), ui)
+            if self._webmcp_enabled:
+                ui_res.append(_webmcp._dependency())
             rendered = HTMLDocument(ui_res).render(lib_prefix=lib_prefix)
 
         self._ensure_web_dependencies(rendered["dependencies"])
