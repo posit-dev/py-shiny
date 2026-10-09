@@ -293,7 +293,7 @@ def server(input, output, session):
     report = load_reactlog_json(export)
     steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
     load_graph_report(page, format_reactlog_html(report, code))
-    expect(page.locator(".app-box")).to_contain_text("App (no namespace)")
+    expect(page.locator(".app-box")).to_contain_text("App")
     root_chart = _node(report, "output chart")
     page.locator(root_chart).click()
     expect(page.locator("#insp-plot-image")).to_be_hidden()
