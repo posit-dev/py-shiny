@@ -417,6 +417,29 @@ def load_reactlog_json(
                 label=mark_label, time_sec=round(t_sec, 3), step=step_idx, index=0
             )
         else:
+            is_inval = action in ("invalidate", "invalidateStart", "propagate")
+            if (
+                is_inval
+                and normalized_events
+                and normalized_events[-1].get("action")
+                in ("invalidate", "invalidateStart", "propagate")
+                and normalized_events[-1].get("phase") == phase
+            ):
+                prev = normalized_events[-1]
+                if nid:
+                    nid_str = str(nid)
+                    if nid_str not in prev.setdefault("invalidated_node_ids", []):
+                        prev["invalidated_node_ids"].append(nid_str)
+                if lbl:
+                    lbl_str = str(lbl)
+                    if lbl_str not in prev.setdefault("invalidated_node_labels", []):
+                        prev["invalidated_node_labels"].append(lbl_str)
+                count = len(prev.get("invalidated_node_ids", []))
+                prev["details"] = (
+                    f"Invalidated {count} reactive node{'s' if count != 1 else ''}"
+                )
+                continue
+
             # A removed dependency is not an active edge; only `details` names it.
             is_removal = action == "dependsOnRemove"
             ev_dict = _make_event(
@@ -445,6 +468,13 @@ def load_reactlog_json(
                 session=event_session,
                 action=action,
             )
+            if is_inval:
+                ev_dict["invalidated_node_ids"] = [str(nid)] if nid else []
+                ev_dict["invalidated_node_labels"] = [str(lbl)] if lbl else []
+                if not item.get("details"):
+                    ev_dict["details"] = (
+                        f"Invalidated '{lbl}'" if lbl else "Invalidation phase"
+                    )
         preview = item.get("plot")
         if isinstance(preview, dict):
             plot_dict = cast(Dict[str, Any], preview)
@@ -1198,6 +1228,30 @@ def format_reactlog_html(
     .status-center .nav-idle svg {{ color: #a3c586; }}
     .status-center .nav-output svg {{ color: var(--output); }}
     .status-center .nav-mark svg {{ color: var(--text-muted); }}
+    .secondary-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface-2); padding: 5px 16px 6px 16px; gap: 4px; z-index: 2; }}
+    .secondary-timeline-bar[hidden] {{ display: none !important; }}
+    .secondary-timeline-header {{ display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 600 .72rem var(--sans); }}
+    .secondary-timeline-info {{ display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; }}
+    .secondary-timeline-tag {{ padding: 1px 6px; border-radius: 4px; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }}
+    .secondary-timeline-tag.tag-flush {{ background: color-mix(in srgb, var(--accent) 20%, var(--surface)); color: var(--accent); border: 1px solid var(--accent); }}
+    .secondary-timeline-tag.tag-node {{ background: color-mix(in srgb, var(--source) 20%, var(--surface)); color: var(--source); border: 1px solid var(--source); }}
+    .secondary-timeline-title {{ font-weight: 650; color: var(--text); overflow: hidden; text-overflow: ellipsis; max-width: 420px; }}
+    .secondary-timeline-meta {{ color: var(--text-muted); font-size: 0.68rem; font-weight: 400; }}
+    .secondary-timeline-close {{ border: none; background: transparent; cursor: pointer; color: var(--text-muted); padding: 0 4px; font-size: 0.75rem; border-radius: 4px; height: 20px; min-height: 20px; width: 20px; line-height: 1; }}
+    .secondary-timeline-close:hover {{ color: var(--text); background: var(--surface-3); }}
+    .secondary-timeline-track-wrap {{ overflow-x: auto; overflow-y: hidden; display: flex; align-items: center; padding: 2px 0; scrollbar-width: thin; }}
+    .secondary-timeline-chips {{ display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; width: max-content; }}
+    .secondary-chip {{ display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px; font-size: 0.67rem; font-family: var(--mono); background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; white-space: nowrap; transition: all 0.15s ease; }}
+    .secondary-chip:hover {{ border-color: var(--accent); background: var(--surface-3); }}
+    .secondary-chip.is-active {{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 25%, var(--surface)); font-weight: 600; box-shadow: 0 0 6px rgba(99, 179, 255, 0.35); }}
+    .secondary-chip.chip-trigger {{ border-left: 3px solid var(--accent); }}
+    .secondary-chip.chip-invalidate {{ border-left: 3px solid var(--warning); }}
+    .secondary-chip.chip-calc {{ border-left: 3px solid var(--calc); }}
+    .secondary-chip.chip-output {{ border-left: 3px solid var(--output); }}
+    .secondary-chip.chip-idle {{ border-left: 3px solid var(--border-strong); }}
+    .secondary-chip-step {{ font-size: 0.6rem; color: var(--text-muted); font-weight: 700; }}
+    .secondary-chip-label {{ max-width: 160px; overflow: hidden; text-overflow: ellipsis; }}
+    .graph-node.is-invalidated rect {{ stroke: var(--warning) !important; stroke-width: 2.5px !important; filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.5)); }}
     .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
     .status-left, .status-center, .status-right {{ flex-wrap: wrap; }}
     @media (max-width: 1000px) {{
@@ -1444,6 +1498,20 @@ def format_reactlog_html(
     </main>
   </div>
 
+  <div class="secondary-timeline-bar" id="secondary-timeline-bar" hidden aria-label="Detailed secondary timeline">
+    <div class="secondary-timeline-header">
+      <div class="secondary-timeline-info">
+        <span class="secondary-timeline-tag tag-flush" id="secondary-timeline-tag">Flush</span>
+        <span class="secondary-timeline-title" id="secondary-timeline-title">Flush Details</span>
+        <span class="secondary-timeline-meta" id="secondary-timeline-meta"></span>
+      </div>
+      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline">✕</button>
+    </div>
+    <div class="secondary-timeline-track-wrap" id="secondary-timeline-track-wrap">
+      <div class="secondary-timeline-chips" id="secondary-timeline-chips" role="list" aria-label="Step events"></div>
+    </div>
+  </div>
+
   <script>
     const reactlogData = {escaped_json};
     const rawAppSource = {escaped_source_raw};
@@ -1481,7 +1549,7 @@ def format_reactlog_html(
     let videoFrameRequestKind = null;
     let isSourceDrawerOpen = false;
 
-    let currentViewMode = 'full';
+    let currentViewMode = 'flush';
     let eventListScope = null;
     let selectedStageFilter = null;
 
@@ -1831,7 +1899,11 @@ def format_reactlog_html(
             curWave = null;
             return;
           }}
-          if (evAction === 'queueEmpty' && !curWave) {{
+          if (evAction === 'queueEmpty') {{
+            if (curWave) {{
+              curWave.endStep = idx;
+              curWave = null;
+            }}
             return;
           }}
           const nId = ev.node_id || ev.id || '';
@@ -1843,6 +1915,7 @@ def format_reactlog_html(
           const isSameInput = Boolean(curWave && inputName && curWave.inputs.some(item => item.name === inputName));
           const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0 && !isSameInput;
           const isExecution = evAction === 'enter' || evAction === 'recalculate' || evAction === 'output' || evAction === 'render';
+          const isInvalidation = evAction === 'invalidate' || evAction === 'invalidateStart' || evAction === 'propagate' || ev.semantic_state === 'invalidated';
 
           if (!curWave && !isUserAction && !isExecution && evAction !== 'userMark') {{
             return;
@@ -1866,6 +1939,7 @@ def format_reactlog_html(
               inputs: [],
               calcs: [],
               outputs: [],
+              invalidatedNodes: new Set(),
               totalEvents: 0,
               userChanges: 0,
               details: ev.details || evAction,
@@ -1920,11 +1994,17 @@ def format_reactlog_html(
             if (name && !curWave.outputs.some(item => item.name === name)) {{
               curWave.outputs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
+          }} else if (isInvalidation) {{
+            if (!curWave.invalidatedNodes) curWave.invalidatedNodes = new Set();
+            if (nId) curWave.invalidatedNodes.add(nId);
+            if (Array.isArray(ev.invalidated_node_ids)) {{
+              ev.invalidated_node_ids.forEach(id => {{ if (id) curWave.invalidatedNodes.add(id); }});
+            }}
           }}
         }}
       }});
 
-      actionWaves = filterItems(actionWaves, w => w.inputs.length > 0 || w.calcs.length > 0 || w.outputs.length > 0 || w.isMark);
+      actionWaves = filterItems(actionWaves, w => w.inputs.length > 0 || w.calcs.length > 0 || w.outputs.length > 0 || w.isMark || (w.invalidatedNodes && w.invalidatedNodes.size > 0));
       actionWaves.forEach((w, i) => {{
         w.index = i + 1;
         w.id = `burst-${{i + 1}}`;
@@ -2052,6 +2132,158 @@ def format_reactlog_html(
       updateTraceTimelineScrubber(getCurrentStepTime());
     }}
 
+    let secondaryTimelineMode = null;
+    let secondaryTimelineTarget = null;
+
+    function openSecondaryTimelineForFlush(wave) {{
+      if (!wave) {{
+        wave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
+      }}
+      if (!wave) return;
+      secondaryTimelineMode = 'flush';
+      secondaryTimelineTarget = wave;
+      renderSecondaryTimeline();
+    }}
+
+    function toggleSecondaryTimelineForFlush(wave) {{
+      if (secondaryTimelineMode === 'flush') {{
+        closeSecondaryTimeline();
+      }} else {{
+        openSecondaryTimelineForFlush(wave);
+      }}
+    }}
+
+    function openSecondaryTimelineForNode(nodeId) {{
+      if (!nodeId) return;
+      secondaryTimelineMode = 'node';
+      secondaryTimelineTarget = nodeId;
+      renderSecondaryTimeline();
+    }}
+
+    function closeSecondaryTimeline() {{
+      secondaryTimelineMode = null;
+      secondaryTimelineTarget = null;
+      const bar = document.getElementById('secondary-timeline-bar');
+      if (bar) bar.hidden = true;
+    }}
+
+    function renderSecondaryTimeline() {{
+      const bar = document.getElementById('secondary-timeline-bar');
+      if (!bar) return;
+      if (!secondaryTimelineMode) {{
+        bar.hidden = true;
+        return;
+      }}
+      bar.hidden = false;
+      const tag = document.getElementById('secondary-timeline-tag');
+      const title = document.getElementById('secondary-timeline-title');
+      const meta = document.getElementById('secondary-timeline-meta');
+      const chips = document.getElementById('secondary-timeline-chips');
+      chips.replaceChildren();
+
+      const events = reactlogData.events || reactlogData.log || [];
+
+      if (secondaryTimelineMode === 'flush') {{
+        const wave = secondaryTimelineTarget;
+        if (!wave) return;
+        tag.textContent = 'Flush';
+        tag.className = 'secondary-timeline-tag tag-flush';
+        title.textContent = `Flush ${{wave.index || 1}}: ${{wave.humanAction || wave.triggerLabel || 'Init'}}`;
+
+        const start = wave.startStep !== undefined ? wave.startStep : 0;
+        const end = wave.endStep !== undefined ? wave.endStep : (events.length - 1);
+        const waveEvents = [];
+        for (let s = start; s <= end && s < events.length; s++) {{
+          waveEvents.push({{ step: s, ev: events[s] }});
+        }}
+
+        const invCount = wave.invalidatedNodes ? wave.invalidatedNodes.size : 0;
+        const calcCount = wave.calcs ? wave.calcs.length : 0;
+        const outCount = wave.outputs ? wave.outputs.length : 0;
+        meta.textContent = `${{waveEvents.length}} steps · ${{calcCount}} calcs · ${{outCount}} outputs · ${{invCount}} invalidated`;
+
+        waveEvents.forEach(({{ step, ev }}) => {{
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'secondary-chip' + (step === currentStep ? ' is-active' : '');
+          chip.dataset.step = step;
+          const action = ev.action || ev.event || '';
+          const isInv = action === 'invalidate' || action === 'invalidateStart' || action === 'propagate' || ev.semantic_state === 'invalidated';
+          const isUser = action === 'inputChange' || action === 'userClick' || action === 'userAction' || action === 'valueChange';
+          const isCalc = action === 'enter' && (ev.type === 'calc' || ev.node_type === 'conductor');
+          const isOutput = (action === 'output' || action === 'render' || action === 'outputUpdated') || (action === 'enter' && (ev.type === 'output' || ev.node_type === 'observer'));
+
+          let chipClass = 'chip-idle';
+          let icon = '•';
+          if (isUser) {{ chipClass = 'chip-trigger'; icon = '⚡'; }}
+          else if (isInv) {{ chipClass = 'chip-invalidate'; icon = '⚠'; }}
+          else if (isCalc) {{ chipClass = 'chip-calc'; icon = '⚙'; }}
+          else if (isOutput) {{ chipClass = 'chip-output'; icon = '👁'; }}
+
+          chip.classList.add(chipClass);
+
+          const rawLabel = ev.node_label || ev.label || ev.details || action;
+          const lbl = cleanName(rawLabel);
+          chip.innerHTML = `<span class="secondary-chip-icon">${{icon}}</span><span class="secondary-chip-step">#${{step}}</span><span class="secondary-chip-label" title="${{escapeHTML(rawLabel)}}">${{escapeHTML(lbl || action)}}</span>`;
+          chip.onclick = (e) => {{
+            e.stopPropagation();
+            seekTo(step);
+          }};
+          chips.appendChild(chip);
+        }});
+      }} else if (secondaryTimelineMode === 'node') {{
+        const nodeId = secondaryTimelineTarget;
+        const node = (reactlogData.nodes || []).find(n => n.id === nodeId);
+        const rawLabel = node ? (node.label || node.name || node.id) : nodeId;
+        const nodeLabel = cleanName(rawLabel);
+        tag.textContent = 'Node';
+        tag.className = 'secondary-timeline-tag tag-node';
+        title.textContent = `Node: ${{nodeLabel}}`;
+
+        const nodeSteps = [];
+        events.forEach((ev, s) => {{
+          const matches = ev.node_id === nodeId || ev.id === nodeId ||
+            (ev.invalidated_node_ids && ev.invalidated_node_ids.includes(nodeId)) ||
+            ev.edge_from === nodeId || ev.edge_to === nodeId ||
+            ev.dependsOn === nodeId;
+          if (matches) {{
+            nodeSteps.push({{ step: s, ev }});
+          }}
+        }});
+
+        meta.textContent = `${{nodeSteps.length}} event${{nodeSteps.length === 1 ? '' : 's'}} recorded`;
+
+        nodeSteps.forEach(({{ step, ev }}) => {{
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'secondary-chip' + (step === currentStep ? ' is-active' : '');
+          chip.dataset.step = step;
+          const action = ev.action || ev.event || '';
+          const isInv = action === 'invalidate' || action === 'invalidateStart' || action === 'propagate' || ev.semantic_state === 'invalidated';
+          const isUser = action === 'inputChange' || action === 'userClick' || action === 'userAction' || action === 'valueChange';
+          const isCalc = action === 'enter' || action === 'recalculate';
+          const isOutput = action === 'output' || action === 'render' || action === 'outputUpdated';
+
+          let chipClass = 'chip-idle';
+          let icon = '•';
+          if (isUser) {{ chipClass = 'chip-trigger'; icon = '⚡'; }}
+          else if (isInv) {{ chipClass = 'chip-invalidate'; icon = '⚠'; }}
+          else if (isCalc) {{ chipClass = 'chip-calc'; icon = '⚙'; }}
+          else if (isOutput) {{ chipClass = 'chip-output'; icon = '👁'; }}
+
+          chip.classList.add(chipClass);
+
+          const desc = ev.details || `${{action}} (${{nodeLabel}})`;
+          chip.innerHTML = `<span class="secondary-chip-icon">${{icon}}</span><span class="secondary-chip-step">#${{step}}</span><span class="secondary-chip-label" title="${{escapeHTML(desc)}}">${{escapeHTML(desc)}}</span>`;
+          chip.onclick = (e) => {{
+            e.stopPropagation();
+            seekTo(step);
+          }};
+          chips.appendChild(chip);
+        }});
+      }}
+    }}
+
     function updateTraceTimelineScrubber(curSec) {{
       document.getElementById('trace-current-time').textContent = formatTime(curSec);
       const events = reactlogData.events || reactlogData.log || [];
@@ -2073,6 +2305,43 @@ def format_reactlog_html(
       range.style.setProperty('--progress', `${{percent}}%`);
       document.getElementById('timeline-playhead').style.left = `calc(${{percent}}% - ${{3 * percent / 100}}px)`;
       range.setAttribute('aria-valuetext', `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}}. ${{activeLabel.textContent}}. ${{status.textContent}}`);
+
+      if (secondaryTimelineMode) {{
+        if (secondaryTimelineMode === 'flush') {{
+          if (curWave && curWave !== secondaryTimelineTarget) {{
+            secondaryTimelineTarget = curWave;
+            renderSecondaryTimeline();
+          }} else {{
+            const chips = document.querySelectorAll('.secondary-chip');
+            chips.forEach(c => {{
+              const s = Number(c.dataset.step);
+              const isActive = s === currentStep;
+              c.classList.toggle('is-active', isActive);
+              if (isActive) c.scrollIntoView({{ behavior: 'smooth', block: 'nearest', inline: 'nearest' }});
+            }});
+          }}
+        }} else if (secondaryTimelineMode === 'node') {{
+          const chips = Array.from(document.querySelectorAll('.secondary-chip'));
+          let bestChip = null;
+          chips.forEach(c => {{
+            const s = Number(c.dataset.step);
+            if (s === currentStep) bestChip = c;
+            c.classList.remove('is-active');
+          }});
+          if (!bestChip) {{
+            for (let i = chips.length - 1; i >= 0; i--) {{
+              if (Number(chips[i].dataset.step) <= currentStep) {{
+                bestChip = chips[i];
+                break;
+              }}
+            }}
+          }}
+          if (bestChip) {{
+            bestChip.classList.add('is-active');
+            bestChip.scrollIntoView({{ behavior: 'smooth', block: 'nearest', inline: 'nearest' }});
+          }}
+        }}
+      }}
     }}
 
     function nextAction() {{
@@ -3075,6 +3344,7 @@ def format_reactlog_html(
       selectedNodeId = nodeId;
       focusedNodeId = nodeId;
       showSidebarPanel('timeline');
+      openSecondaryTimelineForNode(nodeId);
       renderInspector();
       renderGraph();
       updateSourceHighlight();
@@ -3084,6 +3354,9 @@ def format_reactlog_html(
     function clearNodeSelection() {{
       focusedNodeId = null;
       selectedNodeId = null;
+      if (secondaryTimelineMode === 'node') {{
+        closeSecondaryTimeline();
+      }}
       renderInspector();
       renderGraph();
       updateSourceHighlight();
@@ -3288,9 +3561,11 @@ def format_reactlog_html(
 
           const fromMatch = representatives.get(activeEvent.edge_from || activeEvent.dependsOn);
           const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
+          const isInvalidatedEdge = (activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart' || activeEvent.semantic_state === 'invalidated') &&
+            ((activeEvent.invalidated_node_ids && activeEvent.invalidated_node_ids.includes(e.to)) || activeEvent.node_id === e.to);
           const isEdgeActive = !e.inactive && ((fromMatch && toMatch)
             ? (fromMatch === e.from && toMatch === e.to)
-            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart')));
+            : (isInvalidatedEdge || (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn'))));
 
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{c1x}} ${{y1}}, ${{c2x}} ${{y2}}, ${{x2}} ${{y2}}`);
@@ -3301,6 +3576,7 @@ def format_reactlog_html(
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
           const isConnected = focusedNodeId && e.related;
           path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (isConnected ? ' is-connected' : '') + (!e.related ? ' is-dimmed' : ''));
+          const edgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
           if (e.isolated) {{
             path.setAttribute('stroke-dasharray', '5 4');
             path.setAttribute('data-isolated', 'true');
@@ -3324,12 +3600,14 @@ def format_reactlog_html(
         const isSelected = selectedNodeId === n.id || (n.members || []).includes(selectedNodeId);
         const isConnected = focusedNodeId && focusedNodes && (n.members || [n.id]).some(id => focusedNodes.has(id)) && !isSelected;
         const isExecuted = (n.members || []).some(id => executedInBurst.has(id)) || executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
+        const isInvalidated = (activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart' || activeEvent.semantic_state === 'invalidated') &&
+          ((activeEvent.invalidated_node_ids && activeEvent.invalidated_node_ids.includes(n.id)) || activeNodeId === n.id);
         const kind = nodeKind(n);
         const isDimmed = focusedNodes && !(n.members || [n.id]).some(id => focusedNodes.has(id));
         const isClientData = isClientDataNode(n);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isConnected ? ' is-connected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isClientData ? ' is-clientdata' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isConnected ? ' is-connected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isInvalidated ? ' is-invalidated' : '') + (isClientData ? ' is-clientdata' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
         const state = replay.states.get(n.id) || 'ready';
@@ -3843,6 +4121,9 @@ def format_reactlog_html(
     function resetGraphView() {{
       selectedNodeId = null;
       focusedNodeId = null;
+      if (secondaryTimelineMode === 'node') {{
+        closeSecondaryTimeline();
+      }}
       searchQuery = '';
       selectedStageFilter = null;
       hideClientData = false;
@@ -4095,6 +4376,11 @@ def format_reactlog_html(
         }}
         if (selectedNodeId) {{
           clearNodeSelection();
+          e.preventDefault();
+          return;
+        }}
+        if (secondaryTimelineMode) {{
+          closeSecondaryTimeline();
           e.preventDefault();
           return;
         }}
