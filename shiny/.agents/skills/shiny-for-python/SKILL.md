@@ -24,7 +24,7 @@ reference file before writing code** for that area.
 | Express mode | Writing or converting an Express app (`from shiny.express import ...`); context-manager layout; `page_opts`, `@expressify` | `references/express.md` |
 | Modules (Core) | A reusable, repeatable UI+server component in a Core app; avoiding input/output id collisions across copies | `references/modules-core.md` |
 | Modules (Express) | The same reusable-component need in an Express app, via the single `@module` decorator | `references/modules-express.md` |
-| Session lifecycle | Per-session cleanup (`on_ended`), reading request headers/cookies/URL, flush hooks, per-session routes | `references/session-lifecycle.md` |
+| Session lifecycle | Per-session cleanup (`on_ended`), per-session data (`user_data`), reading request headers/cookies/URL, flush hooks, per-session routes | `references/session-lifecycle.md` |
 
 ## Dashboard building
 

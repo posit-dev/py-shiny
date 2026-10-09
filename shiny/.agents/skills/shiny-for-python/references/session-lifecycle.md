@@ -110,6 +110,28 @@ def server(input, output, session):
     session.on_flushed(lambda: print("client updated"), once=False)
 ```
 
+## Store arbitrary per-session data: `session.user_data`
+
+A plain dict, created fresh for each session, for session-specific state that
+should not be reactive: a DB handle, a credential, a cache, a "set up once"
+flag. It is the right tool when code has only a `session` and no `server`
+closure to hang state on, such as a helper or module called from elsewhere.
+Modules share the root session's dict, so a write in a module is visible
+everywhere. It is available inside `on_ended` callbacks.
+
+```python
+def get_conn(session: Session):
+    if "db" not in session.user_data:
+        conn = connect()
+        session.user_data["db"] = conn
+        session.on_ended(conn.close)
+    return session.user_data["db"]
+```
+
+Mutate it in place; assigning a new dict (`session.user_data = {}`) raises an
+error. Use a `reactive.value` instead if the data should drive the UI, and a
+local variable in `server` if nothing else needs to reach it.
+
 ## Quick reference
 
 | Need | Use |
@@ -117,6 +139,7 @@ def server(input, output, session):
 | Get the session in `server` | third arg: `def server(input, output, session)` |
 | Get the session elsewhere | `require_active_session(None)` |
 | Run cleanup on disconnect | `@session.on_ended` |
+| Per-session non-reactive data | `session.user_data["key"]` |
 | Request headers / cookies | `session.http_conn.headers` / `.cookies` |
 | Live browser URL (reactive) | `session.clientdata.url_*()` |
 | Per-session HTTP endpoint | `path = session.dynamic_route(name, handler)` |
@@ -128,6 +151,8 @@ def server(input, output, session):
 
 - Per-user state in a module-level global -> shared across all sessions; create
   it inside `server` (or a `reactive.value`) so each session gets its own.
+- Reassigning `session.user_data = {...}` -> raises; mutate the dict in place
+  (`session.user_data["key"] = value`).
 - Cleanup in `atexit`/module teardown -> fires once at shutdown, not per user;
   register it with `session.on_ended`.
 - Reading `session.clientdata.url_*()` at module scope or in a plain helper ->
