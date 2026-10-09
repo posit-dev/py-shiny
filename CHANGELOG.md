@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+* `@render.download_button()` and `@render.download_link()` gain an `icon` argument, and pass any other keyword arguments (e.g. `class_="btn-success"`) to the control they auto-place in Express. An Express app no longer needs `ui.hold()` and a hand-placed `ui.download_button()` just to add an icon. The same arguments can also be given with `@output_args()`. (#2533) (Thanks, @raashish1601!) (#2533)
+
 * Navigation links that target a tab panel (e.g. in `ui.navset_tab()`) now carry `aria-controls` pointing at the panel's `id`, alongside the existing `href` (rstudio/bslib#1355). (#2526)
 
 ### Bug fixes
