@@ -257,19 +257,26 @@ class Session(ABC):
     # session.
     bookmark: Bookmark
 
-    user_data: dict[str, Any]
-    """
-    A dictionary for storing arbitrary per-session data.
+    @property
+    @abstractmethod
+    def user_data(self) -> dict[str, Any]:
+        """
+        A dictionary for storing arbitrary per-session data.
 
-    This is a place to keep session-specific state that is not reactive and
-    should not be shared across sessions, such as credentials or objects that
-    don't belong in a :class:`~shiny.reactive.Value`.
+        This is a place to keep session-specific state that is not reactive and
+        should not be shared across sessions, such as credentials or objects that
+        don't belong in a :class:`~shiny.reactive.Value`.
 
-    The dictionary is shared with module sessions: reading or writing
-    `session.user_data` inside a module accesses the same dictionary as the
-    root session. It lives in the server process's memory only, and is
-    discarded when the session ends.
-    """
+        The dictionary is shared with module sessions: reading or writing
+        `session.user_data` inside a module accesses the same dictionary as the
+        root session. Modifying it in place is fine, but assigning a new dictionary
+        to `session.user_data` raises an error.
+
+        It lives in the server process's memory only, and is released along with
+        the session. It is still available inside `session.on_ended` callbacks,
+        which is the place to close any resources stored in it.
+        """
+        ...
 
     @property
     @abstractmethod
@@ -951,7 +958,7 @@ class AppSession(Session):
 
         self.bookmark: Bookmark = BookmarkApp(self)
 
-        self.user_data: dict[str, Any] = {}
+        self._user_data: dict[str, Any] = {}
 
         self._user: str | None = None
         self._groups: list[str] | None = None
@@ -1035,6 +1042,10 @@ class AppSession(Session):
 
     def is_stub_session(self) -> Literal[False]:
         return False
+
+    @property
+    def user_data(self) -> dict[str, Any]:
+        return self._user_data
 
     @property
     def user(self) -> str | None:
@@ -1867,11 +1878,11 @@ class SessionProxy(Session):
         self._outbound_message_queues = root_session._outbound_message_queues
         self._downloads = root_session._downloads
 
-        # Share the root session's user_data dictionary, so that modules and
-        # the app see the same per-session data.
-        self.user_data = root_session.user_data
-
         self.bookmark = BookmarkProxy(self)
+
+    @property
+    def user_data(self) -> dict[str, Any]:
+        return self._root_session.user_data
 
     @property
     def user(self) -> str | None:

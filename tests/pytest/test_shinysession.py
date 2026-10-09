@@ -21,8 +21,6 @@ def test_stub_session_user_groups():
 
 
 def test_stub_session_user_data():
-    from shiny.express._stub_session import ExpressStubSession
-
     stub = ExpressStubSession()
     assert stub.user_data == {}
     stub.user_data["token"] = "abc"
@@ -57,6 +55,60 @@ async def test_session_user_data():
     assert captured["root_user_data"] == {"from_root": 2, "from_module": 1}
     # Same object, so writes via one session are visible via the other.
     assert captured["mod_user_data"] is captured["root_user_data"]
+
+
+@pytest.mark.asyncio
+async def test_module_session_user_data_is_not_reassignable():
+    """Reassigning `user_data` from a module would silently detach it from the root."""
+    captured: dict[str, Session] = {}
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session):
+        captured["mod"] = session
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        captured["root"] = session
+        mod("m")
+
+    conn = MockConnection()
+    sess = App(ui.TagList(), server)._create_session(conn)
+
+    async def mock_client():
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
+
+    with pytest.raises(AttributeError):
+        # Deliberately assigning to a read-only property to check the runtime error.
+        captured["mod"].user_data = {}  # pyright: ignore[reportAttributeAccessIssue]
+
+    captured["root"].user_data["k"] = 1
+    assert captured["mod"].user_data == {"k": 1}
+
+
+@pytest.mark.asyncio
+async def test_session_user_data_available_in_on_ended():
+    """Resources stashed in `user_data` can be cleaned up from `on_ended`."""
+    ended_with: list[object] = []
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        session.user_data["conn"] = "open"
+
+        @session.on_ended
+        def _():
+            ended_with.append(session.user_data.get("conn"))
+
+    conn = MockConnection()
+    sess = App(ui.TagList(), server)._create_session(conn)
+
+    async def mock_client():
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
+
+    assert ended_with == ["open"]
 
 
 @pytest.mark.asyncio
