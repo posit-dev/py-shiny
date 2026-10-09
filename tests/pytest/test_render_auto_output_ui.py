@@ -46,18 +46,8 @@ def _params(fn: Callable[..., object]) -> dict[str, set[Any]]:
         (render.ui, ui.output_ui),
         (render.express, ui.output_ui),
         (render.data_frame, ui.output_data_frame),
-        # TODO: Remove the xfail once #2533 adds `icon` and `**kwargs`; `label` still
-        # needs to be added to `auto_output_ui()` afterward
-        pytest.param(
-            render.download_button,
-            ui.download_button,
-            marks=pytest.mark.xfail(reason="#2533", strict=True),
-        ),
-        pytest.param(
-            render.download_link,
-            ui.download_link,
-            marks=pytest.mark.xfail(reason="#2533", strict=True),
-        ),
+        (render.download_button, ui.download_button),
+        (render.download_link, ui.download_link),
     ],
 )
 def test_auto_output_ui_matches_ui_fn(

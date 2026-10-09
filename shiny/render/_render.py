@@ -812,14 +812,16 @@ class download_button(_DownloadBase):
     def auto_output_ui(
         self,
         *,
-        width: str | MISSING_TYPE = MISSING,
+        label: TagChild | MISSING_TYPE = MISSING,
+        width: Optional[str] | MISSING_TYPE = MISSING,
         icon: TagChild | MISSING_TYPE = MISSING,
         **kwargs: TagAttrValue,
     ) -> Tag:
         ui_kwargs: dict[str, Any] = {**self.attrs, **kwargs}
+        set_kwargs_value(ui_kwargs, "label", label, self.label)
         set_kwargs_value(ui_kwargs, "width", width, self.width)
-        ui_kwargs["icon"] = self.icon if isinstance(icon, MISSING_TYPE) else icon
-        return _ui.download_button(self.output_id, label=self.label, **ui_kwargs)
+        set_kwargs_value(ui_kwargs, "icon", icon, self.icon)
+        return _ui.download_button(self.output_id, **ui_kwargs)
 
 
 @add_example(example_name="download_link")
@@ -875,14 +877,16 @@ class download_link(_DownloadBase):
     def auto_output_ui(
         self,
         *,
-        width: str | MISSING_TYPE = MISSING,
+        label: TagChild | MISSING_TYPE = MISSING,
+        width: Optional[str] | MISSING_TYPE = MISSING,
         icon: TagChild | MISSING_TYPE = MISSING,
         **kwargs: TagAttrValue,
     ) -> Tag:
         ui_kwargs: dict[str, Any] = {**self.attrs, **kwargs}
+        set_kwargs_value(ui_kwargs, "label", label, self.label)
         set_kwargs_value(ui_kwargs, "width", width, self.width)
-        ui_kwargs["icon"] = self.icon if isinstance(icon, MISSING_TYPE) else icon
-        return _ui.download_link(self.output_id, label=self.label, **ui_kwargs)
+        set_kwargs_value(ui_kwargs, "icon", icon, self.icon)
+        return _ui.download_link(self.output_id, **ui_kwargs)
 
 
 @add_example(example_name="download")
