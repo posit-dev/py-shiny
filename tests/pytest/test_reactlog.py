@@ -659,9 +659,7 @@ def test_reactlog_remote_security_access_control():
 
         return remote_app
 
-    remote_client = TestClient(
-        make_remote(client_app)
-    )  # pyright: ignore[reportArgumentType]
+    remote_client = TestClient(make_remote(client_app))  # pyright: ignore[reportArgumentType]
     assert remote_client.get("/__reactlog__").status_code == 403
     assert remote_client.get("/__reactlog__/mark").status_code == 403
 
@@ -743,7 +741,6 @@ def _recorded_view_source(app: App) -> str:
 def test_in_app_reactlog_reads_complete_source_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-
     monkeypatch.syspath_prepend(  # pyright: ignore[reportUnknownMemberType]
         str(tmp_path)
     )
@@ -769,7 +766,6 @@ app = App(app_ui, server, reactlog=True)
 
 @pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch):
-
     from shiny import App, _app, ui
 
     def server(input: Any, output: Any, session: Any):
@@ -791,7 +787,6 @@ def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch
 def test_express_reactlog_reads_app_source(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-
     from shiny.express._run import wrap_express_app
 
     monkeypatch.setenv("SHINY_REACTLOG", "1")
@@ -1128,7 +1123,6 @@ def test_format_reactlog_html_flush_details_card():
 
 
 def test_load_reactlog_json_defaults_provenance_to_observed() -> None:
-    # Every loaded event was recorded; nothing is simulated any more.
     loaded = load_reactlog_json(
         {
             "log": [
@@ -1139,3 +1133,56 @@ def test_load_reactlog_json_defaults_provenance_to_observed() -> None:
     )
     assert {e["provenance"] for e in loaded["events"]} == {"observed"}
     assert "inferred_events_count" not in loaded
+
+
+def test_load_reactlog_json_consecutive_init_queue_empty() -> None:
+    raw = [
+        {"action": "define", "reactId": "r1", "label": "input.x", "type": "input"},
+        {
+            "action": "valueChange",
+            "reactId": "r1",
+            "label": "input.x",
+            "type": "input",
+            "value": "1",
+        },
+        {"action": "queueEmpty"},
+        {"action": "queueEmpty"},
+        {
+            "action": "valueChange",
+            "reactId": "r1",
+            "label": "input.x",
+            "type": "input",
+            "value": "2",
+        },
+        {"action": "queueEmpty"},
+    ]
+    loaded = load_reactlog_json(raw)
+    phases = [e["phase"] for e in loaded["events"]]
+    assert phases == ["init", "init", "init", "init", "interaction", "interaction"]
+
+
+def test_format_reactlog_html_node_interactions_and_layout() -> None:
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
+    assert "App · ${members.length} nodes" in html
+    assert "App (no namespace)" not in html
+    assert "width: min(440px, 48vw, calc(100% - 64px))" in html
+    assert "g.ondblclick" in html
+    assert "handleSearch(term)" in html
+    assert ".graph-edge.is-connected" in html
+    footer_idx = html.index('class="bottom-timeline-bar toolbar"')
+    shortcuts_idx = html.index('id="btn-shortcuts"')
+    assert shortcuts_idx > footer_idx
+    assert 'class="btn icon mini" id="btn-shortcuts"' in html
+    assert 'title="Keyboard shortcuts (?)"' in html
+    assert ">Shortcuts</button>" not in html
+    assert "let currentViewMode = 'full';" in html
+
+
+def test_format_reactlog_html_preserves_video_path():
+    log = _chain_log()
+    html = format_reactlog_html(
+        log, source_code=_CHAIN_SOURCE, video_path="recording.webm"
+    )
+    assert 'id="video-panel"' in html
+    assert 'id="session-video"' in html
+    assert '"video_path": "recording.webm"' in html

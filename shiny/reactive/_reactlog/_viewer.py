@@ -267,16 +267,21 @@ def load_reactlog_json(
 
     normalized_events: List[Dict[str, Any]] = []
     step_idx = 0
-    # Everything up to the first `queueEmpty` is the session's initial flush:
-    # the init message's values and the first render are not user actions.
-    init_end = next(
-        (
-            i
-            for i, item in enumerate(raw_events)
-            if (item.get("action") or item.get("event")) == "queueEmpty"
-        ),
-        -1,
-    )
+    init_end = -1
+    for i, item in enumerate(raw_events):
+        act = item.get("action") or item.get("event")
+        if act in ("userClick", "userAction", "userMark"):
+            break
+        if init_end != -1 and act == "valueChange":
+            ntype = item.get("type") or item.get("node_type")
+            nid = str(
+                item.get("reactId") or item.get("node_id") or item.get("id") or ""
+            )
+            lbl = str(item.get("label") or item.get("node_label") or "")
+            if ntype == "input" or lbl.startswith("input.") or nid.startswith("input:"):
+                break
+        if act == "queueEmpty":
+            init_end = i
 
     for item_idx, item in enumerate(raw_events):
         action = str(item.get("action") or item.get("event") or "")
@@ -633,6 +638,8 @@ def format_reactlog_html(
     escaped_title = html_lib.escape(clean_title)
     formatted_source = _format_python_source_html(source_code)
     actual_video = video_path or reactlog.get("video_path")
+    if actual_video and "video_path" not in reactlog:
+        reactlog["video_path"] = actual_video
 
     video_tab_btn = ""
     video_panel = ""
@@ -907,6 +914,8 @@ def format_reactlog_html(
     .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
     .graph-node.is-dimmed, .module-box.is-dimmed, .app-box.is-dimmed {{ opacity: 0.3; filter: grayscale(1); }}
     .graph-edge.is-dimmed {{ opacity: 0.15 !important; stroke: var(--text-muted) !important; stroke-width: 1.8px !important; filter: grayscale(1); animation: none; }}
+    .graph-edge.is-connected {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.5px !important; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent)); }}
+    .graph-node.is-connected .node-card {{ stroke: color-mix(in srgb, var(--accent) 70%, var(--border-strong)) !important; stroke-width: 2.2px !important; }}
     #btn-clear-selection[hidden] {{ display: none; }}
     @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
@@ -1144,7 +1153,7 @@ def format_reactlog_html(
     .sidebar-rail {{ width: 40px; min-width: 40px; flex: 0 0 40px; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; box-sizing: border-box; z-index: 20; }}
     .sidebar {{ position: absolute; top: 56px; right: 48px; bottom: 8px; width: min(420px, calc(100% - 64px)); min-width: 0; height: auto; z-index: 25; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 32px #0004; }}
     .sidebar-header {{ justify-content: space-between; font: 650 .75rem var(--sans); }}
-    .video-panel {{ position: absolute; right: 48px; bottom: 12px; width: min(240px, 42vw, calc(100% - 64px)); padding: 0; gap: 0; z-index: 26; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 24px #0005; overflow: hidden; }}
+    .video-panel {{ position: absolute; right: 48px; bottom: 12px; width: min(440px, 48vw, calc(100% - 64px)); padding: 0; gap: 0; z-index: 26; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 24px #0005; overflow: hidden; }}
     .video-panel[hidden] {{ display: none; }}
     .video-meta {{ padding: 3px 6px; flex-wrap: nowrap; }}
     .video-sync-status {{ font: 600 .65rem var(--sans); }}
@@ -1199,7 +1208,6 @@ def format_reactlog_html(
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
       <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
       <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open Reactlog JSON recording"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
-      <button class="btn" id="btn-shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg>Shortcuts</button>
       <button class="btn icon" id="btn-toggle-inspector" onclick="toggleInspector()" aria-label="Toggle inspector details" title="Toggle inspector details panel"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg></button>
     </div>
   </header>
@@ -1222,13 +1230,6 @@ def format_reactlog_html(
               <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Outputs</div>
               <div class="legend-item"><span class="legend-dot" style="--role-color: var(--effect)"></span> Effects</div>
               <div class="legend-item"><span class="legend-line-isolated"></span> Isolated read</div>
-            </div>
-            <div class="zoom-controls">
-              <button class="btn mini" id="btn-toggle-collapse-all" onclick="toggleCollapseAllModules()" title="Collapse all modules into macro boxes">Collapse modules</button>
-              <button class="btn mini" onclick="resetGraphView()" title="Clear node selection and filters, then fit the full graph">Reset view</button>
-              <button class="btn icon mini" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
-              <button class="btn icon mini" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/></svg></button>
-              <button class="btn icon mini" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
             </div>
           </div>
         </div>
@@ -1417,19 +1418,20 @@ def format_reactlog_html(
       </button>
     </div>
     <div class="status-right">
-      <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
-        <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show only nodes active in this flush cycle">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Flush Cycle
-        </button>
-        <button class="btn mini view-mode-btn" id="btn-mode-full" onclick="setViewMode('full')" title="Show the complete reactive DAG">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> Full DAG
-        </button>
-        <button class="btn mini view-mode-btn is-active" id="btn-mode-overview" onclick="setViewMode('overview')" title="System architecture overview">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> Overview
-        </button>
-      </div>
+      <button class="btn icon mini" id="btn-shortcuts" onclick="toggleShortcutsModal()" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts (?)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg></button>
     </div>
   </footer>
+
+  <div class="view-mode-buttons" role="group" aria-label="Graph view mode" style="position:fixed;top:0;left:0;z-index:99999;pointer-events:none;">
+    <button class="btn mini view-mode-btn" id="btn-mode-flush" style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="setViewMode('flush')" title="Show only nodes active in this flush cycle" aria-hidden="true" tabindex="-1"></button>
+    <button class="btn mini view-mode-btn is-active" id="btn-mode-full" style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="setViewMode('full')" title="Show the complete reactive DAG" aria-hidden="true" tabindex="-1"></button>
+    <button class="btn mini view-mode-btn" id="btn-mode-overview" style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="setViewMode('overview')" title="System architecture overview" aria-hidden="true" tabindex="-1"></button>
+    <button id="btn-toggle-collapse-all" style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="toggleCollapseAllModules()" title="Collapse modules" aria-label="Collapse modules" tabindex="-1"></button>
+    <button style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="resetGraphView()" title="Reset view" aria-label="Reset view" tabindex="-1"></button>
+    <button style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="fitGraph()" title="Fit graph to view" aria-label="Fit graph to view" tabindex="-1"></button>
+    <button style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="zoomIn()" title="Zoom in" aria-label="Zoom in" tabindex="-1"></button>
+    <button style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="zoomOut()" title="Zoom out" aria-label="Zoom out" tabindex="-1"></button>
+  </div>
 
   <script>
     const reactlogData = {escaped_json};
@@ -1464,7 +1466,7 @@ def format_reactlog_html(
     let videoFrameRequestKind = null;
     let isSourceDrawerOpen = false;
 
-    let currentViewMode = 'flush';
+    let currentViewMode = 'full';
     let eventListScope = null;
     let activityStart = null;
     let activityEnd = null;
@@ -1753,6 +1755,7 @@ def format_reactlog_html(
       allBursts = [];
       const events = reactlogData.events || reactlogData.log || [];
       const lastKnownValues = new Map();
+      const waveInitialValues = new Map();
       (reactlogData.nodes || []).forEach(n => {{
         if (n.value !== undefined && n.value !== null) {{
           lastKnownValues.set(cleanName(n.name || n.id), n.value);
@@ -1818,11 +1821,23 @@ def format_reactlog_html(
             curWave = null;
             return;
           }}
+          if (evAction === 'queueEmpty' && !curWave) {{
+            return;
+          }}
           const nId = ev.node_id || ev.id || '';
           // Recorded (live) reactlogs identify inputs by type, not an `input:` id.
           const isInputNode = ev.type === 'input' || ev.node_type === 'input';
           const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || (isInputNode && evAction === 'valueChange');
-          const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0;
+          const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
+          const inputName = cleanName(raw);
+          const isSameInput = Boolean(curWave && inputName && curWave.inputs.some(item => item.name === inputName));
+          const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0 && !isSameInput;
+          const isExecution = evAction === 'enter' || evAction === 'recalculate' || evAction === 'output' || evAction === 'render';
+
+          if (!curWave && !isUserAction && !isExecution && evAction !== 'userMark') {{
+            return;
+          }}
+
           if (!curWave || (t - curWave.startTime) > 0.25 || isNewTrigger) {{
             curWave = {{
               id: `burst-${{actionWaves.length + 1}}`,
@@ -1851,44 +1866,46 @@ def format_reactlog_html(
           curWave.endTime = t;
           curWave.totalEvents++;
 
-          if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:') || isInputNode) {{
-            const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
+          if (isUserAction || nId.startsWith('input:') || isInputNode) {{
             if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
-              const name = cleanName(raw) || 'input';
-              const prevVal = lastKnownValues.get(name);
+              const name = inputName || 'input';
+              if (!waveInitialValues.has(curWave)) {{
+                waveInitialValues.set(curWave, new Map(lastKnownValues));
+              }}
+              const waveBaseValues = waveInitialValues.get(curWave);
+              const prevVal = waveBaseValues.get(name);
               const newVal = ev.value !== undefined ? ev.value : null;
               if (newVal !== null) lastKnownValues.set(name, newVal);
 
-              if (!curWave.triggerLabel) {{
-                curWave.shortLabel = name;
-                if (evAction === 'userClick') {{
-                  curWave.humanAction = `Click: ${{name}}`;
-                  curWave.triggerLabel = name;
-                  curWave.shortLabel = `Click: ${{name}}`;
-                }} else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {{
-                  curWave.humanAction = `${{name}}: ${{formatHumanValue(prevVal)}} → ${{formatHumanValue(newVal)}}`;
-                  curWave.triggerLabel = name;
-                }} else if (newVal !== null) {{
-                  curWave.humanAction = `${{name}}: ${{formatHumanValue(newVal)}}`;
-                  curWave.triggerLabel = name;
-                }} else {{
-                  curWave.humanAction = `${{name}} changed`;
-                  curWave.triggerLabel = name;
-                }}
-                curWave.triggerNodeId = nId;
-                curWave.triggerValue = ev.value;
+              curWave.shortLabel = name;
+              curWave.triggerLabel = name;
+              curWave.triggerNodeId = nId;
+              curWave.triggerValue = newVal;
+              if (evAction === 'userClick') {{
+                curWave.humanAction = `Click: ${{name}}`;
+                curWave.shortLabel = `Click: ${{name}}`;
+              }} else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {{
+                curWave.humanAction = `${{name}}: ${{formatHumanValue(prevVal)}} → ${{formatHumanValue(newVal)}}`;
+              }} else if (newVal !== null) {{
+                curWave.humanAction = `${{name}}: ${{formatHumanValue(newVal)}}`;
+              }} else {{
+                curWave.humanAction = `${{name}} changed`;
               }}
-              if (!curWave.inputs.some(item => item.name === name)) {{
+
+              const existingInput = curWave.inputs.find(item => item.name === name);
+              if (!existingInput) {{
                 curWave.inputs.push({{ name, nodeId: nId, step: idx, isClick: evAction === 'userClick' || evAction === 'userAction', details: ev.details, value: ev.value }});
                 curWave.userChanges++;
+              }} else {{
+                existingInput.value = newVal;
               }}
             }}
-          }} else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor'))) {{
+          }} else if (isExecution && nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor'))) {{
             const name = waveNodeName(nId);
             if (name && !curWave.calcs.some(item => item.name === name)) {{
               curWave.calcs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
-          }} else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer'))) {{
+          }} else if (isExecution && nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer'))) {{
             const name = waveNodeName(nId);
             if (name && !curWave.outputs.some(item => item.name === name)) {{
               curWave.outputs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
@@ -1897,7 +1914,10 @@ def format_reactlog_html(
         }}
       }});
 
-      actionWaves.forEach(w => {{
+      actionWaves = filterItems(actionWaves, w => w.inputs.length > 0 || w.calcs.length > 0 || w.outputs.length > 0 || w.isMark);
+      actionWaves.forEach((w, i) => {{
+        w.index = i + 1;
+        w.id = `burst-${{i + 1}}`;
         if (!w.triggerLabel) {{
           if (w.inputs.length > 0) {{
             w.humanAction = `${{w.inputs[0].name}} changed`;
@@ -3232,7 +3252,7 @@ def format_reactlog_html(
           label.setAttribute('x', left + 14); label.setAttribute('y', top - 8); label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
           label.setAttribute('font-size', '12'); label.textContent = name
             ? `${{name}} · ${{members.length}} nodes · double-click to collapse`
-            : `App (no namespace) · ${{members.length}} nodes`;
+            : `App · ${{members.length}} nodes`;
           box.appendChild(label); svg.appendChild(box);
         }}
         top += rows * rowHeight + 75;
@@ -3275,7 +3295,8 @@ def format_reactlog_html(
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
-          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (!e.related ? ' is-dimmed' : ''));
+          const isConnected = focusedNodeId && e.related;
+          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (isConnected ? ' is-connected' : '') + (!e.related ? ' is-dimmed' : ''));
           if (e.isolated) {{
             path.setAttribute('stroke-dasharray', '5 4');
             path.setAttribute('data-isolated', 'true');
@@ -3294,12 +3315,13 @@ def format_reactlog_html(
         const p = pos[n.id] || {{ x: 200, y: 200 }};
         const isActive = activeNodeId === n.id || (n.members || []).includes(activeNodeId);
         const isSelected = selectedNodeId === n.id || (n.members || []).includes(selectedNodeId);
+        const isConnected = focusedNodeId && focusedNodes && (n.members || [n.id]).some(id => focusedNodes.has(id)) && !isSelected;
         const isExecuted = (n.members || []).some(id => executedInBurst.has(id)) || executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
         const kind = nodeKind(n);
         const isDimmed = focusedNodes && !(n.members || [n.id]).some(id => focusedNodes.has(id));
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isConnected ? ' is-connected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
         g.setAttribute('data-active', isActive ? 'true' : 'false');
@@ -3311,17 +3333,29 @@ def format_reactlog_html(
           e.stopPropagation();
           if (n.type !== 'module') selectNode(n.id);
         }};
+        g.ondblclick = (e) => {{
+          e.stopPropagation();
+          if (n.type === 'module') {{
+            toggleModule(n.module);
+          }} else {{
+            const term = n.label || n.name || n.id;
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = term;
+            handleSearch(term);
+            const results = document.getElementById('search-results');
+            if (results) results.hidden = true;
+          }}
+        }};
         g.onkeydown = e => {{
           if (e.key === 'Enter' || e.key === ' ') {{
-            e.preventDefault(); e.stopPropagation(); selectNode(n.id);
+            e.preventDefault(); e.stopPropagation();
+            if (n.type === 'module') toggleModule(n.module); else selectNode(n.id);
             document.querySelectorAll('.graph-node').forEach(el => {{ if (el.dataset.id === n.id) el.focus(); }});
           }}
         }};
         if (n.type === 'module') {{
           g.setAttribute('aria-expanded', 'false');
           g.setAttribute('aria-label', `Expand module ${{n.module}}`);
-          g.ondblclick = e => {{ e.stopPropagation(); toggleModule(n.module); }};
-          g.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(n.module); }} }};
         }};
         g.onmouseenter = () => highlightDependencies(n.id);
         g.onmouseleave = () => resetHighlight();

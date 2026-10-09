@@ -294,7 +294,7 @@ def test_recording_floats_above_timeline_and_rail_stays_40px(page: Page):
         graph = page.locator("#graph-container").bounding_box()
         assert rail and video and timeline and graph
         assert rail["width"] == 40
-        assert video["width"] <= 240
+        assert video["width"] <= 440
         assert video["x"] + video["width"] < rail["x"]
         assert video["y"] + video["height"] < timeline["y"]
         assert graph["width"] == width - 40
