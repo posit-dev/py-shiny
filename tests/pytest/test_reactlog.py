@@ -1175,7 +1175,7 @@ def test_format_reactlog_html_node_interactions_and_layout() -> None:
     assert 'class="btn icon mini" id="btn-shortcuts"' in html
     assert 'title="Keyboard shortcuts (?)"' in html
     assert ">Shortcuts</button>" not in html
-    assert "let currentViewMode = 'full';" in html
+    assert "let currentViewMode = 'flush';" in html
 
 
 def test_format_reactlog_html_preserves_video_path():
@@ -1186,3 +1186,48 @@ def test_format_reactlog_html_preserves_video_path():
     assert 'id="video-panel"' in html
     assert 'id="session-video"' in html
     assert '"video_path": "recording.webm"' in html
+
+
+def test_load_reactlog_json_coalesces_consecutive_invalidations():
+    raw = [
+        {"action": "define", "reactId": "r1", "label": "x", "type": "reactiveVal"},
+        {"action": "define", "reactId": "r2", "label": "calc1", "type": "calc"},
+        {"action": "define", "reactId": "r3", "label": "calc2", "type": "calc"},
+        {"action": "valueChange", "reactId": "r1", "value": "10"},
+        {"action": "invalidateStart", "reactId": "r2", "label": "calc1"},
+        {"action": "invalidate", "reactId": "r3", "label": "calc2"},
+        {"action": "enter", "reactId": "r2", "label": "calc1"},
+        {"action": "exit", "reactId": "r2", "label": "calc1"},
+    ]
+    loaded = load_reactlog_json(raw)
+    events = loaded["events"]
+    inval_events = [
+        e
+        for e in events
+        if e.get("action") in ("invalidate", "invalidateStart", "propagate")
+    ]
+    assert len(inval_events) == 1
+    inval = inval_events[0]
+    assert inval["invalidated_node_ids"] == ["r2", "r3"]
+    assert inval["invalidated_node_labels"] == ["calc1", "calc2"]
+    assert inval["details"] == "Invalidated 2 reactive nodes"
+    assert inval["semantic_state"] == "invalidated"
+    assert inval["status"] == "affected"
+
+
+def test_format_reactlog_html_secondary_timeline_and_invalidation():
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
+    assert 'id="secondary-timeline-bar"' in html
+    assert 'id="secondary-timeline-tag"' in html
+    assert 'id="secondary-timeline-title"' in html
+    assert 'id="secondary-timeline-meta"' in html
+    assert 'id="secondary-timeline-chips"' in html
+    assert 'id="btn-close-secondary-timeline"' in html
+    assert "toggleSecondaryTimelineForFlush()" in html
+    assert "openSecondaryTimelineForFlush(" in html
+    assert "openSecondaryTimelineForNode(" in html
+    assert "closeSecondaryTimeline()" in html
+    assert "renderSecondaryTimeline()" in html
+    assert ".timeline-marker.is-invalidation" in html
+    assert ".graph-node.is-invalidated" in html
+    assert "is-invalidation" in html
