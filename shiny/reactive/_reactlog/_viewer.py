@@ -3878,7 +3878,12 @@ def format_reactlog_html(
       const ranks = dependencyRanks(nodes, edges);
       const colWidth = 350, rowHeight = 92, nodeWidth = 280, nodeHeight = 64;
       const pos = {{}};
-      // Module bands keep boxes disjoint while dependency rank sets horizontal position.
+      const totalNodesByModule = new Map();
+      (reactlogData.nodes || []).forEach(n => {{
+        const mKey = n.module || '';
+        totalNodesByModule.set(mKey, (totalNodesByModule.get(mKey) || 0) + 1);
+      }});
+
       const bands = new Map();
       nodes.forEach(n => {{ const key = n.module || ''; if (!bands.has(key)) bands.set(key, []); bands.get(key).push(n); }});
       let top = 70;
@@ -3900,6 +3905,10 @@ def format_reactlog_html(
             box.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(name); }} }};
           }}
           const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          const totalModNodes = totalNodesByModule.get(name) || members.length;
+          const countText = members.length < totalModNodes
+            ? `${{members.length}}/${{totalModNodes}} nodes`
+            : `${{members.length}} node${{members.length === 1 ? '' : 's'}}`;
           rect.setAttribute('x', left);
           rect.setAttribute('y', top - 28);
           rect.setAttribute('width', Math.max(320, right - left));
@@ -3927,7 +3936,7 @@ def format_reactlog_html(
             label.setAttribute('y', top - 8);
             label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
             label.setAttribute('font-size', '12');
-            label.innerHTML = nodeLabelHTML({{ label: name, module: name }}, true) + escapeHTML(` · ${{members.length}} nodes · click to collapse`);
+            label.innerHTML = nodeLabelHTML({{ label: name, module: name }}, true) + escapeHTML(` · ${{countText}} · click to collapse`);
             headerBtn.appendChild(label);
 
             const textWidth = (label.getComputedTextLength && label.getComputedTextLength()) || (name.length * 8 + 190);
@@ -3975,7 +3984,7 @@ def format_reactlog_html(
             label.setAttribute('y', top - 8);
             label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
             label.setAttribute('font-size', '12');
-            label.textContent = escapeHTML(`App · ${{members.length}} nodes`);
+            label.textContent = escapeHTML(`App · ${{countText}}`);
             box.appendChild(label);
           }}
           svg.appendChild(box);
@@ -4156,7 +4165,11 @@ def format_reactlog_html(
         subText.setAttribute('y', p.y + 14);
         subText.setAttribute('fill', state === 'frozen' ? '#e2e8f0' : '#1e293b');
         subText.setAttribute('font-size', '12px');
-        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · click to expand` : `${{kind.label}} · ${{state}}`;
+        const totalModNodes = n.module ? (totalNodesByModule.get(n.module) || n.members.length) : (n.members ? n.members.length : 0);
+        const modCountText = n.members && n.members.length < totalModNodes
+          ? `${{n.members.length}}/${{totalModNodes}} nodes`
+          : `${{n.members ? n.members.length : 0}} node${{n.members && n.members.length === 1 ? '' : 's'}}`;
+        subText.textContent = n.type === 'module' ? `${{modCountText}} · click to expand` : `${{kind.label}} · ${{state}}`;
         g.appendChild(subText);
 
         const execCount = execCounts.get(n.id) || 0;
