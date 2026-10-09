@@ -291,6 +291,7 @@ quartodoc:
             - session.session_context
             - reactive.get_current_context
             - session.ClientData
+            - session.Session.user_data
             - session.Session.send_custom_message
             - session.Session.send_input_message
             - session.Session.on_flush

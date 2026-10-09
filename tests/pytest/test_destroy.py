@@ -555,6 +555,7 @@ def _make_mock_root_session() -> Session:
             self.output = Outputs(cast(Session, self), ns=ResolvedId(""), outputs={})
             self._outbound_message_queues = MockOutboundQueues()
             self._downloads: dict[str, Any] = {}
+            self.user_data: dict[str, Any] = {}
             self._message_handlers: dict[str, Any] = {}
             self._dynamic_routes: dict[str, Any] = {}
             self.bookmark = MockBookmark()

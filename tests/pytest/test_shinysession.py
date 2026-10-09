@@ -20,6 +20,45 @@ def test_stub_session_user_groups():
     assert stub.groups is None
 
 
+def test_stub_session_user_data():
+    from shiny.express._stub_session import ExpressStubSession
+
+    stub = ExpressStubSession()
+    assert stub.user_data == {}
+    stub.user_data["token"] = "abc"
+    assert stub.user_data["token"] == "abc"
+
+
+@pytest.mark.asyncio
+async def test_session_user_data():
+    """`session.user_data` is a plain per-session dict, shared with module sessions."""
+    captured: dict[str, object] = {}
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session):
+        # The module session shares the root session's dict (not a copy).
+        session.user_data["from_module"] = 1
+        captured["mod_user_data"] = session.user_data
+
+    def server(input: Inputs, output: Outputs, session: Session):
+        session.user_data["from_root"] = 2
+        mod("m")
+        captured["root_user_data"] = session.user_data
+
+    conn = MockConnection()
+    sess = App(ui.TagList(), server)._create_session(conn)
+
+    async def mock_client():
+        conn.cause_receive('{"method":"init","data":{}}')
+        conn.cause_disconnect()
+
+    await asyncio.gather(mock_client(), sess._run())
+
+    assert captured["root_user_data"] == {"from_root": 2, "from_module": 1}
+    # Same object, so writes via one session are visible via the other.
+    assert captured["mod_user_data"] is captured["root_user_data"]
+
+
 @pytest.mark.asyncio
 async def test_module_session_user_groups():
     """SessionProxy (module session) should delegate user/groups to the root session."""

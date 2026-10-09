@@ -35,6 +35,7 @@ class ExpressStubSession(Session):
         self.id = "express_stub_session"
         self.input = Inputs({})
         self.output = Outputs(self, self.ns, outputs={})
+        self.user_data: dict[str, Any] = {}
 
         # Set these values to None just to satisfy the abstract base class to make this
         # code run -- these things should not be used at run time, so None will work as

@@ -257,6 +257,20 @@ class Session(ABC):
     # session.
     bookmark: Bookmark
 
+    user_data: dict[str, Any]
+    """
+    A dictionary for storing arbitrary per-session data.
+
+    This is a place to keep session-specific state that is not reactive and
+    should not be shared across sessions, such as credentials or objects that
+    don't belong in a :class:`~shiny.reactive.Value`.
+
+    The dictionary is shared with module sessions: reading or writing
+    `session.user_data` inside a module accesses the same dictionary as the
+    root session. It lives in the server process's memory only, and is
+    discarded when the session ends.
+    """
+
     @property
     @abstractmethod
     def user(self) -> str | None: ...
@@ -936,6 +950,8 @@ class AppSession(Session):
         self.clientdata: ClientData = ClientData(self)
 
         self.bookmark: Bookmark = BookmarkApp(self)
+
+        self.user_data: dict[str, Any] = {}
 
         self._user: str | None = None
         self._groups: list[str] | None = None
@@ -1850,6 +1866,10 @@ class SessionProxy(Session):
         self.clientdata = ClientData(self)
         self._outbound_message_queues = root_session._outbound_message_queues
         self._downloads = root_session._downloads
+
+        # Share the root session's user_data dictionary, so that modules and
+        # the app see the same per-session data.
+        self.user_data = root_session.user_data
 
         self.bookmark = BookmarkProxy(self)
 
