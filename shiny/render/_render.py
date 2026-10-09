@@ -6,7 +6,7 @@ import sys
 import typing
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, cast
 
-from htmltools import Tag, TagAttrValue, TagChild
+from htmltools import Tag, TagAttrValue, TagChild, TagFunction
 
 from ._data_frame_utils._tbl_data import as_data_frame
 from ._data_frame_utils._types import IntoDataFrame
@@ -23,6 +23,7 @@ from ..module import ResolvedId
 from ..session import require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
+from ..ui._plot_output_opts import BrushOpts, ClickOpts, DblClickOpts, HoverOpts
 from ._try_render_plot import (
     PlotSizeInfo,
     try_render_matplotlib,
@@ -89,9 +90,11 @@ class text(Renderer[str]):
         self,
         *,
         inline: bool | MISSING_TYPE = MISSING,
+        container: Optional[TagFunction] | MISSING_TYPE = MISSING,
     ) -> Tag:
         kwargs: dict[str, Any] = {}
         set_kwargs_value(kwargs, "inline", inline, self.inline)
+        set_kwargs_value(kwargs, "container", container)
 
         return _ui.output_text(self.output_id, **kwargs)
 
@@ -239,16 +242,24 @@ class plot(Renderer[object]):
         *,
         width: str | float | int | MISSING_TYPE = MISSING,
         height: str | float | int | MISSING_TYPE = MISSING,
-        **kwargs: object,
+        inline: bool | MISSING_TYPE = MISSING,
+        click: bool | ClickOpts | MISSING_TYPE = MISSING,
+        dblclick: bool | DblClickOpts | MISSING_TYPE = MISSING,
+        hover: bool | HoverOpts | MISSING_TYPE = MISSING,
+        brush: bool | BrushOpts | MISSING_TYPE = MISSING,
+        fill: bool | MISSING_TYPE = MISSING,
     ) -> Tag:
         # Only set the arg if it is available. (Prevents duplicating default values)
+        kwargs: dict[str, Any] = {}
         set_kwargs_value(kwargs, "width", width, self.width)
         set_kwargs_value(kwargs, "height", height, self.height)
-        return _ui.output_plot(
-            self.output_id,
-            # (possibly) contains `width` and `height` keys!
-            **kwargs,  # pyright: ignore[reportArgumentType]
-        )
+        set_kwargs_value(kwargs, "inline", inline)
+        set_kwargs_value(kwargs, "click", click)
+        set_kwargs_value(kwargs, "dblclick", dblclick)
+        set_kwargs_value(kwargs, "hover", hover)
+        set_kwargs_value(kwargs, "brush", brush)
+        set_kwargs_value(kwargs, "fill", fill)
+        return _ui.output_plot(self.output_id, **kwargs)
         # TODO: Deal with output width/height separately from render width/height?
 
     def __init__(
@@ -409,11 +420,29 @@ class image(Renderer[ImgData]):
     * :class:`~shiny.render.plot`
     """
 
-    def auto_output_ui(self, **kwargs: object):
-        return _ui.output_image(
-            self.output_id,
-            **kwargs,  # pyright: ignore[reportArgumentType]
-        )
+    def auto_output_ui(
+        self,
+        *,
+        width: str | float | int | MISSING_TYPE = MISSING,
+        height: str | float | int | MISSING_TYPE = MISSING,
+        inline: bool | MISSING_TYPE = MISSING,
+        click: bool | ClickOpts | MISSING_TYPE = MISSING,
+        dblclick: bool | DblClickOpts | MISSING_TYPE = MISSING,
+        hover: bool | HoverOpts | MISSING_TYPE = MISSING,
+        brush: bool | BrushOpts | MISSING_TYPE = MISSING,
+        fill: bool | MISSING_TYPE = MISSING,
+    ) -> Tag:
+        # Only set the arg if it is available. (Prevents duplicating default values)
+        kwargs: dict[str, Any] = {}
+        set_kwargs_value(kwargs, "width", width)
+        set_kwargs_value(kwargs, "height", height)
+        set_kwargs_value(kwargs, "inline", inline)
+        set_kwargs_value(kwargs, "click", click)
+        set_kwargs_value(kwargs, "dblclick", dblclick)
+        set_kwargs_value(kwargs, "hover", hover)
+        set_kwargs_value(kwargs, "brush", brush)
+        set_kwargs_value(kwargs, "fill", fill)
+        return _ui.output_image(self.output_id, **kwargs)
         # TODO: Make width/height handling consistent with render_plot
 
     def __init__(
@@ -584,8 +613,22 @@ class ui(Renderer[TagChild]):
     * :func:`~shiny.ui.output_ui`
     """
 
-    def auto_output_ui(self) -> Tag:
-        return _ui.output_ui(self.output_id)
+    def auto_output_ui(
+        self,
+        *,
+        inline: bool | MISSING_TYPE = MISSING,
+        container: Optional[TagFunction] | MISSING_TYPE = MISSING,
+        fill: bool | MISSING_TYPE = MISSING,
+        fillable: bool | MISSING_TYPE = MISSING,
+        **kwargs: TagAttrValue,
+    ) -> Tag:
+        # Only set the arg if it is available. (Prevents duplicating default values)
+        ui_kwargs: dict[str, Any] = {**kwargs}
+        set_kwargs_value(ui_kwargs, "inline", inline)
+        set_kwargs_value(ui_kwargs, "container", container)
+        set_kwargs_value(ui_kwargs, "fill", fill)
+        set_kwargs_value(ui_kwargs, "fillable", fillable)
+        return _ui.output_ui(self.output_id, **ui_kwargs)
 
     async def transform(self, value: TagChild) -> Jsonifiable:
         session = require_active_session(None)
@@ -769,14 +812,16 @@ class download_button(_DownloadBase):
     def auto_output_ui(
         self,
         *,
-        width: str | MISSING_TYPE = MISSING,
+        label: TagChild | MISSING_TYPE = MISSING,
+        width: Optional[str] | MISSING_TYPE = MISSING,
         icon: TagChild | MISSING_TYPE = MISSING,
         **kwargs: TagAttrValue,
     ) -> Tag:
         ui_kwargs: dict[str, Any] = {**self.attrs, **kwargs}
+        set_kwargs_value(ui_kwargs, "label", label, self.label)
         set_kwargs_value(ui_kwargs, "width", width, self.width)
-        ui_kwargs["icon"] = self.icon if isinstance(icon, MISSING_TYPE) else icon
-        return _ui.download_button(self.output_id, label=self.label, **ui_kwargs)
+        set_kwargs_value(ui_kwargs, "icon", icon, self.icon)
+        return _ui.download_button(self.output_id, **ui_kwargs)
 
 
 @add_example(example_name="download_link")
@@ -832,14 +877,16 @@ class download_link(_DownloadBase):
     def auto_output_ui(
         self,
         *,
-        width: str | MISSING_TYPE = MISSING,
+        label: TagChild | MISSING_TYPE = MISSING,
+        width: Optional[str] | MISSING_TYPE = MISSING,
         icon: TagChild | MISSING_TYPE = MISSING,
         **kwargs: TagAttrValue,
     ) -> Tag:
         ui_kwargs: dict[str, Any] = {**self.attrs, **kwargs}
+        set_kwargs_value(ui_kwargs, "label", label, self.label)
         set_kwargs_value(ui_kwargs, "width", width, self.width)
-        ui_kwargs["icon"] = self.icon if isinstance(icon, MISSING_TYPE) else icon
-        return _ui.download_link(self.output_id, label=self.label, **ui_kwargs)
+        set_kwargs_value(ui_kwargs, "icon", icon, self.icon)
+        return _ui.download_link(self.output_id, **ui_kwargs)
 
 
 @add_example(example_name="download")

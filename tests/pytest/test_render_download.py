@@ -86,10 +86,10 @@ def test_download_auto_ui_takes_icon_and_attributes(
     # `output_args()` overrides what the decorator was given
     other_icon = ui.tags.i(class_="fa-solid fa-file")
 
-    @output_args(icon=other_icon, title="Get the report")
+    @output_args(label="Get it", icon=other_icon, title="Get the report")
     @renderer(filename="report.txt", icon=icon)
     async def report2() -> AsyncIterable[str]:
         yield "hello"
 
-    expected = ui_fn("report2", "Download", icon=other_icon, title="Get the report")
+    expected = ui_fn("report2", "Get it", icon=other_icon, title="Get the report")
     assert str(report2.tagify()) == str(expected)

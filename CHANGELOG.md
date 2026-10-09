@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Navigation links that target a tab panel (e.g. in `ui.navset_tab()`) now carry `aria-controls` pointing at the panel's `id`, alongside the existing `href` (rstudio/bslib#1355). (#2526)
 
+* In Express, `@output_args()` now accepts every argument of the output's UI function, with matching types. `@render.ui` now takes `inline`, `container`, `fill`, `fillable`, and HTML attributes, instead of raising a `TypeError`. `@render.text` now takes `container`. `@render.plot` and `@render.image` now declare `inline`, `click`, `dblclick`, `hover`, `brush`, and `fill` explicitly (and `width` and `height` for `@render.image`), instead of accepting any keyword. `@render.download_button()` and `@render.download_link()` now take `label`. (#2539)
+
 ### Bug fixes
 
 * `Jsonifiable` now uses `Sequence` and `Mapping` for its container arms instead of `List` and `Dict`, which are invariant. Values like `dict[str, int]` and `list[str]` now type-check as `Jsonifiable`, including as the return type of a function passed to a `Renderer[Jsonifiable]`. As a side effect, type checkers also accept other sequences and mappings, such as `range`, `deque`, and `bytes`, even though only `list`, `tuple`, and `dict` serialize. Nothing changes at runtime. (Thanks, @wolfgang-aura!) (#2511)
