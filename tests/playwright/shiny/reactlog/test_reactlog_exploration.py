@@ -111,6 +111,10 @@ def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page
     expect(page.locator(".graph-node")).to_have_count(2)
     expect(page.locator("#filter-node-count")).to_have_text("2 of 5 nodes")
     page.locator('.graph-node[data-id="calc:doubled"]').click()
+    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_have_class(
+        re.compile(r"is-selected")
+    )
+    page.locator("#btn-toggle-inspector").click()
     expect(page.locator("#sidebar")).to_be_visible()
     expect(page.locator("#why-story")).to_contain_text("input.x")
     page.get_by_role("button", name="Zoom in", exact=True).click()
@@ -134,6 +138,7 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
     page.locator("#search-input").fill("id:calc:doubled")
     page.locator("#search-results button").click()
     expect(page.locator("#module-overview-panel")).to_be_hidden()
+    page.locator("#btn-toggle-inspector").click()
     expect(page.locator("#sidebar")).to_be_visible()
     expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
@@ -315,3 +320,36 @@ def test_details_overlay_does_not_resize_graph(page: Page):
     expect(page.locator("#source-panel")).to_be_visible()
     expect(page.locator("#timeline-panel")).to_be_hidden()
     assert graph.bounding_box() == before
+
+
+def test_node_click_highlights_without_opening_sidebar(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    node = page.locator('.graph-node[data-id="calc:doubled"]')
+    node.click()
+    expect(node).to_have_class(re.compile(r"is-selected"))
+    expect(page.locator("#sidebar")).to_be_hidden()
+
+    node.dblclick()
+    expect(page.locator("#search-input")).to_have_value(re.compile(r"doubled"))
+    expect(page.locator("#secondary-timeline-bar")).to_be_visible()
+
+
+def test_secondary_timeline_flush_milestones_and_seeking(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    badge = page.locator("#flush-counter-badge")
+    badge.click()
+    sec_bar = page.locator("#secondary-timeline-bar")
+    expect(sec_bar).to_be_visible()
+
+    pills = page.locator(".secondary-stage-pill")
+    expect(pills.first).to_be_visible()
+    count = pills.count()
+    assert count >= 2
+
+    last_pill = pills.last
+    last_step = last_pill.get_attribute("data-step")
+    last_pill.click()
+    expect(page.locator("#scrubber-range")).to_have_value(str(last_step))
+
+    page.locator("#btn-close-secondary-timeline").click()
+    expect(sec_bar).to_be_hidden()

@@ -673,6 +673,7 @@ def server(input, output, session):
     expect(page.locator("#actions-tab, #timeline-tab")).to_have_count(0)
 
     graph_node(page, _node(reactlog, "reactive.calc calc_b")).click()
+    page.get_by_role("button", name="Node details", exact=True).click()
     drawer_toggle = page.locator("#btn-toggle-source-drawer")
     expect(drawer_toggle).to_be_visible()
 
@@ -1018,8 +1019,8 @@ def server(input, output, session):
     expect(line_nums.nth(3)).to_have_text("4")
 
     # 2. Check inline drawer line numbers: the snippet starts at the recorded line.
-    page.get_by_role("button", name="Node details", exact=True).click()
     graph_node(page, _node(reactlog, "reactive.calc double_val")).click()
+    page.get_by_role("button", name="Node details", exact=True).click()
     page.locator("#btn-toggle-source-drawer").click()
 
     drawer_line_nums = page.locator("#insp-source-code .source-line-num")
@@ -1434,6 +1435,7 @@ def server(input, output, session):
     report = _record(tmp_path, code, [{"units": 1, **_visible("out")}])
     load_graph_report(page, format_reactlog_html(report, code))
     graph_node(page, _node(report, "reactive.calc amount")).click()
+    page.get_by_role("button", name="Node details", exact=True).click()
     page.locator("#btn-toggle-source-drawer").click()
     snippet = page.locator("#insp-source-code")
     expect(snippet.locator(".syntax-keyword").first).to_have_text("def")
