@@ -287,7 +287,15 @@ def load_reactlog_json(
         action = str(item.get("action") or item.get("event") or "")
         nid = item.get("reactId") or item.get("node_id") or item.get("id")
         lbl = item.get("label") or item.get("node_label") or nid or ""
-        ntype = item.get("type") or item.get("node_type") or "calc"
+        ntype = item.get("type") or item.get("node_type")
+        if not ntype and nid and str(nid) in nodes_map:
+            ntype = nodes_map[str(nid)].get("type") or nodes_map[str(nid)].get(
+                "node_type"
+            )
+        if not ntype:
+            ntype = "calc"
+        if (not lbl or lbl == nid) and nid and str(nid) in nodes_map:
+            lbl = nodes_map[str(nid)].get("label") or lbl
         val = item.get("value")
         val_str = str(val) if val is not None else None
 
@@ -469,8 +477,18 @@ def load_reactlog_json(
                 action=action,
             )
             if is_inval:
-                ev_dict["invalidated_node_ids"] = [str(nid)] if nid else []
-                ev_dict["invalidated_node_labels"] = [str(lbl)] if lbl else []
+                raw_inv_ids = item.get("invalidated_node_ids")
+                if isinstance(raw_inv_ids, list):
+                    ev_dict["invalidated_node_ids"] = [str(x) for x in raw_inv_ids if x]
+                else:
+                    ev_dict["invalidated_node_ids"] = [str(nid)] if nid else []
+                raw_inv_lbls = item.get("invalidated_node_labels")
+                if isinstance(raw_inv_lbls, list):
+                    ev_dict["invalidated_node_labels"] = [
+                        str(x) for x in raw_inv_lbls if x
+                    ]
+                else:
+                    ev_dict["invalidated_node_labels"] = [str(lbl)] if lbl else []
                 if not item.get("details"):
                     ev_dict["details"] = (
                         f"Invalidated '{lbl}'" if lbl else "Invalidation phase"
@@ -1732,9 +1750,54 @@ def format_reactlog_html(
       s = s.replace(/^(input|output|calc|effect)[:.]/, '');
       s = s.replace(/^(input#|#)/, '');
       s = s.replace(/^(on[,\\s]+)/i, '');
-      s = s.replace(/^[.#]/, '');
+      s = s.replace(/^[.#$]/, '');
       s = s.split('=')[0].trim();
       return s;
+    }}
+
+    function friendlyNodeName(nodeOrId) {{
+      if (!nodeOrId) return '';
+      const node = (typeof nodeIndex !== 'undefined' && nodeIndex.get(nodeOrId)) ||
+        ((reactlogData.nodes || []).find(n => n.id === nodeOrId)) ||
+        (typeof nodeOrId === 'object' ? nodeOrId : null);
+
+      let raw = node ? (node.label || node.name || node.id || '') : String(nodeOrId);
+      const mod = node ? (node.module || '') : '';
+      const line = node ? node.line : null;
+      const role = node ? (node.role || node.type || '') : '';
+
+      let cleanMod = mod;
+      if (cleanMod) {{
+        cleanMod = cleanMod.replace(/_wrapper(-[a-zA-Z0-9_]+)?$/, '').replace(/-[a-zA-Z0-9_]+$/, '');
+      }}
+
+      const isAnon = raw.includes('<anonymous>');
+      const isRawId = /^r\\d+$/.test(raw);
+      if (isAnon || isRawId) {{
+        const prefix = (role === 'conductor' || role === 'calc' || raw.includes('calc')) ? 'calc' : 'effect';
+        if (cleanMod) return `${{prefix}} (${{cleanMod}})`;
+        if (line) return `${{prefix}} (line ${{line}})`;
+        return prefix;
+      }}
+
+      let s = cleanName(raw);
+      s = s.replace(/^(reactive\\.effect|reactive\\.calc)\\s*/, '');
+      s = s.replace(/^\\.clientdata_output_/, '').replace(/^\\.clientdata_/, '').replace(/_hidden$/, '');
+      s = s.replace(/^[.#$]/, '');
+
+      const colonParts = s.split(':');
+      if (colonParts.length === 2 && colonParts[0] && colonParts[1]) {{
+        const prefixMod = colonParts[0].trim();
+        const name = colonParts[1].trim();
+        const displayMod = cleanMod || prefixMod;
+        return displayMod ? `${{name}} (${{displayMod}})` : name;
+      }}
+
+      s = s.trim();
+      if (cleanMod && !s.endsWith(`(${{cleanMod}})`)) {{
+        return `${{s}} (${{cleanMod}})`;
+      }}
+      return s || raw;
     }}
 
     function formatHumanValue(val) {{
@@ -1823,18 +1886,19 @@ def format_reactlog_html(
       actionWaves = [];
       allBursts = [];
       const events = reactlogData.events || reactlogData.log || [];
+      const nodeMap = new Map();
       const lastKnownValues = new Map();
       const waveInitialValues = new Map();
       (reactlogData.nodes || []).forEach(n => {{
+        if (n.id) nodeMap.set(n.id, n);
         if (n.value !== undefined && n.value !== null) {{
           lastKnownValues.set(cleanName(n.name || n.id), n.value);
         }}
       }});
       let initWave = null;
       let curWave = null;
-      // Recorded ids (`r3`) carry no name; use the node's label instead.
-      const nodeLabels = new Map((reactlogData.nodes || []).map(n => [n.id, n.label]));
-      const waveNodeName = nId => cleanName(nId.includes(':') ? nId : (nodeLabels.get(nId) || nId));
+      // Recorded ids (`r3`) carry no name; use friendlyNodeName instead.
+      const waveNodeName = nId => friendlyNodeName(nId);
 
       events.forEach((ev, idx) => {{
         const evAction = ev.action || ev.event || '';
@@ -1898,10 +1962,11 @@ def format_reactlog_html(
             return;
           }}
           const nId = ev.node_id || ev.id || '';
+          const nNode = nodeMap.get(nId);
           // Recorded (live) reactlogs identify inputs by type, not an `input:` id.
-          const isInputNode = ev.type === 'input' || ev.node_type === 'input';
+          const isInputNode = ev.type === 'input' || ev.node_type === 'input' || (nNode && (nNode.type === 'input' || nNode.role === 'source'));
           const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || (isInputNode && evAction === 'valueChange');
-          const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
+          const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label || (nNode && nNode.label)) : '') || nId || ev.details || (nNode && nNode.label) || '';
           const inputName = cleanName(raw);
           const isSameInput = Boolean(curWave && inputName && curWave.inputs.some(item => item.name === inputName));
           const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0 && !isSameInput;
@@ -1975,12 +2040,12 @@ def format_reactlog_html(
                 existingInput.value = newVal;
               }}
             }}
-          }} else if (isExecution && nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor'))) {{
+          }} else if (isExecution && nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor') || (nNode && (nNode.type === 'calc' || nNode.role === 'conductor')))) {{
             const name = waveNodeName(nId);
             if (name && !curWave.calcs.some(item => item.name === name)) {{
               curWave.calcs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
-          }} else if (isExecution && nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer'))) {{
+          }} else if (isExecution && nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer') || (nNode && (nNode.type === 'output' || nNode.role === 'observer')))) {{
             const name = waveNodeName(nId);
             if (name && !curWave.outputs.some(item => item.name === name)) {{
               curWave.outputs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
@@ -2155,8 +2220,8 @@ def format_reactlog_html(
         const act = ev.action || ev.event || '';
         if (ev.phase === 'interaction' || act === 'inputChange' || act === 'userClick' || act === 'userAction' || act === 'valueChange') {{
           triggerStep = s;
-          if (ev.details || ev.node_label || ev.label) {{
-            triggerLabel = cleanName(ev.details || ev.node_label || ev.label);
+          if (!wave.humanAction && (ev.node_id || ev.id || ev.node_label || ev.label)) {{
+            triggerLabel = friendlyNodeName(ev.node_id || ev.id || ev.node_label || ev.label);
           }}
           break;
         }}
@@ -2180,7 +2245,7 @@ def format_reactlog_html(
             break;
           }}
         }}
-        const invArray = Array.from(wave.invalidatedNodes).map(cleanName).filter(Boolean);
+        const invArray = [...new Set(Array.from(wave.invalidatedNodes).map(friendlyNodeName).filter(Boolean))];
         let invLabel = '';
         if (invArray.length === 1) {{
           invLabel = invArray[0];
@@ -2209,7 +2274,7 @@ def format_reactlog_html(
             break;
           }}
         }}
-        const calcArray = wave.calcs.map(c => cleanName(c.name || c.id)).filter(Boolean);
+        const calcArray = [...new Set(wave.calcs.map(c => friendlyNodeName(c.nodeId || c.name || c.id)).filter(Boolean))];
         let calcLabel = '';
         if (calcArray.length === 1) {{
           calcLabel = calcArray[0];
@@ -2238,7 +2303,7 @@ def format_reactlog_html(
             break;
           }}
         }}
-        const outArray = wave.outputs.map(o => cleanName(o.name || o.id)).filter(Boolean);
+        const outArray = [...new Set(wave.outputs.map(o => friendlyNodeName(o.nodeId || o.name || o.id)).filter(Boolean))];
         let outLabel = '';
         if (outArray.length === 1) {{
           outLabel = outArray[0];

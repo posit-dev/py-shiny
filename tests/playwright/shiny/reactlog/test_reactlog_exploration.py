@@ -364,3 +364,68 @@ def test_filtered_module_box_shows_fractional_node_count(page: Page):
 
     page.locator("#search-input").fill("other")
     expect(page.locator(".app-box text")).to_have_text("App · 1/3 nodes")
+
+
+def test_secondary_timeline_displays_friendly_node_names_for_anonymous_effects(
+    page: Page,
+):
+    raw_report = {
+        "version": "1.0",
+        "nodes": [
+            {
+                "id": "r18",
+                "label": "input.button",
+                "role": "source",
+                "type": "input",
+                "module": "counter2_wrapper-counter",
+            },
+            {
+                "id": "r19",
+                "label": "reactive.effect event counter2_wrapper-counter:<anonymous>",
+                "role": "observer",
+                "type": "output",
+                "module": "counter2_wrapper-counter",
+                "line": 24,
+            },
+            {
+                "id": "r30",
+                "label": "reactive.effect event counter3:<anonymous>",
+                "role": "observer",
+                "type": "output",
+                "module": "counter3",
+                "line": 24,
+            },
+        ],
+        "edges": [
+            {"from": "r18", "to": "r19"},
+            {"from": "r18", "to": "r30"},
+        ],
+        "events": [
+            {
+                "step": 0,
+                "action": "valueChange",
+                "phase": "interaction",
+                "id": "r18",
+                "value": "1",
+                "details": "button changed",
+            },
+            {
+                "step": 1,
+                "action": "invalidate",
+                "id": "r19",
+                "invalidated_node_ids": ["r19", "r30"],
+            },
+            {"step": 2, "action": "output", "id": "r19", "type": "output"},
+            {"step": 3, "action": "output", "id": "r30", "type": "output"},
+        ],
+    }
+    loaded = load_reactlog_json(raw_report)
+    page.set_content(format_reactlog_html(loaded, ""))
+    page.locator("#flush-counter-badge").click()
+    expect(page.locator("#secondary-timeline-bar")).to_be_visible()
+
+    inv_pill = page.locator(".secondary-stage-pill.pill-invalidation")
+    expect(inv_pill).to_be_visible()
+    expect(inv_pill).to_contain_text("effect (counter2), effect (counter3)")
+    expect(inv_pill).not_to_contain_text("r19")
+    expect(inv_pill).not_to_contain_text("r30")
