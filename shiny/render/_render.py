@@ -662,6 +662,8 @@ class _DownloadBase(Renderer[str]):
         encoding: str = "utf-8",
         label: TagChild = "Download",
         width: str | None = None,
+        icon: TagChild = None,
+        **kwargs: TagAttrValue,
     ) -> None:
         super().__init__()
 
@@ -670,6 +672,8 @@ class _DownloadBase(Renderer[str]):
         self.encoding = encoding
         self.label = label
         self.width = width
+        self.icon = icon
+        self.attrs = kwargs
 
         if fn is not None:
             self(fn)
@@ -774,6 +778,10 @@ class download_button(_DownloadBase):
         (Express only) A label for the button. Defaults to "Download".
     width
         (Express only) The width of the button.
+    icon
+        (Express only) An icon to display on the button.
+    **kwargs
+        (Express only) Additional attributes for the button.
 
     Returns
     -------
@@ -805,10 +813,13 @@ class download_button(_DownloadBase):
         self,
         *,
         width: str | MISSING_TYPE = MISSING,
+        icon: TagChild | MISSING_TYPE = MISSING,
+        **kwargs: TagAttrValue,
     ) -> Tag:
-        kwargs: dict[str, Any] = {}
-        set_kwargs_value(kwargs, "width", width, self.width)
-        return _ui.download_button(self.output_id, label=self.label, **kwargs)
+        ui_kwargs: dict[str, Any] = {**self.attrs, **kwargs}
+        set_kwargs_value(ui_kwargs, "width", width, self.width)
+        ui_kwargs["icon"] = self.icon if isinstance(icon, MISSING_TYPE) else icon
+        return _ui.download_button(self.output_id, label=self.label, **ui_kwargs)
 
 
 @add_example(example_name="download_link")
@@ -831,6 +842,10 @@ class download_link(_DownloadBase):
         (Express only) A label for the link. Defaults to "Download".
     width
         (Express only) The width of the link.
+    icon
+        (Express only) An icon to display on the link.
+    **kwargs
+        (Express only) Additional attributes for the link.
 
     Returns
     -------
@@ -861,10 +876,13 @@ class download_link(_DownloadBase):
         self,
         *,
         width: str | MISSING_TYPE = MISSING,
+        icon: TagChild | MISSING_TYPE = MISSING,
+        **kwargs: TagAttrValue,
     ) -> Tag:
-        kwargs: dict[str, Any] = {}
-        set_kwargs_value(kwargs, "width", width, self.width)
-        return _ui.download_link(self.output_id, label=self.label, **kwargs)
+        ui_kwargs: dict[str, Any] = {**self.attrs, **kwargs}
+        set_kwargs_value(ui_kwargs, "width", width, self.width)
+        ui_kwargs["icon"] = self.icon if isinstance(icon, MISSING_TYPE) else icon
+        return _ui.download_link(self.output_id, label=self.label, **ui_kwargs)
 
 
 @add_example(example_name="download")
