@@ -262,7 +262,8 @@ def page(_session_context: BrowserContext, _session_page_holder: list[Page]) -> 
     The page is maintained over the full session and reset by visiting
     "about:blank" between apps. If the page has become unusable (crashed or
     wedged so navigations no longer commit), it is replaced with a new page.
-    The default viewport size is set to 1920 x 1080 (1080p) for each test function.
+    The default viewport size is set to 1920 x 1080 (1080p) and the mouse is moved
+    to (0, 0) for each test function.
     Parameters:
         _session_context (BrowserContext): The browser context used to create replacement pages.
         _session_page_holder (list[Page]): Holder for the shared page.
@@ -297,6 +298,10 @@ def page(_session_context: BrowserContext, _session_page_holder: list[Page]) -> 
         _session_page_holder.append(session_page)
     # Reset screen size to 1080p
     session_page.set_viewport_size({"width": 1920, "height": 1080})
+    # Park the cursor in the corner. Otherwise it stays where the previous test
+    # left it, and Firefox fires `mouseenter` on whatever loads beneath it (e.g.
+    # opening a tooltip before the test has touched the page).
+    session_page.mouse.move(0, 0)
     return session_page
 
 
