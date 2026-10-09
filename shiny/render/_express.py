@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from htmltools import Tag, TagAttrValue, TagFunction, TagList, wrap_displayhook_handler
 
@@ -9,9 +9,9 @@ from .. import ui as _ui
 from .._docstring import add_example
 from .._typing_extensions import Self
 from ..session._utils import require_active_session
-from ..types import MISSING, MISSING_TYPE, JsonifiableDict
+from ..types import JsonifiableDict
 from .renderer import AsyncValueFn, Renderer, ValueFn
-from .renderer._utils import rendered_deps_to_jsonifiable, set_kwargs_value
+from .renderer._utils import rendered_deps_to_jsonifiable
 
 
 @add_example(example_name="render_express")
@@ -42,26 +42,16 @@ class express(Renderer[None]):
     * ~shiny.express.ui.hold
     """
 
-    def auto_output_ui(
-        self,
-        *,
-        inline: bool | MISSING_TYPE = MISSING,
-        container: TagFunction | MISSING_TYPE = MISSING,
-        fill: bool | MISSING_TYPE = MISSING,
-        fillable: bool | MISSING_TYPE = MISSING,
-        **kwargs: TagAttrValue,
-    ) -> Tag:
-        # Only set the arg if it is available. (Prevents duplicating default values)
-        set_kwargs_value(kwargs, "inline", inline, self.inline)
-        set_kwargs_value(kwargs, "container", container, self.container)
-        set_kwargs_value(kwargs, "fill", fill, self.fill)
-        set_kwargs_value(kwargs, "fillable", fillable, self.fillable)
-
-        return _ui.output_ui(
-            self.output_id,
-            # (possibly) contains `inline`, `container`, `fill`, and `fillable` keys!
-            **kwargs,  # pyright: ignore[reportArgumentType]
-        )
+    def auto_output_ui(self, **kwargs: object) -> Tag:
+        # `@output_args()` values (`kwargs`) win over the renderer's own
+        ui_kwargs: dict[str, Any] = {
+            "inline": self.inline,
+            "container": self.container,
+            "fill": self.fill,
+            "fillable": self.fillable,
+            **kwargs,
+        }
+        return _ui.output_ui(self.output_id, **ui_kwargs)
 
     def __call__(self, fn: ValueFn[None]) -> Self:
         if fn is None:  # pyright: ignore[reportUnnecessaryComparison]

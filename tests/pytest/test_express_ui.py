@@ -72,6 +72,27 @@ def test_render_output_controls():
     with pytest.raises(TypeError, match="width"):
         code2.tagify()
 
+    # `output_args()` overrides what the decorator was given
+    @output_args(inline=False)
+    @render.text(inline=True)
+    def text2():
+        return "text"
+
+    assert (
+        ui.TagList(text2.tagify()).get_html_string()
+        == ui.output_text("text2", inline=False).get_html_string()
+    )
+
+    @output_args(fill=False, class_="foo")
+    @render.express(inline=True, fill=True)
+    def expr1():
+        "text"
+
+    assert (
+        ui.TagList(expr1.tagify()).get_html_string()
+        == ui.output_ui("expr1", inline=True, class_="foo").get_html_string()
+    )
+
     @render.download_button
     def dl_btn():
         yield "data"

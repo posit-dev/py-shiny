@@ -85,15 +85,9 @@ class text(Renderer[str]):
     * :func:`~shiny.ui.output_text`
     """
 
-    def auto_output_ui(
-        self,
-        *,
-        inline: bool | MISSING_TYPE = MISSING,
-    ) -> Tag:
-        kwargs: dict[str, Any] = {}
-        set_kwargs_value(kwargs, "inline", inline, self.inline)
-
-        return _ui.output_text(self.output_id, **kwargs)
+    def auto_output_ui(self, **kwargs: object) -> Tag:
+        ui_kwargs: dict[str, Any] = {"inline": self.inline, **kwargs}
+        return _ui.output_text(self.output_id, **ui_kwargs)
 
     def __init__(
         self,
@@ -146,14 +140,9 @@ class code(Renderer[str]):
     * :func:`~shiny.ui.output_code`
     """
 
-    def auto_output_ui(
-        self,
-        *,
-        placeholder: bool | MISSING_TYPE = MISSING,
-    ) -> Tag:
-        kwargs: dict[str, bool] = {}
-        set_kwargs_value(kwargs, "placeholder", placeholder, self.placeholder)
-        return _ui.output_code(self.output_id, **kwargs)
+    def auto_output_ui(self, **kwargs: object) -> Tag:
+        ui_kwargs: dict[str, Any] = {"placeholder": self.placeholder, **kwargs}
+        return _ui.output_code(self.output_id, **ui_kwargs)
 
     def __init__(
         self,
