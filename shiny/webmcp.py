@@ -48,7 +48,8 @@ def tool(
         A JSON Schema 2020-12 object schema. Arguments are validated on the server
         and passed as keyword arguments. Defaults in a schema are descriptive;
         use Python defaults for optional arguments. External references are not
-        supported; keep schemas self-contained.
+        supported; keep schemas self-contained. ``additionalProperties``
+        defaults to ``False`` so unknown arguments are rejected.
     description
         Describe the action, its effects, and its returned result for an agent.
     name
@@ -81,6 +82,9 @@ def tool(
     Long-running work should use an extended task.
     """
     schema = deepcopy(input_schema)
+    # Unknown keys would otherwise pass validation and fail as a TypeError in
+    # the Python call; reject them with a validation message instead.
+    schema.setdefault("additionalProperties", False)
     Draft202012Validator.check_schema(schema)
     if schema.get("type") != "object":
         raise ValueError("A tool's input_schema must have type 'object'.")

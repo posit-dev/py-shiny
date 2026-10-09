@@ -70,7 +70,9 @@ def multiply(factor: float):
 
 Start this Express app with `SHINY_WEBMCP=1 shiny run app.py`. Arguments are
 validated using JSON Schema 2020-12 and passed as keyword arguments. Use a
-self-contained object schema; external references are unsupported. Optional
+self-contained object schema; external references are unsupported.
+`additionalProperties` defaults to `False`, so unknown arguments are rejected
+with a validation error rather than reaching the function. Optional
 arguments need Python defaults; schema defaults do not fill them in. Return
 JSON-serializable values from sync or async functions. The decorator preserves
 the original callable. Names default to function names and gain module

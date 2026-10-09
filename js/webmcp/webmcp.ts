@@ -311,9 +311,12 @@ function rpc(method: string, args: unknown[] = []): Promise<unknown> {
     )
   );
 }
+let flushSeq = 0;
 async function flush() {
   // Force any queued client inputs onto the socket before the correlated RPC.
-  shiny.setInputValue(".clientdata_webmcp_flush", crypto.randomUUID(), {
+  // Event priority always sends, so any value works; crypto.randomUUID() is
+  // avoided because it is unavailable in insecure (plain-http) contexts.
+  shiny.setInputValue(".clientdata_webmcp_flush", ++flushSeq, {
     priority: "event",
   });
   await rpc("shiny_webmcp_flush");

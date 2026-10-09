@@ -129,6 +129,10 @@ def test_custom_tool_errors_respect_sanitization():
         response = request(ws, "shiny_webmcp_invoke", ["broken", {}])
         assert response["error"] == app.sanitize_error_msg
         assert "private detail" not in json.dumps(response)
+        # Unknown keys are a validation error even when the schema omits
+        # additionalProperties, so the message survives sanitization.
+        response = request(ws, "shiny_webmcp_invoke", ["broken", {"extra": 1}])
+        assert response["error"].startswith("Invalid tool arguments")
 
 
 def test_array_arguments_use_json_schema_array_semantics():
