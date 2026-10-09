@@ -392,6 +392,11 @@ Jsonifiable = Union[
     float,
     bool,
     None,
+    # Read-only `Sequence`/`Mapping` rather than invariant `List`/`Dict`, so values
+    # like `dict[str, int]` type-check. The trade-off: type checkers also accept
+    # other sequences and mappings (`range`, `deque`, `MappingProxyType`, `bytes`,
+    # ...), but only `list`, `tuple`, and `dict` (and their subclasses) serialize;
+    # anything else raises at send time.
     Sequence["Jsonifiable"],
     Mapping[str, "Jsonifiable"],
 ]
