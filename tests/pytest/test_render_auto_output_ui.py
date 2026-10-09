@@ -65,7 +65,10 @@ def test_auto_output_ui_matches_ui_fn(
 ):
     # Every `@output_args()` value goes through `auto_output_ui()`, so it should accept
     # exactly the arguments (and types) of the UI function it calls
-    assert _params(renderer.auto_output_ui) == _params(ui_fn)
+    params = _params(renderer.auto_output_ui)
+    # An untyped catch-all hides which arguments are accepted
+    assert params.get("**") != {object}, "Use explicit args, not `**kwargs: object`"
+    assert params == _params(ui_fn)
 
 
 def test_render_ui_takes_output_args():
