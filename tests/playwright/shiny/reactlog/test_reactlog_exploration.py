@@ -124,6 +124,7 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
     page.locator("#search-results button").click()
     page.locator("#btn-play").hover()
     expect(clear_btn).to_be_visible()
+    page.locator("#btn-toggle-inspector").click()
     expect(page.locator("#sidebar")).to_be_visible()
     expect(page.locator("#search-input")).to_have_value("calc:doubled")
     expect(page.locator("#active-filters button")).to_have_count(0)
@@ -1157,3 +1158,36 @@ def test_playback_speed_setting_defaults_to_step_and_switches_modes(page: Page):
     speed_select.select_option("step")
     assert page.evaluate("window.playbackSpeed") == "step"
     expect(speed_select).to_have_value("step")
+
+
+def test_node_click_highlights_without_opening_sidebar(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    node = page.locator('.graph-node[data-id="calc:doubled"]')
+    node.click()
+    expect(node).to_have_class(re.compile(r"is-selected"))
+    expect(page.locator("#sidebar")).to_be_hidden()
+
+    node.dblclick()
+    expect(page.locator("#search-input")).to_have_value(re.compile(r"doubled"))
+    expect(page.locator("#secondary-timeline-bar")).to_be_visible()
+
+
+def test_secondary_timeline_flush_milestones_and_seeking(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    badge = page.locator("#flush-counter-badge")
+    badge.click()
+    sec_bar = page.locator("#secondary-timeline-bar")
+    expect(sec_bar).to_be_visible()
+
+    pills = page.locator(".secondary-stage-pill")
+    expect(pills.first).to_be_visible()
+    count = pills.count()
+    assert count >= 2
+
+    last_pill = pills.last
+    last_step = last_pill.get_attribute("data-step")
+    last_pill.click()
+    expect(page.locator("#scrubber-range")).to_have_value(str(last_step))
+
+    page.locator("#btn-close-secondary-timeline").click()
+    expect(sec_bar).to_be_hidden()
