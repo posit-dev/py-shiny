@@ -348,16 +348,21 @@ def load_reactlog_json(
 
     normalized_events: List[Dict[str, Any]] = []
     step_idx = 0
-    # Everything up to the first `queueEmpty` is the session's initial flush:
-    # the init message's values and the first render are not user actions.
-    init_end = next(
-        (
-            i
-            for i, item in enumerate(raw_events)
-            if (item.get("action") or item.get("event")) == "queueEmpty"
-        ),
-        -1,
-    )
+    init_end = -1
+    for i, item in enumerate(raw_events):
+        act = item.get("action") or item.get("event")
+        if act in ("userClick", "userAction", "userMark"):
+            break
+        if init_end != -1 and act == "valueChange":
+            ntype = item.get("type") or item.get("node_type")
+            nid = str(
+                item.get("reactId") or item.get("node_id") or item.get("id") or ""
+            )
+            lbl = str(item.get("label") or item.get("node_label") or "")
+            if ntype == "input" or lbl.startswith("input.") or nid.startswith("input:"):
+                break
+        if act == "queueEmpty":
+            init_end = i
 
     for item_idx, item in enumerate(raw_events):
         action = str(item.get("action") or item.get("event") or "")
@@ -720,6 +725,8 @@ def format_reactlog_html(
     escaped_title = html_lib.escape(clean_title)
     formatted_source = _format_python_source_html(source_code)
     actual_video = video_path or reactlog.get("video_path")
+    if actual_video and "video_path" not in reactlog:
+        reactlog["video_path"] = actual_video
 
     video_tab_btn = ""
     video_panel = ""
@@ -1041,6 +1048,8 @@ def format_reactlog_html(
     .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }}
     .graph-node.is-dimmed, .module-box.is-dimmed, .app-box.is-dimmed {{ opacity: 0.3; filter: grayscale(1); }}
     .graph-edge.is-dimmed {{ opacity: 0.15 !important; stroke: var(--text-muted) !important; stroke-width: 1.8px !important; filter: grayscale(1); animation: none; }}
+    .graph-edge.is-connected {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.5px !important; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent)); }}
+    .graph-node.is-connected .node-card {{ stroke: color-mix(in srgb, var(--accent) 70%, var(--border-strong)) !important; stroke-width: 2.2px !important; }}
     #btn-clear-selection[hidden], #btn-inspect-selection[hidden] {{ display: none; }}
     #btn-toggle-inspector-bottom.has-selection {{ border-color: var(--accent); color: var(--accent); position: relative; }}
     #btn-toggle-inspector-bottom.has-selection::after {{ content: ''; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }}
@@ -1587,7 +1596,7 @@ def format_reactlog_html(
     let videoFrameRequestKind = null;
     let isSourceDrawerOpen = false;
 
-    let currentViewMode = 'flush';
+    let currentViewMode = 'full';
     let eventListScope = null;
     let selectedStageFilter = null;
 
@@ -1895,6 +1904,7 @@ def format_reactlog_html(
       allBursts = [];
       const events = reactlogData.events || reactlogData.log || [];
       const lastKnownValues = new Map();
+      const waveInitialValues = new Map();
       (reactlogData.nodes || []).forEach(n => {{
         if (n.value !== undefined && n.value !== null) {{
           lastKnownValues.set(nodeDisplayName(n), n.value);
@@ -1960,11 +1970,23 @@ def format_reactlog_html(
             curWave = null;
             return;
           }}
+          if (evAction === 'queueEmpty' && !curWave) {{
+            return;
+          }}
           const nId = ev.node_id || ev.id || '';
           // Recorded (live) reactlogs identify inputs by type, not an `input:` id.
           const isInputNode = ev.type === 'input' || ev.node_type === 'input';
           const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || (isInputNode && evAction === 'valueChange');
-          const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0;
+          const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
+          const inputName = cleanName(raw);
+          const isSameInput = Boolean(curWave && inputName && curWave.inputs.some(item => item.name === inputName));
+          const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0 && !isSameInput;
+          const isExecution = evAction === 'enter' || evAction === 'recalculate' || evAction === 'output' || evAction === 'render';
+
+          if (!curWave && !isUserAction && !isExecution && evAction !== 'userMark') {{
+            return;
+          }}
+
           if (!curWave || (t - curWave.startTime) > 0.25 || isNewTrigger) {{
             curWave = {{
               id: `burst-${{actionWaves.length + 1}}`,
@@ -1993,44 +2015,42 @@ def format_reactlog_html(
           curWave.endTime = t;
           curWave.totalEvents++;
 
-          if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:') || isInputNode) {{
-            const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
+          if (isUserAction || nId.startsWith('input:') || isInputNode) {{
             if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
               const name = nodeDisplayName(raw) || 'input';
               const prevVal = lastKnownValues.get(name);
               const newVal = ev.value !== undefined ? ev.value : null;
               if (newVal !== null) lastKnownValues.set(name, newVal);
 
-              if (!curWave.triggerLabel) {{
-                curWave.shortLabel = name;
-                if (evAction === 'userClick') {{
-                  curWave.humanAction = `Click: ${{name}}`;
-                  curWave.triggerLabel = name;
-                  curWave.shortLabel = `Click: ${{name}}`;
-                }} else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {{
-                  curWave.humanAction = `${{name}}: ${{formatHumanValue(prevVal)}} → ${{formatHumanValue(newVal)}}`;
-                  curWave.triggerLabel = name;
-                }} else if (newVal !== null) {{
-                  curWave.humanAction = `${{name}}: ${{formatHumanValue(newVal)}}`;
-                  curWave.triggerLabel = name;
-                }} else {{
-                  curWave.humanAction = `${{name}} changed`;
-                  curWave.triggerLabel = name;
-                }}
-                curWave.triggerNodeId = nId;
-                curWave.triggerValue = ev.value;
+              curWave.shortLabel = name;
+              curWave.triggerLabel = name;
+              curWave.triggerNodeId = nId;
+              curWave.triggerValue = newVal;
+              if (evAction === 'userClick') {{
+                curWave.humanAction = `Click: ${{name}}`;
+                curWave.shortLabel = `Click: ${{name}}`;
+              }} else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {{
+                curWave.humanAction = `${{name}}: ${{formatHumanValue(prevVal)}} → ${{formatHumanValue(newVal)}}`;
+              }} else if (newVal !== null) {{
+                curWave.humanAction = `${{name}}: ${{formatHumanValue(newVal)}}`;
+              }} else {{
+                curWave.humanAction = `${{name}} changed`;
               }}
-              if (!curWave.inputs.some(item => item.name === name)) {{
+
+              const existingInput = curWave.inputs.find(item => item.name === name);
+              if (!existingInput) {{
                 curWave.inputs.push({{ name, nodeId: nId, step: idx, isClick: evAction === 'userClick' || evAction === 'userAction', details: ev.details, value: ev.value }});
                 curWave.userChanges++;
+              }} else {{
+                existingInput.value = newVal;
               }}
             }}
-          }} else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || ['calc', 'effect'].includes(nodeIndex.get(nId)?.type) || (ev.node_type === 'conductor'))) {{
+          }} else if (isExecution && nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || ['calc', 'effect'].includes(nodeIndex.get(nId)?.type) || (ev.node_type === 'conductor'))) {{
             const name = nodeDisplayName(nId);
             if (name && !curWave.calcs.some(item => item.name === name)) {{
               curWave.calcs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
-          }} else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || nodeIndex.get(nId)?.type === 'output' || (ev.node_type === 'observer'))) {{
+          }} else if (isExecution && nId && (nId.startsWith('output:') || (ev.type === 'output') || nodeIndex.get(nId)?.type === 'output' || (ev.node_type === 'observer'))) {{
             const name = nodeDisplayName(nId);
             if (name && !curWave.outputs.some(item => item.name === name)) {{
               curWave.outputs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
@@ -2039,7 +2059,10 @@ def format_reactlog_html(
         }}
       }});
 
-      actionWaves.forEach(w => {{
+      actionWaves = filterItems(actionWaves, w => w.inputs.length > 0 || w.calcs.length > 0 || w.outputs.length > 0 || w.isMark);
+      actionWaves.forEach((w, i) => {{
+        w.index = i + 1;
+        w.id = `burst-${{i + 1}}`;
         if (!w.triggerLabel) {{
           if (w.inputs.length > 0) {{
             w.humanAction = `${{w.inputs[0].name}} changed`;
@@ -3666,7 +3689,8 @@ def format_reactlog_html(
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
-          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (!e.related ? ' is-dimmed' : ''));
+          const isConnected = focusedNodeId && e.related;
+          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (isConnected ? ' is-connected' : '') + (!e.related ? ' is-dimmed' : ''));
           const edgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
           const fromLabel = nodeDisplayName(e.from);
           const toLabel = nodeDisplayName(e.to);
@@ -3689,13 +3713,14 @@ def format_reactlog_html(
         const p = pos[n.id] || {{ x: 200, y: 200 }};
         const isActive = activeNodeId === n.id || (n.members || []).includes(activeNodeId);
         const isSelected = selectedNodeId === n.id || (n.members || []).includes(selectedNodeId);
+        const isConnected = focusedNodeId && focusedNodes && (n.members || [n.id]).some(id => focusedNodes.has(id)) && !isSelected;
         const isExecuted = (n.members || []).some(id => executedInBurst.has(id)) || executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
         const kind = nodeKind(n);
         const isDimmed = focusedNodes && !(n.members || [n.id]).some(id => focusedNodes.has(id));
         const isClientData = isClientDataNode(n);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isClientData ? ' is-clientdata' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isConnected ? ' is-connected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isClientData ? ' is-clientdata' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
         const state = replay.states.get(n.id) || 'ready';
@@ -3727,16 +3752,29 @@ def format_reactlog_html(
           }}
           filterLineageForNode(n.id);
         }};
+        g.ondblclick = (e) => {{
+          e.stopPropagation();
+          if (n.type === 'module') {{
+            toggleModule(n.module);
+          }} else {{
+            const term = n.label || n.name || n.id;
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = term;
+            handleSearch(term);
+            const results = document.getElementById('search-results');
+            if (results) results.hidden = true;
+          }}
+        }};
         g.onkeydown = e => {{
           if (e.key === 'Enter' || e.key === ' ') {{
-            e.preventDefault(); e.stopPropagation(); selectNode(n.id);
+            e.preventDefault(); e.stopPropagation();
+            if (n.type === 'module') toggleModule(n.module); else selectNode(n.id);
             document.querySelectorAll('.graph-node').forEach(el => {{ if (el.dataset.id === n.id) el.focus(); }});
           }}
         }};
         if (n.type === 'module') {{
           g.setAttribute('aria-expanded', 'false');
           g.setAttribute('aria-label', `Expand module ${{n.module}}`);
-          g.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(n.module); }} }};
         }};
         g.onmouseenter = () => highlightDependencies(n.id);
         g.onmouseleave = () => resetHighlight();
