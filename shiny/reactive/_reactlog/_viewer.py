@@ -1231,15 +1231,17 @@ def format_reactlog_html(
     .secondary-stage-pill {{ display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px; font-family: var(--sans); background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; white-space: nowrap; transition: all 0.15s ease; line-height: 1.3; }}
     .secondary-stage-pill:hover {{ border-color: var(--accent); background: var(--surface-3); }}
     .secondary-stage-pill.is-active {{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--surface)); box-shadow: 0 0 8px rgba(99, 179, 255, 0.3); font-weight: 600; }}
-    .secondary-stage-pill .stage-icon {{ font-size: 0.75rem; }}
+    .secondary-stage-pill .stage-icon {{ display: inline-flex; align-items: center; justify-content: center; }}
+    .secondary-stage-pill .stage-icon svg {{ display: block; }}
     .secondary-stage-pill .stage-kind {{ font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }}
     .secondary-stage-pill .stage-name {{ font-size: 0.7rem; font-family: var(--mono); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }}
-    .secondary-stage-pill.pill-trigger .stage-kind {{ color: var(--source); }}
-    .secondary-stage-pill.pill-invalidation .stage-kind {{ color: var(--warning); }}
-    .secondary-stage-pill.pill-calc .stage-kind {{ color: var(--calc); }}
-    .secondary-stage-pill.pill-output .stage-kind {{ color: var(--output); }}
-    .secondary-stage-pill.pill-idle .stage-kind {{ color: var(--text-muted); }}
-    .secondary-stage-arrow {{ color: var(--border-strong); font-size: 0.75rem; user-select: none; margin: 0 1px; }}
+    .secondary-stage-pill.pill-trigger .stage-kind, .secondary-stage-pill.pill-trigger .stage-icon {{ color: var(--source); }}
+    .secondary-stage-pill.pill-invalidation .stage-kind, .secondary-stage-pill.pill-invalidation .stage-icon {{ color: var(--warning); }}
+    .secondary-stage-pill.pill-calc .stage-kind, .secondary-stage-pill.pill-calc .stage-icon {{ color: var(--calc); }}
+    .secondary-stage-pill.pill-output .stage-kind, .secondary-stage-pill.pill-output .stage-icon {{ color: var(--output); }}
+    .secondary-stage-pill.pill-idle .stage-kind, .secondary-stage-pill.pill-idle .stage-icon {{ color: var(--text-muted); }}
+    .secondary-stage-arrow {{ display: inline-flex; align-items: center; justify-content: center; color: var(--border-strong); user-select: none; margin: 0 1px; }}
+    .secondary-stage-arrow svg {{ display: block; opacity: 0.7; }}
     .graph-node.is-invalidated rect {{ stroke: var(--warning) !important; stroke-width: 2.5px !important; filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.5)); }}
     .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
     .status-left, .status-center, .status-right {{ flex-wrap: wrap; }}
@@ -1364,7 +1366,7 @@ def format_reactlog_html(
       <aside class="sidebar" id="sidebar" aria-label="Details and events" hidden>
         <div class="sidebar-header">
           <span id="detail-panel-title">Node details</span>
-          <button class="btn icon mini" onclick="toggleInspector(false)" aria-label="Close Inspector" title="Close Inspector">✕</button>
+          <button class="btn icon mini" onclick="toggleInspector(false)" aria-label="Close Inspector" title="Close Inspector"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
 
         <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-label="Node details">
@@ -1452,7 +1454,7 @@ def format_reactlog_html(
         <span class="secondary-timeline-title" id="secondary-timeline-title">Flush Details</span>
         <span class="secondary-timeline-meta" id="secondary-timeline-meta"></span>
       </div>
-      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline">✕</button>
+      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="secondary-timeline-track-wrap" id="secondary-timeline-track-wrap">
       <div class="secondary-timeline-chips" id="secondary-timeline-chips" role="list" aria-label="Step events"></div>
@@ -1531,6 +1533,10 @@ def format_reactlog_html(
       zap: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
       clock: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
       arrowRight: '<svg class="inline-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+      warn: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      gear: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+      check: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+      close: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
       flame: '<svg class="inline-icon flame-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--danger, #ef4444);vertical-align:-1px;margin-left:4px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>'
     }};
 
@@ -2231,7 +2237,7 @@ def format_reactlog_html(
         kind: 'Trigger',
         label: triggerLabel,
         fullName: triggerLabel,
-        icon: '⚡',
+        icon: ICONS.zap,
         cssClass: 'pill-trigger'
       }});
 
@@ -2259,7 +2265,7 @@ def format_reactlog_html(
           kind: 'Invalidated',
           label: invLabel,
           fullName: invArray.join(', '),
-          icon: '⚠',
+          icon: ICONS.warn,
           cssClass: 'pill-invalidation'
         }});
       }}
@@ -2288,7 +2294,7 @@ def format_reactlog_html(
           kind: 'Calculated',
           label: calcLabel,
           fullName: calcArray.join(', '),
-          icon: '⚙',
+          icon: ICONS.gear,
           cssClass: 'pill-calc'
         }});
       }}
@@ -2317,7 +2323,7 @@ def format_reactlog_html(
           kind: 'Rendered',
           label: outLabel,
           fullName: outArray.join(', '),
-          icon: '👁',
+          icon: ICONS.eye,
           cssClass: 'pill-output'
         }});
       }}
@@ -2327,7 +2333,7 @@ def format_reactlog_html(
         kind: 'Settled',
         label: 'Idle',
         fullName: 'Flush complete / idle',
-        icon: '✓',
+        icon: ICONS.check,
         cssClass: 'pill-idle'
       }});
 
@@ -2345,7 +2351,7 @@ def format_reactlog_html(
           const arrow = document.createElement('span');
           arrow.className = 'secondary-stage-arrow';
           arrow.setAttribute('aria-hidden', 'true');
-          arrow.textContent = '→';
+          arrow.innerHTML = ICONS.arrowRight;
           chips.appendChild(arrow);
         }}
 
@@ -4529,7 +4535,7 @@ def format_reactlog_html(
     <div class="modal-dialog" role="dialog" aria-labelledby="shortcuts-modal-title" aria-modal="true">
       <div class="modal-header">
         <h2 class="modal-title" id="shortcuts-modal-title">Keyboard Navigation Shortcuts</h2>
-        <button class="modal-close-btn" onclick="toggleShortcutsModal()" aria-label="Close shortcuts dialog">✕</button>
+        <button class="modal-close-btn" onclick="toggleShortcutsModal()" aria-label="Close shortcuts dialog"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <table class="shortcuts-table">
         <tbody>

@@ -426,6 +426,10 @@ def test_secondary_timeline_displays_friendly_node_names_for_anonymous_effects(
 
     inv_pill = page.locator(".secondary-stage-pill.pill-invalidation")
     expect(inv_pill).to_be_visible()
+    expect(inv_pill.locator(".stage-icon svg")).to_be_visible()
+    expect(
+        page.locator(".secondary-stage-pill.pill-trigger .stage-icon svg")
+    ).to_be_visible()
     expect(inv_pill).to_contain_text("effect (counter2), effect (counter3)")
     expect(inv_pill).not_to_contain_text("r19")
     expect(inv_pill).not_to_contain_text("r30")
