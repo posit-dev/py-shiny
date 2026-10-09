@@ -1,11 +1,15 @@
-"""Tests for the download renderers' handler registration."""
+"""Tests for the download renderers' handler registration and auto-placed UI."""
 
 from __future__ import annotations
 
-from typing import AsyncIterable
+from typing import AsyncIterable, Callable
+
+import pytest
+from htmltools import Tag
 
 from shiny import App, Inputs, Outputs, Session, module, render, ui
 from shiny._connection import MockConnection
+from shiny.express import output_args
 from shiny.session import session_context
 
 
@@ -58,3 +62,34 @@ def test_download_registers_under_namespaced_output_id():
     # Downloads are always stored fully namespaced in the root session, and the
     # auto-registered `mod1-_` entry must not survive the rename.
     assert list(session._downloads.keys()) == ["mod1-download4"]
+
+
+@pytest.mark.parametrize(
+    "renderer, ui_fn",
+    [
+        (render.download_button, ui.download_button),
+        (render.download_link, ui.download_link),
+    ],
+)
+def test_download_auto_ui_takes_icon_and_attributes(
+    renderer: type[render.download_button], ui_fn: Callable[..., Tag]
+):
+    icon = ui.tags.i(class_="fa-solid fa-download")
+
+    @renderer(filename="report.txt", label="Report", icon=icon, class_="btn-success")
+    async def report() -> AsyncIterable[str]:
+        yield "hello"
+
+    expected = ui_fn("report", "Report", icon=icon, class_="btn-success")
+    assert str(report.tagify()) == str(expected)
+
+    # `output_args()` overrides what the decorator was given
+    other_icon = ui.tags.i(class_="fa-solid fa-file")
+
+    @output_args(label="Get it", icon=other_icon, title="Get the report")
+    @renderer(filename="report.txt", icon=icon)
+    async def report2() -> AsyncIterable[str]:
+        yield "hello"
+
+    expected = ui_fn("report2", "Get it", icon=other_icon, title="Get the report")
+    assert str(report2.tagify()) == str(expected)
