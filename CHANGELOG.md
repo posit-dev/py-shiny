@@ -37,7 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+* `@render.download_button()` and `@render.download_link()` gain an `icon` argument, and pass any other keyword arguments (e.g. `class_="btn-success"`) to the control they auto-place in Express. An Express app no longer needs `ui.hold()` and a hand-placed `ui.download_button()` just to add an icon. The same arguments can also be given with `@output_args()`. (#2533) (Thanks, @raashish1601!) (#2533)
+
 * Navigation links that target a tab panel (e.g. in `ui.navset_tab()`) now carry `aria-controls` pointing at the panel's `id`, alongside the existing `href` (rstudio/bslib#1355). (#2526)
+
+* In Express, `@output_args()` now accepts every argument of the output's UI function, with matching types. `@render.ui` now takes `inline`, `container`, `fill`, `fillable`, and HTML attributes, instead of raising a `TypeError`. `@render.text` now takes `container`. `@render.plot` and `@render.image` now declare `inline`, `click`, `dblclick`, `hover`, `brush`, and `fill` explicitly (and `width` and `height` for `@render.image`), instead of accepting any keyword. `@render.download_button()` and `@render.download_link()` now take `label`. (#2539)
 
 ### Deprecations
 
@@ -48,6 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * On Windows, an output's busy indicator now shows while the output renders. Before, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it. (#1381)
 
 * Setting a reactive value from a download handler (`@render.download_button`) now updates the outputs and effects that read it right away, including while a streamed download is still sending. The session also keeps handling input during a streamed download. Before, they updated only after the next message from the client. (#1785)
+
+* `Jsonifiable` now uses `Sequence` and `Mapping` for its container arms instead of `List` and `Dict`, which are invariant. Values like `dict[str, int]` and `list[str]` now type-check as `Jsonifiable`, including as the return type of a function passed to a `Renderer[Jsonifiable]`. As a side effect, type checkers also accept other sequences and mappings, such as `range`, `deque`, and `bytes`, even though only `list`, `tuple`, and `dict` serialize. Nothing changes at runtime. (Thanks, @wolfgang-aura!) (#2511)
 
 * `Progress.set(0)` now places the bar at `0` relative to `min` and `max`, instead of sending `0` unnormalized. With a negative `min`, such as `Progress(min=-10, max=10)`, a value of `0` showed an empty bar rather than a half-full one. (#2518)
 
