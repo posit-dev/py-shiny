@@ -120,10 +120,10 @@ def input_text_area(
     height
         The CSS height, e.g., '400px', or '100%'.
     cols
-        Value of the visible character columns of the input, e.g., 80. This argument will
-        only take effect if there is not a CSS width rule defined for this element; such
-        a rule could come from the width argument of this function or from a containing
-        page layout such as :func:`~shiny.ui.page_fluid`.
+        Value of the visible character columns of the input, e.g., 80. This argument only
+        takes effect if there is no CSS width rule for this element. Bootstrap's
+        ``.form-control`` rule, which every textarea carries, is such a rule, so `cols`
+        needs a rule of its own (e.g., ``width: auto``) to reach the rendered width.
     rows
         The value of the visible character rows of the input, e.g., 6. If the height
         argument is specified, height will take precedence in the browser's rendering.
@@ -183,7 +183,7 @@ def input_text_area(
         restore_input(resolved_id, value),
         id=resolved_id,
         class_=" ".join(classes),
-        style=css(width=None if width else "100%", height=height, resize=resize),
+        style=css(width="100%" if width else None, height=height, resize=resize),
         placeholder=placeholder,
         rows=rows,
         cols=cols,
