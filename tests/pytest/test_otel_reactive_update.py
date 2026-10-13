@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import time
 from typing import Callable, Iterator, Literal, Sequence, Tuple
 from unittest.mock import patch
 
@@ -260,7 +259,10 @@ async def test_session_ending_mid_cycle_ends_its_reactive_update(
 ):
     provider, exporter = otel_tracer_provider
     release = asyncio.Event()
-    cancelled_at: list[int] = []
+    # Whether the session's cycle span had already ended when the cancelled
+    # effect's `finally` ran. (Timestamps can't tell: on Windows the clock is too
+    # coarse to separate the two.)
+    span_ended_first: list[bool] = []
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         @reactive.effect
@@ -268,7 +270,7 @@ async def test_session_ending_mid_cycle_ends_its_reactive_update(
             try:
                 await release.wait()
             finally:
-                cancelled_at.append(time.time_ns())
+                span_ended_first.append(c.session._otel_cycle_span is None)
 
     c = Client(server)
     c.send({"method": "init", "data": {}})
@@ -276,14 +278,14 @@ async def test_session_ending_mid_cycle_ends_its_reactive_update(
     await c.close()
     release.set()
 
-    assert await wait_until(lambda: len(cancelled_at) == 1)
+    assert await wait_until(lambda: len(span_ended_first) == 1)
     (update,) = named(
         of_sessions(get_exported_spans(provider, exporter), c), "reactive_update"
     )
+    assert update.end_time is not None
     # Ended by the session's end itself, not later by the cancelled effect's
     # busy period ending.
-    assert update.end_time is not None
-    assert update.end_time < cancelled_at[0]
+    assert span_ended_first == [True]
 
 
 @pytest.mark.parametrize(
