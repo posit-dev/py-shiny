@@ -2080,6 +2080,15 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
     gc.collect()
     assert finalized == []  # ...but they're kept, so they're never finalized
 
+    # `env` is local, so its tasks would be collected in whatever test runs when
+    # the GC gets to them. A round task that never started then warns "coroutine
+    # ... was never awaited", which `filterwarnings = error` turns into that
+    # test's failure. Let them go here instead.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        env._abandoned_tasks.clear()
+        gc.collect()
+
 
 # ----------------------------------------------------------------------------
 # Destroying an effect cancels its in-progress runs (session end, scope destroy)
