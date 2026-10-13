@@ -3,15 +3,51 @@ from __future__ import annotations
 import functools
 import sys
 from types import TracebackType
-from typing import Callable, Generic, Mapping, Optional, Type, TypeVar
+from typing import Any, Callable, Generic, Mapping, Optional, Type, TypeVar
 
-from htmltools import MetadataNode, Tag, TagList, wrap_displayhook_handler
+from htmltools import (
+    HTML,
+    MetadataNode,
+    ReprHtml,
+    Tag,
+    Tagifiable,
+    TagList,
+    wrap_displayhook_handler,
+)
 
 from .._typing_extensions import ParamSpec
+from ..render.renderer import Renderer
 
 P = ParamSpec("P")
 R = TypeVar("R")
 U = TypeVar("U")
+
+
+def only_append_renderable(handler: Callable[[object], None]) -> Callable[[Any], None]:
+    def f(x: Any):
+        if isinstance(x, (list, tuple)):
+            for item in x:  # pyright: ignore[reportUnknownVariableType]
+                f(item)
+            return
+        elif isinstance(x, (str, float, int, bool)):
+            handler(x)
+            return
+        elif isinstance(x, (HTML, Tag, TagList, Tagifiable, ReprHtml, Renderer)):
+            handler(x)  # pyright: ignore[reportUnknownArgumentType]
+            return
+
+        trunc_to = 80
+        x_trunc = f"{x!r}"
+        if len(x_trunc) > trunc_to:
+            x_trunc = x_trunc[:trunc_to] + "..."
+
+        print(
+            # TODO: Make this a more informative warning
+            f"Express has suppressed the object `{x_trunc}` because it is of type {type(x)}. "
+            "Coerce to HTML, a string, or an htmltools tag to display this object."
+        )
+
+    return f
 
 
 class RecallContextManager(Generic[R]):
@@ -31,7 +67,9 @@ class RecallContextManager(Generic[R]):
         self.kwargs: dict[str, object] = dict(kwargs)
         # Let htmltools.wrap_displayhook_handler decide what to do with objects before
         # we append them.
-        self.wrapped_append = wrap_displayhook_handler(self.args.append)
+        self.wrapped_append = only_append_renderable(
+            wrap_displayhook_handler(self.args.append)
+        )
 
     def __enter__(self) -> None:
         self._prev_displayhook = sys.displayhook
