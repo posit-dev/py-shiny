@@ -107,12 +107,12 @@ def server(input, output, session):
         ui.insert_ui(ui.tags.script(f"fetch('{path}')..."), selector="body")
 ```
 
-## Hook the reactive flush: `on_flush` / `on_flushed`
+## Hook the output flush: `on_flush` / `on_flushed`
 
-A flush is when Shiny recomputes invalidated reactives and sends the resulting
-output updates to the client. `on_flush(fn)` runs *before* that send;
-`on_flushed(fn)` runs *after*. Both default to `once=True` (fire on the next
-flush only); pass `once=False` to run on every flush.
+Each session sends its outputs in one message once all of its effects have
+finished (an output flush). `on_flush(fn)` runs just before that send;
+`on_flushed(fn)` runs after. Both default to `once=True` (fire on the next
+output flush only); pass `once=False` to run on every one.
 
 ```python
 def server(input, output, session):
@@ -129,8 +129,8 @@ def server(input, output, session):
 | Request headers / cookies | `session.http_conn.headers` / `.cookies` |
 | Live browser URL (reactive) | `session.clientdata.url_*()` |
 | Per-session HTTP endpoint | `path = session.dynamic_route(name, handler)` |
-| Run before flush is sent | `session.on_flush(fn, once=False)` |
-| Run after flush is sent | `session.on_flushed(fn, once=False)` |
+| Run before outputs are sent | `session.on_flush(fn, once=False)` |
+| Run after outputs are sent | `session.on_flushed(fn, once=False)` |
 | Close the session | `await session.close()` |
 
 ## Common mistakes

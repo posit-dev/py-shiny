@@ -631,14 +631,15 @@ class Session(ABC):
         message once each cycle ends, i.e. once all of its effects have finished. It
         sends them in a task of its own, so a slow callback here (or a slow client)
         delays only this session. Anything the callback queues, such as a
-        `send_input_message()`, goes out in that same message.
+        ``send_input_message()``, goes out in that same message.
 
         Parameters
         ----------
         fn
             The function to call.
         once
-            Whether to call the function only once or on every flush.
+            Whether to call the function only once, or every time this session
+            sends its outputs.
 
         Returns
         -------
@@ -654,16 +655,20 @@ class Session(ABC):
         once: bool = True,
     ) -> Callable[[], None]:
         """
-        Register a function to call after this session next sends its outputs.
+        Register a function to call after this session's next output flush, whether
+        or not it had outputs to send.
 
-        See :meth:`on_flush` for when a session sends its outputs.
+        See :meth:`on_flush` for when a session sends its outputs. Anything the
+        callback queues, such as a ``ui.update_*()`` call, goes out in one more
+        message right after the callbacks, without running them again.
 
         Parameters
         ----------
         fn
             The function to call.
         once
-            Whether to call the function only once or on every flush.
+            Whether to call the function only once, or every time this session
+            sends its outputs.
 
         Returns
         -------
@@ -982,6 +987,10 @@ class AppSession(Session):
         self._output_flush_enabled: bool = False
         self._dispatch_tasks: set[asyncio.Task[None]] = set()
         self._running_flush_callbacks: bool = False
+        self._running_flushed_callbacks: bool = False
+        # Whether to send once more after the `on_flushed` callbacks, for what they
+        # queued.
+        self._output_flush_tail: bool = False
         # The task sending this session's outputs, and whether to run it once more.
         self._output_flush_task: Optional[asyncio.Task[None]] = None
         self._output_flush_again: bool = False
@@ -1170,6 +1179,7 @@ class AppSession(Session):
                         # When the session ends, stop.
                         self._output_flush_enabled = True
                         stack.callback(self._disable_output_flush)
+                        stack.callback(self._cancel_dispatch_tasks)
 
                         # Set up bookmark callbacks here
                         self.bookmark._create_effects()
@@ -1217,7 +1227,7 @@ class AppSession(Session):
                             self._dispatch(typing.cast(ClientMessageOther, message_obj))
                         )
                         self._dispatch_tasks.add(task)
-                        task.add_done_callback(self._dispatch_tasks.discard)
+                        task.add_done_callback(self._on_dispatch_done)
 
                     else:
                         raise ProtocolError(
@@ -1351,6 +1361,11 @@ class AppSession(Session):
                 )
                 return None
             file_data = upload_op.finish()
+            # Sets the input right away, even while this session's effects are still
+            # running, unlike an `update` message, which waits for the cycle to end.
+            # An effect that reads this input across an `await` can see it change.
+            # Kept for parity with Shiny for R, whose `@uploadEnd` does the same.
+            #
             # The input_id string is already a fully namespaced id; make that explicit
             # by wrapping it in ResolvedId, otherwise self.input will throw an id
             # validation error.
@@ -1720,14 +1735,40 @@ class AppSession(Session):
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         once: bool = True,
     ) -> Callable[[], None]:
-        return self._flushed_callbacks.register(wrap_async(fn), once)
+        unregister = self._flushed_callbacks.register(wrap_async(fn), once)
+        self._request_output_flush()
+        return unregister
 
     def _request_output_flush(self) -> None:
         """Send this session's outputs after the next round."""
+        if not self._output_flush_enabled:
+            return
         # Anything queued by this session's own `on_flush` callbacks goes out in the
         # message being built, so it needs no further output flush (which could loop).
-        if self._output_flush_enabled and not self._running_flush_callbacks:
-            self.app._request_output_flush(self)
+        if self._running_flush_callbacks:
+            return
+        # Anything queued by its `on_flushed` callbacks (e.g. a `ui.update_*()`) goes
+        # out in one more message right after them, without running them again: a
+        # callback registered with `once=False` would otherwise loop forever.
+        if self._running_flushed_callbacks:
+            self._output_flush_tail = True
+            return
+        self.app._request_output_flush(self)
+
+    def _cancel_dispatch_tasks(self) -> None:
+        for task in list(self._dispatch_tasks):
+            task.cancel()
+
+    def _on_dispatch_done(self, task: asyncio.Task[None]) -> None:
+        self._dispatch_tasks.discard(task)
+        if task.cancelled():
+            return
+        e = task.exception()
+        if e is not None:
+            # E.g. the response couldn't be sent. This closes the session, as an
+            # error in the receive loop does.
+            traceback.print_exception(type(e), e, e.__traceback__)
+            _reactive_environment._spawn(self._unhandled_error(e))
 
     def _disable_output_flush(self) -> None:
         self._output_flush_enabled = False
@@ -1778,12 +1819,7 @@ class AppSession(Session):
             # This is the only place in the session where the RestoreContext is flushed.
             if self.bookmark._restore_context:
                 self.bookmark._restore_context.flush_pending()
-            # Run the `on_flush` callbacks
-            self._running_flush_callbacks = True
-            try:
-                await self._flush_callbacks.invoke()
-            finally:
-                self._running_flush_callbacks = False
+            await self._run_flush_callbacks()
 
         # Async flush callbacks yield, and an effect may have started meanwhile; its
         # cycle's idle transition sends everything still queued.
@@ -1791,28 +1827,52 @@ class AppSession(Session):
             return
 
         try:
-            omq = self._outbound_message_queues
-            # Send only when a cycle has ended or something is queued (R's
-            # `hasPendingUpdates()`). A cycle's message is sent even when empty: the
-            # client uses it to settle outputs still showing progress (e.g. after
-            # `req(False, cancel_output=True)`).
-            if self._cycle_ended or not omq.is_empty():
-                # Take the queued values before awaiting the send, so a value
-                # written during the send stays queued for the next message.
-                message: dict[str, object] = {
-                    "values": dict(omq.values),
-                    "inputMessages": list(omq.input_messages),
-                    "errors": dict(omq.errors),
-                }
-                omq.reset()
-                self._cycle_ended = False
-                await self._send_message(message)
+            await self._send_queued_outputs()
         finally:
             with session_context(self):
-                await self._flushed_callbacks.invoke()
+                self._running_flushed_callbacks = True
+                try:
+                    await self._flushed_callbacks.invoke()
+                finally:
+                    self._running_flushed_callbacks = False
+
+        if self._output_flush_tail:
+            # The `on_flushed` callbacks queued something (e.g. a `ui.update_*()`,
+            # which registers an `on_flush` callback). Send it now, without running
+            # the `on_flushed` callbacks again.
+            self._output_flush_tail = False
+            with session_context(self):
+                await self._run_flush_callbacks()
+            if self._busy_count == 0:
+                await self._send_queued_outputs()
 
         # This cycle's outputs are out; start the next one.
         self._start_cycle()
+
+    async def _run_flush_callbacks(self) -> None:
+        self._running_flush_callbacks = True
+        try:
+            await self._flush_callbacks.invoke()
+        finally:
+            self._running_flush_callbacks = False
+
+    async def _send_queued_outputs(self) -> None:
+        omq = self._outbound_message_queues
+        # Send only when a cycle has ended or something is queued (R's
+        # `hasPendingUpdates()`). A cycle's message is sent even when empty: the
+        # client uses it to settle outputs still showing progress (e.g. after
+        # `req(False, cancel_output=True)`).
+        if self._cycle_ended or not omq.is_empty():
+            # Take the queued values before awaiting the send, so a value
+            # written during the send stays queued for the next message.
+            message: dict[str, object] = {
+                "values": dict(omq.values),
+                "inputMessages": list(omq.input_messages),
+                "errors": dict(omq.errors),
+            }
+            omq.reset()
+            self._cycle_ended = False
+            await self._send_message(message)
 
     def _increment_busy_count(self) -> None:
         self._busy_count += 1

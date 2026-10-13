@@ -57,7 +57,7 @@ reference file before writing code** for that area.
 | Topic | Use when | Reference |
 |---|---|---|
 | Feedback | Toasts/notifications, modal dialogs, progress bars, busy indicators | `references/feedback.md` |
-| Extended tasks | Running slow work off the reactive flush without freezing the app; task buttons | `references/extended-tasks.md` |
+| Extended tasks | Running slow work outside the session's reactive cycle so the session stays responsive; task buttons | `references/extended-tasks.md` |
 | Bookmarking | Saving/restoring app state — shareable URLs, refresh persistence, server-side state | `references/bookmarking.md` |
 
 ## AI & streaming

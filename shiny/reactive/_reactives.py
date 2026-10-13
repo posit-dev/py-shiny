@@ -504,8 +504,8 @@ class Value(Generic[T]):
 
         Note
         ----
-        Setting a new value schedules a reactive flush, so its dependents re-run
-        without calling :func:`~shiny.reactive.flush`. Call ``set()`` from the thread
+        Setting a new value schedules its dependents to re-run automatically,
+        without a call to :func:`~shiny.reactive.flush`. Call ``set()`` from the thread
         running Shiny's event loop. From any other thread, hand the call to that loop
         with ``loop.call_soon_threadsafe(value.set, new_value)``. The reactive graph
         isn't safe to change from two threads at once, and calling ``set()`` directly
