@@ -569,15 +569,22 @@ def lock() -> asyncio.Lock:
     # Imported here because `shiny._deprecated` imports `shiny.reactive`.
     from .._deprecated import warn_deprecated
 
-    warn_deprecated(
-        "reactive.lock() is deprecated, does nothing, and will be removed in a future "
-        "version of shiny. To change reactive state from a background task, set the "
-        "reactive value directly: a flush is scheduled automatically, so "
-        "`await reactive.flush()` is not needed. To apply the change once the "
-        "session's effects have finished, use `session.run_once_when_idle()`."
-    )
+    global _lock_warned
+    # Once per process: `lock()` is usually called in a loop.
+    if not _lock_warned:
+        _lock_warned = True
+        warn_deprecated(
+            "reactive.lock() is deprecated, does nothing, and will be removed in a "
+            "future version of shiny. To change reactive state from a background "
+            "task, set the reactive value directly: a flush is scheduled "
+            "automatically, so `await reactive.flush()` is not needed. To apply the "
+            "change once the session's effects have finished, use "
+            "`session.run_once_when_idle()`."
+        )
     return _NoOpLock()
 
+
+_lock_warned: bool = False
 
 _timer_tasks: set[asyncio.Task[None]] = set()
 

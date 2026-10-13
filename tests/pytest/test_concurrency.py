@@ -11,6 +11,7 @@ import asyncio
 import gc
 import json
 import threading
+import warnings
 from typing import AsyncIterable, Callable, Iterator
 
 import pytest
@@ -2730,16 +2731,21 @@ async def test_run_once_when_idle_error_closes_the_session():
 
 
 @pytest.mark.asyncio
-async def test_lock_warns_on_every_call():
-    for _ in range(2):
-        with pytest.warns(ShinyDeprecationWarning, match="reactive.lock") as record:
-            reactive.lock()
-        # The warning points at the code that called `lock()`.
-        assert record[0].filename == __file__
+async def test_lock_warns_once(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("shiny.reactive._core._lock_warned", False)
+    with pytest.warns(ShinyDeprecationWarning, match="reactive.lock") as record:
+        reactive.lock()
+    # The warning points at the code that called `lock()`.
+    assert record[0].filename == __file__
+    # `lock()` is usually called in a loop, so later calls don't warn again.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        reactive.lock()
 
 
 @pytest.mark.asyncio
-async def test_lock_does_not_exclude_other_holders():
+async def test_lock_does_not_exclude_other_holders(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("shiny.reactive._core._lock_warned", False)
     with pytest.warns(ShinyDeprecationWarning):
         lock = reactive.lock()
     inside = 0
