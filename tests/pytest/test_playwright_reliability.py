@@ -30,6 +30,14 @@ def _load_module(name: str, path: Path) -> ModuleType:
     return module
 
 
+class _Mouse:
+    def __init__(self) -> None:
+        self.position: tuple[float, float] | None = None
+
+    def move(self, x: float, y: float) -> None:
+        self.position = (x, y)
+
+
 def test_remote_playwright_server_keeps_stdin_open() -> None:
     action = PLAYWRIGHT_REMOTE_START_SERVER.read_text()
 
@@ -55,6 +63,8 @@ def test_shared_page_reset_handles_close_failure(
             raise PlaywrightError("Target page, context or browser has been closed")
 
     class NewPage:
+        mouse = _Mouse()
+
         def set_viewport_size(self, size: dict[str, int]) -> None:
             assert size == {"width": 1920, "height": 1080}
 
@@ -88,6 +98,8 @@ def test_new_shared_page_does_not_repeat_initial_blank_navigation(
     )
 
     class NewPage:
+        mouse = _Mouse()
+
         def goto(self, url: str) -> None:
             raise AssertionError(f"new page redundantly navigated to {url}")
 
@@ -103,6 +115,7 @@ def test_new_shared_page_does_not_repeat_initial_blank_navigation(
 
     page_fixture: Callable[..., Any] = playwright_conftest.page.__wrapped__
     assert page_fixture(object(), []) is new_page
+    assert new_page.mouse.position == (0, 0)
 
 
 def test_dataframe_scroll_reacquires_a_cell_detached_during_render() -> None:

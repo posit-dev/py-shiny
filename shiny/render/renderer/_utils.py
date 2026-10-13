@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Dict, cast
-
-from htmltools import TagFunction
+from typing import Any, Dict, TypeVar, cast
 
 from ...session._utils import RenderedDeps
-from ...types import MISSING_TYPE, ImgData
+from ...types import MISSING, MISSING_TYPE, ImgData
 from ._renderer import Jsonifiable
 
 JsonifiableDict = Dict[str, Jsonifiable]
+
+T = TypeVar("T")
 
 
 def rendered_deps_to_jsonifiable(rendered_deps: RenderedDeps) -> JsonifiableDict:
@@ -22,8 +22,8 @@ def imgdata_to_jsonifiable(imgdata: ImgData) -> JsonifiableDict:
 def set_kwargs_value(
     kwargs: dict[str, Any],
     key: str,
-    ui_val: TagFunction | str | float | int | MISSING_TYPE,
-    self_val: TagFunction | str | float | int | None | MISSING_TYPE,
+    ui_val: T | MISSING_TYPE,
+    self_val: T | None | MISSING_TYPE = MISSING,
 ):
     """
     Set kwarg value with fallback value.
