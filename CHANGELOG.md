@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * `async` effects interleave at each `await` instead of running one after another. `priority` orders when effects start, not when they finish. Runs of the same effect still don't overlap: a re-run waits for the previous run.
 
-    * `reactive.lock()` no longer pauses reactive processing: Shiny itself no longer takes it (see Deprecations). To change reactive state from another `asyncio` task, set the value directly; its dependents re-run automatically, so there's no need to `await reactive.flush()`.
+    * `reactive.lock()` is now defunct and no longer locks the reactive graph. Please remove it from your code.
 
     * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect, a `reactive.on_flushed()` or `session.on_flush()`/`on_flushed()` callback, or a task one of these started while it is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits. The wait covers the whole process, including other sessions' effects and output.
 
@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecations
 
-* `reactive.lock()` is deprecated and now emits a `ShinyDeprecationWarning` (once per process). It does nothing else: it returns an `asyncio.Lock` that never blocks, so code that holds it no longer keeps out other code that holds it. Code that relies on it for mutual exclusion should create its own `asyncio.Lock`. Remove `async with reactive.lock():` and the `await reactive.flush()` that usually follows it, and set the reactive value directly. To apply a change only once a session's running effects have finished, use `session.run_once_when_idle()`. (#2520)
+* `reactive.lock()` is defunct and now emits a `ShinyDeprecationWarning`.  (#2520)
 
 ### Bug fixes
 

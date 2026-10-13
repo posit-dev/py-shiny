@@ -587,9 +587,11 @@ def lock() -> asyncio.Lock:
     if not _lock_warned:
         _lock_warned = True
         warn_deprecated(
-            "reactive.lock() is deprecated, does nothing, and will be removed in a "
-            "future version of shiny. To change reactive state from a background "
-            "task, set the reactive value directly: a flush is scheduled "
+            "reactive.lock() is defunct and its functionality has been superseded by "
+            "the asynchronous reactive execution model in v1.9.0. `reactive.lock()` "
+            "will be removed from the shiny API in a future release."
+            " To change reactive state from a background task, set the "
+            "reactive value directly: a flush is scheduled "
             "automatically, so `await reactive.flush()` is not needed. To apply the "
             "change once the session's effects have finished, use "
             "`session.run_once_when_idle()`."
