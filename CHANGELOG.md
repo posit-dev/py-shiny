@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking changes
 
-* OpenTelemetry `reactive_update` spans now follow each session's cycle, as in Shiny for R: one span per session, from when the session turns busy until all of its effects (including async ones) have finished, carrying the session's `session.id`. The session's calc, effect, and output spans are its children. Before, there was one span per reactive flush, which can serve several sessions, so with concurrent effects it couldn't carry a single `session.id` and ended before async effects finished. Effects without a session no longer have a `reactive_update` parent. (#2522)
+* OpenTelemetry `reactive_update` spans now follow each session's cycle: one span per session, from when the session turns busy until all of its effects (including async ones) have finished, carrying the session's `session.id`. The session's calc, effect, and output spans are its children. Before, there was one span per reactive flush, which can serve several sessions, so with concurrent effects it couldn't carry a single `session.id` and ended before async effects finished. Effects without a session no longer have a `reactive_update` parent. (#2522)
 
-* Reactive effects now run concurrently, following Shiny for R's model. A reactive flush starts each invalidated effect and no longer waits for an `async` effect's awaited part, so a slow `async` effect, calc, or render function no longer delays other sessions. Within a session, input changes and `reactive.invalidate_later()` still wait until all of that session's effects have finished, and outputs are sent together once they have. What app authors may notice:
+* Reactive effects now run concurrently. A reactive flush starts each invalidated effect and no longer waits for an `async` effect's awaited part, so a slow `async` effect, calc, or render function no longer delays other sessions. Within a session, input changes and `reactive.invalidate_later()` still wait until all of that session's effects have finished, and outputs are sent together once they have. What app authors may notice:
 
     * `async` effects interleave at each `await` instead of running one after another. `priority` orders when effects start, not when they finish. Runs of the same effect still don't overlap: a re-run waits for the previous run.
 
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * Setting a `reactive.value` schedules a flush, including when `set()` is called from another thread. The reactive graph itself still isn't thread-safe, so from another thread use `loop.call_soon_threadsafe(value.set, new_value)`.
 
-    * Destroying an effect (`effect.destroy()`) cancels its run that's still in progress: `asyncio.CancelledError` is raised at its current `await`. Since ending a session and `session.destroy(id)` destroy their effects, both now cancel in-progress `async` effects and render functions, instead of letting them run on after their session or module is gone. The cancellation keeps a module's running effect from going on to read the module's destroyed values. An error raised by a destroyed effect, for example by cleanup code that reads those values, is logged instead of closing the session. The run that calls `destroy()` (for example, an effect that closes its own session) is not cancelled.
+    * Destroying an effect (`effect.destroy()`) cancels its in-progress run, raising `asyncio.CancelledError` at its current `await`. So ending a session, or `session.destroy(id)`, cancels its in-progress `async` effects and render functions instead of letting them run on after the session or module is gone.
 
   (#2508, #2515)
 
