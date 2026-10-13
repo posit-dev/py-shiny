@@ -465,6 +465,45 @@ async def test_extended_task_dependents_see_every_queued_result():
         unregister()
 
 
+@pytest.mark.asyncio
+async def test_extended_task_queue_does_not_wait_for_unrelated_effects():
+    # Between invocations, an extended task waits only for its dependents to start.
+    # Waiting until idle (`await reactive.flush()`) would also wait for every other
+    # running effect, so the queued invocation would stall behind a slow, unrelated
+    # one.
+    gate = asyncio.Event()
+    slow_started = asyncio.Event()
+
+    @reactive.effect
+    async def _slow():
+        slow_started.set()
+        await gate.wait()
+
+    try:
+        await asyncio.wait_for(slow_started.wait(), TIMEOUT)
+
+        @reactive.extended_task
+        async def task(n: int) -> int:
+            return n
+
+        seen: list[int] = []
+
+        @reactive.effect
+        def _e():
+            if task.status() == "success":
+                seen.append(task.value())
+
+        task.invoke(1)
+        task.invoke(2)  # queued behind the first
+        assert await wait_until(
+            lambda: seen == [1, 2]
+        ), "queued invocation stalled behind an unrelated slow effect"
+        _e.destroy()
+    finally:
+        gate.set()
+        _slow.destroy()
+
+
 # ----------------------------------------------------------------------------
 # Per-session flush requests
 # ----------------------------------------------------------------------------
