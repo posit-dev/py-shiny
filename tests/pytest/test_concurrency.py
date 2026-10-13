@@ -2772,3 +2772,112 @@ async def test_app_unregisters_its_round_hook_when_its_last_session_ends():
     await c.close()
     assert hooks.count() == before
     assert c.session.app._unregister_output_flush_hook is None
+
+
+@pytest.mark.asyncio
+async def test_on_flushed_callback_that_updates_an_input_does_not_loop():
+    # The update registers an `on_flush` callback, which requests an output flush.
+    # It goes out in one more message, without running `on_flushed` again.
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        session.on_flushed(
+            lambda: ui.update_text("t", value="v", session=session), once=False
+        )
+
+    c = RecordingClient(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: len(c.input_messages()) >= 1)
+        await asyncio.sleep(0.1)
+        n = len(c.input_messages())
+        await asyncio.sleep(0.2)
+        assert len(c.input_messages()) == n
+
+        c.update(x=1)  # one cycle: its outputs, then the update the callback queued
+        assert await wait_until(lambda: len(c.input_messages()) > n)
+        await asyncio.sleep(0.1)
+        n = len(c.input_messages())
+        await asyncio.sleep(0.2)
+        assert len(c.input_messages()) == n
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_insert_ui_from_a_message_handler_is_sent():
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        async def handler() -> None:
+            await asyncio.sleep(0.01)  # past the output flush that follows the message
+            ui.insert_ui(ui.div("x"), "body", session=session)
+
+        session.set_message_handler("h", handler)
+
+    c = RecordingClient(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        c.send({"method": "h", "tag": 1, "args": []})
+        assert await wait_until(lambda: any("shiny-insert-ui" in m for m in c.sent))
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_insert_ui_from_a_background_task_is_sent():
+    c = RecordingClient(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: len(c.sent) > 1)
+
+        async def background() -> None:
+            ui.insert_ui(ui.div("x"), "body", session=c.session)
+
+        await asyncio.create_task(background())
+        assert await wait_until(lambda: any("shiny-insert-ui" in m for m in c.sent))
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_tasks_are_cancelled_when_the_session_ends():
+    log: list[str] = []
+    release = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        async def slow() -> None:
+            try:
+                await release.wait()
+            finally:
+                log.append("handler finally")
+
+        session.set_message_handler("slow", slow)
+
+    c = Client(server)
+    c.send({"method": "init", "data": {}})
+    c.send({"method": "slow", "tag": 1, "args": []})
+    assert await wait_until(lambda: len(c.session._dispatch_tasks) == 1)
+    await c.close()
+    assert await wait_until(lambda: log == ["handler finally"])
+    assert await wait_until(lambda: c.session._dispatch_tasks == set())
+
+
+@pytest.mark.asyncio
+async def test_error_sending_a_handlers_response_closes_the_session(
+    capsys: pytest.CaptureFixture[str],
+):
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        session.set_message_handler("h", lambda: 1)
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: c.session._output_flush_enabled)
+        assert await wait_until(lambda: c.session._busy_count == 0)
+
+        async def fail(*args: object) -> None:
+            raise RuntimeError("send boom")
+
+        c.session._send_response = fail  # type: ignore[method-assign]
+        c.send({"method": "h", "tag": 1, "args": []})
+        assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
+    finally:
+        await c.close()
+    assert "RuntimeError: send boom" in capsys.readouterr().err

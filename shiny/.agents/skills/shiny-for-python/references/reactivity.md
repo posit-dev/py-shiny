@@ -169,7 +169,7 @@ session.run_once_when_idle(lambda: latest.set(new_value))
 | Timer | `reactive.invalidate_later(secs)` |
 | Change state between a session's cycles | `session.run_once_when_idle(fn)` |
 | Poll a data source / file | `@reactive.poll(...)` / `@reactive.file_reader(...)` |
-| Force sync execution in tests | `reactive.flush()` |
+| Run reactive work until idle (tests) | `await reactive.flush()` |
 
 ## Common mistakes
 
