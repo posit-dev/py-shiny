@@ -407,16 +407,28 @@ async def test_flush_during_active_flush_returns():
 
 @pytest.mark.asyncio
 async def test_extended_task_dependents_see_every_queued_result():
-    async def slow_flushed() -> None:
-        await asyncio.sleep(0.05)
+    # The first result lands while a round is in its round-finished callbacks, past
+    # the point where it starts effects. Waiting only for that round to end would
+    # start the queued invocation (status back to "running") before the dependents
+    # run, so they'd never see the first result.
+    gate = asyncio.Event()
+    in_callback = asyncio.Event()
+    hold = False
 
-    unregister = reactive.on_flushed(slow_flushed)
+    async def flushed() -> None:
+        if hold:
+            in_callback.set()
+            await gate.wait()
+
+    unregister = reactive.on_flushed(flushed)
+    loop = asyncio.get_running_loop()
+    results = {1: loop.create_future(), 2: loop.create_future()}
+    other = reactive.value(0)
     try:
 
         @reactive.extended_task
         async def task(n: int) -> int:
-            await asyncio.sleep(0.02)
-            return n
+            return await results[n]
 
         seen: list[int] = []
 
@@ -425,13 +437,30 @@ async def test_extended_task_dependents_see_every_queued_result():
             if task.status() == "success":
                 seen.append(task.value())
 
+        @reactive.effect
+        def _other():
+            other()
+
         task.invoke(1)
         task.invoke(2)  # queued behind the first
         await reactive.flush()
+
+        hold = True
+        other.set(1)
+        await asyncio.wait_for(in_callback.wait(), TIMEOUT)
+        results[1].set_result(1)
+        for _ in range(5):
+            await asyncio.sleep(0)  # the extended task sets its result
+        hold = False
+        gate.set()
+
+        results[2].set_result(2)
         assert await wait_until(lambda: len(seen) == 2)
         assert seen == [1, 2]
         _e.destroy()
+        _other.destroy()
     finally:
+        gate.set()
         unregister()
 
 
