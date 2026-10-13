@@ -336,6 +336,12 @@ class App:
         if self._debug:
             print(f"remove_session: {session}", flush=True)
         del self._sessions[session]
+        # The hook keeps this app alive and runs after every round; drop it once
+        # there's no session left to flush.
+        if not self._sessions and self._unregister_output_flush_hook is not None:
+            self._unregister_output_flush_hook()
+            self._unregister_output_flush_hook = None
+            self._sessions_needing_output_flush.clear()
 
     def run(self, **kwargs: object) -> None:
         """
