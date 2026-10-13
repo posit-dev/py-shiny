@@ -2717,7 +2717,9 @@ async def test_run_once_when_idle_is_dropped_if_the_session_ends_first():
 
 
 @pytest.mark.asyncio
-async def test_run_once_when_idle_error_closes_the_session():
+async def test_run_once_when_idle_error_closes_the_session(
+    capsys: pytest.CaptureFixture[str],
+):
     c = await started_client(lambda input, output, session: None)
     try:
 
@@ -2728,6 +2730,50 @@ async def test_run_once_when_idle_error_closes_the_session():
         assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
     finally:
         await c.close()
+    # The traceback shows where `fn` failed, not just the message.
+    err = capsys.readouterr().err
+    assert "RuntimeError: boom" in err
+    assert "in boom" in err
+
+
+@pytest.mark.asyncio
+async def test_raising_on_flushed_callback_does_not_strand_output_flushes():
+    # A `reactive.on_flushed()` callback registered in `server()` runs before the
+    # app's own round-finished hook; an error in it must not skip that hook.
+    flushed: list[int] = []
+
+    async def boom() -> None:
+        raise RuntimeError("boom")
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        reactive.on_flushed(boom, once=True)
+        session.on_flushed(lambda: flushed.append(1), once=False)
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: len(flushed) >= 1)
+        n = len(flushed)
+        c.update(x=1)
+        assert await wait_until(lambda: len(flushed) > n)
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_app_unregisters_its_round_hook_when_its_last_session_ends():
+    hooks = _reactive_environment._round_finished_callbacks
+    before = hooks.count()
+
+    c = Client(lambda input, output, session: None)
+    c.send({"method": "init", "data": {}})
+    assert await wait_until(lambda: c.session._output_flush_enabled)
+    assert await wait_until(lambda: c.session._busy_count == 0)
+    assert hooks.count() == before + 1
+
+    await c.close()
+    assert hooks.count() == before
+    assert c.session.app._unregister_output_flush_hook is None
 
 
 @pytest.mark.asyncio

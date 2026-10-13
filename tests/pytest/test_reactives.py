@@ -227,21 +227,24 @@ async def test_reactive_value_force_set_preserves_is_set():
 @pytest.mark.asyncio
 async def test_recursive_calc():
     v = Value(5)
+    seen: list[tuple[int, int]] = []
 
     @calc()
-    def r():
+    def r() -> int:
         if v() == 0:
             return 0
         v.set(v() - 1)
-        r()
+        return 1 + r()
 
     @effect()
     def o():
-        r()
+        # The second read is cached: the outermost run's result, not the base case.
+        seen.append((r(), r()))
 
     await flush()
     assert o._exec_count == 2
     assert r._exec_count == 6
+    assert seen == [(5, 5), (5, 5)]
     with isolate():
         assert v() == 0
 
@@ -249,21 +252,23 @@ async def test_recursive_calc():
 @pytest.mark.asyncio
 async def test_recursive_async_calc():
     v = Value(5)
+    seen: list[tuple[int, int]] = []
 
     @calc()
     async def r() -> int:
         if v() == 0:
             return 0
         v.set(v() - 1)
-        return await r()
+        return 1 + await r()
 
     @effect()
     async def o():
-        await r()
+        seen.append((await r(), await r()))
 
     await flush()
     assert o._exec_count == 2
     assert r._exec_count == 6
+    assert seen == [(5, 5), (5, 5)]
     with isolate():
         assert v() == 0
 

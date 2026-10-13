@@ -38,6 +38,12 @@ from ..otel._collect import OtelCollectLevel, _get_env_level
 from ..otel._span_wrappers import shiny_otel_span
 from ..types import MISSING, MISSING_TYPE
 
+
+def _print_round_finished_error(e: Exception) -> None:
+    """Report an error from a round-finished callback; the round has no session to close."""
+    traceback.print_exception(type(e), e, e.__traceback__)
+
+
 if TYPE_CHECKING:
     from ..session import Session
 
@@ -178,7 +184,12 @@ class ReactiveEnvironment:
         )
         self._next_id: int = 0
         self._effect_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
-        self._round_finished_callbacks = _utils.AsyncCallbacks()
+        # One callback's error must not skip the rest: the app's output-flush hook
+        # is one of them, and it runs after any `reactive.on_flushed()` callback
+        # that a server function registered.
+        self._round_finished_callbacks = _utils.AsyncCallbacks(
+            on_error=_print_round_finished_error
+        )
         self._round_requested: bool = False
         # The event loop Shiny runs on, for requests made from other threads.
         self._loop: Optional[asyncio.AbstractEventLoop] = None

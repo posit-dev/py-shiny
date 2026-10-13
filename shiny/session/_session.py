@@ -852,13 +852,16 @@ class Session(ABC):
         fn
             A synchronous function with no arguments; its return value is ignored.
             It runs with this session as the current session. An error it raises
-            closes the session, as an error in an effect does.
+            is printed with its traceback and closes the session, as an error in
+            an effect does.
 
         Raises
         ------
         TypeError
-            If ``fn`` is an async function: it must run without yielding, so that
-            the cycle it starts can't be interrupted partway.
+            If ``fn`` is an async function. The function must run without
+            yielding, so that it changes state all at once, before any effect it
+            invalidates can run. For async work, start a task from ``fn`` with
+            ``asyncio.create_task()``, or do it in an effect.
         """
         _validate_idle_action(fn)
         fn()
@@ -1846,6 +1849,10 @@ class AppSession(Session):
         action = self._cycle_start_action_queue.pop(0)
         try:
             action()
+        except Exception:
+            # Show where it failed; `_unhandled_error()` prints only the message.
+            traceback.print_exc()
+            raise
         finally:
             # The cycle this action starts ends when its effects finish (the idle
             # transition), or right away if it started none.
