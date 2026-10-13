@@ -2715,7 +2715,9 @@ async def test_run_once_when_idle_is_dropped_if_the_session_ends_first():
 
 
 @pytest.mark.asyncio
-async def test_run_once_when_idle_error_closes_the_session():
+async def test_run_once_when_idle_error_closes_the_session(
+    capsys: pytest.CaptureFixture[str],
+):
     c = await started_client(lambda input, output, session: None)
     try:
 
@@ -2726,3 +2728,7 @@ async def test_run_once_when_idle_error_closes_the_session():
         assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
     finally:
         await c.close()
+    # The traceback shows where `fn` failed, not just the message.
+    err = capsys.readouterr().err
+    assert "RuntimeError: boom" in err
+    assert "in boom" in err
