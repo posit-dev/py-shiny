@@ -33,7 +33,8 @@ from typing import (
 
 import orjson
 from htmltools import TagChild, TagList
-from opentelemetry.trace import Span, Status, StatusCode
+from opentelemetry.context import Context as OtelContext
+from opentelemetry.trace import Span, Status, StatusCode, set_span_in_context
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import (
     HTMLResponse,
@@ -868,13 +869,16 @@ class Session(ABC):
         fn
             A synchronous function with no arguments; its return value is ignored.
             It runs with this session as the current session. An error it raises
-            closes the session, as an error in an effect does.
+            is printed with its traceback and closes the session, as an error in
+            an effect does.
 
         Raises
         ------
         TypeError
-            If ``fn`` is an async function: it must run without yielding, so that
-            the cycle it starts can't be interrupted partway.
+            If ``fn`` is an async function. The function must run without
+            yielding, so that it changes state all at once, before any effect it
+            invalidates can run. For async work, start a task from ``fn`` with
+            ``asyncio.create_task()``, or do it in an effect.
         """
         _validate_idle_action(fn)
         fn()
@@ -986,6 +990,8 @@ class AppSession(Session):
         # Spans this session's busy period (its cycle), as R does; see
         # `_increment_busy_count()`.
         self._otel_cycle_span: Optional[Span] = None
+        # The `session_start` span, while the server function and first cycle run.
+        self._otel_session_start_span: Optional[Span] = None
         # Actions (input updates, timer invalidations) waiting for the session to be
         # idle.
         self._cycle_start_action_queue: list[Callable[[], None]] = []
@@ -1205,13 +1211,18 @@ class AppSession(Session):
                                 required_level=OtelCollectLevel.SESSION,
                                 collection_level=_get_env_level(),
                                 infer_session_id=True,
-                            ):
-                                self.app.server(self.input, self.output, self)
+                            ) as session_start_span:
+                                self._otel_session_start_span = session_start_span
+                                try:
+                                    self.app.server(self.input, self.output, self)
 
-                                # Start the first cycle within the `session_start`
-                                # span. This doesn't wait for async effects.
-                                self._request_output_flush()
-                                await _reactive_environment.start_round()
+                                    # Start the first cycle within the
+                                    # `session_start` span. This doesn't wait for
+                                    # async effects.
+                                    self._request_output_flush()
+                                    await _reactive_environment.start_round()
+                                finally:
+                                    self._otel_session_start_span = None
 
                     elif message_obj["method"] == "update":
                         verify_state(ConnectionState.Running)
@@ -1837,14 +1848,23 @@ class AppSession(Session):
             self._send_message_sync({"busy": "busy"})
             # A flush is global and can serve several sessions, so the
             # `reactive_update` span follows this session's cycle instead: it starts
-            # now and ends when all of the session's effects have finished. Its
-            # parent is the current span, e.g. `session_start` for the first cycle.
+            # now and ends when all of the session's effects have finished.
             if self._otel_cycle_span is None:
+                # Choose the parent explicitly. This runs in whichever task
+                # invalidated the effect, often another session's effect or an
+                # earlier cycle of this one, and that task's span isn't this
+                # cycle's parent. The first cycle belongs to `session_start`;
+                # later ones each start a trace of their own.
+                if self._otel_session_start_span is not None:
+                    parent = set_span_in_context(self._otel_session_start_span)
+                else:
+                    parent = OtelContext()
                 self._otel_cycle_span = start_otel_span(
                     "reactive_update",
                     attributes=get_session_id_attrs(self),
                     required_level=OtelCollectLevel.REACTIVE_UPDATE,
                     collection_level=_get_env_level(),
+                    context=parent,
                 )
 
     def _decrement_busy_count(self) -> None:
@@ -1892,6 +1912,10 @@ class AppSession(Session):
         action = self._cycle_start_action_queue.pop(0)
         try:
             action()
+        except Exception:
+            # Show where it failed; `_unhandled_error()` prints only the message.
+            traceback.print_exc()
+            raise
         finally:
             # The cycle this action starts ends when its effects finish (the idle
             # transition), or right away if it started none.
