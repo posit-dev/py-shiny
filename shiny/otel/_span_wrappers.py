@@ -66,6 +66,7 @@ from typing import (
     Union,
 )
 
+from opentelemetry.context import Context as OtelContext
 from opentelemetry.trace import Span, Status, StatusCode, use_span
 
 from ._collect import OtelCollectLevel, get_level
@@ -244,6 +245,7 @@ def start_otel_span(
     attributes: Mapping[str, Any],
     required_level: OtelCollectLevel,
     collection_level: OtelCollectLevel,
+    context: OtelContext | None = None,
 ) -> Span | None:
     """
     Start a span that the caller ends, for work that isn't one block of code.
@@ -251,10 +253,13 @@ def start_otel_span(
     Unlike `shiny_otel_span()`, the span doesn't become the current span; run code
     in it with `use_otel_span()`, and call `span.end()` when the work is done.
     Returns `None` when tracing is off or `collection_level < required_level`.
+
+    `context` chooses the parent: `None` means the current span, and an empty
+    `Context()` starts a new trace.
     """
     if not is_otel_tracing_enabled() or collection_level < required_level:
         return None
-    return get_otel_tracer().start_span(name, attributes=attributes)
+    return get_otel_tracer().start_span(name, context=context, attributes=attributes)
 
 
 @contextmanager
