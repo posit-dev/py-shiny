@@ -36,6 +36,12 @@ from .._docstring import add_example, no_example
 from .._typing_extensions import TypeGuard
 from ..types import MISSING, MISSING_TYPE
 
+
+def _print_round_finished_error(e: Exception) -> None:
+    """Report an error from a round-finished callback; the round has no session to close."""
+    traceback.print_exception(type(e), e, e.__traceback__)
+
+
 if TYPE_CHECKING:
     from ..session import Session
 
@@ -176,7 +182,12 @@ class ReactiveEnvironment:
         )
         self._next_id: int = 0
         self._effect_queue: PriorityQueueFIFO[Context] = PriorityQueueFIFO()
-        self._round_finished_callbacks = _utils.AsyncCallbacks()
+        # One callback's error must not skip the rest: the app's output-flush hook
+        # is one of them, and it runs after any `reactive.on_flushed()` callback
+        # that a server function registered.
+        self._round_finished_callbacks = _utils.AsyncCallbacks(
+            on_error=_print_round_finished_error
+        )
         self._round_requested: bool = False
         # The event loop Shiny runs on, for requests made from other threads.
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -563,15 +574,22 @@ def lock() -> asyncio.Lock:
     # Imported here because `shiny._deprecated` imports `shiny.reactive`.
     from .._deprecated import warn_deprecated
 
-    warn_deprecated(
-        "reactive.lock() is deprecated, does nothing, and will be removed in a future "
-        "version of shiny. To change reactive state from a background task, set the "
-        "reactive value directly: a flush is scheduled automatically, so "
-        "`await reactive.flush()` is not needed. To apply the change once the "
-        "session's effects have finished, use `session.run_once_when_idle()`."
-    )
+    global _lock_warned
+    # Once per process: `lock()` is usually called in a loop.
+    if not _lock_warned:
+        _lock_warned = True
+        warn_deprecated(
+            "reactive.lock() is deprecated, does nothing, and will be removed in a "
+            "future version of shiny. To change reactive state from a background "
+            "task, set the reactive value directly: a flush is scheduled "
+            "automatically, so `await reactive.flush()` is not needed. To apply the "
+            "change once the session's effects have finished, use "
+            "`session.run_once_when_idle()`."
+        )
     return _NoOpLock()
 
+
+_lock_warned: bool = False
 
 _timer_tasks: set[asyncio.Task[None]] = set()
 
