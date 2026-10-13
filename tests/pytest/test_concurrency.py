@@ -2912,11 +2912,12 @@ async def test_async_on_restore_finishes_before_other_effects_start():
 @pytest.mark.asyncio
 async def test_effects_waiting_on_restore_start_in_priority_order():
     log: list[str] = []
+    release = asyncio.Event()
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         @session.bookmark.on_restore
         async def _(state: RestoreState) -> None:
-            await asyncio.sleep(0.01)
+            await release.wait()
             log.append("restored")
 
         @reactive.effect(priority=-1)
@@ -2930,6 +2931,14 @@ async def test_effects_waiting_on_restore_start_in_priority_order():
     c = RestoringClient(server)
     try:
         c.init()
+        # Let both effects reach the restore gate before it opens. A short timer
+        # in the callback isn't enough: before Python 3.13, Windows' clock has a
+        # 15.6 ms resolution, so a 10 ms sleep expired on the next loop pass, and
+        # `low` started after the gate had opened, ahead of the `high` still
+        # being woken.
+        await asyncio.sleep(0.05)
+        assert log == []
+        release.set()
         assert await wait_until(lambda: len(log) == 3)
         assert log == ["restored", "high", "low"]
     finally:
