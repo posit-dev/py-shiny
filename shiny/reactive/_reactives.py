@@ -694,6 +694,9 @@ class Calc_(Generic[T]):
         self._running_task: Optional[asyncio.Task[object]] = None
         self._run_waiters: list[asyncio.Future[None]] = []
         self._most_recent_ctx_id: int = -1
+        # How many runs of the most recent run's task are in progress: more than
+        # one when the calc reads itself.
+        self._run_depth: int = 0
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
         # Guards destroy() idempotency and __call__/get_value access.
@@ -828,12 +831,20 @@ class Calc_(Generic[T]):
         """
         ctx = Context()
         self._ctx = ctx
-        self._most_recent_ctx_id = ctx.id
+        # A nested run (the calc reading itself, in the same task) belongs to the
+        # run that started it: only the outermost one writes the cache.
+        nested = self._running and self._running_task is _current_task()
+        if not nested:
+            self._most_recent_ctx_id = ctx.id
+            self._run_depth = 0
+        run_id = self._most_recent_ctx_id
+        self._run_depth += 1
 
         def on_invalidate() -> None:
             # A superseded run (e.g. a cancelled one) stays subscribed to what it
-            # read; only the most recent run's sources should invalidate the calc.
-            if ctx.id == self._most_recent_ctx_id:
+            # read; only the most recent run's sources (including its nested runs')
+            # should invalidate the calc.
+            if run_id == self._most_recent_ctx_id:
                 self._on_invalidate_cb()
 
         ctx.on_invalidate(on_invalidate)
@@ -863,7 +874,9 @@ class Calc_(Generic[T]):
                         except Exception as err:
                             error.append(err)
                 finally:
-                    if ctx.id == self._most_recent_ctx_id:
+                    if run_id == self._most_recent_ctx_id:
+                        self._run_depth -= 1
+                    if run_id == self._most_recent_ctx_id and self._run_depth == 0:
                         # If this run was invalidated meanwhile, `_invalidated` makes
                         # the next read recompute anyway.
                         self._value[:] = value
