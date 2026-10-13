@@ -1722,7 +1722,7 @@ class AppSession(Session):
         if task.cancelled():
             return
         e = task.exception()
-        if e is not None:
+        if isinstance(e, Exception):
             # E.g. the response couldn't be sent. This closes the session, as an
             # error in the receive loop does.
             traceback.print_exception(type(e), e, e.__traceback__)
