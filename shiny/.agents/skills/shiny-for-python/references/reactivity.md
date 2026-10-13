@@ -145,36 +145,36 @@ Declare `poll`/`file_reader` at module top level to share one cache across
 sessions.
 
 To change reactive state from a background `asyncio` task, call `.set()`
-directly. Setting a value schedules a flush, so there's no lock to take and no
-`reactive.flush()` to await. (From another thread, use
-`loop.call_soon_threadsafe(v.set, x)`.) For a producer shared by all sessions
-(e.g. one polling an API), define it at module top level and start it from the
-first session, once the event loop is running. Keep a reference to its task,
-since the event loop holds tasks only weakly:
+directly. Setting a value schedules its dependents to re-run, so there's no lock
+to take and no `reactive.flush()` to await. (From another thread, use
+`loop.call_soon_threadsafe(v.set, x)`.)
+
+For work shared by all sessions (e.g. polling an API every N seconds), define an
+extended task at module top level and refresh it from a module-level effect. One
+fetch runs for the whole process, and every session's outputs re-run when a
+result arrives:
 
 ```python
-import asyncio
-import contextvars
-import logging
+from shiny import reactive, render
 
-from shiny import reactive
+@reactive.extended_task
+async def fetch_latest():
+    return await fetch()  # your async data source
 
-latest = reactive.value(None)
-_tasks: set[asyncio.Task[None]] = set()
-
-async def _produce():
-    while True:
-        try:
-            latest.set(await fetch())  # your async data source
-        except Exception:
-            logging.exception("fetch failed; retrying")  # keep the producer alive
-        await asyncio.sleep(10)
+@reactive.effect
+def _refresh():
+    reactive.invalidate_later(10)
+    with reactive.isolate():  # `status()` is reactive; don't re-run when it changes
+        if fetch_latest.status() != "running":
+            fetch_latest.invoke()
 
 def server(input, output, session):
-    if not _tasks:
-        # A fresh context keeps this session's context out of the shared task.
-        _tasks.add(contextvars.Context().run(asyncio.create_task, _produce()))
+    @render.text
+    def latest():
+        return fetch_latest.result()  # re-runs when a fetch finishes
 ```
+
+See `references/extended-tasks.md` for extended tasks in general.
 
 A session's effects that are paused at an `await` see a direct `.set()` right
 away. To apply the change the way input changes and `invalidate_later` do, hand
@@ -182,11 +182,8 @@ it to the session. It runs once, after the session's running effects finish, so
 they keep seeing stable values:
 
 ```python
-session.run_once_when_idle(lambda: latest.set(new_value))
+session.run_once_when_idle(lambda: v.set(new_value))
 ```
-
-(For long-running async work that must not block the session, see
-`reactive.extended_task` - out of scope here.)
 
 ## Quick reference
 
