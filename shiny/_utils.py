@@ -578,7 +578,9 @@ class AsyncCallbacks:
         *,
         on_error: Callable[[Exception], None] | None = None,
     ) -> None:
-        self._callbacks: dict[int, tuple[Callable[..., Awaitable[None]], bool]] = {}
+        self._callbacks: dict[
+            int, tuple[Callable[..., Awaitable[None]], bool, bool]
+        ] = {}
         self._id: int = 0
         self._on_error = on_error
         """
@@ -588,11 +590,19 @@ class AsyncCallbacks:
         """
 
     def register(
-        self, fn: Callable[..., Awaitable[None]], once: bool = False
+        self,
+        fn: Callable[..., Awaitable[None]],
+        once: bool = False,
+        *,
+        first: bool = False,
     ) -> CancelCallback:
+        """
+        Register a callback. Callbacks run in registration order, except that those
+        registered with ``first=True`` run before the others.
+        """
         self._id += 1
         id = self._id
-        self._callbacks[id] = (fn, once)
+        self._callbacks[id] = (fn, once, first)
 
         def cancel_callback():
             if id in self._callbacks:
@@ -615,11 +625,11 @@ class AsyncCallbacks:
         **kwargs
             Keyword arguments passed to each callback.
         """
-        # The list() wrapper is necessary to force collection of all the items before
-        # iteration begins. This is necessary because self._callbacks may be mutated
-        # by callbacks.
-        for id, value in list(self._callbacks.items()):
-            fn, once = value
+        # Collect all the items before iteration begins, since self._callbacks may be
+        # mutated by callbacks. The sort is stable, so within each group callbacks
+        # keep their registration order.
+        callbacks = sorted(self._callbacks.items(), key=lambda item: not item[1][2])
+        for id, (fn, once, _) in callbacks:
             try:
                 await fn(*args, **kwargs)
             except Exception as e:

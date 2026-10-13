@@ -316,7 +316,9 @@ class ReactiveEnvironment:
         while True:
             await self.run_next_round()
             running = {t for t in self._tasks if not t.done() and t is not current}
-            if not running and self._effect_queue.empty():
+            # A round requested via `call_soon` (e.g. by an effect's last step, to
+            # start its session's output flush) hasn't started a task yet.
+            if not running and self._effect_queue.empty() and not self._round_requested:
                 return
             if running:
                 await asyncio.wait(running)
@@ -544,10 +546,11 @@ def lock() -> asyncio.Lock:
     """
     Deprecated. Set a reactive value directly instead.
 
-    Apart from emitting a deprecation warning, this function does nothing. It
-    returns an :class:`asyncio.Lock` that never blocks, so holding it neither pauses
-    reactive processing nor keeps out other code that holds it. Code that needs
-    mutual exclusion of its own should create its own :class:`asyncio.Lock`.
+    Apart from emitting a deprecation warning (once per process), this function
+    does nothing. It returns an :class:`asyncio.Lock` that never blocks, so holding
+    it neither pauses reactive processing nor keeps out other code that holds it.
+    Code that needs mutual exclusion of its own should create its own
+    :class:`asyncio.Lock`.
 
     To change reactive state from outside a reactive context (for example, from a
     background :class:`asyncio.Task`), set the :class:`~shiny.reactive.value`

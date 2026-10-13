@@ -379,6 +379,56 @@ async def test_flush_from_task_started_by_effect_waits_for_dependents():
 
 
 @pytest.mark.asyncio
+async def test_flush_waits_for_a_round_requested_by_an_effects_last_step():
+    # A session effect's last step requests a round (to send the session's
+    # outputs) via `call_soon`. If it lands right as `reactive.flush()` checks for
+    # idleness, nothing is running yet, but the outputs haven't been sent either.
+    fut: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+    v = reactive.value(0)
+
+    # Sessionless effect: resolves `fut` one tick after it starts, so the session
+    # effect's last step lands between the waited round's step and the flush's
+    # idleness check.
+    @reactive.effect
+    async def _o():
+        if v() == 0:
+            return
+        await asyncio.sleep(0)
+        fut.set_result(None)
+
+    await reactive.flush()
+    started = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        @reactive.event(input.go, ignore_init=True)
+        async def _t():
+            ui.update_text("t", value="done")  # sent with the outputs
+            started.set()
+            await fut
+
+    c = RecordingClient(server)
+    try:
+        c.send({"method": "init", "data": {"go": 0}})
+        c.update(go=1)
+        await started.wait()
+        assert await wait_until(lambda: not _reactive_environment._round_running)
+        assert c.session._busy_count == 1
+
+        v.set(1)  # round requested
+        for _ in range(10):  # the request fires; the round starts `_o` and yields
+            if _reactive_environment._round_running:
+                break
+            await asyncio.sleep(0)
+        assert _reactive_environment._round_running
+        await reactive.flush()
+        assert c.input_messages() == [{"id": "t", "message": {"value": "done"}}]
+    finally:
+        _o.destroy()
+        await c.close()
+
+
+@pytest.mark.asyncio
 async def test_flush_during_active_flush_returns():
     # With a flushed callback that keeps yielding, reactive.flush() used to keep
     # re-running rounds and never return.
@@ -2341,6 +2391,14 @@ async def test_destroying_a_scope_cancels_its_effects_before_its_values_go():
     def mod(input: Inputs, output: Outputs, session: Session) -> None:
         x = reactive.value(1)  # destroyed along with the module's scope
 
+        # Destroy callbacks run in registration order, so this one runs after
+        # `x` is destroyed. It yields, which would let the effect below resume
+        # and read `x` unless the effect was cancelled first.
+        async def cleanup() -> None:
+            await asyncio.sleep(0)
+
+        session.on_destroy(cleanup)
+
         @reactive.effect
         async def _():
             try:
@@ -2360,8 +2418,8 @@ async def test_destroying_a_scope_cancels_its_effects_before_its_values_go():
         @reactive.effect
         async def _remove():
             await remove.wait()
+            release.set()  # the module's effect is ready to resume
             await session.destroy("mod")
-            release.set()
             log.append("removed")
 
     c = Client(server)
@@ -2741,6 +2799,27 @@ async def test_run_once_when_idle_error_closes_the_session(
     finally:
         await c.close()
     # The traceback shows where `fn` failed, not just the message.
+    err = capsys.readouterr().err
+    assert "RuntimeError: boom" in err
+    assert "in boom" in err
+
+
+@pytest.mark.asyncio
+async def test_flush_callback_error_closes_the_session_with_a_traceback(
+    capsys: pytest.CaptureFixture[str],
+):
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        def boom() -> None:
+            raise RuntimeError("boom")
+
+        session.on_flush(boom)
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
+    finally:
+        await c.close()
     err = capsys.readouterr().err
     assert "RuntimeError: boom" in err
     assert "in boom" in err
@@ -3184,6 +3263,47 @@ async def test_session_end_during_restore_cancels_waiting_effects():
     await c.close()
     assert log == ["restore start", "restore finally"]
     assert c.session._busy_count == 0
+
+
+@pytest.mark.asyncio
+async def test_session_ending_before_its_restore_effect_runs_releases_its_effects():
+    # The session's effects are queued behind a round that a callback holds open,
+    # and the session ends before they start. Its restore effect then never runs,
+    # so it never opens the gate; the other effects must not wait on it forever.
+    in_callback = asyncio.Event()
+    hold = asyncio.Event()
+
+    async def slow_flushed() -> None:
+        in_callback.set()
+        await hold.wait()
+
+    log: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @session.bookmark.on_restore
+        async def _(state: RestoreState) -> None:
+            log.append("restore")
+
+        @reactive.effect
+        def _():
+            log.append("effect")
+
+    unregister = reactive.on_flushed(slow_flushed)
+    hold_round = reactive.effect(lambda: None)  # requests the round that is held
+    try:
+        await in_callback.wait()
+        c = RestoringClient(server)
+        c.init()
+        assert await wait_until(lambda: c.session._output_flush_enabled)
+        await c.close()
+        hold.set()
+        await asyncio.wait_for(reactive.flush(), TIMEOUT)
+        assert log == []
+        assert all(t.done() for t in _reactive_environment._tasks)
+    finally:
+        hold.set()
+        unregister()
+        hold_round.destroy()
 
 
 @pytest.mark.asyncio

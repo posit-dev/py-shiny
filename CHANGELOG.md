@@ -9,13 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking changes
 
-* OpenTelemetry `reactive_update` spans now follow each session's cycle: one span per session, from when the session turns busy until all of its effects (including async ones) have finished, carrying the session's `session.id`. The session's calc, effect, and output spans are its children. Before, there was one span per reactive flush, which can serve several sessions, so with concurrent effects it couldn't carry a single `session.id` and ended before async effects finished. Effects without a session no longer have a `reactive_update` parent. (#2522)
+* OpenTelemetry `reactive_update` spans now follow each session's cycle: one span per session, from when the session turns busy until all of its effects (including async ones) have finished, carrying the session's `session.id`. The session's calc, effect, and output spans are its children. Before, there was one span per reactive flush, which can serve several sessions, so with concurrent effects it couldn't carry a single `session.id` and ended before async effects finished. Effects without a session no longer have a `reactive_update` parent. (#2547)
 
 * Reactive effects now run concurrently. Shiny now starts each invalidated effect without waiting for an `async` effect's awaited part, so a slow `async` effect, calc, or render function no longer delays other sessions. Within a session, input changes and `reactive.invalidate_later()` still wait until all of that session's effects have finished, and outputs are sent together once they have. What app authors may notice:
 
     * `async` effects interleave at each `await` instead of running one after another. `priority` orders when effects start, not when they finish. Runs of the same effect still don't overlap: a re-run waits for the previous run.
 
-    * `reactive.lock()` is now defunct and no longer locks the reactive graph. Please remove it from your code.
+    * `reactive.lock()` is now defunct: it no longer locks the reactive graph, and the lock it returns never blocks, so it no longer keeps out other code holding it either. Please remove it from your code; code that used it as a plain mutex should create its own `asyncio.Lock`.
 
     * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect, a `reactive.on_flushed()` or `session.on_flush()`/`on_flushed()` callback, or a task one of these started while it is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits. The wait covers the whole process, including other sessions' effects and output.
 
@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecations
 
-* `reactive.lock()` is defunct and now emits a `ShinyDeprecationWarning`.  (#2520)
+* `reactive.lock()` is defunct and now emits a `ShinyDeprecationWarning`, once per process. (#2520)
 
 ### Bug fixes
 

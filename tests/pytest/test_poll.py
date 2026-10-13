@@ -40,6 +40,9 @@ class OnEndedSessionCallbacks:
         # No-op for mock; destroy callbacks not needed in these tests
         return lambda: None
 
+    def _on_destroy_first(self, fn: Callable[[], None]) -> None:
+        pass
+
     def _send_message_sync(self, message: Dict[str, object]) -> None:
         pass
 

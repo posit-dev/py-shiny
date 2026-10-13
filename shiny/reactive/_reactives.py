@@ -1108,7 +1108,10 @@ class Effect_:
             # `on_ended` registration is also what destroys effects on session
             # close, since the `on_destroy` one no-ops there.
             self._session.on_ended(self.destroy)
-            self._session.on_destroy(
+            # Before the scope's other destroy callbacks: an async one that yields
+            # would otherwise let a run of this effect resume and read a value the
+            # scope has already destroyed.
+            self._session._on_destroy_first(
                 _weak_destroy_callback(self.destroy, self._session)
             )
 
@@ -1178,10 +1181,12 @@ class Effect_:
                 if previous is not None and not previous.done():
                     await asyncio.shield(previous)
                 # While the session restores its bookmarked state, wait for the
-                # `on_restore` callbacks to finish.
+                # `on_restore` callbacks to finish. Not once destroyed: the session
+                # may have ended before its restore effect ran, in which case the
+                # gate never opens.
                 restore = (
                     self._session._restore_gate(queued_priority)
-                    if self._session
+                    if self._session and not self._destroyed
                     else None
                 )
                 if restore is not None and not restore.done():

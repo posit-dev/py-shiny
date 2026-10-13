@@ -393,6 +393,15 @@ class Session(ABC):
             The function to call on destroy. Can be sync or async.
         """
 
+    def _on_destroy_first(self, fn: Callable[[], None]) -> None:
+        """
+        Like :meth:`on_destroy`, but ``fn`` runs before the callbacks registered
+        with :meth:`on_destroy`, however they interleave. Effects use this so that
+        their in-progress runs are cancelled before an async destroy callback can
+        yield to them while the scope's values are already gone.
+        """
+        self.on_destroy(fn)
+
     @abstractmethod
     async def destroy(self, id: Id | None = None) -> None:
         """
@@ -849,6 +858,7 @@ class Session(ABC):
         """
         return None
 
+    @abstractmethod
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
         """
         Run a function once, at the start of this session's next cycle.
@@ -885,8 +895,6 @@ class Session(ABC):
             invalidates can run. For async work, start a task from ``fn`` with
             ``asyncio.create_task()``, or do it in an effect.
         """
-        _validate_idle_action(fn)
-        fn()
 
 
 def _print_exception(e: Exception) -> None:
@@ -1204,9 +1212,6 @@ class AppSession(Session):
                         stack.callback(self._disable_output_flush)
                         stack.callback(self._cancel_dispatch_tasks)
 
-                        # Set up bookmark callbacks here
-                        self.bookmark._create_effects()
-
                         conn_state = ConnectionState.Running
                         message_obj = typing.cast(ClientMessageInit, message_obj)
                         self._manage_inputs(message_obj["data"])
@@ -1224,6 +1229,10 @@ class AppSession(Session):
                             ) as session_start_span:
                                 self._otel_session_start_span = session_start_span
                                 try:
+                                    # The bookmark effects start the first cycle
+                                    # (and its `reactive_update` span), so create
+                                    # them once `session_start` is its parent.
+                                    self.bookmark._create_effects()
                                     self.app.server(self.input, self.output, self)
 
                                     # Start the first cycle within the
@@ -1825,6 +1834,9 @@ class AppSession(Session):
             try:
                 await self._output_flush()
             except Exception as e:
+                # Show where it failed (an input update, a flush callback, ...);
+                # `_unhandled_error()` prints only the message.
+                _print_exception(e)
                 await self._unhandled_error(e)
             if not self._output_flush_again:
                 return
@@ -1972,10 +1984,6 @@ class AppSession(Session):
         action = self._cycle_start_action_queue.pop(0)
         try:
             action()
-        except Exception:
-            # Show where it failed; `_unhandled_error()` prints only the message.
-            traceback.print_exc()
-            raise
         finally:
             # The cycle this action starts ends when its effects finish (the idle
             # transition), or right away if it started none.
@@ -1994,10 +2002,21 @@ class AppSession(Session):
     def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
+        self._register_destroy(fn, first=False)
+
+    def _on_destroy_first(self, fn: Callable[[], None]) -> None:
+        self._register_destroy(fn, first=True)
+
+    def _register_destroy(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        *,
+        first: bool,
+    ) -> None:
         ns_key = ""
         if ns_key not in self._destroy_callbacks_by_ns:
             self._destroy_callbacks_by_ns[ns_key] = _new_destroy_callbacks()
-        self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn))
+        self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn), first=first)
 
     async def destroy(self, id: Id | None = None) -> None:
         if id is None:
@@ -2182,6 +2201,17 @@ class SessionProxy(Session):
         fn
             The function to call when destroy occurs.
         """
+        self._register_destroy(fn, first=False)
+
+    def _on_destroy_first(self, fn: Callable[[], None]) -> None:
+        self._register_destroy(fn, first=True)
+
+    def _register_destroy(
+        self,
+        fn: Callable[[], None] | Callable[[], Awaitable[None]],
+        *,
+        first: bool,
+    ) -> None:
         destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
             self._root_session, "_destroy_callbacks_by_ns", None
         )
@@ -2189,7 +2219,7 @@ class SessionProxy(Session):
             ns_key = str(self.ns)
             if ns_key not in destroy_cbs:
                 destroy_cbs[ns_key] = _new_destroy_callbacks()
-            destroy_cbs[ns_key].register(wrap_async(fn))
+            destroy_cbs[ns_key].register(wrap_async(fn), first=first)
 
     async def destroy(self, id: Id | None = None) -> None:
         # When `id` is given, destroy that child scope rather than this scope.
