@@ -148,8 +148,9 @@ async def test_each_session_gets_its_own_reactive_update_in_a_shared_flush(
 
     spans = of_sessions(get_exported_spans(provider, exporter), a, b)
     updates = named(spans, "reactive_update")
-    session_ids = {(u.attributes or {}).get(ATTR_SESSION_ID) for u in updates}
-    assert session_ids == {a.session.id, b.session.id}
+    # Attribute values aren't hashable by type (opentelemetry-sdk >= 1.45), so no set.
+    session_ids = [str((u.attributes or {}).get(ATTR_SESSION_ID)) for u in updates]
+    assert sorted(session_ids) == sorted([a.session.id, b.session.id])
     effects = [s for s in spans if s.name.startswith("reactive.effect")]
     assert len(effects) == 2
     assert {parent_of(e, spans) for e in effects} == set(updates)
