@@ -305,8 +305,9 @@ class ReactiveEnvironment:
         Returns right away, without running anything, when called from within a
         round, effect, or output flush that is still going, including from a task it
         started (e.g. via `asyncio.gather()` or `asyncio.wait_for()`): that run may
-        be waiting on the caller, so waiting here could deadlock. A task started by an effect that has since finished
-        (e.g. an extended task's body) waits as usual.
+        be waiting on the caller, so waiting here could deadlock. A task started by
+        an effect that has since finished (e.g. an extended task's body) waits as
+        usual.
         """
         owner = _enclosing_run.get()
         if owner is not None and not owner.done():
@@ -373,7 +374,7 @@ class ReactiveEnvironment:
         self._next_round_waiters = []
         # Stop waiting on the dead loop's tasks, but keep them: if collected, their
         # coroutines' `finally` blocks would run (and fail) in whatever runs then.
-        # ponytail: never freed; only loops that stop mid-round (tests, repeated
+        # Never freed; only loops that stop mid-round (tests, repeated
         # `test_server()` runs) leave any.
         self._abandoned_tasks |= self._tasks
         self._tasks = set()
@@ -463,28 +464,29 @@ def get_current_context() -> Context:
 @no_example()
 async def flush() -> None:
     """
-    Run any pending invalidations (i.e., flush the reactive environment).
+    Run pending reactive work until the reactive environment is idle.
+
+    Runs rounds until the reactive effect queue is empty, every started effect
+    (including its async part) has finished, and each session's resulting outputs
+    have been sent. The wait covers the whole process: other sessions' effects and
+    output flushes too, so steady activity elsewhere delays it.
 
     Warning
     -------
-    You shouldn't ever need to call this function inside of a Shiny app. It's only
-    useful for testing and running reactive code interactively in the console.
-    Setting a :class:`~shiny.reactive.value` already schedules a flush, so code that
-    sets one (from a background task, for example) doesn't need to call this.
-
-    Runs rounds until the reactive environment is idle: the reactive effect queue is
-    empty, every started effect (including its async part) has finished, and each
-    session's resulting outputs have been sent. That covers every session, not only
-    the caller's, so in an app it can wait on other sessions' slow effects.
+    Shiny runs reactive work automatically, so an app only needs this to wait for
+    the work that a change from outside the reactive graph causes (such as a value
+    set from another task). It is mostly useful for tests and interactive use.
 
     Note
     ----
-    Called from within an effect, or from a task started by an effect that is still
-    running (e.g. via `asyncio.create_task()` or `asyncio.gather()`), this returns
-    right away without waiting: the effect may be waiting on the caller, so waiting
-    could deadlock. Dependents still run in the next round, but code right after
-    this call can't rely on them having run yet. A task that outlives the effect
-    that started it (such as an extended task's body) waits as usual.
+    Called from within an effect, a :func:`~shiny.reactive.on_flushed` or
+    ``session.on_flush()``/``on_flushed()`` callback, or a task one of these started
+    while it is still running (e.g. via ``asyncio.create_task()`` or
+    ``asyncio.gather()``), this returns right away without waiting: that work may be
+    waiting on the caller, so waiting could deadlock. Dependents still run in the
+    next round, but code right after this call can't rely on them having run yet. A
+    task that outlives the effect that started it (such as an extended task's body)
+    waits as usual.
     """
     await _reactive_environment.run_until_idle()
 
