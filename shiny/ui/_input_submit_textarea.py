@@ -60,7 +60,8 @@ def input_submit_textarea(
     button
         A :class:`~htmltools.Tag` element to use for the submit button. It's recommended
         that this be an :func:`~shiny.ui.input_task_button` since it will automatically
-        provide a busy indicator (and disable) until the next flush occurs. Note also
+        provide a busy indicator (and disable) until the session next sends its
+        outputs. Note also
         that if the submit button launches an :class:`~shiny.reactive.ExtendedTask`,
         this button can also be bound to the task (:func:`~shiny.ui.bind_task_button`)
         and/or manually updated for more accurate progress reporting
