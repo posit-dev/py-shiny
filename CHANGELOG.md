@@ -11,19 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * OpenTelemetry `reactive_update` spans now follow each session's cycle: one span per session, from when the session turns busy until all of its effects (including async ones) have finished, carrying the session's `session.id`. The session's calc, effect, and output spans are its children. Before, there was one span per reactive flush, which can serve several sessions, so with concurrent effects it couldn't carry a single `session.id` and ended before async effects finished. Effects without a session no longer have a `reactive_update` parent. (#2522)
 
-* Reactive effects now run concurrently. A reactive flush starts each invalidated effect and no longer waits for an `async` effect's awaited part, so a slow `async` effect, calc, or render function no longer delays other sessions. Within a session, input changes and `reactive.invalidate_later()` still wait until all of that session's effects have finished, and outputs are sent together once they have. What app authors may notice:
+* Reactive effects now run concurrently. Shiny now starts each invalidated effect without waiting for an `async` effect's awaited part, so a slow `async` effect, calc, or render function no longer delays other sessions. Within a session, input changes and `reactive.invalidate_later()` still wait until all of that session's effects have finished, and outputs are sent together once they have. What app authors may notice:
 
     * `async` effects interleave at each `await` instead of running one after another. `priority` orders when effects start, not when they finish. Runs of the same effect still don't overlap: a re-run waits for the previous run.
 
-    * `reactive.lock()` no longer pauses reactive processing: Shiny itself no longer takes it (see Deprecations). To change reactive state from another `asyncio` task, set the value directly. A flush is scheduled automatically, so there's no need to `await reactive.flush()`.
+    * `reactive.lock()` no longer pauses reactive processing: Shiny itself no longer takes it (see Deprecations). To change reactive state from another `asyncio` task, set the value directly; its dependents re-run automatically, so there's no need to `await reactive.flush()`.
 
-    * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect or from a task started by an effect that is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits.
+    * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect, a `reactive.on_flushed()` or `session.on_flush()`/`on_flushed()` callback, or a task one of these started while it is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits. The wait covers the whole process, including other sessions' effects and output.
+
+    * `reactive.on_flushed()` callbacks run after each round of effects has *started*, without waiting for `async` effects, and can run several times per `reactive.flush()`. Before, they ran once all effects had finished. An error in one of these callbacks is now printed, and the other callbacks still run, instead of closing a session.
 
     * Message handlers (`session.set_message_handler()`) run in their own task, so a slow handler no longer holds up other messages from the client.
 
-    * Each session sends its outputs in a task of its own, once all of its effects have finished. A slow client, or a slow `session.on_flush()` callback, delays only its own session's output, not other sessions' or the next reactive flush.
+    * Each session sends its outputs in a task of its own, once all of its effects have finished. A slow client, or a slow `session.on_flush()` callback, delays only its own session's output, not other sessions' output or other reactive work.
 
-    * Setting a `reactive.value` schedules a flush, including when `set()` is called from another thread. The reactive graph itself still isn't thread-safe, so from another thread use `loop.call_soon_threadsafe(value.set, new_value)`.
+    * Setting a `reactive.value` now re-runs its dependents automatically, without a call to `reactive.flush()`. The reactive graph itself still isn't thread-safe, so from another thread use `loop.call_soon_threadsafe(value.set, new_value)`.
+
+    * File uploads and `session.dynamic_route()` requests no longer mark the session busy, matching Shiny for R.
 
     * Destroying an effect (`effect.destroy()`) cancels its in-progress run, raising `asyncio.CancelledError` at its current `await`. So ending a session, or `session.destroy(id)`, cancels its in-progress `async` effects and render functions instead of letting them run on after the session or module is gone.
 
@@ -49,7 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* Setting a reactive value from a download handler (`@render.download_button`) now updates the outputs and effects that read it right away, including while a streamed download is still sending. The session also keeps handling input during a streamed download. Before, they updated only after the next message from the client. (#1785)
+* UI updates and custom messages sent outside an output or effect, such as `ui.update_text()` in a `session.on_flushed()` callback or in an `asyncio` task, or `ui.insert_ui()` from a message handler, are now sent to the client right away. Before, they waited until the next input change. (#1889, #21)
+
+* Setting a reactive value from a download handler (`@render.download_button`) now updates the outputs and effects that read it right away, including while a streamed download is still sending. Before, they updated only after the next message from the client. (#1785)
 
 * `Jsonifiable` now uses `Sequence` and `Mapping` for its container arms instead of `List` and `Dict`, which are invariant. Values like `dict[str, int]` and `list[str]` now type-check as `Jsonifiable`, including as the return type of a function passed to a `Renderer[Jsonifiable]`. As a side effect, type checkers also accept other sequences and mappings, such as `range`, `deque`, and `bytes`, even though only `list`, `tuple`, and `dict` serialize. Nothing changes at runtime. (Thanks, @wolfgang-aura!) (#2511)
 
