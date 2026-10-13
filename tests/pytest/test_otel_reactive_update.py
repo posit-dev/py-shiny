@@ -296,3 +296,63 @@ async def test_reactive_update_follows_the_collection_level(
     spans = of_sessions(get_exported_spans(provider, exporter), c)
     assert bool(named(spans, "reactive_update")) is expect_update
     assert any(s.name.startswith("reactive.effect") for s in spans) is expect_effect
+
+
+@pytest.mark.asyncio
+async def test_reactive_update_caused_by_another_session_starts_its_own_trace(
+    otel_tracer_provider: Spans, collect_all: None
+):
+    # A cycle starts in whichever task invalidated the session's effect, here
+    # another session's effect. The span is still the session's own trace, not a
+    # child of that effect.
+    provider, exporter = otel_tracer_provider
+    trigger = reactive.value(0)
+    shared = reactive.value(0)
+
+    def server_a(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        @reactive.event(trigger, ignore_init=True)
+        def _set_shared():
+            shared.set(1)
+
+    def server_b(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        @reactive.event(shared, ignore_init=True)
+        def _react():
+            pass
+
+    a, b = Client(server_a), Client(server_b)
+    for c in (a, b):
+        c.send({"method": "init", "data": {}})
+        await c.idle()
+    exporter.clear()
+
+    trigger.set(1)
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
+    await a.idle()
+    await b.idle()
+    await a.close()
+    await b.close()
+
+    spans = of_sessions(get_exported_spans(provider, exporter), a, b)
+
+    def update_of(c: Client) -> ReadableSpan:
+        (update,) = [
+            s
+            for s in named(spans, "reactive_update")
+            if (s.attributes or {}).get(ATTR_SESSION_ID) == c.session.id
+        ]
+        return update
+
+    a_update, b_update = update_of(a), update_of(b)
+    assert a_update.parent is None
+    assert b_update.parent is None
+    assert a_update.context is not None and b_update.context is not None
+    assert a_update.context.trace_id != b_update.context.trace_id
+    (b_effect,) = [
+        s
+        for s in spans
+        if s.name.startswith("reactive.effect")
+        and (s.attributes or {}).get(ATTR_SESSION_ID) == b.session.id
+    ]
+    assert parent_of(b_effect, spans) is b_update
