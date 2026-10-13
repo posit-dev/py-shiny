@@ -2562,3 +2562,43 @@ async def test_cancelled_calc_run_does_not_react_to_sources_only_it_read():
     await asyncio.wait_for(reactive.flush(), TIMEOUT)
     assert (len(calc_runs), effect_runs) == (3, [1, 1])
     e.destroy()
+
+
+@pytest.mark.asyncio
+async def test_raising_on_flushed_callback_does_not_strand_output_flushes():
+    # A `reactive.on_flushed()` callback registered in `server()` runs before the
+    # app's own round-finished hook; an error in it must not skip that hook.
+    flushed: list[int] = []
+
+    async def boom() -> None:
+        raise RuntimeError("boom")
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        reactive.on_flushed(boom, once=True)
+        session.on_flushed(lambda: flushed.append(1), once=False)
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: len(flushed) >= 1)
+        n = len(flushed)
+        c.update(x=1)
+        assert await wait_until(lambda: len(flushed) > n)
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_app_unregisters_its_round_hook_when_its_last_session_ends():
+    hooks = _reactive_environment._round_finished_callbacks
+    before = hooks.count()
+
+    c = Client(lambda input, output, session: None)
+    c.send({"method": "init", "data": {}})
+    assert await wait_until(lambda: c.session._output_flush_enabled)
+    assert await wait_until(lambda: c.session._busy_count == 0)
+    assert hooks.count() == before + 1
+
+    await c.close()
+    assert hooks.count() == before
+    assert c.session.app._unregister_output_flush_hook is None
