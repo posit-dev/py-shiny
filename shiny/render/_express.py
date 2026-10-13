@@ -46,7 +46,7 @@ class express(Renderer[None]):
         self,
         *,
         inline: bool | MISSING_TYPE = MISSING,
-        container: TagFunction | MISSING_TYPE = MISSING,
+        container: Optional[TagFunction] | MISSING_TYPE = MISSING,
         fill: bool | MISSING_TYPE = MISSING,
         fillable: bool | MISSING_TYPE = MISSING,
         **kwargs: TagAttrValue,
