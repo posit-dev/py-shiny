@@ -1663,7 +1663,7 @@ def test_reactlog_overview_mode_and_module_cards(page: Page, tmp_path: Path) -> 
     for node in data["nodes"]:
         node["module"] = "example"
     load_graph_report(page, format_reactlog_html(data, _VAL_CODE))
-    page.locator("#btn-mode-overview").click()
+    page.keyboard.press("o")
     expect(page.locator(".module-card")).to_have_count(1)
     page.get_by_role("button", name="Zoom into Module").click()
     expect(page.locator("#module-overview-panel")).to_be_hidden()
