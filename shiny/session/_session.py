@@ -15,6 +15,7 @@ import typing
 import urllib.parse
 import warnings
 from abc import ABC, abstractmethod
+from contextvars import ContextVar
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -2705,6 +2706,15 @@ class Inputs:
             del self._map[key]
 
 
+# The output whose renderer is running in the current task, for
+# `session.clientdata.output_*()` called with no id. A ContextVar, because a session's
+# async outputs run as concurrent tasks that interleave at each `await`, and each one
+# must see only its own name.
+_current_output_name: ContextVar[ResolvedId | None] = ContextVar(
+    "shiny_current_output_name", default=None
+)
+
+
 @add_example()
 class ClientData:
     """
@@ -2724,7 +2734,6 @@ class ClientData:
 
     def __init__(self, session: Session) -> None:
         self._session: Session = session
-        self._current_output_name: ResolvedId | None = None
 
     def url_hash(self) -> str:
         """
@@ -2912,8 +2921,8 @@ class ClientData:
         self._check_current_context(f"output_{key}")
 
         # No `id` provided support
-        if id is None and self._current_output_name is not None:
-            id = self._current_output_name
+        if id is None:
+            id = _current_output_name.get()
 
         if id is None:
             raise ValueError(
@@ -2944,12 +2953,11 @@ class ClientData:
         This is used to allow `session.clientdata.output_*()` methods to access the
         current output name without needing to pass it explicitly.
         """
-        old_output_name = self._current_output_name
+        token = _current_output_name.set(output_name)
         try:
-            self._current_output_name = output_name
             yield
         finally:
-            self._current_output_name = old_output_name
+            _current_output_name.reset(token)
 
     @staticmethod
     def _check_current_context(key: str) -> None:
