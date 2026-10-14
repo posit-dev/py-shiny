@@ -1216,6 +1216,9 @@ def format_reactlog_html(
     .timeline-legend {{ display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; margin-left: auto; font: 600 0.62rem var(--sans); color: var(--text-muted); }}
     .trace-timeline-bar .timeline-legend {{ padding-left: 0.5rem; }}
     .timeline-legend .legend-item {{ display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.08rem 0.15rem; }}
+    .timeline-legend .legend-dot {{ position: relative; width: 3px; height: 10px; margin: 0 2px; border-radius: 2px; flex-shrink: 0; }}
+    .timeline-legend .legend-dot:is(.is-flush, .is-mark)::before {{ content: ''; position: absolute; top: -2px; left: 50%; width: 7px; height: 7px; border-radius: 50%; background: inherit; transform: translateX(-50%); }}
+    .timeline-legend .legend-dot.is-mark::before {{ border-radius: 1px; transform: translateX(-50%) rotate(45deg); }}
     .secondary-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface-2); padding: 5px 16px 7px 16px; gap: 4px; z-index: 2; transition: all 0.15s ease; }}
     .secondary-timeline-bar[hidden] {{ display: none !important; }}
     .secondary-timeline-header {{ display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 600 .72rem var(--sans); }}
@@ -1465,9 +1468,10 @@ def format_reactlog_html(
       <span id="active-flush-label" role="status" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()" title="Double-click to toggle flush details"></span>
       <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
       <div class="legend timeline-legend trace-timeline-legend marker-legend timeline-markers-legend legend-markers" aria-label="Timeline markers legend">
-        <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Flush / Flushes</div>
-        <div class="legend-item"><span class="legend-dot" style="--role-color: var(--calc)"></span> Mark / Marks / User mark</div>
-        <div class="legend-item"><span class="legend-dot" style="--role-color: var(--warning)"></span> Invalidation / Invalidations</div>
+        <div class="legend-item" title="Circle: start of a flush, a batch of reactive updates"><span class="legend-dot is-flush" style="--role-color: var(--output)" aria-hidden="true"></span> Flush start</div>
+        <div class="legend-item" title="Plain green tick: a calculation or output finished"><span class="legend-dot" style="--role-color: var(--output)" aria-hidden="true"></span> Completion</div>
+        <div class="legend-item" title="Diamond: a bookmark added by the user"><span class="legend-dot is-mark" style="--role-color: var(--calc)" aria-hidden="true"></span> User mark</div>
+        <div class="legend-item" title="Orange tick: a calculation or output needs to update"><span class="legend-dot" style="--role-color: var(--warning)" aria-hidden="true"></span> Invalidation</div>
       </div>
     </div>
     <div id="trace-track-wrap" class="trace-track-wrap" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()">
