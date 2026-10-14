@@ -1,3 +1,8 @@
+---
+title: "Asset Management"
+description: "Vendored bslib/shiny/sass/htmltools assets and the py-shiny JS bundle: key files, make targets, and pitfalls. Read before running make upgrade-html-deps or touching js/ or shiny/www/."
+---
+
 # Asset Management
 
 py-shiny ships two kinds of client-side assets:
