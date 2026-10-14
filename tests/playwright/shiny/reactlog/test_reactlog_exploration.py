@@ -167,11 +167,20 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3 · x")
 
 
-def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
+@pytest.mark.parametrize("theme", ["dark", "light"])
+def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page, theme: str):
     data = report()
-    page.set_content(format_reactlog_html(data, CODE))
-    expect(page.locator(".timeline-marker.is-idle")).to_have_count(1)
+    page.set_content(format_reactlog_html(data, CODE, theme=theme))
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(3)
     slider = page.get_by_role("slider", name="Timeline step scrubber")
+    timeline = page.locator("#trace-timeline-bar").bounding_box()
+    box = slider.bounding_box()
+    assert timeline is not None and box is not None
+    assert box["y"] + box["height"] <= timeline["y"] + timeline["height"]
+    marker_bounds = page.locator(".timeline-marker").evaluate_all(
+        "els => els.map(el => el.getBoundingClientRect().bottom)"
+    )
+    assert all(bottom < box["y"] + box["height"] / 2 for bottom in marker_bounds)
     slider.focus()
     page.keyboard.press("ArrowRight")
     expect(slider).to_have_value("1")
