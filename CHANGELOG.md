@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+* Python 3.10 is no longer supported; the minimum supported Python version is now 3.11.
+
 ### Improvements
 
 * Python 3.15 is now officially supported and tested. The unit test, end-to-end test, and type check matrices now include 3.15, and the `Programming Language :: Python :: 3.15` trove classifier was added. (#2519)

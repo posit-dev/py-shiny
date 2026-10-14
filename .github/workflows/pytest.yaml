@@ -16,15 +16,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # "3.10" must be a string; otherwise it is interpreted as 3.1.
-        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11", "3.10"]
+        # "3.11" must be a string; otherwise it is interpreted as 3.1.
+        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
           - python-version: ${{ github.event.pull_request.draft && '3.14' }}
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
-          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
           - os: ${{ github.event.pull_request.draft && 'windows-latest' }}
           - os: ${{ github.event.pull_request.draft && 'macOS-latest' }}
 
@@ -108,10 +107,10 @@ jobs:
           # each other.
           prune-cache: true
           cache-dependency-glob: "pyproject.toml"
-          cache-suffix: py3.10-oldest-deps
+          cache-suffix: py3.11-oldest-deps
           activate-environment: true
           # Oldest supported Python (`requires-python` in pyproject.toml)
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Install oldest supported dependencies
         run: |
@@ -169,10 +168,10 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: "Set up Python 3.10"
+      - name: "Set up Python 3.11"
         uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: "3.11"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -210,7 +209,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11", "3.10"]
+        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11"]
         browser: ["chromium", "firefox", "webkit"]
         shard: [0, 1, 2, 3]
         exclude:
@@ -218,7 +217,6 @@ jobs:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
-          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
           - browser: ${{ github.event.pull_request.draft && 'firefox' }}
           - browser: ${{ github.event.pull_request.draft && 'webkit' }}
       fail-fast: false
@@ -265,7 +263,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11", "3.10"]
+        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11"]
         browser: ["chromium", "firefox", "webkit"]
         shard: [0, 1, 2, 3]
         exclude:
@@ -273,7 +271,6 @@ jobs:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
-          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
           - browser: ${{ github.event.pull_request.draft && 'firefox' }}
           - browser: ${{ github.event.pull_request.draft && 'webkit' }}
       fail-fast: false
@@ -338,7 +335,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11", "3.10"]
+        python-version: ["3.15", "3.14", "3.13", "3.12", "3.11"]
         browser: ["chromium", "firefox", "webkit"]
         shard: [0, 1]
         exclude:
@@ -346,7 +343,6 @@ jobs:
           - python-version: ${{ github.event.pull_request.draft && '3.13' }}
           - python-version: ${{ github.event.pull_request.draft && '3.12' }}
           - python-version: ${{ github.event.pull_request.draft && '3.11' }}
-          - python-version: ${{ github.event.pull_request.draft && '3.10' }}
           - browser: ${{ github.event.pull_request.draft && 'firefox' }}
           - browser: ${{ github.event.pull_request.draft && 'webkit' }}
       fail-fast: false
@@ -393,7 +389,7 @@ jobs:
     strategy:
       matrix:
         # Matches deploy server python version
-        python-version: ["3.10"]
+        python-version: ["3.11"]
       fail-fast: false
 
     steps:

@@ -42,8 +42,8 @@ py-shiny/
 ## 3. Code Style & Standards
 
 ### Python Version Support
-- **Minimum**: Python 3.10+ (as of current version)
-- Code must work across supported Python versions (3.10, 3.11, 3.12, 3.13, 3.14, 3.15)
+- **Minimum**: Python 3.11+ (as of current version)
+- Code must work across supported Python versions (3.11, 3.12, 3.13, 3.14, 3.15)
 
 ### Type Hints
 - **Required** for all public APIs
@@ -760,4 +760,4 @@ def my_module_server(input, output, session):
 
 ---
 
-**Version Info**: This document is for py-shiny >= 1.0.0 supporting Python 3.10+
+**Version Info**: This document is for py-shiny >= 1.0.0 supporting Python 3.11+
