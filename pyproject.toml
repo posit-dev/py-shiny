@@ -46,18 +46,18 @@ dynamic = ["version"]
 authors = [{ name = "Winston Chang", email = "winston@posit.co" }]
 description = "A web development framework for Python."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
 dependencies = [
     "typing-extensions>=4.10.0",
@@ -71,7 +71,7 @@ dependencies = [
     "linkify-it-py>=1.0",
     "platformdirs>=2.1.0",
     "asgiref>=3.5.2",
-    "packaging>=20.9",
+    "packaging>=21.3",
     "watchfiles>=0.18.0;platform_system!='Emscripten'",
     "questionary>=2.0.0;platform_system!='Emscripten'",
     "prompt-toolkit>=3.0.0;platform_system!='Emscripten'",
@@ -180,7 +180,7 @@ add-test = [
     "chatlas[anthropic,openai]",
     "openai>=1.104.1",
     "anthropic>=0.62.0",
-    "inspect-ai>=0.3.129;python_version>='3.10'",
+    "inspect-ai>=0.3.129;python_version>='3.11'",
     "pytest-timeout",
     "pytest>=6.2.4",
     "pytest-playwright>=0.5.2",

@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+* Python 3.10 is no longer supported; the minimum supported Python version is now 3.11.
+
 ### New features
 
 * `ui.sidebar()` gains a `role` parameter (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark. (#2526)
 
 ### Improvements
+
+* Python 3.15 is now officially supported and tested. The unit test, end-to-end test, and type check matrices now include 3.15, and the `Programming Language :: Python :: 3.15` trove classifier was added. (#2519)
 
 * `@render.download_button()` and `@render.download_link()` gain an `icon` argument, and pass any other keyword arguments (e.g. `class_="btn-success"`) to the control they auto-place in Express. An Express app no longer needs `ui.hold()` and a hand-placed `ui.download_button()` just to add an icon. The same arguments can also be given with `@output_args()`. (#2533) (Thanks, @raashish1601!) (#2533)
 
