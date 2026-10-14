@@ -2083,10 +2083,11 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
     # environment "in a round" forever: later rounds returned without running, and
     # `run_next_round()` (used by ExtendedTask) waited forever.
     env = ReactiveEnvironment()
-    stuck = asyncio.Event()
 
     async def wait_forever() -> None:
-        await stuck.wait()
+        # Only the round task references this future, so the cleanup below can
+        # collect the task.
+        await asyncio.get_running_loop().create_future()
 
     finalized: list[bool] = []
 
@@ -2104,7 +2105,7 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
         env._round_finished_callbacks.register(wait_forever)
         env._spawn(stranded_run())
         env._spawn(env.start_round())
-        await asyncio.sleep(0.01)  # the round is now waiting on `stuck`
+        await asyncio.sleep(0.01)  # the round is now waiting in `wait_forever()`
         assert env._round_running
         env.request_round()  # also leaves a request pending
 
