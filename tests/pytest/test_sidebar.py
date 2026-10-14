@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 import pytest
-from htmltools import TagAttrValue, TagifiedTag, TagifiedTagList
+from htmltools import HTML, TagAttrValue, TagifiedTag, TagifiedTagList, TagList
 
 from shiny import ui
-from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue
+from shiny.ui._sidebar import SidebarOpenSpec, SidebarOpenValue, SidebarRole
 
 
 @pytest.mark.parametrize(
@@ -94,3 +95,107 @@ def test_sidebar_resizable_attribute():
 
     sb_false, _ = get_sidebar_tags(ui.sidebar(open="open", resizable=False))
     assert "data-resizable" not in sb_false.attrs
+
+
+# Landmark roles ---------------------------------------------------------------------
+
+
+def test_sidebar_neutral_markup_by_default():
+    sidebar_tag, _ = get_sidebar_tags(ui.sidebar(id="sb"))
+
+    assert sidebar_tag.name == "div"
+    assert "role" not in sidebar_tag.attrs
+
+
+def test_sidebar_complementary_role_uses_aside():
+    sidebar_tag, _ = get_sidebar_tags(
+        ui.sidebar(id="sb", title="Filters", role="complementary")
+    )
+
+    assert sidebar_tag.name == "aside"
+    # <aside> is already a complementary landmark, so no explicit role
+    assert "role" not in sidebar_tag.attrs
+
+
+@pytest.mark.parametrize("role", ["form", "search", "region"])
+def test_sidebar_landmark_roles_use_div_with_role(role: SidebarRole):
+    sidebar_tag, _ = get_sidebar_tags(ui.sidebar(id="sb", title="Filters", role=role))
+
+    assert sidebar_tag.name == "div"
+    assert sidebar_tag.attrs["role"] == role
+
+
+def test_sidebar_throws_for_invalid_role():
+    with pytest.raises(ValueError, match="`role` must be one of"):
+        ui.sidebar(role="navigation")  # pyright: ignore[reportArgumentType]
+
+
+def test_sidebar_landmark_labels_from_title():
+    html = TagList(ui.sidebar(id="sb", title="Filters", role="form")).render()["html"]
+
+    assert 'aria-labelledby="sb-title"' in html
+    assert '<header class="sidebar-title" id="sb-title">Filters</header>' in html
+
+
+def test_sidebar_landmark_labels_from_title_without_sidebar_id():
+    # With no sidebar `id`, the title id falls back to a random one
+    html = TagList(ui.sidebar(title="Filters", role="form", open="always")).render()[
+        "html"
+    ]
+
+    match = re.search(r'aria-labelledby="(bslib-sidebar-\d+-title)"', html)
+    assert match is not None
+    assert f'id="{match.group(1)}"' in html
+
+
+def test_sidebar_landmark_uses_existing_title_id():
+    html = TagList(
+        ui.sidebar(
+            id="sb",
+            title=ui.tags.header("Filters", class_="sidebar-title", id="my-heading"),
+            role="form",
+        )
+    ).render()["html"]
+
+    assert 'aria-labelledby="my-heading"' in html
+
+
+def test_sidebar_landmark_wraps_non_tag_title():
+    html = TagList(
+        ui.sidebar(id="sb", title=HTML("<b>Filters</b>"), role="form")
+    ).render()["html"]
+
+    assert 'aria-labelledby="sb-title"' in html
+    assert '<div id="sb-title" style="display:contents"><b>Filters</b></div>' in html
+
+
+def test_sidebar_landmark_hoists_aria_label():
+    sidebar_tag, _ = get_sidebar_tags(
+        ui.sidebar(id="sb", role="form", aria_label="Filters")
+    )
+
+    # The accessible name labels the landmark element (not the content div)
+    assert sidebar_tag.attrs["aria-label"] == "Filters"
+    assert "aria-labelledby" not in sidebar_tag.attrs
+
+    html = TagList(ui.sidebar(id="sb", role="form", aria_label="Filters")).render()[
+        "html"
+    ]
+    assert html.count('aria-label="Filters"') == 1
+
+
+def test_sidebar_landmark_requires_accessible_name():
+    with pytest.raises(ValueError, match="requires an accessible name"):
+        ui.sidebar(id="sb", role="form").tagify()
+
+
+def test_page_sidebar_places_layout_inside_main_landmark():
+    html = TagList(
+        ui.page_sidebar(ui.sidebar(id="sb", title="Filters"), "Main content")
+    ).render()["html"]
+
+    # The whole sidebar layout sits inside the page's <main> landmark, which
+    # doesn't get gap spacing of its own (the layout provides it)
+    main_start = html.index('<main class="bslib-page-main"')
+    assert "bslib-gap-spacing" not in html[main_start : html.index(">", main_start)]
+    assert main_start < html.index("bslib-sidebar-layout")

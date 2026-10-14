@@ -135,17 +135,19 @@ def page_sidebar(
 
     page_attrs: TagAttrs = {"class": "bslib-page-sidebar"}
 
+    sidebar_layout = layout_sidebar(
+        sidebar,
+        *children,
+        attrs,
+        fillable=fillable,
+        border=False,
+        border_radius=False,
+    )
+
     return page_fillable(
         page_attrs,
         navbar_title,
-        layout_sidebar(
-            sidebar,
-            page_main_container(*children, fillable=fillable),
-            attrs,
-            fillable=fillable,
-            border=False,
-            border_radius=False,
-        ),
+        page_main_container(sidebar_layout, fillable=fillable, gap=False),
         get_window_title(title, window_title=window_title),
         padding=0,
         gap=0,
@@ -155,8 +157,12 @@ def page_sidebar(
     )
 
 
-def page_main_container(*args: TagChild, fillable: bool = True) -> Tag:
-    main_attrs: TagAttrs = {"class": "bslib-page-main bslib-gap-spacing"}
+def page_main_container(
+    *args: TagChild, fillable: bool = True, gap: bool = True
+) -> Tag:
+    main_attrs: TagAttrs = {
+        "class": "bslib-page-main" + (" bslib-gap-spacing" if gap else "")
+    }
     main = tags.main(main_attrs, *args)
     if not fillable:
         return main
