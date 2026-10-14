@@ -40,11 +40,12 @@ run can leave presets stale.
 
 Client-side code is in `js/`:
 
-- Entry point: `js/src/shiny/index.ts`
-- Build tool: esbuild via `js/build.ts`
-- Output: `shiny/www/shared/py-shiny/shiny.js` and minified variant, with
-  source maps for debugging
-- TypeScript definitions for Python-JS interop
+- Sources: one directory per component under `js/` (`data-frame/`,
+  `page-output/`, `spin/`, plus shared `utils/`)
+- Build tool: esbuild via `js/build.ts` (entry points listed in its `opts`)
+- Output: `shiny/www/py-shiny/<component>/` (minified, with source maps)
+- `chat/` and `markdown-stream/` there are older committed builds that
+  `js/build.ts` no longer produces (last touched 2025-05)
 
 ```bash
 make js-build        # One-time build (npm install runs automatically)
@@ -52,8 +53,8 @@ make js-watch        # Continuous rebuild on change
 make js-watch-fast   # Continuous rebuild, skipping lint and minification
 ```
 
-Changes to `js/src/` are invisible to Python apps until rebuilt — the apps load
-the committed bundle from `shiny/www/shared/py-shiny/`.
+Changes under `js/` are invisible to Python apps until rebuilt — the apps load
+the committed bundle from `shiny/www/py-shiny/`.
 
 ## When assets come from bslib
 
