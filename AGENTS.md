@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## Overview
 
@@ -20,7 +20,8 @@ make check-format        # Check only
 make check-lint          # Lint with flake8
 
 # Type checking
-make check-types         # Run pyright (requires typings)
+make check-types         # Run pyrefly (requires typings)
+make check-pyright       # Run pyright (separate CI job; run both before pushing)
 
 # Run tests
 make test                # Unit tests only (pytest)
@@ -32,11 +33,11 @@ make playwright-shiny SUB_FILE="inputs/test_foo.py"  # Single test
 make check               # Format, lint, types, unit tests
 make check-fix           # Same but auto-fixes formatting
 
-# Before opening a PR, run the checks through uv so the pinned toolchain is
+# Before opening a PR, run the checks through uv so the venv's toolchain is
 # used (bare `make` may pick up a system black/isort/pyright with different
 # versions and miss failures that CI catches, e.g. a py3.14 black target or a
 # pyright error). This must pass:
-uv run make format check-lint check-types
+uv run make format check-lint check-types check-pyright
 ```
 
 ### Running Apps
@@ -47,7 +48,7 @@ SHINY_LOG_LEVEL=DEBUG shiny run app.py      # Verbose logging
 
 ### Asset Management
 
-See `.claude/references/assets.md` for details.
+See `memory-bank/assets.md` for details.
 ```bash
 # Vendor assets from upstream (bslib, shiny, sass, htmltools)
 make upgrade-html-deps   # Requires R installed
@@ -78,9 +79,21 @@ make playwright-shiny     # Tests in tests/playwright/shiny/
 make playwright-examples  # Tests in tests/playwright/examples/
 ```
 
+## Memory Bank
+
+The `memory-bank/` directory holds contributor documentation with YAML
+frontmatter (`title`, `description`). **Before exploring the codebase**, invoke
+the `memory-bank` skill to find and read the relevant docs. Update or add docs
+when you learn something future contributors will need (see the skill for
+conventions).
+
+Contributor skills live in `.agents/skills/`; `.claude/skills` is a symlink to
+it. Only allowlisted skills are tracked, so when adding or removing one, update
+the `!.agents/skills/<name>/` lines in `.gitignore` to match.
+
 ## Architecture
 
-`.claude/references/architecture.md` explains how the internals work: the reactive
+`memory-bank/architecture.md` explains how the internals work: the reactive
 system, session hierarchy, Express vs Core mode, HTML generation and dependencies,
 input/output bindings, the module system, testing architecture, and the JS build.
 Read the relevant section before working on any of those areas.
@@ -93,12 +106,12 @@ Read the relevant section before working on any of those areas.
 - `shiny/reactive/_core.py` - Reactive system (Context, Dependents, ReactiveEnvironment)
 - `shiny/reactive/_reactives.py` - Reactive primitives (Value, Calc_, Effect_)
 - `shiny/express/_run.py` - Express mode execution
-- `shiny/express/_node_transformers.py` - AST transformation for Express mode
+- `shiny/express/expressify_decorator/_node_transformers.py` - AST transformation for Express mode
 - `shiny/render/renderer/_renderer.py` - Base renderer class
 - `shiny/module.py` - Module decorators and namespacing
 
 ### Asset Management
-- `.claude/references/assets.md` - Vendored bslib/shiny assets and the py-shiny JS bundle (key files, commands, pitfalls)
+- `memory-bank/assets.md` - Vendored bslib/shiny assets and the py-shiny JS bundle (key files, commands, pitfalls)
 
 ### Configuration
 - `pyproject.toml` - Package config, dependencies, tool settings
@@ -107,14 +120,14 @@ Read the relevant section before working on any of those areas.
 - `.pre-commit-config.yaml` - Pre-commit hook configuration
 
 ### Documentation
-- `.claude/references/documentation-style.md` - Docstring conventions, `@add_example()` workflow, quartodoc registration, docs build commands
+- `memory-bank/documentationStyle.md` - Docstring conventions, `@add_example()` workflow, quartodoc registration, docs build commands
 
 ## Important Patterns
 
 ### Component and Renderer Implementation
 
 Before implementing a UI component or output renderer, read
-`.claude/references/component-patterns.md` — it has the step-by-step checklists
+`memory-bank/componentPatterns.md` — it has the step-by-step checklists
 (file layout, exports, examples, controllers, tests) and the rules for pairing
 output components with renderers.
 
@@ -130,13 +143,13 @@ The shiny package ships Agent Skills under `shiny/.agents/skills/` — reference
 docs that teach coding agents how to use shiny's public APIs (debugging,
 testing, etc.). Treat them like user-facing documentation: when a change
 touches an API that a skill documents, update the skill in the same PR. Before
-adding or editing a skill, read `.claude/references/agent-skills.md` for the
+adding or editing a skill, read `memory-bank/agentSkills.md` for the
 layout, frontmatter contract, content shape, scoping rules, and validation
 steps.
 
 ### Type Checking Notes
 
-- Pyright is the primary type checker (not mypy)
+- Pyrefly (`make check-types`) and Pyright (`make check-pyright`) both run in CI (not mypy)
 - Some packages require manual stubs: run `make typings` to generate
 - Stubs are placed in `typings/` (gitignored)
 - Parameter types: prefer `T | None` over `Optional[T]` when no default `None` value is provided
@@ -159,8 +172,8 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 - Choose descriptive parameter names that clarify intent:
   - Use `required_level` not `level` when the parameter represents a threshold/minimum
   - Use `collection_level` not `level` when the parameter represents a current setting
-- Good: `with_otel_span("name", attributes=attrs, required_level=OtelCollectLevel.SESSION)`
-- Bad: `with_otel_span("name", attrs, OtelCollectLevel.SESSION)`
+- Good: `shiny_otel_span("name", attributes=attrs, required_level=OtelCollectLevel.SESSION)`
+- Bad: `shiny_otel_span("name", attrs, OtelCollectLevel.SESSION)`
 
 ### Constants and Magic Values
 
@@ -177,13 +190,13 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 ## Git Commit and PR Conventions
 
 Commit messages and PR titles use **conventional commits**. Read
-`.claude/references/commit-conventions.md` for the format, types, and guidelines
+`memory-bank/commitConventions.md` for the format, types, and guidelines
 before committing or opening a PR — and for the merge policy and flaky-test
 handling before merging one.
 
-Before creating a PR, confirm `uv run make format check-lint check-types`
-passes. Run it through `uv run` (not bare `make`) so the pinned black/isort/
-pyright versions are used — a system toolchain can silently miss failures that
+Before creating a PR, confirm `uv run make format check-lint check-types check-pyright`
+passes. Run it through `uv run` (not bare `make`) so the venv's black/isort/
+pyrefly/pyright are used — a system toolchain can silently miss failures that
 CI then rejects.
 
 ## Common Pitfalls
