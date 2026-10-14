@@ -90,6 +90,10 @@ async function bundle_helper(
 
 const opts: Array<BuildOptions> = [
   {
+    entryPoints: { "webmcp/webmcp": "webmcp/webmcp.ts" },
+    format: "iife",
+  },
+  {
     entryPoints: { "data-frame/data-frame": "data-frame/index.tsx" },
     plugins: [sassPlugin({ type: "css-text", sourceMap: false })],
   },

@@ -318,6 +318,7 @@ class AppOpts(TypedDict):
     static_assets: NotRequired[dict[str, Path]]
     bookmark_store: NotRequired[BookmarkStore]
     debug: NotRequired[bool]
+    webmcp: NotRequired[bool]
 
 
 @no_example()
@@ -326,6 +327,7 @@ def app_opts(
     static_assets: str | Path | Mapping[str, str | Path] | MISSING_TYPE = MISSING,
     bookmark_store: Literal["url", "server", "disable"] | MISSING_TYPE = MISSING,
     debug: bool | MISSING_TYPE = MISSING,
+    webmcp: bool | MISSING_TYPE = MISSING,
 ):
     """
     Set App-level options in Shiny Express
@@ -350,6 +352,8 @@ def app_opts(
         * `"disable"`: Disable bookmarking.
     debug
         Whether to enable debug mode.
+    webmcp
+        Whether to enable experimental browser-agent tools.
     """
 
     stub_session = get_current_session()
@@ -380,6 +384,9 @@ def app_opts(
     if not isinstance(debug, MISSING_TYPE):
         stub_session.app_opts["debug"] = debug
 
+    if not isinstance(webmcp, MISSING_TYPE):
+        stub_session.app_opts["webmcp"] = webmcp
+
 
 def _merge_app_opts(app_opts: AppOpts, app_opts_new: AppOpts) -> AppOpts:
     """
@@ -400,6 +407,9 @@ def _merge_app_opts(app_opts: AppOpts, app_opts_new: AppOpts) -> AppOpts:
 
     if "debug" in app_opts_new:
         app_opts["debug"] = app_opts_new["debug"]
+
+    if "webmcp" in app_opts_new:
+        app_opts["webmcp"] = app_opts_new["webmcp"]
 
     return app_opts
 

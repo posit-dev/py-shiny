@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added experimental WebMCP support for browser agents sharing a live Shiny session. Opt in with `App(..., webmcp=True)` or `SHINY_WEBMCP=1` to expose standard controls and text outputs, and use `@webmcp.tool` for session-scoped Python tools. Includes a sales explorer example, bundled agent guidance, and server/browser tests. (#2513)
+
 * `ui.sidebar()` gains a `role` parameter (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark. (#2526)
 
 ### Improvements

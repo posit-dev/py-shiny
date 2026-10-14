@@ -81,6 +81,7 @@ from ..types import (
     SilentException,
     SilentOperationInProgressException,
 )
+from ..webmcp import _SessionTools
 from ._utils import RenderedDeps, read_thunk_opt, session_context
 
 if TYPE_CHECKING:
@@ -980,6 +981,7 @@ class AppSession(Session):
 
         self._flush_callbacks = _utils.AsyncCallbacks()
         self._flushed_callbacks = _utils.AsyncCallbacks()
+        self._webmcp_tools = _SessionTools(self) if app._webmcp_enabled else None
 
     def _register_session_ended_callbacks(self) -> None:
         # This is to be called from the initialization. It registers functions
