@@ -1,8 +1,13 @@
+---
+title: "Component and Renderer Implementation Patterns"
+description: "Step-by-step checklists for adding UI components and output renderers (file layout, exports, examples, Playwright controllers, tests) and rules for pairing outputs with renderers."
+---
+
 # Component and Renderer Implementation Patterns
 
 Recipes for adding new UI components and output renderers to py-shiny. For
 porting a component from R's bslib specifically, use the
-`.claude/skills/port-from-bslib/SKILL.md` skill instead — it covers asset
+`.agents/skills/port-from-bslib/SKILL.md` skill instead — it covers asset
 vendoring on top of these steps.
 
 ## UI component pattern
@@ -29,7 +34,7 @@ representative example):
 7. Input components usually need a companion `update_*()` function that sends a
    message via `session.send_input_message(id, ...)`; the TypeScript input
    binding handles it in `receiveMessage()`.
-8. Add docs: docstring per `.claude/references/documentation-style.md`, an
+8. Add docs: docstring per `memory-bank/documentationStyle.md`, an
    example app in `shiny/api-examples/<name>/` (`app-core.py` +
    `app-express.py`), and entries in `docs/_quartodoc-core.yml` /
    `docs/_quartodoc-express.yml`.

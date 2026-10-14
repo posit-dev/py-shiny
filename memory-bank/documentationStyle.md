@@ -1,3 +1,8 @@
+---
+title: "Documentation Style Guide"
+description: "Docstring conventions, the @add_example() workflow, quartodoc registration, and docs build commands. Read before writing or editing public API docstrings or examples."
+---
+
 # Documentation Style Guide
 
 Conventions for writing docstrings and API examples in py-shiny. API docs are
