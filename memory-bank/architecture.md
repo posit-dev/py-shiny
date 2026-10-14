@@ -6,7 +6,7 @@ description: "How py-shiny works internally: reactive system, session hierarchy,
 # Architecture
 
 Deep-dive into py-shiny's internals. Key implementation files are listed with
-each section; the "Key Files" section of `CLAUDE.md` has the consolidated list.
+each section; the "Key Files" section of `AGENTS.md` has the consolidated list.
 
 ## Reactive System
 

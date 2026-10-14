@@ -7,7 +7,7 @@ description: "Step-by-step checklists for adding UI components and output render
 
 Recipes for adding new UI components and output renderers to py-shiny. For
 porting a component from R's bslib specifically, use the
-`.claude/skills/port-from-bslib/SKILL.md` skill instead — it covers asset
+`.agents/skills/port-from-bslib/SKILL.md` skill instead — it covers asset
 vendoring on top of these steps.
 
 ## UI component pattern

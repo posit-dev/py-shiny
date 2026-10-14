@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## Overview
 
@@ -85,6 +85,10 @@ frontmatter (`title`, `description`). **Before exploring the codebase**, invoke
 the `memory-bank` skill to find and read the relevant docs. Update or add docs
 when you learn something future contributors will need (see the skill for
 conventions).
+
+Contributor skills live in `.agents/skills/`; `.claude/skills` is a symlink to
+it. Only allowlisted skills are tracked, so when adding or removing one, update
+the `!.agents/skills/<name>/` lines in `.gitignore` to match.
 
 ## Architecture
 

@@ -142,5 +142,17 @@ tests/inspect-ai/scripts/test_metadata.json
 /.claude/*.local.*
 /.claude/scheduled_tasks.lock
 /.claude/plans/
+
+# Contributor skills. `uvx library-skills` installs dependency skills (including
+# the bundled shiny-for-python skill) into .agents/skills/ (and, via the
+# .claude/skills symlink, `--claude` lands there too), so only the skills listed
+# here are tracked. Update this list when adding or removing a skill.
+/.agents/*
+!/.agents/skills/
+/.agents/skills/*
+!/.agents/skills/memory-bank/
+!/.agents/skills/port-from-bslib/
+!/.agents/skills/py-shiny-release/
+!/.agents/skills/sub-issue/
 docs/plans/
 docs/superpowers/
