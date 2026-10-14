@@ -153,6 +153,5 @@ tests/inspect-ai/scripts/test_metadata.json
 !/.agents/skills/memory-bank/
 !/.agents/skills/port-from-bslib/
 !/.agents/skills/py-shiny-release/
-!/.agents/skills/sub-issue/
 docs/plans/
 docs/superpowers/
