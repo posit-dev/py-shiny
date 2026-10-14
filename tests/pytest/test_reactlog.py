@@ -657,7 +657,9 @@ def test_reactlog_remote_security_access_control():
 
         return remote_app
 
-    remote_client = TestClient(make_remote(client_app))  # pyright: ignore[reportArgumentType]
+    remote_client = TestClient(
+        make_remote(client_app)
+    )  # pyright: ignore[reportArgumentType]
     assert remote_client.get("/__reactlog__").status_code == 403
     assert remote_client.get("/__reactlog__/mark").status_code == 403
 
@@ -994,13 +996,6 @@ def test_load_reactlog_json_marks_match_mark_helpers():
     }
     assert ev["mark_wave"]["is_mark"] is True
     assert ev["mark_wave"]["trigger"] == "Bookmark: checkpoint"
-
-
-def test_reactlog_viewer_builds_waves_for_recorded_inputs_and_marks():
-    # The viewer computes waves client-side for loaded logs; pin the hooks it keys on.
-    html = format_reactlog_html(load_reactlog_json({"log": _live_log()}), "")
-    assert "evAction === 'userMark' && ev.mark_wave" in html
-    assert "ev.type === 'input' || ev.node_type === 'input'" in html
 
 
 def test_record_log_fixture_returns_real_graph() -> None:

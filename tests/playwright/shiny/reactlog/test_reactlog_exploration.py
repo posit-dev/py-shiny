@@ -91,6 +91,164 @@ def report(steps: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     return data
 
 
+@pytest.fixture
+def recorded_flushes() -> dict[str, Any]:
+    return load_reactlog_json(
+        [
+            {
+                "action": "define",
+                "reactId": "x",
+                "label": "input.x",
+                "type": "input",
+                "time": 0,
+            },
+            {
+                "action": "define",
+                "reactId": "y",
+                "label": "input.y",
+                "type": "input",
+                "time": 0,
+            },
+            {
+                "action": "define",
+                "reactId": "out",
+                "label": "output result",
+                "type": "output",
+                "time": 0,
+            },
+            {
+                "action": "valueChange",
+                "reactId": "x",
+                "type": "input",
+                "value": 1,
+                "time": 0,
+            },
+            {"action": "enter", "reactId": "out", "time": 0.01},
+            {"action": "exit", "reactId": "out", "time": 0.02},
+            {"action": "queueEmpty", "time": 0.03},
+            {"action": "queueEmpty", "time": 0.03},
+            {"action": "enter", "reactId": "out", "time": 0.04},
+            {"action": "exit", "reactId": "out", "time": 0.4},
+            {"action": "queueEmpty", "time": 0.41},
+            {
+                "action": "valueChange",
+                "reactId": "x",
+                "type": "input",
+                "value": 2,
+                "time": 2.981,
+            },
+            {"action": "invalidateStart", "reactId": "out", "time": 2.981},
+            {"action": "enter", "reactId": "out", "time": 2.981},
+            {"action": "exit", "reactId": "out", "time": 3.098},
+            {"action": "queueEmpty", "time": 3.1},
+            {"action": "invalidateStart", "reactId": "out", "time": 9.255},
+        ]
+    )
+
+
+def test_recorded_flushes_preserve_startup_and_empty_boundaries(
+    page: Page, recorded_flushes: dict[str, Any]
+):
+    page.set_content(format_reactlog_html(recorded_flushes, ""))
+    expect(page.locator("#flush-counter-badge")).to_have_text("Flush 1 / 4")
+    expect(page.locator(".timeline-marker.is-flush")).to_have_count(4)
+    page.locator("#btn-next-flush").click()
+    expect(page.locator("#scrubber-range")).to_have_value("7")
+    expect(page.locator("#flush-counter-badge")).to_have_text("Flush 2 / 4")
+    expect(page.locator(".graph-node")).to_have_count(0)
+    page.locator("#btn-next-flush").click()
+    expect(page.locator("#scrubber-range")).to_have_value("8")
+    page.locator("#btn-next-flush").click()
+    expect(page.locator("#active-flush-label")).to_contain_text(
+        "Flush 4 / 4 · x: 1 → 2"
+    )
+
+
+def test_recorded_flush_keeps_slow_work_and_batched_inputs_together(
+    page: Page, recorded_flushes: dict[str, Any]
+):
+    events = recorded_flushes["events"]
+    events.insert(
+        13,
+        {
+            "action": "valueChange",
+            "node_id": "y",
+            "node_label": "input.y",
+            "type": "input",
+            "value": "3",
+            "time_sec": 3.0,
+        },
+    )
+    events[14]["time_sec"] = 3.4
+    events[15]["time_sec"] = 3.6
+    events[16]["time_sec"] = 3.7
+    page.set_content(format_reactlog_html(recorded_flushes, ""))
+    expect(page.locator(".timeline-marker.is-flush")).to_have_count(4)
+    page.evaluate("seekTo(16)")
+    expect(page.locator(".graph-node")).to_have_count(3)
+    page.locator("#flush-counter-badge").click()
+    expect(page.locator("#secondary-timeline-meta")).to_contain_text("1 outputs")
+    expect(page.locator(".secondary-stage-pill.is-active")).to_contain_text("Settled")
+
+
+def test_video_uses_recorded_flush_completion_time(
+    page: Page, recorded_flushes: dict[str, Any]
+):
+    page.set_content(format_reactlog_html(recorded_flushes, "", video_path="demo.webm"))
+    page.locator("#flush-counter-badge").click()
+    page.locator("#session-video").evaluate("""video => {
+        Object.defineProperties(video, {
+            currentTime: { configurable: true, get: () => 3.0 },
+            paused: { configurable: true, get: () => false },
+        });
+        video.dispatchEvent(new Event('timeupdate'));
+    }""")
+    expect(page.locator(".pill-output.is-active")).to_have_count(0)
+    page.locator("#session-video").evaluate("""video => {
+        Object.defineProperties(video, {
+            currentTime: { configurable: true, get: () => 3.1 },
+            paused: { configurable: true, get: () => false },
+        });
+        video.dispatchEvent(new Event('timeupdate'));
+    }""")
+    expect(page.locator("#scrubber-range")).to_have_value("15")
+    expect(page.locator(".secondary-stage-pill.is-active")).to_contain_text("Settled")
+
+
+@pytest.mark.parametrize("end", [14, 15])
+def test_unfinished_recorded_flush_is_not_shown_as_settled(
+    page: Page, recorded_flushes: dict[str, Any], end: int
+):
+    recorded_flushes["events"] = recorded_flushes["events"][:end]
+    page.set_content(format_reactlog_html(recorded_flushes, ""))
+    page.evaluate(f"seekTo({end - 1})")
+    page.locator("#flush-counter-badge").click()
+    expect(page.locator(".pill-idle")).to_have_count(0)
+    expect(page.locator(".pill-output")).to_have_count(1 if end == 15 else 0)
+    expect(page.locator("#active-flush-label")).to_contain_text("in progress")
+
+
+def test_bookmarks_do_not_create_recorded_flushes(
+    page: Page, recorded_flushes: dict[str, Any]
+):
+    recorded_flushes["events"].insert(
+        14,
+        {
+            "action": "userMark",
+            "event": "userMark",
+            "node_label": "checkpoint",
+            "phase": "interaction",
+            "time_sec": 3.0,
+        },
+    )
+    page.set_content(format_reactlog_html(recorded_flushes, ""))
+    expect(page.locator(".timeline-marker.is-flush")).to_have_count(4)
+    expect(page.locator(".timeline-marker.is-mark")).to_have_count(1)
+    page.evaluate("seekTo(14)")
+    expect(page.locator("#active-flush-label")).to_contain_text("checkpoint")
+    expect(page.locator("#flush-counter-badge")).to_have_text("Flush 4 / 4")
+
+
 def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
     page.keyboard.press("o")
@@ -104,7 +262,7 @@ def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page
     expect(page.locator("#overview-connections")).to_contain_text(
         "App (Root) → analysis"
     )
-    expect(page.locator("#overview-activity button")).to_have_count(3)
+    expect(page.locator("#overview-activity button")).to_have_count(4)
     page.locator('.module-card[data-module="analysis"]').get_by_role(
         "button", name="Zoom into Module"
     ).click()
@@ -161,10 +319,10 @@ def test_activity_interval_filters_graph_and_preserves_selected_action(page: Pag
     page.set_content(format_reactlog_html(report(), CODE))
     page.keyboard.press("o")
     page.locator("#overview-activity-section > summary").click()
-    page.get_by_label("Activity interval start").select_option("1")
-    page.get_by_label("Activity interval end").select_option("1")
+    page.get_by_label("Activity interval start").select_option("2")
+    page.get_by_label("Activity interval end").select_option("2")
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
-    page.locator("#overview-activity button").nth(1).click()
+    page.locator("#overview-activity button").nth(2).click()
     expect(page.locator("#module-overview-panel")).to_be_hidden()
     expect(page.locator(".graph-node")).to_have_count(3)
     step = page.locator("#scrubber-range").input_value()
@@ -205,7 +363,7 @@ def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
     page.keyboard.press("o")
     page.locator("#overview-activity-section > summary").click()
-    page.locator("#overview-activity button").nth(1).click()
+    page.locator("#overview-activity button").nth(2).click()
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Clear all filters").click()
     expect(page.locator(".graph-node")).to_have_count(5)
@@ -264,15 +422,18 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
             "#timeline-tab, #actions-tab, #btn-summary-toggle, #flush-pipeline-bar, #timeline-sidebar, #flush-select"
         )
     ).to_have_count(0)
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 1 / 3")
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 1 / 4")
     page.locator("#btn-next-flush").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 3 · x")
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 4 · Init")
+    expect(page.locator(".graph-node")).to_have_count(0)
+    page.locator("#btn-next-flush").click()
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 4 · x")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.locator("#btn-next-flush").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 3 · y")
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 4 / 4 · y")
     expect(page.locator(".graph-node")).to_have_count(2)
     page.locator("#btn-prev-flush").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 3 · x")
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 4 · x")
 
 
 @pytest.mark.parametrize("theme", ["dark", "light"])
@@ -281,7 +442,7 @@ def test_progress_bar_supports_pointer_keyboard_and_flush_markers(
 ):
     data = report()
     page.set_content(format_reactlog_html(data, CODE, theme=theme))
-    expect(page.locator(".timeline-marker.is-flush")).to_have_count(3)
+    expect(page.locator(".timeline-marker.is-flush")).to_have_count(4)
     slider = page.get_by_role("slider", name="Timeline step scrubber")
     timeline = page.locator("#trace-timeline-bar").bounding_box()
     box = slider.bounding_box()
@@ -298,8 +459,8 @@ def test_progress_bar_supports_pointer_keyboard_and_flush_markers(
     assert box is not None
     page.mouse.click(box["x"] + box["width"] - 8, box["y"] + box["height"] / 2)
     expect(slider).to_have_value(str(len(data["events"]) - 1))
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 3")
-    expect(slider).to_have_attribute("aria-valuetext", re.compile("Flush 3 / 3"))
+    expect(page.locator("#active-flush-label")).to_contain_text("Flush 4 / 4")
+    expect(slider).to_have_attribute("aria-valuetext", re.compile("Flush 4 / 4"))
     page.keyboard.press("Home")
     expect(slider).to_have_value("0")
 
