@@ -59,4 +59,4 @@ the committed bundle from `shiny/www/shared/py-shiny/`.
 
 New Bootstrap components are developed in the R bslib package first and ported
 here; the port vendors bslib's compiled JS/CSS rather than reimplementing it.
-See `.claude/skills/port-from-bslib/SKILL.md` for that full workflow.
+See `.agents/skills/port-from-bslib/SKILL.md` for that full workflow.

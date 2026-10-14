@@ -46,4 +46,4 @@ Keep the frontmatter `title` and `description` in sync with the content.
 
 1. Use **camelCase** naming (e.g., `newFeatureSystem.md`)
 2. Add YAML frontmatter with `title` and `description`; quote values that contain `: `
-3. If the doc should be read for a common task, add a pointer to it in `CLAUDE.md`
+3. If the doc should be read for a common task, add a pointer to it in `AGENTS.md`
