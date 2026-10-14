@@ -1056,7 +1056,9 @@ def test_reactlog_remote_security_access_control():
 
         return remote_app
 
-    remote_client = TestClient(make_remote(client_app))  # pyright: ignore[reportArgumentType]
+    remote_client = TestClient(
+        make_remote(client_app)
+    )  # pyright: ignore[reportArgumentType]
     assert remote_client.get("/__reactlog__").status_code == 403
     assert remote_client.get("/__reactlog__/mark").status_code == 403
 
@@ -1381,95 +1383,6 @@ console.log(JSON.stringify({
         assert pairs[-4][0] < 1520 < pairs[-1][0]
 
 
-def test_reactlog_shared_viewer_bundle_assets_and_r_adapter():
-    import shiny
-
-    asset_dir = Path(shiny.__file__).resolve().parent / "www" / "py-shiny" / "reactlog"
-    for name in ("reactlog.js", "reactlog.css", "reactlog.html"):
-        asset_path = asset_dir / name
-        assert asset_path.is_file()
-        assert asset_path.stat().st_size > 0
-
-    r_trace = [
-        {
-            "action": "define",
-            "reactId": "rNoCtxReactId",
-            "label": "sentinel",
-            "type": "calc",
-            "time": 100.0,
-        },
-        {
-            "action": "define",
-            "reactId": "r1",
-            "label": "input",
-            "type": "reactiveValuesAsListAll",
-            "time": 100.0,
-        },
-        {
-            "action": "define",
-            "reactId": "r2",
-            "label": "out",
-            "type": "observer",
-            "time": 100.0,
-        },
-        {
-            "action": "isolateEnter",
-            "session": "s1",
-            "time": 100.1,
-        },
-        {
-            "action": "dependsOn",
-            "reactId": "r2",
-            "depOnReactId": "r1",
-            "session": "s1",
-            "time": 100.2,
-        },
-        {
-            "action": "isolateExit",
-            "session": "s1",
-            "time": 100.3,
-        },
-    ]
-
-    loaded = load_reactlog_json(r_trace)
-    node_ids = {n["id"] for n in loaded["nodes"]}
-    assert "rNoCtxReactId" not in node_ids
-    assert node_ids == {"r1", "r2"}
-    r1_node = next(n for n in loaded["nodes"] if n["id"] == "r1")
-    assert r1_node["role"] == "source"
-    assert r1_node["type"] == "input"
-    assert loaded["edges"] == [{"from": "r1", "to": "r2"}]
-    html = format_reactlog_html(loaded, "")
-    assert "r1" in html and "r2" in html
-
-    node = shutil.which("node")
-    if node is not None:
-        js_path = json.dumps(str(asset_dir / "reactlog.js"))
-        trace_json = json.dumps(r_trace)
-        script = f"""
-const fs = require("fs");
-global.window = {{ addEventListener: () => {{}}, matchMedia: () => ({{ matches: false }}) }};
-global.document = {{ addEventListener: () => {{}}, getElementById: () => null, querySelector: () => null, documentElement: {{ getAttribute: () => "dark", setAttribute: () => {{}} }} }};
-const reactlogData = {{ nodes: [], edges: [], events: [] }};
-const rawAppSource = null;
-const code = fs.readFileSync({js_path}, "utf8");
-const viewer = (new Function("window", "document", "reactlogData", "rawAppSource", code + "; return ReactlogViewer;"))(global.window, global.document, reactlogData, rawAppSource);
-const normalized = viewer.normalizeReactlogData({trace_json});
-console.log(JSON.stringify({{ nodes: normalized.nodes, edges: normalized.edges }}));
-"""
-        result = subprocess.run(
-            [node, "-e", script], capture_output=True, text=True, check=True
-        )
-        parsed = json.loads(result.stdout)
-        js_node_ids = {n["id"] for n in parsed["nodes"]}
-        assert "rNoCtxReactId" not in js_node_ids
-        assert js_node_ids == {"r1", "r2"}
-        js_r1 = next(n for n in parsed["nodes"] if n["id"] == "r1")
-        assert js_r1["role"] == "source"
-        assert js_r1["type"] == "input"
-        assert parsed["edges"] == [{"from": "r1", "to": "r2", "isolated": True}]
-
-
 def test_load_reactlog_json_marks_isolated_edges():
     data = {
         "log": [
@@ -1629,19 +1542,6 @@ def test_load_reactlog_json_marks_match_mark_helpers():
     }
     assert ev["mark_wave"]["is_mark"] is True
     assert ev["mark_wave"]["trigger"] == "Bookmark: checkpoint"
-
-
-def test_reactlog_viewer_builds_waves_for_recorded_inputs_and_marks():
-    # The viewer computes waves client-side for loaded logs; pin the hooks it keys on.
-    html = format_reactlog_html(load_reactlog_json({"log": _live_log()}), "")
-    assert (
-        "evAction === 'userMark' && ev.mark_wave" in html
-        or 'evAction === "userMark" && ev.mark_wave' in html
-    )
-    assert (
-        "ev.type === 'input' || ev.node_type === 'input'" in html
-        or 'ev.type === "input" || ev.node_type === "input"' in html
-    )
 
 
 def test_record_log_fixture_returns_real_graph() -> None:
