@@ -22,7 +22,7 @@ def load_graph_report(
     """Open the graph and inspector explicitly for tests of those surfaces."""
     page.set_default_timeout(5000)
     page.set_content(html, wait_until=wait_until)
-    page.locator("#btn-mode-full").click()
+    page.evaluate("setViewMode('full')")
     page.locator("#btn-toggle-inspector").click()
     page.locator("#event-history").evaluate("el => el.open = true")
     page.locator("#flush-card").evaluate("el => el.open = true")
@@ -726,7 +726,7 @@ def server(input, output, session):
     page.get_by_role("button", name="Step forward").click()
     expect(page.locator(".graph-node")).to_have_count(3)
 
-    page.get_by_role("button", name="Reset view", exact=True).click()
+    page.get_by_role("button", name="Clear all filters", exact=True).click()
     expect(page.locator(".graph-node")).to_have_count(7)
 
 
@@ -1076,7 +1076,7 @@ def test_r_import_search_preserves_all_nodes(page: Page) -> None:
     expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator('.graph-node[data-id="r4"]')).to_have_count(0)
     expect(page.locator("#search-results")).to_be_hidden()
-    page.get_by_role("button", name="Reset view", exact=True).click()
+    page.get_by_role("button", name="Clear all filters", exact=True).click()
     expect(page.locator(".graph-node")).to_have_count(4)
     page.locator("#search-input").fill("no match xyz")
     expect(page.locator("#search-results")).to_contain_text("0 matches")
@@ -1097,7 +1097,6 @@ def test_fit_large_graph(page: Page) -> None:
     load_graph_report(
         page, format_reactlog_html(load_reactlog_json(raw), source_code="")
     )
-    page.get_by_role("button", name="Fit graph to view", exact=True).click()
     bounds = page.evaluate("""() => {
         const svg = document.getElementById('reactlog-svg').getBoundingClientRect();
         const graph = document.getElementById('viewport-g').getBoundingClientRect();
@@ -1125,7 +1124,7 @@ def test_search_keyboard_and_reset_view(page: Page, tmp_path: Path) -> None:
     expect(page.locator("#search-results button")).to_be_focused()
     page.keyboard.press("Enter")
     expect(page.locator("#search-results")).to_be_hidden()
-    page.get_by_role("button", name="Reset view", exact=True).click()
+    page.get_by_role("button", name="Clear all filters", exact=True).click()
     # input.x, output result, and the output's `.clientdata_*_hidden`.
     expect(page.locator(".graph-node")).to_have_count(3)
     search.fill("unfindablenode")
@@ -1608,7 +1607,7 @@ def test_reactlog_overview_mode_and_module_cards(page: Page, tmp_path: Path) -> 
     for node in data["nodes"]:
         node["module"] = "example"
     load_graph_report(page, format_reactlog_html(data, _VAL_CODE))
-    page.locator("#btn-mode-overview").click()
+    page.keyboard.press("o")
     expect(page.locator(".module-card")).to_have_count(1)
     page.get_by_role("button", name="Zoom into Module").click()
     expect(page.locator("#module-overview-panel")).to_be_hidden()

@@ -1086,12 +1086,6 @@ def format_reactlog_html(
     .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
     .event-details {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
 
-    /* View Mode Switcher */
-    .view-mode-buttons {{ display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; padding: 2px; gap: 2px; }}
-    .view-mode-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.22rem 0.55rem; border-radius: 5px; font: 700 0.68rem var(--sans); cursor: pointer; transition: all 120ms ease; }}
-    .view-mode-btn:hover {{ color: var(--text); background: var(--surface-3); }}
-    .view-mode-btn.is-active {{ background: var(--surface-elevated); color: var(--accent); font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }}
-
     /* Flush Stepper & Nav */
     .flush-nav-group {{ display: flex; align-items: center; gap: 0.3rem; }}
     .flush-selector {{ max-width: 240px; text-overflow: ellipsis; }}
@@ -1518,17 +1512,6 @@ def format_reactlog_html(
       <button class="btn icon mini" id="btn-shortcuts" onclick="toggleShortcutsModal()" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts (?)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg></button>
     </div>
   </footer>
-
-  <div class="view-mode-buttons" role="group" aria-label="Graph view mode" style="position:fixed;top:0;left:0;z-index:99999;pointer-events:none;">
-    <button class="btn mini view-mode-btn" id="btn-mode-flush" style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="setViewMode('flush')" title="Show only nodes active in this flush cycle" aria-hidden="true" tabindex="-1"></button>
-    <button class="btn mini view-mode-btn is-active" id="btn-mode-full" style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="setViewMode('full')" title="Show the complete reactive DAG" aria-hidden="true" tabindex="-1"></button>
-    <button class="btn mini view-mode-btn" id="btn-mode-overview" style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="setViewMode('overview')" title="System architecture overview" aria-hidden="true" tabindex="-1"></button>
-    <button id="btn-toggle-collapse-all" style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="toggleCollapseAllModules()" title="Collapse modules" aria-label="Collapse modules" tabindex="-1"></button>
-    <button style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="resetGraphView()" title="Reset view" aria-label="Reset view" tabindex="-1"></button>
-    <button style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="fitGraph()" title="Fit graph to view" aria-label="Fit graph to view" tabindex="-1"></button>
-    <button style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="zoomIn()" title="Zoom in" aria-label="Zoom in" tabindex="-1"></button>
-    <button style="pointer-events:auto;width:8px;height:8px;opacity:0.001;border:0;padding:0;margin:0;float:left;" onclick="zoomOut()" title="Zoom out" aria-label="Zoom out" tabindex="-1"></button>
-  </div>
 
   <script>
     const reactlogData = {escaped_json};
@@ -2558,9 +2541,6 @@ def format_reactlog_html(
     function setViewMode(mode) {{
       if (mode === 'overview' && currentViewMode !== 'overview') graphViewports.set(currentViewMode + ':' + selectedModuleFilter, {{ zoom: zoomLevel, pan: {{ ...panOffset }} }});
       currentViewMode = mode;
-      document.querySelectorAll('.view-mode-btn').forEach(btn => {{
-        btn.classList.toggle('is-active', btn.id === `btn-mode-${{mode}}`);
-      }});
       document.querySelector('.graph-topbar').hidden = mode === 'overview';
       document.getElementById('trace-timeline-bar').hidden = mode === 'overview';
       const overviewPanel = document.getElementById('module-overview-panel');

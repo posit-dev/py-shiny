@@ -93,7 +93,7 @@ def report(steps: list[dict[str, Any]] | None = None) -> dict[str, Any]:
 
 def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#btn-mode-overview").click()
+    page.keyboard.press("o")
     expect(page.locator("#module-overview-panel")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
     expect(page.get_by_role("button", name="Back to overview")).to_be_hidden()
@@ -117,8 +117,13 @@ def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page
     page.locator("#btn-toggle-inspector").click()
     expect(page.locator("#sidebar")).to_be_visible()
     expect(page.locator("#why-story")).to_contain_text("input.x")
-    page.get_by_role("button", name="Zoom in", exact=True).click()
-    transform = page.locator("#viewport-g").get_attribute("transform")
+    viewport = page.locator("#viewport-g")
+    initial_transform = viewport.get_attribute("transform")
+    assert initial_transform is not None
+    page.locator("#reactlog-svg").hover(position={"x": 20, "y": 20})
+    page.mouse.wheel(0, -100)
+    expect(viewport).not_to_have_attribute("transform", initial_transform)
+    transform = viewport.get_attribute("transform")
     assert transform is not None
     page.get_by_role("button", name="Back to overview").click()
     expect(page.locator("#module-overview-panel")).to_be_visible()
@@ -154,7 +159,7 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
 
 def test_activity_interval_filters_graph_and_preserves_selected_action(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#btn-mode-overview").click()
+    page.keyboard.press("o")
     page.locator("#overview-activity-section > summary").click()
     page.get_by_label("Activity interval start").select_option("1")
     page.get_by_label("Activity interval end").select_option("1")
@@ -175,13 +180,13 @@ def test_phase_stage_and_root_filters_share_scope_and_clear_together(page: Page)
     page.locator("#module-filter-select").select_option("__root__")
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
     page.locator("#phase-filter-select").select_option("interaction")
-    page.locator("#btn-mode-full").click()
+    page.evaluate("setViewMode('full')")
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
     page.get_by_role("button", name="Clear all filters").click()
     expect(page.locator("#module-filter-select")).to_have_value("")
     expect(page.locator("#phase-filter-select")).to_have_value("all")
     expect(page.locator("#active-filters button")).to_have_count(0)
-    page.locator("#btn-mode-full").click()
+    page.evaluate("setViewMode('full')")
     expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
 
 
@@ -191,14 +196,14 @@ def test_empty_recording_can_open_overview_and_graph(page: Page):
     page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
     expect(page.locator("#module-overview-panel")).to_be_hidden()
     expect(page.locator("#filter-node-count")).to_have_text("0 of 0 nodes")
-    page.locator("#btn-mode-full").click()
+    page.evaluate("setViewMode('full')")
     expect(page.locator(".graph-node")).to_have_count(0)
     assert errors == []
 
 
 def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#btn-mode-overview").click()
+    page.keyboard.press("o")
     page.locator("#overview-activity-section > summary").click()
     page.locator("#overview-activity button").nth(1).click()
     expect(page.locator(".graph-node")).to_have_count(3)
@@ -229,7 +234,7 @@ def test_large_overview_prioritizes_modules_and_reveals_activity_on_demand(page:
             }
         )
     page.set_content(format_reactlog_html(data, CODE))
-    page.locator("#btn-mode-overview").click()
+    page.keyboard.press("o")
     expect(page.locator(".module-card")).to_have_count(19)
     expect(page.locator(".module-card").first).to_be_visible()
     expect(page.locator("#overview-activity")).to_be_hidden()
@@ -248,6 +253,7 @@ def test_large_overview_prioritizes_modules_and_reveals_activity_on_demand(page:
 
 def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.get_by_role("group", name="Graph view mode")).to_be_hidden()
     expect(page.locator("#module-overview-panel")).to_be_hidden()
     expect(page.locator("#reactlog-svg")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()

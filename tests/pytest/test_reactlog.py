@@ -91,9 +91,7 @@ def test_format_reactlog_html_self_contained_and_accessible():
     assert 'src="http' not in html
     assert 'href="http' not in html
     assert 'aria-label="Filter reactive nodes by name, type, or id"' in html
-    assert 'aria-label="Fit graph to view"' in html
-    assert 'aria-label="Zoom in"' in html
-    assert 'aria-label="Zoom out"' in html
+    assert 'aria-label="Clear all filters"' in html
     assert 'aria-label="Timeline step scrubber"' in html
     assert 'aria-label="Source file"' in html
 
@@ -1103,9 +1101,6 @@ def test_format_reactlog_html_flush_navigation_and_pipeline():
 
 def test_format_reactlog_html_overview_and_zooming_modes():
     html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
-    assert 'id="btn-mode-overview"' in html
-    assert 'id="btn-mode-flush"' in html
-    assert 'id="btn-mode-full"' in html
     assert 'id="module-overview-panel"' in html
     assert 'id="module-filter-select"' in html
     assert "setViewMode(" in html
