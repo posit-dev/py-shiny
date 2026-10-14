@@ -126,7 +126,7 @@ def test_empty_recording_can_open_graph(page: Page):
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
     expect(page.locator("#filter-node-count")).to_have_text("0 of 0 nodes")
-    page.locator("#btn-mode-full").click()
+    page.evaluate("setViewMode('full')")
     expect(page.locator(".graph-node")).to_have_count(0)
     assert errors == []
 

@@ -1111,12 +1111,6 @@ def format_reactlog_html(
     .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
     .event-details {{ overflow-wrap: anywhere; font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
 
-    /* View Mode Switcher */
-    .view-mode-buttons {{ display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; padding: 2px; gap: 2px; }}
-    .view-mode-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.22rem 0.55rem; border-radius: 5px; font: 700 0.68rem var(--sans); cursor: pointer; transition: all 120ms ease; }}
-    .view-mode-btn:hover {{ color: var(--text); background: var(--surface-3); }}
-    .view-mode-btn.is-active {{ background: var(--surface-elevated); color: var(--accent); font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }}
-
     /* Flush Stepper & Nav */
     .flush-nav-group {{ display: flex; align-items: center; gap: 0.3rem; }}
     .flush-selector {{ max-width: 240px; text-overflow: ellipsis; }}

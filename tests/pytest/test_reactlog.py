@@ -1106,9 +1106,6 @@ def test_format_reactlog_html_flush_navigation_and_pipeline():
 
 def test_format_reactlog_html_overview_and_zooming_modes():
     html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
-    assert 'id="btn-mode-overview"' in html
-    assert 'id="btn-mode-flush"' in html
-    assert 'id="btn-mode-full"' in html
     assert 'id="module-overview-panel"' in html
     assert 'id="module-filter-select"' in html
     assert "setViewMode(" in html
