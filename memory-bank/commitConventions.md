@@ -1,3 +1,8 @@
+---
+title: "Git Commit and PR Conventions"
+description: "Conventional-commit format and types for commits and PR titles, plus merge policy and flaky-test handling. Read before committing, opening, or merging a PR."
+---
+
 # Git Commit and PR Conventions
 
 This project uses **conventional commits** for commit messages and PR titles.

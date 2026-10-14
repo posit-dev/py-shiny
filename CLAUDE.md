@@ -47,7 +47,7 @@ SHINY_LOG_LEVEL=DEBUG shiny run app.py      # Verbose logging
 
 ### Asset Management
 
-See `.claude/references/assets.md` for details.
+See `memory-bank/assets.md` for details.
 ```bash
 # Vendor assets from upstream (bslib, shiny, sass, htmltools)
 make upgrade-html-deps   # Requires R installed
@@ -78,9 +78,17 @@ make playwright-shiny     # Tests in tests/playwright/shiny/
 make playwright-examples  # Tests in tests/playwright/examples/
 ```
 
+## Memory Bank
+
+The `memory-bank/` directory holds contributor documentation with YAML
+frontmatter (`title`, `description`). **Before exploring the codebase**, invoke
+the `memory-bank` skill to find and read the relevant docs. Update or add docs
+when you learn something future contributors will need (see the skill for
+conventions).
+
 ## Architecture
 
-`.claude/references/architecture.md` explains how the internals work: the reactive
+`memory-bank/architecture.md` explains how the internals work: the reactive
 system, session hierarchy, Express vs Core mode, HTML generation and dependencies,
 input/output bindings, the module system, testing architecture, and the JS build.
 Read the relevant section before working on any of those areas.
@@ -98,7 +106,7 @@ Read the relevant section before working on any of those areas.
 - `shiny/module.py` - Module decorators and namespacing
 
 ### Asset Management
-- `.claude/references/assets.md` - Vendored bslib/shiny assets and the py-shiny JS bundle (key files, commands, pitfalls)
+- `memory-bank/assets.md` - Vendored bslib/shiny assets and the py-shiny JS bundle (key files, commands, pitfalls)
 
 ### Configuration
 - `pyproject.toml` - Package config, dependencies, tool settings
@@ -107,14 +115,14 @@ Read the relevant section before working on any of those areas.
 - `.pre-commit-config.yaml` - Pre-commit hook configuration
 
 ### Documentation
-- `.claude/references/documentation-style.md` - Docstring conventions, `@add_example()` workflow, quartodoc registration, docs build commands
+- `memory-bank/documentationStyle.md` - Docstring conventions, `@add_example()` workflow, quartodoc registration, docs build commands
 
 ## Important Patterns
 
 ### Component and Renderer Implementation
 
 Before implementing a UI component or output renderer, read
-`.claude/references/component-patterns.md` — it has the step-by-step checklists
+`memory-bank/componentPatterns.md` — it has the step-by-step checklists
 (file layout, exports, examples, controllers, tests) and the rules for pairing
 output components with renderers.
 
@@ -130,7 +138,7 @@ The shiny package ships Agent Skills under `shiny/.agents/skills/` — reference
 docs that teach coding agents how to use shiny's public APIs (debugging,
 testing, etc.). Treat them like user-facing documentation: when a change
 touches an API that a skill documents, update the skill in the same PR. Before
-adding or editing a skill, read `.claude/references/agent-skills.md` for the
+adding or editing a skill, read `memory-bank/agentSkills.md` for the
 layout, frontmatter contract, content shape, scoping rules, and validation
 steps.
 
@@ -177,7 +185,7 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 ## Git Commit and PR Conventions
 
 Commit messages and PR titles use **conventional commits**. Read
-`.claude/references/commit-conventions.md` for the format, types, and guidelines
+`memory-bank/commitConventions.md` for the format, types, and guidelines
 before committing or opening a PR — and for the merge policy and flaky-test
 handling before merging one.
 

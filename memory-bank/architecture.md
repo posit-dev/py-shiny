@@ -1,3 +1,8 @@
+---
+title: "Architecture"
+description: "How py-shiny works internally: reactive system, session hierarchy, Express vs Core mode, HTML generation and dependencies, input/output bindings, modules, testing architecture, and the JS build. Read the relevant section before working in any of those areas."
+---
+
 # Architecture
 
 Deep-dive into py-shiny's internals. Key implementation files are listed with
@@ -80,7 +85,7 @@ HTML is generated using the `htmltools` package:
 - `components_dependencies()` returns bslib component dependencies
 
 Asset vendoring (bslib CSS/JS, theme presets, `make upgrade-html-deps`) is
-covered in `.claude/references/assets.md`.
+covered in `memory-bank/assets.md`.
 
 ### App UI types
 
@@ -122,7 +127,7 @@ Client-server communication works through bindings:
 - Server defines output using `@render.text`, `@render.plot`, etc.
 - Renderers inherit from the `Renderer` base class
   (`shiny/render/renderer/_renderer.py`; see
-  `.claude/references/component-patterns.md` for the implementation pattern)
+  `memory-bank/componentPatterns.md` for the implementation pattern)
 - Client subscribes to output via `Shiny.bindOutput()` in TypeScript
 - Updates are sent as messages through the WebSocket
 
@@ -203,4 +208,4 @@ text_output.expect_value("You entered: foo")
 
 Client-side code is in `js/` (entry point `js/src/shiny/index.ts`), bundled
 with esbuild into `shiny/www/shared/py-shiny/`. Build commands and workflow are
-covered in `.claude/references/assets.md`.
+covered in `memory-bank/assets.md`.
