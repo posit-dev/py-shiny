@@ -1201,16 +1201,18 @@ def format_reactlog_html(
     .video-sync-status {{ font: 600 .65rem var(--sans); }}
     .video-container {{ border: 0; border-radius: 0; aspect-ratio: 16 / 9; }}
     .video-container video {{ width: 100%; height: 100%; object-fit: contain; }}
-    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); height: 56px; min-height: 56px; padding: 5px 16px; gap: 4px; }}
+    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); min-height: 72px; padding: 5px 16px; gap: 4px; }}
     .timeline-current {{ display: flex; justify-content: space-between; gap: 12px; font: 650 .72rem var(--sans); }}
     #active-flush-label, .trace-status-line {{ max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-    .trace-track-wrap {{ position: relative; height: 24px; flex: none; display: block; }}
-    #scrubber-range {{ position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; accent-color: var(--accent); cursor: pointer; }}
-    #trace-markers {{ position: absolute; inset: 0 8px; pointer-events: none; z-index: 1; }}
-    .timeline-marker {{ position: absolute; bottom: 0; width: 2px; height: 5px; background: var(--output); }}
-    .timeline-marker.is-flush {{ height: 9px; }}
-    .timeline-marker.is-mark {{ height: 12px; width: 3px; background: #f59e0b; }}
-    .timeline-marker.is-invalidation {{ height: 8px; width: 2px; background: var(--warning); }}
+    .trace-track-wrap {{ position: relative; height: 40px; flex: none; display: block; }}
+    #scrubber-range {{ position: absolute; inset: auto 0 0; width: 100%; height: 24px; margin: 0; accent-color: var(--accent); cursor: pointer; }}
+    #trace-markers {{ position: absolute; inset: 0 8px 16px; pointer-events: none; z-index: 1; }}
+    .timeline-marker {{ position: absolute; bottom: 0; width: 3px; height: 10px; border-radius: 2px; background: var(--output); transform: translateX(-50%); box-shadow: 0 0 0 1px var(--surface); }}
+    .timeline-marker.is-invalidation {{ height: 14px; width: 4px; background: var(--warning); }}
+    .timeline-marker.is-flush {{ height: 18px; width: 5px; z-index: 2; }}
+    .timeline-marker.is-mark {{ height: 24px; width: 6px; background: var(--calc); z-index: 3; }}
+    .timeline-marker.is-flush::before, .timeline-marker.is-mark::before {{ content: ''; position: absolute; top: 0; left: 50%; width: 8px; height: 8px; border: 1px solid var(--surface); border-radius: 50%; background: inherit; transform: translate(-50%, -25%); }}
+    .timeline-marker.is-mark::before {{ width: 10px; height: 10px; border-radius: 1px; transform: translate(-50%, -25%) rotate(45deg); }}
     .timeline-legend {{ display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; margin-left: auto; font: 600 0.62rem var(--sans); color: var(--text-muted); }}
     .trace-timeline-bar .timeline-legend {{ padding-left: 0.5rem; }}
     .timeline-legend .legend-item {{ display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.08rem 0.15rem; }}
@@ -1464,7 +1466,7 @@ def format_reactlog_html(
       <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
       <div class="legend timeline-legend trace-timeline-legend marker-legend timeline-markers-legend legend-markers" aria-label="Timeline markers legend">
         <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Flush / Flushes</div>
-        <div class="legend-item"><span class="legend-dot" style="--role-color: #f59e0b"></span> Mark / Marks / User mark</div>
+        <div class="legend-item"><span class="legend-dot" style="--role-color: var(--calc)"></span> Mark / Marks / User mark</div>
         <div class="legend-item"><span class="legend-dot" style="--role-color: var(--warning)"></span> Invalidation / Invalidations</div>
       </div>
     </div>
