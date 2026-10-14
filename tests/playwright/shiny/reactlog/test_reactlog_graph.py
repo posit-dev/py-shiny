@@ -1491,7 +1491,7 @@ def server(input, output, session):
     isolated_edges = page.locator(".graph-edge.is-isolated")
     expect(isolated_edges).to_have_count(1)
     expect(isolated_edges).to_have_attribute("stroke-dasharray", "5 4")
-    expect(page.locator(".legend")).to_contain_text("Isolated read")
+    expect(page.locator(".graph-topbar .legend")).to_contain_text("Isolated read")
 
 
 def test_isolated_reads_are_not_reported_as_causes(page: Page, tmp_path: Path) -> None:

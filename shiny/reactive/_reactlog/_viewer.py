@@ -1217,6 +1217,9 @@ def format_reactlog_html(
     .timeline-marker.is-flush {{ height: 9px; }}
     .timeline-marker.is-mark {{ height: 12px; width: 3px; background: #f59e0b; }}
     .timeline-marker.is-invalidation {{ height: 8px; width: 2px; background: var(--warning); }}
+    .timeline-legend {{ display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; margin-left: auto; font: 600 0.62rem var(--sans); color: var(--text-muted); }}
+    .trace-timeline-bar .timeline-legend {{ padding-left: 0.5rem; }}
+    .timeline-legend .legend-item {{ display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.08rem 0.15rem; }}
     .secondary-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface-2); padding: 5px 16px 7px 16px; gap: 4px; z-index: 2; transition: all 0.15s ease; }}
     .secondary-timeline-bar[hidden] {{ display: none !important; }}
     .secondary-timeline-header {{ display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 600 .72rem var(--sans); }}
@@ -1465,6 +1468,11 @@ def format_reactlog_html(
     <div class="timeline-current">
       <span id="active-flush-label" role="status" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()" title="Double-click to toggle flush details"></span>
       <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
+      <div class="legend timeline-legend trace-timeline-legend marker-legend timeline-markers-legend legend-markers" aria-label="Timeline markers legend">
+        <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Flush / Flushes</div>
+        <div class="legend-item"><span class="legend-dot" style="--role-color: #f59e0b"></span> Mark / Marks / User mark</div>
+        <div class="legend-item"><span class="legend-dot" style="--role-color: var(--warning)"></span> Invalidation / Invalidations</div>
+      </div>
     </div>
     <div id="trace-track-wrap" class="trace-track-wrap" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()">
       <div id="trace-markers" aria-hidden="true"></div>
