@@ -10,6 +10,8 @@ each section; the "Key Files" section of `AGENTS.md` has the consolidated list.
 
 ## Reactive System
 
+Deep dive: `memory-bank/reactiveInternals.md`.
+
 Implementation: `shiny/reactive/_core.py` (graph machinery),
 `shiny/reactive/_reactives.py` (primitives).
 
@@ -35,6 +37,8 @@ Key implementation details:
 
 ## Session Hierarchy
 
+Deep dives: `memory-bank/sessionMessaging.md` (wire protocol, flush cycle) and `memory-bank/appServing.md` (routes, CLI, autoreload).
+
 Implementation: `shiny/session/_session.py`; app entry point in `shiny/_app.py`.
 
 Sessions manage the lifetime and state of a Shiny application:
@@ -57,25 +61,29 @@ Session management:
 ## Express vs Core Mode
 
 Implementation: `shiny/express/_run.py` (execution),
-`shiny/express/_node_transformers.py` (AST transformation).
+`shiny/express/expressify_decorator/_node_transformers.py` (AST transformation).
+Deep dive: `memory-bank/expressMode.md`.
 
 **Core mode** is imperative: you explicitly construct UI and define server
 logic in a function.
 
-**Express mode** transforms Python code using AST manipulation:
+**Express mode** executes the app file top to bottom and captures UI as it goes:
 
-- `@render.text` decorators are hoisted into a synthetic `server()` function
-- UI elements are collected into a synthetic `ui` object
-- Top-level code runs in a special context where UI calls are recorded
-- `RecallContextManager` enables UI elements to render themselves automatically
-- The transformation happens at import time via `_run.py` and
-  `_node_transformers.py`
+- The file runs once with a stub session to build the UI, then **re-runs in
+  full for every session** with the real session active (there is no synthetic
+  `server()`; renderers simply register again each run)
+- A light AST transform plus a swapped `sys.displayhook` collect the value of
+  each top-level expression as UI
+- `RecallContextManager` (`with ui.card():`) collects the children produced
+  inside its block
 
 Critical difference: Express mode uses **execution order** (top-to-bottom) for
 UI layout, while Core mode uses explicit nesting. Debugging Express apps
 requires understanding the transformed code.
 
 ## HTML Generation and Dependencies
+
+Deep dive on themes: `memory-bank/theming.md`.
 
 HTML is generated using the `htmltools` package:
 
@@ -151,6 +159,8 @@ Modules enable namespaced, reusable components:
 
 ## Testing Architecture
 
+Deep dive: `memory-bank/playwrightTesting.md`; toolchain and CI in `memory-bank/ciAndTooling.md`.
+
 **Unit tests** (`tests/pytest/`):
 
 - Use standard pytest with syrupy for snapshots (`make test-update-snapshots`
@@ -206,6 +216,7 @@ text_output.expect_value("You entered: foo")
 
 ## JavaScript/TypeScript Build
 
-Client-side code is in `js/` (entry point `js/src/shiny/index.ts`), bundled
-with esbuild into `shiny/www/shared/py-shiny/`. Build commands and workflow are
+Client-side code is in `js/`, with one esbuild entry point per component
+(`data-frame/index.tsx`, `page-output/page-output.ts`, `spin/spin.scss`; see
+`opts` in `js/build.ts`), bundled into `shiny/www/py-shiny/`. Build commands and workflow are
 covered in `memory-bank/assets.md`.

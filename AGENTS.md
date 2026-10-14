@@ -20,7 +20,8 @@ make check-format        # Check only
 make check-lint          # Lint with flake8
 
 # Type checking
-make check-types         # Run pyright (requires typings)
+make check-types         # Run pyrefly (requires typings)
+make check-pyright       # Run pyright (separate CI job; run both before pushing)
 
 # Run tests
 make test                # Unit tests only (pytest)
@@ -32,11 +33,11 @@ make playwright-shiny SUB_FILE="inputs/test_foo.py"  # Single test
 make check               # Format, lint, types, unit tests
 make check-fix           # Same but auto-fixes formatting
 
-# Before opening a PR, run the checks through uv so the pinned toolchain is
+# Before opening a PR, run the checks through uv so the venv's toolchain is
 # used (bare `make` may pick up a system black/isort/pyright with different
 # versions and miss failures that CI catches, e.g. a py3.14 black target or a
 # pyright error). This must pass:
-uv run make format check-lint check-types
+uv run make format check-lint check-types check-pyright
 ```
 
 ### Running Apps
@@ -105,7 +106,7 @@ Read the relevant section before working on any of those areas.
 - `shiny/reactive/_core.py` - Reactive system (Context, Dependents, ReactiveEnvironment)
 - `shiny/reactive/_reactives.py` - Reactive primitives (Value, Calc_, Effect_)
 - `shiny/express/_run.py` - Express mode execution
-- `shiny/express/_node_transformers.py` - AST transformation for Express mode
+- `shiny/express/expressify_decorator/_node_transformers.py` - AST transformation for Express mode
 - `shiny/render/renderer/_renderer.py` - Base renderer class
 - `shiny/module.py` - Module decorators and namespacing
 
@@ -148,7 +149,7 @@ steps.
 
 ### Type Checking Notes
 
-- Pyright is the primary type checker (not mypy)
+- Pyrefly (`make check-types`) and Pyright (`make check-pyright`) both run in CI (not mypy)
 - Some packages require manual stubs: run `make typings` to generate
 - Stubs are placed in `typings/` (gitignored)
 - Parameter types: prefer `T | None` over `Optional[T]` when no default `None` value is provided
@@ -171,8 +172,8 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 - Choose descriptive parameter names that clarify intent:
   - Use `required_level` not `level` when the parameter represents a threshold/minimum
   - Use `collection_level` not `level` when the parameter represents a current setting
-- Good: `with_otel_span("name", attributes=attrs, required_level=OtelCollectLevel.SESSION)`
-- Bad: `with_otel_span("name", attrs, OtelCollectLevel.SESSION)`
+- Good: `shiny_otel_span("name", attributes=attrs, required_level=OtelCollectLevel.SESSION)`
+- Bad: `shiny_otel_span("name", attrs, OtelCollectLevel.SESSION)`
 
 ### Constants and Magic Values
 
@@ -193,9 +194,9 @@ Commit messages and PR titles use **conventional commits**. Read
 before committing or opening a PR — and for the merge policy and flaky-test
 handling before merging one.
 
-Before creating a PR, confirm `uv run make format check-lint check-types`
-passes. Run it through `uv run` (not bare `make`) so the pinned black/isort/
-pyright versions are used — a system toolchain can silently miss failures that
+Before creating a PR, confirm `uv run make format check-lint check-types check-pyright`
+passes. Run it through `uv run` (not bare `make`) so the venv's black/isort/
+pyrefly/pyright are used — a system toolchain can silently miss failures that
 CI then rejects.
 
 ## Common Pitfalls
