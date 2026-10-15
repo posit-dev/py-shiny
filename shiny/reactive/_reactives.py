@@ -1303,6 +1303,10 @@ class Effect_:
         release resources and prevent future execution — the same work
         that would happen if this object were garbage collected.
         """
+        # Idempotent: a session registers `destroy` for both its end and its
+        # destroy, and a second cancel would interrupt a cancelled run's cleanup.
+        if self._destroyed:
+            return
         self._destroyed = True
 
         # Cancel in-progress runs now, before the caller tears down what they read

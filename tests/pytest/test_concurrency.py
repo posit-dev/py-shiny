@@ -2181,6 +2181,38 @@ async def test_destroy_cancels_effect_run_in_progress():
 
 
 @pytest.mark.asyncio
+async def test_destroying_an_effect_twice_does_not_interrupt_its_cleanup():
+    # A session calls `destroy()` from both `on_ended` and `on_destroy`; the second
+    # call must not cancel the cleanup the first one's cancellation is running.
+    log: list[str] = []
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    @reactive.effect
+    async def e():
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            log.append("cleanup start")
+            try:
+                await release.wait()
+                log.append("cleanup end")
+            except asyncio.CancelledError:
+                log.append("cleanup interrupted")
+                raise
+
+    flush = asyncio.create_task(reactive.flush())
+    await asyncio.wait_for(started.wait(), TIMEOUT)
+    e.destroy()
+    assert await wait_until(lambda: log == ["cleanup start"])
+    e.destroy()
+    release.set()
+    await asyncio.wait_for(flush, TIMEOUT)
+    assert log == ["cleanup start", "cleanup end"]
+
+
+@pytest.mark.asyncio
 async def test_destroy_cancels_queued_rerun_waiting_on_previous_run():
     v = reactive.value(0)
     release = asyncio.Event()
