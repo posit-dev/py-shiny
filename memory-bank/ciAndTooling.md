@@ -202,7 +202,9 @@ py-htmltools' CI; keep it in sync when changing what `check` runs.
   Node version in `js/.nvmrc`, or `verify-js-built` fails.
 - After changing a Playwright controller, run `make update-testing-docs` and
   commit `shiny/pytest/_generate/_data/testing-documentation.json`, or
-  `verify-testing-docs-on-change` fails.
+  `verify-testing-docs-on-change` fails. `docs/api/` is gitignored, so the
+  Makefile's `repomix` call needs `--no-gitignore`; without it, newer repomix
+  packs zero files and the JSON becomes `[]`.
 - A workflow's own `paths` filter must use its exact filename (`.yml` vs
   `.yaml`), or editing only the workflow won't trigger it.
 - `oldest-deps` installs runtime deps at their declared floors, so code using
