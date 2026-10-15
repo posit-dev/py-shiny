@@ -27,7 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * File uploads and `session.dynamic_route()` requests no longer mark the session busy, matching Shiny for R.
 
-  (#2508)
+    * Destroying an effect (`effect.destroy()`) cancels its in-progress run, raising `asyncio.CancelledError` at its current `await`. So ending a session, or `session.destroy(id)`, cancels its in-progress `async` effects and render functions instead of letting them run on after the session or module is gone.
+
+  (#2508, #2515)
 
 ### New features
 

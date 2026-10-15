@@ -419,8 +419,9 @@ class Session(ABC):
         state. (Session *close* is deliberately gentler with reactives — see
         "Close is not destroy" below.)
 
-        - **Reactive objects** — Effects are stopped, calcs and values are
-          invalidated. After destruction, ``get()``/``set()`` on a destroyed
+        - **Reactive objects** — Effects are stopped, and a run still in progress
+          (e.g. paused at an ``await``) is cancelled, so it can't go on to read
+          the scope's destroyed values. Calcs and values are invalidated. After destruction, ``get()``/``set()`` on a destroyed
           value raises ``DestroyedReactiveError``; ``is_set()`` returns
           ``False``.
         - **Inputs** — Namespaced input keys and their values are removed.
@@ -444,7 +445,7 @@ class Session(ABC):
         refreshed), reactive values and calcs are **not** destroyed: they are
         left readable at their last value and reclaimed by ordinary garbage
         collection. Effects are still destroyed, since the session can no longer
-        flush.
+        flush, and their in-progress runs are cancelled.
 
         Without this, any async work that outlives the connection — an
         :class:`~shiny.reactive.ExtendedTask` that settles after the user
