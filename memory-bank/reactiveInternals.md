@@ -126,7 +126,7 @@ reactive effect queue, round, idle, cycle, output flush.
   ignored, and an error it raises is printed and closes the session. Calls
   after the session ended are dropped right away; queued actions are cleared
   if the session ends first. `ExpressStubSession.run_once_when_idle` is a
-  no-op. The base `Session.run_once_when_idle` is abstract.
+  no-op. The base `Session.run_once_when_idle` raises `NotImplementedError`.
 
 ## `reactive.flush()` / `run_until_idle()`
 
