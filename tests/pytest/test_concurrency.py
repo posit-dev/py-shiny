@@ -2370,6 +2370,10 @@ async def test_output_flush_hook_is_dropped_after_the_last_session_ends():
     await reactive.flush()
     assert c.session.app._sessions == {}
     assert c.session.app._unregister_output_flush_hook is None
+
+
+@pytest.mark.asyncio
+async def test_session_end_cancels_running_render_output():
     log: list[str] = []
     release = asyncio.Event()
 
