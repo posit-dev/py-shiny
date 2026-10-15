@@ -393,17 +393,6 @@ class Session(ABC):
             The function to call on destroy. Can be sync or async.
         """
 
-    def _on_destroy_first(self, fn: Callable[[], None]) -> None:
-        """
-        Like :meth:`on_destroy`, but ``fn`` runs before the callbacks registered
-        with :meth:`on_destroy` on the same scope, however they interleave. (Child
-        scopes are destroyed before their parent, so a parent scope's effect is
-        cancelled only after its children's values are gone.) Effects use this so
-        that their in-progress runs are cancelled before an async destroy callback
-        can yield to them while the scope's values are already gone.
-        """
-        self.on_destroy(fn)
-
     @abstractmethod
     async def destroy(self, id: Id | None = None) -> None:
         """
@@ -2017,21 +2006,30 @@ class AppSession(Session):
     def on_destroy(
         self, fn: Callable[[], None] | Callable[[], Awaitable[None]]
     ) -> None:
-        self._register_destroy(fn, first=False)
+        self._register_destroy(fn, ns="", first=False)
 
-    def _on_destroy_first(self, fn: Callable[[], None]) -> None:
-        self._register_destroy(fn, first=True)
+    def _on_destroy_first(self, fn: Callable[[], None], *, ns: str) -> None:
+        """
+        Like :meth:`on_destroy` for the scope ``ns`` (``""`` for this root scope,
+        ``str(proxy.ns)`` for a module scope), but ``fn`` runs before the callbacks
+        registered with ``on_destroy`` on that scope, however they interleave.
+        (Child scopes are destroyed before their parent, so a parent scope's effect
+        is cancelled only after its children's values are gone.) Effects use this
+        so that their in-progress runs are cancelled before an async destroy
+        callback can yield to them while the scope's values are already gone.
+        """
+        self._register_destroy(fn, ns=ns, first=True)
 
     def _register_destroy(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
         *,
+        ns: str,
         first: bool,
     ) -> None:
-        ns_key = ""
-        if ns_key not in self._destroy_callbacks_by_ns:
-            self._destroy_callbacks_by_ns[ns_key] = _new_destroy_callbacks()
-        self._destroy_callbacks_by_ns[ns_key].register(wrap_async(fn), first=first)
+        if ns not in self._destroy_callbacks_by_ns:
+            self._destroy_callbacks_by_ns[ns] = _new_destroy_callbacks()
+        self._destroy_callbacks_by_ns[ns].register(wrap_async(fn), first=first)
 
     async def destroy(self, id: Id | None = None) -> None:
         if id is None:
@@ -2222,17 +2220,6 @@ class SessionProxy(Session):
         fn
             The function to call when destroy occurs.
         """
-        self._register_destroy(fn, first=False)
-
-    def _on_destroy_first(self, fn: Callable[[], None]) -> None:
-        self._register_destroy(fn, first=True)
-
-    def _register_destroy(
-        self,
-        fn: Callable[[], None] | Callable[[], Awaitable[None]],
-        *,
-        first: bool,
-    ) -> None:
         destroy_cbs: dict[str, _utils.AsyncCallbacks] | None = getattr(
             self._root_session, "_destroy_callbacks_by_ns", None
         )
@@ -2240,7 +2227,7 @@ class SessionProxy(Session):
             ns_key = str(self.ns)
             if ns_key not in destroy_cbs:
                 destroy_cbs[ns_key] = _new_destroy_callbacks()
-            destroy_cbs[ns_key].register(wrap_async(fn), first=first)
+            destroy_cbs[ns_key].register(wrap_async(fn))
 
     async def destroy(self, id: Id | None = None) -> None:
         # When `id` is given, destroy that child scope rather than this scope.
