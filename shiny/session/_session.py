@@ -1920,7 +1920,9 @@ class AppSession(Session):
             self._send_message_sync({"busy": "busy"})
             # A flush is global and can serve several sessions, so the
             # `reactive_update` span follows this session's cycle instead: it starts
-            # now and ends when all of the session's effects have finished.
+            # now and ends when all of the session's effects have finished. A
+            # download marks the session busy too (see `_handle_request()`), so it
+            # gets a span of its own, as in R.
             if self._otel_cycle_span is None:
                 # Choose the parent explicitly. This runs in whichever task
                 # invalidated the effect, often another session's effect or an
