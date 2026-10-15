@@ -2821,6 +2821,20 @@ async def test_run_once_when_idle_is_dropped_if_the_session_ends_first():
 
 
 @pytest.mark.asyncio
+async def test_run_once_when_idle_after_the_session_ends_is_dropped_right_away():
+    # E.g. a custom timer that keeps calling it after the tab closed: the queue
+    # would otherwise grow forever, since nothing drains it anymore.
+    c = await started_client(lambda input, output, session: None)
+    await c.close()
+    ran: list[bool] = []
+    for _ in range(3):
+        c.session.run_once_when_idle(lambda: ran.append(True))
+    assert c.session._cycle_start_action_queue == []
+    await reactive.flush()
+    assert ran == []
+
+
+@pytest.mark.asyncio
 async def test_run_once_when_idle_error_closes_the_session(
     capsys: pytest.CaptureFixture[str],
 ):

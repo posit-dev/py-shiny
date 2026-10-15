@@ -1966,6 +1966,10 @@ class AppSession(Session):
         # Actions are sync, so they can't be interrupted partway, and only
         # `_output_flush` runs them (never whichever task happened to queue one).
         _validate_idle_action(fn)
+        # Nothing drains the queue once the session has ended, so a timer that
+        # keeps calling this would grow it forever.
+        if self._has_run_session_ended_tasks:
+            return
 
         def action() -> None:
             with session_context(self):
