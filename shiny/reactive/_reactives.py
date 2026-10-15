@@ -1253,7 +1253,8 @@ class Effect_:
                         if e.sanitize:
                             msg = SANITIZE_ERROR_MSG
                         notification_show(msg, type="error", duration=None)
-                        if e.close:
+                        # As below: a destroyed effect has no session to close.
+                        if e.close and not self._destroyed:
                             await self._session._unhandled_error(e)
                 except Exception as e:
                     traceback.print_exc()

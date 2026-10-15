@@ -29,6 +29,7 @@ from shiny.reactive._core import (
     _reactive_environment,
 )
 from shiny.session import get_current_session, session_context
+from shiny.types import NotifyException
 
 # Waits return as soon as their condition holds, so a long limit costs passing tests
 # nothing. It has to cover one-off synchronous stalls: in a busy xdist worker, the
@@ -2650,6 +2651,47 @@ async def test_cleanup_reading_destroyed_scope_values_keeps_session_open(
             await asyncio.sleep(0.05)
         assert not c.session._has_run_session_ended_tasks
         assert await wait_until(lambda: c.session._busy_count == 0)
+    finally:
+        release.set()
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_notify_exception_from_a_destroyed_effects_cleanup_keeps_session_open():
+    # Like any other error from a destroyed effect, `NotifyException(close=True)`
+    # is reported but doesn't close the session.
+    release = asyncio.Event()
+    remove = asyncio.Event()
+    log: list[str] = []
+
+    @module.server
+    def mod(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        async def _():
+            try:
+                await release.wait()
+            finally:
+                log.append("cleanup")
+                raise NotifyException("cleanup failed", close=True)
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        mod("mod")
+
+        @reactive.effect
+        async def _remove():
+            await remove.wait()
+            await session.destroy("mod")
+            log.append("removed")
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: c.session._busy_count == 2)
+        with pytest.warns(ReactiveWarning, match="cleanup failed"):
+            remove.set()
+            assert await wait_until(lambda: sorted(log) == ["cleanup", "removed"])
+            assert await wait_until(lambda: c.session._busy_count == 0)
+        assert not c.session._has_run_session_ended_tasks
     finally:
         release.set()
         await c.close()
