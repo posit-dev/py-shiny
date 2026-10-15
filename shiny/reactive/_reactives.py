@@ -1054,6 +1054,7 @@ class Effect_:
 
         from ..render.renderer import Renderer
         from ..session import Session
+        from ..session._session import AppSession, SessionProxy
 
         if isinstance(fn, Renderer):
             raise TypeError(
@@ -1111,9 +1112,16 @@ class Effect_:
             # Before the scope's other destroy callbacks: an async one that yields
             # would otherwise let a run of this effect resume and read a value the
             # scope has already destroyed.
-            self._session._on_destroy_first(
-                _weak_destroy_callback(self.destroy, self._session)
+            destroy_fn = _weak_destroy_callback(self.destroy, self._session)
+            root = (
+                self._session.root_scope()
+                if isinstance(self._session, SessionProxy)
+                else self._session
             )
+            if isinstance(root, AppSession):
+                root._on_destroy_first(destroy_fn, ns=str(self._session.ns))
+            else:
+                self._session.on_destroy(destroy_fn)
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs: dict[str, Any] = {
