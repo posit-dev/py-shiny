@@ -149,8 +149,9 @@ pytest test_app.py --tracing retain-on-failure # then: playwright show-trace <tr
 
 ## Generate a test with AI
 
-`shiny add test --app app.py` analyzes an app and writes a test file for it
-(requires `ANTHROPIC_API_KEY`, or `OPENAI_API_KEY` with `--provider openai`).
+`shiny add test` is deprecated and will be removed in a future release. Prefer
+generating tests with an agent harness using this `shiny-for-python` skill; the
+skill documents the controller API and test patterns the generator relies on.
 
 ## Common mistakes
 
