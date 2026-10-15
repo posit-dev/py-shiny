@@ -80,6 +80,12 @@ class Client:
         await asyncio.wait_for(self.task, TIMEOUT)
 
 
+async def started_up(c: Client) -> None:
+    """Wait for the session's start-up (its first cycle and that cycle's outputs)."""
+    assert await wait_until(lambda: c.session._output_flush_enabled)
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
+
+
 @pytest.mark.asyncio
 async def test_slow_effect_does_not_block_other_session():
     gate = asyncio.Event()
@@ -201,7 +207,8 @@ async def test_update_while_busy():
 
         # An input update that arrives while busy waits until the session is idle...
         c.update(x=1)
-        await asyncio.sleep(0.05)
+        assert await wait_until(lambda: len(c.session._cycle_start_action_queue) == 1)
+        await settle()
         assert x_seen == [0]
 
         # ...so the busy effect sees stable inputs, and the update then applies.
@@ -265,8 +272,7 @@ async def test_timer_with_queued_update_does_not_hang():
         session._cycle_start_action_queue.append(
             lambda: session._manage_inputs({"x": 1})
         )
-        await asyncio.sleep(0.35)  # the timer fires
-
+        # The timer fires, and its cycle's idle transition runs the queued update.
         assert await wait_until(lambda: 1 in seen)
         n = len(seen)
         assert await wait_until(lambda: len(seen) > n), "timer effect stopped"
@@ -452,10 +458,12 @@ async def test_flush_during_active_flush_returns():
     # With a flushed callback that keeps yielding, reactive.flush() used to keep
     # re-running rounds and never return.
     flushes = 0
+    in_callback = asyncio.Event()
 
     async def slow_flushed() -> None:
         nonlocal flushes
         flushes += 1
+        in_callback.set()
         await asyncio.sleep(0.01)
 
     unregister = reactive.on_flushed(slow_flushed)
@@ -467,8 +475,10 @@ async def test_flush_during_active_flush_returns():
             v()
 
         await reactive.flush()
+        in_callback.clear()
         v.set(1)
-        await asyncio.sleep(0.002)  # the requested round is now mid-callback
+        # The requested round is now mid-callback.
+        await asyncio.wait_for(in_callback.wait(), TIMEOUT)
         await asyncio.wait_for(reactive.flush(), TIMEOUT)
         assert flushes < 10
         _e.destroy()
@@ -636,7 +646,7 @@ async def test_input_update_from_background_task_is_sent():
 async def test_message_handler_update_after_await_is_sent():
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         async def handler() -> None:
-            await asyncio.sleep(0.01)
+            await reactive.flush()  # past the output flush that follows the message
             ui.update_text("t", value="hi")
 
         session.set_message_handler("h", handler)
@@ -728,8 +738,7 @@ async def test_every_cycle_ends_with_a_message_even_when_empty():
     c = RecordingClient(server)
     try:
         c.send({"method": "init", "data": {"x": 0}})
-
-        await asyncio.sleep(0.05)
+        await started_up(c)
         start = len(c.sent)
         c.update(x=1)
 
@@ -878,6 +887,8 @@ async def test_values_set_mid_stream_are_sent_before_the_stream_ends(kind: str):
 
 @pytest.mark.asyncio
 async def test_session_handles_input_while_a_download_streams():
+    at_gate = asyncio.Event()
+
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         release = asyncio.Event()
 
@@ -889,6 +900,7 @@ async def test_session_handles_input_while_a_download_streams():
         @render.download_button(filename="f.txt")
         async def dl() -> AsyncIterable[str]:
             yield "a"
+            at_gate.set()
             await release.wait()
             yield "b"
 
@@ -902,7 +914,8 @@ async def test_session_handles_input_while_a_download_streams():
             return b"".join([chunk async for chunk in response.body_iterator])  # type: ignore
 
         body = asyncio.create_task(read_body())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(at_gate.wait(), TIMEOUT)
+        await settle()
         assert not body.done()
         # The stream finishes only once the session has handled this input.
         c.update(release=1)
@@ -981,7 +994,7 @@ async def test_rerun_of_destroyed_effect_is_skipped():
     flush_task = asyncio.create_task(reactive.flush())
     assert await wait_until(lambda: runs == [0])
     v.set(1)  # queues a re-run behind the one in progress
-    await asyncio.sleep(0.01)
+    assert await wait_until(lambda: len(e._run_tasks) == 2)
     e.destroy()
     release.set()
     await asyncio.wait_for(flush_task, TIMEOUT)
@@ -1044,7 +1057,7 @@ async def test_many_invalidations_in_one_tick_share_one_round():
         for i in range(1, 6):
             v.set(i)
         assert await wait_until(lambda: runs[-1] == 5)
-        await asyncio.sleep(0.02)
+        await settle()
         assert runs == [0, 5]
         assert flushes == 1
         _e.destroy()
@@ -1120,8 +1133,12 @@ async def test_input_message_from_on_flush_callback_does_not_loop():
     c = RecordingClient(server)
     try:
         c.send({"method": "init", "data": {}})
-        await asyncio.sleep(0.2)
-        assert count < 5
+        # A loop would keep requesting rounds, so this would never return.
+        await started_up(c)
+        n = count
+        assert n < 5
+        await settle()
+        assert count == n
     finally:
         await c.close()
 
@@ -1147,8 +1164,10 @@ async def test_outputs_are_sent_together_once_the_cycle_ends():
         c.send({"method": "init", "data": {"go": 0}})
         assert await wait_until(lambda: any("values" in m for m in c.sent))
         c.update(go=1)
-        await asyncio.sleep(0.05)
-        # The fast effect finished, but its output waits for the slow one.
+        # The fast effect finished (busy count down from 2), but its output waits
+        # for the slow one.
+        assert await wait_until(lambda: c.session._busy_count == 1)
+        await settle()
         assert c.input_messages() == []
         release.set()
         assert await wait_until(lambda: len(c.input_messages()) == 2)
@@ -1163,6 +1182,7 @@ async def test_outputs_are_sent_together_once_the_cycle_ends():
 @pytest.mark.asyncio
 async def test_timer_waits_while_session_is_busy():
     release = asyncio.Event()
+    started = asyncio.Event()
     ticks: list[float] = []
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
@@ -1174,6 +1194,7 @@ async def test_timer_waits_while_session_is_busy():
         @reactive.effect
         @reactive.event(input.go, ignore_init=True)
         async def _slow():
+            started.set()
             await release.wait()
 
     c = Client(server)
@@ -1181,13 +1202,14 @@ async def test_timer_waits_while_session_is_busy():
         c.send({"method": "init", "data": {"go": 0}})
         assert await wait_until(lambda: len(ticks) >= 2)
         c.update(go=1)
-        assert await wait_until(lambda: c.session._busy_count > 0)
+        await asyncio.wait_for(started.wait(), TIMEOUT)
         n = len(ticks)
-        await asyncio.sleep(0.15)
-        # Timer invalidations wait for the busy cycle, like input changes.
-        assert len(ticks) <= n + 1
+        # Timer invalidations wait for the busy cycle, like input changes: the
+        # timer fires and queues its invalidation for when the session is idle.
+        assert await wait_until(lambda: len(c.session._cycle_start_action_queue) >= 1)
+        assert len(ticks) == n
         release.set()
-        assert await wait_until(lambda: len(ticks) > n + 2)
+        assert await wait_until(lambda: len(ticks) >= n + 2)
     finally:
         release.set()
         await c.close()
@@ -1261,7 +1283,7 @@ async def test_flush_waits_for_slow_effects_in_other_sessions():
         c.update(go=1)
         assert await wait_until(lambda: c.session._busy_count == 1)
         flush = asyncio.create_task(reactive.flush())
-        await asyncio.sleep(0.05)
+        await settle()
         assert not flush.done()
         release.set()
         await asyncio.wait_for(flush, TIMEOUT)
@@ -1484,8 +1506,7 @@ async def test_on_flush_registered_outside_a_cycle_runs():
     c = Client(lambda input, output, session: None)
     try:
         c.send({"method": "init", "data": {}})
-        assert await wait_until(lambda: c.session._output_flush_enabled)
-        await asyncio.sleep(0.02)
+        await started_up(c)
 
         ran: list[bool] = []
         c.session.on_flush(lambda: ran.append(True))
@@ -1544,8 +1565,7 @@ async def test_flush_callbacks_wait_while_session_is_busy():
             c.session.send_input_message("t", {"value": 1})
             await asyncio.sleep(0.01)
         release.set()
-        assert await wait_until(lambda: c.session._busy_count == 0)
-        await asyncio.sleep(0.02)
+        await asyncio.wait_for(reactive.flush(), TIMEOUT)  # the output flushes ran
         assert busy_when_called and all(b == 0 for b in busy_when_called)
     finally:
         release.set()
@@ -1558,10 +1578,14 @@ async def test_no_output_message_while_busy_after_async_flush_callback():
     # message must then wait for the idle transition.
     shared = reactive.value(0)
     release = asyncio.Event()
+    in_callback = asyncio.Event()
+    proceed = asyncio.Event()
+    proceed.set()
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         async def on_flush() -> None:
-            await asyncio.sleep(0.02)
+            in_callback.set()
+            await proceed.wait()
 
         session.on_flush(on_flush, once=False)
 
@@ -1574,11 +1598,14 @@ async def test_no_output_message_while_busy_after_async_flush_callback():
     try:
         c.send({"method": "init", "data": {}})
         assert await wait_until(lambda: len(c.recording.busy_at_output_send) == 1)
+        in_callback.clear()
+        proceed.clear()
         c.session.send_input_message("t", {"value": 1})
-        await asyncio.sleep(0.005)  # the on_flush callback is now awaiting
+        await asyncio.wait_for(in_callback.wait(), TIMEOUT)  # the callback awaits
         shared.set(1)
         assert await wait_until(lambda: c.session._busy_count == 1)
-        await asyncio.sleep(0.05)
+        proceed.set()
+        await settle()
         release.set()
         assert await wait_until(lambda: len(c.input_messages()) == 1)
         assert all(b == 0 for b in c.recording.busy_at_output_send)
@@ -1618,8 +1645,7 @@ async def test_queued_update_waits_if_session_turns_busy_during_flushed_callback
     c = Client(server)
     try:
         c.send({"method": "init", "data": {"x": 0}})
-        assert await wait_until(lambda: x_seen == [0])
-        await asyncio.sleep(0.05)
+        await started_up(c)
         session = c.session
         # Something to send plus a queued update: the flush sends, runs its flushed
         # callbacks, then starts the update.
@@ -1628,10 +1654,15 @@ async def test_queued_update_waits_if_session_turns_busy_during_flushed_callback
         session.run_once_when_idle(lambda: session._manage_inputs({"x": 1}))
         await asyncio.wait_for(in_callback.wait(), TIMEOUT)
         shared.set(1)  # the session turns busy while the callback awaits
-        await asyncio.sleep(0.01)
+        assert await wait_until(lambda: session._busy_count == 1)
+        output_flush = session._output_flush_task
+        assert output_flush is not None and not output_flush.done()
         proceed.set()
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(
+            output_flush, TIMEOUT
+        )  # ...and goes on to start the cycle
         assert x_seen == [0]
+        assert len(session._cycle_start_action_queue) == 1  # the update still waits
         release.set()
         assert await wait_until(lambda: x_seen == [0, 1])
     finally:
@@ -1660,12 +1691,11 @@ async def test_cycle_not_started_by_an_input_still_ends_with_a_message():
     c = RecordingClient(server)
     try:
         c.send({"method": "init", "data": {"x": 0}})
-
-        await asyncio.sleep(0.05)
+        await started_up(c)
         shared.set(1)
         assert await wait_until(lambda: c.session._busy_count == 1)
         c.update(x=1)
-        await asyncio.sleep(0.02)
+        assert await wait_until(lambda: len(c.session._cycle_start_action_queue) == 1)
         start = len(c.sent)
         release.set()
         assert await wait_until(lambda: {"busy": "busy"} in c.sent[start:])
@@ -1848,7 +1878,7 @@ async def test_reactive_flush_waits_for_pending_sends():
         a.session.send_input_message("t", {"value": "hi"})
         flush = asyncio.create_task(reactive.flush())
         assert await wait_until(lambda: a.gated.sending == 1)
-        await asyncio.sleep(0.05)
+        await settle()
         assert not flush.done()
         a.gated.gate.set()
         await asyncio.wait_for(flush, TIMEOUT)
@@ -1867,10 +1897,8 @@ async def test_flush_callbacks_in_two_sessions_calling_reactive_flush_return():
     try:
         a.send({"method": "init", "data": {}})
         b.send({"method": "init", "data": {}})
-        assert await wait_until(
-            lambda: a.session._output_flush_enabled and b.session._output_flush_enabled
-        )
-        await asyncio.sleep(0.02)
+        await started_up(a)
+        await started_up(b)
 
         def callback(name: str):
             async def cb() -> None:
@@ -1906,7 +1934,8 @@ async def test_session_closed_while_its_send_is_stuck():
     assert "queued" not in texts(a)
     # ...and later requests don't start an output flush at all.
     a.session.send_input_message("t", {"value": "late"})
-    await asyncio.sleep(0.02)
+    assert a.session.id not in a.session.app._sessions_needing_output_flush
+    await settle()
     assert "late" not in texts(a)
 
 
@@ -2054,9 +2083,9 @@ async def test_many_round_requests_from_threads_are_merged():
             t.start()
         for t in threads:
             t.join(TIMEOUT)
-        assert await wait_until(lambda: flushes >= 1)
-        await asyncio.sleep(0.05)
-        assert flushes <= 3
+        # Returns once no round is requested, so every request has been served.
+        await asyncio.wait_for(reactive.flush(), TIMEOUT)
+        assert 1 <= flushes <= 3
     finally:
         unregister()
 
@@ -2079,7 +2108,7 @@ def test_round_request_on_a_new_loop_after_the_old_one_closed():
 
     async def use() -> None:
         env.request_round()
-        await asyncio.sleep(0.01)
+        assert await wait_until(lambda: len(flushed) == 1)
 
     asyncio.run(use())
     flushed.clear()
@@ -2092,7 +2121,7 @@ def test_round_request_after_the_loop_closed_is_ignored():
 
     async def use() -> None:
         env.request_round()
-        await asyncio.sleep(0.01)
+        await env.run_until_idle()
 
     asyncio.run(use())  # env now remembers a loop that is closed
     assert env._loop is not None and env._loop.is_closed()
@@ -2114,12 +2143,12 @@ async def test_one_output_message_per_input_update():
     c = RecordingClient(update_on())
     try:
         await started(c)
-        await asyncio.sleep(0.05)
+        await started_up(c)
         start = len(c.sent)
         for i in range(1, 4):
             c.update(x=i)
             assert await wait_until(lambda i=i: texts(c)[-1:] == [str(i)])
-            await asyncio.sleep(0.02)
+            await asyncio.wait_for(reactive.flush(), TIMEOUT)  # the cycle is over
         assert sum("values" in m for m in c.sent[start:]) == 3
     finally:
         await c.close()
@@ -2130,8 +2159,7 @@ async def test_on_flush_outside_a_cycle_runs_without_sending_an_empty_message():
     c = RecordingClient(lambda input, output, session: None)
     try:
         c.send({"method": "init", "data": {}})
-        assert await wait_until(lambda: c.session._output_flush_enabled)
-        await asyncio.sleep(0.05)
+        await started_up(c)
         start = len(c.sent)
         ran: list[bool] = []
         c.session.on_flush(lambda: ran.append(True))
@@ -2149,8 +2177,10 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
     # `run_next_round()` (used by ExtendedTask) waited forever.
     env = ReactiveEnvironment()
     stuck = asyncio.Event()
+    in_callback = asyncio.Event()
 
     async def wait_forever() -> None:
+        in_callback.set()
         await stuck.wait()
 
     finalized: list[bool] = []
@@ -2169,7 +2199,7 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
         env._round_finished_callbacks.register(wait_forever)
         env._spawn(stranded_run())
         env._spawn(env.start_round())
-        await asyncio.sleep(0.01)  # the round is now waiting on `stuck`
+        await in_callback.wait()  # the round is now waiting on `stuck`
         assert env._round_running
         env.request_round()  # also leaves a request pending
 
@@ -2237,7 +2267,7 @@ async def test_destroy_cancels_effect_run_in_progress():
     await asyncio.wait_for(flush, TIMEOUT)
     assert log == ["e start", "e finally"]
     release.set()
-    await asyncio.sleep(0.01)
+    await settle()
     assert log == ["e start", "e finally"]
 
 
@@ -2365,7 +2395,7 @@ async def test_session_end_cancels_running_effects():
     assert await wait_until(lambda: log == ["e start", "e finally"])
     assert c.session._busy_count == 0
     release.set()
-    await asyncio.sleep(0.01)
+    await settle()
     assert "e end" not in log
 
 
@@ -2555,7 +2585,7 @@ async def test_destroying_a_scope_cancels_its_effects_before_its_values_go():
         remove.set()
         assert await wait_until(lambda: "removed" in log)
         assert await wait_until(lambda: "mod finally" in log)
-        await asyncio.sleep(0.02)
+        await settle()
         assert sorted(log) == ["mod finally", "mod start", "removed"]
         assert not c.session._has_run_session_ended_tasks
         assert await wait_until(lambda: c.session._busy_count == 0)
@@ -2619,8 +2649,7 @@ async def test_calc_waiter_recomputes_when_the_run_it_shares_is_cancelled():
         results.append(("b", await c()))
 
     flush = asyncio.create_task(reactive.flush())
-    assert await wait_until(lambda: len(calc_runs) == 1)
-    await asyncio.sleep(0.01)  # b is now waiting on a's run of the calc
+    assert await wait_until(lambda: len(c._run_waiters) == 1)  # b waits on a's run
     a.destroy()
     assert await wait_until(lambda: len(calc_runs) == 2)
     gate.set()
@@ -2701,13 +2730,13 @@ async def test_cleanup_reading_destroyed_scope_values_keeps_session_open(
     c = Client(server)
     try:
         c.send({"method": "init", "data": {}})
-        await asyncio.sleep(0.02)
+        assert await wait_until(lambda: c.session._busy_count == 2)  # both parked
         with pytest.warns(ReactiveWarning, match="has been destroyed"):
             remove.set()
             assert await wait_until(lambda: "removed" in log)
-            await asyncio.sleep(0.05)
+            # The module effect's run warns, then ends its busy period.
+            assert await wait_until(lambda: c.session._busy_count == 0)
         assert not c.session._has_run_session_ended_tasks
-        assert await wait_until(lambda: c.session._busy_count == 0)
     finally:
         release.set()
         await c.close()
@@ -2822,7 +2851,7 @@ async def test_run_once_when_idle_runs_on_next_loop_pass_with_session_current():
         c.session.run_once_when_idle(lambda: ran.append(get_current_session()))
         assert ran == []  # never synchronously, even when idle
         assert await wait_until(lambda: ran == [c.session])
-        await asyncio.sleep(0.02)
+        await asyncio.wait_for(reactive.flush(), TIMEOUT)
         assert len(ran) == 1  # once
     finally:
         await c.close()
@@ -2848,8 +2877,9 @@ async def test_run_once_when_idle_waits_for_running_effects():
         c.update(go=1)
         assert await wait_until(lambda: c.session._busy_count == 1)
         c.session.run_once_when_idle(lambda: v.set(1))
-        await asyncio.sleep(0.05)
+        await settle()
         assert v._value == 0  # held while the effect runs
+        assert len(c.session._cycle_start_action_queue) == 1
         release.set()
         assert await wait_until(lambda: v._value == 1)
         assert seen == [(0, 0)]  # the effect saw a stable value
@@ -2947,7 +2977,7 @@ async def test_run_once_when_idle_is_dropped_if_the_session_ends_first():
     c.session.run_once_when_idle(lambda: ran.append(True))
     await c.close()
     release.set()
-    await asyncio.sleep(0.05)
+    await asyncio.wait_for(reactive.flush(), TIMEOUT)
     assert ran == []
 
 
@@ -3135,6 +3165,14 @@ class RestoringClient(RecordingClient):
         return [m["values"][name] for m in self.sent if name in m.get("values", {})]  # type: ignore
 
 
+async def at_restore_gate(effects: list[reactive.Effect_], n: int) -> None:
+    """Wait until `n` effects have started and are waiting on the restore gate."""
+    # A run's task is registered right before it awaits the gate, without yielding.
+    assert await wait_until(
+        lambda: len(effects) == n and all(len(e._run_tasks) == 1 for e in effects)
+    )
+
+
 @pytest.mark.asyncio
 async def test_async_on_restore_finishes_before_other_effects_start():
     seen: list[str] = []
@@ -3168,6 +3206,7 @@ async def test_async_on_restore_finishes_before_other_effects_start():
 async def test_effects_waiting_on_restore_start_in_priority_order():
     log: list[str] = []
     release = asyncio.Event()
+    effects: list[reactive.Effect_] = []
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         @session.bookmark.on_restore
@@ -3176,22 +3215,20 @@ async def test_effects_waiting_on_restore_start_in_priority_order():
             log.append("restored")
 
         @reactive.effect(priority=-1)
-        def _():
+        def low():
             log.append("low")
 
         @reactive.effect(priority=1)
-        def _():
+        def high():
             log.append("high")
+
+        effects.extend([low, high])
 
     c = RestoringClient(server)
     try:
         c.init()
-        # Let both effects reach the restore gate before it opens. A short timer
-        # in the callback isn't enough: before Python 3.13, Windows' clock has a
-        # 15.6 ms resolution, so a 10 ms sleep expired on the next loop pass, and
-        # `low` started after the gate had opened, ahead of the `high` still
-        # being woken.
-        await asyncio.sleep(0.05)
+        # Both effects reach the restore gate before it opens.
+        await at_restore_gate(effects, 2)
         assert log == []
         release.set()
         assert await wait_until(lambda: len(log) == 3)
@@ -3322,12 +3359,15 @@ async def test_effects_run_after_an_on_restore_callback_is_cancelled():
 async def test_module_effects_wait_for_restore():
     release = asyncio.Event()
     log: list[str] = []
+    effects: list[reactive.Effect_] = []
 
     @module.server
     def mod(input: Inputs, output: Outputs, session: Session) -> None:
         @reactive.effect
-        def _():
+        def e():
             log.append("mod")
+
+        effects.append(e)
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         @session.bookmark.on_restore
@@ -3340,7 +3380,7 @@ async def test_module_effects_wait_for_restore():
     c = RestoringClient(server)
     try:
         c.init()
-        await asyncio.sleep(0.02)
+        await at_restore_gate(effects, 1)
         assert log == []
         release.set()
         assert await wait_until(lambda: log == ["restored", "mod"])
@@ -3390,6 +3430,7 @@ async def test_destroying_an_effect_waiting_on_restore_leaves_the_others_waiting
 async def test_effect_waits_for_restore_at_the_priority_it_was_queued_at():
     release = asyncio.Event()
     log: list[str] = []
+    effects: list[reactive.Effect_] = []
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         @session.bookmark.on_restore
@@ -3403,11 +3444,12 @@ async def test_effect_waits_for_restore_at_the_priority_it_was_queued_at():
 
         # Takes effect on the next invalidation; this run is queued at priority 0.
         e.set_priority(2_000_000)
+        effects.append(e)
 
     c = RestoringClient(server)
     try:
         c.init()
-        await asyncio.sleep(0.02)
+        await at_restore_gate(effects, 1)
         assert log == []
         release.set()
         assert await wait_until(lambda: log == ["restored", "e"])
@@ -3495,16 +3537,17 @@ async def test_on_flushed_callback_that_updates_an_input_does_not_loop():
     try:
         c.send({"method": "init", "data": {}})
         assert await wait_until(lambda: len(c.input_messages()) >= 1)
-        await asyncio.sleep(0.1)
+        # A loop would keep requesting output flushes, so this would never return.
+        await asyncio.wait_for(reactive.flush(), TIMEOUT)
         n = len(c.input_messages())
-        await asyncio.sleep(0.2)
+        await settle()
         assert len(c.input_messages()) == n
 
         c.update(x=1)  # one cycle: its outputs, then the update the callback queued
         assert await wait_until(lambda: len(c.input_messages()) > n)
-        await asyncio.sleep(0.1)
+        await asyncio.wait_for(reactive.flush(), TIMEOUT)
         n = len(c.input_messages())
-        await asyncio.sleep(0.2)
+        await settle()
         assert len(c.input_messages()) == n
     finally:
         await c.close()
@@ -3514,7 +3557,7 @@ async def test_on_flushed_callback_that_updates_an_input_does_not_loop():
 async def test_insert_ui_from_a_message_handler_is_sent():
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         async def handler() -> None:
-            await asyncio.sleep(0.01)  # past the output flush that follows the message
+            await reactive.flush()  # past the output flush that follows the message
             ui.insert_ui(ui.div("x"), "body", session=session)
 
         session.set_message_handler("h", handler)
