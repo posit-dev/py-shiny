@@ -1119,9 +1119,9 @@ class Effect_:
                 else self._session
             )
             if isinstance(root, AppSession):
-                root._on_destroy_first(destroy_fn, ns=str(self._session.ns))
+                root._register_destroy(destroy_fn, ns=str(self._session.ns), first=True)
             else:
-                # Intentional, not a gap to fix: `_on_destroy_first()` is kept off
+                # Intentional, not a gap to fix: `_register_destroy()` is kept off
                 # the public `Session` API, so other sessions (duck-typed test
                 # mocks with no `root_scope()`, third-party `Session` subclasses)
                 # get plain `on_destroy()` ordering.

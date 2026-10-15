@@ -2008,18 +2008,6 @@ class AppSession(Session):
     ) -> None:
         self._register_destroy(fn, ns="", first=False)
 
-    def _on_destroy_first(self, fn: Callable[[], None], *, ns: str) -> None:
-        """
-        Like :meth:`on_destroy` for the scope ``ns`` (``""`` for this root scope,
-        ``str(proxy.ns)`` for a module scope), but ``fn`` runs before the callbacks
-        registered with ``on_destroy`` on that scope, however they interleave.
-        (Child scopes are destroyed before their parent, so a parent scope's effect
-        is cancelled only after its children's values are gone.) Effects use this
-        so that their in-progress runs are cancelled before an async destroy
-        callback can yield to them while the scope's values are already gone.
-        """
-        self._register_destroy(fn, ns=ns, first=True)
-
     def _register_destroy(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],
@@ -2027,6 +2015,17 @@ class AppSession(Session):
         ns: str,
         first: bool,
     ) -> None:
+        """
+        Register ``fn`` to run when the scope ``ns`` is destroyed (``""`` for this
+        root scope, ``str(proxy.ns)`` for a module scope).
+
+        With ``first=True``, ``fn`` runs before the callbacks registered with
+        ``first=False`` on that scope, however they interleave. (Child scopes are
+        destroyed before their parent, so a parent scope's effect is cancelled only
+        after its children's values are gone.) Effects use this so that their
+        in-progress runs are cancelled before an async destroy callback can yield
+        to them while the scope's values are already gone.
+        """
         if ns not in self._destroy_callbacks_by_ns:
             self._destroy_callbacks_by_ns[ns] = _new_destroy_callbacks()
         self._destroy_callbacks_by_ns[ns].register(wrap_async(fn), first=first)
