@@ -43,7 +43,7 @@ parameter if the task needs access to `input`, `output`, or session state.
 
 **Testing**: Unit tests in `tests/pytest/test_otel_async_context.py` verify
 correct span propagation through various async patterns. Integration tests in
-`tests/playwright/shiny/otel-async/` verify the full reactive flow with async
+`tests/playwright/shiny/otel/async/` verify the full reactive flow with async
 operations.
 
 See Also
