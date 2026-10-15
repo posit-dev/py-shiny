@@ -1197,6 +1197,8 @@ class Effect_:
                 # The effect runs in its own task, so report errors to its session.
                 if not self._session:
                     raise
+                # `_unhandled_error()` prints only the message; show where it failed.
+                traceback.print_exception(type(e), e, e.__traceback__)
                 await self._session._unhandled_error(e)
             finally:
                 if task is not None:
