@@ -174,6 +174,13 @@ class ReactiveEnvironment:
       and one round can advance the cycles of several sessions.
     * **Output flush** (per session): sending a session's outputs to the client,
       once that session's effects have finished.
+
+    "Flush" on its own is not one of these terms. Public names that keep it mean:
+
+    * `reactive.flush()`: run rounds until idle.
+    * `reactive.on_flushed()`: run after each round.
+    * `session.on_flush()` / `session.on_flushed()`: run before / after the
+      session's next output flush.
     """
 
     def __init__(self) -> None:
