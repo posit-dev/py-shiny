@@ -861,7 +861,6 @@ class Session(ABC):
         """
         return None
 
-    @abstractmethod
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
         """
         Run a function once, at the start of this session's next cycle.
@@ -898,6 +897,9 @@ class Session(ABC):
             invalidates can run. For async work, start a task from ``fn`` with
             ``asyncio.create_task()``, or do it in an effect.
         """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement `run_once_when_idle()`."
+        )
 
 
 def _print_exception(e: Exception) -> None:
