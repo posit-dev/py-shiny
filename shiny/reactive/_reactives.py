@@ -1298,7 +1298,10 @@ class Effect_:
 
         Effects are destroyed when their session ends, and when their scope is
         destroyed with :meth:`~shiny.Session.destroy`, so both cancel the effect's
-        in-progress runs.
+        in-progress runs. Cancellation is delivered on the next pass of the event
+        loop, so a cancelled run's cleanup runs after the session's ``on_ended``
+        and the scope's ``on_destroy`` callbacks have run (unless one of them
+        awaits).
 
         Note
         ----

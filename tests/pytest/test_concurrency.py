@@ -2443,6 +2443,9 @@ async def test_effect_that_closes_its_session_finishes_teardown(via_child_task: 
         assert await wait_until(lambda: "closer after close" in log)
         assert "on_ended" in log
         assert "sibling finally" in log and "sibling end" not in log
+        # Cancellation is delivered on the next loop pass, so the cancelled run's
+        # cleanup runs after the `on_ended` callbacks (documented).
+        assert log.index("on_ended") < log.index("sibling finally")
         assert c.session.id not in c.session.app._sessions
         assert await wait_until(lambda: c.session._busy_count == 0)
     finally:

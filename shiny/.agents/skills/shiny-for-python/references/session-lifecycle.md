@@ -58,8 +58,10 @@ that is still running: `asyncio.CancelledError` is raised at its current
 `await`. Put cleanup in `try`/`finally`, not after the `await`, and don't swallow
 `CancelledError`. With `session.destroy(id)`, cleanup runs after the module's
 values are destroyed, so don't read them there: the `DestroyedReactiveError` is
-only logged, and the rest of the cleanup is skipped. An effect that closes or destroys its own session keeps
-running. An `ExtendedTask` is not cancelled; call `task.cancel()` from
+only logged, and the rest of the cleanup is skipped. Cleanup runs after the
+`on_ended` (or `on_destroy`) callbacks, so don't tear down something there that
+an effect's cleanup still needs, such as a connection pool. An effect that
+closes or destroys its own session keeps running. An `ExtendedTask` is not cancelled; call `task.cancel()` from
 `session.on_ended` if it should stop.
 
 ## Read the incoming request: `http_conn` and `clientdata`
