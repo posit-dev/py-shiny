@@ -396,9 +396,11 @@ class Session(ABC):
     def _on_destroy_first(self, fn: Callable[[], None]) -> None:
         """
         Like :meth:`on_destroy`, but ``fn`` runs before the callbacks registered
-        with :meth:`on_destroy`, however they interleave. Effects use this so that
-        their in-progress runs are cancelled before an async destroy callback can
-        yield to them while the scope's values are already gone.
+        with :meth:`on_destroy` on the same scope, however they interleave. (Child
+        scopes are destroyed before their parent, so a parent scope's effect is
+        cancelled only after its children's values are gone.) Effects use this so
+        that their in-progress runs are cancelled before an async destroy callback
+        can yield to them while the scope's values are already gone.
         """
         self.on_destroy(fn)
 
