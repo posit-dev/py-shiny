@@ -55,7 +55,9 @@ OTel name inference uses). Tests: `tests/pytest/test_reactives.py`.
 ## Rounds and priorities (`ReactiveEnvironment`)
 
 The `ReactiveEnvironment` class docstring defines the vocabulary used here:
-reactive effect queue, round, idle, cycle, output flush.
+reactive effect queue, round, idle, cycle, output flush, and what the public
+`flush` names (`reactive.flush()`, `reactive.on_flushed()`, `session.on_flush()`,
+`session.on_flushed()`) mean in those terms.
 
 - `_reactive_environment` is one module-level singleton for the whole
   process: every session and every App shares one reactive effect queue.
