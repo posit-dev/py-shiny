@@ -1,12 +1,12 @@
 ---
 title: "OpenTelemetry Instrumentation"
-description: "How Shiny's internal OpenTelemetry spans and logs work: collect levels, the span/log helpers in shiny/otel/, every emission site, naming and attribute conventions, testing, and the bundled otel skill reference. Read before adding or changing a span/log, touching shiny.otel, or editing reactive/session code that is instrumented."
+description: "How Shiny's internal OpenTelemetry spans and logs work: collect levels, the span/log helpers in shiny/otel/, every emission site, the per-session reactive_update cycle span and how spans are parented, naming and attribute conventions, testing, and the bundled otel skill reference. Read before adding or changing a span/log, touching shiny.otel, or editing reactive/session code that is instrumented."
 ---
 
 # OpenTelemetry Instrumentation
 
-Shiny emits OTel spans and logs for session lifecycle, reactive flushes, and
-individual reactive executions. All machinery lives in `shiny/otel/`; the
+Shiny emits OTel spans and logs for session lifecycle, each session's reactive
+cycles, and individual reactive executions. All machinery lives in `shiny/otel/`; the
 public API is only `otel.suppress`, `otel.collect`, and `otel.get_level`
 (`shiny/otel/__init__.py`, whose module docstring is the user-facing guide).
 
@@ -18,7 +18,7 @@ public API is only `otel.suppress`, `otel.collect`, and `otel.get_level`
 | `_decorators.py` | `suppress` / `collect` (decorator or context manager), `_OtelContext`, `_stamp_or_raise` |
 | `_function_attrs.py` | `set_otel_collect_level_on_func`, `resolve_func_otel_level` |
 | `_core.py` | lazy `get_otel_tracer` / `get_otel_logger`, `is_otel_tracing_enabled`, `emit_otel_log`, `detached_otel_context` |
-| `_span_wrappers.py` | `shiny_otel_span` (async CM), `shiny_otel_span_stream` (wraps a byte iterator) |
+| `_span_wrappers.py` | `shiny_otel_span` (async CM), `shiny_otel_span_stream` (wraps a byte iterator), `start_otel_span` / `use_otel_span` (sync; a span the caller ends) |
 | `_labels.py` | `create_otel_label`, `create_otel_span_name`, `get/set_otel_label_modifier` |
 | `_attributes.py` | `get_session_id_attrs`, `extract_http_attributes`, `extract_source_ref` |
 | `_errors.py` | silent-error detection, sanitization, record-once marking |
@@ -66,12 +66,12 @@ public API is only `otel.suppress`, `otel.collect`, and `otel.get_level`
 
 | Name | Site | `required_level` |
 |---|---|---|
-| `session_start` (attrs: `extract_http_attributes`) | `AppSession._run_impl`, wraps `app.server(...)` | `SESSION` |
+| `session_start` (attrs: `extract_http_attributes`) | `AppSession._run_impl` on `init`; wraps `bookmark._create_effects()`, `app.server(...)`, and the first `start_round()` | `SESSION` |
 | `session_end` | `AppSession._run_session_ended_tasks` | `SESSION` |
-| `reactive_update` | `ReactiveEnvironment.flush` (`shiny/reactive/_core.py`) | `REACTIVE_UPDATE` |
+| `reactive_update` (attrs: `session.id`) | started by `AppSession._increment_busy_count()` on 0 → 1 (`start_otel_span`); ended by `_end_otel_cycle_span()` from `_decrement_busy_count()` on → 0, or from `_run_session_ended_tasks` | `REACTIVE_UPDATE` |
 | `reactive.calc [mods] [ns:]name` | `Calc_._run` | `REACTIVITY` |
-| `reactive.effect [mods] [ns:]name` | `Effect_._run` | `REACTIVITY` |
-| `output [ns:]name` | `output_obs` inside `Outputs.__call__`'s `set_renderer` | `REACTIVITY` |
+| `reactive.effect [mods] [ns:]name` | `Effect_._run`, inside `use_otel_span(session._otel_reactive_update_span())` | `REACTIVITY` |
+| `output [ns:]name` | `output_obs` inside `Outputs.__call__`'s `set_renderer`, after the `recalculating` message and its `await asyncio.sleep(0)` | `REACTIVITY` |
 | `extended_task [ns:]name` | `ExtendedTask._execution_wrapper` | `REACTIVITY` |
 | `download [ns:]id` | download handler in `AppSession._handle_request_impl` (`FileResponse` path: `shiny_otel_span`; iterator path: `shiny_otel_span_stream`) | `REACTIVITY` |
 
@@ -85,9 +85,46 @@ Logs (via `emit_otel_log`, gated on `is_otel_tracing_enabled()` and
 - `extended_task queued [ns:]name` (DEBUG, `queue.size`) from
   `ExtendedTask.invoke` when an invocation is queued.
 
-`invalidate_later`'s timer task (`shiny/reactive/_core.py`, used by
-`reactive.poll`) runs its invalidate + flush inside `detached_otel_context()`,
-so that `reactive_update` is a root span, not a child of whatever was current.
+## The `reactive_update` cycle span
+
+A round (`ReactiveEnvironment.start_round()`) is global and can serve several
+sessions, so it has no span of its own. As in Shiny for R
+(`R/otel-reactive-update.R`), `reactive_update` follows one session's
+**cycle**: its busy count going 0 → 1 until it returns to 0 (see
+[reactiveInternals.md](reactiveInternals.md) for rounds and cycles). It
+covers the session's async effects to the end, but not sending the cycle's
+outputs. A download handler call also takes the busy count
+(`AppSession._handle_request`), so a download gets a cycle span even if it
+runs no reactive code.
+
+- **Parent, chosen explicitly** in `_increment_busy_count()`: the busy count
+  turns 1 in whichever task invalidated the effect (often another session's
+  effect), so the current span is never used. While
+  `_otel_session_start_span` is set (the `init` block), the parent is
+  `session_start`; otherwise an empty `OtelContext()`, so every later cycle
+  is a root span in a trace of its own. The bookmark effects are created
+  inside `session_start` because their invalidation starts the first cycle.
+- **Children:** `Effect_._run` enters `use_otel_span(cycle_span)` around its
+  own span, so effect and output spans are the cycle span's children and a
+  calc's span is a child of the effect/output that read it. Effects without a
+  session (`self._session is None`) get `None` and are root spans.
+- **Status:** `_end_otel_cycle_span()` sets `OK` unless
+  `AppSession._unhandled_error()` recorded the exception and set `ERROR` on
+  the open span (`_otel_cycle_failed`). The effect's own span reports `OK`
+  (the effect handled the error), so the cycle span is where a session-closing
+  error shows.
+- `SessionProxy._otel_reactive_update_span()` delegates to the root session.
+  Duck-typed session mocks must define it (see `tests/pytest/test_poll.py`).
+- **First-load timing (#2525):** `output_obs` yields after its
+  `recalculating` message, so a synchronous render function now runs just
+  after `session_start` ends, like async ones already did. Its span is still
+  under the first cycle span, which started inside `session_start`.
+
+`invalidate_later` (`shiny/reactive/_core.py`, used by `reactive.poll`) now
+calls `session.run_once_when_idle(ctx.invalidate)`; the cycle that starts is a
+root span because of the explicit parent above. `detached_otel_context()`
+remains in `_core.py` (tested in `test_otel_foundation.py`) but Shiny itself
+no longer uses it.
 
 ## Naming and attribute conventions
 
@@ -127,8 +164,14 @@ so that `reactive_update` is a root span, not a child of whatever was current.
 
 1. Async code: `async with shiny_otel_span("type name", attributes=...,
    infer_session_id=..., required_level=OtelCollectLevel.X,
-   collection_level=...)`. Streams: `shiny_otel_span_stream`. There is no sync
-   span helper; sync code emits logs via `emit_otel_log`.
+   collection_level=...)`. Streams: `shiny_otel_span_stream`. A span that
+   isn't one block of code (started in one callback, ended in another):
+   `start_otel_span(name, attributes=, required_level=, collection_level=,
+   context=)` returns `Span | None` without making it current (`context=None`
+   parents it on the current span, `OtelContext()` makes a root); run code in
+   it with `with use_otel_span(span):` (no-op on `None`, never ends the span)
+   and call `span.end()` yourself. These skip `shiny_otel_span`'s error
+   handling, so set the status yourself (see `_end_otel_cycle_span`).
 2. Pass every argument after the name by keyword. Per `AGENTS.md`,
    `required_level` is the threshold, `collection_level` the current setting.
 3. Per-object work: capture `resolve_func_otel_level(fn)` at construction and
@@ -150,9 +193,21 @@ so that `reactive_update` is a root span, not a child of whatever was current.
 ## Testing
 
 - Unit tests: `tests/pytest/test_otel_*.py` (collect levels, foundation,
-  session, reactive execution/flush, poll, download, data frame, async context,
-  error handling, value logging, logfire). Async-context propagation is
-  verified in `test_otel_async_context.py`.
+  session, reactive execution/flush/update, poll, download, data frame, async
+  context, error handling, value logging, logfire). Async-context propagation
+  is verified in `test_otel_async_context.py`.
+- `test_otel_reactive_update.py` drives real `AppSession`s over a
+  `MockConnection` (its `Client`, with `bookmark_store=` to cover the
+  bookmark effects), filters exported spans to its own sessions by
+  `session.id` (`of_sessions`; other tests' sessions may still export), and
+  checks parentage with `parent_of`. It waits on state, not time:
+  `wait_until(cond)` polls with a 10 s `TIMEOUT`, `Client.idle()` waits for
+  `_output_flush_enabled` and `_busy_count == 0`, an open cycle is detected
+  via `session._otel_cycle_span`, and asyncio `Event`s hold async effects
+  open. Ordering is asserted by state (e.g. whether `_otel_cycle_span` was
+  already `None` in a cancelled effect's `finally`), not by timestamps, which
+  are too coarse on Windows. `test_otel_reactive_flush.py` asserts that a
+  round creates no `reactive_update` span.
 - Fixtures in `tests/pytest/conftest.py`: session-scoped
   `_otel_tracer_provider_session` installs one SDK `TracerProvider` +
   `InMemorySpanExporter` per worker (OTel forbids re-setting providers);
@@ -168,8 +223,10 @@ so that `reactive_update` is a root span, not a child of whatever was current.
 - Use `monkeypatch.setenv/delenv("SHINY_OTEL_COLLECT", ...)`;
   `test_otel_collect.py` has an autouse fixture that clears it.
 - Playwright: `tests/playwright/shiny/otel/` (`async/`,
-  `client-data-inputs-init/`, `express-session-start/`). Demo app:
-  `examples/open-telemetry/`.
+  `client-data-inputs-init/`, `express-session-start/`). Because of the
+  first-load timing above, `express-session-start` only waits for the first
+  render to show a `session_start_count` of 0 or 1, then checks that a later
+  re-render sees the closed span. Demo app: `examples/open-telemetry/`.
 
 ## Bundled skill reference
 
@@ -191,13 +248,13 @@ checks presence only, not accuracy. See `memory-bank/agentSkills.md`.
   ContextVar is inherited by tasks).
 - A new internal effect/calc/value that isn't suppressed shows up as user
   spans/logs (e.g. the output wrapper effect would double every `output` span).
-- `shiny_otel_span` is async-only; there is no sync span helper.
-- The user docstring's "Enable Error Sanitization" section in
-  `shiny/otel/__init__.py` cites `sanitize_errors=True`, but spans actually use
-  `App.sanitize_otel_errors` (already `True` by default).
-- `_span_wrappers.py`'s module docstring points to
-  `tests/playwright/shiny/otel-async/`; the real path is
-  `tests/playwright/shiny/otel/async/`.
+- `shiny_otel_span` is async-only. `start_otel_span` / `use_otel_span` are
+  sync, but the caller owns ending the span and setting its status.
+- A new parent-sensitive span started from reactive plumbing must choose its
+  parent explicitly: code that turns a session busy runs in some other task's
+  context (see `_increment_busy_count()`).
+- Session mocks used with `Effect_` need `_otel_reactive_update_span()` (and
+  `_restore_gate()`, see [bookmarking.md](bookmarking.md)).
 - `emit_otel_log` catches `TypeError` from `Logger.emit(**kwargs)` and falls
   back to building a `LogRecord` (`_emit_otel_log_record`) for
   opentelemetry-api < 1.38; keep both paths working when touching it.

@@ -1,6 +1,6 @@
 ---
 title: "Bookmarking"
-description: "How bookmarking saves and restores session state: url vs server stores, the save/restore flow, callbacks, restore context, modules, Express, input serializers, and tests. Read before touching shiny/bookmark/, adding an input that should survive a bookmark, or debugging restore."
+description: "How bookmarking saves and restores session state: url vs server stores, the save/restore flow, callbacks and their timing, the restore gate that holds a session's effects until async on_restore callbacks finish, restore context, modules, Express, input serializers, and tests. Read before touching shiny/bookmark/, adding an input that should survive a bookmark, or debugging restore."
 ---
 
 # Bookmarking
@@ -80,8 +80,11 @@ Restore happens twice per page view, both via
   ContextVar `_current_restore_context`.
 - **WebSocket `init`** (`AppSession` message loop): built from
   `.clientdata_url_search` and stored with `BookmarkApp._set_restore_context()`;
-  then `_create_effects()` runs. Server-side code (e.g. `@render.ui`) finds it
-  through `get_current_session().bookmark._restore_context`.
+  then `_create_effects()` runs inside the `session_start` span, before the
+  server function (its effects start the first cycle; see
+  [otel.md](otel.md#the-reactive_update-cycle-span)). Server-side code (e.g.
+  `@render.ui`) finds it through
+  `get_current_session().bookmark._restore_context`.
 
 `from_query_string` rules:
 - `bookmark_store == "disable"` → inactive context.
@@ -98,9 +101,10 @@ Restore happens twice per page view, both via
 
 `RestoreInputSet` makes each value one-shot: `get()` marks it pending,
 `flush_pending()` marks it used, and used values are no longer returned.
-`restore_context()` flushes on exit; `AppSession._flush()` flushes the session's
-context each reactive flush. So dynamic UI only restores values if it renders in
-the first flush.
+`restore_context()` flushes on exit; `AppSession._output_flush()` flushes the
+session's context once per cycle, after the session is idle and before its
+outputs are sent. So dynamic UI only restores values if it renders in the
+first cycle.
 
 ## How inputs pick up restored values
 
@@ -138,12 +142,39 @@ land in the root `Inputs._serializers`, which is what `_serialize()` reads.
 |---|---|---|
 | `on_bookmark` | Before persisting (after `dir` is set for server) | `BookmarkState`: add to `.values`, write files to `.dir` |
 | `on_bookmarked` | After persisting; replaces the default modal | full URL `str` |
-| `on_restore` | Effect with `priority=1000000` in the first flush, after the server function | `RestoreState` (`input`, `values`, `dir`) |
-| `on_restored` | `session.on_flushed` after the flush is sent | `RestoreState` |
+| `on_restore` | Effect `invoke_on_restore_callbacks` with `priority=ON_RESTORE_PRIORITY` (1000000), started in the first round before default-priority effects, after the server function; the session's lower-priority effects wait for it (restore gate, below) | `RestoreState` (`input`, `values`, `dir`) |
+| `on_restored` | `root_session.on_flushed` (once), after the first cycle's outputs are sent | `RestoreState` |
 
 `on_restore`/`on_restored` run only if the context is `active`, inside
 `isolate()`; exceptions become a warning plus error notification. All
 registrations return a cancel callback.
+
+## Restore gate
+
+A round starts effects in priority order but doesn't wait for their async
+parts (see [reactiveInternals.md](reactiveInternals.md)), so an `on_restore`
+callback that awaits (shinychat's `enable_bookmarking()` does) would let the
+session's other effects run first with default values. The gate makes them
+wait:
+
+- `_create_effects()` creates a future, `BookmarkApp._restore_done`. The
+  restore effect resolves it in a `finally`, so also when its callbacks raise
+  (`invoke_callbacks()` turns errors into a warning) or its run is cancelled.
+- `BookmarkApp._restore_gate(priority)` returns `None` for
+  `priority >= ON_RESTORE_PRIORITY` (those ran before the restore on `main`
+  too), else the future. `AppSession._restore_gate()` delegates to it (or
+  `None` without a `BookmarkApp`); `SessionProxy._restore_gate()` delegates to
+  the root, so module effects wait too.
+- `Effect_._create_context()`'s `on_flush_cb` (`shiny/reactive/_reactives.py`)
+  awaits `asyncio.shield(gate)` after its previous run and before `_run()`
+  (the shield keeps a cancelled waiter from cancelling the shared future).
+  It passes `queued_priority`, the priority when the run was queued, so a
+  `set_priority()` mid-wait can't skip the gate. A destroyed effect skips the
+  gate: a session that ended before its restore effect ran never opens it.
+- Waiting effects hold the session's busy count, so no outputs go out before
+  the restore finishes. The gate is per session; other sessions don't wait.
+- Duck-typed session mocks used with `Effect_` need `_restore_gate()`
+  returning `None` (see `tests/pytest/test_poll.py`).
 
 ## Modules and exclusion
 
@@ -172,7 +203,12 @@ registrations return a cancel callback.
 ## Tests
 
 - Unit: `tests/pytest/test_bookmark_security.py` (id validation, store/id
-  gating, active-context invariant, file source checks).
+  gating, active-context invariant, file source checks). The restore gate is
+  tested in the "Async bookmark `on_restore` callbacks" section of
+  `tests/pytest/test_concurrency.py`: `RestoringClient` inits with
+  `?_inputs_&x=%22restored%22`, and `at_restore_gate(effects, n)` waits until
+  `n` effects each have a run task parked at the gate (see
+  [concurrencyTesting.md](concurrencyTesting.md)).
 - Playwright: `tests/playwright/shiny/bookmark/` — `callbacks/`, `dir/`
   (per-app and global dir fns), `modal/`, `modules/` (core, express, recursive;
   url and server via `SHINY_BOOKMARK_STORE`), `chat/`. Per-input apps under
@@ -202,7 +238,10 @@ registrations return a cancel callback.
   serializers on the root session with the resolved id.
 - `BookmarkState.exclude` is computed before `on_bookmark` runs; appending to
   `session.bookmark.exclude` inside the callback does not affect that save.
-- Module dir mismatch: save uses `root.dir / ns` (e.g. `mod`), but
-  `_state_within_namespace` restores from `dir / "mod-"` (prefix with separator).
+- Module files live in `root.dir / ns` (e.g. `mod`, no trailing separator).
+  `_scoped_on_bookmark` (save) and `_state_within_namespace` (restore) must
+  agree on this path.
+- Effects with `priority >= 1000000` don't wait for the restore gate, so they
+  can see pre-restore values.
 - `_state_id_` must match `[A-Za-z0-9_-]+` (≤1024 chars); custom dir fns get
   validated ids, but are still responsible for not escaping their store.

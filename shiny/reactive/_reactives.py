@@ -46,7 +46,7 @@ from ..otel._labels import (
     get_otel_label_modifier,
     set_otel_label_modifier,
 )
-from ..otel._span_wrappers import shiny_otel_span
+from ..otel._span_wrappers import shiny_otel_span, use_otel_span
 from ..types import (
     MISSING,
     MISSING_TYPE,
@@ -54,8 +54,16 @@ from ..types import (
     NotifyException,
     SilentException,
 )
-from ._core import Context, Dependents, ReactiveWarning, isolate
+from ._core import Context, Dependents, ReactiveWarning, _enclosing_run, isolate
 from ._utils import is_user_code_frame
+
+
+def _current_task() -> Optional[asyncio.Task[object]]:
+    try:
+        return asyncio.current_task()
+    except RuntimeError:
+        # No running loop (a sync calc read outside of asyncio).
+        return None
 
 
 def _weak_destroy_callback(
@@ -493,6 +501,16 @@ class Value(Generic[T]):
             If the value has been destroyed.
         RuntimeError
             If called on a read-only reactive value.
+
+        Note
+        ----
+        Setting a new value schedules its dependents to re-run automatically,
+        without a call to :func:`~shiny.reactive.flush`. Call ``set()`` from the thread
+        running Shiny's event loop. From any other thread, hand the call to that loop
+        with ``loop.call_soon_threadsafe(value.set, new_value)``. The reactive graph
+        isn't safe to change from two threads at once, and calling ``set()`` directly
+        from another thread can fail (e.g. when a session's effect depends on the
+        value).
         """
         if self._destroyed:
             raise DestroyedReactiveError(
@@ -671,7 +689,14 @@ class Calc_(Generic[T]):
         self._dependents: Dependents = Dependents()
         self._invalidated: bool = True
         self._running: bool = False
+        # The task running `update_value()`, and readers from other tasks waiting on
+        # that run (async calcs only: concurrent effects can read mid-run).
+        self._running_task: Optional[asyncio.Task[object]] = None
+        self._run_waiters: list[asyncio.Future[None]] = []
         self._most_recent_ctx_id: int = -1
+        # How many runs of the most recent run's task are in progress: more than
+        # one when the calc reads itself.
+        self._run_depth: int = 0
         self._ctx: Optional[Context] = None
         self._exec_count: int = 0
         # Guards destroy() idempotency and __call__/get_value access.
@@ -770,8 +795,23 @@ class Calc_(Generic[T]):
             )
         self._dependents.register()
 
+        # Another task is computing this value: share that run rather than starting a
+        # second one. Recompute only if it was invalidated meanwhile.
+        current = _current_task()
+        while (
+            self._running
+            and not self._invalidated
+            and self._running_task is not current
+        ):
+            waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+            self._run_waiters.append(waiter)
+            await waiter
+
         if self._invalidated or self._running:
-            await self.update_value()
+            value, error = await self._update_value()
+            if error:
+                raise error[0]
+            return value[0]
 
         if self._error:
             raise self._error[0]
@@ -780,16 +820,42 @@ class Calc_(Generic[T]):
 
     # TODO: should this be private?
     async def update_value(self) -> None:
-        self._ctx = Context()
-        self._most_recent_ctx_id = self._ctx.id
+        await self._update_value()
 
-        self._ctx.on_invalidate(self._on_invalidate_cb)
+    async def _update_value(self) -> tuple[list[T], list[Exception]]:
+        """
+        Run the calc; return this run's value or error.
+
+        Only the most recent run is cached: an async run can be invalidated and
+        superseded by a newer one while it awaits.
+        """
+        ctx = Context()
+        self._ctx = ctx
+        # A nested run (the calc reading itself, in the same task) belongs to the
+        # run that started it: only the outermost one writes the cache.
+        nested = self._running and self._running_task is _current_task()
+        if not nested:
+            self._most_recent_ctx_id = ctx.id
+            self._run_depth = 0
+        run_id = self._most_recent_ctx_id
+        self._run_depth += 1
+
+        def on_invalidate() -> None:
+            # A superseded run (e.g. a cancelled one) stays subscribed to what it
+            # read; only the most recent run's sources (including its nested runs')
+            # should invalidate the calc.
+            if run_id == self._most_recent_ctx_id:
+                self._on_invalidate_cb()
+
+        ctx.on_invalidate(on_invalidate)
 
         self._exec_count += 1
         self._invalidated = False
 
-        was_running = self._running
         self._running = True
+        self._running_task = _current_task()
+        value: list[T] = []
+        error: list[Exception] = []
 
         from ..session import session_context
 
@@ -802,34 +868,37 @@ class Calc_(Generic[T]):
                 collection_level=self._otel_level,
             ):
                 try:
-                    with self._ctx():
-                        await self._run_func()
+                    with ctx():
+                        try:
+                            value.append(await self._fn())
+                        except Exception as err:
+                            error.append(err)
                 finally:
-                    self._running = was_running
+                    if run_id == self._most_recent_ctx_id:
+                        self._run_depth -= 1
+                    if run_id == self._most_recent_ctx_id and self._run_depth == 0:
+                        # If this run was invalidated meanwhile, `_invalidated` makes
+                        # the next read recompute anyway.
+                        self._value[:] = value
+                        self._error[:] = error
+                        if not value and not error:
+                            # Cancelled before it finished: there's nothing to cache,
+                            # so the next read (or a waiting one) recomputes.
+                            self._invalidated = True
+                        self._running = False
+                        self._running_task = None
+                        waiters = self._run_waiters
+                        self._run_waiters = []
+                        for waiter in waiters:
+                            if not waiter.done():
+                                waiter.set_result(None)
+        return value, error
 
     def _on_invalidate_cb(self) -> None:
         self._invalidated = True
         self._value.clear()  # Allow old value to be GC'd
         self._dependents.invalidate()
         self._ctx = None  # Allow context to be GC'd
-
-    async def _run_func(self) -> None:
-        self._error.clear()
-        try:
-            val = await self._fn()
-
-            # Clear before appending: a reentrant recursive call to this same
-            # `Calc_` (the calc calling itself) re-enters `_run_func` while an
-            # outer frame's call is still pending, so without clearing first,
-            # each level's value just piles onto the same list and the very
-            # first (deepest/base-case) entry -- not this call's own result --
-            # would be whatever a stale index read back. Clearing keeps
-            # exactly one entry: the one this call just computed, read
-            # immediately afterward with no other call able to interleave.
-            self._value.clear()
-            self._value.append(val)
-        except Exception as err:
-            self._error.append(err)
 
     def _extract_otel_attrs(self, fn: Callable[..., Any]) -> SourceRefAttrs:
         """Extract OpenTelemetry attributes from the reactive function."""
@@ -985,6 +1054,7 @@ class Effect_:
 
         from ..render.renderer import Renderer
         from ..session import Session
+        from ..session._session import AppSession, SessionProxy
 
         if isinstance(fn, Renderer):
             raise TypeError(
@@ -1004,6 +1074,10 @@ class Effect_:
         self._priority: int = priority
         self._suspended = suspended
         self._on_resume: Callable[[], None] = lambda: None
+        # Resolved when the latest run finishes (see `on_flush_cb`).
+        self._run_done: Optional[asyncio.Future[None]] = None
+        # Tasks running (or waiting to run) this effect; `destroy()` cancels them.
+        self._run_tasks: set[asyncio.Task[object]] = set()
 
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._destroyed: bool = False
@@ -1035,9 +1109,23 @@ class Effect_:
             # `on_ended` registration is also what destroys effects on session
             # close, since the `on_destroy` one no-ops there.
             self._session.on_ended(self.destroy)
-            self._session.on_destroy(
-                _weak_destroy_callback(self.destroy, self._session)
+            # Before the scope's other destroy callbacks: an async one that yields
+            # would otherwise let a run of this effect resume and read a value the
+            # scope has already destroyed.
+            destroy_fn = _weak_destroy_callback(self.destroy, self._session)
+            root = (
+                self._session.root_scope()
+                if isinstance(self._session, SessionProxy)
+                else self._session
             )
+            if isinstance(root, AppSession):
+                root._register_destroy(destroy_fn, ns=str(self._session.ns), first=True)
+            else:
+                # Intentional, not a gap to fix: `_register_destroy()` is kept off
+                # the public `Session` API, so other sessions (duck-typed test
+                # mocks with no `root_scope()`, third-party `Session` subclasses)
+                # get plain `on_destroy()` ordering.
+                self._session.on_destroy(destroy_fn)
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs: dict[str, Any] = {
@@ -1056,7 +1144,7 @@ class Effect_:
         # Extract collection level from function attribute (e.g., set by `@otel.suppress` or `@otel.collect` decorators)
         self._otel_level: OtelCollectLevel = resolve_func_otel_level(fn)
 
-        # Defer the first running of this until flushReact is called
+        # Defer the first run to the next round
         self._create_context().invalidate()
 
     def _create_context(self) -> Context:
@@ -1065,6 +1153,9 @@ class Effect_:
         # Store the context explicitly in Effect object
         # TODO: More explanation here
         self._ctx = ctx
+        # The priority this context's run was queued at; `set_priority()` doesn't
+        # change it.
+        queued_priority = self._priority
 
         def on_invalidate_cb() -> None:
             # Context is invalidated, so we don't need to store a reference to it
@@ -1078,7 +1169,9 @@ class Effect_:
                 return
 
             def _continue() -> None:
-                ctx.add_pending_flush(self._priority)
+                nonlocal queued_priority
+                queued_priority = self._priority
+                ctx.add_pending_flush(queued_priority)
                 if self._session:
                     self._session._increment_busy_count()
 
@@ -1088,10 +1181,44 @@ class Effect_:
                 _continue()
 
         async def on_flush_cb() -> None:
-            if not self._destroyed:
-                await self._run()
-            if self._session:
-                self._session._decrement_busy_count()
+            # Unlike R, runs of one effect don't overlap: a re-run waits for the
+            # previous run's async part, so a slower, older run can't finish last.
+            previous = self._run_done
+            done: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+            self._run_done = done
+            task = _current_task()
+            if task is not None:
+                self._run_tasks.add(task)
+            try:
+                if previous is not None and not previous.done():
+                    await asyncio.shield(previous)
+                # While the session restores its bookmarked state, wait for the
+                # `on_restore` callbacks to finish. Not once destroyed: the session
+                # may have ended before its restore effect ran, in which case the
+                # gate never opens.
+                restore = (
+                    self._session._restore_gate(queued_priority)
+                    if self._session and not self._destroyed
+                    else None
+                )
+                if restore is not None and not restore.done():
+                    await asyncio.shield(restore)
+                if not self._destroyed:
+                    await self._run()
+            except Exception as e:
+                # The effect runs in its own task, so report errors to its session.
+                if not self._session:
+                    raise
+                # `_unhandled_error()` prints only the message; show where it failed.
+                traceback.print_exception(type(e), e, e.__traceback__)
+                await self._session._unhandled_error(e)
+            finally:
+                if task is not None:
+                    self._run_tasks.discard(task)
+                done.set_result(None)
+                # Every exit path (raised, cancelled) must end the busy period.
+                if self._session:
+                    self._session._decrement_busy_count()
 
         ctx.on_invalidate(on_invalidate_cb)
         ctx.on_flush(on_flush_cb)
@@ -1104,7 +1231,12 @@ class Effect_:
 
         from ..session import session_context
 
-        with session_context(self._session):
+        # Run in the session's cycle span, so this effect's span (and those of the
+        # calcs it reads) are its children.
+        cycle_span = (
+            self._session._otel_reactive_update_span() if self._session else None
+        )
+        with session_context(self._session), use_otel_span(cycle_span):
             async with shiny_otel_span(
                 self._otel_label,
                 attributes=self._otel_attrs,
@@ -1135,7 +1267,8 @@ class Effect_:
                         if e.sanitize:
                             msg = SANITIZE_ERROR_MSG
                         notification_show(msg, type="error", duration=None)
-                        if e.close:
+                        # As below: a destroyed effect has no session to close.
+                        if e.close and not self._destroyed:
                             await self._session._unhandled_error(e)
                 except Exception as e:
                     traceback.print_exc()
@@ -1143,7 +1276,9 @@ class Effect_:
                     warnings.warn(
                         "Error in Effect: " + str(e), ReactiveWarning, stacklevel=2
                     )
-                    if self._session:
+                    # A destroyed effect has no session to protect. (E.g. cleanup
+                    # in a cancelled run reads its destroyed scope's values.)
+                    if self._session and not self._destroyed:
                         await self._session._unhandled_error(e)
 
     def on_invalidate(self, callback: Callable[[], None]) -> None:
@@ -1163,7 +1298,22 @@ class Effect_:
         Destroy this reactive effect.
 
         Stops the effect from executing ever again, even if it is currently scheduled
-        for re-execution.
+        for re-execution. A run that is still in progress (e.g., paused at an `await`)
+        is cancelled: `asyncio.CancelledError` is raised at its current `await`, so
+        its `finally` blocks run but the rest of its body doesn't. The exception is
+        the run that calls `destroy()` (directly, or from a task it started), as when
+        an effect closes its own session; that run continues.
+
+        An error raised by an effect after it has been destroyed is logged rather
+        than closing the session. (E.g., cleanup in a cancelled run that reads its
+        destroyed scope's values raises `DestroyedReactiveError`.)
+
+        Effects are destroyed when their session ends, and when their scope is
+        destroyed with :meth:`~shiny.Session.destroy`, so both cancel the effect's
+        in-progress runs. Cancellation is delivered on the next pass of the event
+        loop, so a cancelled run's cleanup runs after the session's ``on_ended``
+        and the scope's ``on_destroy`` callbacks have run (unless one of them
+        awaits).
 
         Note
         ----
@@ -1171,7 +1321,18 @@ class Effect_:
         release resources and prevent future execution — the same work
         that would happen if this object were garbage collected.
         """
+        # Idempotent: a session registers `destroy` for both its end and its
+        # destroy, and a second cancel would interrupt a cancelled run's cleanup.
+        if self._destroyed:
+            return
         self._destroyed = True
+
+        # Cancel in-progress runs now, before the caller tears down what they read
+        # (e.g. a destroyed scope's values). Skip the run calling us, so it finishes.
+        caller = _enclosing_run.get()
+        for task in self._run_tasks:
+            if task is not caller:
+                task.cancel()
 
         if self._ctx is not None:
             self._ctx.invalidate()
@@ -1180,10 +1341,10 @@ class Effect_:
         """
         Suspend the effect.
 
-        Pauses scheduling of flushes (re-executions) in response to invalidations. If
-        the effect was invalidated prior to this call but it has not re-executed yet
-        (because it waits until on_flush is called) then that re-execution will still
-        occur, because the flush is already scheduled.
+        Stops adding the effect to the reactive effect queue in response to
+        invalidations. If the effect was invalidated prior to this call but it has not
+        re-executed yet (because it waits for the next round), then that re-execution
+        will still occur, because the effect is already in the queue.
         """
         self._suspended = True
 
@@ -1192,8 +1353,8 @@ class Effect_:
         Resume the effect.
 
         Causes this effect to start re-executing in response to invalidations. If the
-        effect was invalidated while suspended, then it will schedule itself for
-        re-execution (pending flush).
+        effect was invalidated while suspended, then it adds itself to the reactive
+        effect queue, to re-execute in the next round.
         """
         if self._suspended:
             self._suspended = False
@@ -1208,8 +1369,10 @@ class Effect_:
         ----------
         priority
             The new priority. A higher value means higher priority: an effect with a
-            higher priority value will execute before all effects with lower priority
-            values. Positive, negative, and zero values are allowed.
+            higher priority value starts before all effects with lower priority
+            values. An async effect's awaited part doesn't hold back lower-priority
+            effects, so they can finish first. Positive, negative, and zero values
+            are allowed.
 
         Note
         ----
@@ -1269,8 +1432,9 @@ def effect(
         until resumed and invalidated).
     priority
         The new priority. A higher value means higher priority: an effect with a higher
-        priority value will execute before all effects with lower priority values.
-        Positive, negative, and zero values are allowed.
+        priority value starts before all effects with lower priority values. An async
+        effect's awaited part doesn't hold back lower-priority effects, so they can
+        finish first. Positive, negative, and zero values are allowed.
     session
         A :class:`~shiny.Session` instance. If not provided, the session is inferred via
         :func:`~shiny.session.get_current_session`.

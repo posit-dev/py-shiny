@@ -1,6 +1,6 @@
 ---
 title: "CI and Tooling"
-description: "The dev toolchain (Makefile targets, uv, pyproject extras, type checkers, pre-commit) and the GitHub Actions workflows: what runs on PRs, matrices, Playwright sharding, deploy tests, docs build, and PyPI release. Read before changing the Makefile, pyproject dependencies, or .github/, or when a CI job fails and you need to know what it actually ran."
+description: "The dev toolchain (Makefile targets, uv, pyproject extras, type checkers, pre-commit) and the GitHub Actions workflows: what runs on PRs, matrices, Playwright sharding, the Windows Playwright job, pytest timeouts, deploy tests, docs build, and PyPI release. Read before changing the Makefile, pyproject dependencies, or .github/, or when a CI job fails and you need to know what it actually ran."
 ---
 
 # CI and Tooling
@@ -45,7 +45,9 @@ Playwright knobs (Makefile variables): `SUB_FILE`, `TEST_FILE`,
 `PYTEST_BROWSERS`, `PYTEST_EXTRA_ARGS` (e.g. `"--tracing on"`),
 `PLAYWRIGHT_TEST_TIMEOUT=120` with `--timeout-method=thread` and
 `faulthandler_timeout=110` (dumps stacks before the kill). `-v` is added only
-when `CI=true`. `install-playwright` skips `playwright install` entirely when
+when `CI=true`. `install-playwright` runs `playwright install
+$(PLAYWRIGHT_INSTALL_ARGS) $(PLAYWRIGHT_BROWSERS)` (`PLAYWRIGHT_INSTALL_ARGS`
+defaults to `--with-deps`), and skips it entirely when
 `PW_TEST_CONNECT_WS_ENDPOINT` is set (remote browser server).
 
 ## Type checking: Pyrefly and Pyright
@@ -103,10 +105,22 @@ are built once and never refreshed; `make clean-test` deletes `typings/`.
 
 ## pytest configuration
 
-- `pytest.ini`: `testpaths=tests/pytest/`, `--numprocesses auto`,
-  `asyncio_mode=strict`, and `filterwarnings = error` (any stray warning fails
-  a test; add narrow third-party ignores there, assert expected ones with
-  `pytest.warns()`).
+- `pytest.ini`: `testpaths=tests/pytest/`, `--strict-markers --numprocesses
+  auto`, `asyncio_mode=strict`, and `filterwarnings = error` (any stray
+  warning fails a test; add narrow third-party ignores there, assert expected
+  ones with `pytest.warns()`). It ignores `ResourceWarning` and
+  `PytestUnraisableExceptionWarning` (raised from GC finalizers in whichever
+  test is running), and syrupy's "selected test(s) missing" warning that a
+  killed worker causes.
+- Every test (unit and Playwright) has `timeout = 120` with
+  `timeout_method = thread` and `faulthandler_timeout = 110`, the same scheme
+  as the Makefile's Playwright variables: a hang kills the xdist worker
+  (reported as that test's failure) after faulthandler has dumped every
+  thread's stack to stderr.
+- Don't pass `-p no:rerunfailures`: with `--strict-markers`,
+  `test_utils.py`'s `@pytest.mark.flaky` becomes an unknown marker, the file
+  fails to collect, and its tests silently drop out of the count. In a
+  sandbox, run `.venv/bin/python -m pytest tests/pytest -q`.
 - `tests/pytest/asyncio_prevent.py` runs in a clean process before pytest to
   ensure importing shiny never touches the event loop.
 - Retries are opt-in per test via `@pytest.mark.flaky(...)`
@@ -127,7 +141,7 @@ isort, flake8, or any type checker.
 | Run deploy tests (`deploy-tests.yaml`) | push to `main`/`rc-*`/`deploy-**`, dispatch (not PRs) | Deploys apps to a local Posit Connect (`posit-dev/with-connect`, license secret) across 4 shiny/rsconnect source combos; `concurrency` serializes each config |
 | Verify built assets (`verify-js-built.yaml`) | PRs, push to `main`/`rc-*` | `npm ci && npm run build` in `js/`; fails on any diff |
 | Conventional Commits (`verify-conventional-commits.yaml`) | PR opened/edited/sync | Lints the PR title; sticky comment on failure |
-| Verify testing docs (`verify-testing-docs-on-change.yml`) | PRs touching `shiny/playwright/controller/**` or `docs/_quartodoc-testing.yml` | Reruns `make update-testing-docs`, comments if the JSON changed |
+| Verify testing docs (`verify-testing-docs-on-change.yml`) | PRs touching `shiny/playwright/controller/**` or `docs/_quartodoc-testing.yml` | Reruns `make update-testing-docs`; comments and fails if the JSON changed |
 | Verify test generation prompts (`verify-test-generation-prompts.yaml`) | PRs touching `shiny/pytest/_generate/**`, dispatch | LLM eval of `shiny add test` (3 attempts, quality gate); needs OpenAI/Anthropic secrets |
 | Issue Management (`triage-issues.yaml`) | issue opened | Adds `needs-triage` for non-maintainers |
 
@@ -146,6 +160,15 @@ isort, flake8, or any type checker.
   10-minute step timeout ("healthy shards finish in ~4 minutes").
   `playwright-examples` also checks out `posit-dev/py-shiny-templates` and
   `npm ci`s `examples/brownian/shinymediapipe`.
+- `playwright-windows`: one `windows-latest` job (setup action's default
+  Python, Chromium only, 10-minute step timeout, no draft reduction since it
+  is already one job) for behavior that differs on Windows. It runs
+  `make playwright-shiny SUB_FILE="bugs/1381-busy-indicator-progress"` with
+  `PLAYWRIGHT_BROWSERS=chromium PLAYWRIGHT_INSTALL_ARGS=--only-shell`: it
+  installs the headless shell on the runner (no remote server, no
+  `--with-deps`, which on Windows only adds ~3 minutes of Media Foundation).
+  To add a Windows-specific test, extend that `SUB_FILE` (see
+  [playwrightTesting.md](playwrightTesting.md#windows-specific-tests)).
 - `playwright-deploys-precheck`: Python 3.10, runs deploy tests locally with
   `DEPLOY_APPS=false` (no Connect).
 - `test-narwhals-integration`: Python 3.12, via composite actions
@@ -163,7 +186,8 @@ isort, flake8, or any type checker.
 Playwright jobs on 3.14 + chromium only. Marking ready for review reruns the
 full matrix.
 
-**Playwright in CI** never installs browsers on the runner:
+**Playwright in CI** (except `playwright-windows`) never installs browsers on
+the runner:
 `.github/py-shiny/setup-playwright-remote` starts a `playwright run-server`
 Docker container (image mirrored to GHCR with the npm package baked in,
 falling back to MCR) and exports `PW_TEST_CONNECT_WS_ENDPOINT`. The Playwright
@@ -200,13 +224,13 @@ py-htmltools' CI; keep it in sync when changing what `check` runs.
   the gate.
 - Committed JS bundles must match a fresh `npm ci && npm run build` with the
   Node version in `js/.nvmrc`, or `verify-js-built` fails.
-- `verify-testing-docs-on-change.yml`: its `diff -q` branch sets
-  `docs_changed=true` when the files are *identical*, and no step exits
-  non-zero, so its comment is unreliable. Run `make update-testing-docs`
-  yourself after changing a controller.
-- `verify-test-generation-prompts.yaml`'s `paths` filter lists
-  `verify-test-generation-prompts.yml` (wrong extension), so editing only the
-  workflow does not trigger it.
+- After changing a Playwright controller, run `make update-testing-docs` and
+  commit `shiny/pytest/_generate/_data/testing-documentation.json`, or
+  `verify-testing-docs-on-change` fails. `docs/api/` is gitignored, so the
+  Makefile's `repomix` call needs `--no-gitignore`; without it, newer repomix
+  packs zero files and the JSON becomes `[]`.
+- A workflow's own `paths` filter must use its exact filename (`.yml` vs
+  `.yaml`), or editing only the workflow won't trigger it.
 - `oldest-deps` installs runtime deps at their declared floors, so code using
   an API newer than a floor fails there first: raise the floor in
   `pyproject.toml` (or make the test skip when the dep is absent, as the
