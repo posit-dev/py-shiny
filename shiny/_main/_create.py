@@ -129,7 +129,7 @@ def find_templates(path: Path | str = ".") -> list[ShinyTemplate]:
 
     template_files = sorted(path.glob("**/_template.json"))
     for tf in template_files:
-        with tf.open() as f:
+        with tf.open(encoding="utf-8") as f:
             try:
                 template = json.load(f)
             except json.JSONDecodeError as err:

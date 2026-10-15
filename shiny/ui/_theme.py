@@ -84,7 +84,7 @@ class Theme:
         )
     )
 
-    with open(Path(__file__).parent / "my_theme.css", "w") as f:
+    with open(Path(__file__).parent / "my_theme.css", "w", encoding="utf-8") as f:
         f.write(my_theme.to_css())
     ```
 
@@ -413,7 +413,7 @@ class Theme:
         ValueError
             If the `.scss` file doesn't contain at least one valid region decorator.
         """
-        with open(path, "r") as file:
+        with open(path, "r", encoding="utf-8") as file:
             src = file.readlines()
 
         layer_keys = ["uses", "functions", "defaults", "mixins", "rules"]
@@ -557,7 +557,7 @@ class Theme:
 
     def _read_precompiled_css(self) -> str:
         path = self._dep_css_precompiled_path()
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return f.read()
 
     def _dep_create(self, css_path: str | pathlib.Path) -> HTMLDependency:
@@ -601,7 +601,7 @@ class Theme:
         css_path = os.path.join(self._get_css_tempdir(), css_name)
 
         if not os.path.exists(css_path):
-            with open(css_path, "w") as css_file:
+            with open(css_path, "w", encoding="utf-8") as css_file:
                 css_file.write(self.to_css())
 
         return [self._dep_create(css_path)]
