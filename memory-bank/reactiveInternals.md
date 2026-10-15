@@ -189,8 +189,10 @@ reactive effect queue, round, idle, cycle, output flush.
 - `CancelledError` is delivered at the run's current `await` on the next loop
   pass, so `finally` blocks run after the `on_ended` / `on_destroy` callbacks
   (unless one of those awaits).
-- Effects register their destroy with `session._on_destroy_first()`
-  (`AsyncCallbacks.register(..., first=True)`), so within one scope they are
+- Effects register their destroy with `AppSession._on_destroy_first(fn, ns=)`
+  (`AsyncCallbacks.register(..., first=True)`); a module effect calls it on
+  its proxy's `root_scope()` with the proxy's `ns`. It is not on `Session`: any
+  other session falls back to `on_destroy()`. So within one scope effects are
   cancelled before any other destroy callback, including an async one that
   could yield to a running effect after values are gone. Child scopes are
   still destroyed before their parent.
@@ -347,7 +349,7 @@ reactive effect queue, round, idle, cycle, output flush.
   cancelled run's cleanup may read values its destroyed scope already tore
   down.
 - Duck-typed session mocks (e.g. `OnEndedSessionCallbacks` in
-  `tests/pytest/test_poll.py`) must implement `_on_destroy_first()`,
+  `tests/pytest/test_poll.py`) must implement `on_destroy()`,
   `run_once_when_idle()`, `_increment_busy_count()`/`_decrement_busy_count()`,
   `_otel_reactive_update_span()`, and `_restore_gate()`, which `Effect_` and
   `invalidate_later` call.

@@ -66,7 +66,7 @@ timed sleep decide a result.
 
 - A duck-typed session (e.g. `OnEndedSessionCallbacks` in `test_poll.py`)
   used with `Effect_` or `invalidate_later` must provide what they call:
-  `_on_destroy_first`, `_send_message_sync`, `run_once_when_idle`,
+  `on_destroy`, `_send_message_sync`, `run_once_when_idle`,
   `_increment_busy_count` / `_decrement_busy_count`,
   `_otel_reactive_update_span()` and `_restore_gate()` (both may return
   `None`).
