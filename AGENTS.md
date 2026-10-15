@@ -187,6 +187,17 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 - Use type-specific exception handling rather than broad `except Exception`
 - Document exception behavior in function docstrings
 
+### Public-facing text
+
+- Don't compare to Shiny for R in user-facing text (`CHANGELOG.md`, docstrings,
+  docs, bundled Agent Skills, PR descriptions). State the behavior and its
+  Python-side reason. Exception: name the R equivalent when its name is
+  obviously different, so R users can find the mapping (e.g. `ui.page_html()`
+  ↔ `htmlTemplate(document_ = TRUE)`). Skip it when it's only a spelling
+  translation (`session.allow_reconnect()` ↔ `session$allowReconnect()`) or a
+  "matching Shiny for R" note. Dev comments and upstream refs like
+  `rstudio/bslib#1359` are fine.
+
 ## Git Commit and PR Conventions
 
 Commit messages and PR titles use **conventional commits**. Read
