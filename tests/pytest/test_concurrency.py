@@ -30,7 +30,11 @@ from shiny.reactive._core import (
 )
 from shiny.session import get_current_session, session_context
 
-TIMEOUT = 1.0
+# Waits return as soon as their condition holds, so a long limit costs passing tests
+# nothing. It has to cover one-off synchronous stalls: in a busy xdist worker, the
+# first `reactive.value()` after new imports can spend over a second in
+# `inspect.stack()` (from its name inference) before any effect starts.
+TIMEOUT = 10.0
 
 
 async def wait_until(cond: Callable[[], bool], timeout: float = TIMEOUT) -> bool:
