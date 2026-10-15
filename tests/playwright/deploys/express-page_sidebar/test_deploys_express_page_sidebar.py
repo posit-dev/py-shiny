@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 from utils.deploy_utils import (
     goto_deployed_app,
     local_deploys_app_url_fixture,
@@ -24,7 +24,9 @@ app_url = local_deploys_app_url_fixture(
 def test_express_page_sidebar(page: Page, app_url: str) -> None:
     goto_deployed_app(page, app_url)
 
-    sidebar = controller.Sidebar(page, "sidebar")
-    sidebar.expect_text("SidebarTitle Sidebar Content")
+    # Released controllers may expect <aside> while the local app uses newer markup.
+    expect(page.locator("#sidebar > .sidebar-content")).to_have_text(
+        "SidebarTitle Sidebar Content"
+    )
     output_txt = controller.OutputCode(page, "txt")
     output_txt.expect_value("50")
