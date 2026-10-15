@@ -119,16 +119,8 @@ async def test_as_data_frame_none():
 
     await expect_data_is_not_none_error(call_update_data)
 
-    await expect_data_is_not_none_error(
-        lambda: render.DataGrid(
-            None  # pyright: ignore[reportArgumentType,reportUnknownLambdaType]
-        )
-    )
-    await expect_data_is_not_none_error(
-        lambda: render.DataTable(
-            None  # pyright: ignore[reportArgumentType,reportUnknownLambdaType]
-        )
-    )
+    await expect_data_is_not_none_error(lambda: render.DataGrid(cast(Any, val=None)))
+    await expect_data_is_not_none_error(lambda: render.DataTable(cast(Any, val=None)))
 
 
 @pytest.mark.asyncio
