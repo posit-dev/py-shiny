@@ -652,10 +652,6 @@ class BookmarkProxy(Bookmark):
         # the app author or a sub-proxy bookmark class
         # These function are utilized
 
-    @property
-    def _ns_prefix(self) -> str:
-        return str(self._ns + self._ns._sep)
-
     # The goal of this method is to save the scope's values. All namespaced inputs
     # will already exist within the `root_state`.
     async def _scoped_on_bookmark(self, root_state: BookmarkState) -> None:
@@ -740,9 +736,7 @@ class BookmarkProxy(Bookmark):
                 if self._on_restore_callbacks.count() == 0:
                     return
 
-                scoped_restore_state = restore_state._state_within_namespace(
-                    self._ns_prefix
-                )
+                scoped_restore_state = restore_state._state_within_namespace(self._ns)
 
                 with session_context(self._proxy_session):
                     await self._on_restore_callbacks.invoke(scoped_restore_state)
@@ -765,9 +759,7 @@ class BookmarkProxy(Bookmark):
                 if self._on_restored_callbacks.count() == 0:
                     return
 
-                scoped_restore_state = restore_state._state_within_namespace(
-                    self._ns_prefix
-                )
+                scoped_restore_state = restore_state._state_within_namespace(self._ns)
 
                 with session_context(self._proxy_session):
                     await self._on_restored_callbacks.invoke(scoped_restore_state)

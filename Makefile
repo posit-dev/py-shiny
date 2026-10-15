@@ -148,7 +148,7 @@ install-repomix: install-npm FORCE ## Install repomix if not already installed
 
 update-testing-docs-repomix: install-repomix FORCE ## Generate repomix output for testing docs
 	@echo "-------- Generating repomix output for testing docs --------"
-	repomix docs/api/testing -o tests/inspect-ai/utils/scripts/repomix-output-testing.xml
+	repomix docs/api/testing --no-gitignore -o tests/inspect-ai/utils/scripts/repomix-output-testing.xml
 
 update-testing-docs-process: FORCE ## Process repomix output to generate testing documentation JSON
 	@echo "-------- Processing testing documentation --------"

@@ -239,9 +239,8 @@ def run_app(
         directory. In other cases, the app location can be specified as a
         ``<module>:<attribute>`` string where the ``:<attribute>`` is only necessary if
         the application is named something other than ``app``. Note that ``<module>``
-        can be a relative path to a ``.py`` file or a directory (with an ``app.py`` file
-        inside of it); and in this case, the relative path is resolved relative to the
-        ``app_dir`` directory.
+        can be a relative path to a ``.py`` file; in this case, the relative path is
+        resolved relative to the ``app_dir`` directory.
     host
         The address that the app should listen on.
     port
@@ -289,13 +288,13 @@ def run_app(
     # Run ``app`` inside ``./app.py``
     run_app()
 
-    # Run ``app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+    # Run ``app`` inside ``./myapp.py``
     run_app("myapp")
 
-    # Run ``my_app`` inside ``./myapp.py`` (or ``./myapp/app.py``)
+    # Run ``my_app`` inside ``./myapp.py``
     run_app("myapp:my_app")
 
-    # Run ``my_app`` inside ``../myapp.py`` (or ``../myapp/app.py``)
+    # Run ``my_app`` inside ``../myapp.py``
     run_app("myapp:my_app", app_dir="..")
     ```
     """
@@ -447,7 +446,6 @@ def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
     # - A module:attribute name
     # - An absolute or relative path to a:
     #   - .py file (look for app inside of it)
-    #   - directory (look for app:app inside of it)
     # - A module name (look for :app) inside of it
 
     if platform.system() == "Windows" and re.match("^[a-zA-Z]:[/\\\\]", app):
