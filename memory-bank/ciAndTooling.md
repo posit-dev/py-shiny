@@ -209,10 +209,6 @@ py-htmltools' CI; keep it in sync when changing what `check` runs.
 
 ## Pitfalls
 
-- Deploy compatibility jobs install released Shiny versions, so pytest uses
-  their controllers while local app subprocesses run `python -m shiny` from
-  the checkout. Use shared IDs/classes in deploy assertions when a released
-  controller assumes older markup (e.g. `<aside>` vs `<div>` sidebars).
 - `make check-types` does **not** run Pyright.
   CI's `pyright` job will still fail you; run `make check-pyright` too.
 - Stale `typings/` stubs persist across dependency upgrades; `make clean-test`
