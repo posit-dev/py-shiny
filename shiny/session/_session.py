@@ -640,7 +640,8 @@ class Session(ABC):
         once: bool = True,
     ) -> Callable[[], None]:
         """
-        Register a function to call before this session next sends its outputs.
+        Register a function to call before this session's next output flush,
+        whether or not it has outputs to send.
 
         A session sends its outputs (values, errors, and input messages) in one
         message once each cycle ends, i.e. once all of its effects have finished. It

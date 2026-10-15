@@ -111,8 +111,9 @@ def server(input, output, session):
 
 Each session sends its outputs in one message once all of its effects have
 finished (an output flush). `on_flush(fn)` runs just before that send;
-`on_flushed(fn)` runs after. Both default to `once=True` (fire on the next
-output flush only); pass `once=False` to run on every one.
+`on_flushed(fn)` runs after. Both run on every output flush, whether or not it
+has outputs to send. Both default to `once=True` (fire on the next output flush
+only); pass `once=False` to run on every one.
 
 ```python
 def server(input, output, session):
