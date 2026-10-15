@@ -174,7 +174,10 @@ class Bookmark(ABC):
         This callback will be executed **before** the bookmark state is restored.
         The session's effects and outputs with a priority below 1000000 (the default
         is 0) start to run only after all `on_restore` callbacks have finished,
-        including the awaited parts of async callbacks.
+        including the awaited parts of async callbacks. Because those effects wait,
+        an async callback must not await anything that one of them produces (such
+        as an extended task's result or a value set by an effect); the callback
+        would wait forever.
         """
         return self._on_restore_callbacks.register(wrap_async(callback))
 
