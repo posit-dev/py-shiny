@@ -3,7 +3,7 @@ from __future__ import annotations
 # TODO-barret-render.data_frame; Docs
 # TODO-barret-render.data_frame; Add examples of selection!
 import warnings
-from typing import Any, Literal, Set, Union, cast
+from typing import Any, Literal, Union, cast
 
 from ..._deprecated import warn_deprecated
 from ..._typing_extensions import TypedDict
@@ -401,7 +401,7 @@ def as_selection_modes(
     if isinstance(selection_mode, SelectionModes):
         return selection_mode
 
-    selection_mode_val = selection_mode
+    selection_mode_val: SelectionMode | ListOrTuple[SelectionMode] = selection_mode
 
     # If a user supplied `row_selection_mode`, use the value but warn against it
     if row_selection_mode != "deprecated":
@@ -419,9 +419,10 @@ def as_selection_modes(
             f"`{name}(row_selection_mode=)` has been superseded by `{name}(selection_mode=)`."
             f' Please use `{name}(selection_mode="{selection_mode_val}")` instead.'
         )
-    if not isinstance(selection_mode_val, tuple):
-        selection_mode_val = (selection_mode_val,)
-
-    selection_mode_set = cast(Set[SelectionMode], set(selection_mode_val))
+    selection_mode_set: set[SelectionMode] = (
+        {selection_mode_val}
+        if isinstance(selection_mode_val, str)
+        else set(selection_mode_val)
+    )
 
     return SelectionModes(selection_mode_set=selection_mode_set)
