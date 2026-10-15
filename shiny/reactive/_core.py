@@ -570,6 +570,10 @@ def lock() -> asyncio.Lock:
     current_query.set(query)
     ```
 
+    Note that the deprecated form returned only once the dependents had run,
+    while ``set()`` returns before they run. Keep the ``await reactive.flush()``
+    (without the lock) if the code after it relies on that.
+
     Effects of a session that are paused at an ``await`` see the new value as soon
     as it is set. To apply the change only once the session's effects have
     finished, as Shiny does for input changes from the client, use
