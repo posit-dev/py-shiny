@@ -482,10 +482,11 @@ def process_credentials():
 
 ### 5. Enable Error Sanitization
 
-When `app.sanitize_errors=True`, Shiny automatically sanitizes error messages in spans to prevent leaking sensitive information:
+Shiny sanitizes error messages in spans by default to prevent leaking sensitive information. This is controlled by `App.sanitize_otel_errors` (separate from `App.sanitize_errors`, which controls UI error messages). Only disable it in trusted development environments:
 
 ```python
-app = App(app_ui, server, sanitize_errors=True)
+app = App(app_ui, server)
+app.sanitize_otel_errors = False  # Default is True
 ```
 
 ### 6. Use Sampling in High-Traffic Apps
@@ -733,10 +734,11 @@ opentelemetry-instrument --traces_exporter console shiny run app.py
            return hash_password(password)
    ```
 
-3. Enable error sanitization:
+3. Keep error sanitization enabled (`App.sanitize_otel_errors` is `True` by default):
 
    ```python
-   app = App(app_ui, server, sanitize_errors=True)
+   app = App(app_ui, server)
+   assert app.sanitize_otel_errors
    ```
 
 4. Use `otel.collect` to re-enable telemetry for specific calcs inside a broad suppress block:

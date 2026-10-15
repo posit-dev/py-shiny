@@ -1,6 +1,7 @@
 """Tests for `shiny.reactive`."""
 
 import asyncio
+import warnings
 from typing import List
 
 import pytest
@@ -1571,3 +1572,17 @@ def test_event_effect_stacked_warns_only_once():
 
     assert len(w) == 1
     assert w[0].filename == __file__
+
+
+# ------------------------------------------------------------
+# req(cancel_output=True) is silent in an effect
+# ------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_effect_req_cancel_output_is_silent():
+    @effect()
+    def _():
+        req(False, cancel_output=True)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ReactiveWarning)
+        await flush()

@@ -731,25 +731,23 @@ class data_frame(
             val = await self._patches_fn(patches=patches)
             patches = tuple(val)
 
-        # Check to make sure `updated_infos` is a list of dicts with the correct keys
-        bad_patches_format = not isinstance(patches, list)
-        if not bad_patches_format:
-            for patch in patches:
-                if not (
-                    # Verify structure
-                    isinstance(patch, dict)
-                    # Verify types
-                    and isinstance(patch["row_index"], int)
-                    and isinstance(patch["column_index"], int)
-                    # # Do not check the value type here. It should be validated by
-                    # # `._set_cell_patch_map_patches()` later with more type hint context
-                    # and isinstance(updated_patch["value"], CellValue)
-                ):
-                    raise ValueError(
-                        f"The return value of {self.output_id}'s `_patches_fn()` "
-                        f"(typically set by `@{self.output_id}.set_patches_fn`) "
-                        f"must be a list where each item has a row_index (`int`), column_index (`int`), and value (`TagChild`)."
-                    )
+        # Check to make sure each patch is a dict with the correct keys
+        for patch in patches:
+            if not (
+                # Verify structure
+                isinstance(patch, dict)
+                # Verify types
+                and isinstance(patch.get("row_index"), int)
+                and isinstance(patch.get("column_index"), int)
+                # # Do not check the value type here. It should be validated by
+                # # `._set_cell_patch_map_patches()` later with more type hint context
+                # and isinstance(updated_patch["value"], CellValue)
+            ):
+                raise ValueError(
+                    f"The return value of {self.output_id}'s `_patches_fn()` "
+                    f"(typically set by `@{self.output_id}.set_patches_fn`) "
+                    f"must be a list where each item has a row_index (`int`), column_index (`int`), and value (`TagChild`)."
+                )
 
         # Add (or overwrite) new cell patches by setting each patch into the cell patch map
         jsonifiable_processed_patches = self._set_cell_patch_map_patches(patches)
