@@ -2347,7 +2347,29 @@ async def test_session_end_cancels_running_effects():
 
 
 @pytest.mark.asyncio
-async def test_session_end_cancels_running_render_output():
+async def test_output_flush_hook_is_dropped_after_the_last_session_ends():
+    # The app's round hook is unregistered when its last session is removed. A
+    # cancelled effect's busy period ends later; it must not register it again
+    # (which would keep the app alive for good).
+    log: list[str] = []
+    release = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        reactive.effect(slow_effect(log, release))
+
+        async def on_ended() -> None:
+            await asyncio.sleep(0)
+
+        session.on_ended(on_ended)
+
+    c = Client(server)
+    c.send({"method": "init", "data": {}})
+    assert await wait_until(lambda: log == ["e start"])
+    await c.close()
+    assert await wait_until(lambda: c.session._busy_count == 0)
+    await reactive.flush()
+    assert c.session.app._sessions == {}
+    assert c.session.app._unregister_output_flush_hook is None
     log: list[str] = []
     release = asyncio.Event()
 
