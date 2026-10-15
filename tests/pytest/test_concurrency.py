@@ -19,6 +19,7 @@ from starlette.requests import Request
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
 from shiny._connection import MockConnection
+from shiny._deprecated import ShinyDeprecationWarning
 from shiny.bookmark._bookmark import BookmarkApp
 from shiny.bookmark._restore_state import RestoreContext
 from shiny.reactive._core import (
@@ -2786,6 +2787,73 @@ async def test_app_unregisters_its_round_hook_when_its_last_session_ends():
     await c.close()
     assert hooks.count() == before
     assert c.session.app._unregister_output_flush_hook is None
+
+
+@pytest.mark.asyncio
+async def test_lock_warns_once(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("shiny.reactive._core._lock_warned", False)
+    with pytest.warns(ShinyDeprecationWarning, match="reactive.lock") as record:
+        reactive.lock()
+    # The warning points at the code that called `lock()`.
+    assert record[0].filename == __file__
+    # `lock()` is usually called in a loop, so later calls don't warn again.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        reactive.lock()
+
+
+@pytest.mark.asyncio
+async def test_lock_does_not_exclude_other_holders(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("shiny.reactive._core._lock_warned", False)
+    with pytest.warns(ShinyDeprecationWarning):
+        lock = reactive.lock()
+    inside = 0
+    both_inside = asyncio.Event()
+
+    async def hold() -> None:
+        nonlocal inside
+        async with lock:
+            inside += 1
+            if inside == 2:
+                both_inside.set()
+            await asyncio.wait_for(both_inside.wait(), TIMEOUT)
+
+    await asyncio.gather(hold(), hold())
+    assert await lock.acquire() is True
+    assert await lock.acquire() is True
+    assert not lock.locked()
+    lock.release()
+    assert isinstance(lock, asyncio.Lock)
+
+    with pytest.raises(ValueError):
+        async with lock:
+            raise ValueError("raised inside the lock")
+
+
+@pytest.mark.asyncio
+async def test_value_set_from_background_task_reruns_session_effect():
+    # The replacement for `async with reactive.lock(): v.set(x); await flush()`:
+    # setting the value from a task outside any session is enough.
+    shared = reactive.value(0)
+    seen: list[int] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _():
+            seen.append(shared())
+
+    c = await started_client(server)
+    try:
+        assert await wait_until(lambda: seen == [0])
+
+        async def producer() -> None:
+            await asyncio.sleep(0)
+            shared.set(1)
+
+        await asyncio.create_task(producer())
+        assert await wait_until(lambda: seen == [0, 1])
+    finally:
+        await c.close()
 
 
 @pytest.mark.asyncio

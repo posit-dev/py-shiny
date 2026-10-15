@@ -144,17 +144,46 @@ def data2():
 Declare `poll`/`file_reader` at module top level to share one cache across
 sessions.
 
-To change reactive state from a background task or a custom timer, the way
-input changes and `invalidate_later` do, hand the change to the session. It runs
-once, after the session's running effects finish, so they keep seeing stable
-values:
+To change reactive state from a background `asyncio` task, call `.set()`
+directly. Setting a value schedules its dependents to re-run, so there's no lock
+to take and no `reactive.flush()` to await. (From another thread, use
+`loop.call_soon_threadsafe(v.set, x)`.)
+
+For work shared by all sessions (e.g. polling an API every N seconds), define an
+extended task at module top level and refresh it from a module-level effect. One
+fetch runs for the whole process, and every session's outputs re-run when a
+result arrives:
 
 ```python
-session.run_once_when_idle(lambda: latest.set(new_value))
+from shiny import reactive, render
+
+@reactive.extended_task
+async def fetch_latest():
+    return await fetch()  # your async data source
+
+@reactive.effect
+def _refresh():
+    reactive.invalidate_later(10)
+    with reactive.isolate():  # `status()` is reactive; don't re-run when it changes
+        if fetch_latest.status() != "running":
+            fetch_latest.invoke()
+
+def server(input, output, session):
+    @render.text
+    def latest():
+        return fetch_latest.result()  # re-runs when a fetch finishes
 ```
 
-(For long-running async work that must not block the session, see
-`reactive.extended_task` - out of scope here.)
+See `references/extended-tasks.md` for extended tasks in general.
+
+A session's effects that are paused at an `await` see a direct `.set()` right
+away. To apply the change the way input changes and `invalidate_later` do, hand
+it to the session. It runs once, after the session's running effects finish, so
+they keep seeing stable values:
+
+```python
+session.run_once_when_idle(lambda: v.set(new_value))
+```
 
 ## Quick reference
 
@@ -167,7 +196,7 @@ session.run_once_when_idle(lambda: latest.set(new_value))
 | Wait for / validate a value | `req(x)`, `req(x, cancel_output=True)` |
 | Read without depending | `with reactive.isolate():` |
 | Timer | `reactive.invalidate_later(secs)` |
-| Change state between a session's cycles | `session.run_once_when_idle(fn)` |
+| Set a value from a background task | `v.set(x)`; between cycles: `session.run_once_when_idle(fn)` |
 | Poll a data source / file | `@reactive.poll(...)` / `@reactive.file_reader(...)` |
 | Run reactive work until idle (tests) | `await reactive.flush()` |
 
@@ -186,3 +215,7 @@ session.run_once_when_idle(lambda: latest.set(new_value))
   `isolate()` -> self-invalidating loop; wrap the read in `reactive.isolate()`.
 - `while`/`sleep` loop to watch a DB or file -> use `reactive.poll` or
   `reactive.file_reader`.
+- `async with reactive.lock():` around a `.set()`, followed by
+  `await reactive.flush()` -> `reactive.lock()` is deprecated and does nothing,
+  and the flush adds nothing but a wait on every session's effects. Call
+  `.set()` alone.

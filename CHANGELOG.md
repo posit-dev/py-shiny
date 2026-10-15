@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * `async` effects interleave at each `await` instead of running one after another. `priority` orders when effects start, not when they finish. Runs of the same effect still don't overlap: a re-run waits for the previous run.
 
-    * `reactive.lock()` no longer pauses reactive processing: Shiny itself no longer takes it. To change reactive state from another `asyncio` task, set the value directly (its dependents re-run automatically) and `await reactive.flush()` to wait until the resulting reactive work has finished.
+    * `reactive.lock()` is now defunct and no longer locks the reactive graph. Please remove it from your code.
 
     * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect, a `reactive.on_flushed()` or `session.on_flush()`/`on_flushed()` callback, or a task one of these started while it is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits. The wait covers the whole process, including other sessions' effects and output.
 
@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Navigation links that target a tab panel (e.g. in `ui.navset_tab()`) now carry `aria-controls` pointing at the panel's `id`, alongside the existing `href` (rstudio/bslib#1355). (#2526)
 
 * In Express, `@output_args()` now accepts every argument of the output's UI function, with matching types. `@render.ui` now takes `inline`, `container`, `fill`, `fillable`, and HTML attributes, instead of raising a `TypeError`. `@render.text` now takes `container`. `@render.plot` and `@render.image` now declare `inline`, `click`, `dblclick`, `hover`, `brush`, and `fill` explicitly (and `width` and `height` for `@render.image`), instead of accepting any keyword. `@render.download_button()` and `@render.download_link()` now take `label`. (#2539)
+
+### Deprecations
+
+* `reactive.lock()` is defunct and now emits a `ShinyDeprecationWarning`.  (#2520)
 
 ### Bug fixes
 

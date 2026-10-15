@@ -237,7 +237,6 @@ quartodoc:
         - reactive.flush
         - reactive.poll
         - reactive.file_reader
-        - reactive.lock
         - req
     - title: Create and run applications
       desc: ""
@@ -415,6 +414,7 @@ quartodoc:
         - render.download
         - render.transformer.output_transformer
         - render.transformer.resolve_value_fn
+        - reactive.lock
         # `ui.update_navs()` is deprecated (superseded by `ui.update_navset()`) but
         # still exists. It is deliberately left undocumented; uncomment to publish it.
         # - ui.update_navs
