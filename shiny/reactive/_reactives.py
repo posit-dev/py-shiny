@@ -1121,6 +1121,10 @@ class Effect_:
             if isinstance(root, AppSession):
                 root._on_destroy_first(destroy_fn, ns=str(self._session.ns))
             else:
+                # Intentional, not a gap to fix: `_on_destroy_first()` is kept off
+                # the public `Session` API, so other sessions (duck-typed test
+                # mocks with no `root_scope()`, third-party `Session` subclasses)
+                # get plain `on_destroy()` ordering.
                 self._session.on_destroy(destroy_fn)
 
         # Extract OpenTelemetry attributes at initialization time
