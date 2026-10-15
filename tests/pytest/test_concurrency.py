@@ -2185,12 +2185,13 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
     # environment "in a round" forever: later rounds returned without running, and
     # `run_next_round()` (used by ExtendedTask) waited forever.
     env = ReactiveEnvironment()
-    stuck = asyncio.Event()
     in_callback = asyncio.Event()
 
     async def wait_forever() -> None:
         in_callback.set()
-        await stuck.wait()
+        # Only the round task references this future, so the cleanup below can
+        # collect the task.
+        await asyncio.get_running_loop().create_future()
 
     finalized: list[bool] = []
 
@@ -2208,7 +2209,7 @@ def test_round_state_from_a_dead_event_loop_is_discarded():
         env._round_finished_callbacks.register(wait_forever)
         env._spawn(stranded_run())
         env._spawn(env.start_round())
-        await in_callback.wait()  # the round is now waiting on `stuck`
+        await in_callback.wait()  # the round is now waiting in `wait_forever()`
         assert env._round_running
         env.request_round()  # also leaves a request pending
 
@@ -3641,3 +3642,59 @@ async def test_error_sending_a_handlers_response_closes_the_session(
     finally:
         await c.close()
     assert "RuntimeError: send boom" in capsys.readouterr().err
+
+
+@pytest.mark.asyncio
+async def test_clientdata_output_with_no_id_reads_its_own_output_across_awaits():
+    # `a` resumes while `b` is still awaiting, then `b` resumes after `a` has ended.
+    # Each must still read its own width.
+    started = {"a": asyncio.Event(), "b": asyncio.Event()}
+    gates = {"a": asyncio.Event(), "b": asyncio.Event()}
+    a_done = asyncio.Event()
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        async def width(name: str) -> str:
+            started[name].set()
+            await gates[name].wait()
+            return str(session.clientdata.output_width())
+
+        @render.text
+        async def a():
+            try:
+                return await width("a")
+            finally:
+                a_done.set()
+
+        @render.text
+        async def b():
+            return await width("b")
+
+    c = RecordingClient(server)
+    try:
+        c.send(
+            {
+                "method": "init",
+                "data": {
+                    ".clientdata_output_a_hidden": False,
+                    ".clientdata_output_b_hidden": False,
+                    ".clientdata_output_a_width": 100,
+                    ".clientdata_output_b_width": 200,
+                },
+            }
+        )
+        assert await wait_until(lambda: all(e.is_set() for e in started.values()))
+        gates["a"].set()
+        assert await wait_until(a_done.is_set)
+        gates["b"].set()
+
+        def sent(key: str) -> dict[str, object]:
+            out: dict[str, object] = {}
+            for m in c.sent:
+                out.update(m.get(key, {}))  # type: ignore[arg-type]
+            return out
+
+        assert await wait_until(lambda: {"a", "b"} <= sent("values").keys())
+        assert sent("errors") == {}
+        assert sent("values") == {"a": "100", "b": "200"}
+    finally:
+        await c.close()
