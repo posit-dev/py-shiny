@@ -27,9 +27,9 @@ def test_session_start_span_closes(page: Page, local_app: ShinyAppProc) -> None:
     show_spans_btn = InputActionButton(page, "show_spans")
     output = OutputCode(page, "span_summary")
 
-    # Before clicking, the initial render fires inside session_start's
-    # reactive_flush (before the span ends), so the count must be 0.
-    expect(output.loc).to_contain_text('"session_start_count": 0,')
+    # The initial render can run before or after session_start ends (an output
+    # yields before it renders), so only wait for it here.
+    expect(output.loc).to_contain_text('"session_start_count":')
 
     # Click after page load so the re-render fires *outside* session_start.
     show_spans_btn.click()

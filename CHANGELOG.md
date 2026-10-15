@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* On Windows, an output's busy indicator now shows while the output renders. Before, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it. (#1381)
+
 * UI updates and custom messages sent outside an output or effect, such as `ui.update_text()` in a `session.on_flushed()` callback or in an `asyncio` task, or `ui.insert_ui()` from a message handler, are now sent to the client right away. Before, they waited until the next input change. (#1889, #21)
 
 * Setting a reactive value from a download handler (`@render.download_button`) now updates the outputs and effects that read it right away, including while a streamed download is still sending. Before, they updated only after the next message from the client. (#1785)
