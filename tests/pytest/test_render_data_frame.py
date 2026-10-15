@@ -9,7 +9,7 @@ from shiny._deprecated import ShinyDeprecationWarning
 from shiny._namespaces import Root
 from shiny._utils import wrap_async
 from shiny.module import ResolvedId
-from shiny.render._data_frame_utils._selection import SelectionModes
+from shiny.render._data_frame_utils._selection import SelectionModes, as_selection_modes
 from shiny.render._data_frame_utils._tbl_data import as_data_frame
 from shiny.session import Session, session_context
 from shiny.session._session import RenderedDeps
@@ -165,3 +165,28 @@ async def test_update_cell_value_assertions():
             with pytest.raises(ValueError) as e:
                 await df.update_cell_value("a", row=-1, col=0)
             assert "`row` to be greater than" in str(e.value)
+
+
+def test_as_selection_modes_accepts_list():
+    sm = as_selection_modes(["rows"], name="test")
+    assert sm.as_dict() == SelectionModes(selection_mode_set={"rows"}).as_dict()
+
+
+@pytest.mark.asyncio
+async def test_patches_fn_bad_return_value_raises():
+    pd_data = pd.DataFrame(data={"a": [1, 2]})
+
+    @render.data_frame
+    def df():
+        return pd_data
+
+    @df.set_patches_fn
+    def _(*, patches: Any) -> Any:
+        return [{"row_index": "0", "column_index": 0, "value": "x"}]
+
+    df._session = test_session
+    with session_context(test_session):
+        with pytest.raises(ValueError, match="must be a list where each item"):
+            await df._patches_handler(
+                ({"row_index": 0, "column_index": 0, "value": "x"},)
+            )

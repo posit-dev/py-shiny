@@ -127,7 +127,7 @@ isort, flake8, or any type checker.
 | Run deploy tests (`deploy-tests.yaml`) | push to `main`/`rc-*`/`deploy-**`, dispatch (not PRs) | Deploys apps to a local Posit Connect (`posit-dev/with-connect`, license secret) across 4 shiny/rsconnect source combos; `concurrency` serializes each config |
 | Verify built assets (`verify-js-built.yaml`) | PRs, push to `main`/`rc-*` | `npm ci && npm run build` in `js/`; fails on any diff |
 | Conventional Commits (`verify-conventional-commits.yaml`) | PR opened/edited/sync | Lints the PR title; sticky comment on failure |
-| Verify testing docs (`verify-testing-docs-on-change.yml`) | PRs touching `shiny/playwright/controller/**` or `docs/_quartodoc-testing.yml` | Reruns `make update-testing-docs`, comments if the JSON changed |
+| Verify testing docs (`verify-testing-docs-on-change.yml`) | PRs touching `shiny/playwright/controller/**` or `docs/_quartodoc-testing.yml` | Reruns `make update-testing-docs`; comments and fails if the JSON changed |
 | Verify test generation prompts (`verify-test-generation-prompts.yaml`) | PRs touching `shiny/pytest/_generate/**`, dispatch | LLM eval of `shiny add test` (3 attempts, quality gate); needs OpenAI/Anthropic secrets |
 | Issue Management (`triage-issues.yaml`) | issue opened | Adds `needs-triage` for non-maintainers |
 
@@ -200,13 +200,11 @@ py-htmltools' CI; keep it in sync when changing what `check` runs.
   the gate.
 - Committed JS bundles must match a fresh `npm ci && npm run build` with the
   Node version in `js/.nvmrc`, or `verify-js-built` fails.
-- `verify-testing-docs-on-change.yml`: its `diff -q` branch sets
-  `docs_changed=true` when the files are *identical*, and no step exits
-  non-zero, so its comment is unreliable. Run `make update-testing-docs`
-  yourself after changing a controller.
-- `verify-test-generation-prompts.yaml`'s `paths` filter lists
-  `verify-test-generation-prompts.yml` (wrong extension), so editing only the
-  workflow does not trigger it.
+- After changing a Playwright controller, run `make update-testing-docs` and
+  commit `shiny/pytest/_generate/_data/testing-documentation.json`, or
+  `verify-testing-docs-on-change` fails.
+- A workflow's own `paths` filter must use its exact filename (`.yml` vs
+  `.yaml`), or editing only the workflow won't trigger it.
 - `oldest-deps` installs runtime deps at their declared floors, so code using
   an API newer than a floor fails there first: raise the floor in
   `pyproject.toml` (or make the test skip when the dep is absent, as the

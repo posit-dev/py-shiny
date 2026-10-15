@@ -74,3 +74,8 @@ def test_internal_templates_are_discovered() -> None:
     # Guards the __file__-relative lookup of shiny/templates/
     assert len(_create.shiny_internal_templates.apps) > 0
     assert len(_create.shiny_internal_templates.packages) > 0
+
+
+def test_enterprise_templates_are_discovered() -> None:
+    assert len(_create.shiny_internal_templates.chat_enterprise) > 0
+    assert len(_create.shiny_internal_templates.stream_enterprise) > 0

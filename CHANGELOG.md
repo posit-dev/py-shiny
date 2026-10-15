@@ -31,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
 
+* `req(False, cancel_output=True)` inside a `@reactive.effect` now stops the effect silently, instead of being treated as an unhandled error that closed the session. `SilentCancelOutputException` now subclasses `SilentException`. (#2558)
+
+* `@render.data_frame`'s `selection_mode=` now accepts a list (e.g. `["rows"]`), as its type hint says, instead of raising `TypeError: unhashable type: 'list'`. (#2558)
+
+* A `set_patches_fn` that returns badly shaped patches now raises the intended `ValueError` describing the expected shape. The check was previously skipped. (#2558)
+
+* Files saved by a module's `session.bookmark.on_bookmark()` callback are now found on restore. Restore looked in `<dir>/<ns>-` instead of the `<dir>/<ns>` they were saved to. (#2558)
+
+* `shiny create` now offers the "Stream markdown with enterprise LLM" templates, which were never found because of a misspelled path. (#2558)
+
 * `near_points()` and `brushed_points()` now map a non-string categorical column (e.g. one of integers) to its category codes, instead of raising `ValueError: to_float: unsupported dtype for x`. `to_float()` tested the Series itself against `CategoricalDtype`, which no Series ever is, so the categorical branch never ran. (#2505)
 
 ## [1.8.0] - 2026-09-12
