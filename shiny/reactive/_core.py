@@ -343,7 +343,10 @@ class ReactiveEnvironment:
         home = self._loop
         if _is_alive(home) and loop is not home:
             # Another thread: retry on the loop's own thread, so only that thread
-            # touches `_round_requested` and schedules the round.
+            # touches `_round_requested` and schedules the round. Until the loop
+            # runs that retry, `_round_requested` stays False, so a concurrent
+            # `run_until_idle()` can return before this request's round; an exact
+            # answer would need a cross-thread counter, which isn't worth it.
             try:
                 home.call_soon_threadsafe(self.request_round)
             except RuntimeError:
