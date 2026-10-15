@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+* Reactive effects now run concurrently. Shiny now starts each invalidated effect without waiting for an `async` effect's awaited part, so a slow `async` effect, calc, or render function no longer delays other sessions. Within a session, input changes and `reactive.invalidate_later()` still wait until all of that session's effects have finished, and outputs are sent together once they have. What app authors may notice:
+
+    * `async` effects interleave at each `await` instead of running one after another. `priority` orders when effects start, not when they finish. Runs of the same effect still don't overlap: a re-run waits for the previous run.
+
+    * `reactive.lock()` no longer pauses reactive processing: Shiny itself no longer takes it. To change reactive state from another `asyncio` task, set the value directly (its dependents re-run automatically) and `await reactive.flush()` to wait until the resulting reactive work has finished.
+
+    * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect, a `reactive.on_flushed()` or `session.on_flush()`/`on_flushed()` callback, or a task one of these started while it is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits. The wait covers the whole process, including other sessions' effects and output.
+
+    * `reactive.on_flushed()` callbacks run after each round of effects has *started*, without waiting for `async` effects, and can run several times per `reactive.flush()`. Before, they ran once all effects had finished. An error in one of these callbacks is now printed, and the other callbacks still run, instead of closing a session.
+
+    * Message handlers (`session.set_message_handler()`) run in their own task, so a slow handler no longer holds up other messages from the client.
+
+    * Each session sends its outputs in a task of its own, once all of its effects have finished. A slow client, or a slow `session.on_flush()` callback, delays only its own session's output, not other sessions' output or other reactive work.
+
+    * Setting a `reactive.value` now re-runs its dependents automatically, without a call to `reactive.flush()`. The reactive graph itself still isn't thread-safe, so from another thread use `loop.call_soon_threadsafe(value.set, new_value)`.
+
+    * File uploads and `session.dynamic_route()` requests no longer mark the session busy, matching Shiny for R.
+
+  (#2508)
+
 ### New features
 
 * `ui.sidebar()` gains a `role` parameter (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark. (#2526)
@@ -20,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * In Express, `@output_args()` now accepts every argument of the output's UI function, with matching types. `@render.ui` now takes `inline`, `container`, `fill`, `fillable`, and HTML attributes, instead of raising a `TypeError`. `@render.text` now takes `container`. `@render.plot` and `@render.image` now declare `inline`, `click`, `dblclick`, `hover`, `brush`, and `fill` explicitly (and `width` and `height` for `@render.image`), instead of accepting any keyword. `@render.download_button()` and `@render.download_link()` now take `label`. (#2539)
 
 ### Bug fixes
+
+* UI updates and custom messages sent outside an output or effect, such as `ui.update_text()` in a `session.on_flushed()` callback or in an `asyncio` task, or `ui.insert_ui()` from a message handler, are now sent to the client right away. Before, they waited until the next input change. (#1889, #21)
+
+* Setting a reactive value from a download handler (`@render.download_button`) now updates the outputs and effects that read it right away, including while a streamed download is still sending. Before, they updated only after the next message from the client. (#1785)
 
 * `Jsonifiable` now uses `Sequence` and `Mapping` for its container arms instead of `List` and `Dict`, which are invariant. Values like `dict[str, int]` and `list[str]` now type-check as `Jsonifiable`, including as the return type of a function passed to a `Renderer[Jsonifiable]`. As a side effect, type checkers also accept other sequences and mappings, such as `range`, `deque`, and `bytes`, even though only `list`, `tuple`, and `dict` serialize. Nothing changes at runtime. (Thanks, @wolfgang-aura!) (#2511)
 

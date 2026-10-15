@@ -159,7 +159,7 @@ sessions.
 | Read without depending | `with reactive.isolate():` |
 | Timer | `reactive.invalidate_later(secs)` |
 | Poll a data source / file | `@reactive.poll(...)` / `@reactive.file_reader(...)` |
-| Force sync execution in tests | `reactive.flush()` |
+| Run reactive work until idle (tests) | `await reactive.flush()` |
 
 ## Common mistakes
 

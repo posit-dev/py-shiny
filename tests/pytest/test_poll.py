@@ -43,6 +43,9 @@ class OnEndedSessionCallbacks:
     def _send_message_sync(self, message: Dict[str, object]) -> None:
         pass
 
+    def _cycle_start_action(self, action: Callable[[], None]) -> None:
+        action()
+
     def _increment_busy_count(self) -> None:
         pass
 

@@ -92,7 +92,7 @@ class TestReactiveFlushInstrumentation:
                     "shiny.reactive._core.shiny_otel_span",
                     return_value=mock_span,
                 ) as mock_wrapper:
-                    await env.flush()
+                    await env.start_round()
 
                     # Verify shiny_otel_span was called with correct parameters
                     mock_wrapper.assert_called_once()
@@ -110,7 +110,7 @@ class TestReactiveFlushInstrumentation:
 
                 # Mock the tracer to verify it's not called at span creation level
                 with patch("shiny.otel._core.get_otel_tracer") as mock_get_tracer:
-                    await env.flush()
+                    await env.start_round()
 
                     # Tracer should not be retrieved since collection level is too low
                     mock_get_tracer.assert_not_called()
@@ -133,7 +133,7 @@ class TestReactiveFlushInstrumentation:
                 ):
                     # Create reactive environment and flush
                     env = ReactiveEnvironment()
-                    await env.flush()
+                    await env.start_round()
 
         # Get exported spans with proper flushing
         spans = get_exported_spans(provider, memory_exporter)
@@ -180,7 +180,7 @@ class TestReactiveFlushInstrumentation:
             with patch.dict(os.environ, {"SHINY_OTEL_COLLECT": "reactive_update"}):
                 with session_context(mock_session):
                     env = ReactiveEnvironment()
-                    await env.flush()
+                    await env.start_round()
 
         spans = get_exported_spans(provider, memory_exporter)
         app_spans = [s for s in spans if not s.name.startswith("_otel")]

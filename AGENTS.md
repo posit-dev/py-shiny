@@ -205,7 +205,7 @@ CI then rejects.
 - **Missing HTML deps**: If styles don't work, ensure `components_dependencies()` is included
 - **Express mode confusion**: Remember Express uses AST transformation; debugging requires understanding the transformed code
 - **Session context errors**: Always access `input`/`output` within reactive context
-- **Reactive graph debugging**: Use `reactive.flush()` to force synchronous execution in tests
+- **Reactive graph debugging**: `await reactive.flush()` runs rounds until the reactive environment is idle (tests)
 - **Playwright timing**: Use `.expect_*()` methods which auto-wait; avoid manual `sleep()`
 - **Asset updates**: After running `make upgrade-html-deps`, verify theme preset files were updated
 - **Out-of-sync Playwright controllers**: When adding or altering UI components, always create or update their companion Playwright controller in `shiny/playwright/controller/` with matching locators, action methods, and expectation methods, and export them from `shiny/playwright/controller/__init__.py`
