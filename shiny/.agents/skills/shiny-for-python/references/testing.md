@@ -147,12 +147,6 @@ pytest test_app.py --headed                    # watch the browser
 pytest test_app.py --tracing retain-on-failure # then: playwright show-trace <trace.zip>
 ```
 
-## Generate a test with AI
-
-`shiny add test` is deprecated and will be removed in a future release. Prefer
-generating tests with an agent harness using this `shiny-for-python` skill; the
-skill documents the controller API and test patterns the generator relies on.
-
 ## Common mistakes
 
 - Test times out with a blank page → you forgot `page.goto(local_app.url)`.
