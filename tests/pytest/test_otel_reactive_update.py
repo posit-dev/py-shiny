@@ -27,7 +27,9 @@ from shiny.reactive._core import ReactiveWarning
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
-TIMEOUT = 1.0
+# Waits return as soon as their condition holds, so a long limit costs passing tests
+# nothing; it has to cover slow CI machines.
+TIMEOUT = 10.0
 Spans = Tuple[TracerProvider, InMemorySpanExporter]
 
 
@@ -183,7 +185,8 @@ async def test_reactive_update_lasts_until_the_sessions_async_effects_finish(
     c = Client(server)
     c.send({"method": "init", "data": {}})
     assert await wait_until(lambda: c.session._busy_count == 1)
-    await asyncio.sleep(0.02)
+    # The cycle's span is open while the effect waits, so it isn't exported yet.
+    assert c.session._otel_cycle_span is not None
     assert (
         named(of_sessions(get_exported_spans(provider, exporter), c), "reactive_update")
         == []
@@ -253,9 +256,7 @@ async def test_reactive_update_reports_the_error_that_closed_the_session(
     c = Client(server)
     with pytest.warns(ReactiveWarning, match="boom"):
         c.send({"method": "init", "data": {}})
-        assert await wait_until(
-            lambda: c.session._has_run_session_ended_tasks, timeout=10.0
-        )
+        assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
     await c.close()
 
     spans = of_sessions(get_exported_spans(provider, exporter), c)
