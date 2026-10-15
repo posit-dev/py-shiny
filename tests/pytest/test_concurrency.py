@@ -50,6 +50,17 @@ async def wait_until(cond: Callable[[], bool], timeout: float = TIMEOUT) -> bool
     return True
 
 
+async def settle(passes: int = 10) -> None:
+    """
+    Run a bounded number of event-loop passes.
+
+    For checking that something parked stays parked: once the state shows it's
+    parked, loop passes are deterministic where a timed sleep is not.
+    """
+    for _ in range(passes):
+        await asyncio.sleep(0)
+
+
 class Client:
     """Drives one in-process session over a MockConnection."""
 
@@ -311,24 +322,26 @@ async def test_effect_runs_do_not_overlap():
     # A re-run waits for the previous run, so a slower, older run can't finish last.
     v = reactive.value(1)
     log: list[tuple[str, int]] = []
+    release = {1: asyncio.Event(), 2: asyncio.Event()}
 
     @reactive.effect
-    async def _setter():
-        await asyncio.sleep(0.01)
-        v.set(2)
-
-    @reactive.effect
-    async def _slow_for_old_values():
+    async def e():
         x = v()
         log.append(("start", x))
-        await asyncio.sleep(0.1 if x == 1 else 0.01)
+        await release[x].wait()
         log.append(("end", x))
 
-    await reactive.flush()
+    flush = asyncio.create_task(reactive.flush())
+    assert await wait_until(lambda: log == [("start", 1)])
+    v.set(2)  # the re-run waits for the run in progress
+    assert await wait_until(lambda: len(e._run_tasks) == 2)
+    release[2].set()  # the newer run is released first, but hasn't started
+    await settle()
+    assert log == [("start", 1)]
+    release[1].set()
+    await asyncio.wait_for(flush, TIMEOUT)
     assert log == [("start", 1), ("end", 1), ("start", 2), ("end", 2)]
-
-    _setter.destroy()
-    _slow_for_old_values.destroy()
+    e.destroy()
 
 
 # ----------------------------------------------------------------------------
@@ -365,7 +378,8 @@ async def test_flush_from_task_started_by_effect_waits_for_dependents():
     @reactive.effect
     def _starter():
         async def bg():
-            await asyncio.sleep(0.01)
+            # Once the effect's run has finished, this task's flush waits as usual.
+            assert await wait_until(lambda: not _starter._run_tasks)
             v.set(1)
             await reactive.flush()
             log.append("bg after flush")
@@ -979,22 +993,29 @@ async def test_rerun_of_destroyed_effect_is_skipped():
 async def test_priority_orders_effect_starts():
     order: list[str] = []
     v = reactive.value(0)
+    release_low = asyncio.Event()
+    release_high = asyncio.Event()
 
     @reactive.effect(priority=1)
     async def _low():
         v()
         order.append("low start")
-        await asyncio.sleep(0.02)
+        await release_low.wait()
         order.append("low end")
 
     @reactive.effect(priority=10)
     async def _high():
         v()
         order.append("high start")
-        await asyncio.sleep(0.04)
+        await release_high.wait()
         order.append("high end")
 
-    await reactive.flush()
+    flush = asyncio.create_task(reactive.flush())
+    assert await wait_until(lambda: order == ["high start", "low start"])
+    release_low.set()
+    assert await wait_until(lambda: "low end" in order)
+    release_high.set()
+    await asyncio.wait_for(flush, TIMEOUT)
     # Starts follow priority; a lower-priority effect can finish first.
     assert order == ["high start", "low start", "low end", "high end"]
     _low.destroy()
@@ -1302,15 +1323,18 @@ async def test_flush_through_child_task_of_effect_returns():
 
 @pytest.mark.asyncio
 async def test_async_calc_invalidated_mid_run_does_not_cache_stale_value():
-    # The stale run is the slower one, so it finishes after the fresh run.
+    # The stale run is released last, so it finishes after the fresh run.
     v = reactive.value(1)
     trigger = reactive.value(0)
     seen: list[tuple[str, int]] = []
+    started = {1: asyncio.Event(), 2: asyncio.Event()}
+    release = {1: asyncio.Event(), 2: asyncio.Event()}
 
     @reactive.calc
     async def data():
         x = v()
-        await asyncio.sleep(0.1 if x == 1 else 0.01)
+        started[x].set()
+        await release[x].wait()
         return x * 10
 
     @reactive.effect
@@ -1323,16 +1347,15 @@ async def test_async_calc_invalidated_mid_run_does_not_cache_stale_value():
             return
         seen.append(("e2", await data()))
 
-    async def poke() -> None:
-        await asyncio.sleep(0.03)  # data()'s first run is mid-await
-        v.set(2)
-        trigger.set(1)
-
-    poker = asyncio.create_task(poke())
-    await reactive.flush()
-    await poker
-    await asyncio.sleep(0.15)
-    await reactive.flush()
+    flush = asyncio.create_task(reactive.flush())
+    await asyncio.wait_for(started[1].wait(), TIMEOUT)  # the first run is mid-await
+    v.set(2)
+    trigger.set(1)
+    await asyncio.wait_for(started[2].wait(), TIMEOUT)  # e2 started the fresh run
+    release[2].set()
+    assert await wait_until(lambda: ("e2", 20) in seen)
+    release[1].set()
+    await asyncio.wait_for(flush, TIMEOUT)
 
     with reactive.isolate():
         assert await data() == 20
