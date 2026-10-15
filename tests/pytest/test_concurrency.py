@@ -12,7 +12,7 @@ import gc
 import json
 import threading
 import warnings
-from typing import AsyncIterable, Callable, Iterator
+from typing import AsyncIterable, Callable, Iterator, Literal
 
 import pytest
 from starlette.requests import Request
@@ -581,10 +581,15 @@ class RecordingConnection(MockConnection):
 
 
 class RecordingClient(Client):
-    def __init__(self, server: Callable[[Inputs, Outputs, Session], None]) -> None:
+    def __init__(
+        self,
+        server: Callable[[Inputs, Outputs, Session], None],
+        bookmark_store: Literal["url", "disable"] = "disable",
+    ) -> None:
         self.recording = RecordingConnection()
         self.conn = self.recording
-        self.session = App(ui.TagList(), server)._create_session(self.conn)
+        app = App(lambda request: ui.TagList(), server, bookmark_store=bookmark_store)
+        self.session = app._create_session(self.conn)
         self.recording.session = self.session
         self.task = asyncio.create_task(self.session._run())
 
@@ -3068,12 +3073,7 @@ class RestoringClient(RecordingClient):
     """A RecordingClient for an app that restores its bookmarked state from the URL."""
 
     def __init__(self, server: Callable[[Inputs, Outputs, Session], None]) -> None:
-        self.recording = RecordingConnection()
-        self.conn = self.recording
-        app = App(lambda request: ui.TagList(), server, bookmark_store="url")
-        self.session = app._create_session(self.conn)
-        self.recording.session = self.session
-        self.task = asyncio.create_task(self.session._run())
+        super().__init__(server, bookmark_store="url")
 
     def init(self, **data: object) -> None:
         """Start the session, restoring `x="restored"`."""
