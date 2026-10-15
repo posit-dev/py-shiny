@@ -397,9 +397,11 @@ class Session(ABC):
     def _on_destroy_first(self, fn: Callable[[], None]) -> None:
         """
         Like :meth:`on_destroy`, but ``fn`` runs before the callbacks registered
-        with :meth:`on_destroy`, however they interleave. Effects use this so that
-        their in-progress runs are cancelled before an async destroy callback can
-        yield to them while the scope's values are already gone.
+        with :meth:`on_destroy` on the same scope, however they interleave. (Child
+        scopes are destroyed before their parent, so a parent scope's effect is
+        cancelled only after its children's values are gone.) Effects use this so
+        that their in-progress runs are cancelled before an async destroy callback
+        can yield to them while the scope's values are already gone.
         """
         self.on_destroy(fn)
 
@@ -641,7 +643,8 @@ class Session(ABC):
         once: bool = True,
     ) -> Callable[[], None]:
         """
-        Register a function to call before this session next sends its outputs.
+        Register a function to call before this session's next output flush,
+        whether or not it has outputs to send.
 
         A session sends its outputs (values, errors, and input messages) in one
         message once each cycle ends, i.e. once all of its effects have finished. It
@@ -874,8 +877,8 @@ class Session(ABC):
         session.run_once_when_idle(lambda: latest.set(new_value))
         ```
 
-        ``fn`` runs once this session is idle and its outputs have been sent; if it is
-        idle already, on the next pass of the event loop. Functions queued while the
+        ``fn`` runs once this session is idle and its outputs have been sent; soon,
+        but never synchronously, even if it is idle already. Functions queued while the
         session is busy run in order, each starting a cycle of its own, so the
         effects one of them triggers finish before the next runs. If the session
         ends first, ``fn`` doesn't run.
@@ -1004,6 +1007,8 @@ class AppSession(Session):
         # Spans this session's busy period (its cycle), as R does; see
         # `_increment_busy_count()`.
         self._otel_cycle_span: Optional[Span] = None
+        # Whether an unhandled error closed the session during the current cycle.
+        self._otel_cycle_failed: bool = False
         # The `session_start` span, while the server function and first cycle run.
         self._otel_session_start_span: Optional[Span] = None
         # Actions (input updates, timer invalidations) waiting for the session to be
@@ -1921,7 +1926,9 @@ class AppSession(Session):
             self._send_message_sync({"busy": "busy"})
             # A flush is global and can serve several sessions, so the
             # `reactive_update` span follows this session's cycle instead: it starts
-            # now and ends when all of the session's effects have finished.
+            # now and ends when all of the session's effects have finished. A
+            # download marks the session busy too (see `_handle_request()`), so it
+            # gets a span of its own, as in R.
             if self._otel_cycle_span is None:
                 # Choose the parent explicitly. This runs in whichever task
                 # invalidated the effect, often another session's effect or an
@@ -1932,6 +1939,7 @@ class AppSession(Session):
                     parent = set_span_in_context(self._otel_session_start_span)
                 else:
                     parent = OtelContext()
+                self._otel_cycle_failed = False
                 self._otel_cycle_span = start_otel_span(
                     "reactive_update",
                     attributes=get_session_id_attrs(self),
@@ -1960,13 +1968,18 @@ class AppSession(Session):
     def _end_otel_cycle_span(self) -> None:
         span, self._otel_cycle_span = self._otel_cycle_span, None
         if span is not None:
-            span.set_status(Status(StatusCode.OK))
+            if not self._otel_cycle_failed:
+                span.set_status(Status(StatusCode.OK))
             span.end()
 
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
         # Actions are sync, so they can't be interrupted partway, and only
         # `_output_flush` runs them (never whichever task happened to queue one).
         _validate_idle_action(fn)
+        # Nothing drains the queue once the session has ended, so a timer that
+        # keeps calling this would grow it forever.
+        if self._has_run_session_ended_tasks:
+            return
 
         def action() -> None:
             with session_context(self):
@@ -2031,6 +2044,12 @@ class AppSession(Session):
     # ==========================================================================
     async def _unhandled_error(self, e: Exception) -> None:
         print("Unhandled error: " + str(e), file=sys.stderr)
+        # The effect's own span has already reported OK (it handled the error), so
+        # the cycle's span is what shows that this error closed the session.
+        if self._otel_cycle_span is not None:
+            self._otel_cycle_failed = True
+            self._otel_cycle_span.record_exception(e)
+            self._otel_cycle_span.set_status(Status(StatusCode.ERROR, str(e)))
         await self.close()
 
     def download(

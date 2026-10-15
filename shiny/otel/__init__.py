@@ -217,7 +217,9 @@ Only session lifecycle spans (session start/end, HTTP/WebSocket connections).
 ### `reactive_update`
 Session spans + reactive update cycle spans: one `reactive_update` span per session
 cycle, from when the session turns busy until all of its effects (including async
-ones) have finished. It carries the session's `session.id`, and the session's
+ones) have finished. As in Shiny for R, a download also marks the session busy, so
+a download handler gets a span of its own even if it runs no reactive code. The
+span carries the session's `session.id`, and the session's
 calc, effect, and output spans are its children. The first cycle's span is a child
 of `session_start`; later cycles each start a trace of their own.
 

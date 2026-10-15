@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking changes
 
-* OpenTelemetry `reactive_update` spans now follow each session's cycle: one span per session, from when the session turns busy until all of its effects (including async ones) have finished, carrying the session's `session.id`. The session's calc, effect, and output spans are its children. Before, there was one span per reactive flush, which can serve several sessions, so with concurrent effects it couldn't carry a single `session.id` and ended before async effects finished. Effects without a session no longer have a `reactive_update` parent. (#2547)
+* OpenTelemetry `reactive_update` spans now follow each session's cycle: one span per session, from when the session turns busy until all of its effects (including async ones) have finished, carrying the session's `session.id`. The session's calc, effect, and output spans are its children. Before, there was one span per reactive flush, which can serve several sessions, so with concurrent effects it couldn't carry a single `session.id` and ended before async effects finished. The span no longer covers sending the session's outputs, which happens after its effects have finished. Effects without a session no longer have a `reactive_update` parent. (#2547)
 
 * Reactive effects now run concurrently. Shiny now starts each invalidated effect without waiting for an `async` effect's awaited part, so a slow `async` effect, calc, or render function no longer delays other sessions. Within a session, input changes and `reactive.invalidate_later()` still wait until all of that session's effects have finished, and outputs are sent together once they have. What app authors may notice:
 
@@ -31,11 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     * Destroying an effect (`effect.destroy()`) cancels its in-progress run, raising `asyncio.CancelledError` at its current `await`. So ending a session, or `session.destroy(id)`, cancels its in-progress `async` effects and render functions instead of letting them run on after the session or module is gone.
 
-  (#2508, #2515)
+  (#2549, #2545)
+
+* `Session.run_once_when_idle()` is abstract, so a class that subclasses `Session` directly must implement it. (#2552)
 
 ### New features
 
-* Added `session.run_once_when_idle(fn)`, which runs a function once, at the start of the session's next cycle: once all of the session's effects have finished and its outputs have been sent. Input changes from the client and `reactive.invalidate_later()` already wait this way, so effects that are still running keep seeing the same values; use it to change reactive state the same way from a background task or a custom timer. `reactive.invalidate_later()` now uses it instead of a private method. (#2517)
+* Added `session.run_once_when_idle(fn)`, which runs a function once, at the start of the session's next cycle: once all of the session's effects have finished and its outputs have been sent. Input changes from the client and `reactive.invalidate_later()` already wait this way, so effects that are still running keep seeing the same values; use it to change reactive state the same way from a background task or a custom timer. `reactive.invalidate_later()` now uses it instead of a private method. (#2546)
 
 * `ui.sidebar()` gains a `role` parameter (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark. (#2526)
 

@@ -243,6 +243,8 @@ class ReactiveEnvironment:
         self._adopt_loop(asyncio.get_running_loop())
         if self._round_running:
             self._rerun_round = True
+            # The request that started us is spent; the running round re-requests.
+            self._round_requested = False
             return
         self._round_running = True
         self._rerun_round = False
@@ -274,7 +276,8 @@ class ReactiveEnvironment:
                 or self._next_round_waiters
                 or not self._effect_queue.empty()
             ):
-                self._round_requested = False
+                # No-op if a request made during this round is still pending:
+                # scheduling a second one would run an extra, empty round.
                 self.request_round()
 
     async def _run_context(self, ctx: Context) -> None:
@@ -340,7 +343,10 @@ class ReactiveEnvironment:
         home = self._loop
         if _is_alive(home) and loop is not home:
             # Another thread: retry on the loop's own thread, so only that thread
-            # touches `_round_requested` and schedules the round.
+            # touches `_round_requested` and schedules the round. Until the loop
+            # runs that retry, `_round_requested` stays False, so a concurrent
+            # `run_until_idle()` can return before this request's round; an exact
+            # answer would need a cross-thread counter, which isn't worth it.
             try:
                 home.call_soon_threadsafe(self.request_round)
             except RuntimeError:
@@ -566,6 +572,10 @@ def lock() -> asyncio.Lock:
     # Use instead
     current_query.set(query)
     ```
+
+    Note that the deprecated form returned only once the dependents had run,
+    while ``set()`` returns before they run. Keep the ``await reactive.flush()``
+    (without the lock) if the code after it relies on that.
 
     Effects of a session that are paused at an ``await`` see the new value as soon
     as it is set. To apply the change only once the session's effects have

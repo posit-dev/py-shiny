@@ -18,14 +18,18 @@ from unittest.mock import patch
 import pytest
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import StatusCode
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny._connection import MockConnection
 from shiny.otel._constants import ATTR_SESSION_ID
+from shiny.reactive._core import ReactiveWarning
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
-TIMEOUT = 1.0
+# Waits return as soon as their condition holds, so a long limit costs passing tests
+# nothing; it has to cover slow CI machines.
+TIMEOUT = 10.0
 Spans = Tuple[TracerProvider, InMemorySpanExporter]
 
 
@@ -181,7 +185,8 @@ async def test_reactive_update_lasts_until_the_sessions_async_effects_finish(
     c = Client(server)
     c.send({"method": "init", "data": {}})
     assert await wait_until(lambda: c.session._busy_count == 1)
-    await asyncio.sleep(0.02)
+    # The cycle's span is open while the effect waits, so it isn't exported yet.
+    assert c.session._otel_cycle_span is not None
     assert (
         named(of_sessions(get_exported_spans(provider, exporter), c), "reactive_update")
         == []
@@ -233,6 +238,32 @@ async def test_one_reactive_update_per_cycle(
     assert {parent_of(o, spans) for o in outputs} == set(updates)
     assert len(updates) == 3
     assert all(parent_of(u, spans) is None for u in updates[1:])
+
+
+@pytest.mark.asyncio
+async def test_reactive_update_reports_the_error_that_closed_the_session(
+    otel_tracer_provider: Spans, collect_all: None
+):
+    # The effect's span reports OK (the effect handled the error), so the cycle's
+    # span is what shows the trace went wrong.
+    provider, exporter = otel_tracer_provider
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _boom():
+            raise RuntimeError("boom")
+
+    c = Client(server)
+    with pytest.warns(ReactiveWarning, match="boom"):
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
+    await c.close()
+
+    spans = of_sessions(get_exported_spans(provider, exporter), c)
+    (update,) = named(spans, "reactive_update")
+    assert update.status.status_code is StatusCode.ERROR
+    assert update.status.description == "boom"
+    assert [e.name for e in update.events] == ["exception"]
 
 
 @pytest.mark.asyncio
