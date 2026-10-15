@@ -1,6 +1,6 @@
 ---
 title: "Playwright Testing"
-description: "Deep dive on py-shiny's end-to-end test infrastructure: controller class design, expect helpers, the shipped pytest fixtures and app-process runner, repo test layout, example smoke tests, browser/retry/tracing configuration, and flakiness pitfalls. Read before writing or changing a Playwright controller or e2e test."
+description: "Deep dive on py-shiny's end-to-end test infrastructure: controller class design, expect helpers, the shipped pytest fixtures and app-process runner, repo test layout, example smoke tests, Windows-specific tests, timing tests (busy-indicator progress, concurrent sessions, OTel session_start), browser/retry/tracing configuration, and flakiness pitfalls. Read before writing or changing a Playwright controller or e2e test."
 ---
 
 # Playwright Testing
@@ -155,7 +155,8 @@ loaded page, else `RuntimeError`. Expected values may be predicates.
   `PW_TEST_CONNECT_WS_ENDPOINT` (used in CI).
 - `tests/playwright/shiny/<area>/<feature>/`: `app.py` + `test_*.py`, mostly
   using `local_app` or a `create_*_fixture`. Areas include `inputs/`,
-  `outputs/`, `components/`, `bookmark/`, `shiny-express/`, `bugs/`.
+  `outputs/`, `components/`, `bookmark/`, `shiny-express/`, `bugs/`,
+  `async/`, `otel/`.
 - `tests/playwright/examples/`: smoke tests (below), plus `shiny create`
   template tests.
 - `tests/playwright/deploys/`: apps deployed to Connect/shinyapps via
@@ -186,13 +187,50 @@ Allowlists live in the same file: `app_allow_shiny_errors`,
 `app_allow_external_errors`, `app_allow_js_errors`, `app_allow_output_error`.
 A new example that legitimately warns needs an entry there.
 
+## Windows-specific tests
+
+There is no marker: Windows tests are ordinary tests under
+`tests/playwright/shiny/` (they also run, and pass, in the Ubuntu jobs), and
+the `playwright-windows` CI job selects them by path with
+`SUB_FILE="bugs/1381-busy-indicator-progress"` on Chromium (see
+[ciAndTooling.md](ciAndTooling.md#jobs-in-pytestyaml)). Add a new one by
+extending that job's `SUB_FILE`/`TEST_FILE`.
+
+## Timing tests
+
+Some e2e tests assert *when* something happens, so they can't be pure
+`expect_*` checks:
+
+- **Busy-indicator progress** (`bugs/1381-busy-indicator-progress/`): four
+  `@render.text` outputs each block the loop with `time.sleep(0.5)`.
+  `page.add_init_script` wraps `window.WebSocket` to push
+  `[performance.now(), data]` for every message into `window.__shinyMessages`.
+  After waiting for `out4`'s value, the test clears the array, clicks
+  re-render, waits again, then reads each output's first `recalculating` and
+  `recalculated` times. It asserts all eight arrived (so a missing one fails
+  with the collected times, not a `KeyError`) and that each gap is
+  `>= MIN_GAP_MS` (250). Without the yield after `recalculating` in
+  `output_obs`, Windows gaps are ~0.3 ms; macOS/Linux pass either way.
+- **Concurrent sessions** (`async/concurrent_sessions/`): opens a second page
+  in the same context and checks its 100 ms timer keeps ticking while the
+  first tab runs a 3 s async effect. It deliberately uses
+  `wait_for_timeout` + `inner_text()` because it measures elapsed ticks.
+- **Streaming download** (`async/streaming_download/`): inside
+  `page.expect_download()`, a value set mid-stream must reach the page and a
+  click must be handled while the stream waits.
+- **OTel `session_start`** (`otel/express-session-start/`): the first render
+  may run before or after `session_start` ends (outputs yield before
+  rendering), so the test only waits for a count matching
+  `"session_start_count": [01],` and checks the closed span after a click.
+
 ## Browsers, retries, timeouts
 
 - `make playwright` runs `$(PYTEST_BROWSERS)` = webkit, firefox, chromium
   (deploys: chromium only), with `--timeout=120 --timeout-method=thread`,
   `faulthandler_timeout=110`, and `--snapshot-warn-unused`. Root `pytest.ini`
-  adds `--numprocesses auto` and `filterwarnings = error` (and takes
-  precedence over `[tool.pytest.ini_options]` in `pyproject.toml`).
+  adds `--numprocesses auto`, `filterwarnings = error`, and the same 120 s
+  thread timeout / 110 s faulthandler defaults for plain `pytest` runs (and
+  takes precedence over `[tool.pytest.ini_options]` in `pyproject.toml`).
 - `make playwright-debug` uses `tests/playwright/playwright-pytest.ini`:
   chromium, `--headed --slowmo=250 --maxfail=1`.
 - CI (`.github/workflows/pytest.yaml`) runs one browser per matrix job,
@@ -237,7 +275,11 @@ A new example that legitimately warns needs an entry there.
   Shiny binds; prefer controllers (which include `.shiny-bound-*`) or wait on
   an output value before acting.
 - **No sleeps.** Use `expect_*`/`expect_to_change`; `page.wait_for_timeout` is
-  reserved for apps that never go idle (`app_hard_wait`).
+  reserved for apps that never go idle (`app_hard_wait`) and tests that
+  measure elapsed time (see Timing tests).
+- **Don't pass `-p no:rerunfailures`.** Tests marked `@pytest.mark.flaky`
+  become unknown markers under `--strict-markers`, so their files fail to
+  collect.
 - **Single-shot reads.** `get_value()`, `inner_text()`, `get_attribute()` do
   not retry; asserting on them races the server.
 - **Timeouts that hang.** pytest-timeout's signal method can be swallowed by
