@@ -228,10 +228,10 @@ OTel name inference uses). Tests: `tests/pytest/test_reactives.py`.
 - Don't take `reactive.lock()` inside an effect, calc, or render function.
   The session already holds it during the flush, and `asyncio.Lock` isn't
   reentrant, so it deadlocks.
-- `req(False, cancel_output=True)` in a plain `@reactive.effect` **closes the
-  session**: `SilentCancelOutputException` doesn't subclass
-  `SilentException`, so the generic `Exception` branch handles it. Only
-  output observers treat it specially.
+- `SilentCancelOutputException` (and `SilentOperationInProgressException`)
+  subclass `SilentException`, so an `except SilentException` also catches
+  them. Where they need different handling (output observers), catch the
+  subclasses first.
 - If a `Calc_` is interrupted by a `BaseException` (for example
   `CancelledError`), `_invalidated` stays `False` with no value and no error.
   The next read without an invalidation would hit `IndexError` on
