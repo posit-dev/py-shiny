@@ -177,7 +177,7 @@ class ReactiveEnvironment:
     * **Output flush** (per session): sending a session's outputs to the client,
       once that session's effects have finished.
 
-    "Flush" on its own is not one of these terms. Public names that keep it mean:
+    Public APIs with "flush" in their name predate these terms.
 
     * `reactive.flush()`: run rounds until idle.
     * `reactive.on_flushed()`: run after each round.
