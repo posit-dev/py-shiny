@@ -3,7 +3,7 @@ name: Verify test generation prompts
 on:
   pull_request:
     paths:
-      - ".github/workflows/verify-test-generation-prompts.yml"
+      - ".github/workflows/verify-test-generation-prompts.yaml"
       - "shiny/pytest/_generate/**"
   workflow_dispatch:
 

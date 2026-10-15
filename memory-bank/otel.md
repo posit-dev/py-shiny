@@ -192,12 +192,6 @@ checks presence only, not accuracy. See `memory-bank/agentSkills.md`.
 - A new internal effect/calc/value that isn't suppressed shows up as user
   spans/logs (e.g. the output wrapper effect would double every `output` span).
 - `shiny_otel_span` is async-only; there is no sync span helper.
-- The user docstring's "Enable Error Sanitization" section in
-  `shiny/otel/__init__.py` cites `sanitize_errors=True`, but spans actually use
-  `App.sanitize_otel_errors` (already `True` by default).
-- `_span_wrappers.py`'s module docstring points to
-  `tests/playwright/shiny/otel-async/`; the real path is
-  `tests/playwright/shiny/otel/async/`.
 - `emit_otel_log` catches `TypeError` from `Logger.emit(**kwargs)` and falls
   back to building a `LogRecord` (`_emit_otel_log_record`) for
   opentelemetry-api < 1.38; keep both paths working when touching it.
