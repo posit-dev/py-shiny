@@ -10,7 +10,7 @@ each section; the "Key Files" section of `AGENTS.md` has the consolidated list.
 
 ## Reactive System
 
-Deep dive: `memory-bank/reactiveInternals.md`.
+Deep dive: `memory-bank/reactiveInternals.md`; testing it in `memory-bank/concurrencyTesting.md`.
 
 Implementation: `shiny/reactive/_core.py` (graph machinery),
 `shiny/reactive/_reactives.py` (primitives).
@@ -40,7 +40,7 @@ Key implementation details:
 
 ## Session Hierarchy
 
-Deep dives: `memory-bank/sessionMessaging.md` (wire protocol, flush cycle) and `memory-bank/appServing.md` (routes, CLI, autoreload).
+Deep dives: `memory-bank/sessionMessaging.md` (wire protocol, cycles and the output flush) and `memory-bank/appServing.md` (routes, CLI, autoreload).
 
 Implementation: `shiny/session/_session.py`; app entry point in `shiny/_app.py`.
 
