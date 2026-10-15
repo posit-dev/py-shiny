@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * In Express, `@output_args()` now accepts every argument of the output's UI function, with matching types. `@render.ui` now takes `inline`, `container`, `fill`, `fillable`, and HTML attributes, instead of raising a `TypeError`. `@render.text` now takes `container`. `@render.plot` and `@render.image` now declare `inline`, `click`, `dblclick`, `hover`, `brush`, and `fill` explicitly (and `width` and `height` for `@render.image`), instead of accepting any keyword. `@render.download_button()` and `@render.download_link()` now take `label`. (#2539)
 
+* On Python 3.15+, `import shiny` defers `narwhals`, `shinychat`, and the CLI/server stack (uvicorn, click, questionary, prompt_toolkit, watchfiles) until first use, via PEP 810 `__lazy_modules__` declarations. In a warm-cache benchmark on CPython 3.15.0, `import shiny` drops from ~310 ms to ~140 ms. The declarations are ignored on Python 3.11-3.14, where behavior is unchanged. (#2564)
+
 ### Bug fixes
 
 * `Jsonifiable` now uses `Sequence` and `Mapping` for its container arms instead of `List` and `Dict`, which are invariant. Values like `dict[str, int]` and `list[str]` now type-check as `Jsonifiable`, including as the return type of a function passed to a `Renderer[Jsonifiable]`. As a side effect, type checkers also accept other sequences and mappings, such as `range`, `deque`, and `bytes`, even though only `list`, `tuple`, and `dict` serialize. Nothing changes at runtime. (Thanks, @wolfgang-aura!) (#2511)
@@ -38,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
 
 * `near_points()` and `brushed_points()` now map a non-string categorical column (e.g. one of integers) to its category codes, instead of raising `ValueError: to_float: unsupported dtype for x`. `to_float()` tested the Series itself against `CategoricalDtype`, which no Series ever is, so the categorical branch never ran. (#2505)
+
+* Text files that Shiny reads or writes (theme CSS/SCSS, `shiny create` templates, bundled Agent Skills, and the pytest generator's data files) are now explicitly read and written as UTF-8 instead of using the locale encoding, so non-ASCII content behaves the same on all supported Python versions. (#2564)
 
 ## [1.8.0] - 2026-09-12
 
