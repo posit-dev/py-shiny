@@ -874,8 +874,8 @@ class Session(ABC):
         session.run_once_when_idle(lambda: latest.set(new_value))
         ```
 
-        ``fn`` runs once this session is idle and its outputs have been sent; if it is
-        idle already, on the next pass of the event loop. Functions queued while the
+        ``fn`` runs once this session is idle and its outputs have been sent; soon,
+        but never synchronously, even if it is idle already. Functions queued while the
         session is busy run in order, each starting a cycle of its own, so the
         effects one of them triggers finish before the next runs. If the session
         ends first, ``fn`` doesn't run.
