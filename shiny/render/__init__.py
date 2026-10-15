@@ -2,6 +2,15 @@
 Tools for reactively rendering output for the user interface.
 """
 
+# Deferred on Python 3.15+ (PEP 810) so that `narwhals` is not imported at
+# `import shiny` time; these modules load on first use of a renderer.
+__lazy_modules__ = {
+    "shiny.render._data_frame",
+    "shiny.render._data_frame_utils._selection",
+    "shiny.render._data_frame_utils._types",
+    "shiny.render._render",
+}
+
 from . import (  # noqa: F401
     transformer,  # pyright: ignore[reportUnusedImport]
 )
