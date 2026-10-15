@@ -138,7 +138,7 @@ class ShinyTestGenerator:
                 / "_data"
                 / "testing-documentation.json"
             )
-            with doc_path.open("r") as f:
+            with doc_path.open("r", encoding="utf-8") as f:
                 return f.read()
         except FileNotFoundError:
             raise FileNotFoundError(
@@ -153,7 +153,7 @@ class ShinyTestGenerator:
                 / "_data"
                 / "testing-SYSTEM_PROMPT.md"
             )
-            with prompt_path.open("r") as f:
+            with prompt_path.open("r", encoding="utf-8") as f:
                 system_prompt_file = f.read()
         except FileNotFoundError:
             raise FileNotFoundError(
