@@ -244,7 +244,7 @@ class ShinyInternalTemplates:
 
     @property
     def stream_enterprise(self) -> list[ShinyTemplate]:
-        return self._templates("templates/markdown-stream/llm-enterpise")
+        return self._templates("templates/markdown-stream/llm-enterprise")
 
 
 shiny_internal_templates = ShinyInternalTemplates()

@@ -202,7 +202,8 @@ registrations return a cancel callback.
   serializers on the root session with the resolved id.
 - `BookmarkState.exclude` is computed before `on_bookmark` runs; appending to
   `session.bookmark.exclude` inside the callback does not affect that save.
-- Module dir mismatch: save uses `root.dir / ns` (e.g. `mod`), but
-  `_state_within_namespace` restores from `dir / "mod-"` (prefix with separator).
+- Module files live in `root.dir / ns` (e.g. `mod`, no trailing separator).
+  `_scoped_on_bookmark` (save) and `_state_within_namespace` (restore) must
+  agree on this path.
 - `_state_id_` must match `[A-Za-z0-9_-]+` (≤1024 chars); custom dir fns get
   validated ids, but are still responsible for not escaping their store.
