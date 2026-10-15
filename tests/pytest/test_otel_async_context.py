@@ -18,7 +18,6 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from shiny.otel._collect import OtelCollectLevel
 from shiny.otel._span_wrappers import shiny_otel_span
 from shiny.reactive import Calc_
-from shiny.reactive._core import ReactiveEnvironment
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
@@ -177,43 +176,6 @@ class TestConcurrentReactiveExecutions:
 
         # Verify calc2 finished before calc1 (because it sleeps less)
         assert execution_order.index("calc2_end") < execution_order.index("calc1_end")
-
-    @pytest.mark.asyncio
-    async def test_parallel_flush_cycles_maintain_context(
-        self, otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter]
-    ):
-        """Test that parallel flush cycles each maintain their own span context"""
-        provider, memory_exporter = otel_tracer_provider
-
-        with patch_otel_tracing_state(tracing_enabled=True):
-            # Create two separate reactive environments
-            env1 = ReactiveEnvironment()
-            env2 = ReactiveEnvironment()
-
-            # Flush them in parallel
-            await asyncio.gather(
-                env1.start_round(),
-                env2.start_round(),
-            )
-
-        # Get exported spans
-        spans = get_exported_spans(provider, memory_exporter)
-
-        # Filter to reactive_update spans
-        update_spans = [s for s in spans if s.name == "reactive_update"]
-
-        # Should have two separate reactive_update spans
-        assert len(update_spans) == 2
-
-        # Verify they are separate spans (different span IDs)
-        assert (
-            update_spans[0].context is not None
-        ), "update_spans[0] should have a context"
-        assert (
-            update_spans[1].context is not None
-        ), "update_spans[1] should have a context"
-        assert update_spans[0].context.span_id != update_spans[1].context.span_id
-
 
 class TestAsyncContextIsolation:
     """Test that async operations maintain proper context isolation"""

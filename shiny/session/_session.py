@@ -33,6 +33,8 @@ from typing import (
 
 import orjson
 from htmltools import TagChild, TagList
+from opentelemetry.context import Context as OtelContext
+from opentelemetry.trace import Span, Status, StatusCode, set_span_in_context
 from starlette.requests import HTTPConnection, Request
 from starlette.responses import (
     HTMLResponse,
@@ -66,7 +68,11 @@ from ..otel._collect import OtelCollectLevel, _get_env_level
 from ..otel._decorators import suppress as otel_suppress
 from ..otel._function_attrs import resolve_func_otel_level
 from ..otel._labels import create_otel_label, create_otel_span_name
-from ..otel._span_wrappers import shiny_otel_span, shiny_otel_span_stream
+from ..otel._span_wrappers import (
+    shiny_otel_span,
+    shiny_otel_span_stream,
+    start_otel_span,
+)
 from ..reactive import Effect_, Value, effect, isolate
 from ..reactive._core import _enclosing_run, _reactive_environment
 from ..render.renderer import Renderer, RendererT
@@ -832,6 +838,10 @@ class Session(ABC):
     @abstractmethod
     def _decrement_busy_count(self) -> None: ...
 
+    def _otel_reactive_update_span(self) -> Optional[Span]:
+        """The `reactive_update` span of this session's current cycle, if any."""
+        return None
+
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
         """
         Run a function once, at the start of this session's next cycle.
@@ -975,6 +985,11 @@ class AppSession(Session):
         self._conn: Connection = conn
         self._debug: bool = debug
         self._busy_count: int = 0
+        # Spans this session's busy period (its cycle), as R does; see
+        # `_increment_busy_count()`.
+        self._otel_cycle_span: Optional[Span] = None
+        # The `session_start` span, while the server function and first cycle run.
+        self._otel_session_start_span: Optional[Span] = None
         # Actions (input updates, timer invalidations) waiting for the session to be
         # idle.
         self._cycle_start_action_queue: list[Callable[[], None]] = []
@@ -1096,6 +1111,7 @@ class AppSession(Session):
                     # on_ended handlers can still read reactive state.
                     await self.destroy()
                 finally:
+                    self._end_otel_cycle_span()
                     self.app._remove_session(self)
 
     def is_stub_session(self) -> Literal[False]:
@@ -1198,13 +1214,18 @@ class AppSession(Session):
                                 required_level=OtelCollectLevel.SESSION,
                                 collection_level=_get_env_level(),
                                 infer_session_id=True,
-                            ):
-                                self.app.server(self.input, self.output, self)
+                            ) as session_start_span:
+                                self._otel_session_start_span = session_start_span
+                                try:
+                                    self.app.server(self.input, self.output, self)
 
-                                # Start the first cycle within the `session_start`
-                                # span. This doesn't wait for async effects.
-                                self._request_output_flush()
-                                await _reactive_environment.start_round()
+                                    # Start the first cycle within the
+                                    # `session_start` span. This doesn't wait for
+                                    # async effects.
+                                    self._request_output_flush()
+                                    await _reactive_environment.start_round()
+                                finally:
+                                    self._otel_session_start_span = None
 
                     elif message_obj["method"] == "update":
                         verify_state(ConnectionState.Running)
@@ -1878,14 +1899,44 @@ class AppSession(Session):
         self._busy_count += 1
         if self._busy_count == 1:
             self._send_message_sync({"busy": "busy"})
+            # A flush is global and can serve several sessions, so the
+            # `reactive_update` span follows this session's cycle instead: it starts
+            # now and ends when all of the session's effects have finished.
+            if self._otel_cycle_span is None:
+                # Choose the parent explicitly. This runs in whichever task
+                # invalidated the effect, often another session's effect or an
+                # earlier cycle of this one, and that task's span isn't this
+                # cycle's parent. The first cycle belongs to `session_start`;
+                # later ones each start a trace of their own.
+                if self._otel_session_start_span is not None:
+                    parent = set_span_in_context(self._otel_session_start_span)
+                else:
+                    parent = OtelContext()
+                self._otel_cycle_span = start_otel_span(
+                    "reactive_update",
+                    attributes=get_session_id_attrs(self),
+                    required_level=OtelCollectLevel.REACTIVE_UPDATE,
+                    collection_level=_get_env_level(),
+                    context=parent,
+                )
 
     def _decrement_busy_count(self) -> None:
         self._busy_count -= 1
         if self._busy_count == 0:
+            self._end_otel_cycle_span()
             self._send_message_sync({"busy": "idle"})
             # `_output_flush` sends this cycle's outputs, then starts the next action.
             self._cycle_ended = True
             self._request_output_flush()
+
+    def _otel_reactive_update_span(self) -> Optional[Span]:
+        return self._otel_cycle_span
+
+    def _end_otel_cycle_span(self) -> None:
+        span, self._otel_cycle_span = self._otel_cycle_span, None
+        if span is not None:
+            span.set_status(Status(StatusCode.OK))
+            span.end()
 
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
         # Actions are sync, so they can't be interrupted partway, and only
@@ -2211,6 +2262,9 @@ class SessionProxy(Session):
 
     def _decrement_busy_count(self) -> None:
         self._root_session._decrement_busy_count()
+
+    def _otel_reactive_update_span(self) -> Optional[Span]:
+        return self._root_session._otel_reactive_update_span()
 
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
         _validate_idle_action(fn)
