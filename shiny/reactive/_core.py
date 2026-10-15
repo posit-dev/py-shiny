@@ -243,6 +243,8 @@ class ReactiveEnvironment:
         self._adopt_loop(asyncio.get_running_loop())
         if self._round_running:
             self._rerun_round = True
+            # The request that started us is spent; the running round re-requests.
+            self._round_requested = False
             return
         self._round_running = True
         self._rerun_round = False
@@ -274,7 +276,8 @@ class ReactiveEnvironment:
                 or self._next_round_waiters
                 or not self._effect_queue.empty()
             ):
-                self._round_requested = False
+                # No-op if a request made during this round is still pending:
+                # scheduling a second one would run an extra, empty round.
                 self.request_round()
 
     async def _run_context(self, ctx: Context) -> None:

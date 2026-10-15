@@ -1026,6 +1026,38 @@ async def test_many_invalidations_in_one_tick_share_one_round():
 
 
 @pytest.mark.asyncio
+async def test_round_requested_during_a_round_runs_exactly_one_more_round():
+    # Invalidating an effect from an `on_flushed` callback requests a round while
+    # one is running. That request alone must start the next round: re-requesting
+    # at the end of the running round would add an extra, empty one.
+    rounds = 0
+    v = reactive.value(0)
+    runs: list[int] = []
+
+    async def count() -> None:
+        nonlocal rounds
+        rounds += 1
+        if rounds == 1:
+            v.set(1)
+
+    @reactive.effect
+    def _e():
+        runs.append(v())
+
+    unregister = reactive.on_flushed(count)
+    try:
+        # Not `reactive.flush()`: it runs a round of its own to check for idleness.
+        assert await wait_until(lambda: runs == [0, 1])
+        # Rounds are scheduled with `call_soon`, so a few passes settle them.
+        for _ in range(20):
+            await asyncio.sleep(0)
+        assert rounds == 2
+    finally:
+        unregister()
+        _e.destroy()
+
+
+@pytest.mark.asyncio
 async def test_flush_from_session_on_flush_callback_returns_right_away():
     called: list[bool] = []
 
