@@ -1396,11 +1396,14 @@ async def test_async_calc_reader_waits_for_the_latest_run():
     # Run A (x=1) is invalidated mid-run; run B (x=2) starts; a third reader waits
     # on B. A finishing first must not wake that reader with A's value.
     v = reactive.value(1)
+    started = {1: asyncio.Event(), 2: asyncio.Event()}
+    release = {1: asyncio.Event(), 2: asyncio.Event()}
 
     @reactive.calc
     async def data():
         x = v()
-        await asyncio.sleep(0.05 if x == 1 else 0.15)
+        started[x].set()
+        await release[x].wait()
         return x * 10
 
     async def read() -> int:
@@ -1408,15 +1411,21 @@ async def test_async_calc_reader_waits_for_the_latest_run():
             return await data()
 
     first = asyncio.create_task(read())
-    await asyncio.sleep(0.01)
+    await asyncio.wait_for(started[1].wait(), TIMEOUT)
     v.set(2)
     second = asyncio.create_task(read())
-    await asyncio.sleep(0.01)
+    await asyncio.wait_for(started[2].wait(), TIMEOUT)
     third = asyncio.create_task(read())
+    assert await wait_until(lambda: len(data._run_waiters) == 1)
+    # A finishes first. Its own caller gets A's result; its context was
+    # invalidated anyway.
+    release[1].set()
+    assert await asyncio.wait_for(first, TIMEOUT) == 10
+    assert not third.done()
+    release[2].set()
     assert await asyncio.wait_for(third, TIMEOUT) == 20
     assert await asyncio.wait_for(second, TIMEOUT) == 20
-    # A's own caller gets A's result; its context was invalidated anyway.
-    assert await asyncio.wait_for(first, TIMEOUT) == 10
+    await reactive.flush()  # settle the round `v.set(2)` requested
 
 
 @pytest.mark.asyncio
