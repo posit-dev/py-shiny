@@ -180,13 +180,6 @@ clicks on a cell that is in edit mode don't toggle row selection
 
 - **Re-render resets all user state.** Use `update_data()` /
   `update_cell_value()` to change data without losing sort/filter.
-- **`selection_mode` must be a str or tuple.** `as_selection_modes()` only
-  wraps non-tuples, so a list (`["rows"]`) or set fails with
-  `TypeError: unhashable type`, despite the `ListOrTuple` annotation.
-- **Dead return-value check in `_patches_handler`.** It does
-  `patches = tuple(val)` then tests `isinstance(patches, list)`, so the friendly
-  `ValueError` loop never runs; bad shapes surface later as `KeyError` or the
-  `assert`s in `_set_cell_patch_map_patches`.
 - **Edited values arrive as strings.** Writing `"5"` into a numeric pandas
   column can raise (`LossySetitemError`) in `apply_frame_patches`; coerce in
   `set_patch_fn`.
