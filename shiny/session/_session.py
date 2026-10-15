@@ -1006,6 +1006,8 @@ class AppSession(Session):
         # Spans this session's busy period (its cycle), as R does; see
         # `_increment_busy_count()`.
         self._otel_cycle_span: Optional[Span] = None
+        # Whether an unhandled error closed the session during the current cycle.
+        self._otel_cycle_failed: bool = False
         # The `session_start` span, while the server function and first cycle run.
         self._otel_session_start_span: Optional[Span] = None
         # Actions (input updates, timer invalidations) waiting for the session to be
@@ -1936,6 +1938,7 @@ class AppSession(Session):
                     parent = set_span_in_context(self._otel_session_start_span)
                 else:
                     parent = OtelContext()
+                self._otel_cycle_failed = False
                 self._otel_cycle_span = start_otel_span(
                     "reactive_update",
                     attributes=get_session_id_attrs(self),
@@ -1964,7 +1967,8 @@ class AppSession(Session):
     def _end_otel_cycle_span(self) -> None:
         span, self._otel_cycle_span = self._otel_cycle_span, None
         if span is not None:
-            span.set_status(Status(StatusCode.OK))
+            if not self._otel_cycle_failed:
+                span.set_status(Status(StatusCode.OK))
             span.end()
 
     def run_once_when_idle(self, fn: Callable[[], object]) -> None:
@@ -2039,6 +2043,12 @@ class AppSession(Session):
     # ==========================================================================
     async def _unhandled_error(self, e: Exception) -> None:
         print("Unhandled error: " + str(e), file=sys.stderr)
+        # The effect's own span has already reported OK (it handled the error), so
+        # the cycle's span is what shows that this error closed the session.
+        if self._otel_cycle_span is not None:
+            self._otel_cycle_failed = True
+            self._otel_cycle_span.record_exception(e)
+            self._otel_cycle_span.set_status(Status(StatusCode.ERROR, str(e)))
         await self.close()
 
     def download(
