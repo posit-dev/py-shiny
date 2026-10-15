@@ -3,6 +3,8 @@ import contextlib
 import typing
 import unittest.mock
 
+from shiny.reactive._core import _reactive_environment
+
 
 class MockTime:
     """Patches time.monotonic() and asyncio.sleep(), replacing actual time with
@@ -50,9 +52,16 @@ class MockTime:
                 self._time = self._sleepers[0][0]
                 self._sleepers.pop(0)[2].set()
 
-                # Give the just-awakened task, and the reactive flush it requests
-                # (a few loop passes later), a chance to run.
-                for _ in range(10):
+                # Give the just-awakened task, and the reactive rounds it requests,
+                # a chance to run. Not `reactive.flush()`: it would wait on effects
+                # that are themselves in a (mocked) sleep, which only this loop can
+                # end.
+                await yield_event_loop()
+                while (
+                    _reactive_environment._round_requested
+                    or _reactive_environment._round_running
+                    or not _reactive_environment._effect_queue.empty()
+                ):
                     await yield_event_loop()
             self._time = end_time
 

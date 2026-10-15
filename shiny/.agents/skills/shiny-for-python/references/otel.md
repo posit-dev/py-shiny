@@ -48,8 +48,10 @@ reactive_update                   # each later cycle: a trace of its own
 ```
 
 A `reactive_update` span covers one session cycle: from when the session turns
-busy until all of its effects, including async ones, have finished. It carries
-`session.id`. Effects without a session have no `reactive_update` parent.
+busy until all of its effects, including async ones, have finished. A download
+also marks the session busy, so a download handler gets a span of its own. It carries `session.id`. Effects without a session (e.g. a
+module-level `reactive.poll`) have no `reactive_update` parent: each run starts
+a trace of its own.
 
 ## Collection levels: `SHINY_OTEL_COLLECT`
 

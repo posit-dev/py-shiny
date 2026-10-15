@@ -12,20 +12,24 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from typing import Callable, Iterator, Sequence, Tuple
+from typing import Callable, Iterator, Literal, Sequence, Tuple
 from unittest.mock import patch
 
 import pytest
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import StatusCode
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny._connection import MockConnection
 from shiny.otel._constants import ATTR_SESSION_ID
+from shiny.reactive._core import ReactiveWarning
 
 from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
-TIMEOUT = 1.0
+# Waits return as soon as their condition holds, so a long limit costs passing tests
+# nothing; it has to cover slow CI machines.
+TIMEOUT = 10.0
 Spans = Tuple[TracerProvider, InMemorySpanExporter]
 
 
@@ -42,9 +46,14 @@ async def wait_until(cond: Callable[[], bool], timeout: float = TIMEOUT) -> bool
 
 
 class Client:
-    def __init__(self, server: Callable[[Inputs, Outputs, Session], None]) -> None:
+    def __init__(
+        self,
+        server: Callable[[Inputs, Outputs, Session], None],
+        bookmark_store: Literal["url", "disable"] = "disable",
+    ) -> None:
         self.conn = MockConnection()
-        self.session = App(ui.TagList(), server)._create_session(self.conn)
+        app = App(lambda request: ui.TagList(), server, bookmark_store=bookmark_store)
+        self.session = app._create_session(self.conn)
         self.task = asyncio.create_task(self.session._run())
 
     def send(self, msg: dict[str, object]) -> None:
@@ -89,9 +98,14 @@ def parent_of(span: ReadableSpan, spans: Sequence[ReadableSpan]) -> ReadableSpan
     )
 
 
+# With bookmarking on, the session's bookmark effects turn it busy before the
+# server function runs; the first cycle's span must still be under `session_start`.
+@pytest.mark.parametrize("bookmark_store", ["disable", "url"])
 @pytest.mark.asyncio
 async def test_effect_spans_are_children_of_their_sessions_reactive_update(
-    otel_tracer_provider: Spans, collect_all: None
+    otel_tracer_provider: Spans,
+    collect_all: None,
+    bookmark_store: Literal["url", "disable"],
 ):
     provider, exporter = otel_tracer_provider
 
@@ -104,7 +118,7 @@ async def test_effect_spans_are_children_of_their_sessions_reactive_update(
         def _show():
             _ = doubled()
 
-    c = Client(server)
+    c = Client(server, bookmark_store=bookmark_store)
     c.send({"method": "init", "data": {"x": 1}})
     await c.idle()
     await c.close()
@@ -171,7 +185,8 @@ async def test_reactive_update_lasts_until_the_sessions_async_effects_finish(
     c = Client(server)
     c.send({"method": "init", "data": {}})
     assert await wait_until(lambda: c.session._busy_count == 1)
-    await asyncio.sleep(0.02)
+    # The cycle's span is open while the effect waits, so it isn't exported yet.
+    assert c.session._otel_cycle_span is not None
     assert (
         named(of_sessions(get_exported_spans(provider, exporter), c), "reactive_update")
         == []
@@ -226,6 +241,32 @@ async def test_one_reactive_update_per_cycle(
 
 
 @pytest.mark.asyncio
+async def test_reactive_update_reports_the_error_that_closed_the_session(
+    otel_tracer_provider: Spans, collect_all: None
+):
+    # The effect's span reports OK (the effect handled the error), so the cycle's
+    # span is what shows the trace went wrong.
+    provider, exporter = otel_tracer_provider
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _boom():
+            raise RuntimeError("boom")
+
+    c = Client(server)
+    with pytest.warns(ReactiveWarning, match="boom"):
+        c.send({"method": "init", "data": {}})
+        assert await wait_until(lambda: c.session._has_run_session_ended_tasks)
+    await c.close()
+
+    spans = of_sessions(get_exported_spans(provider, exporter), c)
+    (update,) = named(spans, "reactive_update")
+    assert update.status.status_code is StatusCode.ERROR
+    assert update.status.description == "boom"
+    assert [e.name for e in update.events] == ["exception"]
+
+
+@pytest.mark.asyncio
 async def test_effect_without_a_session_has_no_reactive_update(
     otel_tracer_provider: Spans, collect_all: None
 ):
@@ -249,11 +290,18 @@ async def test_session_ending_mid_cycle_ends_its_reactive_update(
 ):
     provider, exporter = otel_tracer_provider
     release = asyncio.Event()
+    # Whether the session's cycle span had already ended when the cancelled
+    # effect's `finally` ran. (Timestamps can't tell: on Windows the clock is too
+    # coarse to separate the two.)
+    span_ended_first: list[bool] = []
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         @reactive.effect
         async def _slow():
-            await release.wait()
+            try:
+                await release.wait()
+            finally:
+                span_ended_first.append(c.session._otel_cycle_span is None)
 
     c = Client(server)
     c.send({"method": "init", "data": {}})
@@ -261,15 +309,14 @@ async def test_session_ending_mid_cycle_ends_its_reactive_update(
     await c.close()
     release.set()
 
-    assert await wait_until(
-        lambda: len(
-            named(
-                of_sessions(get_exported_spans(provider, exporter), c),
-                "reactive_update",
-            )
-        )
-        == 1
+    assert await wait_until(lambda: len(span_ended_first) == 1)
+    (update,) = named(
+        of_sessions(get_exported_spans(provider, exporter), c), "reactive_update"
     )
+    assert update.end_time is not None
+    # Ended by the session's end itself, not later by the cancelled effect's
+    # busy period ending.
+    assert span_ended_first == [True]
 
 
 @pytest.mark.parametrize(

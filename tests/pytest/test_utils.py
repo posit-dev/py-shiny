@@ -143,6 +143,26 @@ async def test_async_callbacks():
     assert cb4.exec_count == 1  # Registered during previous invoke(), was called
 
 
+@pytest.mark.asyncio
+async def test_async_callbacks_first_run_before_the_others():
+    order: list[str] = []
+
+    def record(name: str):
+        async def cb():
+            order.append(name)
+
+        return cb
+
+    callbacks = AsyncCallbacks()
+    callbacks.register(record("a"))
+    callbacks.register(record("b"), first=True)
+    callbacks.register(record("c"))
+    callbacks.register(record("d"), first=True)
+
+    await callbacks.invoke()
+    assert order == ["b", "d", "a", "c"]
+
+
 # Timeout within 2 seconds
 @pytest.mark.timeout(2)
 @pytest.mark.flaky(reruns=3)

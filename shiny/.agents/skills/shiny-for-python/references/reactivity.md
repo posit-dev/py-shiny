@@ -217,5 +217,6 @@ session.run_once_when_idle(lambda: v.set(new_value))
   `reactive.file_reader`.
 - `async with reactive.lock():` around a `.set()`, followed by
   `await reactive.flush()` -> `reactive.lock()` is deprecated and does nothing,
-  and the flush adds nothing but a wait on every session's effects. Call
-  `.set()` alone.
+  so drop it. `.set()` alone schedules the dependents; keep the
+  `await reactive.flush()` only if the code after it relies on the dependents
+  having run (it waits on every session's effects).

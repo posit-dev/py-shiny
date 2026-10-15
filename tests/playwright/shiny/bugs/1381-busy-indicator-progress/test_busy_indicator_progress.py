@@ -62,9 +62,14 @@ def test_recalculating_messages_arrive_while_outputs_render(
     controller.OutputText(page, "out4").expect_value("1", timeout=10_000)
 
     times = status_times(page)
+    expected = {
+        (name, status)
+        for name in OUTPUTS
+        for status in ("recalculating", "recalculated")
+    }
+    assert expected <= set(times), times
     gaps = {
         name: times[(name, "recalculated")] - times[(name, "recalculating")]
         for name in OUTPUTS
     }
-    print("ms between recalculating and recalculated:", gaps)
     assert all(gap >= MIN_GAP_MS for gap in gaps.values()), gaps

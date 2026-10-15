@@ -1054,6 +1054,7 @@ class Effect_:
 
         from ..render.renderer import Renderer
         from ..session import Session
+        from ..session._session import AppSession, SessionProxy
 
         if isinstance(fn, Renderer):
             raise TypeError(
@@ -1108,9 +1109,23 @@ class Effect_:
             # `on_ended` registration is also what destroys effects on session
             # close, since the `on_destroy` one no-ops there.
             self._session.on_ended(self.destroy)
-            self._session.on_destroy(
-                _weak_destroy_callback(self.destroy, self._session)
+            # Before the scope's other destroy callbacks: an async one that yields
+            # would otherwise let a run of this effect resume and read a value the
+            # scope has already destroyed.
+            destroy_fn = _weak_destroy_callback(self.destroy, self._session)
+            root = (
+                self._session.root_scope()
+                if isinstance(self._session, SessionProxy)
+                else self._session
             )
+            if isinstance(root, AppSession):
+                root._register_destroy(destroy_fn, ns=str(self._session.ns), first=True)
+            else:
+                # Intentional, not a gap to fix: `_register_destroy()` is kept off
+                # the public `Session` API, so other sessions (duck-typed test
+                # mocks with no `root_scope()`, third-party `Session` subclasses)
+                # get plain `on_destroy()` ordering.
+                self._session.on_destroy(destroy_fn)
 
         # Extract OpenTelemetry attributes at initialization time
         self._otel_attrs: dict[str, Any] = {
@@ -1178,10 +1193,12 @@ class Effect_:
                 if previous is not None and not previous.done():
                     await asyncio.shield(previous)
                 # While the session restores its bookmarked state, wait for the
-                # `on_restore` callbacks to finish.
+                # `on_restore` callbacks to finish. Not once destroyed: the session
+                # may have ended before its restore effect ran, in which case the
+                # gate never opens.
                 restore = (
                     self._session._restore_gate(queued_priority)
-                    if self._session
+                    if self._session and not self._destroyed
                     else None
                 )
                 if restore is not None and not restore.done():
@@ -1192,6 +1209,8 @@ class Effect_:
                 # The effect runs in its own task, so report errors to its session.
                 if not self._session:
                     raise
+                # `_unhandled_error()` prints only the message; show where it failed.
+                traceback.print_exception(type(e), e, e.__traceback__)
                 await self._session._unhandled_error(e)
             finally:
                 if task is not None:
@@ -1248,7 +1267,8 @@ class Effect_:
                         if e.sanitize:
                             msg = SANITIZE_ERROR_MSG
                         notification_show(msg, type="error", duration=None)
-                        if e.close:
+                        # As below: a destroyed effect has no session to close.
+                        if e.close and not self._destroyed:
                             await self._session._unhandled_error(e)
                 except Exception as e:
                     traceback.print_exc()
@@ -1290,7 +1310,10 @@ class Effect_:
 
         Effects are destroyed when their session ends, and when their scope is
         destroyed with :meth:`~shiny.Session.destroy`, so both cancel the effect's
-        in-progress runs.
+        in-progress runs. Cancellation is delivered on the next pass of the event
+        loop, so a cancelled run's cleanup runs after the session's ``on_ended``
+        and the scope's ``on_destroy`` callbacks have run (unless one of them
+        awaits).
 
         Note
         ----
@@ -1298,6 +1321,10 @@ class Effect_:
         release resources and prevent future execution — the same work
         that would happen if this object were garbage collected.
         """
+        # Idempotent: a session registers `destroy` for both its end and its
+        # destroy, and a second cancel would interrupt a cancelled run's cleanup.
+        if self._destroyed:
+            return
         self._destroyed = True
 
         # Cancel in-progress runs now, before the caller tears down what they read
