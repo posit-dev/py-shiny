@@ -210,6 +210,22 @@ passes. Run it through `uv run` (not bare `make`) so the venv's black/isort/
 pyrefly/pyright are used — a system toolchain can silently miss failures that
 CI then rejects.
 
+## Sibling Repo: Shiny for R
+
+[rstudio/shiny](https://github.com/rstudio/shiny) is Shiny for R. Keep the
+two from drifting apart:
+
+- **Client JS and wire protocol**: `make upgrade-html-deps` vendors R shiny's
+  `inst/www/shared/` (including `shiny.js`) into `shiny/www/shared/`. Fix
+  `shiny.js` bugs and make client protocol changes in rstudio/shiny, then
+  re-vendor; never edit the vendored copy.
+- **Server behavior and bugs**: when a fix or feature here likely applies to
+  Shiny for R too, open an issue there and cross-link it; don't change both
+  repos in one PR. `gh issue create -R rstudio/shiny --label ai-generated-issue`
+- **Agent infrastructure** (`AGENTS.md` conventions, `.agents/skills/memory-bank/`,
+  `memory-bank/commitConventions.md`): mirror shared changes with a PR in
+  rstudio/shiny.
+
 ## Common Pitfalls
 
 - **Forgetting to run `make format`**: Always format before committing
