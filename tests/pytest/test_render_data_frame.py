@@ -120,12 +120,12 @@ async def test_as_data_frame_none():
     await expect_data_is_not_none_error(call_update_data)
 
     await expect_data_is_not_none_error(
-        lambda: render.DataGrid(
+        lambda: render.DataGrid(  # pyrefly: ignore[bad-specialization]
             None  # pyright: ignore[reportArgumentType,reportUnknownLambdaType]
         )
     )
     await expect_data_is_not_none_error(
-        lambda: render.DataTable(
+        lambda: render.DataTable(  # pyrefly: ignore[bad-specialization]
             None  # pyright: ignore[reportArgumentType,reportUnknownLambdaType]
         )
     )
