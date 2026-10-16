@@ -4184,6 +4184,7 @@ def format_reactlog_html(
             updateSourceHighlight();
             updateTraceTimelineScrubber(getCurrentStepTime());
             fitGraph();
+            openSecondaryTimelineForFlush();
           }};
           results.appendChild(button);
         }});

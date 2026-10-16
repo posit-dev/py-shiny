@@ -296,6 +296,34 @@ def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page
     expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
 
 
+@pytest.mark.parametrize("selection", ["click", "enter", "arrow-enter"])
+def test_input_search_selection_opens_secondary_timeline(page: Page, selection: str):
+    page.set_content(format_reactlog_html(report(), CODE))
+    search = page.locator("#search-input")
+    search.fill("id:input:x")
+    expect(page.locator("#secondary-timeline-bar")).to_be_hidden()
+    if selection == "click":
+        page.locator("#search-results button").click()
+    elif selection == "enter":
+        search.press("Enter")
+    else:
+        search.press("ArrowDown")
+        page.locator("#search-results button").press("Enter")
+
+    expect(page.locator("#secondary-timeline-bar")).to_be_visible()
+    expect(page.locator("#search-results")).to_be_hidden()
+    expect(page.locator('.graph-node[data-id="input:x"]')).to_have_class(
+        re.compile(r"is-selected")
+    )
+    expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
+    last_pill = page.locator(".secondary-stage-pill").last
+    last_step = last_pill.get_attribute("data-step")
+    last_pill.click()
+    expect(page.locator("#scrubber-range")).to_have_value(str(last_step))
+    page.locator("#btn-close-secondary-timeline").click()
+    expect(page.locator("#secondary-timeline-bar")).to_be_hidden()
+
+
 def test_search_selection_opens_details_and_filters_events(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#search-input").fill("id:calc:doubled")
