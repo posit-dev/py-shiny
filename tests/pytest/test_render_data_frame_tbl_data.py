@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import polars.testing as pl_testing
+import pyarrow as pa
 import pytest
 
 from shiny._namespaces import Root
@@ -244,6 +245,15 @@ def assert_frame_equal2(
             ("categorical", ["a", "b"]),
         ),
         (pd.Series([{"x": 1}]), "object"),
+        pytest.param(
+            pd.Series(
+                [[("a", 1)]], dtype=pd.ArrowDtype(pa.map_(pa.string(), pa.int64()))
+            ),
+            "object",
+            marks=pytest.mark.skipif(
+                not hasattr(nw, "Map"), reason="narwhals without `Map` dtype"
+            ),
+        ),
         (pd.Series([h1("yo")]), "html"),
         (pd.Series([HTML("yo")]), "html"),
     ],
