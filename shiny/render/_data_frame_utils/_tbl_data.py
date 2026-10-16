@@ -227,7 +227,14 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         type_ = "object"
         if series_contains_htmltoolslike(col):
             type_ = "html"
-    elif isinstance(dtype, (nw.Struct, nw.List, nw.Array)):
+    elif isinstance(dtype, (nw.Struct, nw.List, nw.Array)) or (
+        # https://github.com/narwhals-dev/narwhals/pull/3861
+        hasattr(nw, "Map")
+        and isinstance(
+            dtype,
+            nw.Map,  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+        )
+    ):
         type_ = "object"
     else:
         type_ = "unknown"
