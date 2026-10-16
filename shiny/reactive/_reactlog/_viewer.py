@@ -4661,6 +4661,7 @@ def format_reactlog_html(
               return;
             }}
             filterLineageForNode(node.id);
+            openSecondaryTimelineForFlush();
           }};
           results.appendChild(button);
         }});
