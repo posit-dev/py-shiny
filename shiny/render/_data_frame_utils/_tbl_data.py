@@ -211,30 +211,16 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         type_ = "datetime"
     elif isinstance(dtype, nw.Duration):
         type_ = "duration"
-    elif hasattr(nw, "Time") and isinstance(
-        dtype,
-        # https://github.com/narwhals-dev/narwhals/pull/2113
-        nw.Time,  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-    ):
+    elif isinstance(dtype, nw.Time):
         type_ = "time"
-    elif hasattr(nw, "Binary") and isinstance(
-        dtype,
-        # https://github.com/narwhals-dev/narwhals/pull/2243
-        nw.Binary,  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-    ):
+    elif isinstance(dtype, nw.Binary):
         type_ = "binary"
     elif isinstance(dtype, nw.Object):
         type_ = "object"
         if series_contains_htmltoolslike(col):
             type_ = "html"
-    elif isinstance(dtype, (nw.Struct, nw.List, nw.Array)) or (
-        # https://github.com/narwhals-dev/narwhals/pull/3861
-        hasattr(nw, "Map")
-        and isinstance(
-            dtype,
-            nw.Map,  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-        )
-    ):
+    elif dtype.is_nested():
+        # NOTE: Covers every nested dtype (`Struct`, `List`, `Array`, `Map`, ...)
         type_ = "object"
     else:
         type_ = "unknown"
