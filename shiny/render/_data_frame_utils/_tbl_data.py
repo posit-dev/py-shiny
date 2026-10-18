@@ -9,7 +9,7 @@ import orjson
 from ..._typing_extensions import TypeIs
 from ...session import Session, require_active_session
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
-from ._html import as_cell_html, ui_must_be_processed
+from ._html import as_cell_html, series_contains_htmltoolslike, ui_must_be_processed
 from ._types import (
     CellHtml,
     CellPatch,
@@ -189,16 +189,12 @@ def apply_frame_patches(
 # serialize_dtype ----------------------------------------------------------------------
 def serialize_dtype(col: nw.Series) -> FrameDtype:
 
-    from ._html import series_contains_htmltoolslike
-
     dtype: DType = col.dtype
 
     if isinstance(dtype, nw.String):
         type_ = "string"
-
     elif dtype.is_numeric():
         type_ = "numeric"
-
     elif isinstance(dtype, (nw.Categorical, nw.Enum)):
         categories = col.cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
