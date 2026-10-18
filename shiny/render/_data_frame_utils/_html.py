@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, time, timedelta
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 from htmltools import TagNode, is_tag_node
@@ -71,7 +72,10 @@ def ui_must_be_processed(  # pyright: ignore[reportInconsistentOverload]
     val: object,
 ):
 
-    if isinstance(val, str):
+    # Dates, times, and durations (including pandas' `Timestamp`, `NaT`, and
+    # `Timedelta`) are never UI. Checking for them first skips `is_tag_node()`, whose
+    # `Protocol` checks are slow, for cells of every temporal column.
+    if isinstance(val, (str, date, time, timedelta)):
         return False
 
     return is_tag_node(val)

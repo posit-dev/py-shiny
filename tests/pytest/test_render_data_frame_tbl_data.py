@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, Union, cast
 
 import htmltools
@@ -17,7 +17,10 @@ import pytest
 
 from shiny._namespaces import Root
 from shiny.module import ResolvedId
-from shiny.render._data_frame_utils._html import maybe_as_cell_html
+from shiny.render._data_frame_utils._html import (
+    maybe_as_cell_html,
+    ui_must_be_processed,
+)
 from shiny.render._data_frame_utils._tbl_data import (
     apply_frame_patches,
     as_col_indexes,
@@ -285,6 +288,23 @@ def test_serialize_dtype_does_not_read_column_when_dtype_suffices(
         raise AssertionError("The column should not be read for this dtype")
 
     serialize_dtype(dtype, get_col=get_col)
+
+
+@pytest.mark.parametrize(
+    "val",
+    [
+        datetime(2000, 1, 1),
+        date(2000, 1, 1),
+        time(1),
+        timedelta(days=1),
+        pd.Timestamp("2000-01-01", tz="UTC"),
+        pd.NaT,
+        pd.Timedelta(1, "D"),
+    ],
+)
+def test_ui_must_be_processed_temporal_values(val: object):
+    # Temporal cells skip `is_tag_node()`, as they are never UI
+    assert ui_must_be_processed(val) is False
 
 
 def test_serialize_frame(df_f: IntoDataFrame):
