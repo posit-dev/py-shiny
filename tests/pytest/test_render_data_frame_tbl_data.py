@@ -390,7 +390,7 @@ def test_apply_frame_patches_numeric_column_names():
 
     assert res.columns == [0, 1]
     assert res.rows(named=False) == [("A", "x"), ("b", "y"), ("c", "Z")]
-    # The original frame is cloned, not patched in place
+    # The original frame is not patched in place
     assert df.rows(named=False) == [("a", "x"), ("b", "y"), ("c", "z")]
 
 
@@ -409,6 +409,23 @@ def test_apply_frame_patches_empty_column_name(constructor: Any):
 
     assert res.columns == ["", "num"]
     assert res.rows(named=False) == [("a", 10), ("B", 2)]
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
+def test_apply_frame_patches_does_not_modify_original(constructor: Any):
+    # `apply_frame_patches()` does not copy the frame: it relies on narwhals'
+    # `scatter()` and `with_columns()` returning new objects
+    df = as_data_frame(constructor({"num": [1, 2], "chr": ["a", "b"]}))
+
+    patches: list[CellPatch] = [
+        {"row_index": 0, "column_index": 0, "value": 10},
+        {"row_index": 1, "column_index": 1, "value": "B"},
+    ]
+
+    res = apply_frame_patches(df, patches)
+
+    assert res.rows(named=False) == [(10, "a"), (2, "B")]
+    assert df.rows(named=False) == [(1, "a"), (2, "b")]
 
 
 def test_apply_frame_patches_non_string_values():

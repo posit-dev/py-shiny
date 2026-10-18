@@ -136,10 +136,9 @@ def apply_frame_patches(
 
     # Apply the patches
 
-    # Copy the data to make sure the original data is not modified in place.
-    # If https://github.com/narwhals-dev/narwhals/issues/1154 is resolved, this
-    # should be able to be removed.
-    nw_data = nw_data.clone()
+    # No copy of the data is needed: `scatter()` returns a new Series and
+    # `with_columns()` a new frame, so the original data is never modified in place
+    # (https://github.com/narwhals-dev/narwhals/issues/1154).
 
     # # https://discord.com/channels/1235257048170762310/1235257049626181656/1283415086722977895
     # # Using narwhals >= v1.7.0
