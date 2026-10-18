@@ -519,6 +519,9 @@ def test_as_col_indexes_unknown_name_raises():
 
     with pytest.raises(ValueError, match="Column name 'nope' not found"):
         as_col_indexes(df, ["nope"])
+    # An unhashable value gets the same error, not a `TypeError` from the lookup
+    with pytest.raises(ValueError, match=r"Column name \['chr'\] not found"):
+        as_col_indexes(df, [["chr"]])  # pyright: ignore[reportArgumentType]
 
 
 def test_as_col_indexes_int_is_always_a_position():

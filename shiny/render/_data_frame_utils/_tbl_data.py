@@ -349,7 +349,11 @@ def as_col_indexes(
         If a name is not a column of `data`, or if a position is negative or beyond the
         last column.
     """
-    ncol = len(data.columns)
+    data_columns = data.columns
+    ncol = len(data_columns)
+    # Built once, so that resolving many names stays linear in wide frames.
+    # Narwhals rejects duplicate column names, so each name maps to exactly one position.
+    col_positions = {name: i for i, name in enumerate(data_columns)}
     col_indexes: list[int] = []
     for col in cols:
         if isinstance(col, bool):
@@ -371,8 +375,9 @@ def as_col_indexes(
             col_indexes.append(col_index)
             continue
         try:
-            col_indexes.append(data.columns.index(col))
-        except ValueError:
+            col_indexes.append(col_positions[col])
+        # `TypeError`: an unhashable value (e.g. a list) is not a column name either
+        except (KeyError, TypeError):
             raise ValueError(
                 f"Column name {col!r} not found in the data frame. "
                 "To select a column by position, pass an `int`."
