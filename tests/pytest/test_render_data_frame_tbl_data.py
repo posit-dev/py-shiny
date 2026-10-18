@@ -266,12 +266,25 @@ def test_serialize_dtype(
     res_type: str | tuple[str, list[str]],
 ):
     nw_ser = series_to_narwhals(ser)
-    dtype_info = serialize_dtype(nw_ser)
+    dtype_info = serialize_dtype(nw_ser.dtype, get_col=lambda: nw_ser)
     ex_type = res_type if isinstance(res_type, str) else res_type[0]
     assert dtype_info["type"] == ex_type
     if dtype_info["type"] == "categorical":
         assert isinstance(res_type, tuple)
         assert dtype_info["categories"] == res_type[1]
+
+
+@pytest.mark.parametrize(
+    "dtype",
+    [nw.Int64(), nw.String(), nw.Boolean(), nw.Datetime(), nw.List(nw.Int64())],
+)
+def test_serialize_dtype_does_not_read_column_when_dtype_suffices(
+    dtype: nw.dtypes.DType,
+):
+    def get_col() -> nw.Series:
+        raise AssertionError("The column should not be read for this dtype")
+
+    serialize_dtype(dtype, get_col=get_col)
 
 
 def test_serialize_frame(df_f: IntoDataFrame):

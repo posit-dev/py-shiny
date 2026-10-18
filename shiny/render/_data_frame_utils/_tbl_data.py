@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, List, SupportsIndex, TypedDict, cast
+from functools import partial
+from typing import TYPE_CHECKING, Any, Callable, List, SupportsIndex, TypedDict, cast
 
 import narwhals.stable.v1 as nw
 import orjson
@@ -187,16 +188,18 @@ def apply_frame_patches(
 
 
 # serialize_dtype ----------------------------------------------------------------------
-def serialize_dtype(col: nw.Series) -> FrameDtype:
+def serialize_dtype(dtype: DType, *, get_col: Callable[[], nw.Series]) -> FrameDtype:
+    """Return the type hint for a column of the given `dtype`.
 
-    dtype: DType = col.dtype
-
+    `get_col` is only called when the hint depends on the column's values (its
+    categories, or whether it holds HTML), so most columns are never read.
+    """
     if isinstance(dtype, nw.String):
         type_ = "string"
     elif dtype.is_numeric():
         type_ = "numeric"
     elif isinstance(dtype, (nw.Categorical, nw.Enum)):
-        categories = col.cat.get_categories().to_list()
+        categories = get_col().cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
     elif isinstance(dtype, nw.Boolean):
         type_ = "boolean"
@@ -212,14 +215,14 @@ def serialize_dtype(col: nw.Series) -> FrameDtype:
         type_ = "binary"
     elif isinstance(dtype, nw.Object):
         type_ = "object"
-        if series_contains_htmltoolslike(col):
+        if series_contains_htmltoolslike(get_col()):
             type_ = "html"
     elif dtype.is_nested():
         # NOTE: Covers every nested dtype (`Struct`, `List`, `Array`, `Map`, ...)
         type_ = "object"
     else:
         type_ = "unknown"
-        if series_contains_htmltoolslike(col):
+        if series_contains_htmltoolslike(get_col()):
             type_ = "html"
 
     return {"type": type_}
@@ -235,7 +238,8 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     data = as_data_frame(into_data)
 
     type_hints = [
-        serialize_dtype(data.get_column(col_name)) for col_name in data.columns
+        serialize_dtype(dtype, get_col=partial(data.get_column, col_name))
+        for col_name, dtype in data.schema.items()
     ]
 
     # TODO-future-barret; Swich serialization to "by column", rather than "by row"
