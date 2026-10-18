@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from typing import Any, Union, cast
 
 import htmltools
@@ -403,6 +404,40 @@ def test_serialize_frame_numeric_column_names():
     assert res["columns"] == [0, 1]
     assert [hint["type"] for hint in res["typeHints"]] == ["string", "numeric"]
     assert res["data"] == [["a", 1], ["b", 2], ["c", 3]]
+
+
+@pytest.mark.parametrize(
+    "into_data",
+    [
+        pd.DataFrame({"d": [Decimal("1.50"), Decimal("2.25")]}),
+        pl.DataFrame({"d": [Decimal("1.50"), Decimal("2.25")]}),
+        pa.table({"d": pa.array([Decimal("1.50"), Decimal("2.25")])}),
+    ],
+)
+def test_serialize_frame_non_json_values_are_str(into_data: IntoDataFrame):
+    with session_context(test_session):
+        res = serialize_frame(into_data)
+
+    assert res["data"] == [["1.50"], ["2.25"]]
+
+
+def test_serialize_frame_ui_after_non_ui_value_of_another_type():
+    # A UI value still renders after other types were recorded as non-UI
+    df = pd.DataFrame(
+        {"x": [Decimal("1"), pd.NA, HTML("<b>x</b>"), Decimal("2"), HTML("<i>y</i>")]},
+        dtype=object,
+    )
+
+    with session_context(test_session):
+        res = serialize_frame(df)
+
+    assert res["data"] == [
+        ["1"],
+        ["<NA>"],
+        [{"isShinyHtml": True, "obj": {"deps": [], "html": "<b>x</b>"}}],
+        ["2"],
+        [{"isShinyHtml": True, "obj": {"deps": [], "html": "<i>y</i>"}}],
+    ]
 
 
 def test_apply_frame_patches_numeric_column_names():

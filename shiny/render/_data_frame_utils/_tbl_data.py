@@ -257,12 +257,18 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     session: Session | None = None
     html_deps: list[RenderedDependency] = []
+    # Value types already checked and found not to be UI. `ui_must_be_processed()` is
+    # slow for values like `Decimal` or `pd.NA`, and a column repeats one type.
+    # shortcut: assumes the type decides UI-ness; revisit if an instance can gain
+    # `tagify()` on its own
+    non_ui_types: set[type] = set()
 
     # Collect all html deps and dedupe them. Send the html separately from its deps
     # Otherwise, serialize as `str()`
-    def default_orjson_serializer(val: Any) -> Jsonifiable:
+    def default_orjson_serializer(val: object) -> Jsonifiable:
         nonlocal session
-        if ui_must_be_processed(val):
+        val_type = type(val)
+        if val_type not in non_ui_types and ui_must_be_processed(val):
             if session is None:
                 session = require_active_session(None)
 
@@ -278,6 +284,7 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
             return cast(JsonifiableDict, cell_html_obj)
 
         # All other values are serialized as strings
+        non_ui_types.add(val_type)
         return str(val)
 
     payload = orjson.dumps(
