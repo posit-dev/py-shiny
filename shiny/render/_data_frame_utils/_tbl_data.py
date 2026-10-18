@@ -280,13 +280,15 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
         # All other values are serialized as strings
         return str(val)
 
-    data_val = orjson.loads(
-        orjson.dumps(
-            data_rows,
-            default=default_orjson_serializer,
-            # option=(orjson.OPT_NAIVE_UTC),
-        )
+    payload = orjson.dumps(
+        data_rows,
+        default=default_orjson_serializer,
+        # option=(orjson.OPT_NAIVE_UTC),
     )
+    # Free the row tuples before decoding, so that they are not held in memory
+    # alongside the decoded rows
+    del data_rows
+    data_val = orjson.loads(payload)
 
     deduped_html_deps = (
         _resolve_processed_dependencies(html_deps) if len(html_deps) > 1 else html_deps
