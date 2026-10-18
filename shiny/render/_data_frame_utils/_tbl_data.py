@@ -253,7 +253,12 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     #     sending it to the client!
     #   * The only serialization would occur during "send to browser"
     #   * This approach would lose the ability to upgrade the column type hints to "html"
-    data_rows = data.rows(named=False)
+
+    # Faster than `data.rows()` for tall frames, and pandas' nullable dtypes stay
+    # Python scalars (`itertuples()` yields numpy scalars, which orjson can't encode).
+    # shortcut: each column has a fixed cost, so frames with at least as many columns
+    # as rows are slower; revisit once narwhals builds rows column-wise
+    data_rows = list(zip(*(col.to_list() for col in data.iter_columns())))
 
     session: Session | None = None
     html_deps: list[RenderedDependency] = []

@@ -421,6 +421,28 @@ def test_serialize_frame_non_json_values_are_str(into_data: IntoDataFrame):
     assert res["data"] == [["1.50"], ["2.25"]]
 
 
+def test_serialize_frame_pandas_nullable_dtypes_are_json_scalars():
+    # `itertuples()` yields numpy scalars for these dtypes, which orjson can't encode,
+    # so they used to be sent as strings ("1", "True")
+    df = pd.DataFrame(
+        {
+            "int": pd.array([1, None], dtype="Int64"),
+            "float": pd.array([1.5, None], dtype="Float64"),
+            "bool": pd.array([True, None], dtype="boolean"),
+        }
+    )
+
+    with session_context(test_session):
+        res = serialize_frame(df)
+
+    assert [hint["type"] for hint in res["typeHints"]] == [
+        "numeric",
+        "numeric",
+        "boolean",
+    ]
+    assert res["data"] == [[1, 1.5, True], ["<NA>", "<NA>", "<NA>"]]
+
+
 def test_serialize_frame_ui_after_non_ui_value_of_another_type():
     # A UI value still renders after other types were recorded as non-UI
     df = pd.DataFrame(
