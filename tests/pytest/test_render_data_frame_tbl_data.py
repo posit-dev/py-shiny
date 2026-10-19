@@ -616,7 +616,8 @@ def test_dtype_coverage():
         if not issubclass(dtype_cls, nw_dtypes.DType):
             continue
 
-        if dtype_cls.is_numeric():
+        # Handled by category (`dtype.is_numeric()`, `dtype.is_nested()`), not by name
+        if dtype_cls.is_numeric() or dtype_cls.is_nested():
             continue
 
         if f"nw.{dtype_name}" in "".join(tbl_data_lines):
