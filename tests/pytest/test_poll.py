@@ -43,11 +43,20 @@ class OnEndedSessionCallbacks:
     def _send_message_sync(self, message: Dict[str, object]) -> None:
         pass
 
+    def run_once_when_idle(self, fn: Callable[[], object]) -> None:
+        fn()
+
     def _increment_busy_count(self) -> None:
         pass
 
     def _decrement_busy_count(self) -> None:
         pass
+
+    def _otel_reactive_update_span(self) -> None:
+        return None
+
+    def _restore_gate(self, priority: int) -> None:
+        return None
 
     async def __aenter__(self):
         self._session_context.__enter__()

@@ -5,10 +5,10 @@ The OTel provider is configured in globals.py (runs once).  This file is
 re-executed for every new session, but it only reads from the exporter —
 it never replaces the TracerProvider.
 
-On initial page load the span_summary output shows 0 session_start spans
-because session_start hasn't ended yet (the initial flush runs inside it).
-After clicking "Show Session Spans" the re-render fires outside session_start,
-so the now-closed span is visible in the exporter.
+The initial flush runs inside session_start, but an output yields before it
+renders, so on initial page load span_summary can show 0 or 1 session_start
+spans. After clicking "Show Session Spans" the re-render fires outside
+session_start, so the now-closed span is visible in the exporter.
 """
 
 import json

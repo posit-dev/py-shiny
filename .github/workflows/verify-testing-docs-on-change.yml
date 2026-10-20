@@ -45,12 +45,10 @@ jobs:
           fi
 
           # Check if the documentation file has changed
-          if diff -q testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json > /dev/null 2>&1; then
+          if ! diff -q testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json > /dev/null 2>&1; then
             echo "docs_changed=true" >> $GITHUB_OUTPUT
             echo "The generated documentation is out of sync with the current controller changes."
-            echo "\n\n"
-            diff -q testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json || true
-            echo "\n\n"
+            diff testing-documentation-before.json shiny/pytest/_generate/_data/testing-documentation.json || true
           else
             echo "docs_changed=false" >> $GITHUB_OUTPUT
             echo "Documentation file is up to date"
@@ -91,3 +89,7 @@ jobs:
         with:
           header: testing-docs-update
           delete: true
+
+      - name: Fail if testing docs are out of sync
+        if: steps.check-docs-changes.outputs.docs_changed == 'true'
+        run: exit 1

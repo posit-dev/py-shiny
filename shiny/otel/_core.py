@@ -283,8 +283,8 @@ def detached_otel_context() -> Generator[None, None, None]:
     from shiny.otel._core import detached_otel_context
 
     with detached_otel_context():
-        ctx.invalidate()
-        await flush()
+        with tracer.start_as_current_span("timer_tick"):  # a root span
+            ...
     ```
     """
     token = otel_context.attach(otel_context.Context())

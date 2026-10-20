@@ -1,3 +1,8 @@
+---
+title: "Bundled Agent Skills"
+description: "Layout, frontmatter contract, content shape, scoping rules, and validation for the Agent Skills shipped under shiny/.agents/skills/. Read before adding or editing a bundled skill or changing a public API a skill documents."
+---
+
 # Bundled Agent Skills
 
 The shiny package ships a single [Agent Skill](https://agentskills.io) under
@@ -17,8 +22,8 @@ package.
 
 **Audience:** coding agents *using* shiny to build, test, and debug apps — not
 contributors to shiny itself. Contributor-facing guidance belongs in
-`.claude/references/`, not here. If a topic serves both audiences, the bundled
-skill documents the public API and the reference file documents the internals.
+`memory-bank/`, not here. If a topic serves both audiences, the bundled
+skill documents the public API and the memory-bank doc documents the internals.
 
 ## Layout
 
