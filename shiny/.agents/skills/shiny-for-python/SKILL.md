@@ -1,6 +1,6 @@
 ---
 name: shiny-for-python
-description: "Use for any Shiny for Python (py-shiny) app: an app.py using `from shiny import ...` or started with `shiny run`, in Core or Express style. Use when the user builds, changes, fixes, refactors, converts, debugs, tests, or reviews such an app. Trigger on any reported symptom: output blank, stale, or not updating; a control with no effect; state shared between users; a slow, frozen, or erroring app. Also trigger on requests to restructure code: modules, shared computed values, IDs, sessions, layouts, or tests. Index skill: read this, then open the linked reference for the task. Covers reactivity, modules, outputs, sessions, extended tasks, dashboards, debugging, and testing."
+description: "Use whenever building, editing, debugging, reviewing, or testing Shiny for Python (py-shiny) apps and dashboards. Includes Core and Express apps, code importing `shiny` or `shiny.express`, and apps launched with `shiny run`."
 ---
 
 # Shiny for Python
