@@ -14,7 +14,7 @@ from shiny.express import ui
 # environment variables which can be read by `os.getenv()`.
 load_dotenv()
 chat_client = ChatBedrockAnthropic(
-    model="anthropic.claude-3-sonnet-20240229-v1:0",
+    model="global.anthropic.claude-sonnet-5-5",
 )
 
 # Set some Shiny page options

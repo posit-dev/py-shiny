@@ -73,6 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.navset_tab()` and the other navsets now add `aria-controls`, pointing at the panel's `id`, to nav links that target a tab panel, alongside the existing `href` (rstudio/bslib#1355, #2526).
 
+* The Google Gemini chat template (`shiny create`, Chat > LLM > Google) now uses `gemini-3.8-flash` instead of `gemini-2.0-flash`, which Google has shut down. The two AWS Bedrock Anthropic templates (chat and markdown stream) now use `global.anthropic.claude-sonnet-5-5` instead of `anthropic.claude-3-sonnet-20240229-v1:0`, which Bedrock no longer lists among its supported models (#2578).
+
 ## [1.8.0] - 2026-09-12
 
 ### Deprecations
