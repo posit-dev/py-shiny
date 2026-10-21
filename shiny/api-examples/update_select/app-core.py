@@ -24,7 +24,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             "inSelect",
             label="Select input label " + str(len(x)),
             choices=x,
-            selected=x[len(x) - 1] if len(x) > 0 else None,
+            selected=x[-1] if x else None,
         )
 
 
