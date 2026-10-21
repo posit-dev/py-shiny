@@ -32,10 +32,7 @@ from .otel_helpers import get_exported_spans, patch_otel_tracing_state
 
 async def _collect_chunks(stream: AsyncIterator[bytes]) -> list[bytes]:
     """Consume an async iterator into a list."""
-    result: list[bytes] = []
-    async for chunk in stream:
-        result.append(chunk)
-    return result
+    return [chunk async for chunk in stream]
 
 
 async def _async_byte_iter(*chunks: bytes) -> AsyncIterator[bytes]:
