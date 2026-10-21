@@ -51,7 +51,7 @@ class ModState(NamedTuple):
     navset_tab: str
 
 
-blacklist = set(["awesome_component"])
+blacklist = {"awesome_component"}
 
 x_input_keys = ("x_" + key for key in x_input_keys)
 
