@@ -647,12 +647,7 @@ def is_uifunc(
         | PageHtmlDocument
     ),
 ) -> bool:
-    if (
-        isinstance(x, Path)
-        or isinstance(x, Tag)
-        or isinstance(x, TagList)
-        or not callable(x)
-    ):
+    if isinstance(x, (Path, Tag, TagList)) or not callable(x):
         return False
     else:
         return True
