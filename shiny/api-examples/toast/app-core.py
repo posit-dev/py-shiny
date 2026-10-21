@@ -236,7 +236,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             header = ui.toast_header(
                 title=input.header_title(),
                 icon=header_icon,
-                status=input.header_status() if input.header_status() else None,
+                status=input.header_status() or None,
             )
 
         # Build body icon if not using header
@@ -249,8 +249,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             input.body(),
             header=header,
             icon=body_icon,
-            id=input.custom_id() if input.custom_id() else None,
-            type=input.type() if input.type() else None,
+            id=input.custom_id() or None,
+            type=input.type() or None,
             duration_s=input.duration() if input.duration() > 0 else None,
             position=input.position(),
             closable=input.closable(),
@@ -473,7 +473,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         fig, ax = plt.subplots(figsize=(6, 3))
         ax.hist(
             eruptions,
-            bins=input.toast_bins() if input.toast_bins() else 30,
+            bins=input.toast_bins() or 30,
             color="#444",
             edgecolor="none",
         )
