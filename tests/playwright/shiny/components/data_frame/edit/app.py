@@ -201,7 +201,7 @@ def mod_server(input: Inputs, output: Outputs, session: Session):
 
         def df_styles_fn(data: pd.DataFrame | pl.DataFrame) -> list[StyleInfo]:
             nonlocal counter
-            counter = counter + 2
+            counter += 2
             if counter > 5:
                 counter = 0
 
