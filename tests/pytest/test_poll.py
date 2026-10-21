@@ -146,6 +146,39 @@ async def test_poll():
 
 
 @pytest.mark.asyncio
+async def test_poll_async_poll_func_with_custom_equals():
+    async with OnEndedSessionCallbacks():
+        poll_invocations = 0
+
+        async def poll_func():
+            nonlocal poll_invocations
+            poll_invocations += 1
+            return {"version": 1}
+
+        @poll(poll_func, equals=lambda old, new: old["version"] == new["version"])
+        def value_func():
+            return "data"
+
+        mock_time = MockTime()
+        with mock_time():
+            # An async poll_func can't be awaited when @poll() runs, so nothing has
+            # been polled yet and there is no previous value to compare with.
+            assert poll_invocations == 0
+
+            await flush()
+            assert poll_invocations == 1
+
+            with isolate():
+                assert value_func() == "data"
+
+            await mock_time.advance_time(1.01)
+            assert poll_invocations == 2
+
+            with isolate():
+                assert value_func() == "data"
+
+
+@pytest.mark.asyncio
 async def test_poll_errors():
     async with OnEndedSessionCallbacks():
 

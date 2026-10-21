@@ -16,6 +16,10 @@ __all__ = ("poll", "file_reader")
 
 T = TypeVar("T")
 
+# Stands in for the first `poll_func` value of an async `poll_func`, which the polling
+# effect reads on its first run.
+_NO_VALUE: Any = object()
+
 
 @add_example()
 def poll(
@@ -99,7 +103,11 @@ def poll(
 
     with otel.suppress():
         with reactive.isolate():
-            last_value: reactive.Value[Any] = reactive.Value(poll_func())
+            # An async `poll_func` can't be awaited here, so the effect below reads its
+            # first value instead.
+            last_value: reactive.Value[Any] = reactive.Value(
+                _NO_VALUE if _utils.is_async_callable(poll_func) else poll_func()
+            )
             last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
 
         @reactive.effect(priority=priority, session=session)
@@ -114,7 +122,7 @@ def poll(
                     old = last_value.get()
 
                 try:
-                    is_equal = equals(old, new)
+                    is_equal = False if old is _NO_VALUE else equals(old, new)
                 except Exception as e:
                     # For example, pandas DataFrame throws if you try to compare it to a
                     # non-comparable object
