@@ -6,10 +6,11 @@ import contextlib
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
-from typing import Generator
+from typing import Any, Generator
 
 import pytest
 
+from shiny import ui
 from shiny.ui._input_slider import _as_numeric
 
 TIMEZONES = [
@@ -115,3 +116,19 @@ def test_as_numeric_other_types():
     assert _as_numeric(10) == 10
     assert _as_numeric(1.5) == 1.5
     assert _as_numeric(timedelta(days=1)) == 86400000
+
+
+@pytest.mark.parametrize("ticks", [False, True])
+@pytest.mark.parametrize(
+    "bounds",
+    [(5, 5), (5.5, 5.5), (date(2025, 1, 1), date(2025, 1, 1))],
+)
+def test_input_slider_with_equal_min_and_max(bounds: tuple[Any, Any], ticks: bool):
+    """A range of zero (e.g., a constant data column) still renders a slider."""
+    low, high = bounds
+
+    html = str(ui.input_slider("x", "X", min=low, max=high, value=low, ticks=ticks))
+
+    assert f'data-min="{_as_numeric(low)}"' in html
+    assert f'data-max="{_as_numeric(high)}"' in html
+    assert 'data-step="1"' in html
