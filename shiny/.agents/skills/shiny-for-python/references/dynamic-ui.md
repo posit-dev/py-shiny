@@ -16,6 +16,15 @@ hard-code every possible input state and toggle visibility by hand. Reactivity
 This documents the Core form. In Express mode, use `@render.express` instead of
 `@render.ui` (see `references/express.md`); everything else below is identical.
 
+## Contents
+
+- Compute UI reactively: `@render.ui` + `ui.output_ui`
+- Update an existing input: `ui.update_*`
+- Inject / remove arbitrary UI: `ui.insert_ui` / `ui.remove_ui`
+- Show / hide UI client-side: `ui.panel_conditional`
+- Quick reference
+- Common mistakes
+
 ## Compute UI reactively: `@render.ui` + `ui.output_ui`
 
 The primary approach. Put an `output_ui(id)` placeholder in the UI, then a

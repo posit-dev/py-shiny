@@ -13,6 +13,20 @@ Do **not** try to add a Core-style `app_ui = ...` / `def server(...)` split, and
 do **not** nest UI calls as positional arguments the Core way. Express uses
 `with` blocks for layout containers instead.
 
+## Contents
+
+- The Express import and mental model
+- Layout with context managers
+- Page-level options
+- Same app: Core vs Express
+- Reusable UI with `@expressify`
+- Express modules
+- Shared objects and startup cost
+- Assign to suppress automatic display
+- When to choose Express vs Core
+- Quick reference (Core → Express)
+- Common mistakes
+
 ## The Express import and mental model
 
 ```python

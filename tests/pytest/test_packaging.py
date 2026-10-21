@@ -267,3 +267,33 @@ def test_skill_frontmatter_has_name_and_description() -> None:
         assert not description.startswith(
             ("Use this skill", "Use whenever", "I can", "I will")
         ), f"{skill_dir}: description should be written in third person"
+
+
+def test_long_reference_files_have_contents_index() -> None:
+    references_dir = ROUTER_SKILL_DIR / "references"
+    for ref in references_dir.glob("*.md"):
+        lines = ref.read_text().splitlines()
+        if len(lines) > 100:
+            assert any(
+                line.strip() == "## Contents" for line in lines[:50]
+            ), f"{ref.name}: files over 100 lines must have a ## Contents index in the first 50 lines"
+
+            start = next(
+                i for i, line in enumerate(lines) if line.strip() == "## Contents"
+            )
+            contents_items: list[str] = []
+            for line in lines[start + 1 :]:
+                if line.startswith("## "):
+                    break
+                if line.startswith("- "):
+                    contents_items.append(line[2:].strip())
+
+            h2_headings = [
+                line[3:].strip()
+                for line in lines
+                if line.startswith("## ")
+                and line.strip() not in ("## Overview", "## Contents")
+            ]
+            assert (
+                contents_items == h2_headings
+            ), f"{ref.name}: ## Contents items do not match H2 headings"

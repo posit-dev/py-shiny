@@ -14,6 +14,18 @@ are only readable inside a reactive context: a `@render.*` output, a
 blocks the session (a slow API call, a long computation), do not run it in a
 calc/effect either — use `reactive.extended_task` (see `references/extended-tasks.md`).
 
+## Contents
+
+- Share a mutable value: `reactive.value`
+- Cache a derived value: `@reactive.calc`
+- Perform a side effect: `@reactive.effect`
+- Control when reactivity fires: `@reactive.event`
+- Short-circuit / validate: `req()`
+- Read without depending: `isolate()`
+- Timers and streaming: `invalidate_later`, `poll`, `file_reader`
+- Quick reference
+- Common mistakes
+
 ## Share a mutable value: `reactive.value`
 
 A settable reactive source. Read with `()` or `.get()`; write with `.set()`.

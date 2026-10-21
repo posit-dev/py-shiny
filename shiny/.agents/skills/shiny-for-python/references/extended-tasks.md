@@ -18,6 +18,15 @@ Because it runs outside the reactive graph, the task **cannot read reactive
 sources** (`input.x()`, a `reactive.value`, a calc). Read those values *before*
 invoking and pass them in as arguments; reading one inside raises an error.
 
+## Contents
+
+- Define and invoke a task
+- Read the result and status
+- Pair with a task button
+- Cancel and re-invoke
+- Quick reference
+- Common mistakes
+
 ## Define and invoke a task
 
 Decorate an async function. Call the returned object (or `.invoke(...)`) from an

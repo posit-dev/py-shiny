@@ -24,6 +24,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 To reach the session from a helper called inside a reactive context, use
 `require_active_session(None)` (it raises if no session is active).
 
+## Contents
+
+- Clean up when a user disconnects: `session.on_ended`
+- Read the incoming request: `http_conn` and `clientdata`
+- Serve a per-session URL: `session.dynamic_route`
+- Hook the output flush: `on_flush` / `on_flushed`
+- Quick reference
+- Common mistakes
+- Related references
+
 ## Clean up when a user disconnects: `session.on_ended`
 
 Register a callback that runs after the client disconnects. Use it to close DB
