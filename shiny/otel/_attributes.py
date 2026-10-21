@@ -238,7 +238,7 @@ def extract_source_ref(func: Callable[..., Any]) -> SourceRefAttrs:
                 for i, source_line in enumerate(lines):
                     stripped = source_line.lstrip()
                     if stripped.startswith(("def ", "async def ")):
-                        line_number = line_number + i
+                        line_number += i
                         column = len(source_line) - len(source_line.lstrip())
                         attributes["code.column.number"] = column
                         break
