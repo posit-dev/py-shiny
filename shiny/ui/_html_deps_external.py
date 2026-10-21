@@ -41,7 +41,7 @@ def shiny_page_theme_deps(theme: str | Path | Theme | ThemeProvider | None) -> T
     elif isinstance(theme, Tagifiable) or isinstance(theme, HTMLDependency):
         deps_theme = theme
     elif isinstance(theme, list) and all(
-        [isinstance(dep, HTMLDependency) for dep in theme]
+        isinstance(dep, HTMLDependency) for dep in theme
     ):
         deps_theme = theme
     else:
