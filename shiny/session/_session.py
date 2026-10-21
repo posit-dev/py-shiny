@@ -103,7 +103,7 @@ class ProtocolError(Exception):
     message: str
 
     def __init__(self, message: str = ""):
-        super(ProtocolError, self).__init__(message)
+        super().__init__(message)
         self.message = message
 
 
