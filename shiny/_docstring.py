@@ -192,9 +192,7 @@ def add_example(
             f = os.path.basename(rel_f)
             is_support_file = (
                 os.path.isfile(abs_f)
-                and f != app_file_name
-                and f != "app.py"
-                and f != ".DS_Store"
+                and f not in (app_file_name, "app.py", ".DS_Store")
                 and "venv" not in path_parts
                 and ".venv" not in path_parts
                 and not (f.startswith("app-") and f.endswith(".py"))

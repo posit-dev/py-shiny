@@ -428,9 +428,9 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
         #     assert param.annotation == "TransformerMetadata"
         # if i == 1:
         #     assert (param.annotation or "").startswith("RenderFnAsync")
-        if i < 2 and not (
-            param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
-            or param.kind == inspect.Parameter.POSITIONAL_ONLY
+        if i < 2 and param.kind not in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.POSITIONAL_ONLY,
         ):
             raise TypeError(
                 "`transformer=` must have 2 positional parameters which have type "
