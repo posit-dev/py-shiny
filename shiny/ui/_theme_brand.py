@@ -83,7 +83,7 @@ class BrandBootstrapConfigFromYaml:
 
         y: dict[Any, Any] = x  # pyright: ignore[reportUnknownVariableType]
 
-        if not all([isinstance(k, str) for k in y.keys()]):
+        if not all([isinstance(k, str) for k in y]):
             raise ValueError(
                 f"Invalid brand `{self._path}.defaults`, all keys must be strings."
             )

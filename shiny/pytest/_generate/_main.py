@@ -553,13 +553,13 @@ class ShinyTestGenerator:
         if self.provider == "anthropic":
             return [
                 model
-                for model in Config.MODEL_ALIASES.keys()
+                for model in Config.MODEL_ALIASES
                 if not (model.startswith("gpt-") or model.startswith("o1-"))
             ]
         elif self.provider == "openai":
             return [
                 model
-                for model in Config.MODEL_ALIASES.keys()
+                for model in Config.MODEL_ALIASES
                 if (model.startswith("gpt-") or model.startswith("o1-"))
             ]
         else:

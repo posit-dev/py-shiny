@@ -272,7 +272,7 @@ def row_heights_attrs(
     x_complete = {k: v for k, v in x.items() if v is not None}
 
     # We use classes to activate CSS variables at the right breakpoints.
-    classes = [f"bslib-grid--row-heights--{brk}" for brk in x_complete.keys()]
+    classes = [f"bslib-grid--row-heights--{brk}" for brk in x_complete]
 
     # Create CSS variables, treating numeric values as fractional units, passing strings
     css_vars: Dict[str, str] = {}
