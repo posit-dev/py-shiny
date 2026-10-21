@@ -420,7 +420,7 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
             "`TransformerMetadata` and `ValueFnAsync` respectively"
         )
 
-    for i, param in zip(range(len(params)), params.values()):
+    for i, param in enumerate(params.values()):
         # # Not a good test as `param.annotation` has type `str` and the type could
         # # have been renamed. We need to do an `isinstance` check but do not have
         # # access to the objects

@@ -1214,7 +1214,7 @@ class data_frame(
 
 
 def assert_column_filters(filters: ListOrTuple[ColumnFilter], ncol: int) -> None:
-    for column_filter, i in zip(filters, range(len(filters))):
+    for i, column_filter in enumerate(filters):
         assert isinstance(column_filter, dict)
         assert isinstance(column_filter["col"], int)
         assert 0 <= column_filter["col"] < ncol
