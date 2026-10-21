@@ -53,7 +53,7 @@ with ui.card():
     ui.h3("Non-Module Section")
 
     with ui.navset_tab(id="navsets_collection"):
-        for navset_type in navset_configs.keys():
+        for navset_type in navset_configs:
             with ui.nav_panel(navset_type):
                 create_navset(navset_type)
 
@@ -62,7 +62,7 @@ with ui.card():
         ui.h3("Navset Module")
 
         with ui.navset_tab(id="navsets_collection"):
-            for navset_type in navset_configs.keys():
+            for navset_type in navset_configs:
                 with ui.nav_panel(navset_type):
                     create_navset(navset_type)
 

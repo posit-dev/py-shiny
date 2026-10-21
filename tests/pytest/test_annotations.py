@@ -12,10 +12,8 @@ def assert_annotations(
 ) -> None:
     ui_a = core_fn.__annotations__
     layout_a = express_fn.__annotations__
-    keys: list[str] = []
-    for key, _ in ui_a.items():
-        keys.append(key)
-    for key, _ in layout_a.items():
+    keys: list[str] = list(ui_a)
+    for key in layout_a:
         if key not in keys:
             keys.append(key)
     for key in keys:

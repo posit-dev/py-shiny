@@ -220,7 +220,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
     def load_app() -> None:
         page.goto(sa.url, wait_until="domcontentloaded")
 
-        if short_app_path in app_hard_wait.keys():
+        if short_app_path in app_hard_wait:
             # Apps are constantly invalidating and will not stabilize
             # Instead, wait for specific amount of time
             page.wait_for_timeout(app_hard_wait[short_app_path])
