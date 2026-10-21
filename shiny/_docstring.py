@@ -245,9 +245,7 @@ def is_express_app(app_path: str) -> bool:
 
     with open(app_path, encoding="utf-8") as f:
         for line in f:
-            if "from shiny.express" in line:
-                return True
-            elif "import shiny.express" in line:
+            if "from shiny.express" in line or "import shiny.express" in line:
                 return True
     return False
 
