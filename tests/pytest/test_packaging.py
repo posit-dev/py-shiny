@@ -258,3 +258,12 @@ def test_skill_frontmatter_has_name_and_description() -> None:
         assert (
             isinstance(description, str) and description.strip()
         ), f"{skill_dir}: frontmatter is missing a non-empty `description`"
+        assert (
+            len(description) <= 1024
+        ), f"{skill_dir}: description exceeds 1024 characters"
+        assert (
+            "<" not in description and ">" not in description
+        ), f"{skill_dir}: description must not contain XML tags"
+        assert not description.startswith(
+            ("Use this skill", "Use whenever", "I can", "I will")
+        ), f"{skill_dir}: description should be written in third person"

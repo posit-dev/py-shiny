@@ -1,6 +1,6 @@
 ---
 name: shiny-for-python
-description: "Use this skill when building, modifying, debugging, testing, or reviewing a Shiny for Python (py-shiny) app - anything importing `shiny` or `shiny.express` or run with `shiny run`. It covers UI, layout, and theming; reactivity; outputs and renderers; modules; sessions and background tasks; troubleshooting misbehaving apps; and testing. This official skill ships with the installed `shiny` package, so its guidance should match your version; it's a short index linking to per-topic reference guides, so opening it adds little context and routes you to the one guide relevant to the task. Reach for it before hand-rolling what the framework already provides, such as custom HTML tables, DOM manipulation, or polling loops."
+description: "Builds, modifies, debugs, tests, and reviews Shiny for Python (py-shiny) apps in Core and Express modes. Use when working on code importing `shiny` or `shiny.express`, running `shiny run`, or handling reactive apps. Covers UI, layout, and theming; reactivity; outputs and renderers; modules; sessions and background tasks; troubleshooting misbehaving apps; and testing. This official skill ships with the installed package as a routing index into per-topic reference guides. Reach for it before hand-rolling what the framework already provides, such as custom HTML tables, DOM manipulation, or polling loops."
 ---
 
 # Shiny for Python
