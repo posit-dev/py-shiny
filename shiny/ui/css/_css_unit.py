@@ -65,7 +65,7 @@ def as_css_unit(value: None | CssUnit) -> None | str:
         # Explicit check for 0 because floats may format to have many decimals.
         if value == 0:
             return "0"
-        return "{:f}px".format(value)
+        return f"{value:f}px"
     else:
         return value
 
