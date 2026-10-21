@@ -1037,8 +1037,8 @@ class AppSession(Session):
         # query information about the request, like headers, cookies, etc.
         self.http_conn: HTTPConnection = conn.get_http_conn()
 
-        self.input: Inputs = Inputs(dict())
-        self.output: Outputs = Outputs(self, self.ns, outputs=dict())
+        self.input: Inputs = Inputs({})
+        self.output: Outputs = Outputs(self, self.ns, outputs={})
         self.clientdata: ClientData = ClientData(self)
 
         self.bookmark: Bookmark = BookmarkApp(self)

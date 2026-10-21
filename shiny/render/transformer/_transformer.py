@@ -259,8 +259,8 @@ class OutputRenderer(
         self._default_ui = default_ui
         self._default_ui_passthrough_args = default_ui_passthrough_args
 
-        self._default_ui_args: tuple[object, ...] = tuple()
-        self._default_ui_kwargs: dict[str, object] = dict()
+        self._default_ui_args: tuple[object, ...] = ()
+        self._default_ui_kwargs: dict[str, object] = {}
 
         # Register the value function with the parent Renderer class
         self(value_fn)

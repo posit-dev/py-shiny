@@ -24,7 +24,7 @@ class RecallContextManager(Generic[R]):
     ):
         self.fn = fn
         if args is None:
-            args = tuple()
+            args = ()
         if kwargs is None:
             kwargs = {}
         self.args: list[object] = list(args)

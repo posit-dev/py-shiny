@@ -93,7 +93,7 @@ class InjectAutoreloadMiddleware:
                 "ascii"
             )
             if ws_url
-            else bytes()
+            else b""
         )
 
     async def __call__(
