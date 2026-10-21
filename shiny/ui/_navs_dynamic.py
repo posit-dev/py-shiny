@@ -1,12 +1,6 @@
 __all__ = ("insert_nav_panel", "remove_nav_panel", "update_nav_panel")
 
-import sys
-from typing import Optional, Union
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from typing import Literal, Optional, Union
 
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id
