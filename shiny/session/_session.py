@@ -2703,9 +2703,7 @@ class Inputs:
         prefix = str(self._ns) + "-"
         clientdata_prefix = f".clientdata_output_{self._ns}-"
         keys_to_remove = [
-            k
-            for k in self._map
-            if k.startswith(prefix) or k.startswith(clientdata_prefix)
+            k for k in self._map if k.startswith((prefix, clientdata_prefix))
         ]
         for key in keys_to_remove:
             value_obj = self._map[key]
