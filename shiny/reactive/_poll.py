@@ -102,13 +102,10 @@ def poll(
     """
 
     with otel.suppress():
-        with reactive.isolate():
-            # An async `poll_func` can't be awaited here, so the effect below reads its
-            # first value instead.
-            last_value: reactive.Value[Any] = reactive.Value(
-                _NO_VALUE if _utils.is_async_callable(poll_func) else poll_func()
-            )
-            last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
+        # The first value is read by the effect below; calling `poll_func` here would also
+        # run it outside the polling loop, and an async one can't be awaited.
+        last_value: reactive.Value[Any] = reactive.Value(_NO_VALUE)
+        last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
 
         @reactive.effect(priority=priority, session=session)
         async def _():
