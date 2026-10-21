@@ -187,10 +187,7 @@ def as_col_spec(
 def validate_col_width(
     x: Iterable[int] | int, n_kids: int, break_name: Breakpoint
 ) -> Iterable[int]:
-    if isinstance(x, int):
-        widths = [x]
-    else:
-        widths = list(x)
+    widths = [x] if isinstance(x, int) else list(x)
 
     positive_widths: list[int] = []
     for w in widths:

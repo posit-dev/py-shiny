@@ -395,10 +395,7 @@ class data_frame(
             data.
         """
 
-        if selected:
-            rows = self.cell_selection()["rows"]
-        else:
-            rows = self.data_view_rows()
+        rows = self.cell_selection()["rows"] if selected else self.data_view_rows()
 
         nw_data = subset_frame(self._nw_data_patched(), rows=rows)
 

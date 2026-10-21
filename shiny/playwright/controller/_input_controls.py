@@ -539,10 +539,7 @@ class _RadioButtonCheckboxGroupBase(
         timeout
             The timeout for the expectation. Defaults to `None`.
         """
-        if len(value) == 1:
-            labels_val = value[0]
-        else:
-            labels_val = value
+        labels_val = value[0] if len(value) == 1 else value
         playwright_expect(self.loc_choice_labels).to_have_text(
             labels_val,
             timeout=timeout,

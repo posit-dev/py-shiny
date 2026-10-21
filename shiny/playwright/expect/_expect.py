@@ -229,8 +229,5 @@ def _xpath_match_str(key: str, value: PatternOrStr) -> str:
 
 
 def _style_match_str(key: str, value: PatternOrStr) -> PatternStr:
-    if isinstance(value, str):
-        value_str = re.escape(value)
-    else:
-        value_str = value.pattern
+    value_str = re.escape(value) if isinstance(value, str) else value.pattern
     return re.compile(rf"(^|;)\s*{re.escape(key)}\s*:\s*{value_str}\s*(;|$)")

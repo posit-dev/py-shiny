@@ -35,10 +35,7 @@ def is_express_app(app: str, app_dir: str | None) -> bool:
     if not app.lower().endswith(".py"):
         return False
 
-    if app_dir is not None:
-        app_path = Path(app_dir) / app
-    else:
-        app_path = Path(app)
+    app_path = Path(app_dir) / app if app_dir is not None else Path(app)
 
     if not app_path.exists():
         return False

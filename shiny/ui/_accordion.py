@@ -452,11 +452,7 @@ def update_accordion(
     * :func:`~shiny.ui.remove_accordion_panel`
     * :func:`~shiny.ui.update_accordion_panel`
     """
-    show_val: bool | str | ListOrTuple[str]
-    if show is False:
-        show_val = []
-    else:
-        show_val = show
+    show_val: bool | str | ListOrTuple[str] = [] if show is False else show
     _accordion_panel_action(id=id, method="set", values=show_val, session=session)
 
 

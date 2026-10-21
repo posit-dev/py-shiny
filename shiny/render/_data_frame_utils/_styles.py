@@ -184,10 +184,7 @@ def as_browser_style_infos(
     into_data: IntoDataFrameT,
 ) -> list[BrowserStyleInfo]:
 
-    if callable(infos):
-        style_infos = infos(into_data)
-    else:
-        style_infos = infos
+    style_infos = infos(into_data) if callable(infos) else infos
 
     if not style_infos:
         return []
