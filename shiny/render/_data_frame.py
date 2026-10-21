@@ -1224,7 +1224,7 @@ def assert_column_filters(filters: ListOrTuple[ColumnFilter], ncol: int) -> None
             assert len(column_filter["value"]) == 2
             if column_filter["value"][0] is None and column_filter["value"][1] is None:
                 raise TypeError(
-                    "Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
+                    f"Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
                 )
             assert isinstance(column_filter["value"][0], (int, float, type(None)))
             assert isinstance(column_filter["value"][1], (int, float, type(None)))
