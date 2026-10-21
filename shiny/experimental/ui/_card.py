@@ -132,7 +132,7 @@ def card_image(
             width=as_css_unit(width),
         ),
     }
-    border_radius_attrs: TagAttrs = {"class": card_class_map.get(border_radius, None)}
+    border_radius_attrs: TagAttrs = {"class": card_class_map.get(border_radius)}
 
     image = tags.img(
         img_attrs,

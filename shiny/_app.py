@@ -403,9 +403,9 @@ class App:
                 [value.encode("latin-1") for value in header]
                 for header in scope["headers"]
             ]
-        if "query_string" in scope and scope["query_string"]:
+        if scope.get("query_string"):
             scope["query_string"] = scope["query_string"].encode("latin-1")
-        if "raw_path" in scope and scope["raw_path"]:
+        if scope.get("raw_path"):
             scope["raw_path"] = scope["raw_path"].encode("latin-1")
 
         async def rcv() -> Message:
