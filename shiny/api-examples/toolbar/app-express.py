@@ -195,18 +195,15 @@ with ui.card():
                     if not msg_list:
                         return ui.p("No messages sent yet.", style="color: #888;")
 
-                    items = []
-                    for _, msg in enumerate(reversed(msg_list), 1):
-                        items.append(
-                            ui.div(
-                                ui.strong(
-                                    f"To: {msg['to']} ({msg['priority']} priority)"
-                                ),
-                                ui.br(),
-                                ui.span(msg["text"]),
-                                style="padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; display: block;",
-                            )
+                    items = [
+                        ui.div(
+                            ui.strong(f"To: {msg['to']} ({msg['priority']} priority)"),
+                            ui.br(),
+                            ui.span(msg["text"]),
+                            style="padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; display: block;",
                         )
+                        for msg in reversed(msg_list)
+                    ]
                     return ui.div(*items)
 
 
