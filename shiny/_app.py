@@ -647,10 +647,7 @@ def is_uifunc(
         | PageHtmlDocument
     ),
 ) -> bool:
-    if isinstance(x, (Path, Tag, TagList)) or not callable(x):
-        return False
-    else:
-        return True
+    return callable(x) and not isinstance(x, (Path, Tag, TagList))
 
 
 def html_dep_name(dep: HTMLDependency) -> str:

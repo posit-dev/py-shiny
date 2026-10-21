@@ -13,11 +13,7 @@ def is_existing_module(name: str) -> bool:
     In either case the new module would probably cause a name conflict.
     """
     try:
-        spec = util.find_spec(name)
-        if spec is not None:
-            return True
-        else:
-            return False
+        return util.find_spec(name) is not None
     except ImportError:
         return False
 

@@ -301,10 +301,7 @@ def _input_select_impl(
 
 def _resolve_remove_button(remove_button: Optional[bool], multiple: bool) -> bool:
     if remove_button is None:
-        if multiple:
-            return True
-        else:
-            return False
+        return multiple
     return remove_button
 
 
