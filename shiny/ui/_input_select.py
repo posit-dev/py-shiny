@@ -343,9 +343,8 @@ def _contains_html(x: _SelectChoices) -> bool:
             for vv in v.values():
                 if not isinstance(vv, str):
                     return True
-        else:
-            if not isinstance(v, str):
-                return True
+        elif not isinstance(v, str):
+            return True
     return False
 
 
