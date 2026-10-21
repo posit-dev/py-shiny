@@ -120,8 +120,7 @@ class Dependents:
         self._dependents[ctx.id] = ctx
 
         def on_invalidate_cb() -> None:
-            if ctx.id in self._dependents:
-                del self._dependents[ctx.id]
+            self._dependents.pop(ctx.id, None)
 
         ctx.on_invalidate(on_invalidate_cb)
 

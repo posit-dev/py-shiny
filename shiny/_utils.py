@@ -548,8 +548,7 @@ class Callbacks:
         self._callbacks[id] = (fn, once)
 
         def _():
-            if id in self._callbacks:
-                del self._callbacks[id]
+            self._callbacks.pop(id, None)
 
         return _
 
@@ -563,8 +562,7 @@ class Callbacks:
                 fn(*args, **kwargs)
             finally:
                 if once:
-                    if id in self._callbacks:
-                        del self._callbacks[id]
+                    self._callbacks.pop(id, None)
 
     def count(self) -> int:
         return len(self._callbacks)
@@ -610,8 +608,7 @@ class AsyncCallbacks:
         self._callbacks[id] = _AsyncCallback(fn, once, first)
 
         def cancel_callback():
-            if id in self._callbacks:
-                del self._callbacks[id]
+            self._callbacks.pop(id, None)
 
         return cancel_callback
 
@@ -644,8 +641,7 @@ class AsyncCallbacks:
                     raise
             finally:
                 if cb.once:
-                    if id in self._callbacks:
-                        del self._callbacks[id]
+                    self._callbacks.pop(id, None)
 
     def count(self) -> int:
         return len(self._callbacks)

@@ -204,8 +204,7 @@ class OutBoundMessageQueues:
     def set_value(self, id: str, value: Any) -> None:
         self.values[id] = value
         # remove from self.errors
-        if id in self.errors:
-            del self.errors[id]
+        self.errors.pop(id, None)
         if self._record_test_values:
             self.test_values[id] = value
             self.test_errors.pop(id, None)
@@ -231,8 +230,7 @@ class OutBoundMessageQueues:
     def set_error(self, id: str, error: Any, traceback_text: str = "") -> None:
         self.errors[id] = error
         # remove from self.values
-        if id in self.values:
-            del self.values[id]
+        self.values.pop(id, None)
         if self._record_test_values:
             self.test_errors[id] = error
             self.test_tracebacks[id] = traceback_text
@@ -2115,8 +2113,7 @@ class AppSession(Session):
             _handler_session = self
 
         if handler is None:
-            if name in self._message_handlers:
-                del self._message_handlers[name]
+            self._message_handlers.pop(name, None)
         else:
             assert callable(handler)
             self._message_handlers[name] = (wrap_async(handler), _handler_session)
