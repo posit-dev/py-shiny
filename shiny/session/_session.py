@@ -1873,23 +1873,58 @@ class AppSession(Session):
                 finally:
                     self._running_flushed_callbacks = False
 
-        if self._output_flush_tail:
-            # The `on_flushed` callbacks queued something (e.g. a `ui.update_*()`,
-            # which registers an `on_flush` callback). Send it now, without running
-            # the `on_flushed` callbacks again.
+        # The `on_flushed` callbacks may have queued something (e.g. a
+        # `ui.update_*()`, which registers an `on_flush` callback) or registered
+        # further `on_flushed` callbacks. Send the former now and run only the
+        # latter, without running the earlier `on_flushed` callbacks again: a
+        # callback registered with `once=False` would otherwise loop forever.
+        # One pass, not a loop, so a callback that re-registers itself runs once
+        # more here, and then with the next output flush (see
+        # `_run_flush_callbacks()`).
+        if self._output_flush_tail or self._flushed_callbacks.has_new():
             self._output_flush_tail = False
+            if not await self._send_tail():
+                return
             with session_context(self):
-                await self._run_flush_callbacks()
-            if self._busy_count == 0:
-                await self._send_queued_outputs()
+                self._running_flushed_callbacks = True
+                try:
+                    await self._flushed_callbacks.invoke_new()
+                finally:
+                    self._running_flushed_callbacks = False
+            if self._output_flush_tail:
+                # Those callbacks queued something in turn. Send it; anything they
+                # registered runs with the next output flush.
+                self._output_flush_tail = False
+                if not await self._send_tail():
+                    return
 
         # This cycle's outputs are out; start the next one.
         self._start_cycle()
+
+    async def _send_tail(self) -> bool:
+        """
+        Run the `on_flush` callbacks and send what is queued, after the `on_flushed`
+        callbacks. Returns False if an effect started meanwhile: its cycle's idle
+        transition sends everything still queued, as in `_output_flush()`.
+        """
+        with session_context(self):
+            await self._run_flush_callbacks()
+        if self._busy_count > 0:
+            return False
+        await self._send_queued_outputs()
+        return True
 
     async def _run_flush_callbacks(self) -> None:
         self._running_flush_callbacks = True
         try:
             await self._flush_callbacks.invoke()
+            # One more pass for callbacks registered meanwhile (by a callback, or
+            # by a task that ran while an async callback awaited), so they go out
+            # with this message. Just one: a callback that re-registers itself
+            # would otherwise loop here. Anything registered during that pass runs
+            # with the next output flush.
+            if self._flush_callbacks.has_new():
+                await self._flush_callbacks.invoke_new()
         finally:
             self._running_flush_callbacks = False
 
