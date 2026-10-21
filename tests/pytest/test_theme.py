@@ -279,9 +279,9 @@ defaults:
         assert theme.preset == preset
 
         # Check that the brand Sass layer is included
-        assert any(["brand-choose" in f for f in theme._functions])
-        assert any(["brand: initial" in d for d in theme._defaults])
-        assert any(["brand: brand rules" in r for r in theme._rules])
+        assert any("brand-choose" in f for f in theme._functions)
+        assert any("brand: initial" in d for d in theme._defaults)
+        assert any("brand: brand rules" in r for r in theme._rules)
 
         # Check that the CSS compiles without error
         css = theme.to_css()
