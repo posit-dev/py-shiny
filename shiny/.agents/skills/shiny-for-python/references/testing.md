@@ -147,11 +147,6 @@ pytest test_app.py --headed                    # watch the browser
 pytest test_app.py --tracing retain-on-failure # then: playwright show-trace <trace.zip>
 ```
 
-## Generate a test with AI
-
-`shiny add test --app app.py` analyzes an app and writes a test file for it
-(requires `ANTHROPIC_API_KEY`, or `OPENAI_API_KEY` with `--provider openai`).
-
 ## Common mistakes
 
 - Test times out with a blank page → you forgot `page.goto(local_app.url)`.

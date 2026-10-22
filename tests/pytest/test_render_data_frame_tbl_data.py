@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from typing import Any, Union, cast
 
 import htmltools
@@ -17,7 +18,10 @@ import pytest
 
 from shiny._namespaces import Root
 from shiny.module import ResolvedId
-from shiny.render._data_frame_utils._html import maybe_as_cell_html
+from shiny.render._data_frame_utils._html import (
+    maybe_as_cell_html,
+    ui_must_be_processed,
+)
 from shiny.render._data_frame_utils._tbl_data import (
     apply_frame_patches,
     as_col_indexes,
@@ -266,12 +270,42 @@ def test_serialize_dtype(
     res_type: str | tuple[str, list[str]],
 ):
     nw_ser = series_to_narwhals(ser)
-    dtype_info = serialize_dtype(nw_ser)
+    dtype_info = serialize_dtype(nw_ser.dtype, get_col=lambda: nw_ser)
     ex_type = res_type if isinstance(res_type, str) else res_type[0]
     assert dtype_info["type"] == ex_type
     if dtype_info["type"] == "categorical":
         assert isinstance(res_type, tuple)
         assert dtype_info["categories"] == res_type[1]
+
+
+@pytest.mark.parametrize(
+    "dtype",
+    [nw.Int64(), nw.String(), nw.Boolean(), nw.Datetime(), nw.List(nw.Int64())],
+)
+def test_serialize_dtype_does_not_read_column_when_dtype_suffices(
+    dtype: nw.dtypes.DType,
+):
+    def get_col() -> nw.Series:
+        raise AssertionError("The column should not be read for this dtype")
+
+    serialize_dtype(dtype, get_col=get_col)
+
+
+@pytest.mark.parametrize(
+    "val",
+    [
+        datetime(2000, 1, 1),
+        date(2000, 1, 1),
+        time(1),
+        timedelta(days=1),
+        pd.Timestamp("2000-01-01", tz="UTC"),
+        pd.NaT,
+        pd.Timedelta(1, "D"),
+    ],
+)
+def test_ui_must_be_processed_temporal_values(val: object):
+    # Temporal cells skip `is_tag_node()`, as they are never UI
+    assert ui_must_be_processed(val) is False
 
 
 def test_serialize_frame(df_f: IntoDataFrame):
@@ -372,6 +406,62 @@ def test_serialize_frame_numeric_column_names():
     assert res["data"] == [["a", 1], ["b", 2], ["c", 3]]
 
 
+@pytest.mark.parametrize(
+    "into_data",
+    [
+        pd.DataFrame({"d": [Decimal("1.50"), Decimal("2.25")]}),
+        pl.DataFrame({"d": [Decimal("1.50"), Decimal("2.25")]}),
+        pa.table({"d": pa.array([Decimal("1.50"), Decimal("2.25")])}),
+    ],
+)
+def test_serialize_frame_non_json_values_are_str(into_data: IntoDataFrame):
+    with session_context(test_session):
+        res = serialize_frame(into_data)
+
+    assert res["data"] == [["1.50"], ["2.25"]]
+
+
+def test_serialize_frame_pandas_nullable_dtypes_are_json_scalars():
+    # `itertuples()` yields numpy scalars for these dtypes, which orjson can't encode,
+    # so they used to be sent as strings ("1", "True")
+    df = pd.DataFrame(
+        {
+            "int": pd.array([1, None], dtype="Int64"),
+            "float": pd.array([1.5, None], dtype="Float64"),
+            "bool": pd.array([True, None], dtype="boolean"),
+        }
+    )
+
+    with session_context(test_session):
+        res = serialize_frame(df)
+
+    assert [hint["type"] for hint in res["typeHints"]] == [
+        "numeric",
+        "numeric",
+        "boolean",
+    ]
+    assert res["data"] == [[1, 1.5, True], ["<NA>", "<NA>", "<NA>"]]
+
+
+def test_serialize_frame_ui_after_non_ui_value_of_another_type():
+    # A UI value still renders after other types were recorded as non-UI
+    df = pd.DataFrame(
+        {"x": [Decimal("1"), pd.NA, HTML("<b>x</b>"), Decimal("2"), HTML("<i>y</i>")]},
+        dtype=object,
+    )
+
+    with session_context(test_session):
+        res = serialize_frame(df)
+
+    assert res["data"] == [
+        ["1"],
+        ["<NA>"],
+        [{"isShinyHtml": True, "obj": {"deps": [], "html": "<b>x</b>"}}],
+        ["2"],
+        [{"isShinyHtml": True, "obj": {"deps": [], "html": "<i>y</i>"}}],
+    ]
+
+
 def test_apply_frame_patches_numeric_column_names():
     # Regression test: patching a cell of a frame with numeric column names previously
     # raised in apply_frame_patches because `nw_data[column_name]` was interpreted as
@@ -390,7 +480,7 @@ def test_apply_frame_patches_numeric_column_names():
 
     assert res.columns == [0, 1]
     assert res.rows(named=False) == [("A", "x"), ("b", "y"), ("c", "Z")]
-    # The original frame is cloned, not patched in place
+    # The original frame is not patched in place
     assert df.rows(named=False) == [("a", "x"), ("b", "y"), ("c", "z")]
 
 
@@ -409,6 +499,23 @@ def test_apply_frame_patches_empty_column_name(constructor: Any):
 
     assert res.columns == ["", "num"]
     assert res.rows(named=False) == [("a", 10), ("B", 2)]
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
+def test_apply_frame_patches_does_not_modify_original(constructor: Any):
+    # `apply_frame_patches()` does not copy the frame: it relies on narwhals'
+    # `scatter()` and `with_columns()` returning new objects
+    df = as_data_frame(constructor({"num": [1, 2], "chr": ["a", "b"]}))
+
+    patches: list[CellPatch] = [
+        {"row_index": 0, "column_index": 0, "value": 10},
+        {"row_index": 1, "column_index": 1, "value": "B"},
+    ]
+
+    res = apply_frame_patches(df, patches)
+
+    assert res.rows(named=False) == [(10, "a"), (2, "B")]
+    assert df.rows(named=False) == [(1, "a"), (2, "b")]
 
 
 def test_apply_frame_patches_non_string_values():
@@ -502,6 +609,9 @@ def test_as_col_indexes_unknown_name_raises():
 
     with pytest.raises(ValueError, match="Column name 'nope' not found"):
         as_col_indexes(df, ["nope"])
+    # An unhashable value gets the same error, not a `TypeError` from the lookup
+    with pytest.raises(ValueError, match=r"Column name \['chr'\] not found"):
+        as_col_indexes(df, [["chr"]])  # pyright: ignore[reportArgumentType]
 
 
 def test_as_col_indexes_int_is_always_a_position():

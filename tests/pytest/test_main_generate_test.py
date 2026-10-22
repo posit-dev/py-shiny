@@ -25,6 +25,17 @@ def test_add_group_lists_test_command() -> None:
 
     assert result.exit_code == 0
     assert "test" in result.output
+    assert "deprecated" in result.output.lower()
+
+
+def test_add_test_warns_about_deprecation(
+    captured_generate: dict[str, Any],
+) -> None:
+    result = CliRunner().invoke(main, ["add", "test"])
+
+    assert result.exit_code == 0
+    assert "deprecated" in result.output.lower()
+    assert "shiny-for-python" in result.output
 
 
 def test_add_test_forwards_options(captured_generate: dict[str, Any]) -> None:
