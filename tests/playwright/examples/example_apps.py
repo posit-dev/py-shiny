@@ -220,7 +220,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
     def load_app() -> None:
         page.goto(sa.url, wait_until="domcontentloaded")
 
-        if short_app_path in app_hard_wait.keys():
+        if short_app_path in app_hard_wait:
             # Apps are constantly invalidating and will not stabilize
             # Instead, wait for specific amount of time
             page.wait_for_timeout(app_hard_wait[short_app_path])
@@ -251,7 +251,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
         error_lines = [
             line
             for line in error_lines
-            if not any([error_txt in line for error_txt in app_allow_external_errors])
+            if not any(error_txt in line for error_txt in app_allow_external_errors)
         ]
 
         # Remove any app specific errors that are allowed
@@ -279,7 +279,7 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 line
                 for line in error_lines
                 if len(line.strip()) > 0
-                and not any([error_txt in line for error_txt in app_allowable_errors])
+                and not any(error_txt in line for error_txt in app_allowable_errors)
             ]
             if len(error_lines) > 0:
                 print("\nshort_app_path: " + short_app_path)
@@ -309,10 +309,8 @@ def validate_example(page: Page, ex_app_path: str) -> None:
                 line
                 for line in console_errors
                 if not any(
-                    [
-                        error_txt in line
-                        for error_txt in app_allow_js_errors[short_app_path]
-                    ]
+                    error_txt in line
+                    for error_txt in app_allow_js_errors[short_app_path]
                 )
             ]
         assert len(console_errors) == 0, (

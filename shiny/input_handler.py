@@ -212,16 +212,15 @@ def _(value: Any, name: ResolvedId, session: Session) -> Any:
     # `{name: (n1, n2, n3), size: (s1, s2, s3), type: (t1, t2, t3), datapath: (d1, d2, d3)}`
     # to:
     # `[{name: n1, size: s1, type: t1, datapath: d1}, ...]`
-    value_list: list[dict[str, str | int | None]] = []
-    for i in range(len(value_obj["name"])):
-        value_list.append(
-            {
-                "name": value_obj["name"][i],
-                "size": value_obj["size"][i],
-                "type": value_obj["type"][i],
-                "datapath": value_obj["datapath"][i],
-            }
-        )
+    value_list: list[dict[str, str | int | None]] = [
+        {
+            "name": value_obj["name"][i],
+            "size": value_obj["size"][i],
+            "type": value_obj["type"][i],
+            "datapath": value_obj["datapath"][i],
+        }
+        for i in range(len(value_obj["name"]))
+    ]
 
     # Validate the input value
     for value_item in value_list:

@@ -196,7 +196,7 @@ def emit_otel_log(
             logger.emit(
                 body=body,
                 severity_text=severity_text,
-                attributes=resolved_attrs if resolved_attrs else None,
+                attributes=resolved_attrs or None,
             )
         except TypeError:
             # opentelemetry-api < 1.38.0: `Logger.emit()` only accepts a
@@ -205,7 +205,7 @@ def emit_otel_log(
                 logger,
                 body=body,
                 severity_text=severity_text,
-                attributes=resolved_attrs if resolved_attrs else None,
+                attributes=resolved_attrs or None,
             )
     except Exception:
         # Silently fail if OTel logging is not configured or fails

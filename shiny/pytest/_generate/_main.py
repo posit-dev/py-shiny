@@ -171,7 +171,7 @@ class ShinyTestGenerator:
         resolved_model = self._resolve_model(model)
 
         if self.provider == "anthropic":
-            if resolved_model.startswith("gpt-") or resolved_model.startswith("o1-"):
+            if resolved_model.startswith(("gpt-", "o1-")):
                 raise ValueError(
                     f"Model '{model}' is an OpenAI model but provider is set to 'anthropic'. "
                     f"Either use an Anthropic model or switch provider to 'openai'."
@@ -553,14 +553,14 @@ class ShinyTestGenerator:
         if self.provider == "anthropic":
             return [
                 model
-                for model in Config.MODEL_ALIASES.keys()
-                if not (model.startswith("gpt-") or model.startswith("o1-"))
+                for model in Config.MODEL_ALIASES
+                if not model.startswith(("gpt-", "o1-"))
             ]
         elif self.provider == "openai":
             return [
                 model
-                for model in Config.MODEL_ALIASES.keys()
-                if (model.startswith("gpt-") or model.startswith("o1-"))
+                for model in Config.MODEL_ALIASES
+                if model.startswith(("gpt-", "o1-"))
             ]
         else:
             return []

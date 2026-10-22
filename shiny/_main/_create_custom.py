@@ -13,11 +13,7 @@ def is_existing_module(name: str) -> bool:
     In either case the new module would probably cause a name conflict.
     """
     try:
-        spec = util.find_spec(name)
-        if spec is not None:
-            return True
-        else:
-            return False
+        return util.find_spec(name) is not None
     except ImportError:
         return False
 
@@ -61,12 +57,7 @@ class ComponentNameValidator(Validator):
 
         # Check for quotations
 
-        if (
-            name.startswith('"')
-            or name.endswith('"')
-            or name.startswith("'")
-            or name.endswith("'")
-        ):
+        if name.startswith(('"', "'")) or name.endswith(('"', "'")):
             raise ValidationError(
                 message="The name should be unquoted.",
                 cursor_position=len(name),

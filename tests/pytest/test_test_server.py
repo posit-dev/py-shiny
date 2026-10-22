@@ -1124,9 +1124,7 @@ def test_test_server_client_data_param_overrides_defaults():
     ) as ts:
         assert ts.get_output("url") == "/dashboard"
         # `output_*` applies to every output, and unset keys keep their default.
-        assert ts.get_output("size") == "300x{}".format(
-            DEFAULT_CLIENT_DATA["output_height"]
-        )
+        assert ts.get_output("size") == f"300x{DEFAULT_CLIENT_DATA['output_height']}"
 
 
 def test_test_server_reaches_a_module_through_its_namespaced_ids():

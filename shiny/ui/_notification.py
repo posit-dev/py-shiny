@@ -74,7 +74,7 @@ def notification_show(
     ui_ = session._process_ui(ui)
     action_ = session._process_ui(action)
 
-    id = id if id else rand_hex(8)
+    id = id or rand_hex(8)
 
     payload: dict[str, Any] = {
         "html": ui_["html"],

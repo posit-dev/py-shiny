@@ -591,7 +591,7 @@ class AsyncTestServerSession:
                 for key, value in client_data.items()
                 if not key.startswith("output_")
             }
-            for out_name in self._session.output._outputs.keys():
+            for out_name in self._session.output._outputs:
                 for suffix, value in per_output.items():
                     unhide_data[f".clientdata_output_{out_name}_{suffix}"] = value
 
@@ -684,7 +684,7 @@ class AsyncTestServerSession:
         # what distinguishes "blank now" from "never ran".
         raw_outputs: Dict[str, Any] = snapshot.get("output", {})
         self._current_outputs = {}
-        for name in self._session.output._outputs.keys():
+        for name in self._session.output._outputs:
             error = _snapshot_error(raw_outputs.get(name))
             if name in queues.test_silent:
                 self._current_outputs[name] = TestServerValue(name, "output", "silent")

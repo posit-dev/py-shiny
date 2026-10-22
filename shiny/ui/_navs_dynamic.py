@@ -1,12 +1,6 @@
 __all__ = ("insert_nav_panel", "remove_nav_panel", "update_nav_panel")
 
-import sys
-from typing import Optional, Union
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from typing import Literal, Optional, Union
 
 from .._docstring import add_example, no_example
 from .._namespaces import resolve_id
@@ -62,10 +56,7 @@ def insert_nav_panel(
     # N.B. this is only sensible if the target is a menu, but we don't know that,
     # which could cause confusion of we decide to support top-level strings at some
     # in the future.
-    if isinstance(nav_panel, str):
-        nav = menu_string_as_nav(nav_panel)
-    else:
-        nav = nav_panel
+    nav = menu_string_as_nav(nav_panel) if isinstance(nav_panel, str) else nav_panel
 
     # N.B. shiny.js' is smart enough to know how to add active classes and href/id attrs
     li_tag, div_tag = nav.resolve(

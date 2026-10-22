@@ -43,8 +43,7 @@ def rand_hex(bytes: int) -> str:
     Creates a random hexadecimal string of size `bytes`. The length in
     characters will be bytes*2.
     """
-    format_str = "{{:0{}x}}".format(bytes * 2)
-    return format_str.format(secrets.randbits(bytes * 8))
+    return f"{secrets.randbits(bytes * 8):0{bytes * 2}x}"
 
 
 def is_test_mode() -> bool:
@@ -218,7 +217,7 @@ def random_port(
         10080,
     ]
 
-    unusable = set([x for x in unsafe_ports if x >= min and x <= max])
+    unusable = {x for x in unsafe_ports if min <= x <= max}
     while n > 0:
         if (max - min + 1) <= len(unusable):
             break
@@ -548,8 +547,7 @@ class Callbacks:
         self._callbacks[id] = (fn, once)
 
         def _():
-            if id in self._callbacks:
-                del self._callbacks[id]
+            self._callbacks.pop(id, None)
 
         return _
 
@@ -563,8 +561,7 @@ class Callbacks:
                 fn(*args, **kwargs)
             finally:
                 if once:
-                    if id in self._callbacks:
-                        del self._callbacks[id]
+                    self._callbacks.pop(id, None)
 
     def count(self) -> int:
         return len(self._callbacks)
@@ -610,8 +607,7 @@ class AsyncCallbacks:
         self._callbacks[id] = _AsyncCallback(fn, once, first)
 
         def cancel_callback():
-            if id in self._callbacks:
-                del self._callbacks[id]
+            self._callbacks.pop(id, None)
 
         return cancel_callback
 
@@ -644,8 +640,7 @@ class AsyncCallbacks:
                     raise
             finally:
                 if cb.once:
-                    if id in self._callbacks:
-                        del self._callbacks[id]
+                    self._callbacks.pop(id, None)
 
     def count(self) -> int:
         return len(self._callbacks)

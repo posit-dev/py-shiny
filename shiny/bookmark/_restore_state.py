@@ -147,8 +147,7 @@ class RestoreContext:
         if app.bookmark_store == "disable":
             return res_ctx
 
-        if query_string.startswith("?"):
-            query_string = query_string[1:]
+        query_string = query_string.removeprefix("?")
 
         # IMPORTANT: once bookmarking is enabled, every request below yields an
         # *active* restore context -- including an ordinary page load with no
@@ -289,8 +288,7 @@ class RestoreContext:
     async def _decode_state_qs(self, query_string: str) -> None:
         """Given a query string with values encoded in it, restore saved state from those values."""
         # Remove leading '?'
-        if query_string.startswith("?"):
-            query_string = query_string[1:]
+        query_string = query_string.removeprefix("?")
 
         qs_pairs = parse_qsl(query_string, keep_blank_values=True)
 

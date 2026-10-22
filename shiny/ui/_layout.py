@@ -171,11 +171,7 @@ def layout_column_wrap(
 
 
 def is_probably_a_css_unit(x: TagChild) -> bool:
-    if isinstance(x, str):
-        return False
-    if isinstance_cssunit(x):
-        return True
-    return False
+    return not isinstance(x, str) and isinstance_cssunit(x)
 
 
 def wrap_all_in_gap_spaced_container(

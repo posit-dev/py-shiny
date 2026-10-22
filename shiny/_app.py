@@ -222,7 +222,7 @@ class App:
         else:
             static_assets_map = {"/": Path(static_assets)}
 
-        for _, static_asset_path in static_assets_map.items():
+        for static_asset_path in static_assets_map.values():
             if not static_asset_path.is_absolute():
                 raise ValueError(
                     f'static_assets must be an absolute path: "{static_asset_path}".'
@@ -403,9 +403,9 @@ class App:
                 [value.encode("latin-1") for value in header]
                 for header in scope["headers"]
             ]
-        if "query_string" in scope and scope["query_string"]:
+        if scope.get("query_string"):
             scope["query_string"] = scope["query_string"].encode("latin-1")
-        if "raw_path" in scope and scope["raw_path"]:
+        if scope.get("raw_path"):
             scope["raw_path"] = scope["raw_path"].encode("latin-1")
 
         async def rcv() -> Message:
@@ -647,15 +647,7 @@ def is_uifunc(
         | PageHtmlDocument
     ),
 ) -> bool:
-    if (
-        isinstance(x, Path)
-        or isinstance(x, Tag)
-        or isinstance(x, TagList)
-        or not callable(x)
-    ):
-        return False
-    else:
-        return True
+    return callable(x) and not isinstance(x, (Path, Tag, TagList))
 
 
 def html_dep_name(dep: HTMLDependency) -> str:

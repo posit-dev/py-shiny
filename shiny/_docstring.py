@@ -192,9 +192,7 @@ def add_example(
             f = os.path.basename(rel_f)
             is_support_file = (
                 os.path.isfile(abs_f)
-                and f != app_file_name
-                and f != "app.py"
-                and f != ".DS_Store"
+                and f not in (app_file_name, "app.py", ".DS_Store")
                 and "venv" not in path_parts
                 and ".venv" not in path_parts
                 and not (f.startswith("app-") and f.endswith(".py"))
@@ -247,9 +245,7 @@ def is_express_app(app_path: str) -> bool:
 
     with open(app_path, encoding="utf-8") as f:
         for line in f:
-            if "from shiny.express" in line:
-                return True
-            elif "import shiny.express" in line:
+            if "from shiny.express" in line or "import shiny.express" in line:
                 return True
     return False
 

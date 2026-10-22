@@ -1200,7 +1200,7 @@ class OutputDataFrame(UiWithContainer):
             )
 
         # For every sorting info...
-        for sort_info, i in zip(sort, range(len(sort))):
+        for i, sort_info in enumerate(sort):
             # TODO-barret-future; assert column does not have `cell-html` class
             shift = i > 0
 

@@ -19,7 +19,7 @@ def get_controller_classes() -> Set[str]:
 
     res: Set[str] = set()
     for x in dir(controller_module):
-        if x.startswith("_") or x.startswith("@"):
+        if x.startswith(("_", "@")):
             continue
         res.add(x)
 

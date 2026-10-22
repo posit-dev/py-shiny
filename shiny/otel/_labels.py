@@ -58,7 +58,7 @@ def create_otel_label(
     'reactive.calc mod1:myValue'
     """
 
-    if name is None or name == "" or name == "_" or name == "<lambda>":
+    if not name or name in ("_", "<lambda>"):
         name = "<anonymous>"
 
     if namespace:

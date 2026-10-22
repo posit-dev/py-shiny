@@ -44,7 +44,7 @@ def format_opt_names(
     opts: ClickOpts | DblClickOpts | HoverOpts | BrushOpts,
     prefix: str,
 ) -> dict[str, str]:
-    new_opts: dict[str, str] = dict()
+    new_opts: dict[str, str] = {}
     for key, value in opts.items():
         new_key = f"data-{prefix}-" + re.sub("([A-Z])", "-\\1", key).lower()
         new_value = str(value)

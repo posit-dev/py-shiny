@@ -465,10 +465,7 @@ def hide_toast(
 
     the_id: str | None
 
-    if isinstance(id, Toast):
-        the_id = id.id
-    else:
-        the_id = id
+    the_id = id.id if isinstance(id, Toast) else id
 
     if the_id is None:
         raise ValueError("Cannot hide toast without an ID")

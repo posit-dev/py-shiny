@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import sys
 
 from playwright.sync_api import Locator
 from playwright.sync_api import expect as playwright_expect
@@ -223,17 +222,12 @@ def _xpath_match_str(key: str, value: PatternOrStr) -> str:
         # `key` is `value`
         return f'@{key}="{value_str}"'
     else:
-        # Disabling type assertion for earlier versions of Python
-        if sys.version_info >= (3, 10):
-            assert_type(value, re.Pattern[str])
+        assert_type(value, re.Pattern[str])
 
         # `key` contains `value`
         return f'matches(@{key}, "{value.pattern}")'
 
 
 def _style_match_str(key: str, value: PatternOrStr) -> PatternStr:
-    if isinstance(value, str):
-        value_str = re.escape(value)
-    else:
-        value_str = value.pattern
+    value_str = re.escape(value) if isinstance(value, str) else value.pattern
     return re.compile(rf"(^|;)\s*{re.escape(key)}\s*:\s*{value_str}\s*(;|$)")

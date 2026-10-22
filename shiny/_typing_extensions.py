@@ -18,16 +18,7 @@ __all__ = (
 
 
 import sys
-
-if sys.version_info >= (3, 9):
-    from typing import Annotated
-else:
-    from typing_extensions import Annotated
-
-if sys.version_info >= (3, 10):
-    from typing import Concatenate, ParamSpec, TypeGuard
-else:
-    from typing_extensions import Concatenate, ParamSpec, TypeGuard
+from typing import Annotated, Concatenate, ParamSpec, TypeGuard
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.

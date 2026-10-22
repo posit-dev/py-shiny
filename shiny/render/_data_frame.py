@@ -395,10 +395,7 @@ class data_frame(
             data.
         """
 
-        if selected:
-            rows = self.cell_selection()["rows"]
-        else:
-            rows = self.data_view_rows()
+        rows = self.cell_selection()["rows"] if selected else self.data_view_rows()
 
         nw_data = subset_frame(self._nw_data_patched(), rows=rows)
 
@@ -1214,7 +1211,7 @@ class data_frame(
 
 
 def assert_column_filters(filters: ListOrTuple[ColumnFilter], ncol: int) -> None:
-    for column_filter, i in zip(filters, range(len(filters))):
+    for i, column_filter in enumerate(filters):
         assert isinstance(column_filter, dict)
         assert isinstance(column_filter["col"], int)
         assert 0 <= column_filter["col"] < ncol
@@ -1224,7 +1221,7 @@ def assert_column_filters(filters: ListOrTuple[ColumnFilter], ncol: int) -> None
             assert len(column_filter["value"]) == 2
             if column_filter["value"][0] is None and column_filter["value"][1] is None:
                 raise TypeError(
-                    "Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
+                    f"Expected `filter[{i}]['value']` to be a `str` or a `list`/`tuple` of type `int` or `None`. Received `None` for both values."
                 )
             assert isinstance(column_filter["value"][0], (int, float, type(None)))
             assert isinstance(column_filter["value"][1], (int, float, type(None)))

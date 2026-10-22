@@ -29,15 +29,14 @@ with ui.card():
             return pd.DataFrame()
 
         # Create a DataFrame with file information
-        file_info = []
-        for file in files:
-            file_info.append(
-                {
-                    "Name": file["name"],
-                    "Size (bytes)": file["size"],
-                    "Type": file["type"],
-                }
-            )
+        file_info = [
+            {
+                "Name": file["name"],
+                "Size (bytes)": file["size"],
+                "Type": file["type"],
+            }
+            for file in files
+        ]
         return pd.DataFrame(file_info)
 
     @render.data_frame

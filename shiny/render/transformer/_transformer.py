@@ -259,8 +259,8 @@ class OutputRenderer(
         self._default_ui = default_ui
         self._default_ui_passthrough_args = default_ui_passthrough_args
 
-        self._default_ui_args: tuple[object, ...] = tuple()
-        self._default_ui_kwargs: dict[str, object] = dict()
+        self._default_ui_args: tuple[object, ...] = ()
+        self._default_ui_kwargs: dict[str, object] = {}
 
         # Register the value function with the parent Renderer class
         self(value_fn)
@@ -420,7 +420,7 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
             "`TransformerMetadata` and `ValueFnAsync` respectively"
         )
 
-    for i, param in zip(range(len(params)), params.values()):
+    for i, param in enumerate(params.values()):
         # # Not a good test as `param.annotation` has type `str` and the type could
         # # have been renamed. We need to do an `isinstance` check but do not have
         # # access to the objects
@@ -428,9 +428,9 @@ def _assert_transformer(transform_fn: TransformFn[IT, P, OT]) -> None:
         #     assert param.annotation == "TransformerMetadata"
         # if i == 1:
         #     assert (param.annotation or "").startswith("RenderFnAsync")
-        if i < 2 and not (
-            param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
-            or param.kind == inspect.Parameter.POSITIONAL_ONLY
+        if i < 2 and param.kind not in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.POSITIONAL_ONLY,
         ):
             raise TypeError(
                 "`transformer=` must have 2 positional parameters which have type "

@@ -242,7 +242,7 @@ def test_is_internal_snapshot_input() -> None:
 async def test_serialize_test_mode_collects_and_skips() -> None:
     from shiny.session._session import Inputs
 
-    inputs = Inputs(dict())
+    inputs = Inputs({})
     inputs["x"] = reactive.Value(5)
     inputs["name"] = reactive.Value("hi")
     inputs[".clientdata_output_x_hidden"] = reactive.Value(True)

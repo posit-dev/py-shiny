@@ -68,7 +68,7 @@ def expect_mod_state(
     # print(str(locals().items()))
     # Must realize the locals before iterating
     for key, value in list(locals().items()):
-        if key == "page" or key == "module_id":
+        if key in ("page", "module_id"):
             continue
         if key.startswith("x_"):
             expect_x_state(page, module_id, key, value)

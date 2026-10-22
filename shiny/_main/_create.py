@@ -805,9 +805,8 @@ def copy_template_files(
             if item.name == "_template.json":
                 continue
             shutil.copy(item, dest_dir / item.name)
-        else:
-            if item.name != "__pycache__":
-                shutil.copytree(item, dest_dir / item.name)
+        elif item.name != "__pycache__":
+            shutil.copytree(item, dest_dir / item.name)
 
     def rename_unlink(file_to_rename: str, file_to_delete: str, dir: Path = dest_dir):
         (dir / file_to_rename).rename(dir / "app.py")

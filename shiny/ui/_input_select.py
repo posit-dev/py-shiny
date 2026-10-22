@@ -301,10 +301,7 @@ def _input_select_impl(
 
 def _resolve_remove_button(remove_button: Optional[bool], multiple: bool) -> bool:
     if remove_button is None:
-        if multiple:
-            return True
-        else:
-            return False
+        return multiple
     return remove_button
 
 
@@ -315,10 +312,7 @@ def _update_options(
     plugins = opts.get("plugins", [])
 
     if remove_button:
-        if multiple:
-            to_add = "remove_button"
-        else:
-            to_add = "clear_button"
+        to_add = "remove_button" if multiple else "clear_button"
 
         if to_add not in plugins:
             plugins.append(to_add)
@@ -346,9 +340,8 @@ def _contains_html(x: _SelectChoices) -> bool:
             for vv in v.values():
                 if not isinstance(vv, str):
                     return True
-        else:
-            if not isinstance(v, str):
-                return True
+        elif not isinstance(v, str):
+            return True
     return False
 
 

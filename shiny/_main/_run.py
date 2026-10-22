@@ -475,7 +475,7 @@ def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
             print(f"Error: {module_path} is not a file\n", file=sys.stderr)
             sys.exit(1)
         dirname, filename = os.path.split(module_path)
-        module = filename[:-3] if filename.endswith(".py") else filename
+        module = filename.removesuffix(".py")
         app_dir = dirname
 
     return f"{module}:{attr}", app_dir

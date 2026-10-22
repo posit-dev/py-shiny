@@ -210,7 +210,7 @@ def expect_locator_values_in_list(
             len(arr), timeout=timeout
         )
 
-        for item, i in zip(arr, range(len(arr))):
+        for i, item in enumerate(arr):
             # Expecting item `{i}` to be `{item}`
             playwright_expect(
                 loc_container_orig.locator(loc_item).nth(i)
@@ -224,7 +224,7 @@ def expect_locator_values_in_list(
         return
 
     # Find all items in set
-    for item, i in zip(arr, range(len(arr))):
+    for i, item in enumerate(arr):
         # Get all elements of type
         has_locator = loc_item
         # Get the `n`th matching element

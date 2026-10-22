@@ -77,13 +77,12 @@ def expressify_unwrap_inplace() -> Callable[[TFunc], TFunc]:
             # When Pyodide is updated to a newer version, this will be not be needed.
             # https://github.com/posit-dev/py-shiny/issues/1042#issuecomment-1901945787
             fcode = _transform_body(cast(types.FunctionType, unwrapped_fn))
+        elif unwrapped_fn.__code__ in code_cache:
+            fcode = code_cache[unwrapped_fn.__code__]
         else:
-            if unwrapped_fn.__code__ in code_cache:
-                fcode = code_cache[unwrapped_fn.__code__]
-            else:
-                # Save for next time
-                fcode = _transform_body(cast(types.FunctionType, unwrapped_fn))
-                code_cache[unwrapped_fn.__code__] = fcode
+            # Save for next time
+            fcode = _transform_body(cast(types.FunctionType, unwrapped_fn))
+            code_cache[unwrapped_fn.__code__] = fcode
 
         unwrapped_fn.__code__ = fcode
         setattr(unwrapped_fn, expressify_attr, True)
@@ -142,13 +141,12 @@ def expressify(
             # When Pyodide is updated to a newer version, this will be not be needed.
             # https://github.com/posit-dev/py-shiny/issues/1042#issuecomment-1901945787
             fcode = _transform_body(cast(types.FunctionType, fn), has_docstring)
+        elif fn.__code__ in code_cache:
+            fcode = code_cache[fn.__code__]
         else:
-            if fn.__code__ in code_cache:
-                fcode = code_cache[fn.__code__]
-            else:
-                # Save for next time
-                fcode = _transform_body(cast(types.FunctionType, fn), has_docstring)
-                code_cache[fn.__code__] = fcode
+            # Save for next time
+            fcode = _transform_body(cast(types.FunctionType, fn), has_docstring)
+            code_cache[fn.__code__] = fcode
 
         # Create a new function from the code object
         new_func = types.FunctionType(

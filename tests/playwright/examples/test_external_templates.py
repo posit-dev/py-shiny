@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 from shutil import copytree
 
@@ -14,10 +13,6 @@ if not Path(here_root / "py-shiny-templates").exists():
     )
 
 
-@pytest.mark.skipif(
-    sys.version_info[:2] == (3, 9),
-    reason="Skipping test for Python 3.9 since scikit-learn pinned version is only supported on Python 3.10+",
-)
 @pytest.mark.only_browser("chromium")
 @pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)
 @pytest.mark.parametrize("ex_app_path", get_apps("py-shiny-templates"))

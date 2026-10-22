@@ -119,7 +119,7 @@ else:
         # Check for illegal paths
         if "/" in path_segment:
             return None, False
-        elif path_segment == ".." or path_segment == ".":
+        elif path_segment in ("..", "."):
             return None, False
 
         if path_segment != "":

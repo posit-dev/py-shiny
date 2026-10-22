@@ -214,7 +214,7 @@ def _():
         input.body(),
         header=header,
         icon=body_icon,
-        type=input.type() if input.type() else None,
+        type=input.type() or None,
         duration_s=input.duration() if input.duration() > 0 else None,
         position=input.position(),
         closable=input.closable(),
