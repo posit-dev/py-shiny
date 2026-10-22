@@ -169,8 +169,12 @@ def wait_for_idle_app(
     )
 
 
-def validate_example(page: Page, ex_app_path: str) -> None:
-    sa: ShinyAppProc = run_shiny_app(pyshiny_root / ex_app_path, wait_for_start=True)
+def validate_example(
+    page: Page, ex_app_path: str, *, env: dict[str, str] | None = None
+) -> None:
+    sa: ShinyAppProc = run_shiny_app(
+        pyshiny_root / ex_app_path, wait_for_start=True, env=env
+    )
     app_name = os.path.basename(os.path.dirname(ex_app_path))
     short_app_path = (
         f"{os.path.basename(os.path.dirname(os.path.dirname(ex_app_path)))}/{app_name}"
