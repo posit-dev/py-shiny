@@ -587,6 +587,8 @@ class AsyncCallbacks:
     ) -> None:
         self._callbacks: dict[int, _AsyncCallback] = {}
         self._id: int = 0
+        # Highest id handed to `invoke()`/`invoke_new()` so far.
+        self._last_invoked_id: int = 0
         self._on_error = on_error
         """
         If set, called with the exception when a callback raises during
@@ -630,10 +632,35 @@ class AsyncCallbacks:
         **kwargs
             Keyword arguments passed to each callback.
         """
+        await self._invoke(list(self._callbacks.items()), *args, **kwargs)
+
+    async def invoke_new(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Invoke only the callbacks registered since the last `invoke()` or
+        `invoke_new()` (e.g. by a callback while it was being invoked).
+        """
+        since = self._last_invoked_id
+        await self._invoke(
+            [(id, cb) for id, cb in self._callbacks.items() if id > since],
+            *args,
+            **kwargs,
+        )
+
+    def has_new(self) -> bool:
+        """Whether any callback was registered since the last invocation."""
+        return any(id > self._last_invoked_id for id in list(self._callbacks))
+
+    async def _invoke(
+        self, items: list[tuple[int, _AsyncCallback]], *args: Any, **kwargs: Any
+    ) -> None:
         # Collect all the items before iteration begins, since self._callbacks may be
         # mutated by callbacks. The sort is stable, so within each group callbacks
         # keep their registration order.
-        callbacks = sorted(self._callbacks.items(), key=lambda item: not item[1].first)
+        callbacks = sorted(items, key=lambda item: not item[1].first)
+        if callbacks:
+            self._last_invoked_id = max(
+                self._last_invoked_id, *(id for id, _ in callbacks)
+            )
         for id, cb in callbacks:
             try:
                 await cb.fn(*args, **kwargs)

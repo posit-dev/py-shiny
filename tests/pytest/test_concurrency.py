@@ -1526,6 +1526,170 @@ async def test_on_flush_registered_outside_a_cycle_runs():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("hook", ["on_flush", "on_flushed"])
+async def test_callback_registered_by_a_flush_callback_runs(hook: str):
+    # A callback registered while the session runs its flush callbacks misses
+    # the list being iterated. It must still run without further client input.
+    ran: list[str] = []
+
+    def first() -> None:
+        ran.append("first")
+        register(lambda: ran.append("second"))
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+
+        register = getattr(c.session, hook)
+        register(first)
+        assert await wait_until(lambda: ran == ["first", "second"])
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hook", ["on_flush", "on_flushed"])
+async def test_callback_registered_during_an_async_flush_callback_runs(hook: str):
+    # A task that runs while an async flush callback awaits (e.g. something that
+    # sends with the next output flush, like a widget library) hits the same gap.
+    ran: list[str] = []
+    in_slow = asyncio.Event()
+    gate = asyncio.Event()
+
+    async def slow() -> None:
+        in_slow.set()
+        await gate.wait()
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+
+        register = getattr(c.session, hook)
+        register(slow)
+        await in_slow.wait()
+        register(lambda: ran.append("late"))
+        gate.set()
+        assert await wait_until(lambda: ran == ["late"])
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_callbacks_registered_by_an_on_flushed_callback_keep_flush_before_flushed():
+    # The late `on_flush` callback goes out with the next message, before the
+    # late `on_flushed` callback runs, as it would had both been registered
+    # before the flush.
+    order: list[str] = []
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+        session = c.session
+
+        def flushed() -> None:
+            session.on_flush(lambda: order.append("flush"))
+            session.on_flushed(lambda: order.append("flushed"))
+
+        session.on_flushed(flushed)
+        assert await wait_until(lambda: len(order) == 2)
+        assert order == ["flush", "flushed"]
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_late_on_flushed_callback_waits_for_an_effect_started_mid_tail():
+    # If an effect starts while the late `on_flush` callbacks run, the outputs
+    # aren't sent (its cycle's idle transition does that), so the late
+    # `on_flushed` callbacks must not run yet either.
+    ran: list[str] = []
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+        session = c.session
+
+        def flushed() -> None:
+            session.on_flush(session._increment_busy_count)  # type: ignore
+            session.on_flushed(lambda: ran.append("late"))
+
+        session.on_flushed(flushed)
+        assert await wait_until(lambda: session._busy_count == 1)  # type: ignore
+        await settle()
+        assert ran == []
+        session._decrement_busy_count()  # type: ignore
+        assert await wait_until(lambda: ran == ["late"])
+        await settle()
+        assert ran == ["late"]
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hook", ["on_flush", "on_flushed"])
+async def test_callback_that_re_registers_itself_runs_once_per_flush(hook: str):
+    # Late callbacks get one extra pass per output flush, not a loop: a callback
+    # that re-arms itself every time it runs would otherwise spin forever.
+    count = 0
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+        register = getattr(c.session, hook)
+
+        def rearm() -> None:
+            nonlocal count
+            count += 1
+            register(rearm)
+
+        register(rearm)
+        assert await wait_until(lambda: count >= 1)
+        await settle()
+        n = count
+        assert n <= 2
+        await settle()
+        assert count == n
+        # The next flush runs it again.
+        c.update(x=1)
+        assert await wait_until(lambda: count > n)
+        await settle()
+        assert count <= n + 2
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_input_message_from_repeating_on_flushed_callback_does_not_loop():
+    # The late callbacks above must not re-run the earlier `on_flushed`
+    # callbacks: a repeating one that queues an input message would loop forever.
+    count = 0
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        def on_flushed() -> None:
+            nonlocal count
+            count += 1
+            session.send_input_message("t", {"value": count})
+
+        session.on_flushed(on_flushed, once=False)
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+        n = count
+        assert n < 5
+        await settle()
+        assert count == n
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
 async def test_slow_message_handler_does_not_block_other_messages():
     gate = asyncio.Event()
     fast_done = asyncio.Event()
