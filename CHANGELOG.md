@@ -47,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes and minor improvements
 
+* `shiny add test` and the Anthropic chat template no longer point at retired Claude models. The `sonnet` alias and the default model are now `claude-sonnet-5-5`, and the `haiku3.5` alias is now `haiku`, for `claude-haiku-5-5`.
+
 * On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
 
 * UI updates and custom messages sent outside an output or effect, such as `ui.update_text()` in a `session.on_flushed()` callback or in an `asyncio` task, or `ui.insert_ui()` from a message handler, are now sent to the client right away instead of waiting for the next input change (#1889, #21).

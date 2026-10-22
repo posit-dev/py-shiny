@@ -23,14 +23,14 @@ class Config:
     # Model aliases for both providers
     MODEL_ALIASES = {
         # Anthropic models
-        "haiku3.5": "claude-3-5-haiku-20241022",
-        "sonnet": "claude-sonnet-4-20250514",
+        "haiku": "claude-haiku-5-5",
+        "sonnet": "claude-sonnet-5-5",
         # OpenAI models
         "gpt-5": "gpt-5-2025-08-07",
         "gpt-5-mini": "gpt-5-mini-2025-08-07",
     }
 
-    DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
+    DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5-5"
     DEFAULT_OPENAI_MODEL = "gpt-5-2025-08-07"
     DEFAULT_PROVIDER = "anthropic"
 
