@@ -18,6 +18,15 @@ Because it runs outside the reactive graph, the task **cannot read reactive
 sources** (`input.x()`, a `reactive.value`, a calc). Read those values *before*
 invoking and pass them in as arguments; reading one inside raises an error.
 
+## Contents
+
+- Define and invoke a task
+- Read the result and status
+- Pair with a task button
+- Cancel and re-invoke
+- Quick reference
+- Common mistakes
+
 ## Define and invoke a task
 
 Decorate an async function. Call the returned object (or `.invoke(...)`) from an
@@ -123,7 +132,10 @@ current one finishes.
 - Decorating a plain `def` -> `TypeError`; the function must be `async def`.
 - Long synchronous work (a blocking library call) inside the async task still
   blocks the event loop - offload it with `asyncio.to_thread(...)` or an async
-  client.
+  client. For heavy CPU work, use a `ProcessPoolExecutor` with
+  `asyncio.get_running_loop().run_in_executor(...)`; the worker must be
+  importable and its arguments picklable. An extended task does not move
+  synchronous work to a thread or process automatically.
 - Calling `value.set(...)` from that worker thread -> the reactive graph isn't
   thread-safe and it can raise. Return the result to the task instead, or hand the
   call to the event loop: `loop.call_soon_threadsafe(value.set, new_value)`.
@@ -133,5 +145,25 @@ current one finishes.
   instead; call `.cancel()` first if you need to abort.
 - Awaiting `.invoke()` or using its return value -> it returns `None`
   immediately; get output via `.result()`.
-</content>
-</invoke>
+
+For blocking I/O, this pattern keeps the event loop responsive (replace the
+sleep with the synchronous service call):
+
+```python
+import asyncio
+import time
+from shiny import reactive
+
+def blocking_work(value: str) -> str:
+    time.sleep(1)
+    return f"result_{value}"
+
+def server(input, output, session):
+    @reactive.extended_task
+    async def task(value: str) -> str:
+        return await asyncio.to_thread(blocking_work, value)
+```
+
+Invoke it from an event-gated effect as in the example above, passing values
+read at click time. Do not replace the parameter with a reactive read inside
+the task.

@@ -9,6 +9,14 @@ Enable it with **zero-code auto-instrumentation** — launch the app under
 (`trace.set_tracer_provider(...)`): providers install once per process, so
 in-code setup is silently ignored under external instrumentation.
 
+## Contents
+
+- Setup and run
+- Collection levels: `SHINY_OTEL_COLLECT`
+- Per-object control: `otel.suppress` / `otel.collect`
+- Custom spans for business logic
+- Common mistakes
+
 ## Setup and run
 
 ```bash

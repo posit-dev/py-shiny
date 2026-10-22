@@ -13,6 +13,17 @@ values, calcs, error paths, modules — without a browser, use
 `shiny.testserver.test_server()` instead (`references/test-server.md`); it is
 faster and needs no Playwright install.
 
+## Contents
+
+- Setup
+- Write a test
+- Test an app in another location
+- Find the right controller
+- Client-side vs server-side values
+- Debug a failing test
+- Generate a test with AI
+- Common mistakes
+
 ## Setup
 
 ```bash

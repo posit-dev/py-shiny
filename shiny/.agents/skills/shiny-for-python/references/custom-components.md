@@ -14,6 +14,15 @@ open your own socket. Ship assets through an `HTMLDependency` (never a bare
 pure-Python dynamic UI see `references/dynamic-ui.md`; to wrap an existing Jupyter
 widget use shinywidgets (external) rather than writing a binding by hand.
 
+## Contents
+
+- Ship a component's JS/CSS
+- Custom input
+- Custom output
+- Server to client messages
+- Quick reference
+- Common mistakes
+
 ## Ship a component's JS/CSS
 
 Put files in a `www/` folder and register them as one dependency. Attaching the
