@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any, cast
 
@@ -264,3 +265,159 @@ def test_error_results_use_same_report_shape(tmp_path: Path) -> None:
     assert missing.errors[0]["code"] == "FILE_NOT_FOUND"
     assert syntax.to_dict().keys() == validate_shiny_code("pass").to_dict().keys()
     assert missing.to_dict().keys() == syntax.to_dict().keys()
+
+
+class _FakeEntryPoint:
+    def __init__(self, name: str, obj: object) -> None:
+        self.name = name
+        self.value = f"fake:{name}"
+        self._obj = obj
+
+    def load(self) -> object:
+        if isinstance(self._obj, Exception):
+            raise self._obj
+        return self._obj
+
+
+def _print_rule_class() -> type[Any]:
+    import ast
+
+    from shiny.validate import ValidationRule
+
+    class NoPrintRule(ValidationRule):
+        def visit_Call(self, node: ast.Call) -> None:
+            if isinstance(node.func, ast.Name) and node.func.id == "print":
+                self.result.add_warning(node.lineno, "No print", "PLUGIN_PRINT")
+            self.generic_visit(node)
+
+    return NoPrintRule
+
+
+class _Plugins:
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.monkeypatch = monkeypatch
+        self.calls: list[str] = []
+
+    def __call__(self, *eps: _FakeEntryPoint) -> None:
+        import shiny._validate as validate_mod
+
+        def fake_entry_points(*, group: str) -> list[_FakeEntryPoint]:
+            self.calls.append(group)
+            return list(eps)
+
+        self.monkeypatch.setattr(validate_mod, "entry_points", fake_entry_points)
+        validate_mod.installed_validation_rules.cache_clear()
+
+
+@pytest.fixture
+def fake_plugins(monkeypatch: pytest.MonkeyPatch):
+    from shiny._validate import installed_validation_rules
+
+    yield _Plugins(monkeypatch)
+    installed_validation_rules.cache_clear()
+
+
+def test_installed_plugins_compose_and_run_once(fake_plugins: _Plugins) -> None:
+    import ast
+
+    from shiny.validate import ValidateResult, installed_validation_rules
+
+    def no_global_rule(tree: ast.Module, result: ValidateResult) -> None:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Global):
+                result.add_error(node.lineno, "No global", "PLUGIN_GLOBAL")
+
+    fake_plugins(
+        _FakeEntryPoint("prints", _print_rule_class()),
+        _FakeEntryPoint("globals", no_global_rule),
+    )
+    result = validate_shiny_code("def f():\n    global x\nprint('hi')")
+    assert [e["code"] for e in result.errors] == ["PLUGIN_GLOBAL"]
+    assert [w["code"] for w in result.warnings] == ["PLUGIN_PRINT"]
+
+    validate_shiny_code("pass")
+    installed_validation_rules()
+    assert fake_plugins.calls == ["shiny.validators"]
+
+
+def test_explicit_rules_override_installed_plugins(fake_plugins: _Plugins) -> None:
+    fake_plugins(_FakeEntryPoint("prints", _print_rule_class()))
+    assert validate_shiny_code("print('hi')", rules=()).valid
+    assert not validate_shiny_code("print('hi')").valid
+
+
+def test_plugin_findings_are_suppressible(fake_plugins: _Plugins) -> None:
+    fake_plugins(_FakeEntryPoint("prints", _print_rule_class()))
+    assert validate_shiny_code("print('hi')  # shiny: ignore PLUGIN_PRINT").valid
+
+
+@pytest.mark.parametrize(
+    "obj, fragment",
+    [
+        (ImportError("missing dep"), "ImportError: missing dep"),
+        (int, "must subclass"),
+        (42, "not a ValidationRule"),
+    ],
+)
+def test_broken_plugin_is_reported_loudly(
+    fake_plugins: _Plugins, obj: object, fragment: str
+) -> None:
+    fake_plugins(
+        _FakeEntryPoint("broken", obj), _FakeEntryPoint("ok", _print_rule_class())
+    )
+    result = validate_shiny_code("print('hi')")
+    codes = [w["code"] for w in result.warnings]
+    assert codes == ["VALIDATOR_PLUGIN_ERROR", "PLUGIN_PRINT"]
+    assert "broken (fake:broken)" in result.warnings[0]["message"]
+    assert fragment in result.warnings[0]["message"]
+
+
+def test_plugin_crash_does_not_stop_validation() -> None:
+    import ast
+
+    from shiny.validate import ValidateResult
+
+    def crashing(tree: ast.Module, result: ValidateResult) -> None:
+        raise RuntimeError("boom")
+
+    result = validate_shiny_code("input.x = 1", rules=[crashing])
+    assert [e["code"] for e in result.errors] == ["INPUT_ASSIGNMENT"]
+    assert result.warnings[0]["code"] == "VALIDATOR_PLUGIN_ERROR"
+    assert "RuntimeError: boom" in result.warnings[0]["message"]
+
+
+def test_load_validation_rule(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from shiny.validate import ValidationRule, load_validation_rule
+
+    (tmp_path / "local_rules_mod.py").write_text(
+        "from shiny.validate import ValidationRule\n"
+        "class Rules:\n"
+        "    class Inner(ValidationRule):\n"
+        "        pass\n"
+        "def func(tree, result):\n"
+        "    pass\n"
+        "NOT_A_RULE = 1\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    inner = load_validation_rule("local_rules_mod:Rules.Inner")
+    assert isinstance(inner, type) and issubclass(inner, ValidationRule)
+    assert callable(load_validation_rule("local_rules_mod:func"))
+    with pytest.raises(TypeError):
+        load_validation_rule("local_rules_mod:NOT_A_RULE")
+    with pytest.raises(ValueError):
+        load_validation_rule("local_rules_mod")
+    with pytest.raises(AttributeError):
+        load_validation_rule("local_rules_mod:missing")
+
+
+def test_startup_validation_runs_plugins(
+    fake_plugins: _Plugins, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from shiny._main._run import _validate_app_file
+
+    fake_plugins(_FakeEntryPoint("prints", _print_rule_class()))
+    path = tmp_path / "app.py"
+    path.write_text("print('hi')")
+    _validate_app_file(path)
+    assert "No print" in capsys.readouterr().err

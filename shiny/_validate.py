@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import ast
+import functools
+import importlib
+import os
 import re
+import sys
 import tokenize
 from dataclasses import dataclass, field
+from importlib.metadata import entry_points
 from io import StringIO
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Any, Callable, Literal, Sequence, TypedDict, Union
+
+VALIDATOR_ENTRY_POINT_GROUP = "shiny.validators"
 
 
 class ValidationIssue(TypedDict):
@@ -302,6 +309,91 @@ class ShinyCodeValidator(ast.NodeVisitor):
         return ""
 
 
+class ValidationRule(ast.NodeVisitor):
+    """Plugin rule that visits the shared parsed tree and records issues on ``self.result``.
+
+    Register a subclass (or a ``(tree, result) -> None`` callable) under the
+    ``shiny.validators`` entry-point group so ``shiny validate`` and ``shiny run``
+    load it automatically.
+    """
+
+    def __init__(self, result: ValidateResult) -> None:
+        self.result = result
+
+    def check(self, tree: ast.Module) -> None:
+        self.visit(tree)
+
+
+ValidationRuleFunc = Callable[[ast.Module, ValidateResult], None]
+ValidationRuleLike = Union[type[ValidationRule], ValidationRuleFunc]
+
+
+def _rule_name(rule: ValidationRuleLike) -> str:
+    return getattr(rule, "__qualname__", type(rule).__name__)
+
+
+def _check_rule(obj: object, name: str) -> ValidationRuleLike:
+    if isinstance(obj, type):
+        if issubclass(obj, ValidationRule):
+            return obj
+        raise TypeError(f"'{name}' must subclass shiny.validate.ValidationRule.")
+    if callable(obj):
+        return obj  # pyright: ignore[reportUnknownVariableType]
+    raise TypeError(f"'{name}' is not a ValidationRule subclass or callable.")
+
+
+def _failed_rule(name: str, error: Exception) -> ValidationRuleFunc:
+    def rule(tree: ast.Module, result: ValidateResult) -> None:
+        raise error
+
+    rule.__qualname__ = name
+    return rule
+
+
+@functools.cache
+def installed_validation_rules() -> tuple[ValidationRuleLike, ...]:
+    """Rules registered by installed packages under ``shiny.validators``, loaded once."""
+    rules: list[ValidationRuleLike] = []
+    for ep in entry_points(group=VALIDATOR_ENTRY_POINT_GROUP):
+        name = f"{ep.name} ({ep.value})"
+        try:
+            rules.append(_check_rule(ep.load(), name))
+        except Exception as e:
+            rules.append(_failed_rule(name, e))
+    return tuple(rules)
+
+
+def load_validation_rule(spec: str) -> ValidationRuleLike:
+    """Load a rule from a ``module:attr`` spec, importing relative to the working directory."""
+    module_name, sep, attr = spec.partition(":")
+    if not sep or not module_name or not attr:
+        raise ValueError(f"Expected 'module:attr', got '{spec}'.")
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+    obj: Any = importlib.import_module(module_name)
+    for part in attr.split("."):
+        obj = getattr(obj, part)
+    return _check_rule(obj, spec)
+
+
+def _run_rules(
+    rules: Sequence[ValidationRuleLike], tree: ast.Module, result: ValidateResult
+) -> None:
+    for rule in rules:
+        try:
+            if isinstance(rule, type):
+                rule(result).check(tree)
+            else:
+                rule(tree, result)
+        except Exception as e:
+            result.add_warning(
+                1,
+                f"Validation plugin '{_rule_name(rule)}' failed: {type(e).__name__}: {e}",
+                "VALIDATOR_PLUGIN_ERROR",
+            )
+
+
 def _apply_suppressions(code: str, result: ValidateResult) -> None:
     suppressed: dict[int, set[str] | None] = {}
     for token in tokenize.generate_tokens(StringIO(code).readline):
@@ -335,9 +427,15 @@ def _apply_suppressions(code: str, result: ValidateResult) -> None:
 
 
 def validate_shiny_code(
-    code: str, *, validator_class: type[ShinyCodeValidator] = ShinyCodeValidator
+    code: str,
+    *,
+    validator_class: type[ShinyCodeValidator] = ShinyCodeValidator,
+    rules: Sequence[ValidationRuleLike] | None = None,
 ) -> ValidateResult:
-    """Validate source, optionally using a subclass with project rules.
+    """Validate source with the built-in validator plus plugin rules.
+
+    ``rules`` defaults to :func:`installed_validation_rules`; pass ``()`` to run
+    only the built-in validator. Every rule visits the same parsed tree.
 
     ``# shiny: ignore [CODE, ...]`` suppresses diagnostics on the current line.
     ``# shiny: ignore-next-line [CODE, ...]`` suppresses the following line.
@@ -356,6 +454,7 @@ def validate_shiny_code(
         return result
 
     validator.visit(tree)
+    _run_rules(installed_validation_rules() if rules is None else rules, tree, result)
     _apply_suppressions(code, result)
     if (
         result.mode == "express"
@@ -371,7 +470,10 @@ def validate_shiny_code(
 
 
 def validate_shiny_file(
-    path: str | Path, *, validator_class: type[ShinyCodeValidator] = ShinyCodeValidator
+    path: str | Path,
+    *,
+    validator_class: type[ShinyCodeValidator] = ShinyCodeValidator,
+    rules: Sequence[ValidationRuleLike] | None = None,
 ) -> ValidateResult:
     """Validate a UTF-8 file with built-in or project-specific validation rules."""
     p = Path(path)
@@ -380,5 +482,5 @@ def validate_shiny_file(
         result.add_error(1, f"File not found: {path}", "FILE_NOT_FOUND")
         return result
     return validate_shiny_code(
-        p.read_text(encoding="utf-8"), validator_class=validator_class
+        p.read_text(encoding="utf-8"), validator_class=validator_class, rules=rules
     )

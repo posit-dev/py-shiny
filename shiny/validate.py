@@ -1,19 +1,27 @@
-"""Static Shiny validation, including typed results and extensible AST visitors.
+"""Static Shiny validation, including typed results and extensible rules.
 
-Subclass ``ShinyCodeValidator`` and pass it as ``validator_class`` to
-``validate_shiny_code`` or ``validate_shiny_file`` to include project rules::
+Packages contribute rules by registering a ``ValidationRule`` subclass, or a
+``(tree, result) -> None`` callable, under the ``shiny.validators`` entry-point
+group. ``shiny validate``, ``shiny run`` and ``validate_shiny_code`` run every
+installed rule over the same parsed tree::
 
+    # pyproject.toml
+    [project.entry-points."shiny.validators"]
+    mypkg = "mypkg.validation:NoPrintRule"
+
+    # mypkg/validation.py
     import ast
-    from shiny.validate import ShinyCodeValidator, validate_shiny_code
+    from shiny.validate import ValidationRule
 
-    class ProjectValidator(ShinyCodeValidator):
+    class NoPrintRule(ValidationRule):
         def visit_Call(self, node: ast.Call) -> None:
             if isinstance(node.func, ast.Name) and node.func.id == "print":
-                self.result.add_warning(node.lineno, "Use logging", "PROJECT_LOGGING")
-            super().visit_Call(node)
+                self.result.add_warning(node.lineno, "Use logging", "MYPKG_PRINT")
+            self.generic_visit(node)
 
-    result = validate_shiny_code(source, validator_class=ProjectValidator)
-    report = result.to_dict()
+For one-off rules, run ``shiny validate app.py --validator module:attr``.
+Subclassing ``ShinyCodeValidator`` and passing it as ``validator_class`` still
+customizes the built-in rules.
 
 For intentional exceptions, use ``# shiny: ignore`` on the diagnostic line or
 ``# shiny: ignore-next-line`` on the preceding line. Add comma-separated rule
@@ -23,19 +31,31 @@ VS Code extension. Runtime errors still enforce Shiny's input/output contracts.
 """
 
 from ._validate import (
+    VALIDATOR_ENTRY_POINT_GROUP,
     ShinyCodeValidator,
     ValidateResult,
     ValidationIssue,
     ValidationReport,
+    ValidationRule,
+    ValidationRuleFunc,
+    ValidationRuleLike,
+    installed_validation_rules,
+    load_validation_rule,
     validate_shiny_code,
     validate_shiny_file,
 )
 
 __all__ = [
+    "VALIDATOR_ENTRY_POINT_GROUP",
     "ShinyCodeValidator",
     "ValidateResult",
     "ValidationIssue",
     "ValidationReport",
+    "ValidationRule",
+    "ValidationRuleFunc",
+    "ValidationRuleLike",
+    "installed_validation_rules",
+    "load_validation_rule",
     "validate_shiny_code",
     "validate_shiny_file",
 ]
