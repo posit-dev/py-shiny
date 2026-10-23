@@ -98,6 +98,14 @@ app_allow_external_errors: typing.List[str] = [
     # yfinance deprecation warning (Pandas 4.0 compatibility)
     "Pandas4Warning: Timestamp.utcnow is deprecated",
     "dt_now = pd.Timestamp.utcnow()",  # continuation of line above
+    # yfinance uses inplace operations deprecated by pandas 3.1.
+    "Pandas4Warning: The inplace keyword in DataFrame.",
+    "See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace",
+    "quotes.sort_index(inplace=True)",
+    'dividends.set_index("date", inplace=True)',
+    "dividends.sort_index(inplace=True)",
+    "  df.drop(",
+    "  df.rename(columns={",
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "examples/brownian": ["Failed to acquire camera feed:"],
