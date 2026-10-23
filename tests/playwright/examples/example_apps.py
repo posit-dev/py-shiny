@@ -99,6 +99,8 @@ app_allow_external_errors: typing.List[str] = [
     "Pandas4Warning: Timestamp.utcnow is deprecated",
     "dt_now = pd.Timestamp.utcnow()",  # continuation of line above
     # yfinance uses inplace operations deprecated by pandas 3.1.
+    # Remove once CI uses a yfinance release that includes this fix:
+    # https://github.com/ranaroussi/yfinance/pull/3010
     "Pandas4Warning: The inplace keyword in DataFrame.",
     "See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace",
     "quotes.sort_index(inplace=True)",
