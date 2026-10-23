@@ -421,3 +421,17 @@ def test_startup_validation_runs_plugins(
     path.write_text("print('hi')")
     _validate_app_file(path)
     assert "No print" in capsys.readouterr().err
+
+
+def test_plugin_ids_share_namespace_with_core() -> None:
+    import ast
+
+    from shiny.validate import ValidateResult
+
+    def rule(tree: ast.Module, result: ValidateResult) -> None:
+        result.register_id("output", "w", 2)
+
+    result = validate_shiny_code(
+        "from shiny import ui\nui.output_text('w')", rules=[rule]
+    )
+    assert [w["code"] for w in result.warnings] == ["DUPLICATE_ID"]

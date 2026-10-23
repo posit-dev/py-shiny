@@ -224,23 +224,15 @@ class ShinyCodeValidator(ast.NodeVisitor):
         call_name = self._get_call_name(node.func)
 
         if call_name and (
-            call_name.startswith("ui.input_")
-            or call_name.startswith("ui.output_")
-            or call_name.startswith("shinychat.chat_ui")
-            or call_name.startswith("shinywidgets.output_widget")
+            call_name.startswith("ui.input_") or call_name.startswith("ui.output_")
         ):
             if (
                 node.args
                 and isinstance(node.args[0], ast.Constant)
                 and isinstance(node.args[0].value, str)
             ):
-                widget_id = node.args[0].value
-                if call_name.startswith("ui.input_"):
-                    self.result.register_id("input", widget_id, node.lineno)
-                elif call_name.startswith("ui.output_") or call_name.startswith(
-                    "shinywidgets.output_widget"
-                ):
-                    self.result.register_id("output", widget_id, node.lineno)
+                kind = "input" if call_name.startswith("ui.input_") else "output"
+                self.result.register_id(kind, node.args[0].value, node.lineno)
 
         self.generic_visit(node)
 
