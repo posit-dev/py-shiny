@@ -11,15 +11,23 @@ from dataclasses import dataclass, field
 from importlib.metadata import entry_points
 from io import StringIO
 from pathlib import Path
-from typing import Any, Callable, Literal, Sequence, TypedDict, Union
+from typing import Any, Callable, Literal, Sequence, TypedDict, Union, cast
+
+from typing_extensions import NotRequired
+
+from ._validate_reactivity import ReactiveUsageValidator
 
 VALIDATOR_ENTRY_POINT_GROUP = "shiny.validators"
+
+_CLEAN_MESSAGE = "No issues found by the enabled static checks."
+"""Success wording shared by source validation, file validation, and the CLI."""
 
 
 class ValidationIssue(TypedDict):
     line: int
     message: str
     code: str
+    file: NotRequired[str]
 
 
 class ValidationReport(TypedDict):
@@ -357,7 +365,7 @@ def _check_rule(obj: object, name: str) -> ValidationRuleLike:
             return obj
         raise TypeError(f"'{name}' must subclass shiny.validate.ValidationRule.")
     if callable(obj):
-        return obj  # pyright: ignore[reportUnknownVariableType]
+        return cast(ValidationRuleFunc, val=obj)
     raise TypeError(f"'{name}' is not a ValidationRule subclass or callable.")
 
 
@@ -473,6 +481,7 @@ def validate_shiny_code(
         return result
 
     validator.visit(tree)
+    ReactiveUsageValidator(result).visit(tree)
     _run_rules(installed_validation_rules() if rules is None else rules, tree, result)
     _apply_suppressions(code, result)
     if (
@@ -484,7 +493,7 @@ def validate_shiny_code(
             "Ensure each UI component in Express mode has a unique string ID."
         )
     if result.clean:
-        result.suggestions.append("Code structure matches Python Shiny best practices.")
+        result.suggestions.append(_CLEAN_MESSAGE)
     return result
 
 
@@ -494,12 +503,87 @@ def validate_shiny_file(
     validator_class: type[ShinyCodeValidator] = ShinyCodeValidator,
     rules: Sequence[ValidationRuleLike] | None = None,
 ) -> ValidateResult:
-    """Validate a UTF-8 file with built-in or project-specific validation rules."""
+    """Validate a UTF-8 file and its local Python imports without executing them.
+
+    Imports are followed only within the entry file's directory. Installed
+    packages, unresolved imports, and dynamic imports are not inspected.
+    Diagnostics include a ``file`` path as well as their line number. Each
+    file has its own ID namespace and suppression comments.
+    """
     p = Path(path)
     if not p.is_file():
         result = ValidateResult()
         result.add_error(1, f"File not found: {path}", "FILE_NOT_FOUND")
         return result
-    return validate_shiny_code(
-        p.read_text(encoding="utf-8"), validator_class=validator_class, rules=rules
-    )
+    entry = p.resolve()
+    root = entry.parent
+    pending = [entry]
+    seen: set[Path] = set()
+    result = ValidateResult()
+    while pending:
+        current = pending.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+        try:
+            code = current.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            report = ValidateResult()
+            report.add_error(
+                1, message=f"Could not read file: {error}", code="FILE_READ_ERROR"
+            )
+        else:
+            report = validate_shiny_code(
+                code, validator_class=validator_class, rules=rules
+            )
+            if not any(issue["code"] == "SYNTAX_ERROR" for issue in report.errors):
+                pending.extend(
+                    reversed(
+                        _local_imports(ast.parse(code), current=current, root=root)
+                    )
+                )
+        if current == entry:
+            result.mode = report.mode
+        for issue in [*report.errors, *report.warnings]:
+            issue["file"] = str(current)
+        result.errors.extend(report.errors)
+        result.warnings.extend(report.warnings)
+        result.input_ids.update(report.input_ids)
+        result.ui_output_ids.update(report.ui_output_ids)
+        result.renderer_ids.update(report.renderer_ids)
+        result.reactive_vals.update(report.reactive_vals)
+        result.reactive_calcs.update(report.reactive_calcs)
+        result.duplicate_ids.extend(report.duplicate_ids)
+        result.suggestions.extend(s for s in report.suggestions if s != _CLEAN_MESSAGE)
+    if result.clean:
+        result.suggestions.append(_CLEAN_MESSAGE)
+    return result
+
+
+def _local_imports(tree: ast.Module, *, current: Path, root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for node in ast.walk(tree):
+        names: list[list[str]] = []
+        base = root
+        if isinstance(node, ast.Import):
+            names = [alias.name.split(".") for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                base = current.parent
+                for _ in range(node.level - 1):
+                    base = base.parent
+            parts: list[str] = node.module.split(".") if node.module else []
+            names = [
+                parts,
+                *[parts + [alias.name] for alias in node.names if alias.name != "*"],
+            ]
+        for parts in names:
+            first = 0 if isinstance(node, ast.ImportFrom) and node.level else 1
+            for length in range(first, len(parts) + 1):
+                candidate = base.joinpath(*parts[:length])
+                package = candidate / "__init__.py"
+                file = candidate.with_suffix(".py")
+                path = package if package.is_file() else file
+                if path.is_file() and path.resolve().is_relative_to(root):
+                    paths.append(path.resolve())
+    return paths

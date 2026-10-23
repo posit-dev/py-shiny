@@ -510,7 +510,7 @@ def _validate_app_file(app_file: Path | str) -> None:
                 line = err["line"]
                 msg = err["message"]
                 print(
-                    f"Validation error ({app_file}:{line}): {msg}",
+                    f"Validation error ({err.get('file', str(app_file))}:{line}): {msg}",
                     file=sys.stderr,
                 )
         if report.warnings:
@@ -518,7 +518,7 @@ def _validate_app_file(app_file: Path | str) -> None:
                 line = warn["line"]
                 msg = warn["message"]
                 print(
-                    f"Validation warning ({app_file}:{line}): {msg}",
+                    f"Validation warning ({warn.get('file', str(app_file))}:{line}): {msg}",
                     file=sys.stderr,
                 )
     except Exception:

@@ -8,10 +8,12 @@ from typing import Optional
 import click
 
 from .._validate import (
+    _CLEAN_MESSAGE,
     ValidationRuleLike,
     installed_validation_rules,
     load_validation_rule,
     validate_shiny_code,
+    validate_shiny_file,
 )
 from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_warning
 
@@ -21,7 +23,8 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
     help="""Perform static AST analysis and validation on Shiny for Python code.
 
     Validates Shiny apps against common reactivity errors, duplicate widget IDs,
-    missing reactive call parentheses, and R Shiny idioms.
+    missing reactive call parentheses, and R Shiny idioms. File targets also
+    check local Python imports within the app directory without executing them.
     Exits with status 1 when errors are found. Warnings are reported but exit 0
     unless --strict is passed.
 
@@ -77,6 +80,7 @@ def validate(
 
     source_code: str = ""
     target_desc: str = ""
+    source_path: Path | None = None
 
     if code is not None:
         source_code = code
@@ -111,12 +115,12 @@ def validate(
             else:
                 click.echo(cli_danger(f"File not found: {path}"))
             sys.exit(1)
-        source_code = p.read_text(encoding="utf-8")
+        source_path = p
         target_desc = str(p)
     else:
         default_app = Path("app.py")
         if default_app.is_file():
-            source_code = default_app.read_text(encoding="utf-8")
+            source_path = default_app
             target_desc = "app.py"
         else:
             if json_output:
@@ -139,8 +143,11 @@ def validate(
                 )
             sys.exit(1)
 
-    result = validate_shiny_code(
-        source_code, rules=[*installed_validation_rules(), *extra_rules]
+    rules = [*installed_validation_rules(), *extra_rules]
+    result = (
+        validate_shiny_file(source_path, rules=rules)
+        if source_path is not None
+        else validate_shiny_code(source_code, rules=rules)
     )
 
     exit_code = 0 if (result.clean if strict else result.valid) else 1
@@ -156,7 +163,11 @@ def validate(
     if result.errors:
         click.echo(cli_bold("Errors:"))
         for err in result.errors:
-            line_str = f"Line {err['line']}"
+            line_str = (
+                f"{err['file']}:{err['line']}"
+                if "file" in err
+                else f"Line {err['line']}"
+            )
             code_str = err["code"]
             click.echo(
                 f"  {cli_danger(line_str)}: {err['message']} ({cli_code(code_str)})"
@@ -166,7 +177,11 @@ def validate(
     if result.warnings:
         click.echo(cli_bold("Warnings:"))
         for warn in result.warnings:
-            line_str = f"Line {warn['line']}"
+            line_str = (
+                f"{warn['file']}:{warn['line']}"
+                if "file" in warn
+                else f"Line {warn['line']}"
+            )
             code_str = warn["code"]
             click.echo(
                 f"  {cli_warning(line_str)}: {warn['message']} ({cli_code(code_str)})"
@@ -174,7 +189,7 @@ def validate(
         click.echo("")
 
     if result.clean:
-        click.echo(cli_success("All validation checks passed successfully!"))
+        click.echo(cli_success(_CLEAN_MESSAGE))
     elif result.valid:
         n = len(result.warnings)
         click.echo(cli_warning(f"No errors found ({n} warning{'s' * (n != 1)})."))

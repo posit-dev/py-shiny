@@ -20,7 +20,7 @@ def txt():
 """
     res = runner.invoke(main, ["validate", "--code", code])
     assert res.exit_code == 0
-    assert "All validation checks passed" in res.output
+    assert "No issues found by the enabled static checks" in res.output
     assert "Inputs (1): n" in res.output
 
 

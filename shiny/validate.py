@@ -23,6 +23,20 @@ For one-off rules, run ``shiny validate app.py --validator module:attr``.
 Subclassing ``ShinyCodeValidator`` and passing it as ``validator_class`` still
 customizes the built-in rules.
 
+``shiny validate app.py`` and ``validate_shiny_file()`` also inspect local Python
+imports within the entry file's directory, without executing the app or its
+imports. Each diagnostic includes its source ``file`` and ``line``. Installed
+packages, dynamic imports, and unresolved imports are not inspected.
+``validate_shiny_code()`` inspects only the supplied source string.
+
+The built-in checks detect forbidden reactive reads in extended tasks and
+access to container contents on known reactive objects without calling them.
+They recognize reactive constructors, calc decorators, and ``reactive.Value``
+parameter annotations, including import aliases. Warnings identify mutation
+followed by setting the same object and broad exception handlers that swallow
+extended-task result errors. Use ``--strict`` to fail on warnings too.
+Static checks do not replace running the app and testing its interactions.
+
 For intentional exceptions, use ``# shiny: ignore`` on the diagnostic line or
 ``# shiny: ignore-next-line`` on the preceding line. Add comma-separated rule
 codes to ignore only those rules (for example, ``# shiny: ignore UNCALLED_INPUT``).
