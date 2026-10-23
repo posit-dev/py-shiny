@@ -50,6 +50,10 @@ class ValidateResult:
 
     @property
     def valid(self) -> bool:
+        return not self.errors
+
+    @property
+    def clean(self) -> bool:
         return not self.errors and not self.warnings
 
     def add_error(self, line: int, message: str, code: str) -> None:
@@ -456,7 +460,7 @@ def validate_shiny_code(
         result.suggestions.append(
             "Ensure each UI component in Express mode has a unique string ID."
         )
-    if result.valid:
+    if result.clean:
         result.suggestions.append("Code structure matches Python Shiny best practices.")
     return result
 

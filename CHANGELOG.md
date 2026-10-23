@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added a built-in developer CLI tool: `shiny validate` statically checks apps for common reactivity errors and duplicate IDs. It returns a nonzero exit status when it finds errors or warnings.
+* Added a built-in developer CLI tool: `shiny validate` statically checks apps for common reactivity errors and duplicate IDs. It returns a nonzero exit status when it finds errors; pass `--strict` to also fail on warnings.
 
 ### Bug fixes
 

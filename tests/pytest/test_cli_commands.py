@@ -43,11 +43,14 @@ def txt():
     return f"Value: {input.n}"
 """
     res = runner.invoke(main, ["validate", "--code", code])
-    assert res.exit_code == 1
+    assert res.exit_code == 0
     assert "UNCALLED_INPUT" in res.output
+    assert "No errors found (1 warning)." in res.output
+    assert "All validation checks passed" not in res.output
+    assert runner.invoke(main, ["validate", "--code", code, "--strict"]).exit_code == 1
 
 
-def test_cli_validate_warning_only_json_fails() -> None:
+def test_cli_validate_warning_only_json() -> None:
     runner = CliRunner()
     code = """from shiny.express import input, render, ui
 ui.input_slider("n", "N", 1, 10, 5)
@@ -56,10 +59,12 @@ ui.input_slider("n", "Second N", 1, 10, 5)
 def txt():
     return input.n
 """
-    res = runner.invoke(main, ["validate", "--code", code, "--json"])
-    assert res.exit_code == 1
+    args = ["validate", "--code", code, "--json"]
+    res = runner.invoke(main, args)
+    assert res.exit_code == 0
     data = json.loads(res.output)
-    assert data["valid"] is False
+    assert data["valid"] is True
+    assert runner.invoke(main, [*args, "--strict"]).exit_code == 1
     assert {warning["code"] for warning in data["warnings"]} == {
         "DUPLICATE_ID",
         "UNCALLED_INPUT",

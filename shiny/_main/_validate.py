@@ -22,11 +22,13 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
 
     Validates Shiny apps against common reactivity errors, duplicate widget IDs,
     missing reactive call parentheses, and R Shiny idioms.
-    Exits with status 1 when errors or warnings are found.
+    Exits with status 1 when errors are found. Warnings are reported but exit 0
+    unless --strict is passed.
 
     Examples:
 
         shiny validate app.py
+        shiny validate app.py --strict
         shiny validate --code "from shiny.express import ui"
         shiny validate . --json
         shiny validate app.py --validator my_rules:NoPrintRule
@@ -44,6 +46,12 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
     help="Output validation report in JSON format.",
 )
 @click.option(
+    "--strict",
+    is_flag=True,
+    default=False,
+    help="Exit with status 1 on warnings as well as errors.",
+)
+@click.option(
     "--validator",
     "validator_specs",
     multiple=True,
@@ -55,6 +63,7 @@ def validate(
     path: Optional[str],
     code: Optional[str],
     json_output: bool,
+    strict: bool,
     validator_specs: tuple[str, ...],
 ) -> None:
     extra_rules: list[ValidationRuleLike] = []
@@ -134,11 +143,13 @@ def validate(
         source_code, rules=[*installed_validation_rules(), *extra_rules]
     )
 
+    exit_code = 0 if (result.clean if strict else result.valid) else 1
+
     if json_output:
         result_with_target = dict(result.to_dict())
         result_with_target["target"] = target_desc
         click.echo(json.dumps(result_with_target, indent=2))
-        sys.exit(0 if result.valid else 1)
+        sys.exit(exit_code)
 
     click.echo(cli_bold(f"Validating {target_desc} (Mode: {result.mode})\n"))
 
@@ -162,8 +173,11 @@ def validate(
             )
         click.echo("")
 
-    if result.valid:
+    if result.clean:
         click.echo(cli_success("All validation checks passed successfully!"))
+    elif result.valid:
+        n = len(result.warnings)
+        click.echo(cli_warning(f"No errors found ({n} warning{'s' * (n != 1)})."))
 
     if result.detected_inputs or result.detected_outputs or result.detected_reactives:
         click.echo(cli_bold("\nDetected Reactive Structure:"))
@@ -185,4 +199,4 @@ def validate(
         for s in result.suggestions:
             click.echo(f"  {cli_info(s)}")
 
-    sys.exit(0 if result.valid else 1)
+    sys.exit(exit_code)
