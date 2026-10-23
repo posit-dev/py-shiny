@@ -7,17 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+* OpenTelemetry `reactive_update` spans now follow each session's cycle: one span per session, from when the session turns busy until all of its effects (including async ones) have finished, carrying the session's `session.id`. The session's calc, effect, and output spans are its children. Previously, there was one span per reactive flush, which can serve several sessions, so with concurrent effects it couldn't carry a single `session.id` and ended before async effects finished. Effects without a session no longer have a `reactive_update` parent (#2522).
+
+* Reactive effects now run concurrently. Shiny starts each invalidated effect without waiting for an `async` effect's awaited part, so a slow `async` effect, calc, or render function no longer delays other sessions. Within a session, input changes and `reactive.invalidate_later()` still wait until all of that session's effects have finished, and outputs are sent together once they have. What app authors may notice:
+
+    * `async` effects interleave at each `await` instead of running one after another. `priority` orders when effects start, not when they finish. Runs of the same effect still don't overlap: a re-run waits for the previous run.
+
+    * `reactive.lock()` is now defunct and no longer locks the reactive graph. Please remove it from your code.
+
+    * `await reactive.flush()` returns right away, without waiting for dependents, when called from within an effect, a `reactive.on_flushed()` or `session.on_flush()`/`session.on_flushed()` callback, or a task one of these started while it is still running, since waiting there could deadlock. A task that outlives the effect that started it, such as an extended task's body, still waits. The wait covers the whole process, including other sessions' effects and output.
+
+    * `reactive.on_flushed()` callbacks run after each round of effects has *started*, without waiting for `async` effects, and can run several times per `reactive.flush()`. Previously, they ran once all effects had finished. An error in one of these callbacks is now printed, and the other callbacks still run, instead of closing a session.
+
+    * Message handlers (`session.set_message_handler()`) run in their own task, so a slow handler no longer holds up other messages from the client.
+
+    * Each session sends its outputs in a task of its own, once all of its effects have finished. A slow client, or a slow `session.on_flush()` callback, delays only its own session's output, not other sessions' output or other reactive work.
+
+    * Setting a `reactive.value` now re-runs its dependents automatically, without a call to `reactive.flush()`. The reactive graph itself still isn't thread-safe, so from another thread use `loop.call_soon_threadsafe(value.set, new_value)`.
+
+    * File uploads and `session.dynamic_route()` requests no longer mark the session busy.
+
+    * Destroying an effect (`effect.destroy()`) cancels its in-progress run, raising `asyncio.CancelledError` at its current `await`. So ending a session, or `session.destroy(id)`, cancels its in-progress `async` effects and render functions instead of letting them run on after the session or module is gone.
+
+  (#2508, #2515)
+
+* `near_points(add_dist=True)`, imported from `shiny.plotutils`, now names its distance column `dist_` instead of `dist`. Code reading `df["dist"]` from the result must now read `df["dist_"]` (#2510).
+
+### Lifecycle changes
+
+* `reactive.lock()` is now defunct: it no longer locks the reactive graph and emits a `ShinyDeprecationWarning`. Please remove it from your code (#2520).
+
 ### New features
 
 * Added a built-in developer CLI tool (`shiny validate`) and public `shiny.validate` module to statically check apps for common reactivity errors and duplicate IDs. `shiny validate` returns a nonzero exit status when it finds errors; pass `--strict` to also fail on warnings. (#2453)
 
 * Assigning directly to a Shiny input (e.g. `input.x = 1`) now raises a clearer `TypeError` explaining that inputs are read-only and suggesting `reactive.value()` or `ui.update_*` functions, and registering a duplicate output renderer now emits a `RuntimeWarning`. (#2453)
 
-### Bug fixes
+* New `session.run_once_when_idle()` runs a function once, after the session's effects have finished and its outputs have been sent. Use it to change reactive state from a background task or a custom timer without changing a value that a running effect is still reading (#2546).
 
-* `near_points(add_dist=True)` now adds the `dist_` column its documentation describes, instead of a column named `dist`. Shiny for R names it `dist_` as well, and the trailing underscore is what keeps it from colliding with a `dist` column of the caller's own data. Code reading `df["dist"]` from the result must read `df["dist_"]`. (#2510)
+* `ui.sidebar()` gains a `role` argument (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark (#2526).
 
-* `near_points()` and `brushed_points()` now map a non-string categorical column (e.g. one of integers) to its category codes, instead of raising `ValueError: to_float: unsupported dtype for x`. `to_float()` tested the Series itself against `CategoricalDtype`, which no Series ever is, so the categorical branch never ran. (#2505)
+### Bug fixes and minor improvements
+
+* On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
+
+* UI updates and custom messages sent outside an output or effect, such as `ui.update_text()` in a `session.on_flushed()` callback or in an `asyncio` task, or `ui.insert_ui()` from a message handler, are now sent to the client right away instead of waiting for the next input change (#1889, #21).
+
+* `Jsonifiable` now uses `Sequence` and `Mapping` for its container arms instead of the invariant `List` and `Dict`, so values like `dict[str, int]` and `list[str]` type-check as `Jsonifiable`, including as the return type of a function passed to a `Renderer[Jsonifiable]`. As a side effect, type checkers also accept other sequences and mappings, such as `range`, `deque`, and `bytes`, even though only `list`, `tuple`, and `dict` serialize. Runtime behavior is unchanged (@wolfgang-aura, #2511).
+
+* In Express, `@output_args()` now accepts every argument of the output's UI function, with matching types. `@render.ui` now takes `inline`, `container`, `fill`, `fillable`, and HTML attributes, instead of raising a `TypeError`. `@render.text` now takes `container`. `@render.plot` and `@render.image` now declare `inline`, `click`, `dblclick`, `hover`, `brush`, and `fill` explicitly (and `width` and `height` for `@render.image`), instead of accepting any keyword. `@render.download_button` and `@render.download_link` now take `label` (#2539).
+
+* `near_points(add_dist=True)`, imported from `shiny.plotutils`, now adds the `dist_` column its documentation describes, instead of a column named `dist`. The trailing underscore keeps it from colliding with a `dist` column in your own data. Code reading `df["dist"]` from the result must now read `df["dist_"]` (#2510). `near_points()` and `brushed_points()` also now map a non-string categorical column (e.g. one of integers) to its category codes, instead of raising `ValueError: to_float: unsupported dtype for x` (#2505).
+
+* `Progress.set(0)` now places the bar at `0` relative to `min` and `max`, instead of sending `0` unnormalized. Previously, with a negative `min`, such as `Progress(min=-10, max=10)`, a value of `0` showed an empty bar rather than a half-full one (#2518).
+
+* `@render.data_frame` now serializes Polars `Categorical` and `Enum` columns with Polars >= 2.0, instead of raising `AttributeRemovedError: get_categories was removed in version 2.0` (#2529). It also labels key-value `Map` columns (e.g. a pyarrow `map<string, int64>` column) as `object`, like struct, list, and array columns. This requires a narwhals version that has the `Map` dtype (#2569). Its `selection_mode` now accepts a list (e.g. `["rows"]`), as its type hint says, instead of raising `TypeError: unhashable type: 'list'`, and a `set_patches_fn()` that returns badly shaped patches now raises the intended `ValueError` describing the expected shape (#2560).
+
+* `@render.data_frame` now sends values of pandas nullable dtypes (`Int64`, `Float64`, `boolean`) to the browser as numbers and booleans, instead of strings such as `"1"` and `"True"`. It also serializes data frames faster and with less memory: a 100,000-row frame with mixed column types serializes 2-3.5x faster, with a 15-40% lower memory peak. The largest gains are for pandas datetime and timedelta columns, duration columns, and `Decimal` or missing (`pd.NA`) values. Editing a cell no longer copies the whole data frame. (Thanks, @FBruzzesi!) (#2572)
+
+* `@render.download_button` and `@render.download_link` gain an `icon` argument, and pass any other keyword arguments (e.g. `class_="btn-success"`) to the control they auto-place in Express, so an Express app no longer needs `ui.hold()` and a hand-placed `ui.download_button()` just to add an icon. The same arguments can also be given with `@output_args()` (@raashish1601, #2533). Setting a reactive value from a `@render.download_button` download handler now updates the outputs and effects that read it right away, including while a streamed download is still sending, instead of only after the next message from the client (#1785).
+
+* `req(False, cancel_output=True)` inside a `@reactive.effect` now stops the effect silently, instead of being treated as an unhandled error that closes the session. `SilentCancelOutputException` now subclasses `SilentException` (#2560).
+
+* `session.bookmark.on_bookmark()` callbacks in a module now have the files they save found on restore. Restore now looks in `<dir>/<ns>`, where the files are saved, instead of `<dir>/<ns>-` (#2560).
+
+* `shiny create` now offers the "Stream markdown with enterprise LLM" templates, which were previously never found because of a misspelled path (#2560).
+
+* `ui.input_date()`'s `datesdisabled` now works when `format` is not the default `yyyy-mm-dd`. The dates are now converted on the client the same way `min`/`max` are, instead of being parsed by bootstrap-datepicker with the display `format`. The `data-date-dates-disabled` attribute is replaced by `data-dates-disabled` (and omitted when `datesdisabled` is `None`), and `controller.InputDate.expect_datesdisabled()` checks the new attribute. Requires the updated vendored `shiny.js` (rstudio/shiny#4434, #2523).
+
+* `ui.navset_tab()` and the other navsets now add `aria-controls`, pointing at the panel's `id`, to nav links that target a tab panel, alongside the existing `href` (rstudio/bslib#1355, #2526).
 
 ## [1.8.0] - 2026-09-12
 
@@ -31,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `local_server`, a pytest fixture that is the in-memory counterpart of `local_app`: a function-scoped `test_server()` session for the `app.py` next to the test file. (#2495)
 
-* Added `session.allow_reconnect()`, the Python counterpart to Shiny for R's `session$allowReconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
+* Added `session.allow_reconnect()`. Call it with `True` to let the browser reconnect to its session (showing a countdown dialog instead of the "Disconnected from server" overlay) when the hosting environment keeps sessions alive after a client disconnects, or with `"force"` to attempt the reconnect anywhere. (#2441)
 
 * Added `shiny.testserver.test_server()`, an in-memory server testing API for testing reactive server functions and Shiny apps headlessly, without a browser. (#2470)
 
@@ -69,7 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.input_selectize()`'s `options` docstring now correctly points at `ui.js_eval()` for marking a string as a JavaScript function. (#2416)
 
-* `ui.input_slider()` and `ui.update_slider()` now encode `datetime.date` values as UTC midnight, matching Shiny for R, so they no longer shift by a day when the server runs in a timezone ahead of UTC. Dates were encoded as local midnight, but the client formats and reads slider dates back in UTC, so on e.g. `Europe/Amsterdam` an update to `2025-01-01` landed on `2024-12-31`. Naive (timezone-less) `datetime.datetime` values are likewise anchored to UTC and round-trip unchanged, instead of shifting by the server's UTC offset: such a value was encoded as if it named a local time, but the client sends it back to be decoded as UTC, so a slider set to `12:00` reported `11:00` on a server in `Europe/Amsterdam`. Timezone-aware datetimes name an absolute instant and are unaffected. (#2398)
+* `ui.input_slider()` and `ui.update_slider()` now encode `datetime.date` values as UTC midnight, so they no longer shift by a day when the server runs in a timezone ahead of UTC. Dates were encoded as local midnight, but the client formats and reads slider dates back in UTC, so on e.g. `Europe/Amsterdam` an update to `2025-01-01` landed on `2024-12-31`. Naive (timezone-less) `datetime.datetime` values are likewise anchored to UTC and round-trip unchanged, instead of shifting by the server's UTC offset: such a value was encoded as if it named a local time, but the client sends it back to be decoded as UTC, so a slider set to `12:00` reported `11:00` on a server in `Europe/Amsterdam`. Timezone-aware datetimes name an absolute instant and are unaffected. (#2398)
 
 * `ui.input_task_button(type=None)` no longer drops the `bslib-task-button` class. Operator precedence made the `type is not None` check apply to the whole class string rather than just the Bootstrap classes, so the button rendered with `class=""`; since that class is the selector Shiny's input binding uses, the button was never bound as an input and clicking it did nothing. (#2388)
 
@@ -85,7 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * When test mode is enabled, each session serves a JSON snapshot of its `input`, `output`, and `export` values at `/session/{id}/dataobj/shinytest` (URL available via `session.get_test_snapshot_url()`). App authors can surface internal reactive values with `shiny.testmode.export_test_values()`. The endpoint honors query params `input`/`output`/`export` to select specific blocks (`=1` for a whole block, or a comma-separated list of keys); unlike R, requesting no blocks returns all three rather than a `400`. (#2269)
 
-* `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) and `my_output.snapshot_preprocess(fn)` preprocess test-mode snapshot values before they are written, e.g. to scrub timestamps or temp paths. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename, matching Shiny for R. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
+* `input.set_snapshot_preprocess(id, fn)` (or `shiny.testmode.snapshot_preprocess_input()`) and `my_output.snapshot_preprocess(fn)` preprocess test-mode snapshot values before they are written, e.g. to scrub timestamps or temp paths. Handlers may be synchronous or asynchronous. File inputs automatically scrub each file's `datapath` to its basename. `export_test_values()` moved from `shiny.session` to the new `shiny.testmode` module. (#2282)
 
 * `shiny.playwright.controller.AppTestValues` reads a session's test-mode snapshot (`input`/`output`/`export`) in end-to-end tests. Its expect methods accept predicates: pass any callable (e.g. `app_values.expect_input("n", is_integer)`) in place of an expected value, and the expectation retries until the predicate returns a truthy value. (#2269, #2357)
 

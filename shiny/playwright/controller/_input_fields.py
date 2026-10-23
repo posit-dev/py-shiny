@@ -612,21 +612,22 @@ class _DateBase(
         timeout: Timeout = None,
     ) -> None:
         """
-        Asserts that the input element has the expected `data-date-dates-disabled` attribute value.
+        Asserts that the input element has the expected `data-dates-disabled` attribute value.
 
         Parameters
         ----------
         value
-            The expected `data-date-dates-disabled` attribute value.
+            The expected `data-dates-disabled` attribute value. When `None`, the
+            attribute is expected to be absent.
         timeout
             The maximum time to wait for the value to appear. Defaults to `None`.
         """
         if isinstance(value, list):
             assert len(value) > 0, "`value` must be `None` or a non-empty list"
-        value_str = "null" if value is None else json.dumps(value)
+        value_str = None if value is None else json.dumps(value)
         _expect_attribute_to_have_value(
             self.loc,
-            "data-date-dates-disabled",
+            "data-dates-disabled",
             value=value_str,
             timeout=timeout,
         )

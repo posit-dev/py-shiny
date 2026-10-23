@@ -92,6 +92,8 @@ jobs:
       - name: Test that deployable example apps work
         timeout-minutes: 5 # ~10s locally
         env:
+          # Use checkout controllers with every app version in the matrix.
+          PYTHONPATH: ${{ github.workspace }}
           DEPLOY_APPS: "false"
         run: |
           make playwright-deploys TEST_FILE="${{ matrix.config.base_test_dir }} -vv"
@@ -99,6 +101,7 @@ jobs:
       - name: Deploy apps and run tests with local Connect
         uses: posit-dev/with-connect@main
         env:
+          PYTHONPATH: ${{ github.workspace }}
           UV_PYTHON: "3.13"
           DEPLOY_APPS: "true"
           EXPRESS_PAGE_SIDEBAR_NAME: "${{ matrix.config.app_name }}"

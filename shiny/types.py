@@ -20,9 +20,11 @@ from typing import (
     Dict,
     List,
     Literal,
+    Mapping,
     NamedTuple,
     Optional,
     Protocol,
+    Sequence,
     Tuple,
     TypeVar,
     Union,
@@ -146,7 +148,7 @@ class SilentException(Exception):
 
 
 @add_example()
-class SilentCancelOutputException(Exception):
+class SilentCancelOutputException(SilentException):
     """
     Throw a silent exception and don't clear output
 
@@ -390,9 +392,13 @@ Jsonifiable = Union[
     float,
     bool,
     None,
-    List["Jsonifiable"],
-    Tuple["Jsonifiable", ...],
-    "JsonifiableDict",
+    # Read-only `Sequence`/`Mapping` rather than invariant `List`/`Dict`, so values
+    # like `dict[str, int]` type-check. The trade-off: type checkers also accept
+    # other sequences and mappings (`range`, `deque`, `MappingProxyType`, `bytes`,
+    # ...), but only `list`, `tuple`, and `dict` (and their subclasses) serialize;
+    # anything else raises at send time.
+    Sequence["Jsonifiable"],
+    Mapping[str, "Jsonifiable"],
 ]
 
 JsonifiableDict = Dict[str, Jsonifiable]

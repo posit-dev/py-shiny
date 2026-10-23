@@ -8,7 +8,7 @@ from typing import Callable
 import click
 import questionary
 
-from ._utils import cli_action, cli_bold, cli_code, path_rel_wd
+from ._utils import cli_action, cli_bold, cli_code, cli_warning, path_rel_wd
 
 
 class ValidationError(Exception):
@@ -113,6 +113,28 @@ def get_output_file_path(output_file: str | None, app_path: Path) -> Path:
     return Path(output_file_val)
 
 
+def warn_deprecated() -> None:
+    click.echo(
+        cli_warning(
+            click.style(
+                "`shiny add test` is deprecated and will be removed within the "
+                "next few releases.",
+                fg="yellow",
+                bold=True,
+            )
+        ),
+        err=True,
+    )
+    click.echo(
+        click.style(
+            "  Use the `shiny-for-python` skill with an agent harness to "
+            "generate tests instead.",
+            fg="yellow",
+        ),
+        err=True,
+    )
+
+
 def generate_test_file(
     *,
     app_file: str | None,
@@ -120,7 +142,6 @@ def generate_test_file(
     provider: str,
     model: str | None,
 ) -> None:
-
     try:
         validate_api_key(provider)
 
@@ -171,10 +192,15 @@ def add() -> None:
 
 @add.command(
     "test",
+    deprecated=True,
     help="""Add a test file for a specified Shiny app.
 
 Generate a comprehensive test file for a specified app using AI. The generator
 will analyze your app code and create appropriate test cases with assertions.
+
+NOTE: `shiny add test` is deprecated and will be removed within the next few
+releases. Use the `shiny-for-python` skill with an agent harness to generate
+tests for your Shiny for Python apps instead.
 
 After creating the test file, you can use `pytest` to run the tests:
 
@@ -210,6 +236,7 @@ def test(
     provider: str,
     model: str | None,
 ) -> None:
+    warn_deprecated()
     generate_test_file(
         app_file=app, output_file=test_file, provider=provider, model=model
     )

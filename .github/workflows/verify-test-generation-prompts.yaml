@@ -1,10 +1,7 @@
 name: Verify test generation prompts
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/verify-test-generation-prompts.yml"
-      - "shiny/pytest/_generate/**"
+  # Disabled for now: `shiny add test` is deprecated. Run manually only.
   workflow_dispatch:
 
 concurrency:

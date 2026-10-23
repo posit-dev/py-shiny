@@ -58,7 +58,7 @@ class Sidebar(
         super().__init__(
             page,
             id=id,
-            loc=f"> aside#{id}",
+            loc=f"> .sidebar#{id}",
             loc_container="div.bslib-sidebar-layout",
         )
         self.loc_handle = self.loc_container.locator("button.collapse-toggle")
