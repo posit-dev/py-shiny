@@ -436,3 +436,52 @@ def test_plugin_ids_share_namespace_with_core() -> None:
         "from shiny import ui\nui.output_text('w')", rules=[rule]
     )
     assert [w["code"] for w in result.warnings] == ["DUPLICATE_ID"]
+
+
+@pytest.mark.parametrize(
+    "imports, render_dec, calc_dec, ui_call",
+    [
+        (
+            "import shiny",
+            "shiny.render.text",
+            "shiny.reactive.calc",
+            "shiny.ui.input_slider",
+        ),
+        (
+            "import shiny as s",
+            "s.render.text",
+            "s.reactive.calc",
+            "s.ui.input_slider",
+        ),
+        (
+            "from shiny import render as r, reactive as rx, ui as u",
+            "r.text",
+            "rx.calc",
+            "u.input_slider",
+        ),
+        (
+            "from shiny.render import text\nfrom shiny.reactive import calc\nfrom shiny.ui import input_slider",
+            "text",
+            "calc",
+            "input_slider",
+        ),
+    ],
+)
+def test_validate_import_styles_and_aliases(
+    imports: str, render_dec: str, calc_dec: str, ui_call: str
+) -> None:
+    code = (
+        f"{imports}\n"
+        f'{ui_call}("n", "N", 1, 10, 5)\n'
+        f"@{calc_dec}\n"
+        "def doubled():\n"
+        "    return input.n() * 2\n"
+        f"@{render_dec}\n"
+        "def out():\n"
+        "    return input.n\n"
+    )
+    result = validate_shiny_code(code, rules=())
+    assert result.detected_inputs == ["n"]
+    assert result.detected_reactives == ["doubled"]
+    assert result.detected_outputs == ["out"]
+    assert [err["code"] for err in result.errors] == ["UNCALLED_INPUT"]

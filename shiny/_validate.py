@@ -115,21 +115,36 @@ class ShinyCodeValidator(ast.NodeVisitor):
     def __init__(self) -> None:
         self.result = ValidateResult()
 
-        self._in_server_func = False
         self._in_reactive_context = False
         self._current_func_decorators: list[str] = []
         self._parent_map: dict[ast.AST, ast.AST] = {}
+        self._aliases: dict[str, str] = {}
 
     def generic_visit(self, node: ast.AST) -> None:
         for child in ast.iter_child_nodes(node):
             self._parent_map[child] = node
         super().generic_visit(node)
 
+    def _normalize_name(self, name: str) -> str:
+        if not name:
+            return ""
+        head, sep, tail = name.partition(".")
+        if head in self._aliases:
+            target = self._aliases[head]
+            name = f"{target}.{tail}" if sep else target
+        if name.startswith("shiny.express."):
+            return name[len("shiny.express.") :]
+        if name.startswith("shiny."):
+            return name[len("shiny.") :]
+        return name
+
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             if alias.name == "shiny" or alias.name.startswith("shiny."):
                 if self.result.mode == "unknown":
                     self.result.mode = "core"
+                bound = alias.asname or alias.name.partition(".")[0]
+                self._aliases[bound] = alias.name if alias.asname else "shiny"
             if "shiny.express" in alias.name:
                 self.result.mode = "express"
             if alias.name in ("shinyApp", "fluidPage", "shinyServer"):
@@ -150,6 +165,10 @@ class ShinyCodeValidator(ast.NodeVisitor):
         if "shiny.express" in module:
             self.result.mode = "express"
         for alias in node.names:
+            if module == "shiny" or module.startswith("shiny."):
+                if alias.name != "*":
+                    bound = alias.asname or alias.name
+                    self._aliases[bound] = f"{module}.{alias.name}"
             if module == "shiny" and alias.name in (
                 "shinyApp",
                 "fluidPage",
@@ -166,15 +185,16 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _check_func_def(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-        decorators = [self._get_decorator_name(d) for d in node.decorator_list]
-        prev_in_server = self._in_server_func
+        decorators = [
+            self._normalize_name(self._get_decorator_name(d))
+            for d in node.decorator_list
+        ]
         prev_in_reactive = self._in_reactive_context
         prev_decorators = self._current_func_decorators
 
         self._current_func_decorators = decorators
 
         if node.name == "server" and len(node.args.args) >= 2:
-            self._in_server_func = True
             if self.result.mode == "unknown":
                 self.result.mode = "core"
 
@@ -214,7 +234,6 @@ class ShinyCodeValidator(ast.NodeVisitor):
 
         self.generic_visit(node)
 
-        self._in_server_func = prev_in_server
         self._in_reactive_context = prev_in_reactive
         self._current_func_decorators = prev_decorators
 
@@ -225,7 +244,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self._check_func_def(node)
 
     def visit_Call(self, node: ast.Call) -> None:
-        call_name = self._get_call_name(node.func)
+        call_name = self._normalize_name(self._get_call_name(node.func))
 
         if call_name and (
             call_name.startswith("ui.input_") or call_name.startswith("ui.output_")
@@ -253,7 +272,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
                     )
 
             if isinstance(node.value, ast.Call):
-                call_name = self._get_call_name(node.value.func)
+                call_name = self._normalize_name(self._get_call_name(node.value.func))
                 if call_name in ("reactive.value", "reactive.Value") and isinstance(
                     target, ast.Name
                 ):
