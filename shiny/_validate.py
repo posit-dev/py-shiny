@@ -459,7 +459,7 @@ def validate_shiny_code(
     ``# shiny: ignore [CODE, ...]`` suppresses diagnostics on the current line.
     ``# shiny: ignore-next-line [CODE, ...]`` suppresses the following line.
     Omitting codes suppresses all validation rules on that line. Syntax errors
-    cannot be suppressed. These directives also work in the Shiny extension.
+    cannot be suppressed.
     """
     validator = validator_class()
     result = validator.result

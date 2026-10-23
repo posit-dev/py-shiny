@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added a built-in developer CLI tool: `shiny validate` statically checks apps for common reactivity errors and duplicate IDs. It returns a nonzero exit status when it finds errors; pass `--strict` to also fail on warnings.
+* Added a built-in developer CLI tool (`shiny validate`) and public `shiny.validate` module to statically check apps for common reactivity errors and duplicate IDs. `shiny validate` returns a nonzero exit status when it finds errors; pass `--strict` to also fail on warnings. (#2453)
+
+* Assigning directly to a Shiny input (e.g. `input.x = 1`) now raises a clearer `TypeError` explaining that inputs are read-only and suggesting `reactive.value()` or `ui.update_*` functions, and registering a duplicate output renderer now emits a `RuntimeWarning`. (#2453)
 
 ### Bug fixes
 

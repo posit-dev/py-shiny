@@ -26,8 +26,8 @@ customizes the built-in rules.
 For intentional exceptions, use ``# shiny: ignore`` on the diagnostic line or
 ``# shiny: ignore-next-line`` on the preceding line. Add comma-separated rule
 codes to ignore only those rules (for example, ``# shiny: ignore UNCALLED_INPUT``).
-These directives work in ``shiny validate``, startup validation, and the Shiny
-VS Code extension. Runtime errors still enforce Shiny's input/output contracts.
+These directives work in ``shiny validate`` and startup validation. Runtime
+errors still enforce Shiny's input/output contracts.
 """
 
 from ._validate import (

@@ -350,6 +350,21 @@ quartodoc:
             - otel.suppress
             - otel.collect
             - otel.get_level
+        - kind: page
+          path: Validate
+          flatten: true
+          summary:
+            name: "Code validation"
+            desc: "Static AST analysis and extensible validation rules for Shiny applications"
+          contents:
+            - validate
+            - validate.validate_shiny_code
+            - validate.validate_shiny_file
+            - validate.ValidateResult
+            - validate.ValidationRule
+            - validate.ShinyCodeValidator
+            - validate.installed_validation_rules
+            - validate.load_validation_rule
     - title: Types
       desc: ""
       contents:
