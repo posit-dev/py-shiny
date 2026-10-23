@@ -276,9 +276,8 @@ def test_validate_app_file_logs_exception_at_debug(
     logger = logging.getLogger("shiny")
     prev_level = logger.level
     try:
-        logger.setLevel(logging.NOTSET)
-        with caplog.at_level(logging.NOTSET, logger="shiny"):
-            _run._validate_app_file(tmp_path / "app.py")
+        logger.setLevel(logging.WARNING)
+        _run._validate_app_file(tmp_path / "app.py")
         assert logger.level == logging.DEBUG
         assert "validator crash" in caplog.text
     finally:
