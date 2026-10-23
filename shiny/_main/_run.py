@@ -524,9 +524,12 @@ def _validate_app_file(app_file: Path | str) -> None:
                     file=sys.stderr,
                 )
     except Exception:
-        logging.getLogger("shiny").debug(
-            "Static validation failed for %s", app_file, exc_info=True
-        )
+        logger = logging.getLogger("shiny")
+        if os.environ.get("SHINY_LOG_LEVEL", "").upper() == "DEBUG":
+            if not logger.handlers and not logging.getLogger().handlers:
+                logging.basicConfig(level=logging.DEBUG)
+            logger.setLevel(logging.DEBUG)
+        logger.debug("Static validation failed for %s", app_file, exc_info=True)
 
 
 def try_import_module(module: str) -> Optional[types.ModuleType]:

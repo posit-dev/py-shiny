@@ -272,6 +272,14 @@ def test_validate_app_file_logs_exception_at_debug(
         raise RuntimeError("validator crash")
 
     monkeypatch.setattr(_run, "validate_shiny_file", boom)
-    with caplog.at_level(logging.DEBUG, logger="shiny"):
-        _run._validate_app_file(tmp_path / "app.py")
-    assert "validator crash" in caplog.text
+    monkeypatch.setenv("SHINY_LOG_LEVEL", "DEBUG")
+    logger = logging.getLogger("shiny")
+    prev_level = logger.level
+    try:
+        logger.setLevel(logging.NOTSET)
+        with caplog.at_level(logging.NOTSET, logger="shiny"):
+            _run._validate_app_file(tmp_path / "app.py")
+        assert logger.level == logging.DEBUG
+        assert "validator crash" in caplog.text
+    finally:
+        logger.setLevel(prev_level)
