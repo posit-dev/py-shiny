@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from shiny._main import main
@@ -99,3 +100,37 @@ def test_cli_validate_directory_requires_app_py(tmp_path: Path):
 
     assert res.exit_code == 1
     assert "does not contain app.py" in res.output
+
+
+def test_cli_validate_validator_option(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sys
+
+    (tmp_path / "cli_rules_mod.py").write_text(
+        "import ast\n"
+        "from shiny.validate import ValidationRule\n"
+        "class NoPrint(ValidationRule):\n"
+        "    def visit_Call(self, node):\n"
+        "        if isinstance(node.func, ast.Name) and node.func.id == 'print':\n"
+        "            self.result.add_error(node.lineno, 'No print', 'CLI_PRINT')\n"
+        "        self.generic_visit(node)\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    runner = CliRunner()
+    args = ["validate", "--code", "print('hi')", "--json"]
+    assert runner.invoke(main, args).exit_code == 0
+
+    res = runner.invoke(main, [*args, "--validator", "cli_rules_mod:NoPrint"])
+    assert res.exit_code == 1
+    assert [e["code"] for e in json.loads(res.output)["errors"]] == ["CLI_PRINT"]
+
+
+def test_cli_validate_bad_validator_spec() -> None:
+    res = CliRunner().invoke(
+        main, ["validate", "--code", "pass", "--validator", "no_such_mod_xyz:Rule"]
+    )
+    assert res.exit_code == 2
+    assert "--validator" in res.output
+    assert "ModuleNotFoundError" in res.output

@@ -7,7 +7,12 @@ from typing import Optional
 
 import click
 
-from .._validate import validate_shiny_code
+from .._validate import (
+    ValidationRuleLike,
+    installed_validation_rules,
+    load_validation_rule,
+    validate_shiny_code,
+)
 from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_warning
 
 
@@ -24,6 +29,7 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
         shiny validate app.py
         shiny validate --code "from shiny.express import ui"
         shiny validate . --json
+        shiny validate app.py --validator my_rules:NoPrintRule
     """,
 )
 @click.argument("path", required=False, type=click.Path(exists=False))
@@ -37,7 +43,29 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
     default=False,
     help="Output validation report in JSON format.",
 )
-def validate(path: Optional[str], code: Optional[str], json_output: bool) -> None:
+@click.option(
+    "--validator",
+    "validator_specs",
+    multiple=True,
+    metavar="MODULE:ATTR",
+    help="Extra validation rule (ValidationRule subclass or callable). Repeatable; "
+    "runs alongside rules installed under the 'shiny.validators' entry-point group.",
+)
+def validate(
+    path: Optional[str],
+    code: Optional[str],
+    json_output: bool,
+    validator_specs: tuple[str, ...],
+) -> None:
+    extra_rules: list[ValidationRuleLike] = []
+    for spec in validator_specs:
+        try:
+            extra_rules.append(load_validation_rule(spec))
+        except Exception as e:
+            raise click.BadParameter(
+                f"{spec}: {type(e).__name__}: {e}", param_hint="'--validator'"
+            ) from e
+
     source_code: str = ""
     target_desc: str = ""
 
@@ -102,7 +130,9 @@ def validate(path: Optional[str], code: Optional[str], json_output: bool) -> Non
                 )
             sys.exit(1)
 
-    result = validate_shiny_code(source_code)
+    result = validate_shiny_code(
+        source_code, rules=[*installed_validation_rules(), *extra_rules]
+    )
 
     if json_output:
         result_with_target = dict(result.to_dict())
