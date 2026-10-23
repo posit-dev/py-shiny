@@ -90,7 +90,13 @@ class _StubSession:
         return False
 
 
-def test_runtime_outputs_duplicate_warning() -> None:
+def test_runtime_outputs_duplicate_warning(tmp_path: Path) -> None:
+    import warnings
+
+    from shiny.express import wrap_express_app
+    from shiny.express._stub_session import ExpressStubSession
+    from shiny.session._utils import session_context
+
     session = cast(Session, _StubSession())
     outputs_map: dict[str, Any] = {}
     outputs = Outputs(session, ns=ResolvedId(""), outputs=outputs_map)
@@ -100,12 +106,37 @@ def test_runtime_outputs_duplicate_warning() -> None:
     def result() -> str:
         return "first"
 
-    with pytest.warns(RuntimeWarning, match="Duplicate output 'result'"):
+    with pytest.warns(RuntimeWarning, match="Duplicate output 'result'") as record:
 
         @outputs
         @render.text
         def result() -> str:  # noqa: F811
             return "second"
+
+    assert record[0].filename == __file__
+
+    app_file = tmp_path / "app.py"
+    app_file.write_text(
+        "from shiny.express import render\n"
+        "@render.text\n"
+        "def dup():\n"
+        "    return 'one'\n"
+        "@render.text\n"
+        "def dup():\n"
+        "    return 'two'\n"
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", RuntimeWarning)
+        app = wrap_express_app(app_file)
+        s2 = ExpressStubSession()
+        with session_context(s2):
+            assert app.server is not None
+            app.server(s2.input, s2.output, s2)
+
+    dup_warnings = [w for w in caught if "Duplicate output 'dup'" in str(w.message)]
+    assert len(dup_warnings) == 1
+    assert Path(dup_warnings[0].filename).resolve() == app_file.resolve()
+    assert dup_warnings[0].lineno == 6
 
 
 def test_core_shiny_output_id_order_independent() -> None:

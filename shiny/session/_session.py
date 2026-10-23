@@ -2630,6 +2630,9 @@ class OutputInfo:
     suspend_when_hidden: bool
 
 
+_warned_duplicate_outputs: set[tuple[str, int, str]] = set()
+
+
 class Outputs:
     """
     A class representing Shiny output definitions.
@@ -2701,14 +2704,25 @@ class Outputs:
             output_otel_attrs = extract_source_ref(renderer_func)
             output_otel_level = resolve_func_otel_level(renderer_func)
 
-            renderer._on_register()
-
             if output_name in self._outputs:
-                warnings.warn(
-                    f"Duplicate output '{output_id}': overwriting previous renderer definition.",
-                    RuntimeWarning,
-                    stacklevel=2,
+                code = getattr(renderer_func, "__code__", None)
+                filename = output_otel_attrs.get("code.file.path") or (
+                    code.co_filename if code is not None else "<unknown>"
                 )
+                lineno = output_otel_attrs.get("code.line.number") or (
+                    code.co_firstlineno if code is not None else 1
+                )
+                warn_key = (filename, lineno, str(output_name))
+                if warn_key not in _warned_duplicate_outputs:
+                    _warned_duplicate_outputs.add(warn_key)
+                    warnings.warn_explicit(
+                        f"Duplicate output '{output_id}': overwriting previous renderer definition.",
+                        RuntimeWarning,
+                        filename,
+                        lineno,
+                    )
+
+            renderer._on_register()
 
             self.remove(output_name)
 
