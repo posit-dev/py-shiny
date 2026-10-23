@@ -23,12 +23,15 @@ def test_validate_direct_input_assignment() -> None:
 def test_validate_uncalled_input() -> None:
     code = "from shiny import render, input\n@render.text\ndef txt():\n    return input.val"
     report = validate_shiny_code(code)
-    assert report.valid and not report.clean
-    assert any(warn["code"] == "UNCALLED_INPUT" for warn in report.warnings)
-    assert any("parentheses" in warn["message"] for warn in report.warnings)
+    assert not report.valid
+    assert any(err["code"] == "UNCALLED_INPUT" for err in report.errors)
+    assert any("parentheses" in err["message"] for err in report.errors)
     assert (
         "Code structure matches Python Shiny best practices." not in report.suggestions
     )
+    assert validate_shiny_code(
+        "from shiny import render, input\n@render.text\ndef txt():\n    return input.val.is_set()"
+    ).clean
 
 
 def test_validate_duplicate_input_ids() -> None:
@@ -230,10 +233,8 @@ def test_shared_editor_suppression_fixtures() -> None:
     )
     for fixture in fixtures:
         result = validate_shiny_code(fixture["code"])
-        assert [issue["line"] for issue in result.warnings] == fixture[
-            "lines"
-        ], fixture["name"]
-        assert not result.errors
+        issues = result.errors + result.warnings
+        assert [issue["line"] for issue in issues] == fixture["lines"], fixture["name"]
 
 
 def test_file_validation_uses_custom_validator(tmp_path: Path) -> None:

@@ -269,19 +269,23 @@ class ShinyCodeValidator(ast.NodeVisitor):
         ):
             parent = self._parent_map.get(node)
             is_func_call = isinstance(parent, ast.Call) and parent.func is node
+            is_attr_access = isinstance(parent, ast.Attribute) and parent.value is node
             is_event_arg = False
             if isinstance(parent, ast.Call):
                 parent_call_name = self._get_call_name(parent.func)
                 if "event" in parent_call_name:
                     is_event_arg = True
 
-            if not is_func_call and not is_event_arg and self._in_reactive_context:
-                self.result.warnings.append(
-                    {
-                        "line": node.lineno,
-                        "message": f"Input 'input.{node.attr}' accessed without parentheses '()'. Inputs are reactive callables in Python.",
-                        "code": "UNCALLED_INPUT",
-                    }
+            if (
+                not is_func_call
+                and not is_attr_access
+                and not is_event_arg
+                and self._in_reactive_context
+            ):
+                self.result.add_error(
+                    node.lineno,
+                    f"Input 'input.{node.attr}' accessed without parentheses '()'. Inputs are reactive callables in Python.",
+                    "UNCALLED_INPUT",
                 )
 
         self.generic_visit(node)

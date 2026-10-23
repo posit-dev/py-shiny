@@ -36,15 +36,13 @@ def test_cli_validate_errors_json():
 
 def test_cli_validate_warnings():
     runner = CliRunner()
-    code = """from shiny.express import input, render, ui
+    code = """from shiny.express import ui
 ui.input_slider("n", "N", 1, 10, 5)
-@render.text
-def txt():
-    return f"Value: {input.n}"
+ui.input_slider("n", "Second N", 1, 10, 5)
 """
     res = runner.invoke(main, ["validate", "--code", code])
     assert res.exit_code == 0
-    assert "UNCALLED_INPUT" in res.output
+    assert "DUPLICATE_ID" in res.output
     assert "No errors found (1 warning)." in res.output
     assert "All validation checks passed" not in res.output
     assert runner.invoke(main, ["validate", "--code", code, "--strict"]).exit_code == 1
@@ -52,12 +50,9 @@ def txt():
 
 def test_cli_validate_warning_only_json() -> None:
     runner = CliRunner()
-    code = """from shiny.express import input, render, ui
+    code = """from shiny.express import ui
 ui.input_slider("n", "N", 1, 10, 5)
 ui.input_slider("n", "Second N", 1, 10, 5)
-@render.text
-def txt():
-    return input.n
 """
     args = ["validate", "--code", code, "--json"]
     res = runner.invoke(main, args)
@@ -65,10 +60,7 @@ def txt():
     data = json.loads(res.output)
     assert data["valid"] is True
     assert runner.invoke(main, [*args, "--strict"]).exit_code == 1
-    assert {warning["code"] for warning in data["warnings"]} == {
-        "DUPLICATE_ID",
-        "UNCALLED_INPUT",
-    }
+    assert {warning["code"] for warning in data["warnings"]} == {"DUPLICATE_ID"}
     assert (
         "Code structure matches Python Shiny best practices." not in data["suggestions"]
     )
