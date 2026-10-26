@@ -51,6 +51,7 @@ def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#btn-mode-overview").click()
     expect(page.locator("#module-overview-panel")).to_be_visible()
+    expect(page.locator("#overview-activity-count")).to_have_text("(3 updates)")
     expect(page.locator("#sidebar")).to_be_hidden()
     expect(page.get_by_role("button", name="Back to overview")).to_be_hidden()
     expect(page.locator(".graph-topbar")).to_be_hidden()
@@ -202,15 +203,15 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
             "#timeline-tab, #actions-tab, #btn-summary-toggle, #flush-pipeline-bar, #timeline-sidebar, #flush-select"
         )
     ).to_have_count(0)
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 1 / 3")
+    expect(page.locator("#active-flush-label")).to_contain_text("Update 1 of 3")
     page.locator("#btn-next-action").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 3 · x")
+    expect(page.locator("#active-flush-label")).to_contain_text("Update 2 of 3 · x")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.locator("#btn-next-action").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 3 · y")
+    expect(page.locator("#active-flush-label")).to_contain_text("Update 3 of 3 · y")
     expect(page.locator(".graph-node")).to_have_count(2)
     page.locator("#btn-prev-action").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 3 · x")
+    expect(page.locator("#active-flush-label")).to_contain_text("Update 2 of 3 · x")
 
 
 def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
@@ -225,8 +226,8 @@ def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
     assert box is not None
     page.mouse.click(box["x"] + box["width"] - 8, box["y"] + box["height"] / 2)
     expect(slider).to_have_value(str(len(data["events"]) - 1))
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 3")
-    expect(slider).to_have_attribute("aria-valuetext", re.compile("Flush 3 / 3"))
+    expect(page.locator("#active-flush-label")).to_contain_text("Update 3 of 3")
+    expect(slider).to_have_attribute("aria-valuetext", re.compile("Update 3 of 3"))
     page.keyboard.press("Home")
     expect(slider).to_have_value("0")
 
@@ -431,3 +432,23 @@ def test_timeline_can_drag_from_a_mark_across_the_band(page: Page):
     )
     page.mouse.up()
     expect(page.locator("#scrubber-range")).to_have_value("8")
+
+
+def test_update_labels_and_view_controls(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    current = page.get_by_role("button", name="Current update", exact=True)
+    all_items = page.get_by_role("button", name="All items", exact=True)
+    expect(current).to_be_visible()
+    expect(all_items).to_have_attribute("title", "Show all items")
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Update 1 of 3")
+    expect(page.locator("#active-flush-label")).to_contain_text("Update 1 of 3")
+    all_items.click()
+    expect(page.locator(".graph-node")).to_have_count(5)
+    current.click()
+    expect(page.get_by_role("button", name="Remove update filter")).to_be_visible()
+    page.locator("#btn-next-action").click()
+    expect(page.locator("#active-flush-label")).to_contain_text("Update 2 of 3")
+    expect(page.locator(".graph-node")).to_have_count(3)
+    page.get_by_role("button", name="Node details", exact=True).click()
+    expect(page.locator("#flush-card-title")).to_contain_text("Update 2:")
+    expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")

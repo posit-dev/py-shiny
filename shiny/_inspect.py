@@ -1484,7 +1484,7 @@ def generate_reactlog(
             status="idle",
             timestamp=0,
             time_sec=0.0,
-            details=f"Static ordering contains {len(eval_order)} nodes; no reactive flush occurred",
+            details=f"Static ordering contains {len(eval_order)} nodes; no reactive update occurred",
             session=session,
         )
     )
@@ -2989,16 +2989,16 @@ def format_reactlog_html(
       <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
       <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
       <span class="step-display" id="step-display">Step 0 / 0</span>
-      <span class="flush-counter-badge" id="flush-counter-badge">Flush 1 / 1</span>
+      <span class="flush-counter-badge" id="flush-counter-badge" title="An update is a group of related activity. Some updates have no visible changes.">Update 1 of 1</span>
     </div>
     </div>
     <div class="status-right">
       <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
-        <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show only nodes active in this flush cycle">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Flush Cycle
+        <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show activity for this update">
+          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Current update
         </button>
-        <button class="btn mini view-mode-btn" id="btn-mode-full" onclick="setViewMode('full')" title="Show the complete reactive DAG">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> Full DAG
+        <button class="btn mini view-mode-btn" id="btn-mode-full" onclick="setViewMode('full')" title="Show all items">
+          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> All items
         </button>
         <button class="btn mini view-mode-btn is-active" id="btn-mode-overview" onclick="setViewMode('overview')" title="System architecture overview">
           <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> Overview
@@ -3060,8 +3060,8 @@ def format_reactlog_html(
               <span class="overview-subtitle" id="overview-subtitle"></span>
             </div>
             <div class="overview-actions">
-              <button type="button" class="btn mini" onclick="setViewMode('flush')"><svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Zoom to Active Flush</button>
-              <button type="button" class="btn mini" onclick="setViewMode('full')"><svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> Full DAG</button>
+              <button type="button" class="btn mini" onclick="setViewMode('flush')"><svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Current update</button>
+              <button type="button" class="btn mini" onclick="setViewMode('full')"><svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> All items</button>
             </div>
           </div>
           <div class="overview-cards-grid" id="overview-cards-grid"></div>
@@ -3114,7 +3114,7 @@ def format_reactlog_html(
           <div class="inspector-container">
             <details class="flush-card" id="flush-card">
               <summary class="flush-card-header">
-                <div class="flush-card-title" id="flush-card-title">Flush 0: Init</div>
+                <div class="flush-card-title" id="flush-card-title">Update 1: Initial render</div>
                 <span class="flush-card-time" id="flush-card-time">0.0s</span>
               </summary>
               <div class="flush-card-body">
@@ -3760,7 +3760,7 @@ def format_reactlog_html(
       activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
       const activeLabel = document.getElementById('active-flush-label');
       activeLabel.textContent = curWave
-        ? `Flush ${{activeBurstIndex + 1}} / ${{allBursts.length}} · ${{curWave.humanAction || curWave.triggerLabel || 'Initial render'}}`
+        ? `Update ${{activeBurstIndex + 1}} of ${{allBursts.length}} · ${{curWave.humanAction || curWave.triggerLabel || 'Initial render'}}`
         : 'No recorded activity';
       activeLabel.title = activeLabel.textContent;
       const ev = events[currentStep];
@@ -3977,7 +3977,7 @@ def format_reactlog_html(
 
 
       const badge = document.getElementById('flush-counter-badge');
-      if (badge) badge.textContent = `Flush ${{curIdx + 1}} / ${{allBursts.length}}`;
+      if (badge) badge.textContent = `Update ${{curIdx + 1}} of ${{allBursts.length}}`;
 
       const invCount = curWave.invalidatedNodes ? curWave.invalidatedNodes.size : 0;
       const calcCount = curWave.calcs ? curWave.calcs.length : 0;
@@ -3985,7 +3985,7 @@ def format_reactlog_html(
 
       const cardTitle = document.getElementById('flush-card-title');
       if (cardTitle) {{
-        cardTitle.textContent = curWave.isInit ? 'Flush 0: Initial Render' : `Flush ${{curIdx}}: ${{curWave.shortLabel || 'Action'}}`;
+        cardTitle.textContent = curWave.isInit ? 'Update 1: Initial render' : `Update ${{curIdx + 1}}: ${{curWave.shortLabel || 'Action'}}`;
       }}
       const cardTime = document.getElementById('flush-card-time');
       if (cardTime) {{
@@ -4001,7 +4001,7 @@ def format_reactlog_html(
       const cardCalcs = document.getElementById('flush-card-calcs');
       if (cardCalcs) cardCalcs.textContent = `${{calcCount}} calcs re-evaluated`;
       const cardOuts = document.getElementById('flush-card-outputs');
-      if (cardOuts) cardOuts.textContent = `${{outCount}} outputs flushed`;
+      if (cardOuts) cardOuts.textContent = `Outputs that ran: ${{outCount}}`;
 
       const execOrder = document.getElementById('flush-execution-order');
       if (execOrder) {{
@@ -4091,7 +4091,7 @@ def format_reactlog_html(
         button.onclick = () => {{ clear(); refreshExploration(); }};
         chips.appendChild(button);
       }};
-      if (currentViewMode === 'flush') add('flush', 'Active flush', () => setViewMode('full'));
+      if (currentViewMode === 'flush') add('update', 'Current update', () => setViewMode('full'));
       if (selectedModuleFilter) add('module', selectedModuleFilter === '__root__' ? 'App (Root)' : selectedModuleFilter, () => {{
         selectedModuleFilter = '';
       }});
@@ -4099,7 +4099,7 @@ def format_reactlog_html(
         searchQuery = ''; document.getElementById('search-input').value = ''; document.getElementById('search-results').hidden = true;
       }});
       if (selectedStageFilter) add('stage', selectedStageFilter, () => {{ selectedStageFilter = null; }});
-      if (activityStart !== null || activityEnd !== null) add('interval', `Flushes ${{activityStart ?? 0}}–${{activityEnd ?? allBursts.length - 1}}`, () => {{
+      if (activityStart !== null || activityEnd !== null) add('interval', `Updates ${{activityStart ?? 0}}–${{activityEnd ?? allBursts.length - 1}}`, () => {{
         activityStart = null; activityEnd = null;
       }});
       document.querySelectorAll('.pipeline-step-item').forEach(el => el.classList.toggle('is-selected-stage', el.id === `pipe-${{selectedStageFilter}}`));
@@ -4156,12 +4156,12 @@ def format_reactlog_html(
       }});
 
       if (subtitle) {{
-        subtitle.textContent = `${{modulesMap.size}} Modules · ${{nodes.length}} Nodes · ${{allBursts.length}} flushes`;
+        subtitle.textContent = `${{modulesMap.size}} Modules · ${{nodes.length}} Nodes · ${{allBursts.length}} updates`;
       }}
 
       const activity = document.getElementById('overview-activity');
       activity.replaceChildren();
-      document.getElementById('overview-activity-count').textContent = `(${{allBursts.length}} flushes)`;
+      document.getElementById('overview-activity-count').textContent = `(${{allBursts.length}} updates)`;
       for (const side of ['start', 'end']) {{
         const select = document.getElementById('activity-' + side);
         select.replaceChildren(new Option(side === 'start' ? 'Recording start' : 'Recording end', ''));
@@ -5859,7 +5859,7 @@ def format_reactlog_html(
           <tr><td><span class="shortcut-key">Shift+←</span> / <span class="shortcut-key">Shift+→</span></td><td>Jump to previous / next idle</td></tr>
           <tr><td><span class="shortcut-key">Alt+←</span> / <span class="shortcut-key">Alt+→</span></td><td>Previous / next output calculation</td></tr>
           <tr><td><span class="shortcut-key">O</span></td><td>Toggle Macro Architecture Overview</td></tr>
-          <tr><td><span class="shortcut-key">F</span></td><td>Toggle Active Flush Subgraph mode</td></tr>
+          <tr><td><span class="shortcut-key">F</span></td><td>Toggle current update view</td></tr>
           <tr><td><span class="shortcut-key">←</span> or <span class="shortcut-key">h</span></td><td>Step backward one event</td></tr>
           <tr><td><span class="shortcut-key">→</span> or <span class="shortcut-key">l</span></td><td>Step forward one event</td></tr>
           <tr><td><span class="shortcut-key">↑</span> or <span class="shortcut-key">k</span></td><td>Jump to previous action burst</td></tr>
