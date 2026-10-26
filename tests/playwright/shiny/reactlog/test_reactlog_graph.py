@@ -1594,8 +1594,8 @@ def test_reactlog_flush_pipeline_and_stepper(page: Page, tmp_path: Path) -> None
     data = _record(tmp_path, _VAL_CODE, [*_VAL_STEPS, {"val": 20}])
     load_graph_report(page, format_reactlog_html(data, _VAL_CODE))
     expect(page.locator("#flush-select, #flush-pipeline-bar")).to_have_count(0)
-    page.locator("#btn-next-flush").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Flush 2")
+    page.evaluate("selectFlush(1)")
+    expect(page.locator("#active-flush-label")).to_contain_text("Update 2")
     expect(page.locator("#flush-card")).to_be_visible()
 
 

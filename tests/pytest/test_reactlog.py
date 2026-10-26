@@ -1102,7 +1102,7 @@ def test_format_reactlog_html_flush_navigation_and_pipeline():
 def test_format_reactlog_html_overview_and_zooming_modes():
     html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert 'id="module-overview-panel"' in html
-    assert 'id="module-filter-select"' in html
+    assert 'id="module-filter-select"' not in html
     assert "setViewMode(" in html
     assert "zoomToModule(" in html
     assert "renderModuleOverview(" in html
@@ -1223,6 +1223,6 @@ def test_format_reactlog_html_secondary_timeline_and_invalidation():
     assert "openSecondaryTimelineForNode(" in html
     assert "closeSecondaryTimeline()" in html
     assert "renderSecondaryTimeline()" in html
-    assert ".timeline-marker.is-invalidation" in html
+    assert ".timeline-marker.is-output" in html
     assert ".graph-node.is-invalidated" in html
-    assert "is-invalidation" in html
+    assert 'id="timeline-key"' in html

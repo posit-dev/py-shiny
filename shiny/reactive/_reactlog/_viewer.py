@@ -1314,7 +1314,7 @@ def format_reactlog_html(
     <div class="timeline-navigation">
       <button class="btn mini" id="btn-prev-activity" onclick="selectFlush(getCurrentFlushIndex() - 1)" aria-label="Previous activity">◀ Previous</button>
       <div class="flush-picker-wrap">
-        <span class="flush-counter-badge" id="flush-counter-badge" title="An activity is a group of recorded events. Some activities have no visible changes.">Activity 1 of 1</span>
+        <span class="flush-counter-badge" id="flush-counter-badge" onclick="toggleSecondaryTimelineForFlush()" style="cursor:pointer" title="An activity is a group of recorded events. Some activities have no visible changes.">Activity 1 of 1</span>
         <button type="button" class="btn icon mini flush-picker-btn" id="btn-flush-picker" onclick="toggleFlushPicker(event)" aria-label="Jump to activity" aria-expanded="false" title="Jump to any activity"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
         <div id="flush-picker-menu" class="flush-picker-menu" role="menu" aria-label="Activities list" hidden></div>
       </div>
@@ -1346,6 +1346,7 @@ def format_reactlog_html(
       </details>
     </div>
     <div class="status-right">
+      <button class="btn icon mini" id="btn-shortcuts" onclick="toggleShortcutsModal()" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts (?)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10"/></svg></button>
       <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
         <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show activity for this group">
           <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Current activity
@@ -1359,7 +1360,7 @@ def format_reactlog_html(
 
   <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline" ondblclick="toggleSecondaryTimelineForFlush()">
     <div class="timeline-current">
-      <span id="active-flush-label" role="status" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()" title="Double-click to toggle flush details"></span>
+      <span id="active-flush-label" role="status" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()" title="Double-click to toggle update details"></span>
       <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
     </div>
     <div id="trace-track-wrap" class="trace-track-wrap" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()">
@@ -1371,6 +1372,20 @@ def format_reactlog_html(
     <div class="timeline-key" id="timeline-key" aria-label="Timeline key">
       <span><i></i>Idle</span><span><i class="key-output"></i>Output calculation</span>
       <span><i class="key-mark"></i>User mark</span><span><i class="key-position"></i>Current step</span>
+    </div>
+  </div>
+
+  <div class="secondary-timeline-bar" id="secondary-timeline-bar" hidden aria-label="Detailed secondary timeline">
+    <div class="secondary-timeline-header">
+      <div class="secondary-timeline-info">
+        <span class="secondary-timeline-tag tag-flush" id="secondary-timeline-tag">Update</span>
+        <span class="secondary-timeline-title" id="secondary-timeline-title">Update details</span>
+        <span class="secondary-timeline-meta" id="secondary-timeline-meta"></span>
+      </div>
+      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="secondary-timeline-track-wrap" id="secondary-timeline-track-wrap">
+      <div class="secondary-timeline-chips" id="secondary-timeline-chips" role="list" aria-label="Step events"></div>
     </div>
   </div>
 
@@ -1394,6 +1409,13 @@ def format_reactlog_html(
               <button type="button" class="legend-role-btn is-active" data-role="conductor" onclick="toggleRoleFilter('conductor')" aria-pressed="true" title="Filter Calc nodes"><span class="legend-dot" style="--role-color:var(--calc)"></span>Calc</button>
               <button type="button" class="legend-role-btn is-active" data-role="effect" onclick="toggleRoleFilter('effect')" aria-pressed="true" title="Filter Effect nodes"><span class="legend-dot" style="--role-color:var(--effect)"></span>Effect</button>
               <button type="button" class="legend-role-btn is-active" data-role="output" onclick="toggleRoleFilter('output')" aria-pressed="true" title="Filter Output nodes"><span class="legend-dot" style="--role-color:var(--output)"></span>Output</button>
+            </div>
+            <div class="zoom-controls">
+              <button class="btn mini" id="btn-toggle-collapse-all" onclick="toggleCollapseAllModules()" title="Collapse all modules into macro boxes">Collapse modules</button>
+              <button class="btn mini" onclick="resetGraphView()" title="Clear node selection and filters, then fit the full graph">Reset view</button>
+              <button class="btn icon mini" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+              <button class="btn icon mini" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/></svg></button>
+              <button class="btn icon mini" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
             </div>
           </div>
         </div>
@@ -1510,20 +1532,6 @@ def format_reactlog_html(
         {source_panel}
       </aside>
     </main>
-  </div>
-
-  <div class="secondary-timeline-bar" id="secondary-timeline-bar" hidden aria-label="Detailed secondary timeline">
-    <div class="secondary-timeline-header">
-      <div class="secondary-timeline-info">
-        <span class="secondary-timeline-tag tag-flush" id="secondary-timeline-tag">Flush</span>
-        <span class="secondary-timeline-title" id="secondary-timeline-title">Flush Details</span>
-        <span class="secondary-timeline-meta" id="secondary-timeline-meta"></span>
-      </div>
-      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div class="secondary-timeline-track-wrap" id="secondary-timeline-track-wrap">
-      <div class="secondary-timeline-chips" id="secondary-timeline-chips" role="list" aria-label="Step events"></div>
-    </div>
   </div>
 
   <script>
@@ -2229,12 +2237,12 @@ def format_reactlog_html(
 
       const waveIndex = allBursts.indexOf(wave);
       const flushNum = waveIndex >= 0 ? waveIndex + 1 : (wave.index || 1);
-      tag.textContent = `Flush ${{flushNum}} / ${{allBursts.length}}`;
+      tag.textContent = `Update ${{flushNum}} of ${{allBursts.length}}`;
       tag.className = 'secondary-timeline-tag tag-flush';
 
       const waveStart = wave.startStep !== undefined ? wave.startStep : 0;
       const waveEnd = wave.endStep !== undefined ? wave.endStep : (events.length - 1);
-      const flushTitle = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : `Flush ${{flushNum}}`);
+      const flushTitle = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : `Update ${{flushNum}}`);
       title.textContent = flushTitle;
 
       const invCount = wave.invalidatedNodes ? wave.invalidatedNodes.size : 0;
@@ -2355,9 +2363,9 @@ def format_reactlog_html(
       if (!wave.recorded || wave.completed) {{
         stages.push({{
           step: waveEnd,
-          kind: 'Settled',
+          kind: 'Idle',
           label: 'Idle',
-          fullName: 'Flush complete / idle',
+          fullName: 'Update complete / idle',
           icon: ICONS.check,
           cssClass: 'pill-idle'
         }});
