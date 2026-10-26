@@ -452,3 +452,90 @@ def test_update_labels_and_view_controls(page: Page):
     page.get_by_role("button", name="Node details", exact=True).click()
     expect(page.locator("#flush-card-title")).to_contain_text("Update 2:")
     expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
+
+
+def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
+    data = timeline_report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_output_result_hidden",
+            "name": ".clientdata_output_result_hidden",
+            "label": ".clientdata_output_result_hidden",
+            "type": "input",
+            "role": "source",
+            "module": "",
+        }
+    )
+    long_code = "\n".join([f"# padding line {i}" for i in range(1, 50)] + [CODE])
+    for node in data["nodes"]:
+        if node.get("id") == "calc:doubled":
+            node["line"] = 51
+    page.set_viewport_size({"width": 1280, "height": 720})
+    page.set_content(format_reactlog_html(data, long_code, video_path="demo.webm"))
+
+    idle_bg = page.locator(".timeline-marker.is-idle").first.evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    out_bg = page.locator(".timeline-marker.is-output").first.evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    assert idle_bg != out_bg
+
+    track_bg = page.locator("#trace-track-wrap").evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    assert track_bg == "rgb(27, 38, 52)"
+
+    picker_btn = page.locator("#btn-flush-picker")
+    picker_menu = page.locator("#flush-picker-menu")
+    expect(picker_menu).to_be_hidden()
+    picker_btn.click()
+    expect(picker_menu).to_be_visible()
+    picker_menu.locator('.flush-picker-item[data-flush-index="1"]').click()
+    expect(picker_menu).to_be_hidden()
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Update 2 of 3")
+
+    page.get_by_role("button", name="All items", exact=True).click()
+    expect(page.locator(".graph-node")).to_have_count(6)
+
+    client_btn = page.locator("#btn-toggle-clientdata")
+    expect(client_btn).to_be_visible()
+    client_btn.click()
+    expect(page.locator(".graph-node")).to_have_count(5)
+    expect(page.get_by_role("button", name="Remove clientdata filter")).to_be_visible()
+    page.get_by_role("button", name="Remove clientdata filter").click()
+    expect(page.locator(".graph-node")).to_have_count(6)
+
+    calc_role_btn = page.locator('.legend-role-btn[data-role="conductor"]')
+    calc_role_btn.click()
+    expect(page.locator(".graph-node")).to_have_count(5)
+    expect(page.get_by_role("button", name="Remove role filter")).to_be_visible()
+    page.get_by_role("button", name="Remove role filter").click()
+    expect(page.locator(".graph-node")).to_have_count(6)
+
+    edge_titles = page.locator(".graph-edge title").count()
+    assert edge_titles >= 3
+
+    video_box_closed = page.locator("#video-panel").bounding_box()
+    page.locator('.graph-node[data-id="calc:doubled"]').click()
+    expect(page.locator("#sidebar")).to_be_visible()
+    expect(page.locator("#main-view")).to_have_class(re.compile(r"is-inspector-open"))
+    video_box_open = page.locator("#video-panel").bounding_box()
+    sidebar_box = page.locator("#sidebar").bounding_box()
+    assert video_box_closed and video_box_open and sidebar_box
+    assert video_box_open["x"] < video_box_closed["x"]
+    assert video_box_open["x"] + video_box_open["width"] <= sidebar_box["x"]
+
+    page.get_by_role("button", name="Close Inspector", exact=True).click()
+    expect(page.locator("#sidebar")).to_be_hidden()
+    expect(page.locator("#btn-inspect-selection")).to_be_visible()
+    expect(page.locator("#btn-toggle-inspector-bottom")).to_have_class(
+        re.compile(r"has-selection")
+    )
+    page.locator("#btn-inspect-selection").click()
+    expect(page.locator("#sidebar")).to_be_visible()
+
+    page.get_by_role("tab", name="App code").click()
+    expect(page.locator("#source-panel .source-line.is-active")).to_have_attribute(
+        "data-line", "51"
+    )

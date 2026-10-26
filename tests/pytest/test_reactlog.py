@@ -744,6 +744,10 @@ def out():
     assert 'data-theme="light"' in html_light
     assert '[data-theme="light"]' in html_light
     assert "--bg: #f8fafc;" in html_light
+    assert "--track-bg: #1b2634;" in html_light
+    assert 'id="btn-flush-picker"' in html_light
+    assert 'id="btn-toggle-clientdata"' in html_light
+    assert 'class="legend-role-btn is-active"' in html_light
 
 
 def test_cli_inspect_theme_and_json_file(tmp_path: Path):

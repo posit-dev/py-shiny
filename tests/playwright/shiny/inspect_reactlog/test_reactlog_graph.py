@@ -1513,7 +1513,7 @@ def out():
     expect(page.locator("#flush-counter-badge")).to_contain_text("Update 2")
     expect(page.locator("#flush-card-invalidated")).to_contain_text("2 nodes")
     expect(page.locator("#flush-card-calcs")).to_contain_text("1 calcs")
-    expect(page.locator("#flush-card-outputs")).to_contain_text("1 outputs")
+    expect(page.locator("#flush-card-outputs")).to_contain_text("Outputs that ran: 1")
 
 
 def test_reactlog_overview_mode_and_module_cards(page: Page) -> None:
