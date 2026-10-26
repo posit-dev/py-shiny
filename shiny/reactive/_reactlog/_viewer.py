@@ -1446,9 +1446,8 @@ def format_reactlog_html(
       </div>
       <div class="timeline-current">
         <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
-        <span id="active-flush-label" role="status" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()" title="Double-click to toggle flush details"></span>
+        <span id="active-flush-label" role="status" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()" title="Double-click to toggle update details"></span>
       </div>
-    </div>
     </div>
     <div id="trace-track-wrap" class="trace-track-wrap" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()">
       <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
@@ -1459,6 +1458,20 @@ def format_reactlog_html(
     <div class="timeline-key" id="timeline-key" aria-label="Timeline key">
       <span><i></i>Idle</span><span><i class="key-output"></i>Output calculation</span>
       <span><i class="key-mark"></i>User mark</span><span><i class="key-position"></i>Current step</span>
+    </div>
+  </div>
+
+  <div class="secondary-timeline-bar" id="secondary-timeline-bar" hidden aria-label="Detailed secondary timeline">
+    <div class="secondary-timeline-header">
+      <div class="secondary-timeline-info">
+        <span class="secondary-timeline-tag tag-flush" id="secondary-timeline-tag">Update</span>
+        <span class="secondary-timeline-title" id="secondary-timeline-title">Update details</span>
+        <span class="secondary-timeline-meta" id="secondary-timeline-meta"></span>
+      </div>
+      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="secondary-timeline-track-wrap" id="secondary-timeline-track-wrap">
+      <div class="secondary-timeline-chips" id="secondary-timeline-chips" role="list" aria-label="Step events"></div>
     </div>
   </div>
 
@@ -1630,20 +1643,6 @@ def format_reactlog_html(
       </nav>
       {video_panel}
     </main>
-  </div>
-
-  <div class="secondary-timeline-bar" id="secondary-timeline-bar" hidden aria-label="Detailed secondary timeline">
-    <div class="secondary-timeline-header">
-      <div class="secondary-timeline-info">
-        <span class="secondary-timeline-tag tag-flush" id="secondary-timeline-tag">Flush</span>
-        <span class="secondary-timeline-title" id="secondary-timeline-title">Flush Details</span>
-        <span class="secondary-timeline-meta" id="secondary-timeline-meta"></span>
-      </div>
-      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div class="secondary-timeline-track-wrap" id="secondary-timeline-track-wrap">
-      <div class="secondary-timeline-chips" id="secondary-timeline-chips" role="list" aria-label="Step events"></div>
-    </div>
   </div>
 
   <script>
@@ -2376,12 +2375,12 @@ def format_reactlog_html(
 
       const waveIndex = allBursts.indexOf(wave);
       const flushNum = waveIndex >= 0 ? waveIndex + 1 : (wave.index || 1);
-      tag.textContent = `Flush ${{flushNum}} / ${{allBursts.length}}`;
+      tag.textContent = `Update ${{flushNum}} of ${{allBursts.length}}`;
       tag.className = 'secondary-timeline-tag tag-flush';
 
       const waveStart = wave.startStep !== undefined ? wave.startStep : 0;
       const waveEnd = wave.endStep !== undefined ? wave.endStep : (events.length - 1);
-      const flushTitle = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : `Flush ${{flushNum}}`);
+      const flushTitle = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : `Update ${{flushNum}}`);
       title.textContent = flushTitle;
 
       const invCount = wave.invalidatedNodes ? wave.invalidatedNodes.size : 0;
@@ -2502,9 +2501,9 @@ def format_reactlog_html(
       if (!wave.recorded || wave.completed) {{
         stages.push({{
           step: waveEnd,
-          kind: 'Settled',
+          kind: 'Idle',
           label: 'Idle',
-          fullName: 'Flush complete / idle',
+          fullName: 'Update complete / idle',
           icon: ICONS.check,
           cssClass: 'pill-idle'
         }});

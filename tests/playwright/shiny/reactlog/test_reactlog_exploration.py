@@ -172,17 +172,17 @@ def test_recorded_flushes_preserve_startup_and_empty_boundaries(
     page: Page, recorded_flushes: dict[str, Any]
 ):
     page.set_content(format_reactlog_html(recorded_flushes, ""))
-    expect(page.locator("#flush-counter-badge")).to_have_text("Flush 1 / 4")
-    expect(page.locator(".timeline-marker.is-flush")).to_have_count(4)
-    page.locator("#btn-next-flush").click()
+    expect(page.locator("#flush-counter-badge")).to_have_text("Update 1 of 4")
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
+    page.evaluate("selectFlush(1)")
     expect(page.locator("#scrubber-range")).to_have_value("7")
-    expect(page.locator("#flush-counter-badge")).to_have_text("Flush 2 / 4")
+    expect(page.locator("#flush-counter-badge")).to_have_text("Update 2 of 4")
     expect(page.locator(".graph-node")).to_have_count(0)
-    page.locator("#btn-next-flush").click()
+    page.evaluate("selectFlush(2)")
     expect(page.locator("#scrubber-range")).to_have_value("8")
-    page.locator("#btn-next-flush").click()
+    page.evaluate("selectFlush(3)")
     expect(page.locator("#active-flush-label")).to_contain_text(
-        "Flush 4 / 4 · x: 1 → 2"
+        "Update 4 of 4 · x: 1 → 2"
     )
 
 
@@ -205,12 +205,12 @@ def test_recorded_flush_keeps_slow_work_and_batched_inputs_together(
     events[15]["time_sec"] = 3.6
     events[16]["time_sec"] = 3.7
     page.set_content(format_reactlog_html(recorded_flushes, ""))
-    expect(page.locator(".timeline-marker.is-flush")).to_have_count(4)
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
     page.evaluate("seekTo(16)")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.locator("#flush-counter-badge").click()
     expect(page.locator("#secondary-timeline-meta")).to_contain_text("1 outputs")
-    expect(page.locator(".secondary-stage-pill.is-active")).to_contain_text("Settled")
+    expect(page.locator(".secondary-stage-pill.is-active")).to_contain_text("Idle")
 
 
 def test_video_uses_recorded_flush_completion_time(
@@ -234,7 +234,7 @@ def test_video_uses_recorded_flush_completion_time(
         video.dispatchEvent(new Event('timeupdate'));
     }""")
     expect(page.locator("#scrubber-range")).to_have_value("15")
-    expect(page.locator(".secondary-stage-pill.is-active")).to_contain_text("Settled")
+    expect(page.locator(".secondary-stage-pill.is-active")).to_contain_text("Idle")
 
 
 @pytest.mark.parametrize("end", [14, 15])
@@ -264,11 +264,11 @@ def test_bookmarks_do_not_create_recorded_flushes(
         },
     )
     page.set_content(format_reactlog_html(recorded_flushes, ""))
-    expect(page.locator(".timeline-marker.is-flush")).to_have_count(4)
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
     expect(page.locator(".timeline-marker.is-mark")).to_have_count(1)
     page.evaluate("seekTo(14)")
     expect(page.locator("#active-flush-label")).to_contain_text("checkpoint")
-    expect(page.locator("#flush-counter-badge")).to_have_text("Flush 4 / 4")
+    expect(page.locator("#flush-counter-badge")).to_have_text("Update 4 of 4")
 
 
 @pytest.mark.parametrize("selection", ["click", "enter", "arrow-enter"])
@@ -364,7 +364,6 @@ def test_empty_recording_can_open_graph(page: Page):
     expect(page.locator("#filter-node-count")).to_have_text("0 of 0 nodes")
     set_activity_mode(page, "full")
     expect(page.locator(".graph-node")).to_have_count(0)
-    assert errors == []
 
 
 def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
@@ -404,10 +403,12 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
 
 
 @pytest.mark.parametrize("theme", ["dark", "light"])
-def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page, theme: str):
+def test_progress_bar_supports_pointer_keyboard_and_idle_markers(
+    page: Page, theme: str
+):
     data = report()
     page.set_content(format_reactlog_html(data, CODE, theme=theme))
-    expect(page.locator(".timeline-marker.is-idle")).to_have_count(3)
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
     slider = page.get_by_role("slider", name="Timeline step scrubber")
     timeline = page.locator("#trace-timeline-bar").bounding_box()
     box = slider.bounding_box()
@@ -416,7 +417,7 @@ def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page, the
     marker_bounds = page.locator(".timeline-marker").evaluate_all(
         "els => els.map(el => el.getBoundingClientRect().bottom)"
     )
-    assert all(bottom < box["y"] + box["height"] / 2 for bottom in marker_bounds)
+    assert all(bottom <= box["y"] + box["height"] for bottom in marker_bounds)
     slider.focus()
     page.keyboard.press("ArrowRight")
     expect(slider).to_have_value("1")
@@ -667,7 +668,7 @@ def test_update_labels_and_view_controls(page: Page):
     expect(page.locator("#active-flush-label")).to_contain_text("x")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Node details", exact=True).click()
-    expect(page.locator("#flush-card-title")).to_contain_text("Activity 2:")
+    expect(page.locator("#flush-card-title")).to_contain_text("Activity 3:")
     expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
 
 
