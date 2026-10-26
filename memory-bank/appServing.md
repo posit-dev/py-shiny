@@ -85,9 +85,35 @@ Entry point `shiny = "shiny._main:main"` (pyproject `[project.scripts]`);
 | `create` | `_create.py` | templates (below) |
 | `add test` | `_generate_test.py` | AI-generated Playwright test (`--provider anthropic\|openai`) |
 | `skills list` / `skills path NAME` | `_skills.py` | lists/locates `shiny/.agents/skills/*/SKILL.md`; install is delegated to `library-skills` |
+| `validate` | `_validate.py` | static checks of the entry file and local imports; `--json`, `--strict`, and extra `--validator module:attr` rules |
 | `static` | `_static.py` | always exits 1, pointing to `shinylive export` |
 | `static-assets remove\|info` | `_static.py` | deprecated shinylive asset cache management |
 | `cells-to-app`, `get-shiny-deps` | `_static.py` | Quarto hooks -> `shiny/quarto.py` |
+
+## Static validation
+
+`shiny/_validate.py` implements the public helpers re-exported by
+`shiny/validate.py`. `validate_shiny_code()` checks one source string;
+`validate_shiny_file()` follows statically named local imports within the entry
+file's directory. It reads source without importing it, visits each resolved
+file once (including package initializers), and skips paths outside that
+directory, installed packages, and unresolved imports. Each file gets a fresh
+validator so module IDs and suppression comments do not collide across files.
+File diagnostics add an optional `file` key to the usual line/message/code.
+
+The original `ShinyCodeValidator` checks IDs, inputs, and decorators.
+`shiny/_validate_reactivity.py` adds lexical tracking of known values, calc
+functions, extended tasks, and `reactive.Value` parameter annotations. It
+reports forbidden task reads and uncalled reactive container access as errors;
+same-object mutation/set and swallowed task-result exceptions are warnings.
+Import aliases and string annotations are supported. This is a targeted static
+check, not type inference across function arguments or a runtime guarantee.
+
+The CLI, startup `_validate_app_file()`, and public file helper share this path.
+Startup reports issues without preventing launch; the CLI exits 1 on errors,
+or on warnings with `--strict`. Plugins run per file before local suppression
+comments are applied. Tests are in `test_validate*.py` and
+`test_main_validate.py` under `tests/pytest/`.
 
 ## `shiny run` / `run_app`
 

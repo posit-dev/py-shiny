@@ -7,6 +7,24 @@ snapshot of its `input`, `output`, and `export` values over HTTP. Use it instead
 of print statements, hidden outputs, or websocket spelunking to observe
 server-side state.
 
+## Check source before running
+
+Run `shiny validate app.py` to check the entry file and its local Python imports
+without executing them. Diagnostics include the file and line to fix. Use
+`--json` for structured results and `--strict` to fail on warnings as well as
+errors. `shiny run` also reports these checks at startup.
+
+Checks include duplicate IDs, missing reactive calls, reactive reads inside
+extended tasks, mutating and setting the same stored object, and broad exception
+handlers around extended-task results. Fix task reads by passing values as task
+arguments. Copy stored lists or dictionaries before changing them. Let
+`task.result()` propagate Shiny's pending-result signals.
+
+For intentional exceptions, add `# shiny: ignore RULE_CODE` on the reported
+line. Import traversal stays within the entry file's directory; installed
+packages and dynamic imports are not inspected. Continue with runtime tests to
+check interaction behavior.
+
 ## Enable test mode
 
 - Env var: `SHINY_TESTMODE=1 shiny run app.py`
