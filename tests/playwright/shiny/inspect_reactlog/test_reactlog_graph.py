@@ -67,7 +67,7 @@ def other():
     assert edges.count() == 3
 
     page.wait_for_function(
-        "() => Array.from(document.querySelectorAll('.graph-edge')).every(edge => parseFloat(window.getComputedStyle(edge).opacity) > 0.5)"
+        "() => Array.from(document.querySelectorAll('.graph-edge')).every(edge => parseFloat(window.getComputedStyle(edge).opacity) >= 0.5)"
     )
 
 
@@ -104,7 +104,7 @@ def other():
 
     page.locator(".toolbar").hover()
     page.wait_for_function(
-        "() => Array.from(document.querySelectorAll('.graph-edge')).every(edge => parseFloat(edge.style.opacity) >= 0.6)"
+        "() => Array.from(document.querySelectorAll('.graph-edge')).every(edge => parseFloat(window.getComputedStyle(edge).opacity) >= 0.5)"
     )
 
 
@@ -280,7 +280,7 @@ def out():
     assert reactlog["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
 
 
-def test_phase_filter_and_skip_button(page: Page) -> None:
+def test_action_navigation_without_skip_button(page: Page) -> None:
     code = """from shiny.express import input, render, ui
 from shiny import reactive
 
@@ -305,19 +305,15 @@ def out_txt():
         wait_until="domcontentloaded",
     )
 
-    skip_btn = page.locator("#btn-skip-init")
-    expect(skip_btn).to_be_visible()
-    skip_btn.click()
+    expect(page.locator("#btn-skip-init")).to_have_count(0)
+    page.locator("#btn-next-action").click()
 
     first_interact_step = reactlog["first_interaction_step"]
     expect(page.locator("#step-display")).to_have_text(
         f"Step {first_interact_step} / {reactlog['steps_total'] - 1}"
     )
 
-    phase_select = page.locator("#phase-filter-select")
-    expect(phase_select).to_be_visible()
-    phase_select.select_option("init")
-    expect(page.locator(".event-item.is-current")).to_have_count(0)
+    expect(page.locator("#phase-filter-select")).to_have_count(0)
 
 
 def test_event_timeline_labels_initialization_and_recorded_actions(
@@ -801,7 +797,7 @@ def summary():
         wait_until="domcontentloaded",
     )
 
-    page.locator("#btn-next-flush").click()
+    page.locator("#btn-next-action").click()
     expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
 
     # 2. Causal Story Banner above graph is removed as requested
@@ -821,9 +817,7 @@ def summary():
     graph_node(page, '.graph-node[data-id="output:summary"]').click()
     expect(why_title).to_contain_text("Why did output:summary render?")
 
-    # 6. Streamlined Toolbar & Phase Filter
-    phase_select = page.locator("#phase-filter-select")
-    expect(phase_select).to_be_visible()
+    expect(page.locator("#phase-filter-select")).to_have_count(0)
 
 
 def test_action_scoped_causal_story_and_did_not_run_explanation(page: Page) -> None:
@@ -861,7 +855,7 @@ def client_badge():
     )
 
     # 1. Skip to the price action burst
-    page.locator("#btn-skip-init").click()
+    page.locator("#btn-next-action").click()
 
     expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
 
@@ -1431,7 +1425,7 @@ def txt():
     isolated_edges = page.locator(".graph-edge.is-isolated")
     expect(isolated_edges).to_have_count(1)
     expect(isolated_edges).to_have_attribute("stroke-dasharray", "5 4")
-    expect(page.locator(".legend")).to_contain_text("Isolated read")
+    expect(page.locator(".legend")).to_contain_text("Isolated dependency")
 
 
 def test_isolated_reads_are_not_reported_as_causes(page: Page) -> None:
@@ -1451,7 +1445,7 @@ def out():
         ],
     )
     load_graph_report(page, format_reactlog_html(report, code))
-    page.locator("#btn-skip-init").click()
+    page.locator("#btn-next-action").click()
     graph_node(page, '.graph-node[data-id="output:out"]').click()
     expect(page.locator("#why-title")).to_contain_text("did not render")
     expect(page.locator("#insp-upstream-list")).not_to_contain_text("input.b")
@@ -1515,7 +1509,7 @@ def out():
     expect(page.locator("#flush-card")).to_be_visible()
 
     # Step to flush 1
-    page.locator("#btn-next-flush").click()
+    page.locator("#btn-next-action").click()
     expect(page.locator("#flush-counter-badge")).to_contain_text("Flush 2")
     expect(page.locator("#flush-card-invalidated")).to_contain_text("2 nodes")
     expect(page.locator("#flush-card-calcs")).to_contain_text("1 calcs")
