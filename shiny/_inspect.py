@@ -2471,6 +2471,10 @@ def format_reactlog_html(
       --toast-bg: rgba(23, 33, 45, 0.95);
       --legend-bg: rgba(17, 24, 33, 0.92);
       --card-bg: #141e2b;
+      --track-bg: #1b2634;
+      --track-fill: #2d4f3e;
+      --playhead-bg: #f8fafc;
+      --playhead-ring: #17212b;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }}
@@ -2509,6 +2513,10 @@ def format_reactlog_html(
       --toast-bg: rgba(255, 255, 255, 0.95);
       --legend-bg: rgba(255, 255, 255, 0.92);
       --card-bg: #f8fafc;
+      --track-bg: #f0f0f0;
+      --track-fill: #8e8e8e;
+      --playhead-bg: #262626;
+      --playhead-ring: #ffffff;
     }}
     @media (prefers-color-scheme: light) {{
       [data-theme="auto"] {{
@@ -2546,6 +2554,10 @@ def format_reactlog_html(
         --toast-bg: rgba(255, 255, 255, 0.95);
         --legend-bg: rgba(255, 255, 255, 0.92);
         --card-bg: #f8fafc;
+        --track-bg: #f0f0f0;
+        --track-fill: #8e8e8e;
+        --playhead-bg: #262626;
+        --playhead-ring: #ffffff;
       }}
     }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -2612,13 +2624,19 @@ def format_reactlog_html(
 
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
     .graph-node, .graph-edge {{ transition: opacity 180ms ease, filter 180ms ease, stroke 180ms ease, stroke-width 180ms ease; }}
-    .graph-edge {{ opacity: 0.75; stroke: #676767; stroke-width: 1.8px; }}
+    .graph-edge {{ opacity: 0.75; stroke: #676767; stroke-width: 1.8px; pointer-events: stroke; cursor: pointer; }}
+    .graph-edge:hover {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }}
     .graph-edge.is-isolated {{ opacity: 0.65; stroke: #818181; stroke-dasharray: 5 4; }}
     .graph-edge.is-inactive {{ stroke: #818181; stroke-dasharray: 1 4; opacity: 0.5; }}
     .legend-swatch {{ width: 14px; height: 14px; border: 1px solid #0004; border-radius: 2px; }}
     .legend-line {{ display: inline-block; width: 16px; border-top: 2px solid #676767; }}
     .legend-line.is-isolated {{ border-top-style: dashed; }}
     .legend-line.is-inactive {{ border-top-style: dotted; }}
+    .legend-sep {{ width: 1px; height: 14px; background: var(--border); margin: 0 2px; align-self: center; }}
+    .legend-role-btn {{ display: inline-flex; align-items: center; gap: 0.3rem; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.08rem 0.3rem; cursor: pointer; opacity: 0.45; transition: opacity 120ms ease, border-color 120ms ease, background 120ms ease; }}
+    .legend-role-btn:hover {{ background: var(--surface-2); opacity: 0.85; }}
+    .legend-role-btn.is-active {{ opacity: 1; color: var(--text); border-color: var(--border); background: var(--surface-2); }}
+    .graph-node.is-clientdata {{ opacity: 0.78; }}
     .burst-anchor.is-mark {{ border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); color: #b45309; }}
     [data-theme="dark"] .burst-anchor.is-mark {{ color: #fbbf24; }}
     .burst-anchor.is-mark .burst-anchor-dot {{ background: #f59e0b; }}
@@ -2638,7 +2656,9 @@ def format_reactlog_html(
     .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }}
     .graph-node.is-dimmed, .module-box.is-dimmed, .app-box.is-dimmed {{ opacity: 0.3; filter: grayscale(1); }}
     .graph-edge.is-dimmed {{ opacity: 0.15 !important; stroke: var(--text-muted) !important; stroke-width: 1.8px !important; filter: grayscale(1); animation: none; }}
-    #btn-clear-selection[hidden] {{ display: none; }}
+    #btn-clear-selection[hidden], #btn-inspect-selection[hidden] {{ display: none; }}
+    #btn-toggle-inspector-bottom.has-selection {{ border-color: var(--accent); color: var(--accent); position: relative; }}
+    #btn-toggle-inspector-bottom.has-selection::after {{ content: ''; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }}
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
       .graph-edge[data-active="true"] {{ animation: none; }}
@@ -2768,7 +2788,14 @@ def format_reactlog_html(
     /* Flush Stepper & Nav */
     .flush-nav-group {{ display: flex; align-items: center; gap: 0.3rem; }}
     .flush-selector {{ max-width: 240px; text-overflow: ellipsis; }}
+    .flush-picker-wrap {{ position: relative; display: inline-flex; align-items: center; gap: 2px; }}
     .flush-counter-badge {{ font: 700 0.68rem var(--mono); color: var(--text-muted); background: var(--surface-2); padding: 0.18rem 0.45rem; border-radius: 5px; border: 1px solid var(--border); white-space: nowrap; }}
+    .flush-picker-btn {{ width: 22px !important; min-height: 24px !important; height: 24px !important; padding: 0; color: var(--text-muted); }}
+    .flush-picker-menu {{ position: absolute; top: calc(100% + 6px); left: 0; min-width: 220px; max-width: 320px; max-height: 260px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 4px; z-index: 120; box-shadow: 0 10px 28px rgba(0,0,0,0.35); display: flex; flex-direction: column; gap: 2px; }}
+    .flush-picker-menu[hidden] {{ display: none !important; }}
+    .flush-picker-item {{ width: 100%; text-align: left; background: transparent; border: 0; border-radius: 5px; padding: 5px 8px; color: var(--text); font: 600 0.68rem var(--mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+    .flush-picker-item:hover, .flush-picker-item:focus-visible {{ background: var(--surface-3); color: var(--accent); }}
+    .flush-picker-item.is-active {{ background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); color: var(--accent); font-weight: 700; }}
 
     /* Flush Pipeline Bar */
 
@@ -2874,7 +2901,8 @@ def format_reactlog_html(
     .sidebar-rail {{ width: 40px; min-width: 40px; flex: 0 0 40px; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; box-sizing: border-box; z-index: 20; }}
     .sidebar {{ position: absolute; top: 56px; right: 48px; bottom: 8px; width: min(420px, calc(100% - 64px)); min-width: 0; height: auto; z-index: 25; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 32px #0004; }}
     .sidebar-header {{ justify-content: space-between; font: 650 .75rem var(--sans); }}
-    .video-panel {{ position: absolute; right: 48px; bottom: 12px; width: min(240px, 42vw, calc(100% - 64px)); padding: 0; gap: 0; z-index: 26; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 24px #0005; overflow: hidden; }}
+    .video-panel {{ position: absolute; right: 48px; bottom: 12px; width: min(240px, 42vw, calc(100% - 64px)); padding: 0; gap: 0; z-index: 26; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 24px #0005; overflow: hidden; transition: left 180ms ease, right 180ms ease; }}
+    .main-view.is-inspector-open .video-panel {{ right: auto; left: 12px; }}
     .video-panel[hidden] {{ display: none; }}
     .video-meta {{ padding: 3px 6px; flex-wrap: nowrap; }}
     .video-sync-status {{ font: 600 .65rem var(--sans); }}
@@ -2884,35 +2912,35 @@ def format_reactlog_html(
     .timeline-current {{ display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font: 650 .75rem var(--sans); }}
     #active-flush-label {{ color: var(--text-muted); }}
     .trace-status-line {{ max-width: none; white-space: normal; font: 600 .75rem var(--sans); }}
-    .trace-track-wrap {{ position: relative; height: 24px; flex: none; background: #f0f0f0; touch-action: none; }}
+    .trace-track-wrap {{ position: relative; height: 24px; flex: none; background: var(--track-bg); touch-action: none; }}
     .header-center .search-wrap {{ flex: 1; min-width: 250px; max-width: 420px; }}
     #scrubber-range {{ appearance: none; -webkit-appearance: none; background: transparent; position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; cursor: pointer; }}
-    #scrubber-range::-webkit-slider-runnable-track {{ height: 18px; background: linear-gradient(to right, #8e8e8e var(--progress, 0%), transparent var(--progress, 0%)); }}
+    #scrubber-range::-webkit-slider-runnable-track {{ height: 18px; background: linear-gradient(to right, var(--track-fill) var(--progress, 0%), transparent var(--progress, 0%)); }}
     #scrubber-range::-moz-range-track {{ height: 18px; background: transparent; }}
-    #scrubber-range::-moz-range-progress {{ height: 18px; background: #8e8e8e; }}
+    #scrubber-range::-moz-range-progress {{ height: 18px; background: var(--track-fill); }}
     #scrubber-range::-webkit-slider-thumb {{ appearance: none; -webkit-appearance: none; height: 24px; width: 3px; margin-top: -3px; background: transparent; }}
     #scrubber-range::-moz-range-thumb {{ height: 24px; width: 3px; border: 0; border-radius: 0; background: transparent; }}
     #scrubber-range:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
     #trace-markers {{ position: absolute; inset: 0 1.5px; pointer-events: none; z-index: 1; }}
     .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: #a3c586; pointer-events: auto; cursor: pointer; }}
-    .timeline-marker.is-output {{ top: 6px; height: 12px; }}
+    .timeline-marker.is-output {{ top: 6px; height: 12px; background: var(--output); }}
     .timeline-marker.is-mark {{ background: #666666; z-index: 2; }}
     .timeline-marker:hover, .timeline-marker:focus-visible {{ outline: 2px solid #17212b; outline-offset: 1px; z-index: 3; }}
-    .timeline-playhead {{ position: absolute; top: -3px; bottom: -3px; width: 2px; background: #262626; box-shadow: 0 0 0 1px #fff; pointer-events: none; z-index: 4; }}
-    .timeline-playhead::before {{ content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #262626; }}
+    .timeline-playhead {{ position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); pointer-events: none; z-index: 4; }}
+    .timeline-playhead::before {{ content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--playhead-bg); }}
     .timeline-key {{ display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font: .7rem var(--sans); }}
     .timeline-key span {{ display: inline-flex; align-items: center; gap: 5px; }}
     .timeline-key i {{ display: inline-block; width: 3px; height: 14px; background: #a3c586; }}
-    .timeline-key .key-output {{ height: 6px; }}
+    .timeline-key .key-output {{ height: 6px; background: var(--output); }}
     .timeline-key .key-mark {{ background: #666666; }}
-    .timeline-key .key-position {{ width: 2px; background: #262626; box-shadow: 0 0 0 1px #fff; }}
+    .timeline-key .key-position {{ width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); }}
     .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
     .timeline-tooltip[hidden] {{ display: none; }}
     .timeline-navigation {{ display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }}
     .status-center {{ gap: 3px; }}
     .status-center .btn {{ width: 28px; min-height: 28px; height: 28px; }}
     .status-center .nav-idle svg {{ color: #a3c586; }}
-    .status-center .nav-output svg {{ color: #a3c586; }}
+    .status-center .nav-output svg {{ color: var(--output); }}
     .status-center .nav-mark svg {{ color: var(--text-muted); }}
     .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
     .status-left, .status-center, .status-right {{ flex-wrap: wrap; }}
@@ -2954,6 +2982,7 @@ def format_reactlog_html(
       <button class="btn mini" id="btn-back-overview" onclick="setViewMode('overview')" hidden>Back to overview</button>
       <span id="filter-node-count" role="status" aria-live="polite"></span>
       <div id="active-filters"></div>
+      <button type="button" class="btn mini" id="btn-toggle-clientdata" onclick="toggleClientData()" aria-pressed="false" hidden>Hide clientdata</button>
       <button class="btn mini" onclick="resetGraphView()" aria-label="Clear all filters">Clear all</button>
     </div>
   <!-- Timeline playback controls -->
@@ -2965,7 +2994,7 @@ def format_reactlog_html(
       </button>
       <button class="btn icon mini nav-mark" onclick="seekTimelineStop('mark', -1)" aria-label="Previous user mark" title="Previous user mark"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="var(--text-muted)"/></svg></button>
       <button class="btn icon mini nav-idle" id="btn-prev-flush" onclick="seekTimelineStop('idle', -1)" aria-label="Previous idle" title="Previous idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="#a3c586"/></svg></button>
-      <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', -1)" aria-label="Previous output calculation" title="Previous output calculation (Alt+Left)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="8" width="3" height="8" fill="#a3c586"/></svg></button>
+      <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', -1)" aria-label="Previous output calculation" title="Previous output calculation (Alt+Left)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="8" width="3" height="8" fill="var(--output)"/></svg></button>
       <button class="btn icon mini" id="btn-step-back" onclick="stepBack()" aria-label="Step back" title="Step back (Left)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg>
       </button>
@@ -2975,7 +3004,7 @@ def format_reactlog_html(
       <button class="btn icon mini" id="btn-step-forward" onclick="stepForward()" aria-label="Step forward" title="Step forward (Right)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
       </button>
-      <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', 1)" aria-label="Next output calculation" title="Next output calculation (Alt+Right)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="8" width="3" height="8" fill="#a3c586"/></svg></button>
+      <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', 1)" aria-label="Next output calculation" title="Next output calculation (Alt+Right)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="8" width="3" height="8" fill="var(--output)"/></svg></button>
       <button class="btn icon mini nav-idle" id="btn-next-flush" onclick="seekTimelineStop('idle', 1)" aria-label="Next idle" title="Next idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="#a3c586"/></svg></button>
       <button class="btn icon mini nav-mark" onclick="seekTimelineStop('mark', 1)" aria-label="Next user mark" title="Next user mark"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="var(--text-muted)"/></svg></button>
     </div>
@@ -2989,7 +3018,11 @@ def format_reactlog_html(
       <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
       <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
       <span class="step-display" id="step-display">Step 0 / 0</span>
-      <span class="flush-counter-badge" id="flush-counter-badge" title="An update is a group of related activity. Some updates have no visible changes.">Update 1 of 1</span>
+      <div class="flush-picker-wrap">
+        <span class="flush-counter-badge" id="flush-counter-badge" title="An update is a group of related activity. Some updates have no visible changes.">Update 1 of 1</span>
+        <button type="button" class="btn icon mini flush-picker-btn" id="btn-flush-picker" onclick="toggleFlushPicker(event)" aria-label="Jump to update" aria-expanded="false" title="Jump to any update"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div id="flush-picker-menu" class="flush-picker-menu" role="menu" aria-label="Updates list" hidden></div>
+      </div>
     </div>
     </div>
     <div class="status-right">
@@ -3039,6 +3072,11 @@ def format_reactlog_html(
               <div class="legend-item"><span class="legend-line"></span>Dependency</div>
               <div class="legend-item"><span class="legend-line is-isolated"></span>Isolated dependency</div>
               <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
+              <span class="legend-sep" aria-hidden="true"></span>
+              <button type="button" class="legend-role-btn is-active" data-role="source" onclick="toggleRoleFilter('source')" aria-pressed="true" title="Filter Input nodes"><span class="legend-dot" style="--role-color:var(--source)"></span>Input</button>
+              <button type="button" class="legend-role-btn is-active" data-role="conductor" onclick="toggleRoleFilter('conductor')" aria-pressed="true" title="Filter Calc nodes"><span class="legend-dot" style="--role-color:var(--calc)"></span>Calc</button>
+              <button type="button" class="legend-role-btn is-active" data-role="effect" onclick="toggleRoleFilter('effect')" aria-pressed="true" title="Filter Effect nodes"><span class="legend-dot" style="--role-color:var(--effect)"></span>Effect</button>
+              <button type="button" class="legend-role-btn is-active" data-role="output" onclick="toggleRoleFilter('output')" aria-pressed="true" title="Filter Output nodes"><span class="legend-dot" style="--role-color:var(--output)"></span>Output</button>
             </div>
             <div class="zoom-controls">
               <button class="btn mini" id="btn-toggle-collapse-all" onclick="toggleCollapseAllModules()" title="Collapse all modules into macro boxes">Collapse modules</button>
@@ -3051,6 +3089,7 @@ def format_reactlog_html(
         </div>
         <div id="live-action-toast" class="action-toast" role="status" aria-live="polite" hidden></div>
         <button class="btn mini" id="btn-clear-selection" onclick="clearNodeSelection()" aria-label="Clear node selection" hidden style="position:absolute;left:1rem;bottom:1rem;z-index:28;">Clear selection · Esc</button>
+        <button class="btn mini primary" id="btn-inspect-selection" onclick="showSidebarPanel('timeline')" aria-label="Open selected node details" hidden style="position:absolute;left:9.75rem;bottom:1rem;z-index:28;">Inspect node</button>
 
         <!-- Overview First Panel -->
         <div class="module-overview-panel" id="module-overview-panel" hidden>
@@ -3202,13 +3241,15 @@ def format_reactlog_html(
       flame: '<svg class="inline-icon flame-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--danger, #ef4444);vertical-align:-1px;margin-left:4px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>'
     }};
 
+    const ALL_ROLES = ['source', 'conductor', 'effect', 'output'];
     let currentStep = 0;
     let isPlaying = false;
     let playTimer = null;
     let selectedNodeId = null;
     let focusedNodeId = null;
     let searchQuery = "";
-    let activeRoles = new Set(['source', 'conductor', 'observer']);
+    let activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
+    let hideClientData = false;
     let activeBurstIndex = 0;
     let zoomLevel = 1;
     let panOffset = {{ x: 0, y: 0 }};
@@ -3969,6 +4010,64 @@ def format_reactlog_html(
       fitGraph();
     }}
 
+    function nodeRoleKey(n) {{
+      if (n.role === 'source' || n.type === 'input') return 'source';
+      if (n.role === 'conductor' || n.type === 'calc') return 'conductor';
+      const raw = `${{n.type || ''}} ${{n.label || ''}} ${{n.id || ''}}`.toLowerCase();
+      if (n.type === 'effect' || raw.includes('reactive.effect') || String(n.id || '').startsWith('effect:')) return 'effect';
+      return 'output';
+    }}
+
+    function isClientDataNode(n) {{
+      const raw = `${{n.id || ''}} ${{n.label || ''}} ${{n.name || ''}}`.toLowerCase();
+      return raw.includes('.clientdata_') || raw.includes('clientdata') || raw.includes('pixelratio');
+    }}
+
+    function syncRoleFilterButtons() {{
+      document.querySelectorAll('.legend-role-btn').forEach(btn => {{
+        const role = btn.getAttribute('data-role');
+        const active = activeRoles.has(role);
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', String(active));
+      }});
+    }}
+
+    function toggleRoleFilter(role) {{
+      if (activeRoles.has(role)) {{
+        activeRoles.delete(role);
+      }} else {{
+        activeRoles.add(role);
+      }}
+      if (activeRoles.has('effect') || activeRoles.has('output')) activeRoles.add('observer');
+      else activeRoles.delete('observer');
+      syncRoleFilterButtons();
+      refreshExploration();
+      fitGraph();
+    }}
+
+    function toggleClientData() {{
+      hideClientData = !hideClientData;
+      refreshExploration();
+      fitGraph();
+    }}
+
+    function closeFlushPicker() {{
+      const menu = document.getElementById('flush-picker-menu');
+      const btn = document.getElementById('btn-flush-picker');
+      if (menu) menu.hidden = true;
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }}
+
+    function toggleFlushPicker(event) {{
+      if (event) event.stopPropagation();
+      const menu = document.getElementById('flush-picker-menu');
+      const btn = document.getElementById('btn-flush-picker');
+      if (!menu || !btn) return;
+      const shouldOpen = menu.hidden;
+      menu.hidden = !shouldOpen;
+      btn.setAttribute('aria-expanded', String(shouldOpen));
+    }}
+
     function updateFlushUI() {{
       if (!allBursts || allBursts.length === 0) return;
       const curIdx = getCurrentFlushIndex();
@@ -3978,6 +4077,25 @@ def format_reactlog_html(
 
       const badge = document.getElementById('flush-counter-badge');
       if (badge) badge.textContent = `Update ${{curIdx + 1}} of ${{allBursts.length}}`;
+      const pickerMenu = document.getElementById('flush-picker-menu');
+      if (pickerMenu) {{
+        pickerMenu.replaceChildren();
+        allBursts.forEach((burst, idx) => {{
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'flush-picker-item' + (idx === curIdx ? ' is-active' : '');
+          item.setAttribute('role', 'menuitem');
+          item.setAttribute('data-flush-index', String(idx));
+          const lbl = burst.humanAction || burst.triggerLabel || (burst.isInit ? 'Initial render' : `Update ${{idx + 1}}`);
+          item.textContent = `Update ${{idx + 1}}: ${{lbl}}`;
+          item.onclick = (e) => {{
+            e.stopPropagation();
+            closeFlushPicker();
+            selectFlush(idx);
+          }};
+          pickerMenu.appendChild(item);
+        }});
+      }}
 
       const invCount = curWave.invalidatedNodes ? curWave.invalidatedNodes.size : 0;
       const calcCount = curWave.calcs ? curWave.calcs.length : 0;
@@ -4047,7 +4165,9 @@ def format_reactlog_html(
         }});
       }}
       return filterItems(reactlogData.nodes || [], n => {{
-        if (lineage ? !lineage.has(n.id) : (!activeRoles.has(n.role) || (searchQuery && !Number.isFinite(nodeSearchScore(n, searchQuery))))) return false;
+        const roleKey = nodeRoleKey(n);
+        if (lineage ? !lineage.has(n.id) : ((!activeRoles.has(roleKey) || !activeRoles.has(n.role)) || (searchQuery && !Number.isFinite(nodeSearchScore(n, searchQuery))))) return false;
+        if (hideClientData && isClientDataNode(n)) return false;
         if (selectedModuleFilter && (n.module || '__root__') !== selectedModuleFilter) return false;
         if (active && active.size && !active.has(n.id) && !active.has(cleanName(n.id))) return false;
         if (intervalNodes && !intervalNodes.has(n.id) && !intervalNodes.has(cleanName(n.id))) return false;
@@ -4082,6 +4202,14 @@ def format_reactlog_html(
     function updateFilterState(nodes) {{
       document.getElementById('filter-node-count').textContent = `${{nodes.length}} of ${{(reactlogData.nodes || []).length}} nodes`;
       document.getElementById('btn-back-overview').hidden = currentViewMode === 'overview' || (!selectedModuleFilter && activityStart === null && activityEnd === null);
+      const clientBtn = document.getElementById('btn-toggle-clientdata');
+      if (clientBtn) {{
+        clientBtn.hidden = !(reactlogData.nodes || []).some(isClientDataNode);
+        clientBtn.classList.toggle('active-filter', hideClientData);
+        clientBtn.setAttribute('aria-pressed', String(hideClientData));
+        clientBtn.textContent = hideClientData ? 'Show clientdata' : 'Hide clientdata';
+      }}
+      syncRoleFilterButtons();
       const chips = document.getElementById('active-filters');
       chips.replaceChildren();
       const add = (kind, label, clear) => {{
@@ -4099,6 +4227,10 @@ def format_reactlog_html(
         searchQuery = ''; document.getElementById('search-input').value = ''; document.getElementById('search-results').hidden = true;
       }});
       if (selectedStageFilter) add('stage', selectedStageFilter, () => {{ selectedStageFilter = null; }});
+      if (ALL_ROLES.some(r => !activeRoles.has(r))) add('role', 'Role filter', () => {{
+        activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
+      }});
+      if (hideClientData) add('clientdata', 'Clientdata hidden', () => {{ hideClientData = false; }});
       if (activityStart !== null || activityEnd !== null) add('interval', `Updates ${{activityStart ?? 0}}–${{activityEnd ?? allBursts.length - 1}}`, () => {{
         activityStart = null; activityEnd = null;
       }});
@@ -4237,6 +4369,9 @@ def format_reactlog_html(
 
     function init() {{
       document.addEventListener('click', (e) => {{
+        if (!e.target.closest('.flush-picker-wrap')) {{
+          closeFlushPicker();
+        }}
         const nodeBtn = e.target.closest('[data-node-id]');
         if (nodeBtn && nodeBtn.dataset.nodeId) {{
           selectNode(nodeBtn.dataset.nodeId);
@@ -4321,6 +4456,10 @@ def format_reactlog_html(
       const sidebar = document.getElementById('sidebar');
       const shouldOpen = forceState !== undefined ? Boolean(forceState) : sidebar.hidden;
       sidebar.hidden = !shouldOpen;
+      const mainView = document.getElementById('main-view');
+      if (mainView) mainView.classList.toggle('is-inspector-open', shouldOpen);
+      const inspectBtn = document.getElementById('btn-inspect-selection');
+      if (inspectBtn) inspectBtn.hidden = !focusedNodeId || shouldOpen;
       for (const id of ['btn-toggle-inspector', 'btn-toggle-inspector-bottom']) {{
         const button = document.getElementById(id);
         button.classList.toggle('is-active', shouldOpen);
@@ -4335,6 +4474,7 @@ def format_reactlog_html(
       }}
       document.getElementById('source-tab').setAttribute('aria-selected', String(panelName === 'source'));
       document.getElementById('detail-panel-title').textContent = panelName === 'source' ? 'App code' : 'Node details';
+      if (panelName === 'source') updateSourceHighlight();
     }}
 
     function toggleRecording(forceState) {{
@@ -4940,6 +5080,10 @@ def format_reactlog_html(
         focusedNodeId, ...getUpstreamNodes(focusedNodeId), ...getDownstreamNodes(focusedNodeId)
       ]) : null;
       document.getElementById('btn-clear-selection').hidden = !focusedNodeId;
+      const inspectBtn = document.getElementById('btn-inspect-selection');
+      if (inspectBtn) inspectBtn.hidden = !focusedNodeId || !document.getElementById('sidebar').hidden;
+      const railInspectorBtn = document.getElementById('btn-toggle-inspector-bottom');
+      if (railInspectorBtn) railInspectorBtn.classList.toggle('has-selection', Boolean(focusedNodeId));
 
       const scopedNodes = getScopedNodes();
       updateFilterState(scopedNodes);
@@ -5029,6 +5173,12 @@ def format_reactlog_html(
           const x2 = p2.x - (nodeWidth / 2);
           const y2 = p2.y;
           const midX = x1 + Math.max(35, (x2 - x1) * 0.5);
+          const dy = y2 - y1;
+          const dx = x2 - x1;
+          const crossBand = Math.abs(dy) > rowHeight * 1.25;
+          const arcOffset = crossBand ? Math.min(90, Math.abs(dy) * 0.22) * (dx < 80 ? -1 : 1) : 0;
+          const c1x = midX + arcOffset;
+          const c2x = midX + arcOffset;
 
           const fromMatch = representatives.get(activeEvent.edge_from || activeEvent.dependsOn);
           const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
@@ -5036,23 +5186,25 @@ def format_reactlog_html(
             ? (fromMatch === e.from && toMatch === e.to)
             : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate')));
 
-
-
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{midX}} ${{y1}}, ${{midX}} ${{y2}}, ${{x2}} ${{y2}}`);
+          path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{c1x}} ${{y1}}, ${{c2x}} ${{y2}}, ${{x2}} ${{y2}}`);
           path.setAttribute('fill', 'none');
           path.setAttribute('stroke-linecap', 'round');
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
           path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (!e.related ? ' is-dimmed' : ''));
+          const edgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
           if (e.isolated) {{
             path.setAttribute('stroke-dasharray', '5 4');
             path.setAttribute('data-isolated', 'true');
-            const edgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
             edgeTitle.textContent = `Isolated read (reactive.isolate) from ${{e.from}} to ${{e.to}}`;
-            path.appendChild(edgeTitle);
+          }} else {{
+            const fromNode = nodeIndex.get(e.from);
+            const toNode = nodeIndex.get(e.to);
+            edgeTitle.textContent = `${{fromNode ? (fromNode.label || e.from) : e.from}} → ${{toNode ? (toNode.label || e.to) : e.to}}`;
           }}
+          path.appendChild(edgeTitle);
           path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : (e.isolated ? 'url(#arrow-isolated)' : 'url(#arrow)'));
 
           svg.appendChild(path);
@@ -5067,9 +5219,10 @@ def format_reactlog_html(
         const isExecuted = (n.members || []).some(id => executedInBurst.has(id)) || executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
         const kind = nodeKind(n);
         const isDimmed = focusedNodes && !(n.members || [n.id]).some(id => focusedNodes.has(id));
+        const isClientData = isClientDataNode(n);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isClientData ? ' is-clientdata' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
         const state = replay.states.get(n.id) || 'ready';
@@ -5415,6 +5568,11 @@ def format_reactlog_html(
         const activeLineEl = document.querySelector(`.source-panel .source-line[data-line="${{targetLine}}"]`);
         if (activeLineEl) {{
           activeLineEl.classList.add('is-active');
+          const sourcePanel = document.getElementById('source-panel');
+          if (sourcePanel && !sourcePanel.hidden && typeof activeLineEl.scrollIntoView === 'function') {{
+            const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            activeLineEl.scrollIntoView({{ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' }});
+          }}
         }}
       }} else {{
         highlight.hidden = true;
@@ -5529,7 +5687,7 @@ def format_reactlog_html(
             document.getElementById('search-input').value = filterVal;
             results.hidden = true;
             selectNode(node.id);
-            activeRoles = new Set(['source', 'conductor', 'observer']);
+            activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
             renderGraph();
             renderInspector();
             updateSourceHighlight();
@@ -5549,11 +5707,12 @@ def format_reactlog_html(
       searchQuery = '';
       selectedModuleFilter = '';
       selectedStageFilter = null;
+      hideClientData = false;
       activityStart = null;
       activityEnd = null;
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
-      activeRoles = new Set(['source', 'conductor', 'observer']);
+      activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
       if (currentViewMode === 'flush') setViewMode('full');
       refreshExploration();
       renderInspector();
@@ -5748,7 +5907,8 @@ def format_reactlog_html(
       activityEnd = null;
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
-      activeRoles = new Set(['source', 'conductor', 'observer']);
+      activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
+      hideClientData = false;
       expandedModuleDetails.clear();
       graphViewports.clear();
       eventListScope = null;
@@ -5787,6 +5947,12 @@ def format_reactlog_html(
       }}
 
       if (e.key === 'Escape') {{
+        const pickerMenu = document.getElementById('flush-picker-menu');
+        if (pickerMenu && !pickerMenu.hidden) {{
+          closeFlushPicker();
+          e.preventDefault();
+          return;
+        }}
         const modal = document.getElementById('shortcuts-modal');
         if (modal && !modal.hidden) {{
           toggleShortcutsModal();
