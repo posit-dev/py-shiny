@@ -835,7 +835,7 @@ def server(input, output, session):
     page.get_by_role("button", name="Node details", exact=True).click()
     page.locator("#flush-card").evaluate("el => el.open = true")
     expect(page.locator("#flush-card-calcs")).to_have_text("1 calcs re-evaluated")
-    expect(page.locator("#flush-card-outputs")).to_have_text("1 outputs flushed")
+    expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
 
 
 def test_empty_graph_shows_summary_notice(page: Page) -> None:
