@@ -611,6 +611,8 @@ def test_update_labels_and_view_controls(page: Page):
     page.get_by_role("button", name="Node details", exact=True).click()
     expect(page.locator("#flush-card-title")).to_contain_text("Activity 3:")
     expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
+    page.locator("#flush-counter-badge").click()
+    expect(page.locator("#secondary-timeline-tag")).to_have_text("Update 3 of 4")
 
 
 def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
