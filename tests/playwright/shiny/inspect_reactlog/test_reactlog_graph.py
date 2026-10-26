@@ -1510,7 +1510,7 @@ def out():
 
     # Step to flush 1
     page.locator("#btn-next-action").click()
-    expect(page.locator("#flush-counter-badge")).to_contain_text("Flush 2")
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Update 2")
     expect(page.locator("#flush-card-invalidated")).to_contain_text("2 nodes")
     expect(page.locator("#flush-card-calcs")).to_contain_text("1 calcs")
     expect(page.locator("#flush-card-outputs")).to_contain_text("1 outputs")
