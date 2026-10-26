@@ -2553,7 +2553,7 @@ def format_reactlog_html(
     button:focus-visible, input:focus-visible, select:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
     [hidden] {{ display:none !important; }}
     body {{ background: var(--bg); color: var(--text); font-family: var(--sans); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }}
-    .app-header {{ min-height: 50px; background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 0.5rem 1.1rem; display: flex; justify-content: space-between; gap: 1rem; align-items: center; z-index: 20; position: relative; }}
+    .app-header {{ min-height: 50px; background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 0.5rem 1.1rem; display: flex; justify-content: space-between; gap: 1rem; align-items: center; z-index: 40; position: relative; }}
     .brand {{ display: flex; align-items: center; gap: 0.7rem; min-width: 0; }}
     .brand-mark {{ width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; color: #07111c; background: linear-gradient(145deg, #82c9ff, #3b9ced); font-family: var(--mono); font-weight: 900; box-shadow: 0 3px 12px rgba(58, 158, 239, 0.2); flex-shrink: 0; }}
     .brand-copy {{ min-width: 0; }}
@@ -2573,8 +2573,6 @@ def format_reactlog_html(
     .btn.active-filter {{ background: var(--surface-3); border-color: var(--accent); color: var(--accent); }}
     .inline-icon {{ display: inline-block; vertical-align: -0.15em; margin-right: 0.25rem; flex-shrink: 0; }}
     .btn.icon svg {{ display: block; margin: auto; }}
-    .filter-select {{ height: 28px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0 0.55rem; font: 650 0.72rem var(--sans); cursor: pointer; }}
-    .filter-select:hover {{ border-color: var(--border-strong); }}
     .search-wrap {{ position: relative; width: 200px; flex-shrink: 0; }}
     .search-results {{ position: absolute; top: 100%; right: 0; left: auto; min-width: 360px; max-width: min(540px, calc(100vw - 32px)); width: max-content; max-height: 340px; overflow-y: auto; overflow-x: hidden; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px; z-index: 1000; box-shadow: 0 10px 28px rgba(0,0,0,0.28); }}
     .search-results button {{ display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 7px 10px; background: var(--surface-2); color: var(--text); border: 0; border-radius: 6px; cursor: pointer; word-break: break-word; font-family: var(--mono); font-size: 0.73rem; line-height: 1.4; white-space: normal; }}
@@ -2587,7 +2585,7 @@ def format_reactlog_html(
     /* Workspace Layout: Left Sidebar + Center Canvas + On Demand Right Sidebar */
     .workspace-layout {{ display: flex; flex: 1; min-height: 0; overflow: hidden; position: relative; }}
 
-    /* Bottom Status Bar (VS Code Style) */
+    /* Timeline playback controls */
     .bottom-timeline-bar {{ flex-shrink: 0; height: 38px; min-height: 38px; background: var(--surface-2); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 0.75rem; gap: 0.6rem; z-index: 30; user-select: none; }}
     .status-left, .status-center, .status-right {{ display: flex; align-items: center; gap: 0.4rem; }}
     .trace-status-line {{ font: 650 0.72rem var(--sans); color: var(--text-muted); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
@@ -2614,9 +2612,13 @@ def format_reactlog_html(
 
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
     .graph-node, .graph-edge {{ transition: opacity 180ms ease, filter 180ms ease, stroke 180ms ease, stroke-width 180ms ease; }}
-    .graph-edge {{ opacity: 0.75; stroke: #527494; stroke-width: 1.8px; }}
-    .graph-edge.is-isolated {{ opacity: 0.65; stroke: #88a0b8; stroke-dasharray: 5 4; }}
-    .legend-line-isolated {{ display: inline-block; width: 16px; height: 0; border-top: 2px dashed #88a0b8; vertical-align: middle; margin-right: 4px; }}
+    .graph-edge {{ opacity: 0.75; stroke: #676767; stroke-width: 1.8px; }}
+    .graph-edge.is-isolated {{ opacity: 0.65; stroke: #818181; stroke-dasharray: 5 4; }}
+    .graph-edge.is-inactive {{ stroke: #818181; stroke-dasharray: 1 4; opacity: 0.5; }}
+    .legend-swatch {{ width: 14px; height: 14px; border: 1px solid #0004; border-radius: 2px; }}
+    .legend-line {{ display: inline-block; width: 16px; border-top: 2px solid #676767; }}
+    .legend-line.is-isolated {{ border-top-style: dashed; }}
+    .legend-line.is-inactive {{ border-top-style: dotted; }}
     .burst-anchor.is-mark {{ border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); color: #b45309; }}
     [data-theme="dark"] .burst-anchor.is-mark {{ color: #fbbf24; }}
     .burst-anchor.is-mark .burst-anchor-dot {{ background: #f59e0b; }}
@@ -2633,11 +2635,10 @@ def format_reactlog_html(
     .shortcuts-table {{ width: 100%; border-collapse: collapse; font-size: 0.8rem; }}
     .shortcuts-table td {{ padding: 0.4rem 0.2rem; border-bottom: 1px solid var(--border); color: var(--text); }}
     .shortcut-key {{ display: inline-block; padding: 0.15rem 0.45rem; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 4px; font-family: var(--mono); font-size: 0.75rem; color: var(--accent); font-weight: 600; }}
-    .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; stroke-dasharray: 7 8; animation: edge-flow 900ms linear infinite; }}
+    .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }}
     .graph-node.is-dimmed, .module-box.is-dimmed, .app-box.is-dimmed {{ opacity: 0.3; filter: grayscale(1); }}
     .graph-edge.is-dimmed {{ opacity: 0.15 !important; stroke: var(--text-muted) !important; stroke-width: 1.8px !important; filter: grayscale(1); animation: none; }}
     #btn-clear-selection[hidden] {{ display: none; }}
-    @keyframes edge-flow {{ to {{ stroke-dashoffset: -30; }} }}
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
       .graph-edge[data-active="true"] {{ animation: none; }}
@@ -2834,7 +2835,7 @@ def format_reactlog_html(
 
     /* Keep controls readable and reserve the canvas for the graph. */
     .app-header, .toolbar, .trace-timeline-bar {{ flex-shrink: 0; }}
-    .btn, .filter-select, .search-input {{ min-height: 32px; }}
+    .btn, .search-input {{ min-height: 32px; }}
     .btn.icon {{ width: 32px; flex-shrink: 0; }}
     .search-wrap {{ flex: 1 1 200px; max-width: 320px; }}
     .search-results {{ top: calc(100% + 6px); right: 0; left: auto; padding: 8px; }}
@@ -2879,15 +2880,40 @@ def format_reactlog_html(
     .video-sync-status {{ font: 600 .65rem var(--sans); }}
     .video-container {{ border: 0; border-radius: 0; aspect-ratio: 16 / 9; }}
     .video-container video {{ width: 100%; height: 100%; object-fit: contain; }}
-    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); height: 56px; min-height: 56px; padding: 5px 16px; gap: 4px; }}
-    .timeline-current {{ display: flex; justify-content: space-between; gap: 12px; font: 650 .72rem var(--sans); }}
-    #active-flush-label, .trace-status-line {{ max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-    .trace-track-wrap {{ position: relative; height: 24px; flex: none; display: block; }}
-    #scrubber-range {{ position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; accent-color: var(--accent); cursor: pointer; }}
-    #trace-markers {{ position: absolute; inset: 0 8px; pointer-events: none; z-index: 1; }}
-    .timeline-marker {{ position: absolute; bottom: 0; width: 2px; height: 5px; background: var(--output); }}
-    .timeline-marker.is-flush {{ height: 9px; }}
-    .timeline-marker.is-mark {{ height: 12px; width: 3px; background: #f59e0b; }}
+    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface); padding: 8px 16px; gap: 8px; }}
+    .timeline-current {{ display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font: 650 .75rem var(--sans); }}
+    #active-flush-label {{ color: var(--text-muted); }}
+    .trace-status-line {{ max-width: none; white-space: normal; font: 600 .75rem var(--sans); }}
+    .trace-track-wrap {{ position: relative; height: 24px; flex: none; background: #f0f0f0; touch-action: none; }}
+    .header-center .search-wrap {{ flex: 1; min-width: 250px; max-width: 420px; }}
+    #scrubber-range {{ appearance: none; -webkit-appearance: none; background: transparent; position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; cursor: pointer; }}
+    #scrubber-range::-webkit-slider-runnable-track {{ height: 18px; background: linear-gradient(to right, #8e8e8e var(--progress, 0%), transparent var(--progress, 0%)); }}
+    #scrubber-range::-moz-range-track {{ height: 18px; background: transparent; }}
+    #scrubber-range::-moz-range-progress {{ height: 18px; background: #8e8e8e; }}
+    #scrubber-range::-webkit-slider-thumb {{ appearance: none; -webkit-appearance: none; height: 24px; width: 3px; margin-top: -3px; background: transparent; }}
+    #scrubber-range::-moz-range-thumb {{ height: 24px; width: 3px; border: 0; border-radius: 0; background: transparent; }}
+    #scrubber-range:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
+    #trace-markers {{ position: absolute; inset: 0 1.5px; pointer-events: none; z-index: 1; }}
+    .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: #a3c586; pointer-events: auto; cursor: pointer; }}
+    .timeline-marker.is-output {{ top: 6px; height: 12px; }}
+    .timeline-marker.is-mark {{ background: #666666; z-index: 2; }}
+    .timeline-marker:hover, .timeline-marker:focus-visible {{ outline: 2px solid #17212b; outline-offset: 1px; z-index: 3; }}
+    .timeline-playhead {{ position: absolute; top: -3px; bottom: -3px; width: 2px; background: #262626; box-shadow: 0 0 0 1px #fff; pointer-events: none; z-index: 4; }}
+    .timeline-playhead::before {{ content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #262626; }}
+    .timeline-key {{ display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font: .7rem var(--sans); }}
+    .timeline-key span {{ display: inline-flex; align-items: center; gap: 5px; }}
+    .timeline-key i {{ display: inline-block; width: 3px; height: 14px; background: #a3c586; }}
+    .timeline-key .key-output {{ height: 6px; }}
+    .timeline-key .key-mark {{ background: #666666; }}
+    .timeline-key .key-position {{ width: 2px; background: #262626; box-shadow: 0 0 0 1px #fff; }}
+    .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
+    .timeline-tooltip[hidden] {{ display: none; }}
+    .timeline-navigation {{ display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }}
+    .status-center {{ gap: 3px; }}
+    .status-center .btn {{ width: 28px; min-height: 28px; height: 28px; }}
+    .status-center .nav-idle svg {{ color: #a3c586; }}
+    .status-center .nav-output svg {{ color: #a3c586; }}
+    .status-center .nav-mark svg {{ color: var(--text-muted); }}
     .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
     .status-left, .status-center, .status-right {{ flex-wrap: wrap; }}
     @media (max-width: 1000px) {{
@@ -2909,18 +2935,9 @@ def format_reactlog_html(
       </div>
     </div>
     <div class="header-center">
-      <select class="filter-select" id="module-filter-select" onchange="filterByModule(this.value)" aria-label="Filter reactive nodes by module">
-        <option value="">Module: All modules</option>
-      </select>
-      <select class="filter-select phase-selector" id="phase-filter-select" onchange="handlePhaseSelect(this.value)" aria-label="Filter events by phase">
-        <option value="all" selected>Phase: All events</option>
-        <option value="interaction">Phase: User actions</option>
-        <option value="init">Phase: Init only</option>
-      </select>
-      <button class="btn mini" id="btn-skip-init" onclick="skipToInteractions()" title="Skip to user interaction actions">Skip to Actions</button>
       <div class="search-wrap">
         <svg class="search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Search names or id:r12" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name, type, or id" aria-controls="search-results" onkeydown="handleSearchKey(event)" />
+        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Search names, id:r12, module:name" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name, type, id, or module" aria-controls="search-results" onkeydown="handleSearchKey(event)" />
         <div id="search-results" class="search-results" aria-label="Node search results" onkeydown="handleSearchKey(event)" hidden></div>
       </div>
     </div>
@@ -2939,18 +2956,89 @@ def format_reactlog_html(
       <div id="active-filters"></div>
       <button class="btn mini" onclick="resetGraphView()" aria-label="Clear all filters">Clear all</button>
     </div>
+  <!-- Timeline playback controls -->
+  <footer class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
+    <div class="timeline-navigation">
+    <div class="status-center">
+      <button class="btn icon mini" id="btn-reset" onclick="resetTimeline()" aria-label="Reset timeline" title="Reset (Home)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+      <button class="btn icon mini nav-mark" onclick="seekTimelineStop('mark', -1)" aria-label="Previous user mark" title="Previous user mark"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="var(--text-muted)"/></svg></button>
+      <button class="btn icon mini nav-idle" id="btn-prev-flush" onclick="seekTimelineStop('idle', -1)" aria-label="Previous idle" title="Previous idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="#a3c586"/></svg></button>
+      <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', -1)" aria-label="Previous output calculation" title="Previous output calculation (Alt+Left)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="8" width="3" height="8" fill="#a3c586"/></svg></button>
+      <button class="btn icon mini" id="btn-step-back" onclick="stepBack()" aria-label="Step back" title="Step back (Left)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg>
+      </button>
+      <button class="btn icon mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+      </button>
+      <button class="btn icon mini" id="btn-step-forward" onclick="stepForward()" aria-label="Step forward" title="Step forward (Right)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
+      </button>
+      <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', 1)" aria-label="Next output calculation" title="Next output calculation (Alt+Right)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="8" width="3" height="8" fill="#a3c586"/></svg></button>
+      <button class="btn icon mini nav-idle" id="btn-next-flush" onclick="seekTimelineStop('idle', 1)" aria-label="Next idle" title="Next idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="#a3c586"/></svg></button>
+      <button class="btn icon mini nav-mark" onclick="seekTimelineStop('mark', 1)" aria-label="Next user mark" title="Next user mark"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="var(--text-muted)"/></svg></button>
+    </div>
+    <div class="status-left">
+      <div class="status-time-group">
+        <svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span class="trace-clock" id="trace-current-time">0.0s</span>
+        <span class="trace-sep">/</span>
+        <span class="trace-total" id="trace-total-time">0.0s</span>
+      </div>
+      <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
+      <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
+      <span class="step-display" id="step-display">Step 0 / 0</span>
+      <span class="flush-counter-badge" id="flush-counter-badge">Flush 1 / 1</span>
+    </div>
+    </div>
+    <div class="status-right">
+      <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
+        <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show only nodes active in this flush cycle">
+          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Flush Cycle
+        </button>
+        <button class="btn mini view-mode-btn" id="btn-mode-full" onclick="setViewMode('full')" title="Show the complete reactive DAG">
+          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> Full DAG
+        </button>
+        <button class="btn mini view-mode-btn is-active" id="btn-mode-overview" onclick="setViewMode('overview')" title="System architecture overview">
+          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> Overview
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
+    <div class="timeline-current">
+      <span id="active-flush-label" role="status"></span>
+      <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
+    </div>
+    <div id="trace-track-wrap" class="trace-track-wrap">
+      <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
+      <div id="timeline-playhead" class="timeline-playhead" aria-hidden="true"></div>
+      <div id="timeline-tooltip" class="timeline-tooltip" role="tooltip" hidden></div>
+      <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
+    </div>
+    <div class="timeline-key" id="timeline-key" aria-label="Timeline key">
+      <span><i></i>Idle</span><span><i class="key-output"></i>Output calculation</span>
+      <span><i class="key-mark"></i>User mark</span><span><i class="key-position"></i>Current step</span>
+    </div>
+  </div>
+
   <div class="workspace-layout">
     <!-- Main View & Graph Canvas -->
     <main class="main-view" id="main-view">
       <div class="graph-container" id="graph-container">
         <div class="graph-topbar">
           <div class="graph-top-row">
-            <div class="legend" aria-label="Node types legend">
-              <div class="legend-item"><span class="legend-dot" style="--role-color: var(--source)"></span> Inputs</div>
-              <div class="legend-item"><span class="legend-dot" style="--role-color: var(--calc)"></span> Calcs</div>
-              <div class="legend-item"><span class="legend-dot" style="--role-color: var(--output)"></span> Outputs</div>
-              <div class="legend-item"><span class="legend-dot" style="--role-color: var(--effect)"></span> Effects</div>
-              <div class="legend-item"><span class="legend-line-isolated"></span> Isolated read</div>
+            <div class="legend" aria-label="Reactive states and dependencies legend">
+              <div class="legend-item"><span class="legend-swatch" style="background:#a3c586"></span>Ready</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#fcbf49"></span>Calculating</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#969696"></span>Invalidating</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#d9d9d9"></span>Invalidated</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#2171b5"></span>Frozen</div>
+              <div class="legend-item"><span class="legend-line"></span>Dependency</div>
+              <div class="legend-item"><span class="legend-line is-isolated"></span>Isolated dependency</div>
+              <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
             </div>
             <div class="zoom-controls">
               <button class="btn mini" id="btn-toggle-collapse-all" onclick="toggleCollapseAllModules()" title="Collapse all modules into macro boxes">Collapse modules</button>
@@ -2993,10 +3081,10 @@ def format_reactlog_html(
         <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6685a3" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#676767" />
             </marker>
             <marker id="arrow-isolated" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#88a0b8" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#818181" />
             </marker>
             <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
               <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
@@ -3100,66 +3188,6 @@ def format_reactlog_html(
     </main>
   </div>
 
-  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
-    <div class="timeline-current">
-      <span id="active-flush-label" role="status"></span>
-      <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
-    </div>
-    <div id="trace-track-wrap" class="trace-track-wrap">
-      <div id="trace-markers" aria-hidden="true"></div>
-      <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
-    </div>
-  </div>
-
-  <!-- Bottom Toolbar: VS Code Style Status / Stepper Controls -->
-  <footer class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
-    <div class="status-left">
-      <div class="status-time-group">
-        <svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span class="trace-clock" id="trace-current-time">0.0s</span>
-        <span class="trace-sep">/</span>
-        <span class="trace-total" id="trace-total-time">0.0s</span>
-      </div>
-      <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
-      <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
-      <span class="step-display" id="step-display">Step 0 / 0</span>
-      <span class="flush-counter-badge" id="flush-counter-badge">Flush 1 / 1</span>
-    </div>
-    <div class="status-center">
-      <button class="btn icon mini" id="btn-reset" onclick="resetTimeline()" aria-label="Reset timeline" title="Reset (Home)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-      </button>
-      <button class="btn icon mini" id="btn-prev-flush" onclick="prevFlush()" aria-label="Previous flush" title="Previous flush (Shift+Left)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
-      </button>
-      <button class="btn icon mini" id="btn-step-back" onclick="stepBack()" aria-label="Step back" title="Step back (Left)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg>
-      </button>
-      <button class="btn icon mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-      </button>
-      <button class="btn icon mini" id="btn-step-forward" onclick="stepForward()" aria-label="Step forward" title="Step forward (Right)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
-      </button>
-      <button class="btn icon mini" id="btn-next-flush" onclick="nextFlush()" aria-label="Next flush" title="Next flush (Shift+Right)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
-      </button>
-    </div>
-    <div class="status-right">
-      <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
-        <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show only nodes active in this flush cycle">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Flush Cycle
-        </button>
-        <button class="btn mini view-mode-btn" id="btn-mode-full" onclick="setViewMode('full')" title="Show the complete reactive DAG">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> Full DAG
-        </button>
-        <button class="btn mini view-mode-btn is-active" id="btn-mode-overview" onclick="setViewMode('overview')" title="System architecture overview">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> Overview
-        </button>
-      </div>
-    </div>
-  </footer>
-
   <script>
     const reactlogData = {escaped_json};
     const rawAppSource = {escaped_source_raw};
@@ -3181,13 +3209,13 @@ def format_reactlog_html(
     let focusedNodeId = null;
     let searchQuery = "";
     let activeRoles = new Set(['source', 'conductor', 'observer']);
-    let currentPhaseFilter = 'all';
     let activeBurstIndex = 0;
     let zoomLevel = 1;
     let panOffset = {{ x: 0, y: 0 }};
     let isPanning = false;
     let startPan = {{ x: 0, y: 0 }};
     let maxSessionDuration = 1.0;
+    let timelineStops = [];
     let videoFrameRequest = null;
     let graphSeekTime = null;
     let videoFrameRequestKind = null;
@@ -3666,17 +3694,62 @@ def format_reactlog_html(
       document.getElementById('trace-total-time').textContent = formatTime(maxSessionDuration);
       const markers = document.getElementById('trace-markers');
       markers.replaceChildren();
-      const flushSteps = new Map(allBursts.map(wave => [wave.startStep, wave]));
+      timelineStops = [];
+      let depth = 0;
       events.forEach((ev, step) => {{
-        const wave = flushSteps.get(step);
         const action = ev.action || ev.event || '';
-        const isMark = wave?.isMark || action === 'mark';
-        if (!wave && !['exit', 'outputUpdated', 'execEnd'].includes(action) && !isMark) return;
-        const marker = document.createElement('span');
-        marker.className = 'timeline-marker' + (wave ? ' is-flush' : '') + (isMark ? ' is-mark' : '');
-        marker.style.left = `${{100 * step / Math.max(1, events.length - 1)}}%`;
+        if (['enter', 'execStart'].includes(action)) depth++;
+        let outputComplete = action === 'outputUpdated' || ev.event === 'outputUpdated';
+        if (['exit', 'execEnd'].includes(action)) {{
+          depth = Math.max(0, depth - 1);
+          outputComplete = depth === 0;
+        }}
+        const kind = ['mark', 'userMark'].includes(action) ? 'mark' : isIdleEvent(ev) ? 'idle' : outputComplete ? 'output' : null;
+        if (!kind) return;
+        timelineStops.push({{ step, kind }});
+        const label = kind === 'mark' ? 'User mark' : kind === 'idle' ? 'Idle' : 'Output calculation';
+        const time = formatTime(ev.time_sec ?? ev.time ?? 0);
+        const description = ev.node_label || ev.label || ev.node_id || (kind === 'mark' ? ev.details : '');
+        const text = `${{label}} · Step ${{step}} · ${{time}}${{description ? ' · ' + description : ''}}`;
+        const marker = document.createElement('button');
+        marker.type = 'button';
+        marker.tabIndex = -1;
+        marker.className = `timeline-marker is-${{kind}}`;
+        marker.dataset.step = step;
+        marker.setAttribute('aria-label', text);
+        marker.title = text;
+        const width = Math.min(100, 75 / Math.max(1, events.length - 1));
+        marker.style.width = `${{width}}%`;
+        marker.style.left = `${{Math.max(0, 100 * step / Math.max(1, events.length - 1) - width)}}%`;
+        const tooltip = document.getElementById('timeline-tooltip');
+        marker.onmouseenter = marker.onfocus = () => {{ tooltip.textContent = text; tooltip.hidden = false; }};
+        marker.onmouseleave = marker.onblur = () => {{ tooltip.hidden = true; }};
+        marker.onclick = () => {{ seekTo(step); }};
         markers.appendChild(marker);
       }});
+      const track = document.getElementById('trace-track-wrap');
+      const seekPointer = event => {{
+        const box = track.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (event.clientX - box.left) / box.width));
+        seekTo(Math.round(ratio * Math.max(0, events.length - 1)));
+      }};
+      track.onpointerdown = event => {{
+        if (event.button !== 0) return;
+        event.preventDefault();
+        track.setPointerCapture(event.pointerId);
+        document.getElementById('scrubber-range').focus({{ preventScroll: true }});
+        const marker = event.target.closest('.timeline-marker');
+        if (marker) seekTo(Number(marker.dataset.step)); else seekPointer(event);
+      }};
+      track.onpointermove = event => {{
+        if (track.hasPointerCapture(event.pointerId) && event.buttons === 1) {{
+          document.getElementById('timeline-tooltip').hidden = true;
+          seekPointer(event);
+        }}
+      }};
+      track.onpointerup = event => {{
+        if (track.hasPointerCapture(event.pointerId)) track.releasePointerCapture(event.pointerId);
+      }};
       updateTraceTimelineScrubber(getCurrentStepTime());
     }}
 
@@ -3692,9 +3765,12 @@ def format_reactlog_html(
       activeLabel.title = activeLabel.textContent;
       const ev = events[currentStep];
       const status = document.getElementById('trace-status-line');
-      status.textContent = ev ? (ev.details || ev.action || ev.event || '') : 'No events';
+      status.textContent = ev ? (isIdleEvent(ev) ? 'Idle' : ['mark', 'userMark'].includes(ev.action || ev.event) ? `User mark${{ev.details ? ' · ' + ev.details : ''}}` : (ev.details || ev.action || ev.event || '')) : 'No events';
       status.title = status.textContent;
       const range = document.getElementById('scrubber-range');
+      const percent = 100 * currentStep / Math.max(1, events.length - 1);
+      range.style.setProperty('--progress', `${{percent}}%`);
+      document.getElementById('timeline-playhead').style.left = `calc(${{percent}}% - ${{3 * percent / 100}}px)`;
       range.setAttribute('aria-valuetext', `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}}. ${{activeLabel.textContent}}. ${{status.textContent}}`);
     }}
 
@@ -3821,19 +3897,18 @@ def format_reactlog_html(
       }}
     }}
 
-    function prevFlush() {{
-      const curIdx = getCurrentFlushIndex();
-      if (curIdx > 0) {{
-        selectFlush(curIdx - 1);
-      }}
+    function isIdleEvent(ev) {{
+      return ev.event !== 'orderingStart' && ['idle', 'queueEmpty'].includes(ev.action || ev.event);
     }}
 
-    function nextFlush() {{
-      const curIdx = getCurrentFlushIndex();
-      if (curIdx < allBursts.length - 1) {{
-        selectFlush(curIdx + 1);
-      }}
+    function seekTimelineStop(kind, direction) {{
+      const stops = direction < 0 ? timelineStops.slice().reverse() : timelineStops;
+      const target = stops.find(stop => stop.kind === kind && (direction < 0 ? stop.step < currentStep : stop.step > currentStep));
+      if (target) seekTo(target.step);
     }}
+
+    function prevFlush() {{ seekTimelineStop('idle', -1); }}
+    function nextFlush() {{ seekTimelineStop('idle', 1); }}
 
     function setViewMode(mode) {{
       if (mode === 'overview' && currentViewMode !== 'overview') graphViewports.set(currentViewMode + ':' + selectedModuleFilter, {{ zoom: zoomLevel, pan: {{ ...panOffset }} }});
@@ -3862,16 +3937,8 @@ def format_reactlog_html(
 
     function zoomToModule(modName) {{
       selectedModuleFilter = modName || '';
-      const select = document.getElementById('module-filter-select');
-      if (select) select.value = selectedModuleFilter;
       collapsedModules.delete(modName);
       setViewMode('full');
-    }}
-
-    function filterByModule(modName) {{
-      selectedModuleFilter = modName || '';
-      refreshExploration();
-      fitGraph();
     }}
 
     function filterFlushStage(stage) {{
@@ -3900,19 +3967,6 @@ def format_reactlog_html(
       }}
       renderGraph();
       fitGraph();
-    }}
-
-    function populateModuleSelect() {{
-      const select = document.getElementById('module-filter-select');
-      if (!select) return;
-      select.innerHTML = '<option value="">Module: All modules</option><option value="__root__">Module: App (Root)</option>';
-      const mods = Array.from(new Set(filterItems((reactlogData.nodes || []).map(n => n.module), Boolean))).sort();
-      mods.forEach(mod => {{
-        const opt = document.createElement('option');
-        opt.value = mod;
-        opt.textContent = `Module: ${{mod}}`;
-        select.appendChild(opt);
-      }});
     }}
 
     function updateFlushUI() {{
@@ -3985,7 +4039,7 @@ def format_reactlog_html(
       const wave = allBursts[getCurrentFlushIndex()] || allBursts[0];
       const active = currentViewMode === 'flush' && !focusedNodeId && wave ? getActiveFlushNodeIds(wave) : null;
       let intervalNodes = null;
-      if (activityStart !== null || activityEnd !== null || currentPhaseFilter !== 'all') {{
+      if (activityStart !== null || activityEnd !== null) {{
         intervalNodes = new Set();
         allBursts.forEach((burst, i) => {{
           if (!burstInScope(burst, i)) return;
@@ -4007,8 +4061,7 @@ def format_reactlog_html(
     }}
 
     function burstInScope(wave, index) {{
-      return (activityStart === null || index >= activityStart) && (activityEnd === null || index <= activityEnd)
-        && (currentPhaseFilter === 'all' || (wave.isInit ? 'init' : 'interaction') === currentPhaseFilter);
+      return (activityStart === null || index >= activityStart) && (activityEnd === null || index <= activityEnd);
     }}
 
     function setActivityInterval(side, value) {{
@@ -4040,13 +4093,10 @@ def format_reactlog_html(
       }};
       if (currentViewMode === 'flush') add('flush', 'Active flush', () => setViewMode('full'));
       if (selectedModuleFilter) add('module', selectedModuleFilter === '__root__' ? 'App (Root)' : selectedModuleFilter, () => {{
-        selectedModuleFilter = ''; document.getElementById('module-filter-select').value = '';
+        selectedModuleFilter = '';
       }});
       if (searchQuery) add('search', searchQuery, () => {{
         searchQuery = ''; document.getElementById('search-input').value = ''; document.getElementById('search-results').hidden = true;
-      }});
-      if (currentPhaseFilter !== 'all') add('phase', currentPhaseFilter, () => {{
-        currentPhaseFilter = 'all'; document.getElementById('phase-filter-select').value = 'all';
       }});
       if (selectedStageFilter) add('stage', selectedStageFilter, () => {{ selectedStageFilter = null; }});
       if (activityStart !== null || activityEnd !== null) add('interval', `Flushes ${{activityStart ?? 0}}–${{activityEnd ?? allBursts.length - 1}}`, () => {{
@@ -4213,7 +4263,6 @@ def format_reactlog_html(
 
       showSourceFile(reactlogData.entry_file || Object.keys(reactlogData.sources || {{}})[0]);
       renderEventList();
-      populateModuleSelect();
       renderGraph();
       initTraceTimeline();
       seekTo(0);
@@ -4223,6 +4272,40 @@ def format_reactlog_html(
       setupVideoSync();
       toggleInspector(false);
       setViewMode('flush');
+    }}
+
+    const reactiveStateColors = {{ ready: '#a3c586', calculating: '#fcbf49', invalidating: '#969696', invalidated: '#d9d9d9', frozen: '#2171b5' }};
+
+    function reactiveEventState(ev) {{
+      const action = ev.action || ev.event;
+      if (['enter', 'execStart', 'wouldEvaluate', 'recalculate', 'render', 'output'].includes(action)) return 'calculating';
+      if (action === 'invalidateStart') return 'invalidating';
+      if (['invalidateEnd', 'invalidate', 'propagate', 'define'].includes(action)) return 'invalidated';
+      if (['exit', 'execEnd', 'ordered', 'outputUpdated', 'valueChange', 'inputChange', 'assumeValue'].includes(action)) return 'ready';
+      return null;
+    }}
+
+    function graphStateAtStep() {{
+      const states = new Map(), frozen = new Set(), inactiveEdges = new Set();
+      const events = reactlogData.events || reactlogData.log || [];
+      events.forEach(ev => {{
+        if ((ev.action || ev.event) === 'dependsOn') inactiveEdges.add(JSON.stringify([ev.edge_from || ev.dependsOn || ev.depOnReactId, ev.edge_to || ev.node_id || ev.reactId || ev.id]));
+      }});
+      for (let i = 0; i <= currentStep && i < events.length; i++) {{
+        const ev = events[i], action = ev.action || ev.event;
+        const id = ev.node_id || ev.reactId || ev.id;
+        const state = reactiveEventState(ev);
+        if (id && state) states.set(id, state);
+        if (action === 'freeze') frozen.add(id);
+        if (action === 'thaw') frozen.delete(id);
+        const from = ev.edge_from || ev.dependsOn || ev.depOnReactId;
+        const to = ev.edge_to || id;
+        const key = JSON.stringify([from, to]);
+        if (action === 'dependsOnRemove') inactiveEdges.add(key);
+        if (action === 'dependsOn') inactiveEdges.delete(key);
+      }}
+      frozen.forEach(id => states.set(id, 'frozen'));
+      return {{ states, inactiveEdges }};
     }}
 
     function nodeKind(n) {{
@@ -4261,16 +4344,6 @@ def format_reactlog_html(
       document.getElementById('video-tab').setAttribute('aria-expanded', String(!panel.hidden));
     }}
 
-    function handlePhaseSelect(val) {{
-      currentPhaseFilter = val;
-      refreshExploration();
-    }}
-
-    function skipToInteractions() {{
-      const target = reactlogData.first_interaction_step !== undefined ? reactlogData.first_interaction_step : (actionWaves[0] ? actionWaves[0].startStep : 0);
-      seekTo(target);
-    }}
-
     function escapeHTML(str) {{
       if (str === null || str === undefined) return '';
       return String(str)
@@ -4294,7 +4367,7 @@ def format_reactlog_html(
       if (!list) return;
       const events = reactlogData.events || reactlogData.log || [];
       const scopedIds = new Set(getScopedNodes().map(n => n.id));
-      const scope = JSON.stringify([currentPhaseFilter, activityStart, activityEnd, selectedModuleFilter, searchQuery, selectedStageFilter, currentViewMode, [...scopedIds]]);
+      const scope = JSON.stringify([activityStart, activityEnd, selectedModuleFilter, searchQuery, selectedStageFilter, currentViewMode, [...scopedIds]]);
       if (eventListScope === scope) return;
       eventListScope = scope;
       list.innerHTML = '';
@@ -4305,9 +4378,6 @@ def format_reactlog_html(
         if (activityEnd !== null && allBursts[activityEnd + 1] && idx >= allBursts[activityEnd + 1].startStep) return;
         const eventIds = filterItems([ev.node_id || ev.id, ev.edge_from, ev.edge_to], Boolean);
         if (filtered && eventIds.length && !eventIds.some(id => scopedIds.has(id))) return;
-        if (currentPhaseFilter !== 'all' && ev.phase && ev.phase !== currentPhaseFilter) {{
-          return;
-        }}
 
         const eventPhase = ev.phase || 'interaction';
         if (eventPhase !== visiblePhase) {{
@@ -4366,7 +4436,7 @@ def format_reactlog_html(
 
         const badge = document.createElement('span');
         badge.className = `event-badge ${{ev.status || 'idle'}}`;
-        badge.textContent = ev.status || ev.action || ev.event;
+        badge.textContent = isIdleEvent(ev) ? 'Idle' : (reactiveEventState(ev) || ev.status || ev.action || ev.event);
         badgesWrap.appendChild(badge);
 
         header.appendChild(nameWrap);
@@ -4885,6 +4955,7 @@ def format_reactlog_html(
         }} else {{ representatives.set(n.id, n.id); visibleNodes.push(n); }}
       }});
       const nodes = visibleNodes;
+      const replay = graphStateAtStep();
       const edges = [], edgeKeys = new Map();
       (reactlogData.edges || []).forEach(e => {{
         const from = representatives.get(e.from), to = representatives.get(e.to);
@@ -4892,7 +4963,7 @@ def format_reactlog_html(
         const key = JSON.stringify([from, to]);
         const related = !focusedNodes || (focusedNodes.has(e.from) && focusedNodes.has(e.to));
         if (!edgeKeys.has(key)) {{
-          const edge = {{ from, to, isolated: Boolean(e.isolated), related }};
+          const edge = {{ from, to, isolated: Boolean(e.isolated), inactive: replay.inactiveEdges.has(JSON.stringify([e.from, e.to])), related }};
           edges.push(edge); edgeKeys.set(key, edge);
         }} else if (related) edgeKeys.get(key).related = true;
       }});
@@ -4961,9 +5032,9 @@ def format_reactlog_html(
 
           const fromMatch = representatives.get(activeEvent.edge_from || activeEvent.dependsOn);
           const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
-          const isEdgeActive = (fromMatch && toMatch)
+          const isEdgeActive = !e.inactive && ((fromMatch && toMatch)
             ? (fromMatch === e.from && toMatch === e.to)
-            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate'));
+            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate')));
 
 
 
@@ -4974,7 +5045,7 @@ def format_reactlog_html(
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
-          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (!e.related ? ' is-dimmed' : ''));
+          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (!e.related ? ' is-dimmed' : ''));
           if (e.isolated) {{
             path.setAttribute('stroke-dasharray', '5 4');
             path.setAttribute('data-isolated', 'true');
@@ -5001,10 +5072,12 @@ def format_reactlog_html(
         g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
+        const state = replay.states.get(n.id) || 'ready';
+        g.setAttribute('data-state', state);
         g.setAttribute('data-active', isActive ? 'true' : 'false');
         g.setAttribute('tabindex', '0');
         g.setAttribute('role', 'button');
-        g.setAttribute('aria-label', `${{kind.label}} ${{n.id}}, line ${{n.line || 'unknown'}}`);
+        g.setAttribute('aria-label', `${{kind.label}} ${{n.id}}, ${{state}}, line ${{n.line || 'unknown'}}`);
 
         g.onclick = (e) => {{
           e.stopPropagation();
@@ -5032,20 +5105,10 @@ def format_reactlog_html(
         rect.setAttribute('height', nodeHeight);
         rect.setAttribute('rx', '8');
 
-        let fillCol = isLight ? '#ffffff' : '#121b25';
-        let strokeCol = isSelected ? (isLight ? '#0284c7' : '#63b3ff') : (isLight ? '#cbd5e1' : '#35475a');
-        let strokeW = isSelected ? '2.8' : '1';
-        let filterVal = isSelected ? (isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.35))' : 'drop-shadow(0 0 10px rgba(99,179,255,0.4))') : 'url(#card-shadow)';
-
-        if (isActive) {{
-          fillCol = isLight ? `color-mix(in srgb, ${{kind.color}} 14%, #ffffff)` : `color-mix(in srgb, ${{kind.color}} 26%, #0f1722)`;
-          strokeCol = kind.color;
-          strokeW = '2.5';
-          filterVal = isLight ? `drop-shadow(0 0 12px ${{kind.color}})` : `drop-shadow(0 0 16px ${{kind.color}})`;
-        }} else if (isExecuted) {{
-          strokeCol = isLight ? '#0284c7' : '#63b3ff';
-          strokeW = '2';
-        }}
+        const fillCol = reactiveStateColors[state];
+        const strokeCol = isSelected ? (isLight ? '#0284c7' : '#63b3ff') : (isLight ? '#cbd5e1' : '#35475a');
+        const strokeW = isSelected ? '2.8' : '1';
+        const filterVal = isSelected ? (isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.35))' : 'drop-shadow(0 0 10px rgba(99,179,255,0.4))') : 'url(#card-shadow)';
 
         rect.setAttribute('fill', fillCol);
         rect.setAttribute('stroke', strokeCol);
@@ -5066,7 +5129,7 @@ def format_reactlog_html(
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', p.x - (nodeWidth / 2) + 14);
         text.setAttribute('y', p.y - 4);
-        text.setAttribute('fill', isLight ? '#0f172a' : '#edf4fb');
+        text.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#17212b');
         text.setAttribute('font-family', 'var(--mono)');
         text.setAttribute('font-size', '12px');
         text.setAttribute('font-weight', '700');
@@ -5082,9 +5145,9 @@ def format_reactlog_html(
         const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         subText.setAttribute('x', p.x - (nodeWidth / 2) + 14);
         subText.setAttribute('y', p.y + 14);
-        subText.setAttribute('fill', isLight ? '#64748b' : '#91a1b3');
+        subText.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#374151');
         subText.setAttribute('font-size', '10px');
-        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · double-click to expand` : `${{kind.label}}${{n.line ? ' · line ' + n.line : ''}}`;
+        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · double-click to expand` : `${{kind.label}} · ${{state}}${{n.line ? ' · line ' + n.line : ''}}`;
         g.appendChild(subText);
 
         const execCount = execCounts.get(n.id) || 0;
@@ -5147,10 +5210,9 @@ def format_reactlog_html(
     function resetHighlight() {{
       if (focusedNodeId) return;
       document.querySelectorAll('.graph-edge').forEach(edge => {{
-        const isIsolated = edge.classList.contains('is-isolated') || edge.getAttribute('data-isolated') === 'true';
-        edge.style.opacity = isIsolated ? '0.65' : '0.75';
-        edge.style.stroke = isIsolated ? '#88a0b8' : '#527494';
-        edge.style.strokeWidth = isIsolated ? '1.6px' : '1.8px';
+        edge.style.removeProperty('opacity');
+        edge.style.removeProperty('stroke');
+        edge.style.removeProperty('stroke-width');
       }});
     }}
 
@@ -5403,6 +5465,12 @@ def format_reactlog_html(
     function resetTimeline() {{ seekTo(0); }}
 
     function nodeSearchScore(node, query) {{
+      const moduleOnly = query.startsWith('module:');
+      if (moduleOnly) {{
+        const needle = query.slice(7).trim().toLowerCase();
+        const module = String(node.module || '__root__').toLowerCase();
+        return !needle || module.includes(needle) ? 0 : Infinity;
+      }}
       const idOnly = query.startsWith('id:');
       const needle = (idOnly ? query.slice(3) : query).trim().toLowerCase();
       if (!needle) return 0;
@@ -5414,7 +5482,7 @@ def format_reactlog_html(
         if (nid.includes(needle) || nlabel.includes(needle) || nname.includes(needle)) return 1;
         return Infinity;
       }}
-      const fields = [node.id, node.label, node.name, node.type, node.role];
+      const fields = [node.id, node.label, node.name, node.type, node.role, node.module];
       let best = Infinity;
       fields.forEach(field => {{
         const value = String(field || '').toLowerCase();
@@ -5444,7 +5512,7 @@ def format_reactlog_html(
         summary.setAttribute('role', 'status');
         summary.textContent = matches.length
           ? `${{matches.length}} matches${{matches.length > 50 ? ' · showing first 50' : ''}} · ↓ to select`
-          : '0 matches. Try a node name or id:r12. Press Escape to clear.';
+          : '0 matches. Try a node name, id:r12, or module:name. Press Escape to clear.';
         results.appendChild(summary);
         matches.slice(0, 50).forEach(({{node}}) => {{
           const button = document.createElement('button');
@@ -5453,7 +5521,7 @@ def format_reactlog_html(
           const cleanId = cleanName(node.id);
           const cleanLbl = cleanName(rawLabel);
           const kind = nodeKind(node);
-          const metaText = (cleanLbl && cleanLbl !== cleanId && rawLabel !== node.id) ? rawLabel : kind.label;
+          const metaText = filterItems([(cleanLbl && cleanLbl !== cleanId && rawLabel !== node.id) ? rawLabel : kind.label, node.module], Boolean).join(' · ');
           button.innerHTML = `<span><b>${{escapeHTML(node.id)}}</b></span><span style="color:var(--text-muted);font-size:0.68rem;flex-shrink:0;">${{escapeHTML(metaText)}}</span>`;
           button.onclick = () => {{
             const filterVal = `id:${{node.id}}`;
@@ -5481,11 +5549,8 @@ def format_reactlog_html(
       searchQuery = '';
       selectedModuleFilter = '';
       selectedStageFilter = null;
-      currentPhaseFilter = 'all';
       activityStart = null;
       activityEnd = null;
-      document.getElementById('module-filter-select').value = '';
-      document.getElementById('phase-filter-select').value = 'all';
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
       activeRoles = new Set(['source', 'conductor', 'observer']);
@@ -5679,11 +5744,8 @@ def format_reactlog_html(
       searchQuery = '';
       selectedModuleFilter = '';
       selectedStageFilter = null;
-      currentPhaseFilter = 'all';
       activityStart = null;
       activityEnd = null;
-      document.getElementById('module-filter-select').value = '';
-      document.getElementById('phase-filter-select').value = 'all';
       document.getElementById('search-input').value = '';
       document.getElementById('search-results').hidden = true;
       activeRoles = new Set(['source', 'conductor', 'observer']);
@@ -5744,6 +5806,9 @@ def format_reactlog_html(
       }} else if ((e.shiftKey && e.key === 'ArrowRight') || e.key === ']') {{
         e.preventDefault();
         nextFlush();
+      }} else if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {{
+        e.preventDefault();
+        seekTimelineStop('output', e.key === 'ArrowLeft' ? -1 : 1);
       }} else if (e.key === 'o' || e.key === 'O') {{
         e.preventDefault();
         setViewMode(currentViewMode === 'overview' ? 'full' : 'overview');
@@ -5791,7 +5856,8 @@ def format_reactlog_html(
       </div>
       <table class="shortcuts-table">
         <tbody>
-          <tr><td><span class="shortcut-key">Shift+←</span> / <span class="shortcut-key">Shift+→</span></td><td>Jump to previous / next reactive flush</td></tr>
+          <tr><td><span class="shortcut-key">Shift+←</span> / <span class="shortcut-key">Shift+→</span></td><td>Jump to previous / next idle</td></tr>
+          <tr><td><span class="shortcut-key">Alt+←</span> / <span class="shortcut-key">Alt+→</span></td><td>Previous / next output calculation</td></tr>
           <tr><td><span class="shortcut-key">O</span></td><td>Toggle Macro Architecture Overview</td></tr>
           <tr><td><span class="shortcut-key">F</span></td><td>Toggle Active Flush Subgraph mode</td></tr>
           <tr><td><span class="shortcut-key">←</span> or <span class="shortcut-key">h</span></td><td>Step backward one event</td></tr>

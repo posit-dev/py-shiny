@@ -244,7 +244,7 @@ def greeting():
     assert "https://" not in html
     assert 'src="http' not in html
     assert 'href="http' not in html
-    assert 'aria-label="Filter reactive nodes by name, type, or id"' in html
+    assert 'aria-label="Filter reactive nodes by name, type, id, or module"' in html
     assert 'aria-label="Fit graph to view"' in html
     assert 'aria-label="Zoom in"' in html
     assert 'aria-label="Zoom out"' in html
@@ -304,7 +304,7 @@ def out_c():
     assert ".graph-edge { opacity: 0;" not in html
 
 
-def test_reactlog_phase_separation_and_skip():
+def test_reactlog_phase_separation():
     code = """from shiny.express import input, render, ui
 from shiny import reactive
 
@@ -328,9 +328,8 @@ def out_val():
     html = format_reactlog_html(
         reactlog, source_code=code, video_path="/tmp/recording.webm"
     )
-    assert "phase-selector" in html
-    assert "btn-skip-init" in html
-    assert "skipToInteractions()" in html
+    assert 'id="phase-filter-select"' not in html
+    assert "btn-skip-init" not in html
     assert "setupVideoSync()" in html
 
 
@@ -2011,7 +2010,7 @@ def display():
     assert 'id="btn-mode-flush"' in html
     assert 'id="btn-mode-full"' in html
     assert 'id="module-overview-panel"' in html
-    assert 'id="module-filter-select"' in html
+    assert 'id="module-filter-select"' not in html
     assert "setViewMode(" in html
     assert "zoomToModule(" in html
     assert "renderModuleOverview(" in html

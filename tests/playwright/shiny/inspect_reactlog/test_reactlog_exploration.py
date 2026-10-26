@@ -75,7 +75,7 @@ def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page
     page.get_by_role("button", name="Back to overview").click()
     expect(page.locator("#module-overview-panel")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
-    expect(page.locator("#module-filter-select")).to_have_value("analysis")
+    expect(page.get_by_role("button", name="Remove module filter")).to_be_visible()
     page.locator('.module-card[data-module="analysis"]').get_by_role(
         "button", name="Zoom into Module"
     ).click()
@@ -121,18 +121,15 @@ def test_activity_interval_filters_graph_and_preserves_selected_action(page: Pag
     expect(page.locator("#scrubber-range")).to_have_value(step)
 
 
-def test_phase_stage_and_root_filters_share_scope_and_clear_together(page: Page):
+def test_root_module_search_and_stage_filters_clear_together(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#module-filter-select").select_option("__root__")
+    page.locator("#search-input").fill("module:__root__")
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
-    page.locator("#phase-filter-select").select_option("interaction")
     page.locator("#btn-mode-full").click()
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
     page.get_by_role("button", name="Clear all filters").click()
-    expect(page.locator("#module-filter-select")).to_have_value("")
-    expect(page.locator("#phase-filter-select")).to_have_value("all")
+    expect(page.locator("#search-input")).to_have_value("")
     expect(page.locator("#active-filters button")).to_have_count(0)
-    page.locator("#btn-mode-full").click()
     expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
 
 
@@ -206,20 +203,20 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
         )
     ).to_have_count(0)
     expect(page.locator("#active-flush-label")).to_contain_text("Flush 1 / 3")
-    page.locator("#btn-next-flush").click()
+    page.locator("#btn-next-action").click()
     expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 3 · x")
     expect(page.locator(".graph-node")).to_have_count(3)
-    page.locator("#btn-next-flush").click()
+    page.locator("#btn-next-action").click()
     expect(page.locator("#active-flush-label")).to_contain_text("Flush 3 / 3 · y")
     expect(page.locator(".graph-node")).to_have_count(2)
-    page.locator("#btn-prev-flush").click()
+    page.locator("#btn-prev-action").click()
     expect(page.locator("#active-flush-label")).to_contain_text("Flush 2 / 3 · x")
 
 
-def test_progress_bar_supports_pointer_keyboard_and_flush_markers(page: Page):
+def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
     data = report()
     page.set_content(format_reactlog_html(data, CODE))
-    expect(page.locator(".timeline-marker.is-flush")).to_have_count(3)
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(1)
     slider = page.get_by_role("slider", name="Timeline step scrubber")
     slider.focus()
     page.keyboard.press("ArrowRight")
@@ -234,7 +231,7 @@ def test_progress_bar_supports_pointer_keyboard_and_flush_markers(page: Page):
     expect(slider).to_have_value("0")
 
 
-def test_recording_floats_above_timeline_and_rail_stays_40px(page: Page):
+def test_recording_floats_below_timeline_and_rail_stays_40px(page: Page):
     page.set_content(format_reactlog_html(report(), CODE, video_path="demo.webm"))
     player = page.get_by_role("region", name="Recording")
     expect(player).to_be_visible()
@@ -248,7 +245,7 @@ def test_recording_floats_above_timeline_and_rail_stays_40px(page: Page):
         assert rail["width"] == 40
         assert video["width"] <= 240
         assert video["x"] + video["width"] < rail["x"]
-        assert video["y"] + video["height"] < timeline["y"]
+        assert timeline["y"] + timeline["height"] <= video["y"]
         assert graph["width"] == width - 40
     page.get_by_role("button", name="Hide recording", exact=True).click()
     expect(player).to_be_hidden()
@@ -267,3 +264,170 @@ def test_details_overlay_does_not_resize_graph(page: Page):
     expect(page.locator("#source-panel")).to_be_visible()
     expect(page.locator("#timeline-panel")).to_be_hidden()
     assert graph.bounding_box() == before
+
+
+@pytest.mark.parametrize("query", ["module:analysis", "analysis", "MODULE:ANALYSIS"])
+def test_module_search_filters_nodes_and_clears(page: Page, query: str):
+    page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-mode-full").click()
+    page.locator("#search-input").fill(query)
+    expect(page.locator(".graph-node")).to_have_count(2)
+    expect(page.locator("#search-results button")).to_have_count(2)
+    page.get_by_role("button", name="Clear all filters").click()
+    expect(page.locator(".graph-node")).to_have_count(5)
+    expect(page.locator("#module-filter-select, #phase-filter-select")).to_have_count(0)
+
+
+def test_timeline_and_controls_are_above_graph(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    graph = page.locator("#graph-container").bounding_box()
+    for selector in ("#trace-timeline-bar", "#bottom-timeline-bar"):
+        timeline = page.locator(selector).bounding_box()
+        assert graph and timeline
+        assert timeline["y"] + timeline["height"] <= graph["y"]
+
+
+def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
+    data = report()
+    actions = [
+        "enter",
+        "invalidateStart",
+        "invalidateEnd",
+        "exit",
+        "freeze",
+        "thaw",
+        "idle",
+        "dependsOnRemove",
+        "dependsOn",
+        "queueEmpty",
+    ]
+    data["events"] = [
+        {
+            "action": action,
+            "event": action,
+            "node_id": "calc:doubled" if action not in ("idle", "queueEmpty") else None,
+            "edge_from": "input:x" if action.startswith("dependsOn") else None,
+            "edge_to": "calc:doubled" if action.startswith("dependsOn") else None,
+            "time_sec": i,
+            "phase": "interaction",
+        }
+        for i, action in enumerate(actions)
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    page.locator("#btn-mode-full").click()
+    node = page.locator('.graph-node[data-id="calc:doubled"]')
+    for step, (state, color) in enumerate(
+        [
+            ("calculating", "#fcbf49"),
+            ("invalidating", "#969696"),
+            ("invalidated", "#d9d9d9"),
+            ("ready", "#a3c586"),
+            ("frozen", "#2171b5"),
+            ("ready", "#a3c586"),
+        ]
+    ):
+        page.locator("#scrubber-range").fill(str(step))
+        expect(node).to_have_attribute("data-state", state)
+        expect(node.locator(".node-card")).to_have_attribute("fill", color)
+    page.get_by_role("button", name="Next idle", exact=True).click()
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+    expect(page.locator("#trace-status-line")).to_have_text("Idle")
+    page.locator("#scrubber-range").fill("7")
+    edge = page.locator('.graph-edge[data-from="input:x"][data-to="calc:doubled"]')
+    expect(edge).to_have_class(re.compile("is-inactive"))
+    expect(edge).to_have_css("stroke-dasharray", "1px, 4px")
+    node.hover()
+    page.locator(".toolbar").hover()
+    expect(edge).to_have_css("stroke", "rgb(129, 129, 129)")
+    page.locator("#scrubber-range").fill("8")
+    expect(edge).not_to_have_class(re.compile("is-inactive"))
+    page.get_by_role("button", name="Next idle", exact=True).click()
+    expect(page.locator("#scrubber-range")).to_have_value("9")
+    page.get_by_role("button", name="Previous idle", exact=True).click()
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+
+    page.locator("#scrubber-range").fill("0")
+    expect(node).to_have_attribute("data-state", "calculating")
+    expect(node.locator(".node-card")).to_have_attribute("fill", "#fcbf49")
+
+
+def timeline_report():
+    data = report()
+    entries = [
+        ("define", "output:result"),
+        ("enter", "output:result"),
+        ("enter", "calc:doubled"),
+        ("exit", "calc:doubled"),
+        ("exit", "output:result"),
+        ("idle", None),
+        ("userMark", None),
+        ("enter", "output:other"),
+        ("exit", "output:other"),
+        ("queueEmpty", None),
+        ("userMark", None),
+    ]
+    data["events"] = [
+        {
+            "action": action,
+            "event": action,
+            "node_id": node_id,
+            "time_sec": step / 2,
+            "phase": "interaction",
+            "details": "Check the result" if action == "userMark" else action,
+        }
+        for step, (action, node_id) in enumerate(entries)
+    ]
+    return data
+
+
+def test_timeline_marks_are_inside_band_and_click_to_seek(page: Page):
+    page.set_content(format_reactlog_html(timeline_report(), CODE))
+    expect(page.locator(".timeline-marker.is-output")).to_have_count(2)
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(2)
+    expect(page.locator(".timeline-marker.is-mark")).to_have_count(2)
+    band = page.locator("#trace-track-wrap").bounding_box()
+    idle = page.locator('.timeline-marker[data-step="5"]')
+    idle_box = idle.bounding_box()
+    assert band and idle_box
+    assert idle_box["y"] == band["y"]
+    assert idle_box["height"] == band["height"]
+    idle.hover()
+    expect(page.get_by_role("tooltip")).to_contain_text("Idle · Step 5 · 2.5s")
+    idle.click()
+    expect(page.locator("#scrubber-range")).to_have_value("5")
+    page.locator('.timeline-marker[data-step="6"]').click()
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+    expect(page.locator("#trace-status-line")).to_contain_text("User mark")
+    expect(page.locator("#timeline-key")).to_contain_text("Output calculation")
+
+
+def test_timeline_navigates_user_marks_and_outer_calculations(page: Page):
+    page.set_content(format_reactlog_html(timeline_report(), CODE))
+    page.get_by_role("button", name="Next output calculation", exact=True).click()
+    expect(page.locator("#scrubber-range")).to_have_value("4")
+    page.get_by_role("button", name="Next user mark", exact=True).click()
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+    page.get_by_role("button", name="Next user mark", exact=True).click()
+    expect(page.locator("#scrubber-range")).to_have_value("10")
+    page.get_by_role("button", name="Previous user mark", exact=True).click()
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+    page.get_by_role("button", name="Previous output calculation", exact=True).click()
+    expect(page.locator("#scrubber-range")).to_have_value("4")
+    page.keyboard.press("Alt+ArrowRight")
+    expect(page.locator("#scrubber-range")).to_have_value("8")
+
+
+def test_timeline_can_drag_from_a_mark_across_the_band(page: Page):
+    page.set_content(format_reactlog_html(timeline_report(), CODE))
+    marker = page.locator('.timeline-marker[data-step="5"]').bounding_box()
+    band = page.locator("#trace-track-wrap").bounding_box()
+    assert marker and band
+    page.mouse.move(
+        marker["x"] + marker["width"] / 2, marker["y"] + marker["height"] / 2
+    )
+    page.mouse.down()
+    page.mouse.move(
+        band["x"] + band["width"] * 0.8, band["y"] + band["height"] / 2, steps=5
+    )
+    page.mouse.up()
+    expect(page.locator("#scrubber-range")).to_have_value("8")
