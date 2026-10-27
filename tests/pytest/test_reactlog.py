@@ -1160,7 +1160,7 @@ def test_format_reactlog_html_node_interactions_and_layout() -> None:
     html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert "App · ${countText}" in html
     assert "App (no namespace)" not in html
-    assert "width: min(440px, 48vw, calc(100% - 64px))" in html
+    assert "width: min(240px, 42vw, calc(100% - 64px))" in html
     assert "g.ondblclick" in html
     assert "handleSearch(term)" in html
     assert ".graph-edge.is-connected" in html
