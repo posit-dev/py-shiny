@@ -809,7 +809,11 @@ def test_node_details_events_remain_readable_in_small_windows(
 ):
     page.set_viewport_size({"width": width, "height": height})
     code = CODE.replace("doubled", "filtered_data_with_a_very_long_reactive_name")
-    data = generate_reactlog(code)
+    data = report()
+    for event in data["events"]:
+        event["node_label"] = str(
+            event.get("node_label") or event.get("label") or ""
+        ).replace("doubled", "filtered_data_with_a_very_long_reactive_name")
     page.set_content(format_reactlog_html(data, code))
     set_activity_mode(page, "full")
     page.locator("#btn-toggle-inspector-bottom").click()
