@@ -1949,7 +1949,7 @@ def test_reactlog_flush_pipeline_and_stepper(page: Page, tmp_path: Path) -> None
     expect(page.locator("#flush-select, #flush-pipeline-bar")).to_have_count(0)
     page.evaluate("selectFlush(1)")
     expect(page.locator("#scrubber-range")).to_have_attribute(
-        "aria-valuetext", re.compile(r"Update 2")
+        "aria-valuetext", re.compile(r"Activity 2")
     )
     expect(page.locator("#flush-card")).to_be_visible()
 
