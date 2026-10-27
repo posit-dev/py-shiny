@@ -566,6 +566,20 @@ def test_only_nodes_with_recorded_value_changes_are_shown(page: Page):
     expect(page.locator('.graph-node[data-id="input:fixed"]')).to_have_count(1)
 
 
+def test_default_graph_includes_observed_executions(page: Page):
+    data = report()
+    data["events"] = [
+        {"action": "queueEmpty"},
+        {"action": "enter", "node_id": "calc:doubled", "provenance": "observed"},
+        {"action": "enter", "node_id": "output:result", "provenance": "observed"},
+        {"action": "enter", "node_id": "output:other", "provenance": "inferred"},
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="output:result"]')).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="output:other"]')).to_have_count(0)
+
+
 def test_empty_changed_graph_explains_how_to_show_all_nodes(page: Page):
     data = report()
     data["events"] = [
@@ -573,9 +587,9 @@ def test_empty_changed_graph_explains_how_to_show_all_nodes(page: Page):
         {"action": "queueEmpty"},
     ]
     page.set_content(format_reactlog_html(data, CODE))
-    expect(page.get_by_text("No recorded value changes in this view.")).to_be_visible()
+    expect(page.get_by_text("No recorded changes or executions in this view.")).to_be_visible()
     page.get_by_role("button", name="Show all nodes", exact=True).click()
-    expect(page.get_by_text("No recorded value changes in this view.")).to_be_hidden()
+    expect(page.get_by_text("No recorded changes or executions in this view.")).to_be_hidden()
     expect(page.locator(".graph-node")).to_have_count(5)
 
 

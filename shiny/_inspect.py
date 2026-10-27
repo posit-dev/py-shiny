@@ -3058,7 +3058,7 @@ def format_reactlog_html(
         <button class="btn mini" id="btn-clear-selection" onclick="clearNodeSelection()" aria-label="Clear node selection" hidden style="position:absolute;left:1rem;bottom:1rem;z-index:28;">Clear selection · Esc</button>
         <button class="btn mini primary" id="btn-inspect-selection" onclick="showSidebarPanel('timeline')" aria-label="Open selected node details" hidden style="position:absolute;left:9.75rem;bottom:1rem;z-index:28;">Inspect node</button>
 
-        <div class="empty-graph-message" id="empty-graph-message" role="status" hidden>No recorded value changes in this view. Select Show all nodes to see the full graph.</div>
+        <div class="empty-graph-message" id="empty-graph-message" role="status" hidden>No recorded changes or executions in this view. Select Show all nodes to see the full graph.</div>
         <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
@@ -3965,9 +3965,13 @@ def format_reactlog_html(
       const values = new Map(), changed = new Set();
       events.forEach((ev, index) => {{
         const action = ev.action || ev.event;
-        if (!['valueChange', 'inputChange'].includes(action)) return;
         const id = ev.node_id || ev.reactId || ev.id;
         if (!id || ev.provenance === 'inferred') return;
+        if (ev.provenance === 'observed' && (action === 'enter' || ev.event === 'outputUpdated')) {{
+          changed.add(id);
+          return;
+        }}
+        if (!['valueChange', 'inputChange'].includes(action)) return;
         const value = JSON.stringify(ev.value);
         if (values.has(id) ? values.get(id) !== value : index > boundary) changed.add(id);
         values.set(id, value);
@@ -4122,7 +4126,7 @@ def format_reactlog_html(
       const changedBtn = document.getElementById('btn-toggle-changes');
       changedBtn.hidden = changedNodeIds === null;
       changedBtn.setAttribute('aria-pressed', String(changedNodesOnly));
-      changedBtn.textContent = changedNodesOnly ? 'Show all nodes' : 'Show changed nodes';
+      changedBtn.textContent = changedNodesOnly ? 'Show all nodes' : 'Show active nodes';
       syncRoleFilterButtons();
       const chips = document.getElementById('active-filters');
       chips.replaceChildren();
