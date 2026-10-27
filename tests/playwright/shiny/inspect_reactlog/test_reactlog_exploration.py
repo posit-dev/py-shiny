@@ -88,6 +88,7 @@ def test_empty_recording_can_open_graph(page: Page):
 
 def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-mode-flush").click()
     page.locator("#btn-next-action").click()
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Clear all filters").click()
@@ -96,6 +97,7 @@ def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
 
 def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-mode-flush").click()
     expect(page.locator("#reactlog-svg")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
     expect(page.locator("#sidebar-rail")).to_have_css("width", "40px")
@@ -105,15 +107,15 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
             "#timeline-tab, #actions-tab, #btn-summary-toggle, #flush-pipeline-bar, #timeline-sidebar, #flush-select"
         )
     ).to_have_count(0)
-    expect(page.locator("#active-flush-label")).to_contain_text("Update 1 of 3")
+    expect(page.locator("#active-flush-label")).to_contain_text("Activity 1 of 3")
     page.locator("#btn-next-action").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Update 2 of 3 · x")
+    expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3 · x")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.locator("#btn-next-action").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Update 3 of 3 · y")
+    expect(page.locator("#active-flush-label")).to_contain_text("Activity 3 of 3 · y")
     expect(page.locator(".graph-node")).to_have_count(2)
     page.locator("#btn-prev-action").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Update 2 of 3 · x")
+    expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3 · x")
 
 
 def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
@@ -128,8 +130,8 @@ def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
     assert box is not None
     page.mouse.click(box["x"] + box["width"] - 8, box["y"] + box["height"] / 2)
     expect(slider).to_have_value(str(len(data["events"]) - 1))
-    expect(page.locator("#active-flush-label")).to_contain_text("Update 3 of 3")
-    expect(slider).to_have_attribute("aria-valuetext", re.compile("Update 3 of 3"))
+    expect(page.locator("#active-flush-label")).to_contain_text("Activity 3 of 3")
+    expect(slider).to_have_attribute("aria-valuetext", re.compile("Activity 3 of 3"))
     page.keyboard.press("Home")
     expect(slider).to_have_value("0")
 
@@ -217,6 +219,7 @@ def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
         for i, action in enumerate(actions)
     ]
     page.set_content(format_reactlog_html(data, CODE))
+    page.get_by_role("button", name="Show all nodes", exact=True).click()
     page.locator("#btn-mode-full").click()
     node = page.locator('.graph-node[data-id="calc:doubled"]')
     for step, (state, color) in enumerate(
@@ -338,21 +341,21 @@ def test_timeline_can_drag_from_a_mark_across_the_band(page: Page):
 
 def test_update_labels_and_view_controls(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    current = page.get_by_role("button", name="Current update", exact=True)
+    current = page.get_by_role("button", name="Current activity", exact=True)
     all_items = page.get_by_role("button", name="All items", exact=True)
     expect(current).to_be_visible()
     expect(all_items).to_have_attribute("title", "Show all items")
-    expect(page.locator("#flush-counter-badge")).to_contain_text("Update 1 of 3")
-    expect(page.locator("#active-flush-label")).to_contain_text("Update 1 of 3")
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 1 of 3")
+    expect(page.locator("#active-flush-label")).to_contain_text("Activity 1 of 3")
     all_items.click()
     expect(page.locator(".graph-node")).to_have_count(5)
     current.click()
-    expect(page.get_by_role("button", name="Remove update filter")).to_be_visible()
+    expect(page.get_by_role("button", name="Remove activity filter")).to_be_visible()
     page.locator("#btn-next-action").click()
-    expect(page.locator("#active-flush-label")).to_contain_text("Update 2 of 3")
+    expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Node details", exact=True).click()
-    expect(page.locator("#flush-card-title")).to_contain_text("Update 2:")
+    expect(page.locator("#flush-card-title")).to_contain_text("Activity 2:")
     expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
 
 
@@ -374,6 +377,7 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
             node["line"] = 51
     page.set_viewport_size({"width": 1280, "height": 720})
     page.set_content(format_reactlog_html(data, long_code, video_path="demo.webm"))
+    page.get_by_role("button", name="Show all nodes", exact=True).click()
 
     idle_bg = page.locator(".timeline-marker.is-idle").first.evaluate(
         "el => getComputedStyle(el).backgroundColor"
@@ -395,7 +399,7 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     expect(picker_menu).to_be_visible()
     picker_menu.locator('.flush-picker-item[data-flush-index="1"]').click()
     expect(picker_menu).to_be_hidden()
-    expect(page.locator("#flush-counter-badge")).to_contain_text("Update 2 of 3")
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 2 of 3")
 
     page.get_by_role("button", name="All items", exact=True).click()
     expect(page.locator(".graph-node")).to_have_count(6)
@@ -404,8 +408,10 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     expect(client_btn).to_be_visible()
     client_btn.click()
     expect(page.locator(".graph-node")).to_have_count(5)
-    expect(page.get_by_role("button", name="Remove clientdata filter")).to_be_visible()
-    page.get_by_role("button", name="Remove clientdata filter").click()
+    expect(
+        page.get_by_role("button", name="Show clientdata", exact=True)
+    ).to_be_visible()
+    page.get_by_role("button", name="Show clientdata", exact=True).click()
     expect(page.locator(".graph-node")).to_have_count(6)
 
     calc_role_btn = page.locator('.legend-role-btn[data-role="conductor"]')
@@ -476,7 +482,172 @@ def test_report_has_two_graph_views_and_no_overview(page: Page):
     expect(page.locator("#reactlog-svg")).to_be_visible()
     page.get_by_role("button", name="All items", exact=True).click()
     expect(page.locator(".graph-node")).to_have_count(5)
-    page.get_by_role("button", name="Current update", exact=True).click()
+    page.get_by_role("button", name="Current activity", exact=True).click()
     expect(page.locator("#reactlog-svg")).to_be_visible()
     page.get_by_role("button", name="Shortcuts").click()
     expect(page.locator("#shortcuts-modal")).not_to_contain_text("Overview")
+
+
+def test_clientdata_is_hidden_by_default_and_can_be_shown(page: Page):
+    data = report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_pixelratio",
+            "label": ".clientdata_pixelratio",
+            "role": "source",
+            "type": "input",
+        }
+    )
+    page.set_content(format_reactlog_html(data, CODE))
+    page.get_by_role("button", name="All items", exact=True).click()
+    expect(
+        page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
+    ).to_have_count(0)
+    page.get_by_role("button", name="Show clientdata", exact=True).click()
+    expect(
+        page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
+    ).to_have_count(1)
+
+
+def test_search_dropdown_opens_and_filters_nodes(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    page.get_by_role("button", name="Show node choices").click()
+    expect(page.locator("#search-results")).to_be_visible()
+    expect(page.locator("#search-results button")).not_to_have_count(0)
+    page.locator("#search-input").fill("doubled")
+    expect(page.locator("#search-results button")).to_have_count(1)
+    page.keyboard.press("Enter")
+    expect(page.locator("#search-results")).to_be_hidden()
+    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_be_visible()
+
+
+def test_node_count_and_controls_share_header(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.locator(".app-header #filter-node-count")).to_be_visible()
+    expect(page.locator(".app-header #btn-toggle-clientdata")).to_have_count(1)
+    expect(page.locator("body > .filter-state")).to_have_count(0)
+    expect(
+        page.get_by_role("button", name="Current activity", exact=True)
+    ).to_be_visible()
+
+
+def test_only_nodes_with_recorded_value_changes_are_shown(page: Page):
+    data = report()
+    data["nodes"].extend(
+        [
+            {
+                "id": "input:fixed",
+                "label": "input.fixed",
+                "role": "source",
+                "type": "input",
+            },
+            {
+                "id": "input:changed",
+                "label": "input.changed",
+                "role": "source",
+                "type": "input",
+            },
+        ]
+    )
+    data["events"] = [
+        {"action": "valueChange", "node_id": "input:fixed", "value": "1"},
+        {"action": "valueChange", "node_id": "input:changed", "value": "1"},
+        {"action": "queueEmpty"},
+        {"action": "valueChange", "node_id": "input:fixed", "value": "1"},
+        {"action": "valueChange", "node_id": "input:changed", "value": "2"},
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    page.get_by_role("button", name="All items", exact=True).click()
+    expect(page.locator('.graph-node[data-id="input:fixed"]')).to_have_count(0)
+    expect(page.locator('.graph-node[data-id="input:changed"]')).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="input:x"]')).to_have_count(0)
+    expect(page.locator('.graph-node[data-id="output:result"]')).to_have_count(0)
+    page.get_by_role("button", name="Show all nodes", exact=True).click()
+    expect(page.locator('.graph-node[data-id="input:fixed"]')).to_have_count(1)
+
+
+def test_empty_changed_graph_explains_how_to_show_all_nodes(page: Page):
+    data = report()
+    data["events"] = [
+        {"action": "valueChange", "node_id": "input:x", "value": "1"},
+        {"action": "queueEmpty"},
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    expect(page.get_by_text("No recorded value changes in this view.")).to_be_visible()
+    page.get_by_role("button", name="Show all nodes", exact=True).click()
+    expect(page.get_by_text("No recorded value changes in this view.")).to_be_hidden()
+    expect(page.locator(".graph-node")).to_have_count(5)
+
+
+def test_clear_all_shows_hidden_nodes(page: Page):
+    data = report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_pixelratio",
+            "label": ".clientdata_pixelratio",
+            "role": "source",
+            "type": "input",
+        }
+    )
+    data["events"] = [{"action": "queueEmpty"}]
+    page.set_content(format_reactlog_html(data, CODE))
+    page.get_by_role("button", name="Clear all filters").click()
+    expect(
+        page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
+    ).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="output:result"]')).to_have_count(1)
+
+
+def test_search_can_reveal_a_node_hidden_by_default(page: Page):
+    data = report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_pixelratio",
+            "label": ".clientdata_pixelratio",
+            "role": "source",
+            "type": "input",
+        }
+    )
+    data["events"] = [{"action": "queueEmpty"}]
+    page.set_content(format_reactlog_html(data, CODE))
+    search = page.locator("#search-input")
+    search.fill("id:input:.clientdata_pixelratio")
+    expect(search).to_have_attribute("aria-expanded", "true")
+    page.keyboard.press("Enter")
+    expect(search).to_have_attribute("aria-expanded", "false")
+    expect(
+        page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
+    ).to_be_visible()
+    expect(page.locator("#sidebar")).to_be_visible()
+
+
+def test_empty_search_choices_respect_default_filters(page: Page):
+    data = report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_pixelratio",
+            "label": ".clientdata_pixelratio",
+            "role": "source",
+            "type": "input",
+        }
+    )
+    data["events"] = [
+        {"action": "valueChange", "node_id": "input:x", "value": "1"},
+        {"action": "queueEmpty"},
+        {"action": "valueChange", "node_id": "input:x", "value": "2"},
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    page.get_by_role("button", name="Show node choices").click()
+    expect(page.locator("#search-results button")).to_have_count(1)
+    expect(page.locator("#search-results button").first).to_contain_text("input:x")
+
+
+def test_search_escape_closes_dropdown_after_keyboard_navigation(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    search = page.locator("#search-input")
+    search.focus()
+    page.keyboard.press("ArrowDown")
+    page.keyboard.press("Escape")
+    expect(page.locator("#search-results")).to_be_hidden()
+    expect(search).to_have_attribute("aria-expanded", "false")
+    expect(search).to_be_focused()
