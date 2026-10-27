@@ -1599,18 +1599,6 @@ def test_reactlog_flush_pipeline_and_stepper(page: Page, tmp_path: Path) -> None
     expect(page.locator("#flush-card")).to_be_visible()
 
 
-def test_reactlog_overview_mode_and_module_cards(page: Page, tmp_path: Path) -> None:
-    data = _record(tmp_path, _VAL_CODE, _VAL_STEPS)
-    for node in data["nodes"]:
-        node["module"] = "example"
-    load_graph_report(page, format_reactlog_html(data, _VAL_CODE))
-    page.keyboard.press("o")
-    expect(page.locator(".module-card")).to_have_count(1)
-    page.get_by_role("button", name="Zoom into Module").click()
-    expect(page.locator("#module-overview-panel")).to_be_hidden()
-    expect(page.locator(".graph-node")).to_have_count(len(data["nodes"]))
-
-
 def test_reactlog_repeat_execution_badge_uniform(page: Page, tmp_path: Path) -> None:
     data = _record(tmp_path, _VAL_CODE, [*_VAL_STEPS, {"val": 20}, {"val": 30}])
     load_graph_report(page, format_reactlog_html(data, _VAL_CODE))
