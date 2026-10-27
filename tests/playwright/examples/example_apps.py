@@ -68,7 +68,6 @@ app_allow_shiny_errors: typing.Dict[
     "api-examples/output_transformer": [*output_transformer_errors],
     "api-examples/render_express": [*express_warnings],
     "app-templates/multi-page": [*output_transformer_errors],
-    "examples/airmass": [*output_transformer_errors],
     "examples/brownian": [*output_transformer_errors],
     "examples/model-score": [*output_transformer_errors],
     "deploys/plotly": [*output_transformer_errors],
