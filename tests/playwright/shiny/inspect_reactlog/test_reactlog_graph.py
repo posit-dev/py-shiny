@@ -1516,42 +1516,6 @@ def out():
     expect(page.locator("#flush-card-outputs")).to_contain_text("Outputs that ran: 1")
 
 
-def test_reactlog_overview_mode_and_module_cards(page: Page) -> None:
-    code = """from shiny import module, reactive
-from shiny.express import input, render
-
-@module.server
-def mod1_server(input, output, session):
-    @reactive.calc
-    def calc_a():
-        return input.n() + 1
-    @render.text
-    def out_a():
-        return str(calc_a())
-
-mod1_server("sub1")
-"""
-    rlog = generate_reactlog(code)
-    load_graph_report(page, format_reactlog_html(rlog, code))
-
-    overview_btn = page.locator("#btn-mode-overview")
-    expect(overview_btn).to_be_visible()
-    overview_btn.click()
-
-    panel = page.locator("#module-overview-panel")
-    expect(panel).to_be_visible()
-    cards = page.locator(".module-card")
-    expect(cards).to_have_count(1)
-    expect(cards.first).to_contain_text("sub1")
-
-    # Zoom into module from card
-    page.locator('.module-card[data-module="sub1"]').get_by_role(
-        "button", name="Zoom into Module"
-    ).click()
-    expect(panel).not_to_be_visible()
-    expect(page.locator(".graph-node")).to_have_count(3)
-
-
 def test_reactlog_repeat_execution_badge_uniform(page: Page) -> None:
     code = """from shiny import reactive
 from shiny.express import input, render

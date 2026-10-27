@@ -1997,7 +1997,7 @@ def out():
     assert "updateFlushUI(" in html
 
 
-def test_format_reactlog_html_overview_and_zooming_modes():
+def test_format_reactlog_html_graph_view_modes():
     code = """from shiny.express import input, render, ui
 from shiny import reactive
 ui.input_numeric("n", "N", 5)
@@ -2010,14 +2010,10 @@ def display():
 """
     reactlog = generate_reactlog(code)
     html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="btn-mode-overview"' in html
     assert 'id="btn-mode-flush"' in html
     assert 'id="btn-mode-full"' in html
-    assert 'id="module-overview-panel"' in html
     assert 'id="module-filter-select"' not in html
     assert "setViewMode(" in html
-    assert "zoomToModule(" in html
-    assert "renderModuleOverview(" in html
 
 
 def test_format_reactlog_html_flush_details_card():
