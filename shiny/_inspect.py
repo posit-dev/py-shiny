@@ -2681,7 +2681,7 @@ def format_reactlog_html(
     .sidebar-header {{ min-height: 42px; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
     .sidebar-panel {{ min-height: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }}
     .sidebar-panel[hidden] {{ display: none; }}
-    .inspector-container {{ padding: 0.8rem; display: flex; flex-direction: column; gap: 0.75rem; }}
+    .inspector-container {{ flex-shrink: 0; min-width: 0; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.75rem; overflow-wrap: anywhere; }}
 
     /* Why Card */
     .why-card {{ background: var(--card-bg); border: 1.5px solid var(--accent); border-radius: 9px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.6rem; box-shadow: 0 4px 16px rgba(0,0,0,0.14); position: relative; }}
@@ -2703,8 +2703,8 @@ def format_reactlog_html(
 
     /* Simplified Node Details */
     .node-details-card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.45rem; }}
-    .node-details-header {{ display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }}
-    .node-details-name {{ font: 750 0.84rem var(--mono); color: var(--text); }}
+    .node-details-header {{ display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem; }}
+    .node-details-name {{ flex: 1 1 12rem; min-width: 0; font: 750 0.84rem var(--mono); color: var(--text); }}
     .node-details-meta {{ font: 600 0.68rem var(--mono); color: var(--text-muted); }}
     .node-connections {{ display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.2rem; }}
     .connections-label {{ font-size: 0.66rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }}
@@ -2751,9 +2751,9 @@ def format_reactlog_html(
     [data-theme="light"] .syntax-number {{ color: #b45309; }}
     .syntax-operator {{ color: var(--text-muted); }}
     .syntax-comment {{ color: var(--text-muted); font-style: italic; }}
-    .event-history {{ overflow-y:auto; padding:.5rem; }}
+    .event-history {{ flex-shrink: 0; min-width: 0; padding:.5rem; }}
     .event-history summary {{ cursor:pointer; font-size:.75rem; }}
-    .event-list {{ flex: 1; overflow-y: auto; padding: 0 0.6rem 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; overscroll-behavior: contain; }}
+    .event-list {{ padding: 0 0.6rem 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; }}
     .event-phase-label {{ position: sticky; top: 0; z-index: 2; margin: 0 -0.6rem; padding: 0.65rem 0.75rem 0.4rem; color: var(--text-muted); background: linear-gradient(var(--surface) 78%, transparent); font: 800 0.64rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }}
     .event-item {{ width: 100%; padding: 0.55rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); border-left: 3px solid var(--border-strong); background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 0.25rem; }}
     .event-item:hover {{ background: var(--surface-3); border-color: var(--border-strong); }}
@@ -2762,10 +2762,10 @@ def format_reactlog_html(
     .event-item.kind-calc {{ border-left-color: var(--calc); }}
     .event-item.kind-output {{ border-left-color: var(--output); }}
     .event-item.kind-effect {{ border-left-color: var(--effect); }}
-    .event-header {{ display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }}
-    .event-name-wrap {{ min-width: 0; display: flex; align-items: baseline; gap: 0.45rem; }}
+    .event-header {{ display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }}
+    .event-name-wrap {{ flex: 1 1 12rem; min-width: 0; display: flex; align-items: baseline; gap: 0.45rem; }}
     .event-step {{ color: var(--text-muted); font: 650 0.62rem var(--mono); font-variant-numeric: tabular-nums; }}
-    .event-name {{ font: 700 0.76rem var(--mono); color: var(--text); }}
+    .event-name {{ min-width: 0; overflow-wrap: anywhere; font: 700 0.76rem var(--mono); color: var(--text); }}
     .event-badges {{ display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; flex-wrap: wrap; }}
     .event-time {{ font: 600 0.64rem var(--mono); font-variant-numeric: tabular-nums; color: var(--accent); background: var(--surface-3); border-radius: 4px; padding: 0.1rem 0.3rem; }}
     .event-badge {{ font: 700 0.62rem var(--mono); border-radius: 4px; padding: 0.1rem 0.35rem; text-transform: uppercase; }}
@@ -2777,7 +2777,7 @@ def format_reactlog_html(
     .event-badge.discovered {{ background: var(--surface-3); color: var(--text); }}
     .event-badge.idle {{ background: var(--surface-3); color: var(--text-muted); }}
     .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
-    .event-details {{ font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
+    .event-details {{ overflow-wrap: anywhere; font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
 
     /* View Mode Switcher */
     .view-mode-buttons {{ display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; padding: 2px; gap: 2px; }}
