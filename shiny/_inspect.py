@@ -2901,7 +2901,7 @@ def format_reactlog_html(
     .sidebar-rail {{ width: 40px; min-width: 40px; flex: 0 0 40px; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; box-sizing: border-box; z-index: 20; }}
     .sidebar {{ position: absolute; top: 56px; right: 48px; bottom: 8px; width: min(420px, calc(100% - 64px)); min-width: 0; height: auto; z-index: 25; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 32px #0004; }}
     .sidebar-header {{ justify-content: space-between; font: 650 .75rem var(--sans); }}
-    .video-panel {{ position: absolute; right: 48px; bottom: 12px; width: min(240px, 42vw, calc(100% - 64px)); padding: 0; gap: 0; z-index: 26; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 24px #0005; overflow: hidden; transition: left 180ms ease, right 180ms ease; }}
+    .video-panel {{ position: absolute; right: 48px; bottom: 12px; width: min(440px, 48vw, calc(100% - 64px)); padding: 0; gap: 0; z-index: 26; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 24px #0005; overflow: hidden; transition: left 180ms ease, right 180ms ease; }}
     .main-view.is-inspector-open .video-panel {{ right: auto; left: 12px; }}
     .video-panel[hidden] {{ display: none; }}
     .video-meta {{ padding: 3px 6px; flex-wrap: nowrap; }}

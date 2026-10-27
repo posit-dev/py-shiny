@@ -244,7 +244,7 @@ def test_recording_floats_below_timeline_and_rail_stays_40px(page: Page):
         graph = page.locator("#graph-container").bounding_box()
         assert rail and video and timeline and graph
         assert rail["width"] == 40
-        assert video["width"] <= 240
+        assert video["width"] <= 440
         assert video["x"] + video["width"] < rail["x"]
         assert timeline["y"] + timeline["height"] <= video["y"]
         assert graph["width"] == width - 40
@@ -517,6 +517,7 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     assert edge_titles >= 3
 
     video_box_closed = page.locator("#video-panel").bounding_box()
+    assert video_box_closed and video_box_closed["width"] >= 440
     page.locator('.graph-node[data-id="calc:doubled"]').click()
     expect(page.locator("#sidebar")).to_be_visible()
     expect(page.locator("#main-view")).to_have_class(re.compile(r"is-inspector-open"))
