@@ -47,50 +47,10 @@ def report():
     return data
 
 
-def test_overview_drills_into_module_and_returns_without_losing_scope(page: Page):
-    page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#btn-mode-overview").click()
-    expect(page.locator("#module-overview-panel")).to_be_visible()
-    expect(page.locator("#overview-activity-count")).to_have_text("(3 updates)")
-    expect(page.locator("#sidebar")).to_be_hidden()
-    expect(page.get_by_role("button", name="Back to overview")).to_be_hidden()
-    expect(page.locator(".graph-topbar")).to_be_hidden()
-    expect(page.locator("#overview-activity button").first).to_contain_text(
-        "5 active nodes"
-    )
-    expect(page.locator("#overview-connections")).to_contain_text(
-        "App (Root) → analysis"
-    )
-    expect(page.locator("#overview-activity button")).to_have_count(3)
-    page.locator('.module-card[data-module="analysis"]').get_by_role(
-        "button", name="Zoom into Module"
-    ).click()
-    expect(page.locator(".graph-node")).to_have_count(2)
-    expect(page.locator("#filter-node-count")).to_have_text("2 of 5 nodes")
-    page.locator('.graph-node[data-id="calc:doubled"]').click()
-    expect(page.locator("#sidebar")).to_be_visible()
-    expect(page.locator("#why-story")).to_contain_text("input.x")
-    page.get_by_role("button", name="Zoom in", exact=True).click()
-    transform = page.locator("#viewport-g").get_attribute("transform")
-    assert transform is not None
-    page.get_by_role("button", name="Back to overview").click()
-    expect(page.locator("#module-overview-panel")).to_be_visible()
-    expect(page.locator("#sidebar")).to_be_hidden()
-    expect(page.get_by_role("button", name="Remove module filter")).to_be_visible()
-    page.locator('.module-card[data-module="analysis"]').get_by_role(
-        "button", name="Zoom into Module"
-    ).click()
-    expect(page.locator("#viewport-g")).to_have_attribute("transform", transform)
-    page.get_by_role("button", name="Back to overview").click()
-    page.get_by_role("button", name="Remove module filter").click()
-    expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
-
-
 def test_search_selection_opens_details_and_filters_events(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#search-input").fill("id:calc:doubled")
     page.locator("#search-results button").click()
-    expect(page.locator("#module-overview-panel")).to_be_hidden()
     expect(page.locator("#sidebar")).to_be_visible()
     expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
@@ -102,24 +62,6 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
     page.get_by_role("button", name="Clear all filters").click()
     expect(page.locator(".graph-node")).to_have_count(5)
     expect(page.locator("#search-input")).to_have_value("")
-
-
-def test_activity_interval_filters_graph_and_preserves_selected_action(page: Page):
-    page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#btn-mode-overview").click()
-    page.locator("#overview-activity-section > summary").click()
-    page.get_by_label("Activity interval start").select_option("1")
-    page.get_by_label("Activity interval end").select_option("1")
-    expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
-    page.locator("#overview-activity button").nth(1).click()
-    expect(page.locator("#module-overview-panel")).to_be_hidden()
-    expect(page.locator(".graph-node")).to_have_count(3)
-    step = page.locator("#scrubber-range").input_value()
-    page.get_by_role("button", name="Back to overview").click()
-    expect(page.locator("#scrubber-range")).to_have_value(step)
-    page.get_by_role("button", name="Clear all filters").click()
-    expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
-    expect(page.locator("#scrubber-range")).to_have_value(step)
 
 
 def test_root_module_search_and_stage_filters_clear_together(page: Page):
@@ -134,11 +76,10 @@ def test_root_module_search_and_stage_filters_clear_together(page: Page):
     expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
 
 
-def test_empty_recording_can_open_overview_and_graph(page: Page):
+def test_empty_recording_can_open_graph(page: Page):
     errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
-    expect(page.locator("#module-overview-panel")).to_be_hidden()
     expect(page.locator("#filter-node-count")).to_have_text("0 of 0 nodes")
     page.locator("#btn-mode-full").click()
     expect(page.locator(".graph-node")).to_have_count(0)
@@ -147,53 +88,14 @@ def test_empty_recording_can_open_overview_and_graph(page: Page):
 
 def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#btn-mode-overview").click()
-    page.locator("#overview-activity-section > summary").click()
-    page.locator("#overview-activity button").nth(1).click()
+    page.locator("#btn-next-action").click()
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Clear all filters").click()
     expect(page.locator(".graph-node")).to_have_count(5)
 
 
-def test_large_overview_prioritizes_modules_and_reveals_activity_on_demand(page: Page):
-    data = generate_reactlog(
-        CODE,
-        recorded_actions=[
-            {"type": "input", "name": "x", "value": i, "timestamp": i * 1000}
-            for i in range(1, 111)
-        ],
-    )
-    for i in range(17):
-        data["nodes"].append(
-            {
-                "id": f"calc:module-{i}",
-                "label": f"module-{i}",
-                "module": f"section-module-{i}",
-                "role": "conductor",
-                "type": "calc",
-            }
-        )
-    page.set_content(format_reactlog_html(data, CODE))
-    page.locator("#btn-mode-overview").click()
-    expect(page.locator(".module-card")).to_have_count(18)
-    expect(page.locator(".module-card").first).to_be_visible()
-    expect(page.locator("#overview-activity")).to_be_hidden()
-    expect(page.locator("#timeline-sidebar")).to_be_hidden()
-    expect(page.locator("#trace-timeline-bar")).to_be_hidden()
-    expect(page.locator(".module-card .module-active-nodes-list")).to_have_count(0)
-    expect(page.locator(".module-execution-details").first).not_to_have_attribute(
-        "open", ""
-    )
-    page.locator("#overview-activity-section > summary").click()
-    expect(page.locator("#overview-activity")).to_be_visible()
-    page.locator("#overview-activity button").nth(1).click()
-    expect(page.locator("#reactlog-svg")).to_be_visible()
-    expect(page.locator("#timeline-sidebar")).to_have_count(0)
-
-
 def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    expect(page.locator("#module-overview-panel")).to_be_hidden()
     expect(page.locator("#reactlog-svg")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
     expect(page.locator("#sidebar-rail")).to_have_css("width", "40px")
@@ -564,3 +466,17 @@ def test_node_details_events_remain_readable_in_small_windows(
         assert page.locator(f"#event-list {selector}").evaluate_all(
             "els => els.every(el => el.scrollWidth <= el.clientWidth + 1)"
         ), selector
+
+
+def test_report_has_two_graph_views_and_no_overview(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.get_by_role("button", name="Overview", exact=True)).to_have_count(0)
+    expect(page.locator("#module-overview-panel")).to_have_count(0)
+    page.keyboard.press("o")
+    expect(page.locator("#reactlog-svg")).to_be_visible()
+    page.get_by_role("button", name="All items", exact=True).click()
+    expect(page.locator(".graph-node")).to_have_count(5)
+    page.get_by_role("button", name="Current update", exact=True).click()
+    expect(page.locator("#reactlog-svg")).to_be_visible()
+    page.get_by_role("button", name="Shortcuts").click()
+    expect(page.locator("#shortcuts-modal")).not_to_contain_text("Overview")
