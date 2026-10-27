@@ -2241,12 +2241,12 @@ def format_reactlog_html(
 
       const waveIndex = allBursts.indexOf(wave);
       const flushNum = waveIndex >= 0 ? waveIndex + 1 : (wave.index || 1);
-      tag.textContent = `Update ${{flushNum}} of ${{allBursts.length}}`;
+      tag.textContent = `Activity ${{flushNum}} of ${{allBursts.length}}`;
       tag.className = 'secondary-timeline-tag tag-flush';
 
       const waveStart = wave.startStep !== undefined ? wave.startStep : 0;
       const waveEnd = wave.endStep !== undefined ? wave.endStep : (events.length - 1);
-      const flushTitle = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : `Update ${{flushNum}}`);
+      const flushTitle = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : `Activity ${{flushNum}}`);
       title.textContent = flushTitle;
 
       const invCount = wave.invalidatedNodes ? wave.invalidatedNodes.size : 0;

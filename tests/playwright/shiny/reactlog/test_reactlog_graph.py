@@ -22,6 +22,7 @@ def load_graph_report(
     """Open the graph and inspector explicitly for tests of those surfaces."""
     page.set_default_timeout(5000)
     page.set_content(html, wait_until=wait_until)
+    page.get_by_role("button", name="Clear all filters").click()
     page.evaluate("setViewMode('full')")
     page.locator("#btn-toggle-inspector").click()
     page.locator("#event-history").evaluate("el => el.open = true")
@@ -1367,6 +1368,7 @@ def server(input, output, session):
         "def result():"
     )
     page.evaluate("data => loadReactlogObject(data)", report)
+    page.get_by_role("button", name="Clear all filters").click()
     page.locator(revenue).click()
     expect(page.get_by_label("Source file")).to_have_value("sales.py")
 
@@ -1595,7 +1597,7 @@ def test_reactlog_flush_pipeline_and_stepper(page: Page, tmp_path: Path) -> None
     load_graph_report(page, format_reactlog_html(data, _VAL_CODE))
     expect(page.locator("#flush-select, #flush-pipeline-bar")).to_have_count(0)
     page.evaluate("selectFlush(1)")
-    expect(page.locator("#active-flush-label")).to_contain_text("Update 2")
+    expect(page.locator("#active-flush-label")).to_contain_text("Activity 2")
     expect(page.locator("#flush-card")).to_be_visible()
 
 
