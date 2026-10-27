@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
 
-* UI updates and custom messages sent from a background `asyncio` task, such as `ui.update_text()`, are now sent to the client right away instead of waiting for the next input change (#21).
+* UI updates and custom messages sent from outside the reactive graph execution (i.e. a background `asyncio` task that calls `ui.update_text()`), are now sent to the client right away instead of waiting for the next input change (#21, #1889).
 
 * `Jsonifiable` now uses `Sequence` and `Mapping` for its container arms instead of the invariant `List` and `Dict`, so values like `dict[str, int]` and `list[str]` type-check as `Jsonifiable`, including as the return type of a function passed to a `Renderer[Jsonifiable]`. As a side effect, type checkers also accept other sequences and mappings, such as `range`, `deque`, and `bytes`, even though only `list`, `tuple`, and `dict` serialize. Runtime behavior is unchanged (@wolfgang-aura, #2511).
 
