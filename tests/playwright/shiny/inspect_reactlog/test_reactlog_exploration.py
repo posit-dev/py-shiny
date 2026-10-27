@@ -89,6 +89,7 @@ def test_empty_recording_can_open_graph(page: Page):
 def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#btn-mode-flush").click()
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.locator("#btn-next-action").click()
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Clear all filters").click()
@@ -108,12 +109,15 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
         )
     ).to_have_count(0)
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 1 of 3")
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.locator("#btn-next-action").click()
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3 · x")
     expect(page.locator(".graph-node")).to_have_count(3)
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.locator("#btn-next-action").click()
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 3 of 3 · y")
     expect(page.locator(".graph-node")).to_have_count(2)
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.locator("#btn-prev-action").click()
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3 · x")
 
@@ -235,6 +239,7 @@ def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
         page.locator("#scrubber-range").fill(str(step))
         expect(node).to_have_attribute("data-state", state)
         expect(node.locator(".node-card")).to_have_attribute("fill", color)
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.get_by_role("button", name="Next idle", exact=True).click()
     expect(page.locator("#scrubber-range")).to_have_value("6")
     expect(page.locator("#trace-status-line")).to_have_text("Idle")
@@ -247,8 +252,10 @@ def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
     expect(edge).to_have_css("stroke", "rgb(129, 129, 129)")
     page.locator("#scrubber-range").fill("8")
     expect(edge).not_to_have_class(re.compile("is-inactive"))
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.get_by_role("button", name="Next idle", exact=True).click()
     expect(page.locator("#scrubber-range")).to_have_value("9")
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.get_by_role("button", name="Previous idle", exact=True).click()
     expect(page.locator("#scrubber-range")).to_have_value("6")
 
@@ -309,14 +316,19 @@ def test_timeline_marks_are_inside_band_and_click_to_seek(page: Page):
 
 def test_timeline_navigates_user_marks_and_outer_calculations(page: Page):
     page.set_content(format_reactlog_html(timeline_report(), CODE))
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.get_by_role("button", name="Next output calculation", exact=True).click()
     expect(page.locator("#scrubber-range")).to_have_value("4")
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.get_by_role("button", name="Next user mark", exact=True).click()
     expect(page.locator("#scrubber-range")).to_have_value("6")
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.get_by_role("button", name="Next user mark", exact=True).click()
     expect(page.locator("#scrubber-range")).to_have_value("10")
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.get_by_role("button", name="Previous user mark", exact=True).click()
     expect(page.locator("#scrubber-range")).to_have_value("6")
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.get_by_role("button", name="Previous output calculation", exact=True).click()
     expect(page.locator("#scrubber-range")).to_have_value("4")
     page.keyboard.press("Alt+ArrowRight")
@@ -351,6 +363,7 @@ def test_update_labels_and_view_controls(page: Page):
     expect(page.locator(".graph-node")).to_have_count(5)
     current.click()
     expect(page.get_by_role("button", name="Remove activity filter")).to_be_visible()
+    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
     page.locator("#btn-next-action").click()
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3")
     expect(page.locator(".graph-node")).to_have_count(3)
@@ -587,9 +600,13 @@ def test_empty_changed_graph_explains_how_to_show_all_nodes(page: Page):
         {"action": "queueEmpty"},
     ]
     page.set_content(format_reactlog_html(data, CODE))
-    expect(page.get_by_text("No recorded changes or executions in this view.")).to_be_visible()
+    expect(
+        page.get_by_text("No recorded changes or executions in this view.")
+    ).to_be_visible()
     page.get_by_role("button", name="Show all nodes", exact=True).click()
-    expect(page.get_by_text("No recorded changes or executions in this view.")).to_be_hidden()
+    expect(
+        page.get_by_text("No recorded changes or executions in this view.")
+    ).to_be_hidden()
     expect(page.locator(".graph-node")).to_have_count(5)
 
 
@@ -665,3 +682,34 @@ def test_search_escape_closes_dropdown_after_keyboard_navigation(page: Page):
     expect(page.locator("#search-results")).to_be_hidden()
     expect(search).to_have_attribute("aria-expanded", "false")
     expect(search).to_be_focused()
+
+
+def test_timeline_prioritizes_activity_navigation(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    more = page.locator("#timeline-more-controls")
+    expect(more).not_to_have_attribute("open", "")
+    expect(
+        page.get_by_role("button", name="Previous activity", exact=True)
+    ).to_be_visible()
+    expect(page.get_by_role("button", name="Next activity", exact=True)).to_be_visible()
+    expect(page.locator("#btn-step-forward")).to_be_hidden()
+    expect(page.locator("#step-display")).to_be_hidden()
+    page.get_by_role("button", name="Next activity", exact=True).click()
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 2")
+    page.get_by_role("button", name="Previous activity", exact=True).click()
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 1")
+    page.get_by_text("More controls", exact=True).click()
+    expect(page.locator("#btn-step-forward")).to_be_visible()
+    expect(page.locator("#step-display")).to_be_visible()
+    page.locator("#btn-step-forward").click()
+    expect(page.locator("#step-display")).to_contain_text("Step 1 /")
+
+
+def test_timeline_more_controls_fit_small_screen(page: Page):
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.set_content(format_reactlog_html(report(), CODE))
+    page.get_by_text("More controls", exact=True).click()
+    panel = page.locator(".timeline-advanced").bounding_box()
+    assert panel is not None
+    assert panel["x"] >= 0
+    assert panel["x"] + panel["width"] <= 390
