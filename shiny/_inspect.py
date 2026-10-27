@@ -2852,7 +2852,7 @@ def format_reactlog_html(
       .app-header {{ flex-wrap: wrap; }}
       .header-center {{ order: 3; width: 100%; flex: 1 0 100%; }}
       .toolbar-group {{ width: 100%; }}
-      .bottom-timeline-bar.toolbar {{ width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: auto; flex-wrap: wrap; height: auto; min-height: 38px; }}
+      .bottom-timeline-bar.toolbar {{ width: 100%; max-width: 100%; box-sizing: border-box; overflow: visible; flex-wrap: wrap; height: auto; min-height: 38px; }}
     }}
     @media (max-width: 520px) {{
       html, body {{ overflow-x: hidden; max-width: 100vw; }}
@@ -2905,7 +2905,14 @@ def format_reactlog_html(
     .timeline-key .key-position {{ width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); }}
     .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
     .timeline-tooltip[hidden] {{ display: none; }}
-    .timeline-navigation {{ display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }}
+    .timeline-navigation {{ display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }}
+    .timeline-more-controls {{ position: relative; }}
+    .timeline-more-controls summary {{ list-style: none; }}
+    .timeline-more-controls summary::-webkit-details-marker {{ display: none; }}
+    .timeline-more-controls summary::after {{ content: '▾'; }}
+    .timeline-advanced {{ position: absolute; left: 0; top: calc(100% + 4px); z-index: 130; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; width: min(370px, calc(100vw - 32px)); padding: 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 24px #0004; }}
+    .timeline-advanced .step-display {{ text-align: left; }}
+    @media (max-width: 1000px) {{ .timeline-advanced {{ position: fixed; left: 16px; }} }}
     .status-center {{ gap: 3px; }}
     .status-center .btn {{ width: 28px; min-height: 28px; height: 28px; }}
     .status-center .nav-idle svg {{ color: #a3c586; }}
@@ -2958,18 +2965,26 @@ def format_reactlog_html(
   <!-- Timeline playback controls -->
   <footer class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
     <div class="timeline-navigation">
-    <div class="status-center">
-      <button class="btn icon mini" id="btn-reset" onclick="resetTimeline()" aria-label="Reset timeline" title="Reset (Home)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-      </button>
+      <button class="btn mini" id="btn-prev-activity" onclick="selectFlush(getCurrentFlushIndex() - 1)" aria-label="Previous activity">◀ Previous</button>
+      <div class="flush-picker-wrap">
+        <span class="flush-counter-badge" id="flush-counter-badge" title="An activity is a group of recorded events. Some activities have no visible changes.">Activity 1 of 1</span>
+        <button type="button" class="btn icon mini flush-picker-btn" id="btn-flush-picker" onclick="toggleFlushPicker(event)" aria-label="Jump to activity" aria-expanded="false" title="Jump to any activity"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div id="flush-picker-menu" class="flush-picker-menu" role="menu" aria-label="Activities list" hidden></div>
+      </div>
+      <button class="btn mini" id="btn-next-activity" onclick="selectFlush(getCurrentFlushIndex() + 1)" aria-label="Next activity">Next ▶</button>
+      <button class="btn mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">▶ Play</button>
+      <div class="status-time-group">
+        <span class="trace-clock" id="trace-current-time">0.0s</span><span class="trace-sep">/</span><span class="trace-total" id="trace-total-time">0.0s</span>
+      </div>
+      <details id="timeline-more-controls" class="timeline-more-controls">
+        <summary class="btn mini">More controls</summary>
+        <div class="timeline-advanced" aria-label="Detailed timeline controls">
+      <button class="btn mini" id="btn-reset" onclick="resetTimeline()" aria-label="Reset timeline" title="Go to start (Home)">Go to start</button>
       <button class="btn icon mini nav-mark" onclick="seekTimelineStop('mark', -1)" aria-label="Previous user mark" title="Previous user mark"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="var(--text-muted)"/></svg></button>
       <button class="btn icon mini nav-idle" id="btn-prev-flush" onclick="seekTimelineStop('idle', -1)" aria-label="Previous idle" title="Previous idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="#a3c586"/></svg></button>
       <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', -1)" aria-label="Previous output calculation" title="Previous output calculation (Alt+Left)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="8" width="3" height="8" fill="var(--output)"/></svg></button>
       <button class="btn icon mini" id="btn-step-back" onclick="stepBack()" aria-label="Step back" title="Step back (Left)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg>
-      </button>
-      <button class="btn icon mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
       </button>
       <button class="btn icon mini" id="btn-step-forward" onclick="stepForward()" aria-label="Step forward" title="Step forward (Right)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
@@ -2977,23 +2992,11 @@ def format_reactlog_html(
       <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', 1)" aria-label="Next output calculation" title="Next output calculation (Alt+Right)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="8" width="3" height="8" fill="var(--output)"/></svg></button>
       <button class="btn icon mini nav-idle" id="btn-next-flush" onclick="seekTimelineStop('idle', 1)" aria-label="Next idle" title="Next idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="#a3c586"/></svg></button>
       <button class="btn icon mini nav-mark" onclick="seekTimelineStop('mark', 1)" aria-label="Next user mark" title="Next user mark"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="var(--text-muted)"/></svg></button>
-    </div>
-    <div class="status-left">
-      <div class="status-time-group">
-        <svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span class="trace-clock" id="trace-current-time">0.0s</span>
-        <span class="trace-sep">/</span>
-        <span class="trace-total" id="trace-total-time">0.0s</span>
-      </div>
       <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
       <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
       <span class="step-display" id="step-display">Step 0 / 0</span>
-      <div class="flush-picker-wrap">
-        <span class="flush-counter-badge" id="flush-counter-badge" title="An activity is a group of recorded events. Some activities have no visible changes.">Activity 1 of 1</span>
-        <button type="button" class="btn icon mini flush-picker-btn" id="btn-flush-picker" onclick="toggleFlushPicker(event)" aria-label="Jump to activity" aria-expanded="false" title="Jump to any activity"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <div id="flush-picker-menu" class="flush-picker-menu" role="menu" aria-label="Activities list" hidden></div>
-      </div>
-    </div>
+        </div>
+      </details>
     </div>
     <div class="status-right">
       <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
@@ -5225,7 +5228,7 @@ def format_reactlog_html(
 
       const updatePlayButton = (playing) => {{
         if (!btn) return;
-        btn.innerHTML = playing ? ICONS.pause : ICONS.play;
+        btn.textContent = playing ? '❚❚ Pause' : '▶ Play';
         btn.setAttribute('aria-label', playing ? 'Pause recording' : 'Play recording');
         btn.title = playing ? 'Pause recording' : 'Play recording';
       }};
@@ -5385,7 +5388,10 @@ def format_reactlog_html(
       const events = reactlogData.events || reactlogData.log || [];
       isPlaying = !isPlaying;
       const btn = document.getElementById('btn-play');
-      if (btn) btn.innerHTML = isPlaying ? ICONS.pause : ICONS.play;
+      if (btn) {{
+        btn.textContent = isPlaying ? '❚❚ Pause' : '▶ Play';
+        btn.setAttribute('aria-label', isPlaying ? 'Pause timeline' : 'Play timeline');
+      }}
 
       if (isPlaying) {{
         if (currentStep >= events.length - 1) currentStep = 0;
