@@ -1099,13 +1099,10 @@ def test_format_reactlog_html_flush_navigation_and_pipeline():
     assert "updateFlushUI(" in html
 
 
-def test_format_reactlog_html_overview_and_zooming_modes():
+def test_format_reactlog_html_graph_view_modes():
     html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
-    assert 'id="module-overview-panel"' in html
     assert 'id="module-filter-select"' not in html
     assert "setViewMode(" in html
-    assert "zoomToModule(" in html
-    assert "renderModuleOverview(" in html
 
 
 def test_format_reactlog_html_flush_details_card():
