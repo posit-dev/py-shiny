@@ -5454,7 +5454,7 @@ def format_reactlog_html(
       document.querySelector('.search-toggle').setAttribute('aria-expanded', 'true');
       {{
         const matches = filterItems(
-          (reactlogData.nodes || []).filter(n => searchQuery || ((!hideClientData || !isClientDataNode(n)) && (!changedNodesOnly || !changedNodeIds || changedNodeIds.has(n.id)))).map(n => ({{ node: n, score: searchQuery ? nodeSearchScore(n, searchQuery) : 0 }})),
+          filterItems(reactlogData.nodes || [], n => searchQuery || ((!hideClientData || !isClientDataNode(n)) && (!changedNodesOnly || !changedNodeIds || changedNodeIds.has(n.id)))).map(n => ({{ node: n, score: searchQuery ? nodeSearchScore(n, searchQuery) : 0 }})),
           m => Number.isFinite(m.score)
         ).sort((a, b) => a.score - b.score);
         const summary = document.createElement('div');
