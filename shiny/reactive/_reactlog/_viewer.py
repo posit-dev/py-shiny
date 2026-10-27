@@ -479,16 +479,20 @@ def load_reactlog_json(
             if is_inval:
                 raw_inv_ids = item.get("invalidated_node_ids")
                 if isinstance(raw_inv_ids, list):
-                    ev_dict["invalidated_node_ids"] = [str(x) for x in raw_inv_ids if x]
+                    ev_dict["invalidated_node_ids"] = [
+                        str(x) for x in cast(list[Any], raw_inv_ids) if x
+                    ]
                 else:
-                    ev_dict["invalidated_node_ids"] = [str(nid)] if nid else []
+                    ev_dict["invalidated_node_ids"] = [str(nid)] if nid else list[str]()
                 raw_inv_lbls = item.get("invalidated_node_labels")
                 if isinstance(raw_inv_lbls, list):
                     ev_dict["invalidated_node_labels"] = [
-                        str(x) for x in raw_inv_lbls if x
+                        str(x) for x in cast(list[Any], raw_inv_lbls) if x
                     ]
                 else:
-                    ev_dict["invalidated_node_labels"] = [str(lbl)] if lbl else []
+                    ev_dict["invalidated_node_labels"] = (
+                        [str(lbl)] if lbl else list[str]()
+                    )
                 if not item.get("details"):
                     ev_dict["details"] = (
                         f"Invalidated '{lbl}'" if lbl else "Invalidation phase"
