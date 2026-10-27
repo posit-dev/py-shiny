@@ -676,6 +676,8 @@ def test_update_labels_and_view_controls(page: Page):
 
 def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     data = timeline_report()
+    data["events"][5]["action"] = "queueEmpty"
+    data["events"][5]["event"] = "queueEmpty"
     data["nodes"].append(
         {
             "id": "input:.clientdata_output_result_hidden",
@@ -740,6 +742,7 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     video_box_closed = page.locator("#video-panel").bounding_box()
     assert video_box_closed and video_box_closed["width"] >= 440
     page.locator('.graph-node[data-id="calc:doubled"]').click()
+    page.locator("#btn-toggle-inspector-bottom").click()
     expect(page.locator("#sidebar")).to_be_visible()
     expect(page.locator("#main-view")).to_have_class(re.compile(r"is-inspector-open"))
     video_box_open = page.locator("#video-panel").bounding_box()
