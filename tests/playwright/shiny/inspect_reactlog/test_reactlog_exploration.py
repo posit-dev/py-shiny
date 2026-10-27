@@ -2,16 +2,16 @@ import re
 from collections.abc import Generator
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Error, Page, expect
 
 from shiny._inspect import format_reactlog_html, generate_reactlog
 
 
 @pytest.fixture(autouse=True)
 def no_report_errors(page: Page) -> Generator[None, None, None]:
-    errors = []
+    errors: list[str] = []
 
-    def on_error(error):
+    def on_error(error: Error):
         errors.append(str(error))
 
     page.on("pageerror", on_error)
@@ -135,7 +135,7 @@ def test_root_module_search_and_stage_filters_clear_together(page: Page):
 
 
 def test_empty_recording_can_open_overview_and_graph(page: Page):
-    errors = []
+    errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
     expect(page.locator("#module-overview-panel")).to_be_hidden()
@@ -539,3 +539,27 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     expect(page.locator("#source-panel .source-line.is-active")).to_have_attribute(
         "data-line", "51"
     )
+
+
+@pytest.mark.parametrize("width,height", [(1366, 768), (1024, 600), (390, 700)])
+def test_node_details_events_remain_readable_in_small_windows(
+    page: Page, width: int, height: int
+):
+    page.set_viewport_size({"width": width, "height": height})
+    code = CODE.replace("doubled", "filtered_data_with_a_very_long_reactive_name")
+    data = generate_reactlog(code)
+    page.set_content(format_reactlog_html(data, code))
+    page.locator("#btn-mode-full").click()
+    page.locator("#btn-toggle-inspector-bottom").click()
+    page.locator("#event-history > summary").click()
+    history = page.locator("#event-history")
+    # The panel must scroll as a whole, without a collapsed nested event scroller.
+    assert history.evaluate("el => el.clientHeight >= el.scrollHeight - 1")
+    events = page.locator("#event-list .event-item")
+    expect(events.first).to_be_visible()
+    events.last.scroll_into_view_if_needed()
+    expect(events.last).to_be_in_viewport()
+    for selector in (".event-item", ".event-header", ".event-name"):
+        assert page.locator(f"#event-list {selector}").evaluate_all(
+            "els => els.every(el => el.scrollWidth <= el.clientWidth + 1)"
+        ), selector
