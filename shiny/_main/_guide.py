@@ -10,6 +10,14 @@ from ._skills import SKILLS_DIR
 
 ROUTER_SKILL_NAME = "shiny-for-python"
 
+REFERENCE_LINK = re.compile(r"`references/([a-z0-9-]+)\.md`")
+"""A backticked link to a topic file, as written in the bundled skill."""
+
+
+def as_cli_links(text: str) -> str:
+    """Point topic links at `shiny guide <topic>` so stdout readers can follow them."""
+    return REFERENCE_LINK.sub(r"`shiny guide \1`", text)
+
 
 class GuideTopic(NamedTuple):
     category: str
@@ -111,12 +119,12 @@ def show_guide(topic: str | None = None) -> None:
             "Run 'shiny guide' without arguments to see all available topics."
         )
 
-    click.echo(guide_topic.path.read_text(encoding="utf-8"))
+    click.echo(as_cli_links(guide_topic.path.read_text(encoding="utf-8")))
 
 
 @click.command(
     "guide",
-    help="""View guide topics and print reference docs to stdout.
+    help="""Print a Shiny for Python guide topic to stdout, or list topics.
 
     Run without arguments to list all available topics.
     Specify a topic name (e.g. `shiny guide reactivity`) to print its full reference guide.

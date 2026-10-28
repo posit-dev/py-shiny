@@ -15,10 +15,25 @@ from ._skills import skills
 from ._static import cells_to_app, get_shiny_deps, static, static_assets
 
 
-@click.group("main")
+@click.group("main", invoke_without_command=True)
 @click.version_option(__version__)
-def main() -> None:
-    pass
+@click.pass_context
+def main(ctx: click.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        click.echo(_command_listing(ctx))
+
+
+def _command_listing(ctx: click.Context) -> str:
+    """Every visible command with its full one-line help, for agents and humans."""
+    rows: list[tuple[str, str]] = []
+    for name in main.list_commands(ctx):
+        command = main.get_command(ctx, name)
+        if command is not None and not command.hidden:
+            rows.append((name, command.get_short_help_str(limit=200)))
+    width = max(len(name) for name, _ in rows)
+    lines = ["Usage: shiny <COMMAND>", "", "Commands:"]
+    lines.extend(f"  {name:<{width}}  {short_help}" for name, short_help in rows)
+    return "\n".join(lines)
 
 
 main.add_command(run)

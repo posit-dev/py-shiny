@@ -2,53 +2,22 @@ from __future__ import annotations
 
 import click
 
-QUICKSTART_TEXT = """\
-# Shiny for Python Quickstart
-
-Build reactive web applications in pure Python.
-
-## Quick Example (`app.py`)
-```python
-from shiny.express import input, render, ui
-
-ui.input_slider("n", "N", 0, 100, 20)
-
-@render.text
-def txt():
-    return f"Value squared: {input.n() ** 2}"
-```
-
-## Run the App
-```bash
-shiny run --reload app.py          # Start dev server with live reload
-```
-
-## On-Demand Documentation (CLI)
-Query targeted guides directly to stdout (zero-install progressive disclosure):
-```bash
-shiny guide                       # List all 27 available guide topics
-shiny guide reactivity            # Core reactive graph & primitives
-shiny guide express               # Express mode & layout
-shiny guide layouts               # Cards, sidebars, grids, value boxes
-shiny guide test-server           # Fast in-memory unit testing
-```
-
-## Coding Agent Skills (Optional)
-Link bundled Agent Skills into your workspace for persistent agent integration:
-```bash
-uvx library-skills --claude       # Claude Code (.claude/skills)
-uvx library-skills                # Other agents (.agents/skills)
-```
-
-## Resources & Key Features
-- Docs: https://shiny.posit.co/py/ | Templates: `shiny create`
-- Features: Chat (`ui.Chat`), Markdown streaming, OTel tracing, DataGrid, brand.yml
-"""
+from ._guide import ROUTER_SKILL_NAME, as_cli_links
+from ._skills import SKILLS_DIR
 
 
 @click.command(
     "quickstart",
-    help="Print a concise quickstart guide and agent cheat sheet to stdout.",
+    help="""Print the Shiny for Python agent skill to stdout.
+
+    The skill is an index of topics. Each topic points to a `shiny guide <topic>`
+    command that prints its full reference.
+    """,
 )
 def quickstart() -> None:
-    click.echo(QUICKSTART_TEXT, nl=False)
+    skill_md = SKILLS_DIR / ROUTER_SKILL_NAME / "SKILL.md"
+    if not skill_md.is_file():
+        raise click.ClickException(
+            "No skills are bundled in this installation of shiny."
+        )
+    click.echo(as_cli_links(skill_md.read_text(encoding="utf-8")), nl=False)

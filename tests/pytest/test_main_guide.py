@@ -36,6 +36,13 @@ def test_guide_show_topic_exact() -> None:
     assert "from shiny import reactive" in result.output
 
 
+def test_guide_topic_links_point_to_guide_commands() -> None:
+    result = CliRunner().invoke(main, ["guide", "reactivity"])
+
+    assert "`shiny guide extended-tasks`" in result.output
+    assert "references/" not in result.output
+
+
 def test_guide_normalization() -> None:
     result_upper = CliRunner().invoke(main, ["guide", "REACTIVITY"])
     assert result_upper.exit_code == 0
