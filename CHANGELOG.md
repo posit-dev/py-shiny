@@ -61,7 +61,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `Progress.set(0)` now places the bar at `0` relative to `min` and `max`, instead of sending `0` unnormalized. Previously, with a negative `min`, such as `Progress(min=-10, max=10)`, a value of `0` showed an empty bar rather than a half-full one (#2518).
 
-* `@render.data_frame` now serializes Polars `Categorical` and `Enum` columns with Polars >= 2.0, instead of raising `AttributeRemovedError: get_categories was removed in version 2.0` (#2529). It also labels key-value `Map` columns (e.g. a pyarrow `map<string, int64>` column) as `object`, like struct, list, and array columns. This requires a narwhals version that has the `Map` dtype (#2569).
+* `@render.data_frame` now serializes Polars `Categorical` and `Enum` columns with Polars >= 2.0, instead of raising `AttributeRemovedError: get_categories was removed in version 2.0` (#2529).
+
+* `@render.data_frame` now labels key-value `Map` columns (e.g. a pyarrow `map<string, int64>` column) as `object`, like struct, list, and array columns. This requires a narwhals version that has the `Map` dtype (#2569).
 
 * `@render.data_frame` now sends values of pandas nullable dtypes (`Int64`, `Float64`, `boolean`) to the browser as numbers and booleans, instead of strings such as `"1"` and `"True"`. It also serializes data frames faster and with less memory: a 100,000-row frame with mixed column types serializes 2-3.5x faster, with a 15-40% lower memory peak. The largest gains are for pandas datetime and timedelta columns, duration columns, and `Decimal` or missing (`pd.NA`) values. Editing a cell no longer copies the whole data frame (@FBruzzesi, #2572).
 
