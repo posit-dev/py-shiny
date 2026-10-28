@@ -47,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes and minor improvements
 
+* A `session.on_flush()` or `session.on_flushed()` callback registered while the session's flush callbacks run (by one of them, or by a task that ran while an `async` one was waiting) now runs with one more output flush right after, instead of waiting for the next input change. The same goes for a message one of them queues, such as a `ui.update_*()` in an `on_flushed` callback. That output flush starts 10 ms later, so a callback that causes one every time it runs (e.g. a `once=False` callback that calls `ui.update_*()`) repeats at most 100 times a second (#2580).
+
 * On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
 
 * UI updates and custom messages sent from outside the reactive graph execution (i.e. a background `asyncio` task that calls `ui.update_text()`), are now sent to the client right away instead of waiting for the next input change (#21, #1889).
