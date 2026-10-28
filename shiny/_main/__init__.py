@@ -4,8 +4,8 @@ import click
 
 from .. import __version__
 from ._create import create
-from ._docs import docs
 from ._generate_test import add
+from ._guide import guide
 from ._quickstart import quickstart
 
 # Re-exported as `shiny.run_app` (see `shiny/__init__.py`)
@@ -24,7 +24,7 @@ def main() -> None:
 main.add_command(run)
 main.add_command(add)
 main.add_command(create)
-main.add_command(docs)
+main.add_command(guide)
 main.add_command(quickstart)
 main.add_command(skills)
 main.add_command(static)

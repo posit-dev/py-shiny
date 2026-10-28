@@ -12,7 +12,7 @@ def test_quickstart_outputs_markdown() -> None:
     assert "# Shiny for Python Quickstart" in result.output
     assert "from shiny.express import input, render, ui" in result.output
     assert "shiny run --reload app.py" in result.output
-    assert "shiny docs" in result.output
+    assert "shiny guide" in result.output
     assert "uvx library-skills" in result.output
 
 

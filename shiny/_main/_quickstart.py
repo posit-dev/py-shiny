@@ -24,13 +24,13 @@ shiny run --reload app.py          # Start dev server with live reload
 ```
 
 ## On-Demand Documentation (CLI)
-Query targeted docs directly to stdout (zero-install progressive disclosure):
+Query targeted guides directly to stdout (zero-install progressive disclosure):
 ```bash
-shiny docs                        # List all 27 available doc topics
-shiny docs reactivity             # Core reactive graph & primitives
-shiny docs express                # Express mode & layout
-shiny docs layouts                # Cards, sidebars, grids, value boxes
-shiny docs test-server            # Fast in-memory unit testing
+shiny guide                       # List all 27 available guide topics
+shiny guide reactivity            # Core reactive graph & primitives
+shiny guide express               # Express mode & layout
+shiny guide layouts               # Cards, sidebars, grids, value boxes
+shiny guide test-server           # Fast in-memory unit testing
 ```
 
 ## Coding Agent Skills (Optional)

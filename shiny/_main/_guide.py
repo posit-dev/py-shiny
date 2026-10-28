@@ -11,7 +11,7 @@ from ._skills import SKILLS_DIR
 ROUTER_SKILL_NAME = "shiny-for-python"
 
 
-class DocTopic(NamedTuple):
+class GuideTopic(NamedTuple):
     category: str
     title: str
     description: str
@@ -19,13 +19,13 @@ class DocTopic(NamedTuple):
     path: Path
 
 
-def _parse_topics(skill_dir: Path) -> dict[str, DocTopic]:
+def _parse_topics(skill_dir: Path) -> dict[str, GuideTopic]:
     skill_md = skill_dir / "SKILL.md"
     references_dir = skill_dir / "references"
     if not skill_md.is_file() or not references_dir.is_dir():
         return {}
 
-    topics: dict[str, DocTopic] = {}
+    topics: dict[str, GuideTopic] = {}
     current_category = "General"
     row_pattern = re.compile(
         r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*`references/([^|]+?)\.md`\s*\|"
@@ -41,7 +41,7 @@ def _parse_topics(skill_dir: Path) -> dict[str, DocTopic]:
             clean_slug = slug.strip()
             ref_path = references_dir / f"{clean_slug}.md"
             if ref_path.is_file():
-                topics[clean_slug] = DocTopic(
+                topics[clean_slug] = GuideTopic(
                     category=current_category,
                     title=title.strip(),
                     description=desc.strip(),
@@ -52,7 +52,7 @@ def _parse_topics(skill_dir: Path) -> dict[str, DocTopic]:
     for ref_file in sorted(references_dir.glob("*.md")):
         slug = ref_file.stem
         if slug not in topics:
-            topics[slug] = DocTopic(
+            topics[slug] = GuideTopic(
                 category="Additional References",
                 title=slug.replace("-", " ").title(),
                 description="Reference documentation.",
@@ -63,14 +63,14 @@ def _parse_topics(skill_dir: Path) -> dict[str, DocTopic]:
     return topics
 
 
-def _format_topic_list(topics: dict[str, DocTopic]) -> str:
+def _format_topic_list(topics: dict[str, GuideTopic]) -> str:
     lines = [
-        "# Shiny for Python Documentation Topics",
+        "# Shiny for Python Guide Topics",
         "",
-        "Use `shiny docs <topic>` to print full reference documentation to stdout.",
+        "Use `shiny guide <topic>` to print full reference documentation to stdout.",
         "",
     ]
-    categories: dict[str, list[DocTopic]] = {}
+    categories: dict[str, list[GuideTopic]] = {}
     for topic in topics.values():
         categories.setdefault(topic.category, []).append(topic)
 
@@ -83,7 +83,7 @@ def _format_topic_list(topics: dict[str, DocTopic]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def show_docs(topic: str | None = None) -> None:
+def show_guide(topic: str | None = None) -> None:
     skill_dir = SKILLS_DIR / ROUTER_SKILL_NAME
     if not skill_dir.is_dir():
         raise click.ClickException(
@@ -93,7 +93,7 @@ def show_docs(topic: str | None = None) -> None:
     topics = _parse_topics(skill_dir)
     if not topics:
         raise click.ClickException(
-            "No documentation topics found in this installation of shiny."
+            "No guide topics found in this installation of shiny."
         )
 
     cleaned_topic = topic.strip() if topic else ""
@@ -102,26 +102,26 @@ def show_docs(topic: str | None = None) -> None:
         return
 
     normalized_slug = cleaned_topic.lower().removesuffix(".md").replace("_", "-")
-    doc_topic = topics.get(normalized_slug)
-    if doc_topic is None:
+    guide_topic = topics.get(normalized_slug)
+    if guide_topic is None:
         available = ", ".join(sorted(topics.keys()))
         raise click.ClickException(
-            f"Unknown documentation topic {topic!r}.\n"
+            f"Unknown guide topic {topic!r}.\n"
             f"Available topics: {available}\n\n"
-            "Run 'shiny docs' without arguments to see all available topics."
+            "Run 'shiny guide' without arguments to see all available topics."
         )
 
-    click.echo(doc_topic.path.read_text(encoding="utf-8"))
+    click.echo(guide_topic.path.read_text(encoding="utf-8"))
 
 
 @click.command(
-    "docs",
-    help="""View documentation topics and print reference docs to stdout.
+    "guide",
+    help="""View guide topics and print reference docs to stdout.
 
     Run without arguments to list all available topics.
-    Specify a topic name (e.g. `shiny docs reactivity`) to print its full reference guide.
+    Specify a topic name (e.g. `shiny guide reactivity`) to print its full reference guide.
     """,
 )
 @click.argument("topic", required=False, default=None)
-def docs(topic: str | None = None) -> None:
-    show_docs(topic=topic)
+def guide(topic: str | None = None) -> None:
+    show_guide(topic=topic)
