@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `reactive.lock()` is now defunct: it no longer locks the reactive graph and emits a `ShinyDeprecationWarning`. Please remove it from your code (#2520).
 
+* `shiny add test` is deprecated and now prints a deprecation warning. It will be removed in a future release. Please use the `shiny-for-python` Agent Skill with a coding agent to generate tests instead (#2566).
+
 ### New features
 
 * New `session.run_once_when_idle()` runs a function once, after the session's effects have finished and its outputs have been sent. Use it to change reactive state from a background task or a custom timer without changing a value that a running effect is still reading (#2546).
