@@ -80,6 +80,8 @@ Repo: `posit-dev/py-shiny`
 - [ ] Verify `pyproject.toml` has no git-based dependencies (e.g., no `htmltools @ git+https://...`)
 - [ ] Note: for py-shiny, tagging the commit triggers the version bump automatically (no manual `__init__.py` edit needed)
 - [ ] Bump version in CHANGELOG.md
+- [ ] Read every `[Unreleased]` entry against AGENTS.md's "Public-facing text" rules. Entries
+      written with a fix can still compare to Shiny for R; trim them to the user-facing change.
 - [ ] Update `CITATION.cff`: set `version:` to `X.Y.Z` and `date-released:` to today's date (`YYYY-MM-DD`, the intended release date).
 - [ ] Commit, push, open PR
 - [ ] Wait for CI to pass
