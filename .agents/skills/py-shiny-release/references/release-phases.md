@@ -193,9 +193,23 @@ Repo: `posit-dev/shinylive`
   - `packages/py-htmltools` → latest py-htmltools tag (if released this cycle)
   - `packages/py-shinywidgets` → latest py-shinywidgets tag
   - `packages/py-faicons` → check if update needed
+
+  py-shiny and py-shinywidgets take their version from git tags. `make submodules` fetches
+  both repos' tags (shinylive#253 added py-shinywidgets); if you move a submodule by hand,
+  run `git fetch --tags` inside it. Without tags the wheel builds as `0.0.0.post1.dev…`, and
+  every shinywidgets example 404s on its assets — in CI and in the deploy, even when the
+  local build looks fine.
 - [ ] **Update the PyPI-sourced pins by hand** — see "The `latest` trap" below. At minimum
       check `shinyswatch`, which tracks a py-shiny release of its own.
+- [ ] **Compare every shiny-family package with PyPI**: shiny, htmltools, shinyswatch,
+      shinywidgets, faicons, and shinychat. Bump each one that is behind, or tell the user why
+      it can't move. shinychat is pulled in only as a shiny dependency, so its pin never moves
+      on its own (it sat at 0.2.8 while 0.7.2 was out). Some can't move until Pyodide does:
+      shinychat 0.7+ needs `pydantic>=2.11`, and Pyodide 0.27.7 ships 2.10.5
+      (shinylive#254).
 - [ ] Run `make clean && make all`
+- [ ] **Check dependencies in both directions, before the first smoke run** — see
+      "Bundled versions must satisfy each other" below.
 - [ ] **Verify `shinylive_lock.json`** — check that ALL package versions match their latest releases. The lockfile reflects what's actually bundled. Don't trust that updating one submodule will cascade to others.
 - [ ] Cross-check the built wheels: `ls build/shinylive/pyodide/*.whl` should show the
       expected versions of shiny, shinyswatch, htmltools, shinywidgets and faicons.
@@ -255,8 +269,46 @@ the file's compact one-line-per-dependency style. Expect a ~5-line diff. Re-veri
 
 Harmless finding, so don't chase it: `build/shinylive/pyodide` will contain a couple of
 wheels not referenced by `pyodide-lock.json` (e.g. `anyio`, `narwhals`). Those are pyodide's
-own upstream versions, which shinylive's older pins override in the merged lock. Both files
+own upstream versions, which shinylive's pins override in the merged lock. Both files
 land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likewise expected.
+
+### Bundled versions must satisfy each other
+
+A pin can be stale without anything in `shinylive_requirements.json` mentioning it: packages
+pulled in only as dependencies (narwhals, shinychat) keep whatever version the last full
+regen chose. In v1.9.0, shinylive bundled narwhals 1.12.1 while shiny required
+`narwhals>=2.26.0`; shiny 1.9.0 started calling `DataFrame.iter_columns()`, and every data
+frame example crashed. Bumping narwhals then broke the altair example, because Pyodide's
+altair 5.4.1 warns under narwhals 2 (fixed by pinning altair 5.5.0). Both were found only
+after long smoke runs. Check both directions right after `make all`:
+
+```bash
+uv run --no-project --with packaging python - <<'EOF'
+import json
+from packaging.version import Version
+from packaging.specifiers import SpecifierSet
+lock = json.load(open("shinylive_lock.json"))
+pyo = {k.lower(): v for k, v in
+       json.load(open("build/shinylive/pyodide/pyodide-lock.json"))["packages"].items()}
+version = lambda n: lock.get(n, {}).get("version") or pyo.get(n, {}).get("version")
+# 1. Does every bundled version meet what the shiny family asks for?
+for top in ["shiny", "htmltools", "shinyswatch", "shinywidgets", "faicons", "shinychat"]:
+    for d in lock[top].get("depends", []):
+        spec = SpecifierSet(",".join(op + v for op, v in d.get("specs", [])))
+        have = version(d["name"].lower())
+        if have is None or (spec and Version(have) not in spec):
+            print(f"{top} needs {d['name']}{spec}, bundled {have}")
+# 2. Which bundled packages depend on a pin you moved? Re-test their examples.
+for moved in ["narwhals"]:  # list every pin you changed
+    print(moved, "is used by", [k for k, v in pyo.items()
+                                if moved in [x.lower() for x in v.get("depends", [])]])
+EOF
+```
+
+For each gap in (1), bump the pin with the helper above, or tell the user why it can't move.
+Compiled packages (orjson, pydantic) come from Pyodide and only move with a Pyodide upgrade.
+For (2), make sure each listed package still works with the new version; a newer pure-Python
+release of the dependent can be pinned the same way.
 
 ### Local testing and PR
 
@@ -293,6 +345,11 @@ land on disk; only the pinned ones load. Missing `*-tests.tar` entries are likew
 - [ ] Only after github.io verification passes and user confirms: push to `deploy` branch (for shinylive.io) using `git push origin main:deploy`
 - [ ] **DEPLOY GATE 2 (shinylive.io)**: Wait for the `deploy` branch deploy to shinylive.io to finish. Then bust all browser caches and verify apps work on shinylive.io using the same testing procedure with cache-busting (fresh incognito context or `?v={timestamp}` query params).
 - [ ] Create GH Release. Check existing release note conventions (`gh api repos/posit-dev/shinylive/releases --jq '.[:3] | .[] | .body'`) and match the format used by recent releases.
+      Publishing the release is what builds `shinylive-X.Y.Z.tar.gz` (`build.yml` runs on
+      `release: published`); the tag alone does not. The Phase 7 and 8 PRs fail CI until
+      that file exists, so open them early, but rerun their CI only after the upload. If the
+      user wants to unblock them sooner, the release can be published once github.io is
+      verified, before shinylive.io — ask first.
 - [ ] Wait for release to succeed and build artifact to appear in GH Release page
 - [ ] Confirm the artifact really uploaded — `gh release view vX.Y.Z --repo posit-dev/shinylive
       --json assets` should show `shinylive-X.Y.Z.tar.gz` with `state=uploaded` (it is ~435 MB,
@@ -315,6 +372,12 @@ make test-examples-smoke                       # smoke + intent, both engines
 make test-examples-smoke EXAMPLES_ENGINE=py    # one engine
 make test-examples-intent EXAMPLES_ENGINE=py   # intent tests only
 ```
+
+A full local run takes about 13 minutes, one test at a time. Since shinylive#255,
+`pytest.ini` passes `-v`, so each test prints its name and result as it finishes; when the
+user asks how far along a run is, report which tests have passed and failed so far. CI runs
+the same suite as six parallel shards in about 5 minutes, so once a fix passes locally,
+pushing and letting CI run the rest is usually faster.
 
 `EXAMPLES_SHARD` (as in `1/3`) splits the suite the way CI does. `test-deps` installs
 `requirements-test.txt` plus the local `packages/py-shiny` submodule, so the suite runs

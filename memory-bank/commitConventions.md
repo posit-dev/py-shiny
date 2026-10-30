@@ -28,6 +28,8 @@ An optional scope may be added when it clarifies the affected area, e.g.
 - **chore**: Maintenance tasks, dependency updates
 - **perf**: Performance improvements
 - **style**: Code style/formatting changes (not user-facing style)
+- **release**: The release-prep PR that becomes a release commit (e.g., `release: v1.9.0`).
+  Use this title in every repo of the release train.
 
 ## Guidelines
 
