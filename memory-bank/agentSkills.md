@@ -18,7 +18,10 @@ list|path` CLI subcommands (implemented in `shiny/_main/_skills.py`) are a
 zero-dependency way to inspect it: `list` shows each bundled skill's name and
 description, and `path <name>` prints the skill's directory so its `SKILL.md`
 and supporting files (`references/`, `scripts/`) can be read from the installed
-package.
+package. `shiny quickstart` prints `SKILL.md` and `shiny guide <topic>` prints a
+reference file (both in `shiny/_main/`). Both rewrite each backticked
+`` `references/<topic>.md` `` link to `` `shiny guide <topic>` ``, so write topic
+links in exactly that form.
 
 **Audience:** coding agents *using* shiny to build, test, and debug apps — not
 contributors to shiny itself. Contributor-facing guidance belongs in
