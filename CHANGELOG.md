@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `playwright.controller.NavPanel.click()` now expands a navbar that has collapsed behind its toggler button before clicking the tab, as it already opened a closed dropdown. `ui.page_navbar()` and `ui.navset_bar()` collapse their tabs below 768px wide, so clicking a tab in a narrow window or iframe used to fail (#2597).
 
-* `playwright.controller.OutputPlot` now finds a plot output by its `shiny-plot-output` class alone. It also required `shiny-image-output`, which `ui.output_plot()` writes but other plot markup, such as Shiny for R's `plotOutput()`, does not, so the controller found nothing for those plots (#2596).
+* `playwright.controller.OutputPlot` now finds a plot output by its `shiny-plot-output` class alone. It also required `shiny-image-output`, so it found nothing for plot outputs that don't have that class, such as hand-written markup or apps from other Shiny engines (#2596).
 
 ## [1.9.0] - 2026-10-29
 
