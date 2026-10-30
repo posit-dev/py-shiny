@@ -221,7 +221,7 @@ Repo: `posit-dev/shinylive`
 ### Deprecations break the bundled examples
 
 A py-shiny release that deprecates a renderer or UI function will make any shinylive example
-still using it print a `ShinyDeprecationWarning` on load, and `test-examples-smoke` fails on
+still using it print a `ShinyDeprecationWarning` on load, and `make test-examples` fails on
 that: `_SUSPECT_PATTERNS` in `tests/shinylive_app.py` matches `Warning\b` and `Deprecat`
 (case-insensitive) in the shinylive terminal.
 
@@ -369,10 +369,13 @@ This suite moved from Playwright/TS to pytest. The old
 longer exist — they fail with `playwright-examples.config.ts does not exist`.
 
 ```bash
-make test-examples-smoke                       # smoke + intent, both engines
-make test-examples-smoke EXAMPLES_ENGINE=py    # one engine
+make test-examples                             # smoke + intent, both engines
+make test-examples EXAMPLES_ENGINE=py          # one engine
 make test-examples-intent EXAMPLES_ENGINE=py   # intent tests only
 ```
+
+shinylive#256 renamed `make test-examples-smoke` to `make test-examples`; use the old name
+on a shinylive checkout from before it.
 
 **Keep the local loop short.** Every test boots its example in a fresh page, so the run time
 is mostly the number of tests. shinylive#256 stopped booting each example twice (smoke and
