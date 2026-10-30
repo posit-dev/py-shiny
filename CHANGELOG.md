@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Lowered the minimum `orjson` version from 3.10.7 to 3.10.2. Shiny uses only `orjson.dumps()`, `orjson.loads()`, and `OPT_SORT_KEYS`, which all predate 3.10, and 3.10.2 fixes a crash serializing `str` that 3.10.1 introduced. The lower floor lets Shiny install alongside packages or environments that ship an older `orjson`, such as Pyodide 0.27 (#2594).
 
-* `playwright.controller.OutputPlot` now finds a plot output by its `shiny-plot-output` class alone. It also required `shiny-image-output`, which `ui.output_plot()` writes but other plot markup, such as Shiny for R's `plotOutput()`, does not, so the controller found nothing for those plots (#2596).
+* `playwright.controller.NavPanel.click()` now expands a navbar that has collapsed behind its toggler button before clicking the tab, as it already opened a closed dropdown. `ui.page_navbar()` and `ui.navset_bar()` collapse their tabs below 768px wide, so clicking a tab in a narrow window or iframe used to fail (#2597).
+
+* `playwright.controller.OutputPlot` now finds a plot output by its `shiny-plot-output` class alone (#2596).
 
 ## [1.9.0] - 2026-10-29
 
