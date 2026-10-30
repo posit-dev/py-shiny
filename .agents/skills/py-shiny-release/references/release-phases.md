@@ -207,7 +207,8 @@ Repo: `posit-dev/shinylive`
       on its own (it sat at 0.2.8 while 0.7.2 was out). Some can't move until Pyodide does:
       shinychat 0.7+ needs `pydantic>=2.11`, and Pyodide 0.27.7 ships 2.10.5
       (shinylive#254).
-- [ ] Run `make clean && make all`
+- [ ] Run `make all`. Add `make clean` first only when the Pyodide version changed: it
+      throws away the ~370 MB Pyodide download, which `make all` then fetches again.
 - [ ] **Check dependencies in both directions, before the first smoke run** — see
       "Bundled versions must satisfy each other" below.
 - [ ] **Verify `shinylive_lock.json`** — check that ALL package versions match their latest releases. The lockfile reflects what's actually bundled. Don't trust that updating one submodule will cascade to others.
@@ -373,11 +374,27 @@ make test-examples-smoke EXAMPLES_ENGINE=py    # one engine
 make test-examples-intent EXAMPLES_ENGINE=py   # intent tests only
 ```
 
-A full local run takes about 13 minutes, one test at a time. Since shinylive#255,
-`pytest.ini` passes `-v`, so each test prints its name and result as it finishes; when the
-user asks how far along a run is, report which tests have passed and failed so far. CI runs
-the same suite as six parallel shards in about 5 minutes, so once a fix passes locally,
-pushing and letting CI run the rest is usually faster.
+**Keep the local loop short.** Every test boots its example in a fresh page, so the run time
+is mostly the number of tests. shinylive#256 stopped booting each example twice (smoke and
+intent) and replaced the fixed 2.5 s wait with a wait for Shiny to go idle; a full local run
+of both engines dropped from about 13 minutes to about 5. In the v1.9.0 train the shinylive phase took about two hours,
+mostly from finding problems one long run at a time. In order:
+
+1. Run the dependency check above (seconds) and a fresh-checkout `make submodules` in a
+   clean clone (about a minute). Together they catch what a test run would only find late.
+2. Run the examples that use what changed first, e.g.
+   `venv/bin/pytest tests -m "examples and py" -k "altair or plotly or ipyleaflet or csv"` (names of the examples whose packages moved).
+3. Then the Python intent tests: `make test-examples-intent EXAMPLES_ENGINE=py`. A py-shiny
+   release does not change the R side, and CI still runs both engines.
+4. Push the fixes together. Every push restarts CI on the PR and cancels the run in progress.
+
+Do not run the examples in parallel locally (`-n 6`): each worker boots its own Pyodide, and
+on a 12-core laptop the Python examples took longer than a serial run and 33 of 54 tests
+failed from the contention. CI's sharding is the parallelism.
+
+Since shinylive#255, `pytest.ini` passes `-v`, so each test prints its name and result as it
+finishes; when the user asks how far along a run is, report which tests have passed and
+failed so far.
 
 `EXAMPLES_SHARD` (as in `1/3`) splits the suite the way CI does. `test-deps` installs
 `requirements-test.txt` plus the local `packages/py-shiny` submodule, so the suite runs
