@@ -217,6 +217,24 @@ Repo: `posit-dev/shinylive`
 - [ ] Run `npm install --package-lock-only` to sync `package-lock.json` version with `package.json`
 - [ ] **Grep the bundled examples for anything the new py-shiny deprecated** — see
       "Deprecations break the bundled examples" below.
+- [ ] **Remove test shims the new py-shiny makes obsolete** — see "Controller shims" below.
+
+### Controller shims
+
+`tests/controller_shims.py` wraps a few `shiny.playwright.controller` classes for markup the
+installed py-shiny controllers don't handle yet. The intent tests install py-shiny from the
+`packages/py-shiny` submodule, so a shim can only go once that submodule includes the fix.
+Each shim's docstring names the py-shiny PR that replaces it. For each one, check
+whether the new py-shiny tag contains that PR:
+
+```bash
+git -C packages/py-shiny log --oneline --grep "#2598" --grep "#2599"
+```
+
+Delete the shim (or the part its docstring names), switch its callers in
+`tests/test_examples_intent_*.py` to the plain `controller.*` class, and run
+`make test-examples`. The shims for id-less components (`NavPanel.__init__`, `sidebar()`)
+stay until the examples or the controllers change.
 
 ### Deprecations break the bundled examples
 
