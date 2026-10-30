@@ -11,6 +11,16 @@ you.
 
 All response methods are async; write async callbacks and `await` them.
 
+## Contents
+
+- Minimal app (echo bot)
+- Stream a response
+- Connect an LLM provider
+- Seed and read message history
+- Guardrails and markdown
+- Quick reference
+- Common mistakes
+
 ## Minimal app (echo bot)
 
 ```python

@@ -59,6 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes and minor improvements
 
+* The bundled `shiny-for-python` Agent Skill now includes symptom-based troubleshooting and repair guidance, with examples in the reactivity, background task, session lifecycle, and Express references, plus a workflow for runtime verification. (#2469)
+
 * On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
 
 * UI updates and custom messages sent from outside the reactive graph (e.g. from a background `asyncio` task that calls `ui.update_text()`) are now sent to the client right away instead of waiting for the next input change (#21, #1889).

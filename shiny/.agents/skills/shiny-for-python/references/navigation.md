@@ -15,6 +15,16 @@ track the selection in a separate `reactive.value`.
 This documents the Core form. Express mode uses `with ui.nav_panel(...):`
 context managers — see `references/express.md`.
 
+## Contents
+
+- Choose a container
+- A top-level navbar app: `page_navbar`
+- Read the active panel
+- Switch panels from the server: `update_navset`
+- Add / remove / show / hide panels at runtime
+- Quick reference
+- Common mistakes
+
 ## Choose a container
 
 Every `navset_*()` takes the same core args: `*args` (nav items), `id=`,
