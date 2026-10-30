@@ -59,6 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes and minor improvements
 
+* `reactive.poll()` now works with an `async` `poll_func` and a custom `equals`. Previously `@poll()` called the function without awaiting it and kept the un-awaited coroutine as the "previous value", so a custom `equals` raised on its first comparison and every later poll failed with the same error. `poll_func` is also no longer called once when `@poll()` is applied: the polling effect reads the first value when it first runs. (#2576)
+
 * On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
 
 * UI updates and custom messages sent from outside the reactive graph (e.g. from a background `asyncio` task that calls `ui.update_text()`) are now sent to the client right away instead of waiting for the next input change (#21, #1889).
