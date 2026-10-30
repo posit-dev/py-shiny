@@ -285,7 +285,8 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         self,
         page: Page,
         id: str,
-        loc_classes: str = ".shiny-image-output",
+        *,
+        loc_classes: str,
     ) -> None:
         """
         Initializes an image output.
@@ -297,8 +298,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         id
             The ID of the image.
         loc_classes
-            The classes that identify the output element. Defaults to
-            `".shiny-image-output"`.
+            The classes that identify the output element.
         """
         super().__init__(
             page,
@@ -438,7 +438,7 @@ class OutputImage(_OutputImageBase):
         id
             The ID of the image.
         """
-        super().__init__(page, id=id)
+        super().__init__(page, id=id, loc_classes=".shiny-image-output")
 
 
 class OutputPlot(_OutputImageBase):
