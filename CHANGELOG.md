@@ -59,6 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes and minor improvements
 
+* The `TypeError` that `render.DataGrid` and `render.DataTable` raise for a `filters=` entry whose `value` is `(None, None)` now shows the entry's index, for example `filter[0]['value']`, instead of the literal text `filter[{i}]['value']`.
+
 * On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
 
 * UI updates and custom messages sent from outside the reactive graph (e.g. from a background `asyncio` task that calls `ui.update_text()`) are now sent to the client right away instead of waiting for the next input change (#21, #1889).
