@@ -285,7 +285,7 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         self,
         page: Page,
         id: str,
-        loc_classes: str = "",
+        loc_classes: str = ".shiny-image-output",
     ) -> None:
         """
         Initializes an image output.
@@ -297,12 +297,13 @@ class _OutputImageBase(_OutputInlineContainerM, _OutputBase):
         id
             The ID of the image.
         loc_classes
-            Additional classes to locate the image. Defaults to "".
+            The classes that identify the output element. Defaults to
+            `".shiny-image-output"`.
         """
         super().__init__(
             page,
             id=id,
-            loc=f"#{id}.shiny-image-output{loc_classes}",
+            loc=f"#{id}{loc_classes}",
         )
         self.loc_img = self.loc.locator("img")
 
@@ -459,6 +460,8 @@ class OutputPlot(_OutputImageBase):
         id
             The ID of the plot.
         """
+        # `.shiny-plot-output` alone, since not every plot output also has
+        # `.shiny-image-output` (Shiny for R's `plotOutput()` does not).
         super().__init__(page, id=id, loc_classes=".shiny-plot-output")
 
 
