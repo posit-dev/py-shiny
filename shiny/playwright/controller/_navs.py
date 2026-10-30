@@ -155,8 +155,7 @@ class NavPanel(UiWithContainer):
             The maximum time to wait for the nav panel to be visible and interactable. Defaults to `None`.
         """
 
-        if not self.loc.is_visible():
-            self._expand_collapsed_navbar(timeout=timeout)
+        self._expand_collapsed_navbar(timeout=timeout)
 
         parent_ul_loc = self.loc.locator("..").locator("..")
 
@@ -186,13 +185,18 @@ class NavPanel(UiWithContainer):
         Open the navbar that holds this nav panel, if it has collapsed behind its toggler.
 
         Below the navbar's breakpoint, Bootstrap hides the tabs in a `.navbar-collapse`
-        that only its `.navbar-toggler` button opens.
+        that only its `.navbar-toggler` button opens. The toggler is only visible
+        below that breakpoint, so it decides whether to expand, not the panel's
+        visibility (a panel in a closed dropdown is hidden too).
         """
         collapse = self.loc_container.locator(
             "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '),"
             " ' navbar-collapse ')][1]"
         )
         if collapse.count() == 0:
+            return
+        show_regex = re.compile(r"(^|\s)show(\s|$)")
+        if show_regex.search(collapse.get_attribute("class", timeout=timeout) or ""):
             return
         collapse_id = collapse.get_attribute("id", timeout=timeout)
         toggler = self.page.locator(
@@ -203,9 +207,7 @@ class NavPanel(UiWithContainer):
         if toggler.count() == 0 or not toggler.first.is_visible():
             return
         toggler.first.click(timeout=timeout)
-        playwright_expect(collapse).to_have_class(
-            re.compile(r"(^|\s)show(\s|$)"), timeout=timeout
-        )
+        playwright_expect(collapse).to_have_class(show_regex, timeout=timeout)
 
     def expect_active(self, value: bool, *, timeout: Timeout = None) -> None:
         """
