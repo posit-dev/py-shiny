@@ -109,8 +109,13 @@ checked). Rules must encode Shiny semantics: reactive context, input
 read-only-ness, renderer/ID uniqueness, extended-task constraints.
 
 `ShinyCodeValidator` checks IDs, inputs, and decorators. Duplicate input/output
-IDs are keyed by `(kind, enclosing function, id)` so several `@module.ui`
-functions in one file can reuse IDs. It also checks `@reactive.event`
+IDs are keyed by `(kind, enclosing Shiny module function, id)`: only
+`@module.ui` / `@module.server` functions open a namespace, because those are
+the only functions that get one at runtime; ordinary UI helper functions share
+the app-level scope, so two helpers that both emit `ui.input_text("x")` warn.
+`input` references respect local shadowing (`input = {...}` in a function or
+at module level hides the import; parameters named `input` are still Shiny's).
+Only an argument to `reactive.event(...)` may be an uncalled input. It also checks `@reactive.event`
 position, effects that return a value, and Core-mode output/renderer pairing:
 `app_outputs` (`ui.output_*` and `ui.download_*` IDs, plus any call with a
 string `id=` and a `class_=` containing `-output`, for hand-built

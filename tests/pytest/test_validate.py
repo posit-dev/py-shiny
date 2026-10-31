@@ -142,7 +142,8 @@ def test_all_assignment_forms_to_inputs_are_errors(statement: str) -> None:
     assert all(e["line"] == 4 for e in report.errors)
 
 
-def test_duplicate_ids_are_scoped_to_their_function() -> None:
+def test_duplicate_ids_are_scoped_to_shiny_modules_only() -> None:
+    # `@module.ui` functions get their own namespace at runtime.
     module_code = (
         "from shiny import module, ui\n"
         "@module.ui\ndef first():\n    return ui.input_text('name', 'Name')\n"
@@ -156,6 +157,66 @@ def test_duplicate_ids_are_scoped_to_their_function() -> None:
         "    return ui.div(ui.input_text('name', 'A'), ui.input_text('name', 'B'))\n"
     )
     assert [(w["code"], w["line"]) for w in report.warnings] == [("DUPLICATE_ID", 4)]
+    # Ordinary helper functions do not, so their IDs share the app namespace.
+    report = validate_shiny_code(
+        "from shiny import ui\n"
+        "def first():\n    return ui.input_text('shared', 'First')\n"
+        "def second():\n    return ui.input_text('shared', 'Second')\n"
+        "app_ui = ui.page_fluid(first(), second())\n"
+    )
+    assert [(w["code"], w["line"]) for w in report.warnings] == [("DUPLICATE_ID", 5)]
+
+
+def test_local_variable_shadowing_input_is_not_a_shiny_input() -> None:
+    assert validate_shiny_code(
+        "from shiny.express import input, render\n"
+        "@render.text\ndef label():\n"
+        "    input = {'name': 'Alice'}\n"
+        "    return input.name\n"
+    ).clean
+    assert validate_shiny_code(
+        "from shiny.express import input as inp, render\n"
+        "@render.text\ndef label():\n"
+        "    for inp in [1, 2]:\n        pass\n"
+        "    inp.name = 1\n"
+        "    return inp.name\n"
+    ).clean
+    assert validate_shiny_code(
+        "from shiny.express import input\ninput = {}\ninput.x = 1\n"
+    ).clean
+    # A parameter named `input` is Shiny's input, and the shadow does not leak
+    # into sibling functions.
+    report = validate_shiny_code(
+        "from shiny.express import input, render\n"
+        "def helper(input):\n    return input.n\n"
+        "@render.text\ndef label():\n    input = {}\n    return input.n\n"
+        "@render.text\ndef other():\n    return input.n\n"
+    )
+    assert [(e["code"], e["line"]) for e in report.errors] == [("UNCALLED_INPUT", 10)]
+
+
+def test_only_reactive_event_may_take_an_uncalled_input() -> None:
+    report = validate_shiny_code(
+        "from shiny import reactive\n"
+        "from shiny.express import input, render\n"
+        "def log_event(value):\n    return value\n"
+        "@render.text\ndef summary():\n    return log_event(input.n)\n"
+        "@reactive.effect\n@reactive.event(input.n)\ndef react():\n    pass\n"
+    )
+    assert [(e["code"], e["line"]) for e in report.errors] == [("UNCALLED_INPUT", 7)]
+
+
+def test_destructuring_assignment_to_inputs_is_an_error() -> None:
+    report = validate_shiny_code(
+        "from shiny.express import input\n"
+        "input.x, input.y = 1, 2\n"
+        "[input.a, *rest] = [1, 2]\n"
+    )
+    assert [(e["code"], e["line"]) for e in report.errors] == [
+        ("INPUT_ASSIGNMENT", 2),
+        ("INPUT_ASSIGNMENT", 2),
+        ("INPUT_ASSIGNMENT", 3),
+    ]
 
 
 def test_runtime_inputs_assignment_error() -> None:

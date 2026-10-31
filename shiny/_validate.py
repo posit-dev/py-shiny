@@ -215,9 +215,43 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self._parent_map: dict[ast.AST, ast.AST] = {}
         self._aliases: dict[str, str] = {}
         self._scope = ""
-        """Enclosing function name used to namespace IDs; ``""`` at module level."""
+        """Enclosing Shiny module function used to namespace IDs; ``""`` outside one.
+
+        Only ``@module.ui`` / ``@module.server`` functions get a namespace at
+        runtime, so ordinary UI helper functions share the app-level scope.
+        """
         self._in_module = False
         """Inside a ``@module.ui`` / ``@module.server`` function, whose IDs are namespaced."""
+        self._shadowed: set[str] = set()
+        """Names bound in the current scope that hide a Shiny ``input`` import."""
+
+    def _local_shadows(self, body: list[ast.stmt]) -> set[str]:
+        """Names assigned in ``body`` (not nested functions) that would otherwise
+        resolve to Shiny's ``input``, such as ``input = {...}`` or ``inp = 1``."""
+        shadows: set[str] = set()
+        for statement in body:
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for child in _walk_without_nested_functions(statement):
+                if (
+                    isinstance(child, ast.Name)
+                    and isinstance(child.ctx, ast.Store)
+                    and self._normalize_name(child.id) == "input"
+                ):
+                    shadows.add(child.id)
+        return shadows
+
+    def visit_Module(self, node: ast.Module) -> None:
+        # Imports are registered while visiting, so collect aliases first and
+        # then decide which module-level assignments shadow them.
+        for statement in node.body:
+            if isinstance(statement, (ast.Import, ast.ImportFrom)):
+                self.visit(statement)
+        self._shadowed = self._local_shadows(node.body)
+        for statement in node.body:
+            if not isinstance(statement, (ast.Import, ast.ImportFrom)):
+                self._parent_map[statement] = node
+                self.visit(statement)
 
     def generic_visit(self, node: ast.AST) -> None:
         for child in ast.iter_child_nodes(node):
@@ -270,9 +304,19 @@ class ShinyCodeValidator(ast.NodeVisitor):
         prev_in_reactive = self._in_reactive_context
         prev_decorators = self._current_func_decorators
         prev_scope = self._scope
+        prev_shadowed = self._shadowed
 
         self._current_func_decorators = decorators
-        self._scope = f"{prev_scope}.{node.name}" if prev_scope else node.name
+        # Parameters named `input` are Shiny's input (server and helper
+        # functions receive it); local assignments hide it.
+        self._shadowed = prev_shadowed | self._local_shadows(node.body)
+        for argument in [
+            *node.args.posonlyargs,
+            *node.args.args,
+            *node.args.kwonlyargs,
+            *[a for a in (node.args.vararg, node.args.kwarg) if a is not None],
+        ]:
+            self._shadowed.discard(argument.arg)
 
         if node.name == "server" and len(node.args.args) >= 2:
             if self.result.mode == "unknown":
@@ -299,6 +343,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
         prev_in_module = self._in_module
         if any(d in ("module.ui", "module.server") for d in decorators):
             self._in_module = True
+            self._scope = f"{prev_scope}.{node.name}" if prev_scope else node.name
 
         if not self._in_module and any(
             not d.startswith(_NON_RENDERER_DECORATORS) for d in decorators
@@ -349,6 +394,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self._current_func_decorators = prev_decorators
         self._scope = prev_scope
         self._in_module = prev_in_module
+        self._shadowed = prev_shadowed
 
     def _output_id(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
         """The output ID a renderer registers under: ``@output(id=...)`` or its name."""
@@ -448,8 +494,13 @@ class ShinyCodeValidator(ast.NodeVisitor):
         return None
 
     def _is_input_ref(self, node: ast.AST) -> bool:
-        """Whether ``node`` names the Shiny ``input`` object, under any import alias."""
-        return isinstance(node, ast.Name) and self._normalize_name(node.id) == "input"
+        """Whether ``node`` names the Shiny ``input`` object, under any import
+        alias, and is not hidden by a local assignment in the current scope."""
+        return (
+            isinstance(node, ast.Name)
+            and node.id not in self._shadowed
+            and self._normalize_name(node.id) == "input"
+        )
 
     def visit_Call(self, node: ast.Call) -> None:
         call_name = self._normalize_name(self._get_call_name(node.func))
@@ -490,7 +541,15 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _check_input_assignment(self, target: ast.expr, line: int) -> None:
-        """Report ``input.x = ...`` (plain, augmented, or annotated) as read-only."""
+        """Report ``input.x = ...`` as read-only, for plain, augmented, annotated,
+        and destructuring (``input.x, input.y = ...``) assignments."""
+        if isinstance(target, (ast.Tuple, ast.List)):
+            for element in target.elts:
+                self._check_input_assignment(element, line)
+            return
+        if isinstance(target, ast.Starred):
+            self._check_input_assignment(target.value, line)
+            return
         if isinstance(target, ast.Attribute) and self._is_input_ref(target.value):
             name = cast(ast.Name, target.value).id
             self.result.add_error(
@@ -527,11 +586,12 @@ class ShinyCodeValidator(ast.NodeVisitor):
             parent = self._parent_map.get(node)
             is_func_call = isinstance(parent, ast.Call) and parent.func is node
             is_attr_access = isinstance(parent, ast.Attribute) and parent.value is node
-            is_event_arg = False
-            if isinstance(parent, ast.Call):
-                parent_call_name = self._get_call_name(parent.func)
-                if "event" in parent_call_name:
-                    is_event_arg = True
+            # `@reactive.event(input.btn)` takes the input itself, uncalled.
+            is_event_arg = (
+                isinstance(parent, ast.Call)
+                and self._normalize_name(self._get_call_name(parent.func))
+                == "reactive.event"
+            )
 
             if (
                 not is_func_call
