@@ -112,7 +112,9 @@ read-only-ness, renderer/ID uniqueness, extended-task constraints.
 IDs are keyed by `(kind, enclosing function, id)` so several `@module.ui`
 functions in one file can reuse IDs. It also checks `@reactive.event`
 position, effects that return a value, and Core-mode output/renderer pairing:
-`app_outputs` (`ui.output_*` and `ui.download_*` IDs), `app_renderers`
+`app_outputs` (`ui.output_*` and `ui.download_*` IDs, plus any call with a
+string `id=` and a `class_=` containing `-output`, for hand-built
+placeholders), `app_renderers`
 (`@render.*` IDs, honoring `@output(id=)`), and `app_functions` are collected
 outside `@module.*` functions and outside other render functions, merged
 across the file set in `validate_shiny_file()`, and compared only when both

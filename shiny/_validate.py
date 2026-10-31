@@ -435,6 +435,19 @@ class ShinyCodeValidator(ast.NodeVisitor):
         ):
             # Pairs with `@render.download`, so count it as an output placeholder.
             self.result.app_outputs.setdefault(node.args[0].value, node.lineno)
+        elif not self._in_module:
+            # A hand-built element such as
+            # `ui.div(id="plot", class_="shiny-plot-output")` is bound to a
+            # renderer by its class, so it is a placeholder too.
+            keywords = {
+                k.arg: k.value.value
+                for k in node.keywords
+                if k.arg in ("id", "class_")
+                and isinstance(k.value, ast.Constant)
+                and isinstance(k.value.value, str)
+            }
+            if "id" in keywords and "-output" in keywords.get("class_", ""):
+                self.result.app_outputs.setdefault(keywords["id"], node.lineno)
 
         self.generic_visit(node)
 

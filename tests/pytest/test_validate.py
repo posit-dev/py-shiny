@@ -321,6 +321,13 @@ def test_output_and_renderer_pairing_in_core_mode() -> None:
         "def server(input, output, session):\n"
         "    @render_caps\n    def caps():\n        return 'x'\n"
         "    @render.text\n    def plain():\n        return 'x'\n",
+        # A hand-built element with an output class is bound by that class.
+        "from shiny import App, render, ui\n"
+        "app_ui = ui.page_fluid(\n"
+        "    ui.div(id='plot_only', class_='shiny-plot-output', style='height: 400px;'),\n"
+        ")\n"
+        "def server(input, output, session):\n"
+        "    @render.plot\n    def plot_only():\n        return None\n",
         # A renderer returned from render.ui places itself.
         "from shiny import App, render, ui\n"
         "app_ui = ui.page_fluid(ui.output_ui('dynamic'))\n"
