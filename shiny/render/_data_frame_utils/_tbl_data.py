@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, List, SupportsIndex, TypedDict, cast
+from functools import partial
+from typing import TYPE_CHECKING, Any, Callable, List, SupportsIndex, TypedDict, cast
 
 import narwhals.stable.v1 as nw
 import orjson
@@ -9,7 +10,7 @@ import orjson
 from ..._typing_extensions import TypeIs
 from ...session import Session, require_active_session
 from ...types import Jsonifiable, JsonifiableDict, ListOrTuple
-from ._html import as_cell_html, ui_must_be_processed
+from ._html import as_cell_html, series_contains_htmltoolslike, ui_must_be_processed
 from ._types import (
     CellHtml,
     CellPatch,
@@ -136,10 +137,9 @@ def apply_frame_patches(
 
     # Apply the patches
 
-    # Copy the data to make sure the original data is not modified in place.
-    # If https://github.com/narwhals-dev/narwhals/issues/1154 is resolved, this
-    # should be able to be removed.
-    nw_data = nw_data.clone()
+    # No copy of the data is needed: `scatter()` returns a new Series and
+    # `with_columns()` a new frame, so the original data is never modified in place
+    # (https://github.com/narwhals-dev/narwhals/issues/1154).
 
     # # https://discord.com/channels/1235257048170762310/1235257049626181656/1283415086722977895
     # # Using narwhals >= v1.7.0
@@ -188,20 +188,18 @@ def apply_frame_patches(
 
 
 # serialize_dtype ----------------------------------------------------------------------
-def serialize_dtype(col: nw.Series[Any] | Any) -> FrameDtype:
+def serialize_dtype(dtype: DType, *, get_col: Callable[[], nw.Series]) -> FrameDtype:
+    """Return the type hint for a column of the given `dtype`.
 
-    from ._html import series_contains_htmltoolslike
-
-    dtype: DType = col.dtype
-
+    `get_col` is only called when the hint depends on the column's values (its
+    categories, or whether it holds HTML), so most columns are never read.
+    """
     if isinstance(dtype, nw.String):
         type_ = "string"
-
     elif dtype.is_numeric():
         type_ = "numeric"
-
     elif isinstance(dtype, (nw.Categorical, nw.Enum)):
-        categories = col.cat.get_categories().to_list()
+        categories = get_col().cat.get_categories().to_list()
         return {"type": "categorical", "categories": categories}
     elif isinstance(dtype, nw.Boolean):
         type_ = "boolean"
@@ -211,27 +209,20 @@ def serialize_dtype(col: nw.Series[Any] | Any) -> FrameDtype:
         type_ = "datetime"
     elif isinstance(dtype, nw.Duration):
         type_ = "duration"
-    elif hasattr(nw, "Time") and isinstance(
-        dtype,
-        # https://github.com/narwhals-dev/narwhals/pull/2113
-        nw.Time,  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-    ):
+    elif isinstance(dtype, nw.Time):
         type_ = "time"
-    elif hasattr(nw, "Binary") and isinstance(
-        dtype,
-        # https://github.com/narwhals-dev/narwhals/pull/2243
-        nw.Binary,  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-    ):
+    elif isinstance(dtype, nw.Binary):
         type_ = "binary"
     elif isinstance(dtype, nw.Object):
         type_ = "object"
-        if series_contains_htmltoolslike(col):
+        if series_contains_htmltoolslike(get_col()):
             type_ = "html"
-    elif isinstance(dtype, (nw.Struct, nw.List, nw.Array)):
+    elif dtype.is_nested():
+        # NOTE: Covers every nested dtype (`Struct`, `List`, `Array`, `Map`, ...)
         type_ = "object"
     else:
         type_ = "unknown"
-        if series_contains_htmltoolslike(col):
+        if series_contains_htmltoolslike(get_col()):
             type_ = "html"
 
     return {"type": type_}
@@ -247,7 +238,8 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     data = as_data_frame(into_data)
 
     type_hints = [
-        serialize_dtype(data.get_column(col_name)) for col_name in data.columns
+        serialize_dtype(dtype, get_col=partial(data.get_column, col_name))
+        for col_name, dtype in data.schema.items()
     ]
 
     # TODO-future-barret; Swich serialization to "by column", rather than "by row"
@@ -261,16 +253,27 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     #     sending it to the client!
     #   * The only serialization would occur during "send to browser"
     #   * This approach would lose the ability to upgrade the column type hints to "html"
-    data_rows = data.rows(named=False)
+
+    # Faster than `data.rows()` for tall frames, and pandas' nullable dtypes stay
+    # Python scalars (`itertuples()` yields numpy scalars, which orjson can't encode).
+    # shortcut: each column has a fixed cost, so frames with at least as many columns
+    # as rows are slower; revisit once narwhals builds rows column-wise
+    data_rows = list(zip(*(col.to_list() for col in data.iter_columns())))
 
     session: Session | None = None
     html_deps: list[RenderedDependency] = []
+    # Value types already checked and found not to be UI. `ui_must_be_processed()` is
+    # slow for values like `Decimal` or `pd.NA`, and a column repeats one type.
+    # shortcut: assumes the type decides UI-ness; revisit if an instance can gain
+    # `tagify()` on its own
+    non_ui_types: set[type] = set()
 
     # Collect all html deps and dedupe them. Send the html separately from its deps
     # Otherwise, serialize as `str()`
-    def default_orjson_serializer(val: Any) -> Jsonifiable:
+    def default_orjson_serializer(val: object) -> Jsonifiable:
         nonlocal session
-        if ui_must_be_processed(val):
+        val_type = type(val)
+        if val_type not in non_ui_types and ui_must_be_processed(val):
             if session is None:
                 session = require_active_session(None)
 
@@ -286,15 +289,18 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
             return cast(JsonifiableDict, cell_html_obj)
 
         # All other values are serialized as strings
+        non_ui_types.add(val_type)
         return str(val)
 
-    data_val = orjson.loads(
-        orjson.dumps(
-            data_rows,
-            default=default_orjson_serializer,
-            # option=(orjson.OPT_NAIVE_UTC),
-        )
+    payload = orjson.dumps(
+        data_rows,
+        default=default_orjson_serializer,
+        # option=(orjson.OPT_NAIVE_UTC),
     )
+    # Free the row tuples before decoding, so that they are not held in memory
+    # alongside the decoded rows
+    del data_rows
+    data_val = orjson.loads(payload)
 
     deduped_html_deps = (
         _resolve_processed_dependencies(html_deps) if len(html_deps) > 1 else html_deps
@@ -357,7 +363,11 @@ def as_col_indexes(
         If a name is not a column of `data`, or if a position is negative or beyond the
         last column.
     """
-    ncol = len(data.columns)
+    data_columns = data.columns
+    ncol = len(data_columns)
+    # Built once, so that resolving many names stays linear in wide frames.
+    # Narwhals rejects duplicate column names, so each name maps to exactly one position.
+    col_positions = {name: i for i, name in enumerate(data_columns)}
     col_indexes: list[int] = []
     for col in cols:
         if isinstance(col, bool):
@@ -379,8 +389,9 @@ def as_col_indexes(
             col_indexes.append(col_index)
             continue
         try:
-            col_indexes.append(data.columns.index(col))
-        except ValueError:
+            col_indexes.append(col_positions[col])
+        # `TypeError`: an unhashable value (e.g. a list) is not a column name either
+        except (KeyError, TypeError):
             raise ValueError(
                 f"Column name {col!r} not found in the data frame. "
                 "To select a column by position, pass an `int`."
