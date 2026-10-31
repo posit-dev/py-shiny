@@ -155,7 +155,9 @@ def test_mutation_followed_by_setting_same_reactive_object(mutation: str) -> Non
             state.set(current)
         """))
     assert [(issue["code"], issue["line"]) for issue in result.warnings] == [
-        ("REACTIVE_MUTATION", 7)
+        ("REACTIVE_MUTATION", 7),
+        # Reading and setting `state` in one effect also re-triggers it.
+        ("EFFECT_SELF_INVALIDATION", 7),
     ]
 
 
@@ -170,7 +172,10 @@ def test_mutation_through_alias_is_detected() -> None:
         "    alias['x'] = 1\n"
         "    state.set(current)\n"
     )
-    assert [issue["code"] for issue in result.warnings] == ["REACTIVE_MUTATION"]
+    assert [issue["code"] for issue in result.warnings] == [
+        "REACTIVE_MUTATION",
+        "EFFECT_SELF_INVALIDATION",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -261,6 +266,78 @@ def test_annotated_read_alias_is_checked_for_mutation() -> None:
         "    current['x'] = 1\n    state.set(current)\n"
     )
     assert [issue["code"] for issue in result.warnings] == ["REACTIVE_MUTATION"]
+
+
+@pytest.mark.parametrize(
+    "body, line",
+    [
+        ("    count.set(count() + 1)\n", 5),
+        ("    if count() < 10:\n        count.set(count() + 1)\n", 6),
+        ("    n = count.get()\n    count.set(n + 1)\n", 6),
+    ],
+)
+def test_effect_that_reads_and_sets_the_same_value_re_triggers(
+    body: str, line: int
+) -> None:
+    result = validate_shiny_code(
+        "from shiny import reactive\n"
+        "count = reactive.value(0)\n"
+        "@reactive.effect\n"
+        "def tick():\n" + body
+    )
+    assert [(issue["code"], issue["line"]) for issue in result.warnings] == [
+        ("EFFECT_SELF_INVALIDATION", line)
+    ]
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        # Read inside isolate, then set.
+        "from shiny import reactive\ncount = reactive.value(0)\n"
+        "@reactive.effect\ndef tick():\n"
+        "    with reactive.isolate():\n        n = count()\n    count.set(n + 1)\n",
+        # Triggered by an event, so it only reruns on the event.
+        "from shiny import reactive\ncount = reactive.value(0)\n"
+        "@reactive.effect\n@reactive.event(lambda: None)\ndef tick():\n"
+        "    count.set(count() + 1)\n",
+        # Sets a different value than it reads.
+        "from shiny import reactive\na = reactive.value(0)\nb = reactive.value(0)\n"
+        "@reactive.effect\ndef copy():\n    b.set(a())\n",
+        # The read and set happen in a nested function, which runs elsewhere.
+        "from shiny import reactive\ncount = reactive.value(0)\n"
+        "@reactive.effect\ndef tick():\n"
+        "    def later():\n        count.set(count() + 1)\n",
+    ],
+)
+def test_effect_without_self_invalidation_is_not_reported(code: str) -> None:
+    assert validate_shiny_code(code).clean
+
+
+def test_calc_that_sets_a_reactive_value_is_reported() -> None:
+    result = validate_shiny_code(
+        "from shiny import reactive\n"
+        "count = reactive.value(0)\n"
+        "@reactive.calc\n"
+        "def doubled():\n"
+        "    count.set(1)\n"
+        "    return 2\n"
+    )
+    assert [(issue["code"], issue["line"]) for issue in result.warnings] == [
+        ("CALC_SIDE_EFFECT", 5)
+    ]
+    assert validate_shiny_code(
+        "from shiny import reactive\ncount = reactive.value(0)\n"
+        "@reactive.calc\ndef doubled():\n    return count() * 2\n"
+    ).clean
+
+
+def test_configuring_inputs_in_the_server_body_is_allowed() -> None:
+    assert validate_shiny_code(
+        "def server(input, output, session):\n"
+        "    input.set_snapshot_preprocess('secret', lambda value: '<redacted>')\n"
+        "    input.set_serializer('secret', lambda value: '<redacted>')\n"
+    ).clean
 
 
 def test_wrapping_task_result_exceptions_does_not_preserve_pending_signal() -> None:

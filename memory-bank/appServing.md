@@ -110,16 +110,31 @@ read-only-ness, renderer/ID uniqueness, extended-task constraints.
 
 `ShinyCodeValidator` checks IDs, inputs, and decorators. Duplicate input/output
 IDs are keyed by `(kind, enclosing function, id)` so several `@module.ui`
-functions in one file can reuse IDs. `shiny/_validate_reactivity.py` tracks
+functions in one file can reuse IDs. It also checks `@reactive.event`
+position, effects that return a value, and Core-mode output/renderer pairing:
+`app_outputs` (`ui.output_*` and `ui.download_*` IDs), `app_renderers`
+(`@render.*` IDs, honoring `@output(id=)`), and `app_functions` are collected
+outside `@module.*` functions and outside other render functions, merged
+across the file set in `validate_shiny_file()`, and compared only when both
+sides are non-empty (so a UI or server in an uninspected file is not judged).
+Custom renderer decorators are not recognised, which is why any function name
+satisfies a placeholder. `shiny/_validate_reactivity.py` tracks
 known values, calc functions, extended tasks, and `reactive.Value` parameter
 annotations lexically. It reports reads outside a reactive context (module
 level, or directly in a function named `server`, decorated `@module.server`,
 or taking `(input, output, session)`; `with reactive.isolate():` and lambdas
 are exempt, and decorator arguments are checked in the enclosing scope) and
-reads inside extended tasks as errors; same-object mutation/set and swallowed
-task-result exceptions are warnings. Import aliases and string annotations
-are supported. This is a targeted static check, not type inference across
-function arguments or a runtime guarantee.
+reads inside extended tasks as errors; an effect without `reactive.event`
+that reads and sets the same value, a calc that calls `.set()`, same-object
+mutation/set, and swallowed task-result exceptions are warnings. `Inputs`
+methods that configure rather than read (`set_serializer`,
+`set_snapshot_preprocess`) are exempt from the context check. Import aliases
+and string annotations are supported. This is a targeted static check, not
+type inference across function arguments or a runtime guarantee. Before
+adding a rule, sweep `shiny/api-examples`, `examples`, `shiny/templates`, and
+`tests/playwright` apps with `validate_shiny_file()` for false positives:
+`shiny run` prints findings to stderr, and the Playwright example tests fail
+on unexpected stderr.
 
 The CLI, startup `_validate_app_file()`, and public file helper share this path.
 Startup reports issues without preventing launch; the CLI exits 1 on errors,

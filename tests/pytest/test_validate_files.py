@@ -72,6 +72,29 @@ def test_separate_module_ids_do_not_collide(tmp_path: Path) -> None:
     assert validate_shiny_file(app).clean
 
 
+def test_output_pairing_spans_imported_files(tmp_path: Path) -> None:
+    app = tmp_path / "app.py"
+    app.write_text(
+        "from shiny import App, ui\nfrom server import server\n"
+        "app_ui = ui.page_fluid(ui.output_text('shown'), ui.output_text('orphan'))\n"
+        "app = App(app_ui, server)\n"
+    )
+    server = tmp_path / "server.py"
+    server.write_text(
+        "from shiny import render\n"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def shown():\n        return 'x'\n"
+        "    @render.text\n"
+        "    def debug_only():  # shiny: ignore RENDERER_WITHOUT_OUTPUT\n"
+        "        return 'y'\n"
+    )
+    result = validate_shiny_file(app)
+    assert [
+        (Path(issue.get("file", "")).name, issue["line"], issue["code"])
+        for issue in result.warnings
+    ] == [("app.py", 3, "OUTPUT_WITHOUT_RENDERER")]
+
+
 def test_imported_syntax_errors_are_reported(tmp_path: Path) -> None:
     app = tmp_path / "app.py"
     app.write_text("import broken\n")

@@ -21,6 +21,7 @@ app_ui = ui.page_fluid(
         ),
         ui.card_body(
             ui.p("The above header is a toolbar with two buttons split by a spacer"),
+            ui.output_text("output_example1"),
         ),
     ),
     ui.card(

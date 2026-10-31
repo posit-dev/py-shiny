@@ -11,7 +11,16 @@ from dataclasses import dataclass, field
 from importlib.metadata import entry_points
 from io import StringIO
 from pathlib import Path
-from typing import Any, Callable, Literal, Sequence, TypedDict, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Iterator,
+    Literal,
+    Sequence,
+    TypedDict,
+    Union,
+    cast,
+)
 
 from typing_extensions import NotRequired
 
@@ -55,9 +64,56 @@ class ValidateResult:
     reactive_vals: set[str] = field(default_factory=set[str])
     reactive_calcs: set[str] = field(default_factory=set[str])
     duplicate_ids: list[str] = field(default_factory=list[str])
+    app_outputs: dict[str, int] = field(default_factory=dict[str, int])
+    """``ui.output_*`` placeholder IDs outside modules, with the line they appear on."""
+    app_renderers: dict[str, int] = field(default_factory=dict[str, int])
+    """``@render.*`` output IDs outside modules, with the line they are defined on."""
+    app_functions: set[str] = field(default_factory=set[str])
+    """Function names (and ``@output(id=)`` IDs) outside modules; custom renderers live here."""
     _seen_ids: set[tuple[str, str, str]] = field(
         default_factory=set[tuple[str, str, str]], repr=False
     )
+    _issue_files: dict[str, str] = field(default_factory=dict[str, str], repr=False)
+    """Source file per ``app_outputs``/``app_renderers`` key when merged across files."""
+
+    def check_output_pairing(self) -> None:
+        """Warn about Core-mode outputs with no renderer and renderers with no output.
+
+        Runs only when both placeholders and renderers were found, so an app
+        whose UI or server lives outside the inspected files is not reported.
+        Express apps place their renderers directly and are skipped.
+        """
+        if self.mode != "core" or not self.app_outputs or not self.app_renderers:
+            return
+        for output_id, line in self.app_outputs.items():
+            if (
+                output_id not in self.app_renderers
+                and output_id not in self.app_functions
+            ):
+                self._add_pairing_warning(
+                    f"output:{output_id}",
+                    line,
+                    f"UI output '{output_id}' has no matching render function, so it will stay empty. "
+                    f"Define '@render.* def {output_id}()' in the server, or remove the placeholder.",
+                    "OUTPUT_WITHOUT_RENDERER",
+                )
+        for output_id, line in self.app_renderers.items():
+            if output_id not in self.app_outputs:
+                self._add_pairing_warning(
+                    f"renderer:{output_id}",
+                    line,
+                    f"Render function '{output_id}' has no matching 'ui.output_*(\"{output_id}\")' placeholder, "
+                    "so it will never be shown.",
+                    "RENDERER_WITHOUT_OUTPUT",
+                )
+
+    def _add_pairing_warning(
+        self, key: str, line: int, message: str, code: str
+    ) -> None:
+        issue: ValidationIssue = {"line": line, "message": message, "code": code}
+        if key in self._issue_files:
+            issue["file"] = self._issue_files[key]
+        self.warnings.append(issue)
 
     @property
     def valid(self) -> bool:
@@ -145,6 +201,8 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self._aliases: dict[str, str] = {}
         self._scope = ""
         """Enclosing function name used to namespace IDs; ``""`` at module level."""
+        self._in_module = False
+        """Inside a ``@module.ui`` / ``@module.server`` function, whose IDs are namespaced."""
 
     def generic_visit(self, node: ast.AST) -> None:
         for child in ast.iter_child_nodes(node):
@@ -206,7 +264,9 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 self.result.mode = "core"
 
         is_renderer = any(
-            d.startswith("render.") or d.startswith("render_") for d in decorators
+            (d.startswith("render.") and not d.startswith("render.transformer."))
+            or d.startswith("render_")
+            for d in decorators
         )
         is_calc = any(
             d
@@ -220,9 +280,30 @@ class ShinyCodeValidator(ast.NodeVisitor):
             for d in decorators
         )
 
+        is_effect = any(d in ("reactive.effect", "reactive.Effect") for d in decorators)
+        prev_in_module = self._in_module
+        if any(d in ("module.ui", "module.server") for d in decorators):
+            self._in_module = True
+
+        if not self._in_module:
+            # Any function may back a `ui.output_*()` placeholder through a
+            # custom renderer, so names count as candidates for pairing.
+            self.result.app_functions.add(node.name)
         if is_renderer:
-            self.result.register_id("renderer", node.name, node.lineno)
+            output_id = self._output_id(node)
+            self.result.register_id("renderer", output_id, node.lineno)
+            # Only Shiny's own renderers pair with `ui.output_*()` placeholders;
+            # third-party `render_*` decorators have their own UI functions, and
+            # a renderer created inside another render function places itself.
+            if (
+                not self._in_module
+                and not prev_in_reactive
+                and any(d.startswith("render.") for d in decorators)
+            ):
+                self.result.app_renderers.setdefault(output_id, node.lineno)
             self._in_reactive_context = True
+        elif "output" in decorators and not self._in_module:
+            self.result.app_functions.add(self._output_id(node))
         elif is_calc:
             self.result.reactive_calcs.add(node.name)
             self._in_reactive_context = True
@@ -239,11 +320,89 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 }
             )
 
+        self._check_decorator_order(node, decorators)
+        if is_effect:
+            self._check_effect_return(node)
+
         self.generic_visit(node)
 
         self._in_reactive_context = prev_in_reactive
         self._current_func_decorators = prev_decorators
         self._scope = prev_scope
+        self._in_module = prev_in_module
+
+    def _output_id(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+        """The output ID a renderer registers under: ``@output(id=...)`` or its name."""
+        for decorator in node.decorator_list:
+            if (
+                isinstance(decorator, ast.Call)
+                and self._normalize_name(self._get_decorator_name(decorator))
+                == "output"
+            ):
+                for keyword in decorator.keywords:
+                    if (
+                        keyword.arg == "id"
+                        and isinstance(keyword.value, ast.Constant)
+                        and isinstance(keyword.value.value, str)
+                    ):
+                        return keyword.value.value
+        return node.name
+
+    def _check_decorator_order(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef, decorators: list[str]
+    ) -> None:
+        """``@reactive.event`` must sit below the effect/calc/render decorator it feeds."""
+        if "reactive.event" not in decorators:
+            return
+        event_index = decorators.index("reactive.event")
+        for index, name in enumerate(decorators):
+            if index > event_index and (
+                name.startswith("render.")
+                or name
+                in (
+                    "reactive.effect",
+                    "reactive.Effect",
+                    "reactive.calc",
+                    "reactive.Calc",
+                )
+            ):
+                self.result.add_error(
+                    node.lineno,
+                    f"'@reactive.event' on '{node.name}' must be placed below '@{name}'. "
+                    "Decorators apply bottom-up, so reactive.event has to wrap the plain function "
+                    "before the effect, calc, or renderer wraps it.",
+                    "DECORATOR_ORDER",
+                )
+                return
+
+    def _check_effect_return(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> None:
+        """A ``reactive.effect`` that returns a value is usually meant to be a calc or renderer."""
+        for statement in node.body:
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for child in _walk_without_nested_functions(statement):
+                if isinstance(child, ast.Return) and child.value is not None:
+                    if (
+                        isinstance(child.value, ast.Constant)
+                        and child.value.value is None
+                    ):
+                        continue
+                    # `return state.set(...)` returns None; a style quirk, not a lost value.
+                    if (
+                        isinstance(child.value, ast.Call)
+                        and isinstance(child.value.func, ast.Attribute)
+                        and child.value.func.attr == "set"
+                    ):
+                        continue
+                    self.result.add_warning(
+                        child.lineno,
+                        f"'{node.name}' is a reactive.effect but returns a value, which is discarded. "
+                        "Use @reactive.calc to compute a value or @render.* to show one.",
+                        "EFFECT_RETURNS_VALUE",
+                    )
+                    return
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._check_func_def(node)
@@ -266,6 +425,17 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 self.result.register_id(
                     kind, node.args[0].value, node.lineno, scope=self._scope
                 )
+                if kind == "output" and not self._in_module:
+                    self.result.app_outputs.setdefault(node.args[0].value, node.lineno)
+        elif (
+            call_name in ("ui.download_button", "ui.download_link")
+            and not self._in_module
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            # Pairs with `@render.download`, so count it as an output placeholder.
+            self.result.app_outputs.setdefault(node.args[0].value, node.lineno)
 
         self.generic_visit(node)
 
@@ -336,6 +506,15 @@ class ShinyCodeValidator(ast.NodeVisitor):
         elif isinstance(node, ast.Call):
             return self._get_decorator_name(node.func)
         return ""
+
+
+def _walk_without_nested_functions(node: ast.AST) -> Iterator[ast.AST]:
+    """Yield ``node`` and its descendants, without entering nested function bodies."""
+    yield node
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            continue
+        yield from _walk_without_nested_functions(child)
 
 
 class ValidationRule(ast.NodeVisitor):
@@ -471,6 +650,18 @@ def validate_shiny_code(
     Omitting codes suppresses all validation rules on that line. Syntax errors
     cannot be suppressed.
     """
+    return _validate_source(
+        code, validator_class=validator_class, rules=rules, pair_outputs=True
+    )
+
+
+def _validate_source(
+    code: str,
+    *,
+    validator_class: type[ShinyCodeValidator],
+    rules: Sequence[ValidationRuleLike] | None,
+    pair_outputs: bool,
+) -> ValidateResult:
     validator = validator_class()
     result = validator.result
     try:
@@ -485,6 +676,8 @@ def validate_shiny_code(
     validator.visit(tree)
     ReactiveUsageValidator(result).visit(tree)
     _run_rules(installed_validation_rules() if rules is None else rules, tree, result)
+    if pair_outputs:
+        result.check_output_pairing()
     _apply_suppressions(code, result)
     if (
         result.mode == "express"
@@ -521,6 +714,7 @@ def validate_shiny_file(
     root = entry.parent
     pending = [entry]
     seen: set[Path] = set()
+    sources: dict[str, str] = {}
     result = ValidateResult()
     while pending:
         current = pending.pop()
@@ -535,8 +729,9 @@ def validate_shiny_file(
                 1, message=f"Could not read file: {error}", code="FILE_READ_ERROR"
             )
         else:
-            report = validate_shiny_code(
-                code, validator_class=validator_class, rules=rules
+            sources[str(current)] = code
+            report = _validate_source(
+                code, validator_class=validator_class, rules=rules, pair_outputs=False
             )
             if not any(issue["code"] == "SYNTAX_ERROR" for issue in report.errors):
                 pending.extend(
@@ -556,10 +751,41 @@ def validate_shiny_file(
         result.reactive_vals.update(report.reactive_vals)
         result.reactive_calcs.update(report.reactive_calcs)
         result.duplicate_ids.extend(report.duplicate_ids)
+        for output_id, line in report.app_outputs.items():
+            if output_id not in result.app_outputs:
+                result.app_outputs[output_id] = line
+                result._issue_files[f"output:{output_id}"] = str(current)
+        for output_id, line in report.app_renderers.items():
+            if output_id not in result.app_renderers:
+                result.app_renderers[output_id] = line
+                result._issue_files[f"renderer:{output_id}"] = str(current)
+        result.app_functions.update(report.app_functions)
         result.suggestions.extend(s for s in report.suggestions if s != _CLEAN_MESSAGE)
+    _pair_outputs_across_files(result, sources)
     if result.clean:
         result.suggestions.append(_CLEAN_MESSAGE)
     return result
+
+
+def _pair_outputs_across_files(result: ValidateResult, sources: dict[str, str]) -> None:
+    """Match UI placeholders with renderers over the whole file set, honoring each
+    file's ``# shiny: ignore`` comments for the warnings it receives."""
+    pairing = ValidateResult(
+        mode=result.mode,
+        app_outputs=result.app_outputs,
+        app_renderers=result.app_renderers,
+        app_functions=result.app_functions,
+        _issue_files=result._issue_files,
+    )
+    pairing.check_output_pairing()
+    for file, code in sources.items():
+        per_file = ValidateResult(
+            warnings=[w for w in pairing.warnings if w.get("file") == file]
+        )
+        if per_file.warnings:
+            # Only files that parsed contribute IDs, so tokenizing here is safe.
+            _apply_suppressions(code, per_file)
+            result.warnings.extend(per_file.warnings)
 
 
 def _local_imports(tree: ast.Module, *, current: Path, root: Path) -> list[Path]:

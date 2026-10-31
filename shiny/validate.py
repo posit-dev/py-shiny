@@ -34,14 +34,19 @@ that pyright, pylance, or a linter already report (syntax errors, unknown
 imports, redeclared names, or attribute access on a reactive object). Errors
 are reads of an input, ``reactive.value``, or ``reactive.calc`` outside any
 reactive context (at module level or directly in a server function body),
-reads inside extended tasks, uncalled inputs, assignment to inputs, and
-multiple render decorators. Warnings are duplicate input/output IDs within
-one scope, mutating an object and setting it back into the same reactive
-value, and broad exception handlers that swallow extended-task result errors.
-The checks recognize reactive constructors, calc decorators, ``reactive.Value``
-parameter annotations, and ``reactive.isolate()`` blocks, including import
-aliases. Use ``--strict`` to fail on warnings too. Static checks do not
-replace running the app and testing its interactions.
+reads inside extended tasks, uncalled inputs, assignment to inputs, multiple
+render decorators, and ``@reactive.event`` placed above the effect, calc, or
+renderer it should wrap. Warnings are duplicate input/output IDs within one
+scope, a Core-mode ``ui.output_*()`` with no renderer or a renderer with no
+placeholder, an effect that returns a value, an effect that reads and sets
+the same value without ``reactive.event`` or ``reactive.isolate()``, a calc
+that sets a value, mutating an object and setting it back into the same
+reactive value, and broad exception handlers that swallow extended-task
+result errors. The checks recognize reactive constructors, calc decorators,
+``reactive.Value`` parameter annotations, ``@output(id=)``, and
+``reactive.isolate()`` blocks, including import aliases. Use ``--strict`` to
+fail on warnings too. Static checks do not replace running the app and
+testing its interactions.
 
 For intentional exceptions, use ``# shiny: ignore`` on the diagnostic line or
 ``# shiny: ignore-next-line`` on the preceding line. Add comma-separated rule

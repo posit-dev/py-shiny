@@ -24,11 +24,13 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
 
     Reports Shiny-specific problems only: inputs, values, or calcs read outside
     a reactive context, reads inside extended tasks, uncalled inputs, assignment
-    to inputs, multiple render decorators, duplicate input/output IDs, mutating
-    an object held by a reactive value, and handlers that swallow extended-task
-    errors. Syntax, import, name, and attribute errors are left to your type
-    checker or linter. File targets also check local Python imports within the
-    app directory without executing them.
+    to inputs, multiple render decorators, reactive.event in the wrong decorator
+    position, duplicate input/output IDs, UI outputs without a renderer (and
+    the reverse), effects that return a value or re-trigger themselves, calcs
+    with side effects, mutating an object held by a reactive value, and handlers
+    that swallow extended-task errors. Syntax, import, name, and attribute
+    errors are left to your type checker or linter. File targets also check
+    local Python imports within the app directory without executing them.
     Exits with status 1 when errors are found. Warnings are reported but exit 0
     unless --strict is passed.
 

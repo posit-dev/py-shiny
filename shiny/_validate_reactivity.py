@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
@@ -24,6 +24,9 @@ _MUTATING_METHODS = {
     "discard",
 }
 """Container methods that can change the object held by a reactive value."""
+
+_NON_REACTIVE_INPUT_METHODS = {"set_serializer", "set_snapshot_preprocess"}
+"""``Inputs`` methods that configure the session rather than read a value."""
 
 
 def _resolve_name(node: ast.AST, bindings: dict[str, str]) -> str:
@@ -108,6 +111,13 @@ class _ReactiveReference:
     mutated: bool = False
 
 
+@dataclass
+class _EffectBody:
+    name: str
+    reads: set[str] = field(default_factory=set[str])
+    sets: list[tuple[str, int]] = field(default_factory=list[tuple[str, int]])
+
+
 class ReactiveUsageValidator(ast.NodeVisitor):
     """Check known reactive objects, keeping function bindings and aliases local."""
 
@@ -126,6 +136,10 @@ class ReactiveUsageValidator(ast.NodeVisitor):
         """
         self.isolated = False
         """Inside ``with reactive.isolate():``, where reads are allowed anywhere."""
+        self.effect: _EffectBody | None = None
+        """Reads and sets seen in the body of a ``reactive.effect`` without ``reactive.event``."""
+        self.calc_name: str | None = None
+        """Name of the enclosing ``reactive.calc``, whose body should not set values."""
 
     def visit_Module(self, node: ast.Module) -> None:
         bindings = _Bindings({})
@@ -158,16 +172,25 @@ class ReactiveUsageValidator(ast.NodeVisitor):
             self.in_extended_task,
             self.context,
             self.isolated,
+            self.effect,
+            self.calc_name,
         )
-        self.in_extended_task = any(
+        decorators = {
             _resolve_name(
                 d.func if isinstance(d, ast.Call) else d, bindings=self.bindings
             )
-            == "shiny.reactive.extended_task"
             for d in node.decorator_list
-        )
+        }
+        self.in_extended_task = "shiny.reactive.extended_task" in decorators
         self.context = "server" if self._is_server_function(node) else "function"
         self.isolated = False
+        is_effect = bool(
+            decorators & {"shiny.reactive.effect", "shiny.reactive.Effect"}
+        )
+        has_event = "shiny.reactive.event" in decorators
+        self.effect = _EffectBody(node.name) if is_effect and not has_event else None
+        is_calc = bool(decorators & {"shiny.reactive.calc", "shiny.reactive.Calc"})
+        self.calc_name = node.name if is_calc else None
         bindings = _Bindings(self.bindings)
         for argument in [
             *node.args.posonlyargs,
@@ -186,21 +209,35 @@ class ReactiveUsageValidator(ast.NodeVisitor):
         self.references = {}
         for statement in node.body:
             self.visit(statement)
+        if self.effect is not None:
+            for name, line in self.effect.sets:
+                if name in self.effect.reads:
+                    self.result.add_warning(
+                        line,
+                        message=f"'{self.effect.name}' reads '{name}()' and then sets '{name}', "
+                        "so it re-triggers itself. Read it inside 'with reactive.isolate():', "
+                        "or trigger the effect with '@reactive.event(...)'.",
+                        code="EFFECT_SELF_INVALIDATION",
+                    )
         (
             self.bindings,
             self.references,
             self.in_extended_task,
             self.context,
             self.isolated,
+            self.effect,
+            self.calc_name,
         ) = previous
 
     visit_AsyncFunctionDef = visit_FunctionDef
 
     def visit_Lambda(self, node: ast.Lambda) -> None:
-        previous = self.context
+        previous = self.context, self.effect, self.calc_name
         self.context = "function"
+        self.effect = None
+        self.calc_name = None
         self.generic_visit(node)
-        self.context = previous
+        self.context, self.effect, self.calc_name = previous
 
     def visit_With(self, node: ast.With | ast.AsyncWith) -> None:
         isolates = any(
@@ -237,6 +274,11 @@ class ReactiveUsageValidator(ast.NodeVisitor):
                 "inputs",
                 "shiny.express.input",
             ):
+                if isinstance(function, ast.Attribute) and (
+                    function.attr.startswith("_")
+                    or function.attr in _NON_REACTIVE_INPUT_METHODS
+                ):
+                    return ""
                 return ast.unparse(function)
         return ""
 
@@ -262,10 +304,31 @@ class ReactiveUsageValidator(ast.NodeVisitor):
                 "or wrap it in 'with reactive.isolate():' for a one-time read.",
                 code="REACTIVE_READ_OUTSIDE_CONTEXT",
             )
+        if (
+            source
+            and self.effect is not None
+            and not self.isolated
+            and self.bindings.get(source) == "value"
+        ):
+            self.effect.reads.add(source)
         if isinstance(node.func, ast.Attribute):
             owner = node.func.value
             if node.func.attr in _MUTATING_METHODS:
                 self._mark_mutated(owner)
+            if (
+                node.func.attr == "set"
+                and isinstance(owner, ast.Name)
+                and self.bindings.get(owner.id) == "value"
+            ):
+                if self.effect is not None:
+                    self.effect.sets.append((owner.id, node.lineno))
+                if self.calc_name is not None:
+                    self.result.add_warning(
+                        node.lineno,
+                        message=f"reactive.calc '{self.calc_name}' sets '{owner.id}'. Calcs should "
+                        "only compute and return a value; move side effects into a reactive.effect.",
+                        code="CALC_SIDE_EFFECT",
+                    )
             if node.func.attr == "set" and isinstance(owner, ast.Name) and node.args:
                 reference = self.references.get(getattr(node.args[0], "id", ""))
                 if reference and reference.mutated and reference.source == owner.id:

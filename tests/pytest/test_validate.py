@@ -141,6 +141,18 @@ def test_runtime_outputs_duplicate_warning(tmp_path: Path) -> None:
 
     assert record[0].filename == __file__
 
+    # The legacy `@output` above `@render.*` re-registers the same renderer
+    # that `@render.*` auto-registered, which is not a duplicate.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+
+        @outputs
+        @render.text
+        def legacy() -> str:
+            return "legacy"
+
+        outputs(legacy)
+
     app_file = tmp_path / "app.py"
     app_file.write_text(
         "from shiny.express import render\n"
@@ -212,6 +224,114 @@ app_ui = ui.page_fluid(
     res = validate_shiny_code(dup_code)
     dup_warnings = [w for w in res.warnings if w["code"] == "DUPLICATE_ID"]
     assert len(dup_warnings) == 1
+
+
+@pytest.mark.parametrize(
+    "decorators, below",
+    [
+        ("@reactive.event(input.go)\n@reactive.effect", "reactive.effect"),
+        ("@reactive.event(input.go)\n@reactive.calc", "reactive.calc"),
+        ("@reactive.event(input.go)\n@render.text", "render.text"),
+        ("@event(input.go)\n@effect", "reactive.effect"),
+    ],
+)
+def test_reactive_event_above_its_wrapper_is_an_error(
+    decorators: str, below: str
+) -> None:
+    code = (
+        "from shiny import reactive, render\n"
+        "from shiny.reactive import effect, event\n"
+        f"{decorators}\ndef handler():\n    return 1\n"
+    )
+    report = validate_shiny_code(code)
+    assert [(e["code"], e["line"]) for e in report.errors] == [("DECORATOR_ORDER", 5)]
+    assert f"below '@{below}'" in report.errors[0]["message"]
+    assert validate_shiny_code(
+        "from shiny import reactive\n"
+        "@reactive.effect\n@reactive.event(input.go)\ndef handler():\n    pass\n"
+    ).clean
+
+
+def test_effect_returning_a_value_is_a_warning() -> None:
+    report = validate_shiny_code(
+        "from shiny import reactive\n"
+        "@reactive.effect\ndef compute():\n    if True:\n        return 1\n"
+    )
+    assert [(w["code"], w["line"]) for w in report.warnings] == [
+        ("EFFECT_RETURNS_VALUE", 5)
+    ]
+    for body in (
+        "    return\n",
+        "    return None\n",
+        "    return state.set(1)\n",
+        "    def inner():\n        return 1\n",
+        "    callback = lambda: 1\n",
+    ):
+        assert validate_shiny_code(
+            "from shiny import reactive\nstate = reactive.value(0)\n"
+            f"@reactive.effect\ndef compute():\n{body}"
+        ).clean, body
+
+
+def test_output_and_renderer_pairing_in_core_mode() -> None:
+    report = validate_shiny_code(
+        "from shiny import App, render, ui\n"
+        "app_ui = ui.page_fluid(\n"
+        "    ui.output_text('shown'),\n"
+        "    ui.output_plot('never_rendered'),\n"
+        "    ui.download_button('report', 'Download'),\n"
+        ")\n"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def shown():\n        return 'x'\n"
+        "    @render.text\n    def never_shown():\n        return 'y'\n"
+        "    @output(id='report')\n    @render.download\n    def download():\n"
+        "        yield 'x'\n"
+        "app = App(app_ui, server)\n"
+    )
+    assert [(w["code"], w["line"]) for w in report.warnings] == [
+        ("OUTPUT_WITHOUT_RENDERER", 4),
+        ("RENDERER_WITHOUT_OUTPUT", 12),
+    ]
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        # Express apps place renderers themselves.
+        "from shiny.express import render, ui\nui.input_text('x', 'X')\n"
+        "@render.text\ndef shown():\n    return 'x'\n",
+        # Module UI/server IDs are namespaced, so they are not paired.
+        "from shiny import App, module, render, ui\n"
+        "@module.ui\ndef panel_ui():\n    return ui.output_text('inner')\n"
+        "@module.server\ndef panel_server(input, output, session):\n"
+        "    @render.text\n    def other():\n        return 'x'\n"
+        "app_ui = ui.page_fluid(panel_ui('a'), ui.output_text('top'))\n"
+        "def server(input, output, session):\n"
+        "    panel_server('a')\n"
+        "    @render.text\n    def top():\n        return 'x'\n",
+        # UI lives elsewhere (no placeholders found), so renderers are not judged.
+        "from shiny import render\n"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def anything():\n        return 'x'\n",
+        # Server lives elsewhere (no renderers found), so placeholders are not judged.
+        "from shiny import ui\napp_ui = ui.page_fluid(ui.output_text('anything'))\n",
+        # A custom renderer decorator still backs the placeholder.
+        "from shiny import App, render, ui\nfrom my_renderers import render_caps\n"
+        "app_ui = ui.page_fluid(ui.output_text('caps'), ui.output_text('plain'))\n"
+        "def server(input, output, session):\n"
+        "    @render_caps\n    def caps():\n        return 'x'\n"
+        "    @render.text\n    def plain():\n        return 'x'\n",
+        # A renderer returned from render.ui places itself.
+        "from shiny import App, render, ui\n"
+        "app_ui = ui.page_fluid(ui.output_ui('dynamic'))\n"
+        "def server(input, output, session):\n"
+        "    @render.ui\n    def dynamic():\n"
+        "        @render.text\n        def inner():\n            return 'x'\n"
+        "        return inner\n",
+    ],
+)
+def test_output_pairing_is_not_reported_when_it_cannot_be_judged(code: str) -> None:
+    assert validate_shiny_code(code).clean
 
 
 def test_typed_result_and_subclass_validation() -> None:

@@ -17,13 +17,18 @@ errors. `shiny run` also reports these checks at startup.
 Checks are Shiny-specific and complement, rather than repeat, pyright or a
 linter: reads of `input.*()`, a `reactive.value`, or a `reactive.calc` outside
 a reactive context (module level or directly in the server body), reads inside
-extended tasks, uncalled inputs, assignment to inputs, duplicate IDs, mutating
-and setting the same stored object, and broad exception handlers around
-extended-task results. Fix outside-context reads by moving them into a render
-function, calc, or effect, or wrapping a one-time read in
-`with reactive.isolate():`. Fix task reads by passing values as task
-arguments. Copy stored lists or dictionaries before changing them. Let
-`task.result()` propagate Shiny's pending-result signals.
+extended tasks, uncalled inputs, assignment to inputs, `@reactive.event` above
+the decorator it should sit under, duplicate IDs, Core-mode `ui.output_*()`
+placeholders with no renderer and renderers with no placeholder, effects that
+return a value or that read and set the same value (an infinite loop), calcs
+that set values, mutating and setting the same stored object, and broad
+exception handlers around extended-task results. Fix outside-context reads by
+moving them into a render function, calc, or effect, or wrapping a one-time
+read in `with reactive.isolate():`. Fix self-triggering effects with
+`@reactive.event(...)` or by reading inside `reactive.isolate()`. Fix task
+reads by passing values as task arguments. Copy stored lists or dictionaries
+before changing them. Let `task.result()` propagate Shiny's pending-result
+signals.
 
 For intentional exceptions, add `# shiny: ignore RULE_CODE` on the reported
 line. Import traversal stays within the entry file's directory; installed

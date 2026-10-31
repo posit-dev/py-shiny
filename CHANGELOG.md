@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added a built-in developer CLI tool (`shiny validate`) and public `shiny.validate` module to statically check apps for Shiny-specific mistakes that a type checker cannot see: reactive reads outside a reactive context, reads inside extended tasks, uncalled inputs, assignment to inputs, duplicate IDs, and more. `shiny validate` returns a nonzero exit status when it finds errors; pass `--strict` to also fail on warnings. (#2453)
+* Added a built-in developer CLI tool (`shiny validate`) and public `shiny.validate` module to statically check apps for Shiny-specific mistakes that a type checker cannot see: reactive reads outside a reactive context, reads inside extended tasks, uncalled inputs, assignment to inputs, `@reactive.event` in the wrong decorator position, duplicate IDs, `ui.output_*()` placeholders with no renderer (and the reverse), effects that return a value or re-trigger themselves, calcs with side effects, and more. `shiny validate` returns a nonzero exit status when it finds errors; pass `--strict` to also fail on warnings. (#2453)
 
 * Assigning directly to a Shiny input (e.g. `input.x = 1`) now raises a clearer `TypeError` explaining that inputs are read-only and suggesting `reactive.value()` or `ui.update_*` functions, and registering a duplicate output renderer now emits a `RuntimeWarning`. (#2453)
 
