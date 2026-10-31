@@ -86,6 +86,15 @@ async def started_up(c: Client) -> None:
     await asyncio.wait_for(reactive.flush(), TIMEOUT)
 
 
+async def repeats_paced(count: Callable[[], int]) -> None:
+    """Check that something repeating once per output flush is paced."""
+    await asyncio.sleep(0.1)
+    n = count()
+    await asyncio.sleep(0.3)
+    # At most one output flush per `REPEAT_OUTPUT_FLUSH_DELAY_SECS` (0.01 s).
+    assert 2 <= count() - n <= 31
+
+
 @pytest.mark.asyncio
 async def test_slow_effect_does_not_block_other_session():
     gate = asyncio.Event()
@@ -1117,9 +1126,9 @@ async def test_flush_from_session_on_flush_callback_returns_right_away():
 
 
 @pytest.mark.asyncio
-async def test_input_message_from_on_flush_callback_does_not_loop():
-    # #2449 measured 999 flushes when a repeating on_flush callback queued an input
-    # message that requested another flush.
+async def test_input_message_from_on_flush_callback_repeats_paced():
+    # The message requests one more output flush, which runs the callback again.
+    # #2449 measured 999 flushes before pacing.
     count = 0
 
     def server(input: Inputs, output: Outputs, session: Session) -> None:
@@ -1133,12 +1142,7 @@ async def test_input_message_from_on_flush_callback_does_not_loop():
     c = RecordingClient(server)
     try:
         c.send({"method": "init", "data": {}})
-        # A loop would keep requesting rounds, so this would never return.
-        await started_up(c)
-        n = count
-        assert n < 5
-        await settle()
-        assert count == n
+        await repeats_paced(lambda: len(c.input_messages()))
     finally:
         await c.close()
 
@@ -1521,6 +1525,128 @@ async def test_on_flush_registered_outside_a_cycle_runs():
         c.session.on_flush(lambda: ran.append(True))
         await asyncio.wait_for(reactive.flush(), TIMEOUT)
         assert await wait_until(lambda: ran == [True])
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hook", ["on_flush", "on_flushed"])
+async def test_flush_callback_registered_by_a_flush_callback_runs(hook: str):
+    # It misses the callbacks being run, so it runs with one more output flush,
+    # without waiting for client input.
+    ran: list[str] = []
+
+    def first() -> None:
+        ran.append("first")
+        register(lambda: ran.append("second"))
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+
+        register = getattr(c.session, hook)
+        register(first)
+        assert await wait_until(lambda: ran == ["first", "second"])
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hook", ["on_flush", "on_flushed"])
+async def test_flush_callback_registered_by_a_task_during_an_async_one_runs(hook: str):
+    ran: list[str] = []
+    in_slow = asyncio.Event()
+    gate = asyncio.Event()
+
+    async def slow() -> None:
+        in_slow.set()
+        await gate.wait()
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+
+        register = getattr(c.session, hook)
+        register(slow)
+        await in_slow.wait()
+        register(lambda: ran.append("late"))
+        gate.set()
+        assert await wait_until(lambda: ran == ["late"])
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_flush_callbacks_registered_by_an_on_flushed_callback_keep_order():
+    # The `on_flush` callback goes out right after the `on_flushed` callbacks; the
+    # `on_flushed` one runs after the next output flush.
+    order: list[str] = []
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+        session = c.session
+
+        def flushed() -> None:
+            session.on_flush(lambda: order.append("flush"))
+            session.on_flushed(lambda: order.append("flushed"))
+
+        session.on_flushed(flushed)
+        assert await wait_until(lambda: len(order) == 2)
+        assert order == ["flush", "flushed"]
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+async def test_late_on_flushed_callback_runs_after_a_pending_input_update():
+    # The output flush for a late callback starts after a round, so an input update
+    # already received goes first: the callback runs after that update's outputs.
+    # The test server relies on this to wait for an update it sends.
+    log: list[str] = []
+
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def _():
+            log.append(f"x={input.x()}")
+
+    c = Client(server)
+    try:
+        c.send({"method": "init", "data": {"x": 0}})
+        await started_up(c)
+        session = c.session
+
+        def first() -> None:
+            session.on_flushed(lambda: log.append("second"))
+            c.update(x=1)
+
+        session.on_flushed(first)
+        assert await wait_until(lambda: "second" in log)
+        assert log == ["x=0", "x=1", "second"]
+    finally:
+        await c.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hook", ["on_flush", "on_flushed"])
+async def test_flush_callback_that_registers_itself_repeats_paced(hook: str):
+    ran: list[int] = []
+
+    def again() -> None:
+        ran.append(1)
+        register(again)
+
+    c = Client(lambda input, output, session: None)
+    try:
+        c.send({"method": "init", "data": {}})
+        await started_up(c)
+
+        register = getattr(c.session, hook)
+        register(again)
+        await repeats_paced(lambda: len(ran))
     finally:
         await c.close()
 
@@ -3535,9 +3661,8 @@ async def test_session_ending_before_its_restore_effect_runs_releases_its_effect
 
 
 @pytest.mark.asyncio
-async def test_on_flushed_callback_that_updates_an_input_does_not_loop():
-    # The update registers an `on_flush` callback, which requests an output flush.
-    # It goes out in one more message, without running `on_flushed` again.
+async def test_on_flushed_callback_that_updates_an_input_repeats_paced():
+    # The update requests one more output flush, which runs the callback again.
     def server(input: Inputs, output: Outputs, session: Session) -> None:
         session.on_flushed(
             lambda: ui.update_text("t", value="v", session=session), once=False
@@ -3546,19 +3671,7 @@ async def test_on_flushed_callback_that_updates_an_input_does_not_loop():
     c = RecordingClient(server)
     try:
         c.send({"method": "init", "data": {}})
-        assert await wait_until(lambda: len(c.input_messages()) >= 1)
-        # A loop would keep requesting output flushes, so this would never return.
-        await asyncio.wait_for(reactive.flush(), TIMEOUT)
-        n = len(c.input_messages())
-        await settle()
-        assert len(c.input_messages()) == n
-
-        c.update(x=1)  # one cycle: its outputs, then the update the callback queued
-        assert await wait_until(lambda: len(c.input_messages()) > n)
-        await asyncio.wait_for(reactive.flush(), TIMEOUT)
-        n = len(c.input_messages())
-        await settle()
-        assert len(c.input_messages()) == n
+        await repeats_paced(lambda: len(c.input_messages()))
     finally:
         await c.close()
 

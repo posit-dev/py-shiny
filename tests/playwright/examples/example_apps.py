@@ -68,7 +68,6 @@ app_allow_shiny_errors: typing.Dict[
     "api-examples/output_transformer": [*output_transformer_errors],
     "api-examples/render_express": [*express_warnings],
     "app-templates/multi-page": [*output_transformer_errors],
-    "examples/airmass": [*output_transformer_errors],
     "examples/brownian": [*output_transformer_errors],
     "examples/model-score": [*output_transformer_errors],
     "deploys/plotly": [*output_transformer_errors],
@@ -98,6 +97,16 @@ app_allow_external_errors: typing.List[str] = [
     # yfinance deprecation warning (Pandas 4.0 compatibility)
     "Pandas4Warning: Timestamp.utcnow is deprecated",
     "dt_now = pd.Timestamp.utcnow()",  # continuation of line above
+    # yfinance uses inplace operations deprecated by pandas 3.1.
+    # Remove once CI uses a yfinance release that includes this fix:
+    # https://github.com/ranaroussi/yfinance/pull/3010
+    "Pandas4Warning: The inplace keyword in DataFrame.",
+    "See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace",
+    "quotes.sort_index(inplace=True)",
+    'dividends.set_index("date", inplace=True)',
+    "dividends.sort_index(inplace=True)",
+    "  df.drop(",
+    "  df.rename(columns={",
 ]
 app_allow_js_errors: typing.Dict[str, typing.List[str]] = {
     "examples/brownian": ["Failed to acquire camera feed:"],
