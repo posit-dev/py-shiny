@@ -14,7 +14,10 @@ context registers a dependency, so changing that source re-runs everything that
 read it — you never call outputs or schedule updates yourself.
 
 This skill is an **index**. Find your task below and **read the linked
-reference file before writing code** for that area.
+reference file before writing code** for that area. For the exact signature of
+any function, class, or Playwright controller, run `shiny docs <name>` (e.g.
+`shiny docs ui.value_box`, `shiny docs playwright.controller.Accordion`)
+instead of guessing argument names.
 
 ## Foundations
 

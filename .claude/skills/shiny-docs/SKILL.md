@@ -20,8 +20,14 @@ shiny docs ui.value_box
 # Inspect with explicit full path
 shiny docs shiny.ui.card
 
-# Inspect a Playwright test controller
+# Inspect a Playwright test controller (constructor args, then every method)
 shiny docs playwright.controller.Accordion
+
+# Inspect a renderer or other class: the signature shows its constructor
+shiny docs render.plot
+
+# List the public members of a module
+shiny docs reactive
 
 # Inspect a specific test controller method
 shiny docs playwright.controller.Accordion.expect_height
@@ -82,6 +88,6 @@ shiny docs --complete ui.value_box
 2. **`playwright.controller` assertions**:
    - ❌ `controller.get_value()`, `controller.should_be_open()`
    - ✅ `controller.expect_value()`, `controller.expect_open()`, `controller.expect_height()`
-3. **`render.data_frame` options**:
-   - ❌ `render.data_frame(grid=True)`
-   - ✅ `render.DataGrid(df, selection_mode="rows")` or `render.DataTable(df)`
+3. **`ui.card` has no `title` argument**:
+   - ❌ `ui.card(title="Sales", ...)`
+   - ✅ `ui.card(ui.card_header("Sales"), ...)`

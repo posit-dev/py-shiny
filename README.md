@@ -104,9 +104,7 @@ shiny docs --complete playwright.controller.Accordion.expect
 
 </details>
 
-
 ## Development
-
 
 * Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/
 * API documentation for the `main` branch:
