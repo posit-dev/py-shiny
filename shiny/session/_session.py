@@ -93,6 +93,15 @@ if TYPE_CHECKING:
     from ..bookmark._serializers import Unserializable
 
 
+REPEAT_OUTPUT_FLUSH_DELAY_SECS = 0.01
+"""
+How long an output flush requested while a session's flush callbacks run waits to
+start. A flush callback that requests one each time it runs (e.g. a `once=False`
+`on_flushed` callback that calls `ui.update_*()`) then repeats at most this often,
+instead of as fast as the event loop allows.
+"""
+
+
 class ConnectionState(enum.Enum):
     Start = 0
     Running = 1
@@ -1013,11 +1022,11 @@ class AppSession(Session):
         # exits.
         self._output_flush_enabled: bool = False
         self._dispatch_tasks: set[asyncio.Task[None]] = set()
-        self._running_flush_callbacks: bool = False
-        self._running_flushed_callbacks: bool = False
-        # Whether to send once more after the `on_flushed` callbacks, for what they
-        # queued.
-        self._output_flush_tail: bool = False
+        # Whether this session's `on_flush` or `on_flushed` callbacks are running.
+        self._running_output_callbacks: bool = False
+        # Whether an output flush was requested while those callbacks ran (it repeats
+        # the one running them).
+        self._repeat_output_flush_requested: bool = False
         # The task sending this session's outputs, and whether to run it once more.
         self._output_flush_task: Optional[asyncio.Task[None]] = None
         self._output_flush_again: bool = False
@@ -1777,16 +1786,12 @@ class AppSession(Session):
         """Send this session's outputs after the next round."""
         if not self._output_flush_enabled:
             return
-        # Anything queued by this session's own `on_flush` callbacks goes out in the
-        # message being built, so it needs no further output flush (which could loop).
-        if self._running_flush_callbacks:
-            return
-        # Anything queued by its `on_flushed` callbacks (e.g. a `ui.update_*()`) goes
-        # out in one more message right after them, without running them again: a
-        # callback registered with `once=False` would otherwise loop forever.
-        if self._running_flushed_callbacks:
-            self._output_flush_tail = True
-            return
+        if self._running_output_callbacks:
+            # E.g. a `ui.update_*()` in an `on_flushed` callback, or a callback
+            # registered too late for the ones being run. It's one more output flush,
+            # after this one. Paced, since a callback that requests one each time it
+            # runs would otherwise keep the session flushing as fast as it can.
+            self._repeat_output_flush_requested = True
         self.app._request_output_flush(self)
 
     def _cancel_dispatch_tasks(self) -> None:
@@ -1828,6 +1833,11 @@ class AppSession(Session):
         _enclosing_run.set(asyncio.current_task())
         while self._output_flush_enabled:
             self._output_flush_again = False
+            if self._repeat_output_flush_requested:
+                self._repeat_output_flush_requested = False
+                await asyncio.sleep(REPEAT_OUTPUT_FLUSH_DELAY_SECS)
+                if not self._output_flush_enabled:
+                    return
             try:
                 await self._output_flush()
             except Exception as e:
@@ -1856,7 +1866,7 @@ class AppSession(Session):
             # This is the only place in the session where the RestoreContext is flushed.
             if self.bookmark._restore_context:
                 self.bookmark._restore_context.flush_pending()
-            await self._run_flush_callbacks()
+            await self._invoke_output_callbacks(self._flush_callbacks)
 
         # Async flush callbacks yield, and an effect may have started meanwhile; its
         # cycle's idle transition sends everything still queued.
@@ -1867,31 +1877,17 @@ class AppSession(Session):
             await self._send_queued_outputs()
         finally:
             with session_context(self):
-                self._running_flushed_callbacks = True
-                try:
-                    await self._flushed_callbacks.invoke()
-                finally:
-                    self._running_flushed_callbacks = False
-
-        if self._output_flush_tail:
-            # The `on_flushed` callbacks queued something (e.g. a `ui.update_*()`,
-            # which registers an `on_flush` callback). Send it now, without running
-            # the `on_flushed` callbacks again.
-            self._output_flush_tail = False
-            with session_context(self):
-                await self._run_flush_callbacks()
-            if self._busy_count == 0:
-                await self._send_queued_outputs()
+                await self._invoke_output_callbacks(self._flushed_callbacks)
 
         # This cycle's outputs are out; start the next one.
         self._start_cycle()
 
-    async def _run_flush_callbacks(self) -> None:
-        self._running_flush_callbacks = True
+    async def _invoke_output_callbacks(self, callbacks: _utils.AsyncCallbacks) -> None:
+        self._running_output_callbacks = True
         try:
-            await self._flush_callbacks.invoke()
+            await callbacks.invoke()
         finally:
-            self._running_flush_callbacks = False
+            self._running_output_callbacks = False
 
     async def _send_queued_outputs(self) -> None:
         omq = self._outbound_message_queues

@@ -23,8 +23,8 @@ def markdown(
     render_func
         A function (with at least 1 argument) which accepts a string of markdown and
         returns a string of HTML. By default, a customized instance of the
-        `markdown_id.main.MarkdownIt` class (which supports Github-flavored markdown) from the
-        ``markdown-it`` package is used.
+        `markdown_it.main.MarkdownIt` class (which supports Github-flavored markdown) from the
+        ``markdown-it-py`` package is used.
     **kwargs
         Additional keyword arguments passed to the ``render_func``.
 
@@ -59,7 +59,7 @@ def default_md_renderer(
     except ModuleNotFoundError:
         raise ModuleNotFoundError(
             "The default markdown parser requires the markdown-it-py package"
-            " to be installed. Install it with `pip install markdown-it`."
+            " to be installed. Install it with `pip install markdown-it-py`."
         )
 
     if preset == "commonmark":
