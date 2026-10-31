@@ -3065,7 +3065,13 @@ class Outputs:
             output_otel_attrs = extract_source_ref(renderer_func)
             output_otel_level = resolve_func_otel_level(renderer_func)
 
-            if output_name in self._outputs:
+            # `@output` on top of `@render.*` re-registers the renderer that
+            # `@render.*` already auto-registered; only a different renderer
+            # under the same name is a real duplicate.
+            if (
+                output_name in self._outputs
+                and self._outputs[output_name].renderer is not renderer
+            ):
                 code = getattr(renderer_func, "__code__", None)
                 filename = output_otel_attrs.get("code.file.path") or (
                     code.co_filename if code is not None else "<unknown>"
