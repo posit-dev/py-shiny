@@ -74,9 +74,10 @@ class RestoreState:
 
         return name.removeprefix(prefix)
 
-    def _state_within_namespace(self, prefix: str) -> "RestoreState":
+    def _state_within_namespace(self, ns: ResolvedId) -> "RestoreState":
         # Given a restore state object, return a modified version that's scoped to this
         # namespace.
+        prefix = str(ns + ns._sep)
 
         # Keep only `input` that are in the scope, and rename them
         input = {
@@ -95,7 +96,8 @@ class RestoreState:
         # TODO: Barret; Is this for file inputs?!?
         dir = self.dir
         if dir is not None:
-            dir = dir / prefix
+            # Matches the subdirectory `BookmarkProxy._scoped_on_bookmark()` saves to
+            dir = dir / ns
             # Here was a check for if dir doesn't exist, then dir <- NULL
             # But this is confounded with url vs file system, so we'll just
             # assume that the directory exists.

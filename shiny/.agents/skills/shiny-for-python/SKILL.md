@@ -23,7 +23,7 @@ instead of guessing argument names.
 
 | Topic | Use when | Reference |
 |---|---|---|
-| Reactivity | A value should recompute or an output update as inputs change; choosing between calc / effect / value; `req`, `isolate`, timers, polling | `references/reactivity.md` |
+| Reactivity | A value should recompute or an output update as inputs change; choosing between calc / effect / value; `req`, `isolate`, timers, polling, setting values from background tasks | `references/reactivity.md` |
 | Express mode | Writing or converting an Express app (`from shiny.express import ...`); context-manager layout; `page_opts`, `@expressify` | `references/express.md` |
 | Modules (Core) | A reusable, repeatable UI+server component in a Core app; avoiding input/output id collisions across copies | `references/modules-core.md` |
 | Modules (Express) | The same reusable-component need in an Express app, via the single `@module` decorator | `references/modules-express.md` |
@@ -60,7 +60,7 @@ instead of guessing argument names.
 | Topic | Use when | Reference |
 |---|---|---|
 | Feedback | Toasts/notifications, modal dialogs, progress bars, busy indicators | `references/feedback.md` |
-| Extended tasks | Running slow work off the reactive flush without freezing the app; task buttons | `references/extended-tasks.md` |
+| Extended tasks | Running slow work outside the session's reactive cycle so the session stays responsive; task buttons | `references/extended-tasks.md` |
 | Bookmarking | Saving/restoring app state — shareable URLs, refresh persistence, server-side state | `references/bookmarking.md` |
 
 ## AI & streaming

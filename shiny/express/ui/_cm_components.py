@@ -22,7 +22,7 @@ from ...ui._navs import (
     NavSetBar,
     NavSetCard,
 )
-from ...ui._sidebar import SidebarOpenSpec, SidebarOpenValue
+from ...ui._sidebar import SidebarOpenSpec, SidebarOpenValue, SidebarRole
 from ...ui.css import CssUnit
 from .._recall_context import RecallContextManager
 
@@ -58,6 +58,7 @@ def sidebar(
     width: CssUnit = 250,
     id: Optional[str] = None,
     title: TagChild | str = None,
+    role: Optional[SidebarRole] = None,
     bg: Optional[str] = None,
     fg: Optional[str] = None,
     class_: Optional[str] = None,
@@ -99,6 +100,10 @@ def sidebar(
         `<div>` element with class `sidebar-title`. You can also provide a custom
         :class:`~htmltools.Tag` for the title element, in which case you'll
         likely want to give this element `class = "sidebar-title"`.
+    role
+        An ARIA landmark role describing the sidebar's purpose, one of `"form"`,
+        `"search"`, `"complementary"`, or `"region"`, or `None` (the default) for
+        neutral markup. See :func:`~shiny.ui.sidebar` for details.
     bg,fg
         A background or foreground color.
     class_
@@ -143,6 +148,7 @@ def sidebar(
             open=open,
             id=id,
             title=title,
+            role=role,
             bg=bg,
             fg=fg,
             class_=class_,

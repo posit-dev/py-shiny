@@ -1,0 +1,225 @@
+---
+title: "Architecture"
+description: "How py-shiny works internally: reactive system, session hierarchy, Express vs Core mode, HTML generation and dependencies, input/output bindings, modules, testing architecture, and the JS build. Read the relevant section before working in any of those areas."
+---
+
+# Architecture
+
+Deep-dive into py-shiny's internals. Key implementation files are listed with
+each section; the "Key Files" section of `AGENTS.md` has the consolidated list.
+
+## Reactive System
+
+Deep dive: `memory-bank/reactiveInternals.md`; testing it in `memory-bank/concurrencyTesting.md`.
+
+Implementation: `shiny/reactive/_core.py` (graph machinery),
+`shiny/reactive/_reactives.py` (primitives).
+
+The reactive system is based on a **push-pull** model with three core abstractions:
+
+- **Context**: Tracks reactive dependencies during execution. When a reactive
+  consumer (Calc/Effect) runs, it creates a Context that records which reactive
+  sources (Value) it reads from.
+- **Dependents**: Each reactive source maintains a list of downstream consumers
+  that depend on it. When a source invalidates, it notifies all dependents.
+- **ReactiveEnvironment**: Global singleton managing the reactive graph, the
+  reactive effect queue, and rounds. Its class docstring in
+  `shiny/reactive/_core.py` defines the terms used for the reactive system:
+  reactive effect queue, round, idle, cycle, and output flush.
+
+Key implementation details:
+
+- `Value()` is the reactive source (observable)
+- `Calc_()` is a cached computed value (recomputes only when dependencies change)
+- `Effect_()` is a side-effect that re-executes when dependencies change
+- `event()` decorator suppresses reactive dependencies for specific reads
+- The reactive graph is built automatically through the Context's dependency tracking
+- Each round takes effects from the reactive effect queue in priority order
+- In tests, `await reactive.flush()` runs rounds until the reactive environment is
+  idle
+
+## Session Hierarchy
+
+Deep dives: `memory-bank/sessionMessaging.md` (wire protocol, cycles and the output flush) and `memory-bank/appServing.md` (routes, CLI, autoreload).
+
+Implementation: `shiny/session/_session.py`; app entry point in `shiny/_app.py`.
+
+Sessions manage the lifetime and state of a Shiny application:
+
+- **Session (ABC)**: Base interface defining core session operations
+- **AppSession**: Concrete implementation for a single user's session
+- **SessionProxy**: Thread-safe proxy that delegates to the appropriate AppSession
+- **Inputs/Outputs**: Dynamic objects providing dict-like access to input/output values
+
+Session management:
+
+- Each WebSocket connection gets its own AppSession
+- `get_current_session()` retrieves the current session from thread-local or
+  async context
+- Sessions track input values, output invalidations, file uploads, downloads,
+  and more
+- Session context is established using the `session_context(session)` context
+  manager
+
+## Express vs Core Mode
+
+Implementation: `shiny/express/_run.py` (execution),
+`shiny/express/expressify_decorator/_node_transformers.py` (AST transformation).
+Deep dive: `memory-bank/expressMode.md`.
+
+**Core mode** is imperative: you explicitly construct UI and define server
+logic in a function.
+
+**Express mode** executes the app file top to bottom and captures UI as it goes:
+
+- The file runs once with a stub session to build the UI, then **re-runs in
+  full for every session** with the real session active (there is no synthetic
+  `server()`; renderers simply register again each run)
+- A light AST transform plus a swapped `sys.displayhook` collect the value of
+  each top-level expression as UI
+- `RecallContextManager` (`with ui.card():`) collects the children produced
+  inside its block
+
+Critical difference: Express mode uses **execution order** (top-to-bottom) for
+UI layout, while Core mode uses explicit nesting. Debugging Express apps
+requires understanding the transformed code.
+
+## HTML Generation and Dependencies
+
+Deep dive on themes: `memory-bank/theming.md`.
+
+HTML is generated using the `htmltools` package:
+
+- UI functions return `Tag` or `TagList` objects
+- Tags are mutable; use `.add_class()`, `.add_style()`, `.attrs()` to modify
+- HTML dependencies are attached to tags and automatically bundled
+- `components_dependencies()` returns bslib component dependencies
+
+Asset vendoring (bslib CSS/JS, theme presets, `make upgrade-html-deps`) is
+covered in `memory-bank/assets.md`.
+
+### App UI types
+
+`App(ui=)` accepts a `Tag`/`TagList`, a `Path` to a complete HTML file, a
+`ui.page_html()` result (a complete HTML document with Shiny's dependencies
+prefixed onto the app author's), or a function taking a `Request` and returning
+any of those (except for `Path`, see below).
+
+**Every UI *value* type (except for `Path`) must work in both positions: passed
+directly, and returned by a UI function.** The function form is what bookmarking requires --
+`App._init_bookmarking()` rejects a static UI, since the UI has to be
+reconstructed from the bookmarked state -- so a type supported only when passed
+directly is silently unavailable to bookmark-enabled apps.
+
+The page-level dependency set (requirejs, jQuery, Shiny) has one definition,
+`html_dependencies._page_deps()`. Both page forms -- the tag tree and the
+complete document -- splat it, so they cannot drift.
+
+### `Path` exception
+
+`Path` is the deliberate exception: it names a file to read once at startup
+rather than a UI value, so it is handled in `App.__init__()` and rejected in
+`_render_page()`. A UI function that wants to serve a file returns
+`ui.page_html(path)`, which makes the per-pageview file read explicit.
+
+## Input/Output Bindings
+
+Client-server communication works through bindings:
+
+**Input bindings** (client → server):
+
+- Registered via CSS class selectors in TypeScript (e.g., `.bslib-input-foo`)
+- Implement `getValue()`, `setValue()`, `subscribe()` methods
+- Send values to server using `Shiny.setInputValue(id, value)`
+- Server receives via `input.foo()` which returns a reactive Value
+
+**Output bindings** (server → client):
+
+- Server defines output using `@render.text`, `@render.plot`, etc.
+- Renderers inherit from the `Renderer` base class
+  (`shiny/render/renderer/_renderer.py`; see
+  `memory-bank/componentPatterns.md` for the implementation pattern)
+- Client subscribes to output via `Shiny.bindOutput()` in TypeScript
+- Updates are sent as messages through the WebSocket
+
+**Update functions**:
+
+- Use `session.send_input_message()` to update input widgets from the server
+- Client handles via `receiveMessage()` in the input binding
+
+## Module System
+
+Implementation: `shiny/_namespaces.py` manages the namespace stack;
+`shiny/module.py` provides the decorators.
+
+Modules enable namespaced, reusable components:
+
+- `@module.ui` decorator creates a UI function with automatic ID namespacing
+- `@module.server` decorator creates a server function with namespace context
+- Inside a module, use `resolve_id()` to namespace IDs
+- `resolve_id_or_none()` for optional namespacing
+- Modules can be nested; namespaces compose with `parent-child` format
+
+## Testing Architecture
+
+Deep dive: `memory-bank/playwrightTesting.md`; toolchain and CI in `memory-bank/ciAndTooling.md`.
+
+**Unit tests** (`tests/pytest/`):
+
+- Use standard pytest with syrupy for snapshots (`make test-update-snapshots`
+  to regenerate)
+- Focus on Python API correctness, parameter validation, edge cases
+- Run with `make test` or `pytest`
+
+**Playwright tests** (`tests/playwright/`):
+
+- End-to-end tests using Playwright with custom controllers
+- Controllers in `shiny/playwright/controller/` provide high-level APIs for
+  interacting with inputs/outputs
+- Each input component should have a controller class
+- Test apps live alongside test files
+- Suites: `tests/playwright/shiny/` (`make playwright-shiny`),
+  `tests/playwright/examples/` (`make playwright-examples`),
+  `tests/playwright/deploys/`, `tests/playwright/ai_generated_apps/`
+- Run with `make playwright` (all browsers) or `make playwright-debug`
+  (chromium, headed)
+- Prefer `.expect_*()` controller methods, which auto-wait, over manual sleeps
+- Pass one-off pytest options with `PYTEST_EXTRA_ARGS="..."`
+
+**Playwright traces**:
+
+Record a trace per test with `PYTEST_EXTRA_ARGS="--tracing on"` (or
+`--tracing retain-on-failure` to keep only failures). Each test writes
+`test-results/<test>/trace.zip`; open one with `make playwright-show-trace`,
+which picks the newest unless you pass `TRACE="path/to/trace.zip"`. Tracing
+needs no `--headed`: screenshots and DOM snapshots are captured from the
+renderer, which headless still rasterizes.
+
+`--video` and `--screenshot` behave differently here because
+`tests/playwright/conftest.py` shares one page (and one context) across the
+whole session: video records one continuous file per session rather than per
+test (`--video retain-on-failure` keeps or deletes that one file based on
+whether any test failed), and `--screenshot` does nothing at all. Tracing avoids that limitation by
+slicing the session-long trace with `tracing.start_chunk()` / `stop_chunk()`
+per test. The NOTE in `tests/playwright/playwright-pytest.ini` records the same
+caveats next to the options themselves.
+
+**Playwright controller pattern**:
+
+```python
+from shiny.playwright.controller import InputText, OutputText
+
+text_input = InputText(page, "my_input")
+text_input.set("foo")
+text_input.expect_value("foo")
+
+text_output = OutputText(page, "my_output")
+text_output.expect_value("You entered: foo")
+```
+
+## JavaScript/TypeScript Build
+
+Client-side code is in `js/`, with one esbuild entry point per component
+(`data-frame/index.tsx`, `page-output/page-output.ts`, `spin/spin.scss`; see
+`opts` in `js/build.ts`), bundled into `shiny/www/py-shiny/`. Build commands and workflow are
+covered in `memory-bank/assets.md`.

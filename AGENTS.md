@@ -1,0 +1,240 @@
+# AGENTS.md
+
+This file provides guidance to coding agents when working with code in this repository.
+
+## Overview
+
+py-shiny is a Python web framework for building reactive web applications. It maintains feature parity with Shiny for R, often porting UI components from the R bslib package. The codebase consists of Python server-side code, TypeScript/JavaScript client-side code, and vendored assets from upstream packages.
+
+## Development Commands
+
+### Essential Commands
+```bash
+# Install dev dependencies (requires Python 3.10+)
+pip install -e ".[dev,test,doc]"
+pre-commit install       # Optional: auto-format/lint on commit
+
+# Format code (always run before committing)
+make format              # Auto-fix with black and isort
+make check-format        # Check only
+make check-lint          # Lint with flake8
+
+# Type checking
+make check-types         # Run pyrefly (requires typings)
+make check-pyright       # Run pyright (separate CI job; run both before pushing)
+
+# Run tests
+make test                # Unit tests only (pytest)
+pytest tests/pytest/test_foo.py::test_name  # Single unit test
+make playwright          # All end-to-end tests (slow)
+make playwright-shiny SUB_FILE="inputs/test_foo.py"  # Single test
+
+# Comprehensive checks
+make check               # Format, lint, types, unit tests
+make check-fix           # Same but auto-fixes formatting
+
+# Before opening a PR, run the checks through uv so the venv's toolchain is
+# used (bare `make` may pick up a system black/isort/pyright with different
+# versions and miss failures that CI catches, e.g. a py3.14 black target or a
+# pyright error). This must pass:
+uv run make format check-lint check-types check-pyright
+```
+
+### Running Apps
+```bash
+shiny run app.py --reload --launch-browser  # Dev server with auto-reload
+SHINY_LOG_LEVEL=DEBUG shiny run app.py      # Verbose logging
+```
+
+### Asset Management
+
+See `memory-bank/assets.md` for details.
+```bash
+# Vendor assets from upstream (bslib, shiny, sass, htmltools)
+make upgrade-html-deps   # Requires R installed
+
+# Build JavaScript/TypeScript
+make js-build            # One-time build
+make js-watch            # Continuous rebuild
+```
+
+### Testing Shortcuts
+```bash
+# Update test snapshots
+make test-update-snapshots
+
+# Debug Playwright tests (headed, chromium only)
+make playwright-debug TEST_FILE="tests/playwright/shiny/inputs/test_foo.py"
+
+# Record a Playwright trace per test, into test-results/<test>/trace.zip
+# (use --tracing retain-on-failure to keep traces only for failing tests).
+# Tracing does not require --headed; it works in the default headless runs.
+make playwright-shiny SUB_FILE="inputs/test_foo.py" PYTEST_EXTRA_ARGS="--tracing on"
+
+# Open a recorded trace: the newest one, or TRACE="path/to/trace.zip"
+make playwright-show-trace
+
+# Run specific test suites
+make playwright-shiny     # Tests in tests/playwright/shiny/
+make playwright-examples  # Tests in tests/playwright/examples/
+```
+
+## Memory Bank
+
+The `memory-bank/` directory holds contributor documentation with YAML
+frontmatter (`title`, `description`). **Before exploring the codebase**, invoke
+the `memory-bank` skill to find and read the relevant docs. Update or add docs
+when you learn something future contributors will need (see the skill for
+conventions).
+
+Contributor skills live in `.agents/skills/`; `.claude/skills` is a symlink to
+it. Only allowlisted skills are tracked, so when adding or removing one, update
+the `!.agents/skills/<name>/` lines in `.gitignore` to match.
+
+## Architecture
+
+`memory-bank/architecture.md` explains how the internals work: the reactive
+system, session hierarchy, Express vs Core mode, HTML generation and dependencies,
+input/output bindings, the module system, testing architecture, and the JS build.
+Read the relevant section before working on any of those areas.
+
+## Key Files
+
+### Core Python Files
+- `shiny/_app.py` - App class and entry point
+- `shiny/session/_session.py` - Session hierarchy (AppSession, SessionProxy)
+- `shiny/reactive/_core.py` - Reactive system (Context, Dependents, ReactiveEnvironment)
+- `shiny/reactive/_reactives.py` - Reactive primitives (Value, Calc_, Effect_)
+- `shiny/express/_run.py` - Express mode execution
+- `shiny/express/expressify_decorator/_node_transformers.py` - AST transformation for Express mode
+- `shiny/render/renderer/_renderer.py` - Base renderer class
+- `shiny/module.py` - Module decorators and namespacing
+
+### Asset Management
+- `memory-bank/assets.md` - Vendored bslib/shiny assets and the py-shiny JS bundle (key files, commands, pitfalls)
+
+### Configuration
+- `pyproject.toml` - Package config, dependencies, tool settings
+- `pyrightconfig.json` - Pyright type checker configuration
+- `pytest.ini` - Pytest configuration
+- `.pre-commit-config.yaml` - Pre-commit hook configuration
+
+### Documentation
+- `memory-bank/documentationStyle.md` - Docstring conventions, `@add_example()` workflow, quartodoc registration, docs build commands
+
+## Important Patterns
+
+### Component and Renderer Implementation
+
+Before implementing a UI component or output renderer, read
+`memory-bank/componentPatterns.md` — it has the step-by-step checklists
+(file layout, exports, examples, controllers, tests) and the rules for pairing
+output components with renderers.
+
+### Playwright Controllers for UI Components
+
+Every UI component (inputs, containers/layouts, overlays, outputs) must have a companion Playwright controller in `shiny/playwright/controller/`.
+- **New features**: When adding a new UI component, implement its controller class with locators for all sub-elements (trigger, header, title, body, footer, close buttons, etc.), interaction methods (`set`, `open`, `close`, `show`, `click`), and expectation methods (`expect_*`). Export it from `shiny/playwright/controller/__init__.py` and register it in `docs/_quartodoc-testing.yml`.
+- **Altered features**: When altering or extending existing UI components (adding parameters, new sub-elements, new states, or server-side actions like show/hide/toggle), update the companion Playwright controller in the same PR to keep it in sync.
+
+### Bundled Agent Skills
+
+The shiny package ships Agent Skills under `shiny/.agents/skills/` — reference
+docs that teach coding agents how to use shiny's public APIs (debugging,
+testing, etc.). Treat them like user-facing documentation: when a change
+touches an API that a skill documents, update the skill in the same PR. Before
+adding or editing a skill, read `memory-bank/agentSkills.md` for the
+layout, frontmatter contract, content shape, scoping rules, and validation
+steps.
+
+### Type Checking Notes
+
+- Pyrefly (`make check-types`) and Pyright (`make check-pyright`) both run in CI (not mypy)
+- Some packages require manual stubs: run `make typings` to generate
+- Stubs are placed in `typings/` (gitignored)
+- Parameter types: prefer `T | None` over `Optional[T]` when no default `None` value is provided
+- Use `Literal` instead of `Enum` for string options
+
+## Code Style Preferences
+
+Beyond PEP 8 and standard Python conventions, the following style preferences are used in this codebase:
+
+### Import Organization
+
+- **Always place imports at the top of the file**, not inline within functions
+- Group imports in standard order: stdlib, third-party, local relative
+- Avoid lazy/deferred imports unless absolutely necessary for circular dependency resolution
+- When moving inline imports to the top, update any test mocks to patch the new import location
+
+### Parameter Naming
+
+- Use **named arguments** for all parameters except the first positional parameter in function calls
+- Choose descriptive parameter names that clarify intent:
+  - Use `required_level` not `level` when the parameter represents a threshold/minimum
+  - Use `collection_level` not `level` when the parameter represents a current setting
+- Good: `shiny_otel_span("name", attributes=attrs, required_level=OtelCollectLevel.SESSION)`
+- Bad: `shiny_otel_span("name", attrs, OtelCollectLevel.SESSION)`
+
+### Constants and Magic Values
+
+- Use constants for values that appear multiple times across the codebase
+- Inline single-use attribute/configuration values directly at point of use
+- Document constants with docstrings explaining their purpose
+
+### Error Handling
+
+- Be explicit about which exceptions are caught and why
+- Use type-specific exception handling rather than broad `except Exception`
+- Document exception behavior in function docstrings
+
+### Public-facing text
+
+- Don't compare to Shiny for R in user-facing text (`CHANGELOG.md`, docstrings,
+  docs, bundled Agent Skills, PR descriptions). State the behavior and its
+  Python-side reason. Exception: name the R equivalent when its name is
+  obviously different, so R users can find the mapping (e.g. `ui.page_html()`
+  ↔ `htmlTemplate(document_ = TRUE)`). Skip it when it's only a spelling
+  translation (`session.allow_reconnect()` ↔ `session$allowReconnect()`) or a
+  "matching Shiny for R" note. Dev comments and upstream refs like
+  `rstudio/bslib#1359` are fine.
+
+## Git Commit and PR Conventions
+
+Commit messages and PR titles use **conventional commits**. Read
+`memory-bank/commitConventions.md` for the format, types, and guidelines
+before committing or opening a PR — and for the merge policy and flaky-test
+handling before merging one.
+
+Before creating a PR, confirm `uv run make format check-lint check-types check-pyright`
+passes. Run it through `uv run` (not bare `make`) so the venv's black/isort/
+pyrefly/pyright are used — a system toolchain can silently miss failures that
+CI then rejects.
+
+## Sibling Repo: Shiny for R
+
+[rstudio/shiny](https://github.com/rstudio/shiny) is Shiny for R. Keep the
+two from drifting apart:
+
+- **Client JS and wire protocol**: `make upgrade-html-deps` vendors R shiny's
+  `inst/www/shared/` (including `shiny.js`) into `shiny/www/shared/`. Fix
+  `shiny.js` bugs and make client protocol changes in rstudio/shiny, then
+  re-vendor; never edit the vendored copy.
+- **Server behavior and bugs**: when a fix or feature here likely applies to
+  Shiny for R too, open an issue there and cross-link it; don't change both
+  repos in one PR. `gh issue create -R rstudio/shiny --label ai-generated-issue`
+- **Agent infrastructure** (`AGENTS.md` conventions, `.agents/skills/memory-bank/`,
+  `memory-bank/commitConventions.md`): mirror shared changes with a PR in
+  rstudio/shiny.
+
+## Common Pitfalls
+
+- **Forgetting to run `make format`**: Always format before committing
+- **Missing HTML deps**: If styles don't work, ensure `components_dependencies()` is included
+- **Express mode confusion**: Remember Express uses AST transformation; debugging requires understanding the transformed code
+- **Session context errors**: Always access `input`/`output` within reactive context
+- **Reactive graph debugging**: `await reactive.flush()` runs rounds until the reactive environment is idle (tests)
+- **Playwright timing**: Use `.expect_*()` methods which auto-wait; avoid manual `sleep()`
+- **Asset updates**: After running `make upgrade-html-deps`, verify theme preset files were updated
+- **Out-of-sync Playwright controllers**: When adding or altering UI components, always create or update their companion Playwright controller in `shiny/playwright/controller/` with matching locators, action methods, and expectation methods, and export them from `shiny/playwright/controller/__init__.py`
+- **Stale bundled skills**: When changing a public API, grep `shiny/.agents/skills/` for it — bundled Agent Skills document public APIs and must be updated in the same PR
+- **Narwhals column access**: Never subscript a narwhals frame with a column *name* — use `.get_column(name)`. Subscripts are positional, and pandas allows non-string column names, so `data[0]` returns row `0`, not the column named `0`. Keep `[...]` for genuinely positional access (`data[rows, :]`, `data[:, col_indexes]`), resolving names to positions first
