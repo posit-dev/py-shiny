@@ -484,15 +484,15 @@ class _Plugins:
             return list(eps)
 
         self.monkeypatch.setattr(validate_mod, "entry_points", fake_entry_points)
-        validate_mod.installed_validation_rules.cache_clear()
+        validate_mod._clear_installed_rules()
 
 
 @pytest.fixture
 def fake_plugins(monkeypatch: pytest.MonkeyPatch):
-    from shiny._validate import installed_validation_rules
+    from shiny._validate import _clear_installed_rules
 
     yield _Plugins(monkeypatch)
-    installed_validation_rules.cache_clear()
+    _clear_installed_rules()
 
 
 def test_installed_plugins_compose_and_run_once(fake_plugins: _Plugins) -> None:

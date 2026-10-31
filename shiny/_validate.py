@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import functools
 import importlib
 import os
 import re
@@ -558,17 +557,31 @@ def _failed_rule(name: str, error: Exception) -> ValidationRuleFunc:
     return rule
 
 
-@functools.cache
+_installed_rules: tuple[ValidationRuleLike, ...] | None = None
+"""Entry-point rules, loaded on first use. An explicit cache rather than
+``functools.cache`` because the wrapper object makes griffe (quartodoc) report
+a cyclic alias when documenting the re-export in ``shiny.validate``."""
+
+
 def installed_validation_rules() -> tuple[ValidationRuleLike, ...]:
     """Rules registered by installed packages under ``shiny.validators``, loaded once."""
-    rules: list[ValidationRuleLike] = []
-    for ep in entry_points(group=VALIDATOR_ENTRY_POINT_GROUP):
-        name = f"{ep.name} ({ep.value})"
-        try:
-            rules.append(_check_rule(ep.load(), name))
-        except Exception as e:
-            rules.append(_failed_rule(name, e))
-    return tuple(rules)
+    global _installed_rules
+    if _installed_rules is None:
+        rules: list[ValidationRuleLike] = []
+        for ep in entry_points(group=VALIDATOR_ENTRY_POINT_GROUP):
+            name = f"{ep.name} ({ep.value})"
+            try:
+                rules.append(_check_rule(ep.load(), name))
+            except Exception as e:
+                rules.append(_failed_rule(name, e))
+        _installed_rules = tuple(rules)
+    return _installed_rules
+
+
+def _clear_installed_rules() -> None:
+    """Forget loaded entry-point rules so the next call reloads them (tests)."""
+    global _installed_rules
+    _installed_rules = None
 
 
 def load_validation_rule(spec: str) -> ValidationRuleLike:
