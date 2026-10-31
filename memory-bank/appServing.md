@@ -119,8 +119,14 @@ placeholders), `app_renderers`
 outside `@module.*` functions and outside other render functions, merged
 across the file set in `validate_shiny_file()`, and compared only when both
 sides are non-empty (so a UI or server in an uninspected file is not judged).
-Custom renderer decorators are not recognised, which is why any function name
-satisfies a placeholder. `shiny/_validate_reactivity.py` tracks
+Custom renderer decorators are not recognised, so a function carrying any
+decorator outside `_NON_RENDERER_DECORATORS` (reactive, module, output, and a
+few stdlib ones) counts as a candidate for a placeholder; undecorated helpers
+and known reactive decorators do not. IDs are read from the first positional
+argument or `id=` via `_literal_id()`, and `input` is matched through
+`_is_input_ref()` so import aliases such as `input as inp` are covered.
+`run_app(validate=None)` reads `SHINY_VALIDATE`; an explicit bool (or the
+`--validate/--no-validate` flag) wins. `shiny/_validate_reactivity.py` tracks
 known values, calc functions, extended tasks, and `reactive.Value` parameter
 annotations lexically. It reports reads outside a reactive context (module
 level, or directly in a function named `server`, decorated `@module.server`,

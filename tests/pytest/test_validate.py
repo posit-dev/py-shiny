@@ -83,6 +83,65 @@ def test_python_level_mistakes_are_left_to_type_checkers() -> None:
     ).clean
 
 
+def test_ids_passed_as_keyword_arguments_are_recognised() -> None:
+    report = validate_shiny_code(
+        "from shiny import ui\n"
+        'ui.input_text(id="name", label="First name")\n'
+        'ui.input_text(id="name", label="Last name")\n'
+    )
+    assert [(w["code"], w["line"]) for w in report.warnings] == [("DUPLICATE_ID", 3)]
+    assert report.detected_inputs == ["name"]
+
+    report = validate_shiny_code(
+        "from shiny import App, render, ui\n"
+        "app_ui = ui.page_fluid(\n"
+        '    ui.output_text(id="summary"),\n'
+        '    ui.output_text(id="missing"),\n'
+        '    ui.download_button(id="report", label="Download"),\n'
+        ")\n"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def summary():\n        return 'x'\n"
+        "    @render.download\n    def report():\n        yield 'x'\n"
+    )
+    assert [(w["code"], w["line"]) for w in report.warnings] == [
+        ("OUTPUT_WITHOUT_RENDERER", 4)
+    ]
+
+
+@pytest.mark.parametrize(
+    "imports, name",
+    [
+        ("from shiny.express import input, render", "input"),
+        ("from shiny.express import input as inp, render", "inp"),
+    ],
+)
+def test_input_rules_follow_import_aliases(imports: str, name: str) -> None:
+    uncalled = validate_shiny_code(
+        f"{imports}\n@render.text\ndef summary():\n    return {name}.sales\n"
+    )
+    assert [(e["code"], e["line"]) for e in uncalled.errors] == [("UNCALLED_INPUT", 4)]
+    assert f"'{name}.sales'" in uncalled.errors[0]["message"]
+    assigned = validate_shiny_code(f"{imports}\n{name}.sales = 100\n")
+    assert [(e["code"], e["line"]) for e in assigned.errors] == [
+        ("INPUT_ASSIGNMENT", 2)
+    ]
+
+
+@pytest.mark.parametrize(
+    "statement",
+    ["input.n += 1", "input.n: int = 4", "input.n -= 1", "input.n = input.m = 1"],
+)
+def test_all_assignment_forms_to_inputs_are_errors(statement: str) -> None:
+    report = validate_shiny_code(
+        "from shiny.express import input, render\n"
+        "@render.text\ndef summary():\n"
+        f"    {statement}\n"
+        "    return input.n()\n"
+    )
+    assert {e["code"] for e in report.errors} == {"INPUT_ASSIGNMENT"}
+    assert all(e["line"] == 4 for e in report.errors)
+
+
 def test_duplicate_ids_are_scoped_to_their_function() -> None:
     module_code = (
         "from shiny import module, ui\n"
@@ -295,8 +354,39 @@ def test_output_and_renderer_pairing_in_core_mode() -> None:
 
 
 @pytest.mark.parametrize(
+    "helper",
+    [
+        "def ghost():\n    return 'helper'\n",
+        "@reactive.calc\ndef ghost():\n    return 'calc'\n",
+        "@reactive.effect\ndef ghost():\n    pass\n",
+    ],
+)
+def test_unrelated_functions_do_not_satisfy_a_placeholder(helper: str) -> None:
+    report = validate_shiny_code(
+        "from shiny import App, reactive, render, ui\n"
+        "app_ui = ui.page_fluid(ui.output_text('real'), ui.output_text('ghost'))\n"
+        f"{helper}"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def real():\n        return 'Hello'\n"
+        "app = App(app_ui, server)\n"
+    )
+    assert [(w["code"], w["line"]) for w in report.warnings] == [
+        ("OUTPUT_WITHOUT_RENDERER", 2)
+    ]
+
+
+@pytest.mark.parametrize(
     "code",
     [
+        # A custom renderer built with render.transformer is an unknown
+        # decorator, so the function still backs the placeholder.
+        "from shiny import App, render, ui\n"
+        "from shiny.render.transformer import output_transformer\n"
+        "@output_transformer()\nasync def CapitalizeTransformer(_meta, _fn):\n"
+        "    return (await _fn()).upper()\n"
+        "app_ui = ui.page_fluid(ui.output_text('caps'))\n"
+        "def server(input, output, session):\n"
+        "    @CapitalizeTransformer\n    def caps():\n        return 'x'\n",
         # Express apps place renderers themselves.
         "from shiny.express import render, ui\nui.input_text('x', 'X')\n"
         "@render.text\ndef shown():\n    return 'x'\n",

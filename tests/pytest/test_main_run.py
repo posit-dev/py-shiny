@@ -96,6 +96,19 @@ def test_run_options_are_forwarded(
     assert captured_run_app["validate"] is False
 
 
+def test_run_validate_flag_overrides_environment(
+    captured_run_app: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SHINY_VALIDATE", "0")
+    result = CliRunner().invoke(main, ["run", "myapp.py:my_app", "--validate"])
+    assert result.exit_code == 0
+    assert captured_run_app["validate"] is True
+
+    result = CliRunner().invoke(main, ["run", "myapp.py:my_app"])
+    assert result.exit_code == 0
+    assert captured_run_app["validate"] is False
+
+
 def test_run_rejects_missing_reload_dir(captured_run_app: dict[str, Any]) -> None:
     result = CliRunner().invoke(
         main, ["run", "--reload-dir", "does/not/exist/anywhere"]
@@ -259,6 +272,10 @@ def test_run_app_startup_validation_and_opt_out(
     monkeypatch.setenv("SHINY_VALIDATE", "0")
     _run.run_app(str(app_file), dev_mode=False)
     assert not capsys.readouterr().err
+
+    # An explicit flag or argument wins over the environment variable.
+    _run.run_app(str(app_file), dev_mode=False, validate=True)
+    assert "Validation error" in capsys.readouterr().err
 
 
 def test_validate_app_file_logs_exception_at_debug(

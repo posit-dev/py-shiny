@@ -185,6 +185,21 @@ class ValidateResult:
         }
 
 
+_NON_RENDERER_DECORATORS = (
+    "reactive.",
+    "module.",
+    "session.",
+    "expressify",
+    "output",
+    "functools.",
+    "staticmethod",
+    "classmethod",
+    "property",
+)
+"""Decorator name prefixes (after ``shiny.`` is stripped) that never make a
+function a renderer, so they do not satisfy a ``ui.output_*()`` placeholder."""
+
+
 class ShinyCodeValidator(ast.NodeVisitor):
     """Subclass visitor methods and add project rules to ``self.result``.
 
@@ -285,9 +300,13 @@ class ShinyCodeValidator(ast.NodeVisitor):
         if any(d in ("module.ui", "module.server") for d in decorators):
             self._in_module = True
 
-        if not self._in_module:
-            # Any function may back a `ui.output_*()` placeholder through a
-            # custom renderer, so names count as candidates for pairing.
+        if not self._in_module and any(
+            not d.startswith(_NON_RENDERER_DECORATORS) for d in decorators
+        ):
+            # A decorator the validator does not know may be a custom renderer
+            # (for example one built with `render.transformer`), so the function
+            # counts as a candidate for a placeholder. Undecorated helpers and
+            # known reactive decorators do not.
             self.result.app_functions.add(node.name)
         if is_renderer:
             output_id = self._output_id(node)
@@ -410,32 +429,50 @@ class ShinyCodeValidator(ast.NodeVisitor):
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         self._check_func_def(node)
 
-    def visit_Call(self, node: ast.Call) -> None:
-        call_name = self._normalize_name(self._get_call_name(node.func))
-
-        if call_name and (
-            call_name.startswith("ui.input_") or call_name.startswith("ui.output_")
-        ):
-            if (
-                node.args
-                and isinstance(node.args[0], ast.Constant)
-                and isinstance(node.args[0].value, str)
-            ):
-                kind = "input" if call_name.startswith("ui.input_") else "output"
-                self.result.register_id(
-                    kind, node.args[0].value, node.lineno, scope=self._scope
-                )
-                if kind == "output" and not self._in_module:
-                    self.result.app_outputs.setdefault(node.args[0].value, node.lineno)
-        elif (
-            call_name in ("ui.download_button", "ui.download_link")
-            and not self._in_module
-            and node.args
+    @staticmethod
+    def _literal_id(node: ast.Call) -> str | None:
+        """The string ID of a UI call, given positionally or as ``id=``."""
+        if (
+            node.args
             and isinstance(node.args[0], ast.Constant)
             and isinstance(node.args[0].value, str)
         ):
+            return node.args[0].value
+        for keyword in node.keywords:
+            if (
+                keyword.arg == "id"
+                and isinstance(keyword.value, ast.Constant)
+                and isinstance(keyword.value.value, str)
+            ):
+                return keyword.value.value
+        return None
+
+    def _is_input_ref(self, node: ast.AST) -> bool:
+        """Whether ``node`` names the Shiny ``input`` object, under any import alias."""
+        return isinstance(node, ast.Name) and self._normalize_name(node.id) == "input"
+
+    def visit_Call(self, node: ast.Call) -> None:
+        call_name = self._normalize_name(self._get_call_name(node.func))
+        literal_id = self._literal_id(node)
+
+        if (
+            call_name
+            and (
+                call_name.startswith("ui.input_") or call_name.startswith("ui.output_")
+            )
+            and literal_id is not None
+        ):
+            kind = "input" if call_name.startswith("ui.input_") else "output"
+            self.result.register_id(kind, literal_id, node.lineno, scope=self._scope)
+            if kind == "output" and not self._in_module:
+                self.result.app_outputs.setdefault(literal_id, node.lineno)
+        elif (
+            call_name in ("ui.download_button", "ui.download_link")
+            and not self._in_module
+            and literal_id is not None
+        ):
             # Pairs with `@render.download`, so count it as an output placeholder.
-            self.result.app_outputs.setdefault(node.args[0].value, node.lineno)
+            self.result.app_outputs.setdefault(literal_id, node.lineno)
         elif not self._in_module:
             # A hand-built element such as
             # `ui.div(id="plot", class_="shiny-plot-output")` is bound to a
@@ -452,17 +489,20 @@ class ShinyCodeValidator(ast.NodeVisitor):
 
         self.generic_visit(node)
 
+    def _check_input_assignment(self, target: ast.expr, line: int) -> None:
+        """Report ``input.x = ...`` (plain, augmented, or annotated) as read-only."""
+        if isinstance(target, ast.Attribute) and self._is_input_ref(target.value):
+            name = cast(ast.Name, target.value).id
+            self.result.add_error(
+                line,
+                f"Attempted direct assignment to '{name}.{target.attr}'. Inputs are "
+                "read-only; use reactive.value or update_* functions.",
+                "INPUT_ASSIGNMENT",
+            )
+
     def visit_Assign(self, node: ast.Assign) -> None:
         for target in node.targets:
-            if isinstance(target, ast.Attribute):
-                if isinstance(target.value, ast.Name) and target.value.id == "input":
-                    self.result.errors.append(
-                        {
-                            "line": node.lineno,
-                            "message": f"Attempted direct assignment to 'input.{target.attr}'. Inputs are read-only; use reactive.value or update_* functions.",
-                            "code": "INPUT_ASSIGNMENT",
-                        }
-                    )
+            self._check_input_assignment(target, node.lineno)
 
             if isinstance(node.value, ast.Call):
                 call_name = self._normalize_name(self._get_call_name(node.value.func))
@@ -473,12 +513,17 @@ class ShinyCodeValidator(ast.NodeVisitor):
 
         self.generic_visit(node)
 
+    def visit_AugAssign(self, node: ast.AugAssign) -> None:
+        self._check_input_assignment(node.target, node.lineno)
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        self._check_input_assignment(node.target, node.lineno)
+        self.generic_visit(node)
+
     def visit_Attribute(self, node: ast.Attribute) -> None:
-        if (
-            isinstance(node.value, ast.Name)
-            and node.value.id == "input"
-            and not isinstance(node.ctx, ast.Store)
-        ):
+        if self._is_input_ref(node.value) and not isinstance(node.ctx, ast.Store):
+            name = cast(ast.Name, node.value).id
             parent = self._parent_map.get(node)
             is_func_call = isinstance(parent, ast.Call) and parent.func is node
             is_attr_access = isinstance(parent, ast.Attribute) and parent.value is node
@@ -496,7 +541,8 @@ class ShinyCodeValidator(ast.NodeVisitor):
             ):
                 self.result.add_error(
                     node.lineno,
-                    f"Input 'input.{node.attr}' accessed without parentheses '()'. Inputs are reactive callables in Python.",
+                    f"Input '{name}.{node.attr}' accessed without parentheses '()'. "
+                    "Inputs are reactive callables in Python.",
                     "UNCALLED_INPUT",
                 )
 

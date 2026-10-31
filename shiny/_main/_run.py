@@ -237,7 +237,7 @@ def run_app(
     factory: bool = False,
     launch_browser: bool = False,
     dev_mode: bool = True,
-    validate: bool = True,
+    validate: bool | None = None,
     **kwargs: object,
 ) -> None:
     """
@@ -281,6 +281,11 @@ def run_app(
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    validate
+        Run static validation on the app file before startup and print any
+        findings to stderr. ``None`` (the default) reads the ``SHINY_VALIDATE``
+        environment variable, treating ``0``, ``false``, and ``no`` as off. An
+        explicit ``True`` or ``False`` overrides the environment variable.
     **kwargs
         Additional keyword arguments which are passed to ``uvicorn.run``. For more
         information see [Uvicorn documentation](https://www.uvicorn.org/).
@@ -310,6 +315,7 @@ def run_app(
     run_app("myapp:my_app", app_dir="..")
     ```
     """
+    validate = _validate_enabled(validate)
 
     # If port is 0, randomize
     if port == 0:
@@ -499,10 +505,14 @@ def resolve_app(
     return f"{module}:{attr}", app_dir
 
 
-def _validate_app_file(app_file: Path | str) -> None:
-    if os.environ.get("SHINY_VALIDATE", "1").lower() in ("0", "false", "no"):
-        return
+def _validate_enabled(validate: bool | None) -> bool:
+    """Resolve ``run_app(validate=)``: an explicit value wins over ``SHINY_VALIDATE``."""
+    if validate is not None:
+        return validate
+    return os.environ.get("SHINY_VALIDATE", "1").lower() not in ("0", "false", "no")
 
+
+def _validate_app_file(app_file: Path | str) -> None:
     try:
         report = validate_shiny_file(app_file)
         if report.errors:
