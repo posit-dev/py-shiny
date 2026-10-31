@@ -23,6 +23,7 @@ from typing import (
 
 from typing_extensions import NotRequired
 
+from ._docstring import no_example
 from ._validate_reactivity import ReactiveUsageValidator
 
 VALIDATOR_ENTRY_POINT_GROUP = "shiny.validators"
@@ -576,6 +577,7 @@ _installed_rules: tuple[ValidationRuleLike, ...] | None = None
 a cyclic alias when documenting the re-export in ``shiny.validate``."""
 
 
+@no_example()
 def installed_validation_rules() -> tuple[ValidationRuleLike, ...]:
     """Rules registered by installed packages under ``shiny.validators``, loaded once."""
     global _installed_rules
@@ -597,6 +599,7 @@ def _clear_installed_rules() -> None:
     _installed_rules = None
 
 
+@no_example()
 def load_validation_rule(spec: str) -> ValidationRuleLike:
     """Load a rule from a ``module:attr`` spec, importing relative to the working directory."""
     module_name, sep, attr = spec.partition(":")
@@ -660,6 +663,7 @@ def _apply_suppressions(code: str, result: ValidateResult) -> None:
     result.warnings = [issue for issue in result.warnings if keep(issue)]
 
 
+@no_example()
 def validate_shiny_code(
     code: str,
     *,
@@ -718,6 +722,7 @@ def _validate_source(
     return result
 
 
+@no_example()
 def validate_shiny_file(
     path: str | Path,
     *,
