@@ -405,3 +405,94 @@ def test_docs_no_args() -> None:
 
     assert result.exit_code != 0
     assert "Missing argument" in result.output
+
+
+def test_docs_class_signature_shows_constructor() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "--json", "render.plot", "reactive.Value"])
+
+    assert result.exit_code == 0
+    plot, value = json.loads(result.output)
+
+    assert plot["signature"].startswith("class plot(")
+    assert "alt: Optional[str] = None" in plot["signature"]
+    assert plot["bases"] == ["Renderer[object]"]
+    param_names = [p["name"] for p in plot["parameters"]]
+    assert "self" not in param_names
+    assert {"alt", "width", "height", "**kwargs"} <= set(param_names)
+
+    assert value["signature"].startswith("class Value(value: T | MISSING_TYPE")
+    assert "read_only: bool = False" in value["signature"]
+
+
+def test_docs_signature_is_pep8_formatted() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "ui.input_select"])
+
+    assert result.exit_code == 0
+    first_line = result.output.splitlines()[0]
+    assert "multiple: bool = False" in first_line
+    assert "=False" not in first_line
+    assert first_line.endswith("-> Tag:")
+
+
+def test_docs_class_omits_stdlib_methods() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "--json", "ui.HTML"])
+
+    assert result.exit_code == 0
+    (html,) = json.loads(result.output)
+    method_names = [m["name"] for m in html["methods"]]
+    assert "as_string" in method_names
+    # `HTML` subclasses `UserString`; its `str` methods carry no Shiny docs.
+    assert "upper" not in method_names
+    assert "isascii" not in method_names
+
+    completions = runner.invoke(main, ["docs", "--complete", "ui.HTML."])
+    assert "ui.HTML.as_string" in completions.output
+    assert "ui.HTML.upper" not in completions.output
+
+
+def test_docs_module_lists_members() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "reactive"])
+
+    assert result.exit_code == 0
+    assert result.output.startswith("module shiny.reactive:")
+    assert "Members" in result.output
+    members = result.output.split("Members\n-------\n", 1)[1].splitlines()
+    assert "calc" in members
+    assert "effect" in members
+    assert "value" in members
+
+
+def test_docs_rejects_non_callable_attribute() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "types.MISSING"])
+
+    assert result.exit_code != 0
+    assert "'types.MISSING' is not a function, class, or module" in result.output
+
+
+def test_docs_json_mode_emits_empty_list_when_all_fail() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["docs", "--json", "non_existent_symbol"])
+
+    assert result.exit_code != 0
+    assert "Could not find documentation for 'non_existent_symbol'." in result.output
+    assert result.output.rstrip().endswith("[]")
+
+
+def test_format_signature_markers() -> None:
+    from shiny._main._docs import _format_signature, _ParameterInfo
+
+    params: list[_ParameterInfo] = [
+        {"name": "a", "type": None, "default": None, "kind": "POSITIONAL_ONLY"},
+        {"name": "b", "type": "int", "default": "1", "kind": "POSITIONAL_OR_KEYWORD"},
+        {"name": "c", "type": None, "default": "None", "kind": "KEYWORD_ONLY"},
+        {"name": "**kw", "type": "str", "default": None, "kind": "VAR_KEYWORD"},
+    ]
+    assert (
+        _format_signature("def ", "f", params, "int")
+        == "def f(a, /, b: int = 1, *, c=None, **kw: str) -> int:"
+    )

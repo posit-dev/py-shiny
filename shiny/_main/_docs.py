@@ -8,6 +8,7 @@ import inspect
 import json
 import operator
 import pkgutil
+import sys
 import textwrap
 import warnings
 from collections.abc import Iterator
@@ -47,10 +48,23 @@ class _RoutineInfo(_MethodInfo):
 
 class _ClassInfo(_MethodInfo):
     type: Literal["class"]
+    bases: list[str]
     methods: list[_MethodInfo]
 
 
-_DocInfo = _RoutineInfo | _ClassInfo
+class _ModuleInfo(TypedDict):
+    name: str
+    signature: str
+    type: Literal["module"]
+    docstring: str
+    members: list[str]
+
+
+_DocInfo = _RoutineInfo | _ClassInfo | _ModuleInfo
+
+# Errors raised by `inspect.getsource()` (no source available, e.g. builtins or
+# objects defined interactively) and by `ast.parse()` on the dedented snippet.
+_SOURCE_ERRORS = (OSError, TypeError, SyntaxError)
 
 
 def _iter_public_modules(package: ModuleType) -> Iterator[ModuleType]:
@@ -62,10 +76,11 @@ def _iter_public_modules(package: ModuleType) -> Iterator[ModuleType]:
             continue
         try:
             with warnings.catch_warnings():
+                # Deprecated import paths (e.g. `shiny.express.layout`) warn with
+                # ImportWarning; treat that as "not a public module".
                 warnings.simplefilter("error", ImportWarning)
-                warnings.simplefilter("error", DeprecationWarning)
                 module = importlib.import_module(module_info.name)
-        except (ImportError, ImportWarning, DeprecationWarning):
+        except (ImportError, ImportWarning):
             # Skip unavailable optional modules and deprecated import paths.
             continue
         if module_info.ispkg:
@@ -74,32 +89,79 @@ def _iter_public_modules(package: ModuleType) -> Iterator[ModuleType]:
             yield module
 
 
+def _defining_package(obj: Any) -> str | None:
+    """Top-level package of the module that defines ``obj``, if known."""
+    module = getattr(inspect.unwrap(obj), "__module__", None)
+    return module.split(".")[0] if module else None
+
+
+def _public_names(mod: ModuleType) -> list[str]:
+    """Public attribute names of a module, honoring ``__all__`` when defined.
+
+    Without ``__all__``, only objects defined inside the ``shiny`` package count
+    as public; names like ``Path`` that a module merely imports are skipped.
+    """
+    # Read `__dict__` directly: modules with a module-level `__getattr__` (e.g.
+    # `shiny.express.app`) may raise on an unknown dunder lookup.
+    all_names = vars(mod).get("__all__")
+    if all_names is not None:
+        return [str(name) for name in all_names]
+    return [
+        name
+        for name, obj in vars(mod).items()
+        if not name.startswith("_") and _defining_package(obj) == "shiny"
+    ]
+
+
+def _is_documentable_method(obj: Any) -> bool:
+    """Whether a class attribute is a method worth listing.
+
+    Methods inherited from builtins or the standard library (e.g. the ``str``
+    methods of :class:`~shiny.ui.HTML`, via ``UserString``) are excluded: they
+    carry no Shiny documentation and drown out the useful entries in completion
+    and "did you mean" suggestions.
+    """
+    if not callable(obj):
+        return False
+    package = _defining_package(obj)
+    return package is not None and package not in sys.stdlib_module_names
+
+
+def _public_methods(cls: type) -> list[tuple[str, Any]]:
+    methods: list[tuple[str, Any]] = []
+    for m_name in dir(cls):
+        if m_name.startswith("_"):
+            continue
+        try:
+            m_obj = getattr(cls, m_name)
+        except AttributeError:
+            # `dir()` can list names whose descriptor refuses class-level access.
+            continue
+        if _is_documentable_method(m_obj):
+            methods.append((m_name, m_obj))
+    return methods
+
+
 @functools.lru_cache(maxsize=1)
 def _get_all_documentable_symbols() -> list[str]:
     symbols: set[str] = set()
     for mod in _iter_public_modules(importlib.import_module("shiny")):
         full_mod = mod.__name__
-        short_prefix = full_mod.removeprefix("shiny").lstrip(".")
-        short_prefix = f"{short_prefix}." if short_prefix else ""
-        for attr in dir(mod):
-            if attr.startswith("_"):
-                continue
+        short_mod = full_mod.removeprefix("shiny").lstrip(".")
+        short_prefix = f"{short_mod}." if short_mod else ""
+        symbols.add(full_mod)
+        if short_mod:
+            symbols.add(short_mod)
+        for attr in _public_names(mod):
             obj = getattr(mod, attr, None)
-            if obj is None:
+            if obj is None or not (inspect.isroutine(obj) or inspect.isclass(obj)):
                 continue
-            if inspect.isroutine(obj) or inspect.isclass(obj):
-                symbols.add(f"{full_mod}.{attr}")
-                symbols.add(f"{short_prefix}{attr}")
-                if inspect.isclass(obj):
-                    for m_name in dir(obj):
-                        if not m_name.startswith("_"):
-                            try:
-                                m_obj = getattr(obj, m_name, None)
-                                if callable(m_obj):
-                                    symbols.add(f"{full_mod}.{attr}.{m_name}")
-                                    symbols.add(f"{short_prefix}{attr}.{m_name}")
-                            except Exception:
-                                pass
+            symbols.add(f"{full_mod}.{attr}")
+            symbols.add(f"{short_prefix}{attr}")
+            if inspect.isclass(obj):
+                for m_name, _ in _public_methods(obj):
+                    symbols.add(f"{full_mod}.{attr}.{m_name}")
+                    symbols.add(f"{short_prefix}{attr}.{m_name}")
     return sorted(symbols)
 
 
@@ -177,6 +239,20 @@ def _suggest_similar_symbols(name: str, max_suggestions: int = 3) -> list[str]:
     return filtered[:max_suggestions]
 
 
+def _not_found(name: str) -> click.ClickException:
+    suggestions = _suggest_similar_symbols(name)
+    if not suggestions:
+        return click.ClickException(f"Could not find documentation for '{name}'.")
+    if len(suggestions) == 1:
+        return click.ClickException(
+            f"Could not find documentation for '{name}'. Did you mean '{suggestions[0]}'?"
+        )
+    formatted = ", ".join(f"'{s}'" for s in suggestions)
+    return click.ClickException(
+        f"Could not find documentation for '{name}'. Did you mean one of: {formatted}?"
+    )
+
+
 def _resolve_symbol(name: str) -> tuple[Any, str]:
     def _try_resolve(target_name: str) -> Any | None:
         parts = target_name.split(".")
@@ -193,26 +269,16 @@ def _resolve_symbol(name: str) -> tuple[Any, str]:
                 pass
         return None
 
-    if name.startswith("shiny."):
-        obj = _try_resolve(name)
-        if obj is not None:
-            return obj, name
-    else:
-        obj = _try_resolve(f"shiny.{name}")
-        if obj is not None:
-            return obj, f"shiny.{name}"
-
-    suggestions = _suggest_similar_symbols(name)
-    if not suggestions:
-        raise click.ClickException(f"Could not find documentation for '{name}'.")
-    if len(suggestions) == 1:
+    full_name = name if name.startswith("shiny.") else f"shiny.{name}"
+    obj = _try_resolve(full_name)
+    if obj is None:
+        raise _not_found(name)
+    if not (inspect.ismodule(obj) or inspect.isclass(obj) or callable(obj)):
         raise click.ClickException(
-            f"Could not find documentation for '{name}'. Did you mean '{suggestions[0]}'?"
+            f"'{name}' is not a function, class, or module "
+            f"(it is an instance of {type(obj).__name__})."
         )
-    formatted = ", ".join(f"'{s}'" for s in suggestions)
-    raise click.ClickException(
-        f"Could not find documentation for '{name}'. Did you mean one of: {formatted}?"
-    )
+    return obj, full_name
 
 
 def _complete_symbol_names(
@@ -223,195 +289,215 @@ def _complete_symbol_names(
     return [CompletionItem(s) for s in symbols if s.lower().startswith(inc)]
 
 
-def _extract_function_signature(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-) -> tuple[str, str | None, list[_ParameterInfo]]:
-    fn_prefix = "async def " if isinstance(node, ast.AsyncFunctionDef) else "def "
-    args_str = ast.unparse(node.args)
-    return_type = ast.unparse(node.returns) if node.returns else None
+def _format_signature(
+    prefix: str,
+    name: str,
+    parameters: list[_ParameterInfo],
+    return_type: str | None,
+) -> str:
+    """Render a PEP 8 style signature line from parsed parameters.
+
+    ``ast.unparse`` writes ``x: int=None``; this writes ``x: int = None`` (and
+    ``x=None`` when there is no annotation), inserting the ``/`` and ``*``
+    markers where they belong.
+    """
+    parts: list[str] = []
+    kinds = [p["kind"] for p in parameters]
+    for idx, p in enumerate(parameters):
+        if p["kind"] == "KEYWORD_ONLY" and (
+            "VAR_POSITIONAL" not in kinds and "KEYWORD_ONLY" not in kinds[:idx]
+        ):
+            parts.append("*")
+        part = p["name"]
+        if p["type"] is not None:
+            part += f": {p['type']}"
+        if p["default"] is not None:
+            part += (
+                f" = {p['default']}" if p["type"] is not None else f"={p['default']}"
+            )
+        parts.append(part)
+        if p["kind"] == "POSITIONAL_ONLY" and (
+            idx + 1 == len(kinds) or kinds[idx + 1] != "POSITIONAL_ONLY"
+        ):
+            parts.append("/")
     ret_str = f" -> {return_type}" if return_type else ""
-    sig_str = f"{fn_prefix}{node.name}({args_str}){ret_str}:"
+    return f"{prefix}{name}({', '.join(parts)}){ret_str}:"
+
+
+def _extract_parameters(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[_ParameterInfo]:
+    def annotation(a: ast.arg) -> str | None:
+        return ast.unparse(a.annotation) if a.annotation else None
 
     parameters: list[_ParameterInfo] = []
-    for a in node.args.posonlyargs:
-        parameters.append(
-            {
-                "name": a.arg,
-                "type": ast.unparse(a.annotation) if a.annotation else None,
-                "default": None,
-                "kind": "POSITIONAL_ONLY",
-            }
-        )
+    args = node.args
 
-    pos_args = node.args.args
-    num_defaults = len(node.args.defaults)
-    defaults_offset = len(pos_args) - num_defaults
-    for idx, a in enumerate(pos_args):
-        d_val = (
-            ast.unparse(node.args.defaults[idx - defaults_offset])
+    positional = [*args.posonlyargs, *args.args]
+    defaults_offset = len(positional) - len(args.defaults)
+    for idx, a in enumerate(positional):
+        default = (
+            ast.unparse(args.defaults[idx - defaults_offset])
             if idx >= defaults_offset
             else None
         )
         parameters.append(
             {
                 "name": a.arg,
-                "type": ast.unparse(a.annotation) if a.annotation else None,
-                "default": d_val,
-                "kind": "POSITIONAL_OR_KEYWORD",
+                "type": annotation(a),
+                "default": default,
+                "kind": (
+                    "POSITIONAL_ONLY"
+                    if idx < len(args.posonlyargs)
+                    else "POSITIONAL_OR_KEYWORD"
+                ),
             }
         )
 
-    if node.args.vararg:
+    if args.vararg:
         parameters.append(
             {
-                "name": "*" + node.args.vararg.arg,
-                "type": (
-                    ast.unparse(node.args.vararg.annotation)
-                    if node.args.vararg.annotation
-                    else None
-                ),
+                "name": "*" + args.vararg.arg,
+                "type": annotation(args.vararg),
                 "default": None,
                 "kind": "VAR_POSITIONAL",
             }
         )
 
-    for idx, a in enumerate(node.args.kwonlyargs):
-        d_node = node.args.kw_defaults[idx]
-        d_val = ast.unparse(d_node) if d_node else None
+    for a, d_node in zip(args.kwonlyargs, args.kw_defaults):
         parameters.append(
             {
                 "name": a.arg,
-                "type": ast.unparse(a.annotation) if a.annotation else None,
-                "default": d_val,
+                "type": annotation(a),
+                "default": ast.unparse(d_node) if d_node else None,
                 "kind": "KEYWORD_ONLY",
             }
         )
 
-    if node.args.kwarg:
+    if args.kwarg:
         parameters.append(
             {
-                "name": "**" + node.args.kwarg.arg,
-                "type": (
-                    ast.unparse(node.args.kwarg.annotation)
-                    if node.args.kwarg.annotation
-                    else None
-                ),
+                "name": "**" + args.kwarg.arg,
+                "type": annotation(args.kwarg),
                 "default": None,
                 "kind": "VAR_KEYWORD",
             }
         )
 
-    return sig_str, return_type, parameters
+    return parameters
+
+
+def _source_node(obj: Any) -> ast.stmt | None:
+    """The AST node of ``obj``'s own definition, or ``None`` if unavailable."""
+    try:
+        source = textwrap.dedent(inspect.getsource(inspect.unwrap(obj)))
+        tree = ast.parse(source)
+    except _SOURCE_ERRORS:
+        return None
+    return tree.body[0] if tree.body else None
+
+
+def _parse_callable(
+    func: Any, display_name: str
+) -> tuple[str, str | None, list[_ParameterInfo]]:
+    """Signature line, return type, and parameters of a function or method.
+
+    Parsed from source so annotations and defaults read as written; falls back
+    to :func:`inspect.signature` for callables without Python source.
+    """
+    node = _source_node(func)
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        prefix = "async def " if isinstance(node, ast.AsyncFunctionDef) else "def "
+        return_type = ast.unparse(node.returns) if node.returns else None
+        parameters = _extract_parameters(node)
+        return (
+            _format_signature(prefix, node.name, parameters, return_type),
+            (return_type),
+            parameters,
+        )
+
+    try:
+        sig = inspect.signature(func)
+    except (TypeError, ValueError):
+        return f"def {display_name}(...):", None, []
+    return f"def {display_name}{sig}:", None, []
+
+
+def _docstring(obj: Any) -> str:
+    return inspect.getdoc(inspect.unwrap(obj)) or inspect.getdoc(obj) or ""
 
 
 def _parse_method_info(method: Any, method_name: str) -> _MethodInfo:
-    unwrapped = inspect.unwrap(method)
-    sig_str: str | None = None
-    return_type: str | None = None
-    parameters: list[_ParameterInfo] = []
-
-    try:
-        source = textwrap.dedent(inspect.getsource(unwrapped))
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                sig_str, return_type, parameters = _extract_function_signature(node)
-                break
-    except Exception:
-        pass
-
-    if not sig_str:
-        try:
-            sig = inspect.signature(method)
-            sig_str = f"def {method_name}{sig}:"
-        except Exception:
-            sig_str = f"def {method_name}(...):"
-
-    doc = inspect.getdoc(unwrapped) or inspect.getdoc(method) or ""
+    sig_str, return_type, parameters = _parse_callable(method, method_name)
     return {
         "name": method_name,
         "signature": sig_str,
         "return_type": return_type,
         "parameters": parameters,
-        "docstring": doc,
+        "docstring": _docstring(method),
     }
 
 
-def _parse_class_info(cls: Any, full_name: str) -> _ClassInfo:
-    unwrapped = inspect.unwrap(cls)
-    bases_str = ""
-    try:
-        source = textwrap.dedent(inspect.getsource(unwrapped))
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef):
-                bases = ", ".join(ast.unparse(b) for b in node.bases)
-                bases_str = f"({bases})" if bases else ""
-                break
-    except Exception:
-        pass
+def _parse_class_info(cls: type, full_name: str) -> _ClassInfo:
+    node = _source_node(cls)
+    bases = (
+        [ast.unparse(b) for b in node.bases] if isinstance(node, ast.ClassDef) else []
+    )
 
-    sig_str = f"class {cls.__name__}{bases_str}:"
-    doc = inspect.getdoc(unwrapped) or inspect.getdoc(cls) or ""
-
-    methods: list[_MethodInfo] = []
-    for m_name in dir(cls):
-        if not m_name.startswith("_"):
-            try:
-                m = getattr(cls, m_name)
-                if callable(m):
-                    methods.append(_parse_method_info(m, m_name))
-            except Exception:
-                pass
+    # The class signature is its constructor's, minus `self`, so that
+    # `render.plot(alt=..., width=...)` and `Accordion(page, id)` read as called.
+    parameters: list[_ParameterInfo] = []
+    init = getattr(cls, "__init__", None)
+    if init is not None and init is not object.__init__:
+        _, _, parameters = _parse_callable(init, "__init__")
+        parameters = parameters[1:] if parameters else []
+    sig_str = _format_signature("class ", cls.__name__, parameters, None)
 
     return {
         "name": full_name,
         "signature": sig_str,
         "type": "class",
+        "bases": bases,
         "return_type": None,
-        "parameters": [],
-        "docstring": doc,
-        "methods": methods,
+        "parameters": parameters,
+        "docstring": _docstring(cls),
+        "methods": [
+            _parse_method_info(m, m_name) for m_name, m in _public_methods(cls)
+        ],
     }
 
 
 def _parse_routine_info(func: Any, full_name: str) -> _RoutineInfo:
-    unwrapped = inspect.unwrap(func)
-    sig_str: str | None = None
-    return_type: str | None = None
-    parameters: list[_ParameterInfo] = []
-
-    try:
-        source = textwrap.dedent(inspect.getsource(unwrapped))
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                sig_str, return_type, parameters = _extract_function_signature(node)
-                break
-    except Exception:
-        pass
-
-    if not sig_str:
-        try:
-            sig = inspect.signature(func)
-            prefix = "def " if inspect.isroutine(func) else "class "
-            obj_name = getattr(func, "__name__", full_name.split(".")[-1])
-            sig_str = f"{prefix}{obj_name}{sig}:"
-        except Exception:
-            sig_str = f"{full_name}:"
-
-    doc = inspect.getdoc(unwrapped) or inspect.getdoc(func) or ""
+    sig_str, return_type, parameters = _parse_callable(func, full_name.split(".")[-1])
     return {
         "name": full_name,
         "signature": sig_str,
         "type": "function",
         "return_type": return_type,
         "parameters": parameters,
-        "docstring": doc,
+        "docstring": _docstring(func),
+    }
+
+
+def _parse_module_info(mod: ModuleType, full_name: str) -> _ModuleInfo:
+    members = [
+        name
+        for name in _public_names(mod)
+        if (obj := getattr(mod, name, None)) is not None
+        and (inspect.isroutine(obj) or inspect.isclass(obj) or inspect.ismodule(obj))
+    ]
+    return {
+        "name": full_name,
+        "signature": f"module {mod.__name__}:",
+        "type": "module",
+        "docstring": inspect.getdoc(mod) or "",
+        "members": members,
     }
 
 
 def _get_doc_info(obj: Any, full_name: str) -> _DocInfo:
+    if inspect.ismodule(obj):
+        return _parse_module_info(obj, full_name)
     if inspect.isclass(obj):
         return _parse_class_info(obj, full_name)
     return _parse_routine_info(obj, full_name)
@@ -419,21 +505,24 @@ def _get_doc_info(obj: Any, full_name: str) -> _DocInfo:
 
 def _format_text_doc(info: _DocInfo) -> str:
     lines: list[str] = [info["signature"]]
-    if info.get("docstring"):
+    if info["type"] == "class" and info["bases"]:
+        lines[0] += f"  # bases: {', '.join(info['bases'])}"
+    if info["docstring"]:
         lines.append(info["docstring"])
+
+    if info["type"] == "module" and info["members"]:
+        lines.append("\nMembers\n-------\n" + "\n".join(info["members"]))
 
     if info["type"] == "class" and info["methods"]:
         method_lines: list[str] = []
         for m in info["methods"]:
-            m_header = m["signature"]
-            m_doc = m.get("docstring", "").strip()
+            m_doc = m["docstring"].strip()
             if m_doc:
                 first_para = m_doc.split("\n\n")[0]
-                method_lines.append(f"{m_header}\n    {first_para}")
+                method_lines.append(f"{m['signature']}\n    {first_para}")
             else:
-                method_lines.append(m_header)
-        if method_lines:
-            lines.append("\nMethods\n-------\n" + "\n\n".join(method_lines))
+                method_lines.append(m["signature"])
+        lines.append("\nMethods\n-------\n" + "\n\n".join(method_lines))
 
     return "\n".join(lines)
 
@@ -492,23 +581,20 @@ def docs(
     for name in names:
         try:
             obj, full_name = _resolve_symbol(name)
-            info = _get_doc_info(obj, full_name)
-            results.append(info)
-        except Exception as e:
-            if isinstance(e, click.ClickException):
-                errors.append(e.format_message())
-            else:
-                errors.append(str(e) or f"Could not find documentation for '{name}'.")
+        except click.ClickException as e:
+            errors.append(e.format_message())
+            continue
+        results.append(_get_doc_info(obj, full_name))
 
     for err_msg in errors:
         click.echo(f"Error: {err_msg}", err=True)
 
-    if results:
-        if as_json:
-            click.echo(json.dumps(results, indent=2))
-        else:
-            text_blocks = [_format_text_doc(r) for r in results]
-            click.echo("\n\n---\n\n".join(text_blocks))
+    if as_json:
+        # Always emit valid JSON on stdout, even when every lookup failed.
+        click.echo(json.dumps(results, indent=2))
+    elif results:
+        text_blocks = [_format_text_doc(r) for r in results]
+        click.echo("\n\n---\n\n".join(text_blocks))
 
     if errors:
         ctx.exit(1)
