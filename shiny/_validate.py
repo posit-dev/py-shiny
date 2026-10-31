@@ -55,6 +55,9 @@ class ValidateResult:
     reactive_vals: set[str] = field(default_factory=set[str])
     reactive_calcs: set[str] = field(default_factory=set[str])
     duplicate_ids: list[str] = field(default_factory=list[str])
+    _seen_ids: set[tuple[str, str, str]] = field(
+        default_factory=set[tuple[str, str, str]], repr=False
+    )
 
     @property
     def valid(self) -> bool:
@@ -83,21 +86,34 @@ class ValidateResult:
         return sorted(self.reactive_vals | self.reactive_calcs)
 
     def register_id(
-        self, kind: Literal["input", "output", "renderer"], value: str, line: int
+        self,
+        kind: Literal["input", "output", "renderer"],
+        value: str,
+        line: int,
+        *,
+        scope: str = "",
     ) -> None:
+        """Record a detected ID; repeated input/output IDs in one ``scope`` warn.
+
+        ``scope`` is the enclosing function (``""`` for module level), so module
+        UI functions that reuse the same IDs do not collide with each other.
+        Renderer names are recorded for structure detection only: a repeated
+        function name is a Python redeclaration that type checkers already report.
+        """
         ids = {
             "input": self.input_ids,
             "output": self.ui_output_ids,
             "renderer": self.renderer_ids,
         }[kind]
-        if value in ids:
-            self.duplicate_ids.append(value)
-            message = (
-                f"Duplicate renderer function name detected: '{value}'."
-                if kind == "renderer"
-                else f"Duplicate {kind} ID detected: '{value}'. {kind.title()} IDs must be unique."
-            )
-            self.add_warning(line, message, "DUPLICATE_ID")
+        if kind != "renderer":
+            if (kind, scope, value) in self._seen_ids:
+                self.duplicate_ids.append(value)
+                self.add_warning(
+                    line,
+                    f"Duplicate {kind} ID detected: '{value}'. {kind.title()} IDs must be unique.",
+                    "DUPLICATE_ID",
+                )
+            self._seen_ids.add((kind, scope, value))
         ids.add(value)
 
     def to_dict(self) -> ValidationReport:
@@ -127,6 +143,8 @@ class ShinyCodeValidator(ast.NodeVisitor):
         self._current_func_decorators: list[str] = []
         self._parent_map: dict[ast.AST, ast.AST] = {}
         self._aliases: dict[str, str] = {}
+        self._scope = ""
+        """Enclosing function name used to namespace IDs; ``""`` at module level."""
 
     def generic_visit(self, node: ast.AST) -> None:
         for child in ast.iter_child_nodes(node):
@@ -155,14 +173,6 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 self._aliases[bound] = alias.name if alias.asname else "shiny"
             if "shiny.express" in alias.name:
                 self.result.mode = "express"
-            if alias.name in ("shinyApp", "fluidPage", "shinyServer"):
-                self.result.errors.append(
-                    {
-                        "line": node.lineno,
-                        "message": f"R Shiny idiom detected: '{alias.name}'. Use Python Shiny conventions instead.",
-                        "code": "R_SHINY_IDIOM",
-                    }
-                )
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
@@ -177,19 +187,6 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 if alias.name != "*":
                     bound = alias.asname or alias.name
                     self._aliases[bound] = f"{module}.{alias.name}"
-            if module == "shiny" and alias.name in (
-                "shinyApp",
-                "fluidPage",
-                "reactiveVal",
-                "observeEvent",
-            ):
-                self.result.errors.append(
-                    {
-                        "line": node.lineno,
-                        "message": f"R Shiny idiom detected: '{alias.name}'. Use 'shiny.reactive' or 'shiny.ui' equivalents.",
-                        "code": "R_SHINY_IDIOM",
-                    }
-                )
         self.generic_visit(node)
 
     def _check_func_def(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
@@ -199,8 +196,10 @@ class ShinyCodeValidator(ast.NodeVisitor):
         ]
         prev_in_reactive = self._in_reactive_context
         prev_decorators = self._current_func_decorators
+        prev_scope = self._scope
 
         self._current_func_decorators = decorators
+        self._scope = f"{prev_scope}.{node.name}" if prev_scope else node.name
 
         if node.name == "server" and len(node.args.args) >= 2:
             if self.result.mode == "unknown":
@@ -244,6 +243,7 @@ class ShinyCodeValidator(ast.NodeVisitor):
 
         self._in_reactive_context = prev_in_reactive
         self._current_func_decorators = prev_decorators
+        self._scope = prev_scope
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._check_func_def(node)
@@ -263,7 +263,9 @@ class ShinyCodeValidator(ast.NodeVisitor):
                 and isinstance(node.args[0].value, str)
             ):
                 kind = "input" if call_name.startswith("ui.input_") else "output"
-                self.result.register_id(kind, node.args[0].value, node.lineno)
+                self.result.register_id(
+                    kind, node.args[0].value, node.lineno, scope=self._scope
+                )
 
         self.generic_visit(node)
 

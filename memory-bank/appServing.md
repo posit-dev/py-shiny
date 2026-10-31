@@ -101,13 +101,25 @@ directory, installed packages, and unresolved imports. Each file gets a fresh
 validator so module IDs and suppression comments do not collide across files.
 File diagnostics add an optional `file` key to the usual line/message/code.
 
-The original `ShinyCodeValidator` checks IDs, inputs, and decorators.
-`shiny/_validate_reactivity.py` adds lexical tracking of known values, calc
-functions, extended tasks, and `reactive.Value` parameter annotations. It
-reports forbidden task reads and uncalled reactive container access as errors;
-same-object mutation/set and swallowed task-result exceptions are warnings.
-Import aliases and string annotations are supported. This is a targeted static
-check, not type inference across function arguments or a runtime guarantee.
+Scope rule: only report what a type checker or linter cannot. Syntax errors,
+unknown imports, redeclared function names, and attribute/subscript access on
+a `reactive.Value` are all pyright/pylance territory and are deliberately not
+rules here (a syntax error is still reported, since nothing else can be
+checked). Rules must encode Shiny semantics: reactive context, input
+read-only-ness, renderer/ID uniqueness, extended-task constraints.
+
+`ShinyCodeValidator` checks IDs, inputs, and decorators. Duplicate input/output
+IDs are keyed by `(kind, enclosing function, id)` so several `@module.ui`
+functions in one file can reuse IDs. `shiny/_validate_reactivity.py` tracks
+known values, calc functions, extended tasks, and `reactive.Value` parameter
+annotations lexically. It reports reads outside a reactive context (module
+level, or directly in a function named `server`, decorated `@module.server`,
+or taking `(input, output, session)`; `with reactive.isolate():` and lambdas
+are exempt, and decorator arguments are checked in the enclosing scope) and
+reads inside extended tasks as errors; same-object mutation/set and swallowed
+task-result exceptions are warnings. Import aliases and string annotations
+are supported. This is a targeted static check, not type inference across
+function arguments or a runtime guarantee.
 
 The CLI, startup `_validate_app_file()`, and public file helper share this path.
 Startup reports issues without preventing launch; the CLI exits 1 on errors,

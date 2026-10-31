@@ -25,18 +25,114 @@ def test_extended_task_cannot_read_reactive_sources(read: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "access", ["weights.items()", "weights.keys()", "weights['AAPL']"]
+    "code, line",
+    [
+        # Core: reading an input directly in the server body.
+        (
+            "from shiny import Inputs, Outputs, Session\n"
+            "def server(input: Inputs, output: Outputs, session: Session):\n"
+            "    n = input.n()\n",
+            3,
+        ),
+        # Core: a server function recognised by its (input, output, session) signature.
+        (
+            "from shiny import reactive\n"
+            "count = reactive.value(0)\n"
+            "async def app_server(input, output, session):\n"
+            "    if count() > 1:\n"
+            "        pass\n",
+            4,
+        ),
+        # Module server function.
+        (
+            "from shiny import module, reactive\n"
+            "@module.server\n"
+            "def panel(input, output, session, weights: reactive.Value[dict]):\n"
+            "    total = sum(weights().values())\n",
+            4,
+        ),
+        # Calc read at server level.
+        (
+            "from shiny import reactive\n"
+            "def server(input, output, session):\n"
+            "    @reactive.calc\n"
+            "    def doubled():\n"
+            "        return input.n() * 2\n"
+            "    print(doubled())\n",
+            6,
+        ),
+        # Express: module-level read of an input.
+        (
+            "from shiny.express import input, ui\n"
+            "ui.input_slider('n', 'N', 1, 10, 5)\n"
+            "ui.h1(f'Value: {input.n()}')\n",
+            3,
+        ),
+        # Express: module-level read of a reactive value inside a UI container.
+        (
+            "from shiny import reactive\n"
+            "from shiny.express import ui\n"
+            "state = reactive.value(1)\n"
+            "with ui.card():\n"
+            "    ui.p(state.get())\n",
+            5,
+        ),
+        # A decorator argument is evaluated in the server body, not the function.
+        (
+            "from shiny import reactive\n"
+            "def server(input, output, session):\n"
+            "    @reactive.effect\n"
+            "    @reactive.event(input.go())\n"
+            "    def run():\n"
+            "        pass\n",
+            4,
+        ),
+    ],
 )
-def test_reactive_value_parameter_requires_a_call(access: str) -> None:
-    result = validate_shiny_code(dedent(f"""\
-        from shiny import module, reactive
-        @module.server
-        def allocation(input, output, session, weights: reactive.Value[dict]):
-            @reactive.calc
-            def summary():
-                return {access}
-        """))
-    assert [issue["code"] for issue in result.errors] == ["UNCALLED_REACTIVE"]
+def test_reactive_read_outside_reactive_context(code: str, line: int) -> None:
+    result = validate_shiny_code(code)
+    assert [(issue["code"], issue["line"]) for issue in result.errors] == [
+        ("REACTIVE_READ_OUTSIDE_CONTEXT", line)
+    ]
+    assert "reactive.isolate" in result.errors[0]["message"]
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        # Reads inside render/calc/effect functions.
+        "from shiny import render\n"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def txt():\n        return input.n()\n",
+        # Reads inside a plain helper, which may be called from a reactive context.
+        "from shiny import Inputs\n"
+        "def summarize(input: Inputs):\n    return input.n()\n"
+        "def server(input, output, session):\n"
+        "    def nested():\n        return input.n()\n",
+        # Reads wrapped in reactive.isolate(), including an imported alias.
+        "from shiny import reactive\n"
+        "def server(input, output, session):\n"
+        "    with reactive.isolate():\n        start = input.n()\n",
+        "from shiny.reactive import isolate\n"
+        "from shiny.express import input, ui\n"
+        "with isolate():\n    ui.p(input.n())\n",
+        # Reads inside a lambda or a decorator-registered callback.
+        "def server(input, output, session):\n"
+        "    session.on_ended(lambda: print(input.n()))\n",
+        # Passing the input itself (not a read) to reactive.event.
+        "from shiny import reactive\n"
+        "def server(input, output, session):\n"
+        "    @reactive.effect\n    @reactive.event(input.go)\n"
+        "    def run():\n        pass\n",
+        # Express module-level renderers and effects are functions.
+        "from shiny import reactive\n"
+        "from shiny.express import input, render\n"
+        "@render.text\ndef txt():\n    return input.n()\n"
+        "@reactive.effect\ndef log():\n    print(input.n())\n",
+    ],
+)
+def test_reads_inside_reactive_or_isolated_code_are_allowed(code: str) -> None:
+    assert validate_shiny_code(code).clean
 
 
 @pytest.mark.parametrize(

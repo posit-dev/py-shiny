@@ -20,11 +20,15 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
 
 @click.command(
     "validate",
-    help="""Perform static AST analysis and validation on Shiny for Python code.
+    help="""Check Shiny for Python code for reactivity mistakes without running it.
 
-    Validates Shiny apps against common reactivity errors, duplicate widget IDs,
-    missing reactive call parentheses, and R Shiny idioms. File targets also
-    check local Python imports within the app directory without executing them.
+    Reports Shiny-specific problems only: inputs, values, or calcs read outside
+    a reactive context, reads inside extended tasks, uncalled inputs, assignment
+    to inputs, multiple render decorators, duplicate input/output IDs, mutating
+    an object held by a reactive value, and handlers that swallow extended-task
+    errors. Syntax, import, name, and attribute errors are left to your type
+    checker or linter. File targets also check local Python imports within the
+    app directory without executing them.
     Exits with status 1 when errors are found. Warnings are reported but exit 0
     unless --strict is passed.
 

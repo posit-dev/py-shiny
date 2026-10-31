@@ -66,11 +66,37 @@ def test_validate_multiple_renderers() -> None:
     assert any(err["code"] == "MULTIPLE_RENDERERS" for err in report.errors)
 
 
-def test_validate_r_idioms() -> None:
-    code = "from shiny import shinyApp, fluidPage"
-    report = validate_shiny_code(code)
-    assert not report.valid
-    assert any(err["code"] == "R_SHINY_IDIOM" for err in report.errors)
+def test_python_level_mistakes_are_left_to_type_checkers() -> None:
+    # Unknown imports, redeclared function names, and attribute access on a
+    # reactive object are all reported by pyright/pylance already.
+    assert validate_shiny_code("from shiny import shinyApp, fluidPage").clean
+    report = validate_shiny_code(
+        "from shiny import render\n"
+        "@render.text\ndef dup():\n    return 'one'\n"
+        "@render.text\ndef dup():\n    return 'two'\n"
+    )
+    assert report.clean
+    assert report.detected_outputs == ["dup"]
+    assert validate_shiny_code(
+        "from shiny import reactive\nstate = reactive.value([])\n"
+        "@reactive.effect\ndef grow():\n    state.append(1)\n    state[0]\n"
+    ).clean
+
+
+def test_duplicate_ids_are_scoped_to_their_function() -> None:
+    module_code = (
+        "from shiny import module, ui\n"
+        "@module.ui\ndef first():\n    return ui.input_text('name', 'Name')\n"
+        "@module.ui\ndef second():\n    return ui.input_text('name', 'Name')\n"
+        "app_ui = ui.page_fluid(ui.input_text('name', 'Name'))\n"
+    )
+    assert validate_shiny_code(module_code).clean
+    report = validate_shiny_code(
+        "from shiny import module, ui\n"
+        "@module.ui\ndef first():\n"
+        "    return ui.div(ui.input_text('name', 'A'), ui.input_text('name', 'B'))\n"
+    )
+    assert [(w["code"], w["line"]) for w in report.warnings] == [("DUPLICATE_ID", 4)]
 
 
 def test_runtime_inputs_assignment_error() -> None:

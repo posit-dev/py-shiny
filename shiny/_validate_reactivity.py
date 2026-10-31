@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from ._validate import ValidateResult
@@ -116,6 +116,16 @@ class ReactiveUsageValidator(ast.NodeVisitor):
         self.bindings: dict[str, str] = {}
         self.references: dict[str, _ReactiveReference] = {}
         self.in_extended_task = False
+        self.context: Literal["module", "server", "function"] = "module"
+        """Where a reactive read happens.
+
+        Module-level code and the body of a server function run once per
+        session with no reactive context, so reading an input, value, or calc
+        there raises at runtime. Any other function may be called from a
+        reactive context, so reads inside it are not reported.
+        """
+        self.isolated = False
+        """Inside ``with reactive.isolate():``, where reads are allowed anywhere."""
 
     def visit_Module(self, node: ast.Module) -> None:
         bindings = _Bindings({})
@@ -124,8 +134,31 @@ class ReactiveUsageValidator(ast.NodeVisitor):
         self.bindings = bindings.names
         self.generic_visit(node)
 
+    def _is_server_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        if node.name == "server":
+            return True
+        if any(
+            _resolve_name(
+                d.func if isinstance(d, ast.Call) else d, bindings=self.bindings
+            )
+            == "shiny.module.server"
+            for d in node.decorator_list
+        ):
+            return True
+        names = [a.arg for a in [*node.args.posonlyargs, *node.args.args]]
+        return names[:3] == ["input", "output", "session"]
+
     def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-        previous = self.bindings, self.references, self.in_extended_task
+        # Decorators are evaluated in the enclosing scope, before the body.
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        previous = (
+            self.bindings,
+            self.references,
+            self.in_extended_task,
+            self.context,
+            self.isolated,
+        )
         self.in_extended_task = any(
             _resolve_name(
                 d.func if isinstance(d, ast.Call) else d, bindings=self.bindings
@@ -133,6 +166,8 @@ class ReactiveUsageValidator(ast.NodeVisitor):
             == "shiny.reactive.extended_task"
             for d in node.decorator_list
         )
+        self.context = "server" if self._is_server_function(node) else "function"
+        self.isolated = False
         bindings = _Bindings(self.bindings)
         for argument in [
             *node.args.posonlyargs,
@@ -151,9 +186,35 @@ class ReactiveUsageValidator(ast.NodeVisitor):
         self.references = {}
         for statement in node.body:
             self.visit(statement)
-        self.bindings, self.references, self.in_extended_task = previous
+        (
+            self.bindings,
+            self.references,
+            self.in_extended_task,
+            self.context,
+            self.isolated,
+        ) = previous
 
     visit_AsyncFunctionDef = visit_FunctionDef
+
+    def visit_Lambda(self, node: ast.Lambda) -> None:
+        previous = self.context
+        self.context = "function"
+        self.generic_visit(node)
+        self.context = previous
+
+    def visit_With(self, node: ast.With | ast.AsyncWith) -> None:
+        isolates = any(
+            isinstance(item.context_expr, ast.Call)
+            and _resolve_name(item.context_expr.func, bindings=self.bindings)
+            == "shiny.reactive.isolate"
+            for item in node.items
+        )
+        previous = self.isolated
+        self.isolated = self.isolated or isolates
+        self.generic_visit(node)
+        self.isolated = previous
+
+    visit_AsyncWith = visit_With
 
     def _reactive_read(self, node: ast.AST) -> str:
         if not isinstance(node, ast.Call):
@@ -188,6 +249,19 @@ class ReactiveUsageValidator(ast.NodeVisitor):
                 "Read it before invoking the task and pass its value as an argument.",
                 code="EXTENDED_TASK_REACTIVE_READ",
             )
+        elif source and self.context != "function" and not self.isolated:
+            where = (
+                "at module level"
+                if self.context == "module"
+                else "directly in the server function body"
+            )
+            self.result.add_error(
+                node.lineno,
+                message=f"Reactive source '{source}' is read {where}, outside any reactive context. "
+                "Move the read into a render function, reactive.calc, or reactive.effect, "
+                "or wrap it in 'with reactive.isolate():' for a one-time read.",
+                code="REACTIVE_READ_OUTSIDE_CONTEXT",
+            )
         if isinstance(node.func, ast.Attribute):
             owner = node.func.value
             if node.func.attr in _MUTATING_METHODS:
@@ -201,34 +275,6 @@ class ReactiveUsageValidator(ast.NodeVisitor):
                         "after reading it. Copy the object before changing it so reactive dependents are notified.",
                         code="REACTIVE_MUTATION",
                     )
-        self.generic_visit(node)
-
-    def _uncalled(self, node: ast.Attribute | ast.Subscript) -> None:
-        if isinstance(node.value, ast.Name) and self.bindings.get(node.value.id) in (
-            "value",
-            "calc",
-        ):
-            self.result.add_error(
-                node.lineno,
-                message=f"Reactive object '{node.value.id}' must be called before accessing its contents. "
-                f"Use '{node.value.id}()' to read its value.",
-                code="UNCALLED_REACTIVE",
-            )
-
-    def visit_Attribute(self, node: ast.Attribute) -> None:
-        if node.attr in _MUTATING_METHODS | {
-            "items",
-            "keys",
-            "values",
-            "copy",
-            "iloc",
-            "loc",
-        }:
-            self._uncalled(node)
-        self.generic_visit(node)
-
-    def visit_Subscript(self, node: ast.Subscript) -> None:
-        self._uncalled(node)
         self.generic_visit(node)
 
     def _mark_mutated(self, node: ast.AST) -> None:

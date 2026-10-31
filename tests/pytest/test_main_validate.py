@@ -26,12 +26,12 @@ def txt():
 
 def test_cli_validate_errors_json():
     runner = CliRunner()
-    code = "from shiny import shinyApp, fluidPage\n"
+    code = "from shiny.express import input, ui\nui.h1(input.n())\n"
     res = runner.invoke(main, ["validate", "--code", code, "--json"])
     assert res.exit_code == 1
     data = json.loads(res.output)
     assert data["valid"] is False
-    assert any(e["code"] == "R_SHINY_IDIOM" for e in data["errors"])
+    assert any(e["code"] == "REACTIVE_READ_OUTSIDE_CONTEXT" for e in data["errors"])
 
 
 def test_cli_validate_warnings():

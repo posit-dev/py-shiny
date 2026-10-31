@@ -14,9 +14,14 @@ without executing them. Diagnostics include the file and line to fix. Use
 `--json` for structured results and `--strict` to fail on warnings as well as
 errors. `shiny run` also reports these checks at startup.
 
-Checks include duplicate IDs, missing reactive calls, reactive reads inside
-extended tasks, mutating and setting the same stored object, and broad exception
-handlers around extended-task results. Fix task reads by passing values as task
+Checks are Shiny-specific and complement, rather than repeat, pyright or a
+linter: reads of `input.*()`, a `reactive.value`, or a `reactive.calc` outside
+a reactive context (module level or directly in the server body), reads inside
+extended tasks, uncalled inputs, assignment to inputs, duplicate IDs, mutating
+and setting the same stored object, and broad exception handlers around
+extended-task results. Fix outside-context reads by moving them into a render
+function, calc, or effect, or wrapping a one-time read in
+`with reactive.isolate():`. Fix task reads by passing values as task
 arguments. Copy stored lists or dictionaries before changing them. Let
 `task.result()` propagate Shiny's pending-result signals.
 

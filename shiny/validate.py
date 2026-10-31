@@ -29,13 +29,19 @@ imports. Each diagnostic includes its source ``file`` and ``line``. Installed
 packages, dynamic imports, and unresolved imports are not inspected.
 ``validate_shiny_code()`` inspects only the supplied source string.
 
-The built-in checks detect forbidden reactive reads in extended tasks and
-access to container contents on known reactive objects without calling them.
-They recognize reactive constructors, calc decorators, and ``reactive.Value``
-parameter annotations, including import aliases. Warnings identify mutation
-followed by setting the same object and broad exception handlers that swallow
-extended-task result errors. Use ``--strict`` to fail on warnings too.
-Static checks do not replace running the app and testing its interactions.
+The built-in checks cover Shiny semantics only, not general Python mistakes
+that pyright, pylance, or a linter already report (syntax errors, unknown
+imports, redeclared names, or attribute access on a reactive object). Errors
+are reads of an input, ``reactive.value``, or ``reactive.calc`` outside any
+reactive context (at module level or directly in a server function body),
+reads inside extended tasks, uncalled inputs, assignment to inputs, and
+multiple render decorators. Warnings are duplicate input/output IDs within
+one scope, mutating an object and setting it back into the same reactive
+value, and broad exception handlers that swallow extended-task result errors.
+The checks recognize reactive constructors, calc decorators, ``reactive.Value``
+parameter annotations, and ``reactive.isolate()`` blocks, including import
+aliases. Use ``--strict`` to fail on warnings too. Static checks do not
+replace running the app and testing its interactions.
 
 For intentional exceptions, use ``# shiny: ignore`` on the diagnostic line or
 ``# shiny: ignore-next-line`` on the preceding line. Add comma-separated rule
