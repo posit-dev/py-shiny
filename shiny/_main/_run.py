@@ -4,6 +4,7 @@ import copy
 import importlib
 import importlib.util
 import inspect
+import logging
 import os
 import platform
 import re
@@ -27,6 +28,7 @@ from .._uvicorn import (
     _set_workbench_kwargs,
     maybe_setup_rsw_proxying,
 )
+from .._validate import validate_shiny_file
 from ..bookmark._bookmark_state import shiny_bookmarks_folder_name
 from ..express import is_express_app
 from ..express._utils import escape_to_var_name
@@ -170,6 +172,13 @@ any of the following will work:
     help="Dev mode",
     show_default=True,
 )
+@click.option(
+    "--validate/--no-validate",
+    default=True,
+    envvar="SHINY_VALIDATE",
+    help="Run static validation on the app file before startup.",
+    show_default=True,
+)
 @no_example()
 def run(
     app: str | shiny.App,
@@ -187,6 +196,7 @@ def run(
     factory: bool,
     launch_browser: bool,
     dev_mode: bool,
+    validate: bool,
     **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
@@ -206,6 +216,7 @@ def run(
         factory=factory,
         launch_browser=launch_browser,
         dev_mode=dev_mode,
+        validate=validate,
         **kwargs,
     )
 
@@ -226,6 +237,7 @@ def run_app(
     factory: bool = False,
     launch_browser: bool = False,
     dev_mode: bool = True,
+    validate: bool | None = None,
     **kwargs: object,
 ) -> None:
     """
@@ -269,6 +281,11 @@ def run_app(
         Treat ``app`` as an application factory, i.e. a () -> <ASGI app> callable.
     launch_browser
         Launch app browser after app starts, using the Python webbrowser module.
+    validate
+        Run static validation on the app file before startup and print any
+        findings to stderr. ``None`` (the default) reads the ``SHINY_VALIDATE``
+        environment variable, treating ``0``, ``false``, and ``no`` as off. An
+        explicit ``True`` or ``False`` overrides the environment variable.
     **kwargs
         Additional keyword arguments which are passed to ``uvicorn.run``. For more
         information see [Uvicorn documentation](https://www.uvicorn.org/).
@@ -298,6 +315,7 @@ def run_app(
     run_app("myapp:my_app", app_dir="..")
     ```
     """
+    validate = _validate_enabled(validate)
 
     # If port is 0, randomize
     if port == 0:
@@ -316,6 +334,8 @@ def run_app(
                 app_path = Path(app_no_suffix).resolve()
             else:
                 app_path = (Path(app_dir) / app_no_suffix).resolve()
+            if validate:
+                _validate_app_file(app_path)
             # If the file is "/path/to/app.py", our entrypoint with the escaped filename
             # is "shiny.express.app:_2f_path_2f_to_2f_app_2e_py".
             app = "shiny.express.app:" + escape_to_var_name(str(app_path))
@@ -324,7 +344,7 @@ def run_app(
             # Express apps need min version of rsconnect-python to deploy correctly.
             _verify_rsconnect_version()
         else:
-            app, app_dir = resolve_app(app, app_dir)
+            app, app_dir = resolve_app(app, app_dir, validate=validate)
 
     if app_dir:
         app_dir = os.path.realpath(app_dir)
@@ -440,7 +460,9 @@ def is_file(app: str) -> bool:
     return "/" in app or app.endswith(".py")
 
 
-def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
+def resolve_app(
+    app: str, app_dir: str | None, *, validate: bool = True
+) -> tuple[str, str | None]:
     # The `app` parameter can be:
     #
     # - A module:attribute name
@@ -477,8 +499,45 @@ def resolve_app(app: str, app_dir: str | None) -> tuple[str, str | None]:
         dirname, filename = os.path.split(module_path)
         module = filename[:-3] if filename.endswith(".py") else filename
         app_dir = dirname
+        if validate:
+            _validate_app_file(module_path)
 
     return f"{module}:{attr}", app_dir
+
+
+def _validate_enabled(validate: bool | None) -> bool:
+    """Resolve ``run_app(validate=)``: an explicit value wins over ``SHINY_VALIDATE``."""
+    if validate is not None:
+        return validate
+    return os.environ.get("SHINY_VALIDATE", "1").lower() not in ("0", "false", "no")
+
+
+def _validate_app_file(app_file: Path | str) -> None:
+    try:
+        report = validate_shiny_file(app_file)
+        if report.errors:
+            for err in report.errors:
+                line = err["line"]
+                msg = err["message"]
+                print(
+                    f"Validation error ({err.get('file', str(app_file))}:{line}): {msg}",
+                    file=sys.stderr,
+                )
+        if report.warnings:
+            for warn in report.warnings:
+                line = warn["line"]
+                msg = warn["message"]
+                print(
+                    f"Validation warning ({warn.get('file', str(app_file))}:{line}): {msg}",
+                    file=sys.stderr,
+                )
+    except Exception:
+        logger = logging.getLogger("shiny")
+        if os.environ.get("SHINY_LOG_LEVEL", "").upper() == "DEBUG":
+            if not logger.handlers and not logging.getLogger().handlers:
+                logging.basicConfig(level=logging.DEBUG)
+            logger.setLevel(logging.DEBUG)
+        logger.debug("Static validation failed for %s", app_file, exc_info=True)
 
 
 def try_import_module(module: str) -> Optional[types.ModuleType]:

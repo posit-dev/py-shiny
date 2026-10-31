@@ -153,7 +153,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return fig
 
     @render.table
-    def table() -> pd.DataFrame:
+    def table() -> pd.DataFrame:  # shiny: ignore RENDERER_WITHOUT_OUTPUT
         return pd.concat(df())
 
     @render.ui

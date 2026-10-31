@@ -2494,7 +2494,10 @@ class Inputs:
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, reactive.Value):
-            raise TypeError("`value` must be a reactive.Value object.")
+            raise TypeError(
+                f"Cannot assign directly to 'input.{key}'. Shiny inputs are read-only. "
+                "Use 'reactive.value()' or 'ui.update_*' functions to manage state."
+            )
 
         # Set the name on the Value for OpenTelemetry logging (before namespacing)
         # The module ns will be included separately
@@ -2984,6 +2987,9 @@ class OutputInfo:
     suspend_when_hidden: bool
 
 
+_warned_duplicate_outputs: set[tuple[str, int, str]] = set()
+
+
 class Outputs:
     """
     A class representing Shiny output definitions.
@@ -3054,6 +3060,30 @@ class Outputs:
             )
             output_otel_attrs = extract_source_ref(renderer_func)
             output_otel_level = resolve_func_otel_level(renderer_func)
+
+            # `@output` on top of `@render.*` re-registers the renderer that
+            # `@render.*` already auto-registered; only a different renderer
+            # under the same name is a real duplicate.
+            if (
+                output_name in self._outputs
+                and self._outputs[output_name].renderer is not renderer
+            ):
+                code = getattr(renderer_func, "__code__", None)
+                filename = output_otel_attrs.get("code.file.path") or (
+                    code.co_filename if code is not None else "<unknown>"
+                )
+                lineno = output_otel_attrs.get("code.line.number") or (
+                    code.co_firstlineno if code is not None else 1
+                )
+                warn_key = (filename, lineno, str(output_name))
+                if warn_key not in _warned_duplicate_outputs:
+                    _warned_duplicate_outputs.add(warn_key)
+                    warnings.warn_explicit(
+                        f"Duplicate output '{output_id}': overwriting previous renderer definition.",
+                        RuntimeWarning,
+                        filename,
+                        lineno,
+                    )
 
             renderer._on_register()
 

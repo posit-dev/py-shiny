@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added a built-in developer CLI tool (`shiny validate`) and public `shiny.validate` module to statically check apps for Shiny-specific mistakes that a type checker cannot see: reactive reads outside a reactive context, reads inside extended tasks, uncalled inputs, assignment to inputs, `@reactive.event` in the wrong decorator position, duplicate IDs, `ui.output_*()` placeholders with no renderer (and the reverse), effects that return a value or re-trigger themselves, calcs with side effects, and more. `shiny validate` returns a nonzero exit status when it finds errors; pass `--strict` to also fail on warnings. (#2453)
+
+* Assigning directly to a Shiny input (e.g. `input.x = 1`) now raises a clearer `TypeError` explaining that inputs are read-only and suggesting `reactive.value()` or `ui.update_*` functions, and registering a duplicate output renderer now emits a `RuntimeWarning`. (#2453)
+
 * New `session.run_once_when_idle()` runs a function once, after the session's effects have finished and its outputs have been sent. Use it to change reactive state from a background task or a custom timer without changing a value that a running effect is still reading (#2546).
 
 * `ui.sidebar()` gains a `role` argument (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark (#2526).
