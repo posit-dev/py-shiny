@@ -37,14 +37,13 @@ shiny/.agents/skills/
     scripts/          # optional: self-contained runnable code
     references/       # one file per topic, e.g. debugging.md, testing.md, modules.md
     assets/           # optional: templates, images, data files
-  shiny-docs/
-    SKILL.md          # how to use the `shiny docs` CLI for exact signatures
 ```
 
-- There are two skill directories: `shiny-for-python` (the index of how to
-  build apps) and `shiny-docs` (the `shiny docs` lookup command). Neither is
-  prefixed further (installers namespace skills by package, and each
-  description scopes the skill to Shiny for Python).
+- There is **one** skill directory, `shiny-for-python`; it is not prefixed
+  further (installers namespace skills by package, and the description scopes
+  the skill to Shiny for Python). Cross-cutting tools such as the `shiny docs`
+  lookup command get a reference file (`references/shiny-docs.md`) and an
+  index row, not a skill of their own.
 - `SKILL.md`'s body is a grouped index: short sections that bucket related
   topics (core concepts, layout/UI, outputs, app capabilities, extending
   shiny, ...), each with a row per topic linking to its

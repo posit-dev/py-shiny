@@ -1,6 +1,6 @@
 ---
 name: shiny-for-python
-description: "Building, styling, testing, debugging, or observing a Shiny for Python (py-shiny) reactive web app - `from shiny import ...`, `shiny run app.py`. Index skill: read this, then open the linked reference for the task. Covers dashboard design and visual QA; card toolbars and accessible icons; interactive Plotly charts and maps; reactivity (calc/effect/value/event/req/isolate); Express vs Core; modules; layout, navigation, dynamic UI, and theming; plots, data frames, files, and custom renderers; LLM chat and Markdown streaming; notifications, modals, progress, and background tasks; bookmarking; custom JS components; session lifecycle; in-memory server testing (`test_server`) and Playwright testing; debugging; and OpenTelemetry. Use when writing or changing any Shiny for Python app, especially an analytical dashboard, or when tempted to hand-roll what the framework provides - custom HTML tables, fake tabs, DOM manipulation, blocking reactive work, polling loops, or print-debugging server state."
+description: "Building, styling, testing, debugging, or observing a Shiny for Python (py-shiny) reactive web app - `from shiny import ...`, `shiny run app.py`. Index skill: read this, then open the linked reference for the task. Covers dashboard design and visual QA; card toolbars and accessible icons; interactive Plotly charts and maps; reactivity (calc/effect/value/event/req/isolate); Express vs Core; modules; layout, navigation, dynamic UI, and theming; plots, data frames, files, and custom renderers; LLM chat and Markdown streaming; notifications, modals, progress, and background tasks; bookmarking; custom JS components; session lifecycle; in-memory server testing (`test_server`) and Playwright testing; debugging; OpenTelemetry; and looking up exact signatures, parameters, and controller methods with the `shiny docs` CLI. Use when writing or changing any Shiny for Python app, especially an analytical dashboard, or when tempted to hand-roll what the framework provides - custom HTML tables, fake tabs, DOM manipulation, blocking reactive work, polling loops, or print-debugging server state."
 ---
 
 # Shiny for Python
@@ -16,13 +16,14 @@ read it — you never call outputs or schedule updates yourself.
 This skill is an **index**. Find your task below and **read the linked
 reference file before writing code** for that area. For the exact signature of
 any function, class, or Playwright controller, run `shiny docs <name>` (e.g.
-`shiny docs ui.value_box`, `shiny docs playwright.controller.Accordion`)
-instead of guessing argument names.
+`shiny docs ui.value_box`) instead of guessing argument names; see
+`references/shiny-docs.md`.
 
 ## Foundations
 
 | Topic | Use when | Reference |
 |---|---|---|
+| API lookup | Need the exact arguments, defaults, return type, or controller methods of any shiny function or class before calling it; checking a name you are not sure exists | `references/shiny-docs.md` |
 | Reactivity | A value should recompute or an output update as inputs change; choosing between calc / effect / value; `req`, `isolate`, timers, polling, setting values from background tasks | `references/reactivity.md` |
 | Express mode | Writing or converting an Express app (`from shiny.express import ...`); context-manager layout; `page_opts`, `@expressify` | `references/express.md` |
 | Modules (Core) | A reusable, repeatable UI+server component in a Core app; avoiding input/output id collisions across copies | `references/modules-core.md` |

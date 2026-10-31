@@ -95,7 +95,7 @@ Controller names follow the UI function: `ui.input_slider` →
 `controller.OutputDataFrame`, `ui.card` → `controller.Card`. To see a
 controller's constructor and every `expect_*`/`set` method with its exact
 arguments, run `shiny docs playwright.controller.<Name>`; `shiny docs --complete
-playwright.controller.` lists them all.
+playwright.controller.` lists them all (see `references/shiny-docs.md`).
 
 | Category | Controllers |
 |---|---|
