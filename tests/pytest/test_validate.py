@@ -195,6 +195,46 @@ def test_local_variable_shadowing_input_is_not_a_shiny_input() -> None:
     assert [(e["code"], e["line"]) for e in report.errors] == [("UNCALLED_INPUT", 10)]
 
 
+def test_helper_parameter_named_input_is_an_ordinary_binding() -> None:
+    # A nested helper's `input` parameter is whatever the caller passes.
+    assert validate_shiny_code(
+        "from shiny import render\n"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def summary():\n"
+        "        def format_record(input):\n            return input.name\n"
+        "        return format_record(record)\n"
+    ).clean
+    # Server functions and `Inputs`-annotated parameters are Shiny's input.
+    report = validate_shiny_code(
+        "from shiny import Inputs, module, render\n"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def a():\n        return input.n\n"
+        "@module.server\ndef panel(input, output, session):\n"
+        "    @render.text\n    def b():\n        return input.n\n"
+        "def typed(input: Inputs):\n"
+        "    @render.text\n    def c():\n        return input.n\n"
+        "def by_signature(input, output, session):\n"
+        "    @render.text\n    def d():\n        return input.n\n"
+    )
+    assert [(e["code"], e["line"]) for e in report.errors] == [
+        ("UNCALLED_INPUT", 5),
+        ("UNCALLED_INPUT", 10),
+        ("UNCALLED_INPUT", 14),
+        ("UNCALLED_INPUT", 18),
+    ]
+
+
+def test_comprehension_variables_do_not_shadow_input() -> None:
+    report = validate_shiny_code(
+        "from shiny.express import input, render\n"
+        "@render.text\ndef summary():\n"
+        "    values = [input for input in range(3)]\n"
+        "    total = sum(input for input in range(3))\n"
+        "    return input.n\n"
+    )
+    assert [(e["code"], e["line"]) for e in report.errors] == [("UNCALLED_INPUT", 6)]
+
+
 def test_only_reactive_event_may_take_an_uncalled_input() -> None:
     report = validate_shiny_code(
         "from shiny import reactive\n"

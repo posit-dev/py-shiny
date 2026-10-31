@@ -60,6 +60,26 @@ def test_only_imported_local_files_are_checked(tmp_path: Path) -> None:
     assert validate_shiny_file(app).clean
 
 
+def test_duplicate_app_level_ids_are_detected_across_files(tmp_path: Path) -> None:
+    (tmp_path / "app.py").write_text(
+        "from shiny import App, ui\nfrom a import a\nfrom b import b\n"
+        "app_ui = ui.page_fluid(a(), b(), ui.output_text('out'))\n"
+    )
+    (tmp_path / "a.py").write_text(
+        "from shiny import ui\ndef a():\n    return ui.input_text('shared', 'First')\n"
+    )
+    (tmp_path / "b.py").write_text(
+        "from shiny import ui\ndef b():\n    return ui.input_text('shared', 'Second')\n"
+        "ui.output_text('out')  # shiny: ignore DUPLICATE_ID\n"
+    )
+    result = validate_shiny_file(tmp_path / "app.py")
+    assert [
+        (Path(issue.get("file", "")).name, issue["line"], issue["code"])
+        for issue in result.warnings
+    ] == [("b.py", 3, "DUPLICATE_ID")]
+    assert "a.py" in result.warnings[0]["message"]
+
+
 def test_separate_module_ids_do_not_collide(tmp_path: Path) -> None:
     app = tmp_path / "app.py"
     app.write_text("import first\nimport second\n")

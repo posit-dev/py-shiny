@@ -70,6 +70,10 @@ class ValidateResult:
     """``@render.*`` output IDs outside modules, with the line they are defined on."""
     app_functions: set[str] = field(default_factory=set[str])
     """Function names (and ``@output(id=)`` IDs) outside modules; custom renderers live here."""
+    app_ids: dict[tuple[str, str], int] = field(
+        default_factory=dict[tuple[str, str], int]
+    )
+    """First line of each ``(kind, id)`` outside Shiny modules, for cross-file duplicates."""
     _seen_ids: set[tuple[str, str, str]] = field(
         default_factory=set[tuple[str, str, str]], repr=False
     )
@@ -170,6 +174,8 @@ class ValidateResult:
                     "DUPLICATE_ID",
                 )
             self._seen_ids.add((kind, scope, value))
+            if not scope:
+                self.app_ids.setdefault((kind, value), line)
         ids.add(value)
 
     def to_dict(self) -> ValidationReport:
@@ -241,6 +247,16 @@ class ShinyCodeValidator(ast.NodeVisitor):
                     shadows.add(child.id)
         return shadows
 
+    def _is_server_function(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef, decorators: list[str]
+    ) -> bool:
+        """Named ``server``, decorated ``@module.server``, or taking
+        ``(input, output, session)``: its ``input`` parameter is Shiny's."""
+        if node.name == "server" or "module.server" in decorators:
+            return True
+        names = [a.arg for a in [*node.args.posonlyargs, *node.args.args]]
+        return names[:3] == ["input", "output", "session"]
+
     def visit_Module(self, node: ast.Module) -> None:
         # Imports are registered while visiting, so collect aliases first and
         # then decide which module-level assignments shadow them.
@@ -307,16 +323,27 @@ class ShinyCodeValidator(ast.NodeVisitor):
         prev_shadowed = self._shadowed
 
         self._current_func_decorators = decorators
-        # Parameters named `input` are Shiny's input (server and helper
-        # functions receive it); local assignments hide it.
+        # Local assignments hide Shiny's `input`. So does a parameter of the
+        # same name, unless the function is a server function or the parameter
+        # is annotated as `Inputs`: `def format_record(input)` inside a
+        # renderer receives an ordinary object, not Shiny's input.
         self._shadowed = prev_shadowed | self._local_shadows(node.body)
+        is_server = self._is_server_function(node, decorators)
         for argument in [
             *node.args.posonlyargs,
             *node.args.args,
             *node.args.kwonlyargs,
             *[a for a in (node.args.vararg, node.args.kwarg) if a is not None],
         ]:
-            self._shadowed.discard(argument.arg)
+            if self._normalize_name(argument.arg) != "input":
+                continue
+            annotated = argument.annotation is not None and self._normalize_name(
+                self._get_call_name(argument.annotation)
+            ) in ("Inputs", "session.Inputs")
+            if is_server or annotated:
+                self._shadowed.discard(argument.arg)
+            else:
+                self._shadowed.add(argument.arg)
 
         if node.name == "server" and len(node.args.args) >= 2:
             if self.result.mode == "unknown":
@@ -627,11 +654,24 @@ class ShinyCodeValidator(ast.NodeVisitor):
         return ""
 
 
+_NESTED_SCOPES = (
+    ast.FunctionDef,
+    ast.AsyncFunctionDef,
+    ast.Lambda,
+    ast.ListComp,
+    ast.SetComp,
+    ast.DictComp,
+    ast.GeneratorExp,
+)
+"""Nodes that open their own scope, so bindings inside them stay inside."""
+
+
 def _walk_without_nested_functions(node: ast.AST) -> Iterator[ast.AST]:
-    """Yield ``node`` and its descendants, without entering nested function bodies."""
+    """Yield ``node`` and its descendants, without entering nested scopes
+    (functions, lambdas, and comprehensions)."""
     yield node
     for child in ast.iter_child_nodes(node):
-        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+        if isinstance(child, _NESTED_SCOPES):
             continue
         yield from _walk_without_nested_functions(child)
 
@@ -853,6 +893,7 @@ def validate_shiny_file(
     seen: set[Path] = set()
     sources: dict[str, str] = {}
     result = ValidateResult()
+    cross_file = ValidateResult()
     while pending:
         current = pending.pop()
         if current in seen:
@@ -897,8 +938,22 @@ def validate_shiny_file(
                 result.app_renderers[output_id] = line
                 result._issue_files[f"renderer:{output_id}"] = str(current)
         result.app_functions.update(report.app_functions)
+        for (kind, value), line in report.app_ids.items():
+            # Module namespaces are per file; app-level IDs share one page.
+            if (kind, value) in result.app_ids:
+                cross_file.add_warning(
+                    line,
+                    f"Duplicate {kind} ID detected: '{value}'. {kind.title()} IDs must be "
+                    f"unique; it is also used in {result._issue_files[f'{kind}-id:{value}']}.",
+                    "DUPLICATE_ID",
+                )
+                cross_file.warnings[-1]["file"] = str(current)
+            else:
+                result.app_ids[(kind, value)] = line
+                result._issue_files[f"{kind}-id:{value}"] = str(current)
         result.suggestions.extend(s for s in report.suggestions if s != _CLEAN_MESSAGE)
     _pair_outputs_across_files(result, sources)
+    _extend_with_suppressions(result, cross_file.warnings, sources)
     if result.clean:
         result.suggestions.append(_CLEAN_MESSAGE)
     return result
@@ -915,12 +970,20 @@ def _pair_outputs_across_files(result: ValidateResult, sources: dict[str, str]) 
         _issue_files=result._issue_files,
     )
     pairing.check_output_pairing()
+    _extend_with_suppressions(result, pairing.warnings, sources)
+
+
+def _extend_with_suppressions(
+    result: ValidateResult, warnings: list[ValidationIssue], sources: dict[str, str]
+) -> None:
+    """Add cross-file ``warnings`` to ``result``, honoring each file's
+    ``# shiny: ignore`` comments. Only files that parsed contribute IDs, so
+    tokenizing their source here is safe."""
     for file, code in sources.items():
         per_file = ValidateResult(
-            warnings=[w for w in pairing.warnings if w.get("file") == file]
+            warnings=[w for w in warnings if w.get("file") == file]
         )
         if per_file.warnings:
-            # Only files that parsed contribute IDs, so tokenizing here is safe.
             _apply_suppressions(code, per_file)
             result.warnings.extend(per_file.warnings)
 
