@@ -335,8 +335,8 @@ def _user_reader(
     """
     The function users get: it reads `result`, so its readers wait for `trigger`.
 
-    It carries `fn`'s name, source location, and OTel marks, so the calc, effect, or
-    output above it records its span as `reactive.calc <kind> <name>` (or similar).
+    It carries `fn`'s name, source location, and OTel marks, so a calc or effect
+    above it records its span as e.g. `reactive.calc <kind> <name>`.
     """
     read = functools.wraps(fn)(_call(result))
     set_otel_label_modifier(read, kind, mode="prepend")
