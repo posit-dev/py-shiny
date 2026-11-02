@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import importlib.util
+import inspect
 import json
 import shutil
+import signal
 import sys
 import tempfile
 import threading
@@ -12,11 +15,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from ...run._run import ShinyAppProc, run_shiny_app
+from ._codegen import REDACTED
 
 if TYPE_CHECKING:
     from playwright.sync_api import Browser, BrowserContext, Page, Video
@@ -25,8 +30,7 @@ _APP_ENV = {"SHINY_REACTLOG": "1", "SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1
 
 # Streams browser actions and session ids to Python as they happen, so closing the
 # window or reloading the page loses nothing.
-RECORDER_SCRIPT = r"""
-(() => {
+RECORDER_SCRIPT = "(() => {\n  const REDACTED = " + json.dumps(REDACTED) + ";" + r"""
   const send = (item) => {
     item.time = Date.now() / 1000;
     if (window.__shinyReactlogAction) window.__shinyReactlogAction(item);
@@ -48,16 +52,55 @@ RECORDER_SCRIPT = r"""
     $(document).on("shiny:inputchanged.shinyReactlog", (e) => {
       if (e.name.startsWith(".")) return;
       const el = e.el || document.getElementById(e.name);
+      // Sliders: the formatted label text the Playwright controller drags until it matches.
+      const box = el && el.closest ? el.closest(".shiny-input-container") : null;
+      const txt = (sel) => {
+        const n = box && box.querySelector(sel);
+        return n ? n.textContent : null;
+      };
+      // Date inputs: the visible field text, which follows the input's `format`.
+      const fields = () => (box ? Array.from(box.querySelectorAll("input"), (n) => n.value) : []);
+      const binding = e.binding && e.binding.name ? e.binding.name : null;
+      let display = null;
+      if (!sensitive(e.name, el)) {
+        if (binding === "shiny.sliderInput") {
+          display = Array.isArray(e.value) ? [txt(".irs-from"), txt(".irs-to")] : txt(".irs-single");
+        } else if (binding === "shiny.dateInput") {
+          display = fields()[0] ?? null;
+        } else if (binding === "shiny.dateRangeInput") {
+          const [from, to] = fields();
+          display = [from ?? null, to ?? null];
+        }
+      }
       send({
         type: "input",
+        display: display,
         name: e.name,
-        value: sensitive(e.name, el) ? "[REDACTED]" : e.value,
+        value: sensitive(e.name, el) ? REDACTED : e.value,
         inputType: e.inputType || "",
+        binding: binding,
+        tag: el ? el.tagName : "",
+        elType: el && el.type ? String(el.type) : "",
+        classes: el && el.className ? String(el.className) : "",
+        container: el && el.closest && el.closest(".shiny-input-container")
+          ? String(el.closest(".shiny-input-container").className) : "",
       });
     });
     $(document).on("shiny:value.shinyReactlog", (e) => {
-      send({ type: "output", name: e.name });
+      // Outputs arrive wrapped in an adapter; the named binding is inside it.
+      const inner = e.binding && e.binding.binding ? e.binding.binding : e.binding;
+      const binding = inner && inner.name ? inner.name : null;
+      const el = document.getElementById(e.name);
+      send({
+        type: "output",
+        name: e.name,
+        binding: binding,
+        tag: el ? el.tagName : "",
+        value: binding === "shiny.textOutput" && typeof e.value === "string" ? e.value : undefined,
+      });
     });
+    // The server finished a flush. py-shiny sends this just before the flush's values.
+    $(document).on("shiny:idle.shinyReactlog", () => send({ type: "idle" }));
   };
   document.addEventListener("DOMContentLoaded", attach);
   window.addEventListener("load", attach);
@@ -91,6 +134,35 @@ def _start_app(app_file: Path) -> ShinyAppProc:
         raise RecordingError(
             "\n".join([f"Failed to start Shiny app {app_file}:", *tail])
         ) from err
+
+
+@contextmanager
+def _terminate_as_interrupt() -> Generator[None]:
+    """
+    Treat SIGTERM and SIGHUP like Ctrl+C while an app is running.
+
+    The app runs in its own session, so it only stops through the callers' `finally`
+    blocks, which these signals' default actions would skip.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def interrupt(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    names = ["SIGTERM", "SIGHUP"]  # SIGHUP does not exist on Windows
+    previous = {
+        sig: signal.signal(sig, interrupt)
+        for sig in (getattr(signal, name) for name in names if hasattr(signal, name))
+        # An ignored signal (e.g. SIGHUP under `nohup`) stays ignored.
+        if signal.getsignal(sig) is not signal.SIG_IGN
+    }
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
 
 
 def _get_json(app: ShinyAppProc, path: str) -> Any:
@@ -133,10 +205,10 @@ def _start_stdin_reader(done: threading.Event) -> bool:
 
 
 def redact_export(export: dict[str, Any]) -> None:
-    """Replace every recorded input value in `export` with "[REDACTED]", in place."""
+    """Replace every recorded input value in `export` with `REDACTED`, in place."""
     for entry in export["log"]:
         if entry.get("action") == "valueChange" and entry.get("type") == "input":
-            entry["value"] = "[REDACTED]"
+            entry["value"] = REDACTED
 
 
 def _wait_for_enter_or_close(
@@ -268,7 +340,7 @@ def record_session(
                 script(page, app.url)
             else:
                 page.goto(app.url)
-                _wait_for_enter_or_close(page, timeout_secs, stop)
+                _wait_for_enter_or_close(page, timeout_secs=timeout_secs, stop=stop)
             saved = _close_browser(
                 page,
                 context=context,
@@ -279,31 +351,36 @@ def record_session(
         return video_start, saved
 
     try:
-        # The Playwright sync API refuses to run on a thread that owns an asyncio
-        # loop (pytest-playwright, async callers), so always give it its own thread.
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(drive_browser)
-            try:
-                video_start, saved = future.result()
-            except KeyboardInterrupt:
-                stop.set()
-                video_start, saved = future.result()
+        with _terminate_as_interrupt():
+            # The Playwright sync API refuses to run on a thread that owns an asyncio
+            # loop (pytest-playwright, async callers), so always give it its own thread.
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(drive_browser)
+                try:
+                    video_start, saved = future.result()
+                except KeyboardInterrupt:
+                    stop.set()
+                    video_start, saved = future.result()
 
-        if not session_ids:
-            raise RecordingError(
-                "The app never started a Shiny session in the browser."
+            if not session_ids:
+                raise RecordingError(
+                    "The app never started a Shiny session in the browser."
+                )
+            session_id = session_ids[-1]
+            if len(set(session_ids)) > 1:  # e.g. a reload, or several replayed tests
+                sys.stderr.write(
+                    f"{len(set(session_ids))} sessions were recorded; exported the last.\n"
+                )
+            export = _export(app, session_id)
+            for entry in export["log"]:
+                entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
+            if redact_inputs:
+                redact_export(export)
+            for action in actions:
+                action["time"] = max(0.0, float(action.get("time", 0)) - video_start)
+            return Recording(
+                export=export, actions=actions, video_path=saved, session_id=session_id
             )
-        session_id = session_ids[-1]
-        export = _export(app, session_id)
-        for entry in export["log"]:
-            entry["time"] = max(0.0, float(entry.get("time", 0)) - video_start)
-        if redact_inputs:
-            redact_export(export)
-        for action in actions:
-            action["time"] = max(0.0, float(action.get("time", 0)) - video_start)
-        return Recording(
-            export=export, actions=actions, video_path=saved, session_id=session_id
-        )
     finally:
         app.close()
         shutil.rmtree(video_dir, ignore_errors=True)
@@ -319,11 +396,92 @@ def serve_and_collect(
     """Run `app_file` with reactlog on for others to drive; export the chosen sessions."""
     app = _start_app(app_file)
     try:
-        on_ready(app.url)
-        wait()
-        sessions: list[dict[str, Any]] = _get_json(app, "__reactlog__/sessions")
-        if not sessions:
-            raise RecordingError("No sessions were recorded.")
-        return [_export(app, session_id) for session_id in choose(sessions)]
+        with _terminate_as_interrupt():
+            on_ready(app.url)
+            wait()
+            sessions: list[dict[str, Any]] = _get_json(app, "__reactlog__/sessions")
+            if not sessions:
+                raise RecordingError("No sessions were recorded.")
+            return [_export(app, session_id) for session_id in choose(sessions)]
     finally:
         app.close()
+
+
+_REPLAY_FIXTURES = {"page", "local_app"}
+
+
+def _is_skip(err: BaseException) -> bool:
+    # pytest's skip outcome; matched by name since pytest isn't a shiny dependency.
+    return type(err).__name__ == "Skipped"
+
+
+@dataclass
+class _ReplayApp:
+    """Stands in for the `local_app` fixture; generated tests only read `.url`."""
+
+    url: str
+
+
+def replay_script(test_file: Path) -> Callable[[Page, str], None]:
+    """
+    A `record_session` script that runs every `test_*` function in `test_file`.
+
+    Raises
+    ------
+    RecordingError
+        If the file can't be imported, has no tests, or a test needs a fixture other
+        than `page` and `local_app`; the returned script raises it when a test
+        fails.
+    """
+    name = f"_reactlog_replay_{test_file.stem}"
+    spec = importlib.util.spec_from_file_location(name, test_file)
+    if spec is None or spec.loader is None:
+        raise RecordingError(f"Cannot import {test_file}.")
+    module = importlib.util.module_from_spec(spec)
+    # Registered while it runs, so dataclasses and annotations can find the module.
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except KeyboardInterrupt:
+        raise
+    # Anything the user's file raises at import time, including pytest's skip/fail
+    # outcomes and SystemExit, which are BaseExceptions.
+    except BaseException as err:  # noqa: B036 (re-raised as RecordingError)
+        what = f"skipped: {err}" if _is_skip(err) else f"{type(err).__name__}: {err}"
+        raise RecordingError(f"Cannot import {test_file}: {what}") from err
+    finally:
+        sys.modules.pop(name, None)
+    tests = [
+        fn
+        for name, fn in vars(module).items()
+        if name.startswith("test_") and callable(fn)
+    ]
+    if not tests:
+        raise RecordingError(f"No test_* functions found in {test_file}.")
+    for fn in tests:
+        extra = set(inspect.signature(fn).parameters) - _REPLAY_FIXTURES
+        if extra:
+            raise RecordingError(
+                f"{test_file.name}::{fn.__name__} needs fixtures --replay can't "
+                "provide: " + ", ".join(sorted(extra))
+            )
+
+    def script(page: Page, url: str) -> None:
+        fixtures = {"page": page, "local_app": _ReplayApp(url=url)}
+        for fn in tests:
+            params = inspect.signature(fn).parameters
+            try:
+                fn(**{k: v for k, v in fixtures.items() if k in params})
+            except KeyboardInterrupt:
+                raise
+            # Assertions, Playwright timeouts, pytest outcomes, or any other error in
+            # the user's test.
+            except BaseException as err:  # noqa: B036 (re-raised as RecordingError)
+                what = (
+                    f"was skipped during replay: {err}"
+                    if _is_skip(err)
+                    else f"failed during replay: {type(err).__name__}: {err}"
+                )
+                raise RecordingError(f"{test_file.name}::{fn.__name__} {what}") from err
+
+    return script

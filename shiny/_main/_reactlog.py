@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import time
@@ -10,10 +11,12 @@ from typing import Any, cast
 
 import click
 
+from ..reactive._reactlog._codegen import generate_controller_test
 from ..reactive._reactlog._record import (
     RecordingError,
     record_session,
     redact_export,
+    replay_script,
     serve_and_collect,
 )
 from ..reactive._reactlog._viewer import (
@@ -75,12 +78,15 @@ def _load_saved(path: Path) -> dict[str, Any]:
     return export
 
 
-def _check_paths(input_file: Path, outputs: list[Path]) -> None:
+def _check_paths(inputs: list[Path], outputs: list[Path]) -> None:
+    protected = {p.resolve(): p for p in inputs}
     seen: set[Path] = set()
     for out in outputs:
         resolved = out.resolve()
-        if resolved == input_file.resolve():
-            raise RecordingError(f"Refusing to overwrite the input file {input_file}.")
+        if resolved in protected:
+            raise RecordingError(
+                f"Refusing to overwrite the input file {protected[resolved]}."
+            )
         if resolved in seen:
             raise RecordingError(f"{out} is used for more than one output.")
         seen.add(resolved)
@@ -100,11 +106,18 @@ def _with_suffix(path: Path, suffix: str | None) -> Path:
     with the app, then press Enter or close the window. Use --no-browser to drive the app
     yourself (or with another tool), or pass a saved .json reactlog to view it again.
 
+    --test writes a Playwright controller test of the recorded session: a
+    deterministic starting point to refine by hand or with an agent. --replay records
+    the session by running such a test instead of waiting for you.
+
     Examples:
 
+    \b
         shiny reactlog app.py
         shiny reactlog app.py --html report.html --json report.json
         shiny reactlog app.py --no-browser --all
+        shiny reactlog app.py --test test_app.py
+        shiny reactlog app.py --replay test_app.py
         shiny reactlog report.json --html
     """,
 )
@@ -156,6 +169,20 @@ def _with_suffix(path: Path, suffix: str | None) -> Path:
 @click.option(
     "--redact-inputs", is_flag=True, default=False, help="Redact all input values."
 )
+@click.option(
+    "--test",
+    "test_out",
+    type=str,
+    default=None,
+    help="Write a Playwright controller test that replays the recorded session.",
+)
+@click.option(
+    "--replay",
+    "replay_file",
+    type=str,
+    default=None,
+    help="Record the session by running this Playwright test file (no manual interaction).",
+)
 @click.option("--title", type=str, default=None, help="Title for the HTML viewer.")
 @click.option(
     "--theme",
@@ -173,6 +200,8 @@ def reactlog(
     no_browser: bool,
     all_sessions: bool,
     redact_inputs: bool,
+    test_out: str | None,
+    replay_file: str | None,
     title: str | None,
     theme: str,
 ) -> None:
@@ -195,6 +224,17 @@ def reactlog(
             saved_input = input_file.suffix.lower() == ".json"
             if no_browser and video_out is not None:
                 raise click.UsageError("--video cannot be used with --no-browser.")
+            if (no_browser or saved_input) and (test_out or replay_file):
+                raise click.UsageError(
+                    "--test and --replay need the recording browser; "
+                    "they don't apply with --no-browser or a saved .json reactlog."
+                )
+            if test_out and (code is not None or path == "-"):
+                raise click.UsageError(
+                    "--test needs an app file; it can't be used with --code or stdin."
+                )
+            if test_out and replay_file:
+                raise click.UsageError("Use either --test or --replay, not both.")
             if all_sessions and not no_browser:
                 raise click.UsageError("--all requires --no-browser.")
             if saved_input and (no_browser or video_out is not None or all_sessions):
@@ -209,14 +249,22 @@ def reactlog(
                 elif html_out is not None:
                     video_path = Path(html_out).with_suffix(".webm")
             out_paths = [
-                Path(p) for p in (html_out, json_out, mermaid_out) if p is not None
+                Path(p)
+                for p in (html_out, json_out, mermaid_out, test_out)
+                if p is not None
             ]
+            inputs = [input_file] + ([Path(replay_file)] if replay_file else [])
             # Fail before recording, not after.
             _check_paths(
-                input_file,
-                out_paths + ([video_path] if video_path is not None else []),
+                inputs, out_paths + ([video_path] if video_path is not None else [])
             )
+            if test_out is not None and Path(test_out).exists():
+                raise RecordingError(
+                    f"{test_out} already exists; pass another --test path so a "
+                    "refined test isn't overwritten."
+                )
 
+            actions: list[dict[str, Any]] = []
             if saved_input:
                 exports = [_load_saved(input_file)]
             elif no_browser:
@@ -235,9 +283,13 @@ def reactlog(
                 )
             else:
                 rec = record_session(
-                    input_file, video_path=video_path, redact_inputs=redact_inputs
+                    input_file,
+                    video_path=video_path,
+                    script=replay_script(Path(replay_file)) if replay_file else None,
+                    redact_inputs=redact_inputs,
                 )
                 exports = [rec.export]
+                actions = rec.actions
                 video_path = rec.video_path
 
             if redact_inputs:
@@ -257,7 +309,7 @@ def reactlog(
                 ]
             ]
             _check_paths(
-                input_file,
+                inputs,
                 [p for _, *ps in targets for p in ps if p is not None]
                 + ([video_path] if video_path is not None else []),
             )
@@ -273,6 +325,14 @@ def reactlog(
                 )
             if video_path is not None:
                 click.echo(cli_success(f"Video saved to {video_path}"))
+            # Last, so a failure here can't lose the recording's other outputs.
+            if test_out is not None:
+                _write_test(
+                    Path(test_out),
+                    app_file=input_file,
+                    actions=actions,
+                    redact_outputs=redact_inputs,
+                )
     except RecordingError as err:
         click.echo(cli_danger(str(err)))
         sys.exit(1)
@@ -298,6 +358,32 @@ def _write(path: Path, text: str) -> None:
         path.write_text(text, encoding="utf-8")
     except OSError as err:
         raise RecordingError(f"Could not write {path}: {err}") from err
+
+
+def _write_test(
+    test_path: Path,
+    *,
+    app_file: Path,
+    actions: list[dict[str, Any]],
+    redact_outputs: bool,
+) -> None:
+    try:
+        rel = Path(os.path.relpath(app_file.resolve(), test_path.resolve().parent))
+    except ValueError:  # on Windows, the app and test are on different drives
+        rel = app_file.resolve()
+    # The `local_app` fixture finds an `app.py` next to the test on its own.
+    app_path = None if rel == Path("app.py") else rel.as_posix()
+    test_name = app_file.resolve().parent.name or "app"
+    _write(
+        test_path,
+        generate_controller_test(
+            actions,
+            test_name=test_name,
+            app_path=app_path,
+            redact_outputs=redact_outputs,
+        ),
+    )
+    click.echo(cli_success(f"Controller test written to {test_path}"))
 
 
 def _write_outputs(
