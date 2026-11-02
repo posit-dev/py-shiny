@@ -70,6 +70,7 @@ public API is only `otel.suppress`, `otel.collect`, and `otel.get_level`
 | `session_end` | `AppSession._run_session_ended_tasks` | `SESSION` |
 | `reactive_update` (attrs: `session.id`) | started by `AppSession._increment_busy_count()` on 0 → 1 (`start_otel_span`); ended by `_end_otel_cycle_span()` from `_decrement_busy_count()` on → 0, or from `_run_session_ended_tasks` | `REACTIVE_UPDATE` |
 | `reactive.calc [mods] [ns:]name` | `Calc_._run` | `REACTIVITY` |
+| `reactive.calc debounce [ns:]name` / `reactive.calc throttle [ns:]name` | the result calc of `reactive.debounce`/`throttle` (`_ratelimit._event_calc` sets the modifier with `mode="replace"`, dropping the inner `event`) | `REACTIVITY` |
 | `reactive.effect [mods] [ns:]name` | `Effect_._run`, inside `use_otel_span(session._otel_reactive_update_span())` | `REACTIVITY` |
 | `output [ns:]name` | `output_obs` inside `Outputs.__call__`'s `set_renderer`, after the `recalculating` message and its `await asyncio.sleep(0)` | `REACTIVITY` |
 | `extended_task [ns:]name` | `ExtendedTask._execution_wrapper` | `REACTIVITY` |
@@ -185,7 +186,8 @@ no longer uses it.
    see `output_obs` (`@otel_suppress`), `bind_task_button`'s
    `effect_sync_button`, bookmark effects in `shiny/bookmark/_bookmark.py`,
    `data_frame._init_reactives` and `@otel.suppress` calcs in
-   `shiny/render/_data_frame.py`, and `with otel.suppress()` in `poll()`.
+   `shiny/render/_data_frame.py`, and `with otel.suppress()` in `poll()` and
+   in `debounce()`/`throttle()` (`shiny/reactive/_ratelimit.py`).
 7. If the public API changes, update the user guide docstring in
    `shiny/otel/__init__.py`, `docs/_quartodoc-core.yml` (`otel` section), and
    the bundled skill reference (below).

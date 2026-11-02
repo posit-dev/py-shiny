@@ -1,6 +1,6 @@
 ---
 title: "Reactive Internals"
-description: "Deep dive into the reactive engine in shiny/reactive/ (Context lifecycle, rounds and the reactive effect queue, priorities, per-session cycles, concurrent async effects and calcs, reactive.flush(), cancellation on destroy, ExtendedTask, poll, error handling, teardown). Read before changing anything in shiny/reactive/ or the session code that drives rounds and cycles."
+description: "Deep dive into the reactive engine in shiny/reactive/ (Context lifecycle, rounds and the reactive effect queue, priorities, per-session cycles, concurrent async effects and calcs, reactive.flush(), cancellation on destroy, ExtendedTask, poll, debounce/throttle, error handling, teardown). Read before changing anything in shiny/reactive/ or the session code that drives rounds and cycles."
 ---
 
 # Reactive Internals
@@ -9,7 +9,7 @@ The high-level model (Context / Dependents / ReactiveEnvironment, push-pull) is
 in [architecture.md](architecture.md#reactive-system). This doc covers the
 mechanics, invariants, and gotchas. Files: `shiny/reactive/_core.py` (graph
 machinery), `_reactives.py` (`Value`, `Calc_`, `Effect_`, `event`),
-`_extended_task.py`, `_poll.py`, `_utils.py` (`is_user_code_frame`, which
+`_extended_task.py`, `_poll.py`, `_ratelimit.py`, `_utils.py` (`is_user_code_frame`, which
 OTel name inference uses). Tests: `tests/pytest/test_reactives.py`.
 
 ## Context lifecycle (`_core.Context`)
@@ -249,6 +249,25 @@ reactive effect queue, round, idle, cycle, output flush, and what the public
   `(path, mtime, size)`. Its default `priority=1` (poll's is 0). A missing
   file raises inside the effect, the error is saved, and every reader
   re-raises it.
+
+## debounce, throttle (`_ratelimit.py`)
+
+- Ported from Shiny for R's `debounce()`/`throttle()`. A plain decorated
+  function is first wrapped in a hidden (suppressed) calc, the *source*.
+- The user gets an `event(trigger, ignore_none=False)` calc that reads the
+  source, so only bumping `trigger` (a `Value[int]`) invalidates readers.
+- Two effects at `priority` (default 100, so they run before outputs):
+  a *tracker* that reads the source (swallowing its errors; readers re-raise
+  them from the cached calc) and a *timer* that waits with
+  `invalidate_later` and bumps `trigger`. Debounce's tracker skips its first
+  run so creation doesn't start the timer, and sets a `deadline`; throttle's
+  tracker either fires or sets `pending` for the end of the window.
+- Debounce has a one-shot *primer* effect that reads the result once and
+  destroys itself. Without it, a first read that comes after the source
+  changed returns the new value without waiting
+  (`test_debounce_and_throttle_timing[False]` fails).
+- Time comes from `time.monotonic()`, so `MockTime` drives the tests
+  (`tests/pytest/test_ratelimit.py`, which ports R's timing test).
 
 ## ExtendedTask (`_extended_task.py`)
 

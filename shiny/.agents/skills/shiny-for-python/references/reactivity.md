@@ -144,6 +144,19 @@ def data2():
 Declare `poll`/`file_reader` at module top level to share one cache across
 sessions.
 
+Slow down a value that changes too often (typing, slider drags, plot hover)
+before slow work reads it. `debounce` waits until the changes stop for N
+seconds; `throttle` passes a change at most once every N seconds:
+
+```python
+@reactive.debounce(0.5)
+@reactive.calc
+def query():
+    return input.search()   # outputs re-run 0.5s after typing stops
+```
+
+Both still run the decorated function on every change; only the readers wait.
+
 To change reactive state from a background `asyncio` task, call `.set()`
 directly. Setting a value schedules its dependents to re-run, so there's no lock
 to take and no `reactive.flush()` to await. (From another thread, use
@@ -198,6 +211,7 @@ session.run_once_when_idle(lambda: v.set(new_value))
 | Timer | `reactive.invalidate_later(secs)` |
 | Set a value from a background task | `v.set(x)`; between cycles: `session.run_once_when_idle(fn)` |
 | Poll a data source / file | `@reactive.poll(...)` / `@reactive.file_reader(...)` |
+| Wait for changes to stop / limit the rate | `@reactive.debounce(secs)` / `@reactive.throttle(secs)` |
 | Run reactive work until idle (tests) | `await reactive.flush()` |
 
 ## Common mistakes
