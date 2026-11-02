@@ -9,8 +9,8 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     # Update at most once per second
-    @reactive.throttle(1)
     @reactive.calc
+    @reactive.throttle(1)
     def text_throttled():
         return input.text()
 

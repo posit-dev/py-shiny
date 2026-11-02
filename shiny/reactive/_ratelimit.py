@@ -1,4 +1,4 @@
-"""Slow down how often a reactive calc invalidates: debounce and throttle."""
+"""Slow down how often a reactive function invalidates: debounce and throttle."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ import functools
 import time
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar, cast
 
-from .. import otel
+from .. import _utils, otel
 from .._docstring import add_example
 from ..otel._labels import set_otel_label_modifier
 from ..types import MISSING, MISSING_TYPE
 from ._core import invalidate_later, isolate
-from ._reactives import Calc_, Value, calc, effect, event
+from ._reactives import Calc_, Effect_, Value, calc, effect, event
 
 if TYPE_CHECKING:
     from ..session import Session
@@ -29,12 +29,12 @@ def debounce(
     session: MISSING_TYPE | Session | None = MISSING,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
     """
-    Wait for a reactive calculation to stop changing before invalidating its readers.
+    Wait for a reactive function to stop changing before invalidating its readers.
 
-    Every time the decorated calculation invalidates, the timer starts over. Readers of
-    the debounced calculation are invalidated only after `delay_secs` pass without
-    another change. This is useful when only the final value matters (for example,
-    while a user is typing) and the work that depends on it is slow.
+    Every time the decorated function's reactive dependencies change, the timer starts
+    over. Readers are invalidated only after `delay_secs` pass without another change.
+    This is useful when only the final value matters (for example, while a user is
+    typing) and the work that depends on it is slow.
 
     With a 3-unit window, where each character is one unit of time and `o` is an
     invalidation:
@@ -53,7 +53,7 @@ def debounce(
     priority
         Debouncing is implemented with :func:`~shiny.reactive.effect`s. Use this
         argument to set their priority. It should be higher than the priority of the
-        effects and outputs that read the debounced calculation (which default to 0).
+        effects and outputs that read the debounced function (which default to 0).
     session
         A :class:`~shiny.Session` instance. If not provided, a session is inferred via
         :func:`~shiny.session.get_current_session`.
@@ -61,9 +61,8 @@ def debounce(
     Returns
     -------
     :
-        A decorator for a no-argument function or :func:`~shiny.reactive.calc`
-        (regular or async). The result is a :func:`~shiny.reactive.calc` that returns
-        the decorated function's value but invalidates its readers only after the
+        A decorator for a no-argument function (regular or async). The result returns
+        the decorated function's value, but its readers are invalidated only after the
         changes stop.
 
     Note
@@ -75,6 +74,12 @@ def debounce(
     Times are minimums: if the event loop is busy when the timer is due, the
     invalidation waits until it is free.
 
+    Tip
+    ---
+    Like :func:`~shiny.reactive.event`, this decorator must be applied before the
+    relevant reactivity decorator (i.e., ``@reactive.calc``, ``@reactive.effect``,
+    ``@render.ui``, etc. must be above it).
+
     See Also
     --------
     * :func:`~shiny.reactive.throttle`
@@ -83,7 +88,7 @@ def debounce(
     delay_fn = _as_delay_fn(delay_secs)
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
-        source = _as_calc(fn, session=session)
+        source = _source_calc(fn, kind="debounce", session=session)
 
         with otel.suppress():
             # Bumped to invalidate the result's readers
@@ -116,7 +121,7 @@ def debounce(
                 else:
                     invalidate_later(when - now)
 
-        result = _event_calc(fn, source, trigger, kind="debounce", session=session)
+        result = _result_calc(source, trigger, session=session)
 
         async def prime():
             # Cache the result right away. Otherwise a first read that comes after
@@ -129,7 +134,7 @@ def debounce(
         with otel.suppress():
             primer = effect(priority=priority, session=session)(prime)
 
-        return cast(Callable[[], T], result)
+        return _user_reader(fn, result, kind="debounce")
 
     return wrapper
 
@@ -142,10 +147,10 @@ def throttle(
     session: MISSING_TYPE | Session | None = MISSING,
 ) -> Callable[[Callable[[], T]], Callable[[], T]]:
     """
-    Invalidate the readers of a reactive calculation at most once per time window.
+    Invalidate the readers of a reactive function at most once per time window.
 
-    When the decorated calculation invalidates, its readers are invalidated right away
-    unless they were already invalidated in the last `delay_secs`. In that case they
+    When the decorated function's reactive dependencies change, its readers are
+    invalidated right away unless they were already invalidated in the last `delay_secs`. In that case they
     are invalidated once at the end of the window. Unlike
     :func:`~shiny.reactive.debounce`, new changes don't restart the window, so a source
     that keeps changing still updates its readers regularly.
@@ -167,7 +172,7 @@ def throttle(
     priority
         Throttling is implemented with :func:`~shiny.reactive.effect`s. Use this
         argument to set their priority. It should be higher than the priority of the
-        effects and outputs that read the throttled calculation (which default to 0).
+        effects and outputs that read the throttled function (which default to 0).
     session
         A :class:`~shiny.Session` instance. If not provided, a session is inferred via
         :func:`~shiny.session.get_current_session`.
@@ -175,10 +180,9 @@ def throttle(
     Returns
     -------
     :
-        A decorator for a no-argument function or :func:`~shiny.reactive.calc`
-        (regular or async). The result is a :func:`~shiny.reactive.calc` that returns
-        the decorated function's value but invalidates its readers at most once per
-        `delay_secs`.
+        A decorator for a no-argument function (regular or async). The result returns
+        the decorated function's value, but its readers are invalidated at most once
+        per `delay_secs`.
 
     Note
     ----
@@ -189,6 +193,12 @@ def throttle(
     Times are minimums: if the event loop is busy when the timer is due, the
     invalidation waits until it is free.
 
+    Tip
+    ---
+    Like :func:`~shiny.reactive.event`, this decorator must be applied before the
+    relevant reactivity decorator (i.e., ``@reactive.calc``, ``@reactive.effect``,
+    ``@render.ui``, etc. must be above it).
+
     See Also
     --------
     * :func:`~shiny.reactive.debounce`
@@ -197,7 +207,7 @@ def throttle(
     delay_fn = _as_delay_fn(delay_secs)
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
-        source = _as_calc(fn, session=session)
+        source = _source_calc(fn, kind="throttle", session=session)
 
         with otel.suppress():
             # Bumped to invalidate the result's readers
@@ -244,8 +254,8 @@ def throttle(
                 else:
                     fire()
 
-        result = _event_calc(fn, source, trigger, kind="throttle", session=session)
-        return cast(Callable[[], T], result)
+        result = _result_calc(source, trigger, session=session)
+        return _user_reader(fn, result, kind="throttle")
 
     return wrapper
 
@@ -256,14 +266,44 @@ def _as_delay_fn(delay_secs: float | Callable[[], float]) -> Callable[[], float]
     return lambda: delay_secs
 
 
-def _as_calc(
-    fn: Callable[[], T], *, session: MISSING_TYPE | Session | None
+def _source_calc(
+    fn: Callable[[], T],
+    *,
+    kind: Literal["debounce", "throttle"],
+    session: MISSING_TYPE | Session | None,
 ) -> Calc_[T]:
+    """Check the decorated function, then wrap it in a hidden calc."""
+    name = f"reactive.{kind}"
+
     if isinstance(fn, Calc_):
-        return cast(Calc_[T], fn)
-    # A plain function gets a hidden calc, so the effects and the result share one run
+        raise TypeError(
+            f"`@{name}()` must be applied before `@reactive.calc`.\n"
+            + f"In other words, `@reactive.calc` must be above `@{name}()`."
+        )
+
+    # This is here instead of at the top of the .py file in order to avoid a
+    # circular dependency.
+    from ..render.renderer import Renderer
+
+    if isinstance(fn, Renderer):
+        raise TypeError(
+            f"`@{name}()` must be applied before `@render.xx`.\n"
+            + f"In other words, `@render.xx` must be above `@{name}()`."
+        )
+    if isinstance(fn, Effect_):
+        raise TypeError(
+            f"`@{name}()` must be applied before `@reactive.effect`.\n"
+            + f"In other words, `@reactive.effect` must be above `@{name}()`."
+        )
+    if not callable(fn):
+        raise TypeError(f"`@{name}()` must be applied to a function.")
+
+    _utils.validate_no_params(fn, name, stacklevel=4)
+
+    # The effects and the result share this calc's runs. It calls `fn` through
+    # `_call`, so that the calc doesn't check (and warn about) `fn`'s parameters again.
     with otel.suppress():
-        return calc(session=session)(fn)
+        return calc(session=session)(_call(fn))
 
 
 async def _read_quietly(source: Calc_[Any]) -> None:
@@ -274,42 +314,45 @@ async def _read_quietly(source: Calc_[Any]) -> None:
         pass
 
 
-def _event_calc(
-    fn: Callable[[], T],
+def _result_calc(
     source: Calc_[T],
     trigger: Value[int],
     *,
-    kind: Literal["debounce", "throttle"],
     session: MISSING_TYPE | Session | None,
 ) -> Calc_[T]:
+    """A hidden calc with `source`'s value, invalidated only by `trigger`."""
+    read = event(trigger, ignore_none=False)(_call(source))
+    with otel.suppress():
+        return calc(session=session)(read)
+
+
+def _user_reader(
+    fn: Callable[[], T],
+    result: Calc_[T],
+    *,
+    kind: Literal["debounce", "throttle"],
+) -> Callable[[], T]:
     """
-    The calc users get: `source`'s value, but invalidated only by `trigger`.
+    The function users get: it reads `result`, so its readers wait for `trigger`.
 
-    It is named after the user's function and is the only one of the reactives
-    behind `kind` that records an OTel span, as `reactive.calc <kind> <name>`.
+    It carries `fn`'s name, source location, and OTel marks, so the calc, effect, or
+    output above it records its span as `reactive.calc <kind> <name>` (or similar).
     """
-    # Copy the name, source location, and `@otel.suppress` mark of the user's
-    # function. A calc keeps it (wrapped) in `_fn`; copying the calc's own `__dict__`
-    # would copy its state.
-    user_fn: Callable[[], Any] = (
-        cast(Calc_[Any], fn)._fn if isinstance(fn, Calc_) else fn
-    )
+    read = functools.wraps(fn)(_call(result))
+    set_otel_label_modifier(read, kind, mode="prepend")
+    return read
 
-    if source._is_async:
 
-        @functools.wraps(user_fn)
-        async def read_async():
-            return await source.get_value()
+def _call(fn: Callable[[], T]) -> Callable[[], T]:
+    """A new no-argument function that calls `fn`, async if `fn` is."""
+    if _utils.is_async_callable(fn):
 
-        read = cast(Callable[[], T], read_async)
-    else:
+        async def call_async():
+            return await fn()
 
-        @functools.wraps(user_fn)
-        def read_sync() -> T:
-            return source()
+        return cast(Callable[[], T], call_async)
 
-        read = read_sync
+    def call_sync() -> T:
+        return fn()
 
-    read = event(trigger, ignore_none=False)(read)
-    set_otel_label_modifier(read, kind, mode="replace")
-    return calc(session=session)(read)
+    return call_sync

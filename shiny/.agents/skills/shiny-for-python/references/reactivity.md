@@ -149,13 +149,15 @@ before slow work reads it. `debounce` waits until the changes stop for N
 seconds; `throttle` passes a change at most once every N seconds:
 
 ```python
-@reactive.debounce(0.5)
 @reactive.calc
+@reactive.debounce(0.5)
 def query():
     return input.search()   # outputs re-run 0.5s after typing stops
 ```
 
 Both still run the decorated function on every change; only the readers wait.
+Like `@reactive.event`, they go below `@reactive.calc`, `@reactive.effect`, or
+`@render.*`.
 
 To change reactive state from a background `asyncio` task, call `.set()`
 directly. Setting a value schedules its dependents to re-run, so there's no lock

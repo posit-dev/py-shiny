@@ -1,18 +1,20 @@
 """Tests for reactive.debounce() and reactive.throttle()."""
 
+import warnings
 from typing import Any, Callable, Tuple
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from shiny import otel
+from shiny import otel, render
 from shiny.reactive import (
     Calc_,
     Value,
     calc,
     debounce,
     effect,
+    event,
     flush,
     invalidate_later,
     isolate,
@@ -50,13 +52,13 @@ async def test_debounce_and_throttle_timing(do_priming: bool):
                 with isolate():
                     a.set(a() + 1)
 
-            @debounce(0.5)
             @calc
+            @debounce(0.5)
             def d() -> int:
                 return a()
 
-            @throttle(0.5)
             @calc
+            @throttle(0.5)
             def t() -> int:
                 return a()
 
@@ -114,8 +116,8 @@ async def test_errors_reach_readers_only(limit: Callable[..., Any]):
     session = RecordingSession()
     async with session:
 
-        @limit(1)
         @calc
+        @limit(1)
         def r() -> int:
             raise ValueError("boom")
 
@@ -135,28 +137,24 @@ async def test_errors_reach_readers_only(limit: Callable[..., Any]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("limit", [debounce, throttle])
-async def test_async_and_plain_functions(limit: Callable[..., Any]):
+async def test_async_functions_and_effects(limit: Callable[..., Any]):
     async with OnEndedSessionCallbacks():
         mock_time = MockTime()
         with mock_time():
             a = Value(0)
 
+            @calc
             @limit(1)
             async def r_async() -> int:
                 return a()
 
-            @limit(1)
-            def r_plain() -> int:
-                return a()
+            seen: list[int] = []
 
-            assert isinstance(r_async, Calc_)
-            assert isinstance(r_plain, Calc_)
-
-            seen: list[Tuple[int, int]] = []
-
+            # Like @reactive.event, it also works right under an effect
             @effect()
+            @limit(1)
             async def _():
-                seen.append((await r_async(), r_plain()))
+                seen.append(await r_async())
 
             await flush()
             with isolate():
@@ -164,8 +162,65 @@ async def test_async_and_plain_functions(limit: Callable[..., Any]):
             await flush()
             await mock_time.advance_time(1.1)
             await flush()
-            assert seen[0] == (0, 0)
-            assert seen[-1] == (1, 1)
+            assert seen[0] == 0
+            assert seen[-1] == 1
+
+
+@pytest.mark.parametrize("limit", [debounce, throttle])
+def test_must_be_below_other_decorators(limit: Callable[..., Any]):
+    name = limit.__name__
+
+    with pytest.raises(
+        TypeError, match=f"`@reactive.calc` must be above `@reactive.{name}"
+    ):
+
+        @limit(1)
+        @calc
+        def _():
+            return 1
+
+    with pytest.raises(
+        TypeError, match=f"`@render.xx` must be above `@reactive.{name}"
+    ):
+
+        @limit(1)
+        @render.text
+        def _():
+            return "x"
+
+    with pytest.raises(
+        TypeError, match=f"`@reactive.effect` must be above `@reactive.{name}"
+    ):
+
+        @limit(1)
+        @effect
+        def _():
+            pass
+
+    with pytest.raises(
+        TypeError, match=f"`@reactive.{name}\\(\\)` must be applied to a function"
+    ):
+        limit(1)(1)
+
+    with pytest.raises(TypeError, match=f"@reactive.{name} expected a function"):
+
+        @limit(1)
+        def _(x: int):
+            return x
+
+
+@pytest.mark.parametrize("limit", [debounce, throttle])
+def test_default_params_warn_once_at_caller(limit: Callable[..., Any]):
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @limit(1)
+        def _(x: int = 1):
+            return x
+
+    assert len(w) == 1
+    assert w[0].filename == __file__
+    assert f"reactive.{limit.__name__}" in str(w[0].message)
 
 
 @pytest.mark.asyncio
@@ -176,8 +231,8 @@ async def test_delay_can_be_a_function():
             a = Value(0)
             delay = Value(1.0)
 
-            @debounce(delay)
             @calc
+            @debounce(delay)
             def d() -> int:
                 return a()
 
@@ -200,7 +255,7 @@ async def test_delay_can_be_a_function():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("kind", ["debounce", "throttle"])
-async def test_otel_only_the_result_calc_records_a_span(
+async def test_otel_only_the_users_reactives_record_spans(
     kind: str,
     otel_tracer_provider: Tuple[TracerProvider, InMemorySpanExporter],
     monkeypatch: pytest.MonkeyPatch,
@@ -213,40 +268,43 @@ async def test_otel_only_the_result_calc_records_a_span(
         async with OnEndedSessionCallbacks():
             a = Value(0)
 
-            @limit(1)
             @calc
-            def source_calc() -> int:
+            @limit(1)
+            def limited() -> int:
                 return a()
 
+            @calc
             @limit(1)
-            def plain_fn() -> int:
+            @event(a)
+            def limited_event() -> int:
                 return a()
 
-            @limit(1)
             @calc
+            @limit(1)
             @otel.suppress
-            def quiet_calc() -> int:
+            def quiet() -> int:
                 return a()
 
-            assert isinstance(source_calc, Calc_)
-            assert source_calc._otel_label == f"reactive.calc {kind} source_calc"
+            assert isinstance(limited, Calc_)
+            assert limited._otel_label == f"reactive.calc {kind} limited"
+            assert (
+                limited_event._otel_label == f"reactive.calc {kind} event limited_event"
+            )
 
             @effect()
             def reader():
-                source_calc()
-                plain_fn()
-                quiet_calc()
+                limited()
+                limited_event()
+                quiet()
 
             await flush()
 
     names = sorted(span.name for span in get_exported_spans(provider, exporter))
-    # The user's own calc keeps its span; the hidden calc around a plain function,
-    # the internal effects, and anything marked @otel.suppress record none.
+    # The hidden calcs and effects, and anything marked @otel.suppress, record none
     assert names == sorted(
         [
-            "reactive.calc source_calc",
-            f"reactive.calc {kind} source_calc",
-            f"reactive.calc {kind} plain_fn",
+            f"reactive.calc {kind} limited",
+            f"reactive.calc {kind} event limited_event",
             "reactive.effect reader",
         ]
     )

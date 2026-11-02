@@ -70,7 +70,6 @@ public API is only `otel.suppress`, `otel.collect`, and `otel.get_level`
 | `session_end` | `AppSession._run_session_ended_tasks` | `SESSION` |
 | `reactive_update` (attrs: `session.id`) | started by `AppSession._increment_busy_count()` on 0 → 1 (`start_otel_span`); ended by `_end_otel_cycle_span()` from `_decrement_busy_count()` on → 0, or from `_run_session_ended_tasks` | `REACTIVE_UPDATE` |
 | `reactive.calc [mods] [ns:]name` | `Calc_._run` | `REACTIVITY` |
-| `reactive.calc debounce [ns:]name` / `reactive.calc throttle [ns:]name` | the result calc of `reactive.debounce`/`throttle` (`_ratelimit._event_calc` sets the modifier with `mode="replace"`, dropping the inner `event`) | `REACTIVITY` |
 | `reactive.effect [mods] [ns:]name` | `Effect_._run`, inside `use_otel_span(session._otel_reactive_update_span())` | `REACTIVITY` |
 | `output [ns:]name` | `output_obs` inside `Outputs.__call__`'s `set_renderer`, after the `recalculating` message and its `await asyncio.sleep(0)` | `REACTIVITY` |
 | `extended_task [ns:]name` | `ExtendedTask._execution_wrapper` | `REACTIVITY` |
@@ -135,6 +134,9 @@ no longer uses it.
   become `<anonymous>`. `@reactive.event` prepends the `event` modifier via
   `set_otel_label_modifier(..., mode="prepend")` (stored in
   `_shiny_otel_label_modifier`, carried through `functools.wraps`).
+  `@reactive.debounce`/`@reactive.throttle` prepend `debounce`/`throttle` the
+  same way, so `@calc @debounce(1) @event(x) def f` is
+  `reactive.calc debounce event f`.
 - Attributes follow OTel semconv: `session.id`; `code.file.path`,
   `code.line.number`, `code.column.number`, `code.function.name` from
   `extract_source_ref` (unwraps `__wrapped__`, scans past decorator lines);

@@ -5,8 +5,8 @@ ui.input_text("text", "Type quickly")
 
 
 # Update only after typing stops for 1 second
-@reactive.debounce(1)
 @reactive.calc
+@reactive.debounce(1)
 def text_debounced():
     return input.text()
 

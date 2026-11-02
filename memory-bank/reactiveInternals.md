@@ -252,10 +252,14 @@ reactive effect queue, round, idle, cycle, output flush, and what the public
 
 ## debounce, throttle (`_ratelimit.py`)
 
-- Ported from Shiny for R's `debounce()`/`throttle()`. A plain decorated
-  function is first wrapped in a hidden (suppressed) calc, the *source*.
-- The user gets an `event(trigger, ignore_none=False)` calc that reads the
-  source, so only bumping `trigger` (a `Value[int]`) invalidates readers.
+- Ported from Shiny for R's `debounce()`/`throttle()`, but used like `event`:
+  they go below `@calc`/`@effect`/`@render.*`, and `_source_calc` raises
+  `TypeError` if given a `Calc_`, `Renderer`, or `Effect_`.
+- The decorated function is wrapped in a hidden (suppressed) calc, the
+  *source*. A second hidden calc, the *result*, is
+  `event(trigger, ignore_none=False)` over the source, so only bumping
+  `trigger` (a `Value[int]`) invalidates it. The user gets a plain function
+  (`_user_reader`, carrying `fn`'s name and `__dict__`) that reads the result.
 - Two effects at `priority` (default 100, so they run before outputs):
   a *tracker* that reads the source (swallowing its errors; readers re-raise
   them from the cached calc) and a *timer* that waits with

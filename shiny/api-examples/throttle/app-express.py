@@ -5,8 +5,8 @@ ui.input_text("text", "Type quickly")
 
 
 # Update at most once per second
-@reactive.throttle(1)
 @reactive.calc
+@reactive.throttle(1)
 def text_throttled():
     return input.text()
 

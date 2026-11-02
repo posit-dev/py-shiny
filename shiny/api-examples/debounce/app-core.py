@@ -9,8 +9,8 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     # Update only after typing stops for 1 second
-    @reactive.debounce(1)
     @reactive.calc
+    @reactive.debounce(1)
     def text_debounced():
         return input.text()
 

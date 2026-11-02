@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `reactive.debounce()` and `reactive.throttle()`, decorators that slow down how often a reactive calculation invalidates its readers. `debounce` waits until the changes stop for a set time; `throttle` lets a change through at most once per time window. Use them when a value changes often (typing, slider drags, plot hover) and the work that reads it is slow. Under OpenTelemetry, each records one `reactive.calc debounce <name>` or `reactive.calc throttle <name>` span; the effects behind them record none. (#564)
+* Added `reactive.debounce()` and `reactive.throttle()`, decorators that slow down how often a reactive function invalidates its readers. Like `@reactive.event()`, they go below `@reactive.calc`, `@reactive.effect`, or `@render.*`. `debounce` waits until the changes stop for a set time; `throttle` lets a change through at most once per time window. Use them when a value changes often (typing, slider drags, plot hover) and the work that reads it is slow. Under OpenTelemetry, the calc above them records its span as `reactive.calc debounce <name>` or `reactive.calc throttle <name>`; the reactives behind them record none. (#564)
 
 ### Bug fixes and minor improvements
 
