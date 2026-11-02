@@ -197,21 +197,21 @@ def test_effects_and_outputs_reject_it(limit: Callable[..., Any]):
     def limited():
         return limit(1)(lambda: 1)
 
-    hint = "read it from"
-    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` can not .* {hint}"):
+    hint = "read that calc from"
+    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` cannot .* {hint}"):
         effect(limited())
-    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` can not .* {hint}"):
+    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` cannot .* {hint}"):
         effect(event(lambda: 1)(limited()))
-    with pytest.raises(TypeError, match=f"(?s)`@render.text` can not .* {hint}"):
+    with pytest.raises(TypeError, match=f"(?s)`@render.text` cannot .* {hint}"):
         render.text(limited())
     with pytest.raises(
-        TypeError, match=f"(?s)`@render.download_button` can not .* {hint}"
+        TypeError, match=f"(?s)`@render.download_button` cannot .* {hint}"
     ):
         render.download_button(limited())
 
-    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` can not .* {hint}"):
+    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` cannot .* {hint}"):
         limit(1)(effect(lambda: None))
-    with pytest.raises(TypeError, match=f"(?s)`@render.xx` can not .* {hint}"):
+    with pytest.raises(TypeError, match=f"(?s)`@render.xx` cannot .* {hint}"):
         limit(1)(render.text(lambda: "x"))
 
 
@@ -257,6 +257,71 @@ async def test_delay_can_be_a_function():
             await mock_time.advance_time(4)
             with isolate():
                 assert d() == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [debounce, throttle])
+async def test_delay_change_moves_an_open_window(limit: Callable[..., Any]):
+    async with OnEndedSessionCallbacks():
+        mock_time = MockTime()
+        with mock_time():
+            a = Value(0)
+            delay = Value(1.0)
+
+            @calc
+            @limit(delay)
+            def r() -> int:
+                return a()
+
+            @effect()
+            def _():
+                r()
+
+            await flush()
+            # Debounce: the timer starts. Throttle: it fired at creation, so the
+            # change waits for the window to end.
+            with isolate():
+                a.set(1)
+            await flush()
+            await mock_time.advance_time(0.5)
+            with isolate():
+                delay.set(3.0)
+            await flush()
+            await mock_time.advance_time(0.6)
+            with isolate():
+                assert r() == 0
+            await mock_time.advance_time(2.5)
+            with isolate():
+                assert r() == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [debounce, throttle])
+async def test_session_end_stops_a_pending_timer(limit: Callable[..., Any]):
+    mock_time = MockTime()
+    with mock_time():
+        async with OnEndedSessionCallbacks():
+            a = Value(0)
+
+            @calc
+            @limit(1)
+            def r() -> int:
+                return a()
+
+            @effect()
+            def _():
+                r()
+
+            await flush()
+            with isolate():
+                a.set(1)
+            await flush()
+
+        # The session ended with the timer pending, so it must not fire
+        await mock_time.advance_time(2)
+        await flush()
+        with isolate():
+            assert r() == 0
 
 
 @pytest.mark.asyncio
