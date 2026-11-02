@@ -60,8 +60,29 @@ from ._utils import is_user_code_frame
 FUNC_ATTR_RATE_LIMIT = "_shiny_rate_limit"
 """
 Attribute set on the function returned by `reactive.debounce()` or
-`reactive.throttle()` (to `"debounce"` or `"throttle"`), so `Effect_` can reject it.
+`reactive.throttle()` (to `"debounce"` or `"throttle"`), so effects and renderers can
+reject it.
 """
+
+
+def rate_limit_misuse_message(name: str, kind: str) -> str:
+    """
+    The error for `@{name}` (an effect or renderer) combined with
+    `@reactive.{kind}()`. Only a calc may use it: effects and outputs have no value for
+    readers to wait on.
+    """
+    return (
+        f"`@{name}` can not be combined with `@reactive.{kind}()`.\n"
+        + f"Instead, make a `@reactive.calc` that is {kind}d and read it from "
+        + f"`@{name}`. An effect can react to it with `@reactive.event(<calc>)`."
+    )
+
+
+def check_not_rate_limited(fn: object, name: str) -> None:
+    """Raise `TypeError` if `fn` came from `reactive.debounce()`/`throttle()`."""
+    kind = getattr(fn, FUNC_ATTR_RATE_LIMIT, None)
+    if kind is not None:
+        raise TypeError(rate_limit_misuse_message(name, kind))
 
 
 def _current_task() -> Optional[asyncio.Task[object]]:
@@ -1068,15 +1089,7 @@ class Effect_:
                 + "Please remove your call of `@reactive.effect`."
             )
 
-        rate_limit = getattr(fn, FUNC_ATTR_RATE_LIMIT, None)
-        if rate_limit is not None:
-            # An effect has no value for its readers to wait on
-            raise TypeError(
-                f"`@reactive.effect` can not be applied to a `@reactive.{rate_limit}()` "
-                + "function.\n"
-                + f"Instead, make a `@reactive.calc` that is {rate_limit}d and react "
-                + "to it with `@reactive.event(<calc>)`."
-            )
+        check_not_rate_limited(fn, "reactive.effect")
 
         _utils.validate_no_params(fn, "reactive.effect", stacklevel=5)
 

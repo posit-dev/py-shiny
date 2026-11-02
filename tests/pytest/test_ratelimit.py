@@ -167,7 +167,7 @@ async def test_async_functions_and_effects(limit: Callable[..., Any]):
 
 
 @pytest.mark.parametrize("limit", [debounce, throttle])
-def test_must_be_below_other_decorators(limit: Callable[..., Any]):
+def test_must_be_below_calc(limit: Callable[..., Any]):
     name = limit.__name__
 
     with pytest.raises(
@@ -180,38 +180,6 @@ def test_must_be_below_other_decorators(limit: Callable[..., Any]):
             return 1
 
     with pytest.raises(
-        TypeError, match=f"`@render.xx` must be above `@reactive.{name}"
-    ):
-
-        @limit(1)
-        @render.text
-        def _():
-            return "x"
-
-    # An effect has no value to wait on, in either order
-    with pytest.raises(TypeError, match="react to it with `@reactive.event"):
-
-        @limit(1)
-        @effect
-        def _():
-            pass
-
-    with pytest.raises(TypeError, match="react to it with `@reactive.event"):
-
-        @effect
-        @limit(1)
-        def _():
-            pass
-
-    with pytest.raises(TypeError, match="react to it with `@reactive.event"):
-
-        @effect
-        @event(lambda: 1)
-        @limit(1)
-        def _():
-            pass
-
-    with pytest.raises(
         TypeError, match=f"`@reactive.{name}\\(\\)` must be applied to a function"
     ):
         limit(1)(1)
@@ -221,6 +189,30 @@ def test_must_be_below_other_decorators(limit: Callable[..., Any]):
         @limit(1)
         def _(x: int):
             return x
+
+
+@pytest.mark.parametrize("limit", [debounce, throttle])
+def test_effects_and_outputs_reject_it(limit: Callable[..., Any]):
+    # Effects and outputs have no value for readers to wait on, in either order
+    def limited():
+        return limit(1)(lambda: 1)
+
+    hint = "read it from"
+    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` can not .* {hint}"):
+        effect(limited())
+    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` can not .* {hint}"):
+        effect(event(lambda: 1)(limited()))
+    with pytest.raises(TypeError, match=f"(?s)`@render.text` can not .* {hint}"):
+        render.text(limited())
+    with pytest.raises(
+        TypeError, match=f"(?s)`@render.download_button` can not .* {hint}"
+    ):
+        render.download_button(limited())
+
+    with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` can not .* {hint}"):
+        limit(1)(effect(lambda: None))
+    with pytest.raises(TypeError, match=f"(?s)`@render.xx` can not .* {hint}"):
+        limit(1)(render.text(lambda: "x"))
 
 
 @pytest.mark.parametrize("limit", [debounce, throttle])
