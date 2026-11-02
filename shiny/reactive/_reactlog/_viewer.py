@@ -1,641 +1,12 @@
 from __future__ import annotations
 
-import ast
-import asyncio
-import concurrent.futures
-import copy
 import html as html_lib
-import inspect
 import io
 import json
 import keyword
 import os
-import shutil
-import sys
-import tempfile
-import time
 import tokenize
-from collections import deque
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, cast
-
-
-def _expand_module_calls(tree: ast.Module) -> tuple[ast.Module, Dict[str, str]]:
-    """Expand same-file modules with literal IDs for static analysis, never execution.
-
-    Each call gets its own namespaced inputs/functions. Reactive parameters and a
-    directly returned reactive are aliases, preserving edges across the boundary.
-    Dynamic IDs cannot be resolved statically. Local imports are combined before expansion.
-    """
-    definitions = {
-        node.name: node
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and any(
-            isinstance(d, ast.Attribute)
-            and isinstance(d.value, ast.Name)
-            and d.value.id == "module"
-            and d.attr in ("ui", "server")
-            for d in node.decorator_list
-        )
-    }
-    members: Dict[str, str] = {}
-    expanded: List[ast.stmt] = []
-    active: Set[str] = set()
-
-    class Expander(ast.NodeTransformer):
-        def __init__(
-            self, namespace: str = "", aliases: Optional[Dict[str, ast.expr]] = None
-        ):
-            self.namespace = namespace
-            self.aliases = dict(aliases or {})
-
-        def qualify(self, name: str) -> str:
-            qualified = f"{self.namespace}-{name}" if self.namespace else name
-            if self.namespace:
-                members[qualified] = self.namespace
-            return qualified
-
-        def visit_Name(self, node: ast.Name) -> ast.expr:
-            return copy.deepcopy(self.aliases.get(node.id, node))
-
-        def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-            if isinstance(node.value, ast.Name) and node.value.id == "input":
-                node.attr = self.qualify(node.attr)
-                return node
-            return self.generic_visit(node)
-
-        def visit_FunctionDef(
-            self, node: ast.FunctionDef | ast.AsyncFunctionDef
-        ) -> Any:
-            if node.name in definitions:
-                return None
-            child = Expander(self.namespace, self.aliases)
-            # Register all reactive functions before visiting their bodies (forward references).
-            for stmt in node.body:
-                if (
-                    isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    and stmt.decorator_list
-                ):
-                    child.aliases[stmt.name] = ast.Name(
-                        id=self.qualify(stmt.name), ctx=ast.Load()
-                    )
-            alias = self.aliases.get(node.name)
-            if isinstance(alias, ast.Name):
-                node.name = alias.id
-            node.decorator_list = [
-                cast(ast.expr, self.visit(d)) for d in node.decorator_list
-            ]
-            node.body = [
-                result
-                for stmt in node.body
-                if (result := child.visit(stmt)) is not None
-            ]
-            return node
-
-        visit_AsyncFunctionDef = visit_FunctionDef
-
-        def visit_Assign(self, node: ast.Assign) -> ast.AST:
-            is_module = (
-                isinstance(node.value, ast.Call)
-                and isinstance(node.value.func, ast.Name)
-                and node.value.func.id in definitions
-            )
-            node.value = cast(ast.expr, self.visit(node.value))
-            if is_module and isinstance(node.value, ast.Name):
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        self.aliases[target.id] = node.value
-            return node
-
-        def visit_Call(self, node: ast.Call) -> ast.AST:
-            name = node.func.id if isinstance(node.func, ast.Name) else ""
-            if name in definitions:
-                definition = definitions[name]
-                if (
-                    not node.args
-                    or not isinstance(node.args[0], ast.Constant)
-                    or not isinstance(node.args[0].value, str)
-                    or name in active
-                ):
-                    return ast.Constant(value=None)
-                namespace = self.qualify(node.args[0].value)
-                params = definition.args.args
-                is_server = any(
-                    isinstance(d, ast.Attribute) and d.attr == "server"
-                    for d in definition.decorator_list
-                )
-                params = params[3:] if is_server else params
-                aliases = {
-                    param.arg: cast(ast.expr, self.visit(copy.deepcopy(arg)))
-                    for param, arg in zip(params, node.args[1:])
-                }
-                aliases.update(
-                    {
-                        kw.arg: cast(ast.expr, self.visit(copy.deepcopy(kw.value)))
-                        for kw in node.keywords
-                        if kw.arg
-                    }
-                )
-                child = Expander(namespace, aliases)
-                for stmt in definition.body:
-                    if (
-                        isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef))
-                        and stmt.decorator_list
-                    ):
-                        child.aliases[stmt.name] = ast.Name(
-                            id=child.qualify(stmt.name), ctx=ast.Load()
-                        )
-                active.add(name)
-                result: ast.expr = ast.Constant(value=None)
-                for stmt in copy.deepcopy(definition.body):
-                    if isinstance(stmt, ast.Return):
-                        if is_server and stmt.value is not None:
-                            result = cast(ast.expr, child.visit(stmt.value))
-                        elif stmt.value is not None:
-                            expanded.append(
-                                ast.Expr(value=cast(ast.expr, child.visit(stmt.value)))
-                            )
-                    else:
-                        visited = child.visit(stmt)
-                        if visited is not None:
-                            expanded.append(visited)
-                active.remove(name)
-                return ast.copy_location(result, node)
-            if (
-                isinstance(node.func, ast.Attribute)
-                and isinstance(node.func.value, ast.Name)
-                and node.func.value.id == "ui"
-                and node.func.attr.startswith(("input_", "output_"))
-                and node.args
-                and isinstance(node.args[0], ast.Constant)
-                and isinstance(node.args[0].value, str)
-            ):
-                node.args[0].value = self.qualify(node.args[0].value)
-            return self.generic_visit(node)
-
-    transformed = cast(ast.Module, Expander().visit(copy.deepcopy(tree)))
-    transformed.body.extend(expanded)
-    return transformed, members
-
-
-class GraphVisitor(ast.NodeVisitor):
-    def __init__(self) -> None:
-        self.inputs: Dict[str, int] = {}
-        self.input_defaults: Dict[str, Any] = {}
-        self.input_files: Dict[str, str] = {}
-        self.calcs: Dict[str, Dict[str, Any]] = {}
-        self.outputs: Dict[str, Dict[str, Any]] = {}
-        self.effects: Dict[str, Dict[str, Any]] = {}
-        self.current_calc: Optional[str] = None
-        self.current_output: Optional[str] = None
-        self.current_effect: Optional[str] = None
-        self.isolated_depth: int = 0
-        self.event_depth: int = 0
-
-    def visit_With(self, node: ast.With) -> None:
-        is_isolate_block = False
-        for item in node.items:
-            ctx = item.context_expr
-            if isinstance(ctx, ast.Call):
-                func_name = self._get_decorator_name(ctx.func)
-                if func_name in ("reactive.isolate", "isolate") or func_name.endswith(
-                    ".isolate"
-                ):
-                    is_isolate_block = True
-            elif isinstance(ctx, (ast.Attribute, ast.Name)):
-                func_name = self._get_decorator_name(ctx)
-                if func_name in ("reactive.isolate", "isolate") or func_name.endswith(
-                    ".isolate"
-                ):
-                    is_isolate_block = True
-
-        if is_isolate_block:
-            self.isolated_depth += 1
-        self.generic_visit(node)
-        if is_isolate_block:
-            self.isolated_depth -= 1
-
-    def visit_Call(self, node: ast.Call) -> None:
-        func_name = self._get_decorator_name(node.func)
-
-        if (
-            func_name.startswith("ui.input_")
-            and node.args
-            and isinstance(node.args[0], ast.Constant)
-            and isinstance(node.args[0].value, str)
-        ):
-            input_id = node.args[0].value
-            if input_id not in self.inputs:
-                self.inputs[input_id] = node.lineno
-                self.input_files[input_id] = getattr(node, "source_file", "")
-            is_password_input = func_name == "ui.input_password" or any(
-                s in input_id.lower()
-                for s in ("password", "secret", "token", "api_key", "apikey")
-            )
-            if is_password_input:
-                self.input_defaults[input_id] = "[REDACTED]"
-            else:
-                default_val = None
-                for kw in node.keywords:
-                    if kw.arg == "value" and isinstance(kw.value, ast.Constant):
-                        default_val = kw.value.value
-                if default_val is None:
-                    if (
-                        func_name
-                        in (
-                            "ui.input_numeric",
-                            "ui.input_text",
-                            "ui.input_text_area",
-                        )
-                        and len(node.args) >= 3
-                        and isinstance(node.args[2], ast.Constant)
-                    ):
-                        default_val = node.args[2].value
-                    elif (
-                        func_name == "ui.input_slider"
-                        and len(node.args) >= 5
-                        and isinstance(node.args[4], ast.Constant)
-                    ):
-                        default_val = node.args[4].value
-                if default_val is not None:
-                    self.input_defaults[input_id] = default_val
-
-        is_isolate_call = func_name in (
-            "reactive.isolate",
-            "isolate",
-        ) or func_name.endswith(".isolate")
-        if is_isolate_call:
-            self.isolated_depth += 1
-            for arg in node.args:
-                self.visit(arg)
-            for kw in node.keywords:
-                self.visit(kw.value)
-            self.isolated_depth -= 1
-            return
-
-        # Event handlers isolate body reads; keep those relationships visible
-        # without treating them as invalidation triggers.
-        isolated = self.isolated_depth > 0 or self.event_depth > 0
-        dep_key = "isolated_deps" if isolated else "deps"
-        calc_key = "isolated_calc_deps" if isolated else "calc_deps"
-
-        if (
-            isinstance(node.func, ast.Attribute)
-            and isinstance(node.func.value, ast.Name)
-            and node.func.value.id == "input"
-        ):
-            target_input = node.func.attr
-            self.input_files.setdefault(target_input, getattr(node, "source_file", ""))
-            if self.current_output and self.current_output in self.outputs:
-                self.outputs[self.current_output][dep_key].add(target_input)
-            elif self.current_effect and self.current_effect in self.effects:
-                self.effects[self.current_effect][dep_key].add(target_input)
-            elif self.current_calc and self.current_calc in self.calcs:
-                self.calcs[self.current_calc][dep_key].add(target_input)
-
-        if isinstance(node.func, ast.Name):
-            called_name = node.func.id
-            if self.current_output and self.current_output in self.outputs:
-                self.outputs[self.current_output][calc_key].add(called_name)
-            elif self.current_effect and self.current_effect in self.effects:
-                self.effects[self.current_effect][calc_key].add(called_name)
-            elif self.current_calc and self.current_calc in self.calcs:
-                self.calcs[self.current_calc][calc_key].add(called_name)
-
-        self.generic_visit(node)
-
-    def _get_decorator_name(self, d: ast.AST) -> str:
-        if isinstance(d, ast.Call):
-            d = d.func
-        parts: List[str] = []
-        while isinstance(d, ast.Attribute):
-            parts.append(d.attr)
-            d = d.value
-        if isinstance(d, ast.Name):
-            parts.append(d.id)
-            return ".".join(reversed(parts)).removeprefix("shiny.")
-        return ""
-
-    def _extract_event_triggers(self, d: ast.AST) -> tuple[Set[str], Set[str]]:
-        input_deps: Set[str] = set()
-        calc_deps: Set[str] = set()
-
-        if not isinstance(d, ast.Call):
-            return input_deps, calc_deps
-
-        def _process_expr(expr: ast.AST) -> None:
-            if (
-                isinstance(expr, ast.Attribute)
-                and isinstance(expr.value, ast.Name)
-                and expr.value.id == "input"
-            ):
-                input_deps.add(expr.attr)
-            elif isinstance(expr, ast.Call):
-                if (
-                    isinstance(expr.func, ast.Attribute)
-                    and isinstance(expr.func.value, ast.Name)
-                    and expr.func.value.id == "input"
-                ):
-                    input_deps.add(expr.func.attr)
-                elif isinstance(expr.func, ast.Name):
-                    calc_deps.add(expr.func.id)
-            elif isinstance(expr, ast.Name):
-                calc_deps.add(expr.id)
-            elif isinstance(expr, (ast.Tuple, ast.List)):
-                for elt in expr.elts:
-                    _process_expr(elt)
-
-        for arg in d.args:
-            _process_expr(arg)
-
-        return input_deps, calc_deps
-
-    def _handle_func_def(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-        decorators: List[str] = [
-            name for d in node.decorator_list if (name := self._get_decorator_name(d))
-        ]
-
-        has_event_decorator = False
-        event_input_deps: Set[str] = set()
-        event_calc_deps: Set[str] = set()
-
-        for d in node.decorator_list:
-            d_name = self._get_decorator_name(d)
-            if d_name in ("event", "reactive.event"):
-                has_event_decorator = True
-                inp_d, c_d = self._extract_event_triggers(d)
-                event_input_deps.update(inp_d)
-                event_calc_deps.update(c_d)
-
-        is_effect = any(
-            d in ("effect", "Effect", "reactive.effect", "reactive.Effect")
-            for d in decorators
-        )
-        is_render = any(
-            d.startswith("render.") or d.startswith("render_") for d in decorators
-        )
-        is_calc = (
-            any(
-                d in ("calc", "Calc", "reactive.calc", "reactive.Calc")
-                for d in decorators
-            )
-            and not is_effect
-            and not is_render
-        )
-
-        prev_out = self.current_output
-        prev_effect = self.current_effect
-        prev_calc = self.current_calc
-
-        if is_render:
-            self.current_output = node.name
-            self.outputs[node.name] = {
-                "render_type": next(
-                    (d.split(".")[-1] for d in decorators if d.startswith("render.")),
-                    "output",
-                ),
-                "line": node.lineno,
-                "source_file": getattr(node, "source_file", ""),
-                "deps": set(event_input_deps),
-                "calc_deps": set(event_calc_deps),
-                "isolated_deps": set(),
-                "isolated_calc_deps": set(),
-                "is_async": isinstance(node, ast.AsyncFunctionDef),
-            }
-        elif is_effect:
-            self.current_effect = node.name
-            self.effects[node.name] = {
-                "line": node.lineno,
-                "source_file": getattr(node, "source_file", ""),
-                "deps": set(event_input_deps),
-                "calc_deps": set(event_calc_deps),
-                "isolated_deps": set(),
-                "isolated_calc_deps": set(),
-                "is_async": isinstance(node, ast.AsyncFunctionDef),
-            }
-        elif is_calc:
-            self.current_calc = node.name
-            self.calcs[node.name] = {
-                "line": node.lineno,
-                "source_file": getattr(node, "source_file", ""),
-                "deps": set(event_input_deps),
-                "calc_deps": set(event_calc_deps),
-                "isolated_deps": set(),
-                "isolated_calc_deps": set(),
-                "is_async": isinstance(node, ast.AsyncFunctionDef),
-            }
-
-        if has_event_decorator:
-            self.event_depth += 1
-
-        for stmt in node.body:
-            self.visit(stmt)
-
-        if has_event_decorator:
-            self.event_depth -= 1
-
-        self.current_output = prev_out
-        self.current_effect = prev_effect
-        self.current_calc = prev_calc
-
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        self._handle_func_def(node)
-
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        self._handle_func_def(node)
-
-
-def inspect_reactive_graph(
-    code: str, source_path: str | Path | None = None
-) -> Dict[str, Any]:
-    sources: Dict[str, str] = {}
-    entry_file = ""
-    try:
-        if source_path is not None:
-            from ._inspect_sources import read_app_sources
-
-            tree, sources, entry_file = read_app_sources(code, source_path)
-        else:
-            tree = ast.parse(code)
-    except SyntaxError as e:
-        return {
-            "success": False,
-            "error": f"SyntaxError: {e.msg} ({e.filename}:{e.lineno})",
-            "nodes": [],
-            "edges": [],
-            "summary": "Syntax error in source code",
-        }
-
-    tree, module_members = _expand_module_calls(tree)
-    visitor = GraphVisitor()
-    visitor.visit(tree)
-
-    known_calcs = set(visitor.calcs.keys())
-
-    referenced_inputs: Set[str] = set()
-    for meta in visitor.outputs.values():
-        referenced_inputs.update(meta["deps"])
-        referenced_inputs.update(meta.get("isolated_deps", set()))
-    for meta in visitor.effects.values():
-        referenced_inputs.update(meta["deps"])
-        referenced_inputs.update(meta.get("isolated_deps", set()))
-    for meta in visitor.calcs.values():
-        referenced_inputs.update(meta["deps"])
-        referenced_inputs.update(meta.get("isolated_deps", set()))
-
-    all_inputs = set(visitor.inputs.keys()) | referenced_inputs
-
-    nodes: List[Dict[str, Any]] = []
-    for inp in sorted(all_inputs):
-        is_declared = inp in visitor.inputs
-        line = visitor.inputs.get(inp)
-        default_val = visitor.input_defaults.get(inp)
-        nodes.append(
-            {
-                "id": f"input:{inp}",
-                "name": inp,
-                "type": "input",
-                "role": "source",
-                "label": f"input.{inp}",
-                "line": line,
-                "value": default_val,
-                "declaration": "declared" if is_declared else "unresolved",
-                "source_file": visitor.input_files.get(inp, ""),
-            }
-        )
-    for c, meta in sorted(visitor.calcs.items()):
-        nodes.append(
-            {
-                "id": f"calc:{c}",
-                "name": c,
-                "type": "calc",
-                "role": "conductor",
-                "label": f"calc:{c}",
-                "line": meta["line"],
-                "source_file": meta.get("source_file", ""),
-            }
-        )
-    for eff, meta in sorted(visitor.effects.items()):
-        nodes.append(
-            {
-                "id": f"effect:{eff}",
-                "name": eff,
-                "type": "effect",
-                "role": "observer",
-                "label": f"effect:{eff}",
-                "line": meta["line"],
-                "source_file": meta.get("source_file", ""),
-            }
-        )
-    for out, meta in sorted(visitor.outputs.items()):
-        nodes.append(
-            {
-                "id": f"output:{out}",
-                "name": out,
-                "type": "output",
-                "role": "observer",
-                "label": f"output:{out}",
-                "render_type": meta["render_type"],
-                "line": meta["line"],
-                "source_file": meta.get("source_file", ""),
-            }
-        )
-
-    edges: List[Dict[str, Any]] = []
-    for out_name, meta in visitor.outputs.items():
-        for dep in sorted(meta["deps"]):
-            edges.append({"from": f"input:{dep}", "to": f"output:{out_name}"})
-        for cdep in sorted(meta["calc_deps"]):
-            if cdep in known_calcs:
-                edges.append({"from": f"calc:{cdep}", "to": f"output:{out_name}"})
-        for dep in sorted(meta.get("isolated_deps", set())):
-            if dep not in meta["deps"]:
-                edges.append(
-                    {
-                        "from": f"input:{dep}",
-                        "to": f"output:{out_name}",
-                        "isolated": True,
-                    }
-                )
-        for cdep in sorted(meta.get("isolated_calc_deps", set())):
-            if cdep in known_calcs and cdep not in meta["calc_deps"]:
-                edges.append(
-                    {
-                        "from": f"calc:{cdep}",
-                        "to": f"output:{out_name}",
-                        "isolated": True,
-                    }
-                )
-
-    for eff_name, meta in visitor.effects.items():
-        for dep in sorted(meta["deps"]):
-            edges.append({"from": f"input:{dep}", "to": f"effect:{eff_name}"})
-        for cdep in sorted(meta["calc_deps"]):
-            if cdep in known_calcs:
-                edges.append({"from": f"calc:{cdep}", "to": f"effect:{eff_name}"})
-        for dep in sorted(meta.get("isolated_deps", set())):
-            if dep not in meta["deps"]:
-                edges.append(
-                    {
-                        "from": f"input:{dep}",
-                        "to": f"effect:{eff_name}",
-                        "isolated": True,
-                    }
-                )
-        for cdep in sorted(meta.get("isolated_calc_deps", set())):
-            if cdep in known_calcs and cdep not in meta["calc_deps"]:
-                edges.append(
-                    {
-                        "from": f"calc:{cdep}",
-                        "to": f"effect:{eff_name}",
-                        "isolated": True,
-                    }
-                )
-
-    for calc_name, meta in visitor.calcs.items():
-        for dep in sorted(meta["deps"]):
-            edges.append({"from": f"input:{dep}", "to": f"calc:{calc_name}"})
-        for cdep in sorted(meta["calc_deps"]):
-            if cdep in known_calcs and cdep != calc_name:
-                edges.append({"from": f"calc:{cdep}", "to": f"calc:{calc_name}"})
-        for dep in sorted(meta.get("isolated_deps", set())):
-            if dep not in meta["deps"]:
-                edges.append(
-                    {
-                        "from": f"input:{dep}",
-                        "to": f"calc:{calc_name}",
-                        "isolated": True,
-                    }
-                )
-        for cdep in sorted(meta.get("isolated_calc_deps", set())):
-            if (
-                cdep in known_calcs
-                and cdep != calc_name
-                and cdep not in meta["calc_deps"]
-            ):
-                edges.append(
-                    {
-                        "from": f"calc:{cdep}",
-                        "to": f"calc:{calc_name}",
-                        "isolated": True,
-                    }
-                )
-
-    for node in nodes:
-        if node["name"] in module_members:
-            node["module"] = module_members[node["name"]]
-
-    total_observers = len(visitor.outputs) + len(visitor.effects)
-    return {
-        "success": True,
-        "nodes": nodes,
-        "edges": edges,
-        "input_defaults": visitor.input_defaults,
-        "sources": sources,
-        "entry_file": entry_file,
-        "summary": f"{len(all_inputs)} inputs (sources), {len(visitor.calcs)} reactives (conductors), {total_observers} outputs & effects (observers)",
-    }
+from typing import Any, Dict, List, Optional, cast
 
 
 def _is_plot_data_url(src: Any) -> bool:
@@ -794,759 +165,8 @@ def _mark_wave(*, label: str, time_sec: float, step: int, index: int) -> Dict[st
     }
 
 
-def generate_reactlog(
-    code: str,
-    inputs: Optional[Dict[str, Any]] = None,
-    recorded_actions: Optional[List[Dict[str, Any]]] = None,
-    video_path: Optional[str] = None,
-    session: str = "default",
-    source_path: str | Path | None = None,
-    marks: Optional[List[Dict[str, Any]]] = None,
-) -> Dict[str, Any]:
-    user_marks: List[Dict[str, Any]] = list(marks) if marks is not None else []
-
-    graph = inspect_reactive_graph(code, source_path=source_path)
-    if not graph.get("success"):
-        return graph
-
-    nodes = graph.get("nodes", [])
-    edges = graph.get("edges", [])
-    events: List[Dict[str, Any]] = []
-    step = 0
-
-    adj_downstream: Dict[str, List[str]] = {}
-    adj_upstream: Dict[str, List[str]] = {}
-    for edge in edges:
-        # Isolated reads are visible relationships, not invalidation triggers.
-        if edge.get("isolated"):
-            continue
-        f, t = edge["from"], edge["to"]
-        adj_downstream.setdefault(f, []).append(t)
-        adj_upstream.setdefault(t, []).append(f)
-
-    nodes_by_id = {n["id"]: n for n in nodes}
-
-    events.append(
-        _make_event(
-            step=step,
-            event="analysisInit",
-            phase="init",
-            provenance="inferred",
-            node_id=None,
-            node_label="session",
-            node_type="session",
-            status="active",
-            timestamp=0,
-            time_sec=0.0,
-            details=(
-                "Initialized reactive session with recorded Playwright interactions"
-                if recorded_actions
-                else "Started static AST dependency analysis; app code was not executed"
-            ),
-            session=session,
-        )
-    )
-    step += 1
-
-    for node in nodes:
-        initial_val = (inputs or {}).get(node.get("name", ""))
-        if initial_val is None:
-            initial_val = node.get("value")
-        events.append(
-            _make_event(
-                step=step,
-                event="define",
-                phase="init",
-                provenance="inferred",
-                node_id=node["id"],
-                node_label=node["label"],
-                node_type=node["role"],
-                status="discovered",
-                timestamp=0,
-                time_sec=0.0,
-                value=str(initial_val) if initial_val is not None else None,
-                details=f"Discovered {node['role']} node '{node['label']}' at line {node.get('line', '?')}",
-                session=session,
-            )
-        )
-        step += 1
-
-    def compute_evaluation_order(invalidated: Set[str]) -> List[Dict[str, Any]]:
-        conductor_ids = {
-            n["id"]
-            for n in nodes
-            if n["role"] == "conductor" and n["id"] in invalidated
-        }
-        conductor_in_degree: Dict[str, int] = {cid: 0 for cid in conductor_ids}
-        for cid in conductor_ids:
-            for up in adj_upstream.get(cid, []):
-                if up in conductor_ids:
-                    conductor_in_degree[cid] += 1
-
-        queue = deque(
-            [cid for cid, deg in sorted(conductor_in_degree.items()) if deg == 0]
-        )
-        sorted_conductors: List[str] = []
-        while queue:
-            curr = queue.popleft()
-            sorted_conductors.append(curr)
-            for down in adj_downstream.get(curr, []):
-                if down in conductor_in_degree:
-                    conductor_in_degree[down] -= 1
-                    if conductor_in_degree[down] == 0:
-                        queue.append(down)
-
-        for cid in sorted(conductor_ids):
-            if cid not in sorted_conductors:
-                sorted_conductors.append(cid)
-
-        observer_nodes = [
-            n for n in nodes if n["role"] == "observer" and n["id"] in invalidated
-        ]
-
-        return [
-            nodes_by_id[cid] for cid in sorted_conductors if cid in nodes_by_id
-        ] + observer_nodes
-
-    def cascade_record_invalidate(
-        nid: str, cur_step: int, invalidated: Set[str], ts_ms: int, ts_s: float
-    ) -> int:
-        nid_lbl = nodes_by_id.get(nid, {}).get("label", nid)
-        for down in adj_downstream.get(nid, []):
-            if down not in invalidated:
-                invalidated.add(down)
-                node_obj = nodes_by_id.get(down, {})
-                down_lbl = node_obj.get("label", down)
-                events.append(
-                    _make_event(
-                        step=cur_step,
-                        event="propagate",
-                        phase="interaction",
-                        provenance="inferred",
-                        node_id=down,
-                        node_label=down_lbl,
-                        node_type=node_obj.get("role", "conductor"),
-                        status="affected",
-                        timestamp=ts_ms,
-                        time_sec=ts_s,
-                        edge_from=nid,
-                        edge_to=down,
-                        details=f"Inferred invalidation of '{down_lbl}' by '{nid_lbl}'",
-                        session=session,
-                    )
-                )
-                cur_step += 1
-                cur_step = cascade_record_invalidate(
-                    down, cur_step, invalidated, ts_ms, ts_s
-                )
-        return cur_step
-
-    unmatched_inputs: List[str] = []
-    action_waves: List[Dict[str, Any]] = [
-        {
-            "action_id": "burst-init",
-            "index": 0,
-            "is_init": True,
-            "start_time": 0.0,
-            "end_time": 0.0,
-            "start_step": 0,
-            "end_step": step - 1,
-            "trigger": "Init",
-            "trigger_label": "Init",
-            "short_label": "Init",
-            "human_action": "Init",
-            "trigger_node_id": "",
-            "trigger_value": None,
-            "invalidated_nodes": [],
-            "inferred_executions": [n["id"] for n in nodes if n["role"] != "source"],
-            "observed_executions": [],
-            "observed_outputs": [],
-        }
-    ]
-
-    epoch_marks = [
-        float(m.get("time") or 0.0)
-        for m in user_marks
-        if float(m.get("time") or 0.0) > 1_000_000_000
-    ]
-    if epoch_marks:
-        min_epoch = min(epoch_marks)
-        for m in user_marks:
-            t = float(m.get("time") or 0.0)
-            if t > 1_000_000_000:
-                rel_t = round(max(0.0, t - min_epoch), 2)
-                m["time"] = rel_t
-                m["timestamp"] = int(rel_t * 1000)
-
-    def append_single_mark(m: Dict[str, Any], cur_step: int) -> int:
-        mark_label = str(m.get("label", "Bookmark"))
-        mark_time = float(m.get("time") or 0.0)
-        mark_ms = int(m.get("timestamp") or (mark_time * 1000))
-        events.append(
-            _mark_event(
-                step=cur_step,
-                label=mark_label,
-                timestamp=mark_ms,
-                time_sec=mark_time,
-                session=session,
-            )
-        )
-        action_waves.append(
-            _mark_wave(
-                label=mark_label,
-                time_sec=mark_time,
-                step=cur_step,
-                index=len(action_waves),
-            )
-        )
-        return cur_step + 1
-
-    def append_user_marks(cur_step: int) -> int:
-        for m in user_marks:
-            cur_step = append_single_mark(m, cur_step)
-        return cur_step
-
-    if recorded_actions:
-        deduped_actions: List[Dict[str, Any]] = []
-        last_input_action: Dict[str, tuple[Any, int]] = {}
-        for act in recorded_actions:
-            atype = act.get("type")
-            aname = act.get("name")
-            aval = act.get("value")
-            ats = int(act.get("timestamp") or 0)
-            if atype == "input" and aname:
-                last_val, last_time = last_input_action.get(aname, (None, -999999))
-                if str(last_val) == str(aval) and (ats - last_time) < 250:
-                    continue
-                last_input_action[aname] = (aval, ats)
-            deduped_actions.append(act)
-
-        last_known_vals: Dict[str, Any] = {
-            n.get("name", n["id"]): n.get("value") for n in nodes
-        }
-
-        def _mark_time(m: Dict[str, Any]) -> float:
-            return float(m.get("time") or 0.0)
-
-        sorted_user_marks = sorted(user_marks, key=_mark_time)
-        mark_idx = 0
-        last_ts = 0
-        for action in deduped_actions:
-            ts = action.get("timestamp")
-            if ts is not None:
-                last_ts = int(ts)
-            ts_ms = last_ts
-            ts_sec = round(ts_ms / 1000.0, 2)
-
-            while (
-                mark_idx < len(sorted_user_marks)
-                and float(sorted_user_marks[mark_idx].get("time") or 0.0) <= ts_sec
-            ):
-                step = append_single_mark(sorted_user_marks[mark_idx], step)
-                mark_idx += 1
-
-            action_start_step = step
-            action_type = action.get("type", "action")
-            raw_name = str(action.get("name") or action.get("target") or "unknown")
-            action_val = action.get("value")
-
-            if action_type == "input":
-                node_id = (
-                    f"input:{raw_name}"
-                    if f"input:{raw_name}" in nodes_by_id
-                    else (raw_name if raw_name in nodes_by_id else None)
-                )
-                if node_id and node_id in nodes_by_id:
-                    node_obj = nodes_by_id[node_id]
-                    events.append(
-                        _make_event(
-                            step=step,
-                            event="inputChange",
-                            phase="interaction",
-                            provenance="observed",
-                            node_id=node_id,
-                            node_label=node_obj["label"],
-                            node_type="source",
-                            status="assumed",
-                            timestamp=ts_ms,
-                            time_sec=ts_sec,
-                            value=str(action_val),
-                            details=f"Observed browser input change: {node_obj['label']} = {action_val!r}",
-                            session=session,
-                        )
-                    )
-                    step += 1
-
-                    invalidated_nodes: Set[str] = set()
-                    step = cascade_record_invalidate(
-                        node_id, step, invalidated_nodes, ts_ms, ts_sec
-                    )
-
-                    eval_order = compute_evaluation_order(invalidated_nodes)
-                    for target in eval_order:
-                        tid = target["id"]
-                        tlabel = target["label"]
-                        trole = target["role"]
-
-                        events.append(
-                            _make_event(
-                                step=step,
-                                event="wouldEvaluate",
-                                phase="interaction",
-                                provenance="inferred",
-                                node_id=tid,
-                                node_label=tlabel,
-                                node_type=trole,
-                                status="scheduled",
-                                timestamp=ts_ms,
-                                time_sec=ts_sec,
-                                details=f"Inferred evaluation: '{tlabel}' (static topological order)",
-                                session=session,
-                            )
-                        )
-                        step += 1
-
-                        for dep in adj_upstream.get(tid, []):
-                            dep_lbl = nodes_by_id.get(dep, {}).get("label", dep)
-                            events.append(
-                                _make_event(
-                                    step=step,
-                                    event="dependsOn",
-                                    phase="interaction",
-                                    provenance="inferred",
-                                    node_id=tid,
-                                    node_label=tlabel,
-                                    node_type=trole,
-                                    status="scheduled",
-                                    timestamp=ts_ms,
-                                    time_sec=ts_sec,
-                                    edge_from=dep,
-                                    edge_to=tid,
-                                    details=f"Inferred dependency: '{dep_lbl}' used by '{tlabel}'",
-                                    session=session,
-                                )
-                            )
-                            step += 1
-
-                        events.append(
-                            _make_event(
-                                step=step,
-                                event="ordered",
-                                phase="interaction",
-                                provenance="inferred",
-                                node_id=tid,
-                                node_label=tlabel,
-                                node_type=trole,
-                                status="scheduled",
-                                timestamp=ts_ms,
-                                time_sec=ts_sec,
-                                details=f"Inferred completed state for '{tlabel}'",
-                                session=session,
-                            )
-                        )
-                        step += 1
-
-                    prev_v = last_known_vals.get(raw_name)
-                    if (
-                        prev_v is not None
-                        and action_val is not None
-                        and str(prev_v) != str(action_val)
-                    ):
-                        human_trigger = f"{raw_name}: {prev_v} → {action_val}"
-                    elif action_val is not None:
-                        human_trigger = f"{raw_name}: {action_val}"
-                    else:
-                        human_trigger = f"{raw_name} changed"
-                    if action_val is not None:
-                        last_known_vals[raw_name] = action_val
-
-                    action_waves.append(
-                        {
-                            "action_id": f"burst-{len(action_waves)}",
-                            "index": len(action_waves),
-                            "is_init": False,
-                            "start_time": ts_sec,
-                            "end_time": ts_sec,
-                            "start_step": action_start_step,
-                            "end_step": step - 1,
-                            "trigger": human_trigger,
-                            "trigger_label": raw_name,
-                            "short_label": raw_name,
-                            "human_action": human_trigger,
-                            "trigger_node_id": node_id,
-                            "trigger_value": (
-                                str(action_val) if action_val is not None else None
-                            ),
-                            "invalidated_nodes": sorted(list(invalidated_nodes)),
-                            "inferred_executions": [t["id"] for t in eval_order],
-                            "observed_executions": [node_id],
-                            "observed_outputs": [
-                                t["id"] for t in eval_order if t["role"] == "observer"
-                            ],
-                        }
-                    )
-                else:
-                    unmatched_inputs.append(raw_name)
-                    events.append(
-                        _make_event(
-                            step=step,
-                            event="inputChange",
-                            phase="interaction",
-                            provenance="observed",
-                            node_id=None,
-                            node_label=f"input.{raw_name}",
-                            node_type="source",
-                            status="assumed",
-                            timestamp=ts_ms,
-                            time_sec=ts_sec,
-                            value=str(action_val),
-                            details=f"Observed browser input change (unmatched node): input.{raw_name} = {action_val!r}",
-                            session=session,
-                        )
-                    )
-                    step += 1
-
-            elif action_type == "output":
-                out_id = (
-                    f"output:{raw_name}"
-                    if f"output:{raw_name}" in nodes_by_id
-                    else (raw_name if raw_name in nodes_by_id else None)
-                )
-                node_lbl = (
-                    nodes_by_id[out_id]["label"]
-                    if out_id and out_id in nodes_by_id
-                    else f"output:{raw_name}"
-                )
-                events.append(
-                    _make_event(
-                        step=step,
-                        event="outputUpdated",
-                        phase="interaction",
-                        provenance="observed",
-                        node_id=out_id,
-                        node_label=node_lbl,
-                        node_type="observer",
-                        status="scheduled",
-                        timestamp=ts_ms,
-                        time_sec=ts_sec,
-                        details=f"Observed browser output render: {node_lbl}",
-                        session=session,
-                    )
-                )
-                preview = action.get("plot")
-                if isinstance(preview, dict):
-                    plot_dict = cast(Dict[str, Any], preview)
-                    plot_src = plot_dict.get("src")
-                    if _is_plot_data_url(plot_src):
-                        plot_alt = plot_dict.get("alt")
-                        events[-1]["plot"] = {
-                            "src": str(plot_src),
-                            "alt": str(plot_alt) if plot_alt else node_lbl,
-                        }
-                step += 1
-
-            elif action_type == "click":
-                events.append(
-                    _make_event(
-                        step=step,
-                        event="userClick",
-                        phase="interaction",
-                        provenance="observed",
-                        node_id=None,
-                        node_label=raw_name,
-                        node_type="user",
-                        status="active",
-                        timestamp=ts_ms,
-                        time_sec=ts_sec,
-                        details=f"Observed user click: {action.get('text', raw_name)}",
-                        session=session,
-                    )
-                )
-                step += 1
-
-                action_waves.append(
-                    {
-                        "action_id": f"burst-{len(action_waves)}",
-                        "index": len(action_waves),
-                        "is_init": False,
-                        "start_time": ts_sec,
-                        "end_time": ts_sec,
-                        "start_step": action_start_step,
-                        "end_step": step - 1,
-                        "trigger": f"Click: {action.get('text', raw_name)}",
-                        "trigger_label": f"Click: {action.get('text', raw_name)}",
-                        "short_label": f"Click: {action.get('text', raw_name)[:12]}",
-                        "human_action": f"Click: {action.get('text', raw_name)}",
-                        "trigger_node_id": "",
-                        "trigger_value": None,
-                        "invalidated_nodes": [],
-                        "inferred_executions": [],
-                        "observed_executions": [],
-                        "observed_outputs": [],
-                    }
-                )
-
-        while mark_idx < len(sorted_user_marks):
-            step = append_single_mark(sorted_user_marks[mark_idx], step)
-            mark_idx += 1
-
-        events.append(
-            _make_event(
-                step=step,
-                event="recordingComplete",
-                phase="interaction",
-                provenance="inferred",
-                node_id=None,
-                node_label="session",
-                node_type="engine",
-                status="idle",
-                timestamp=last_ts,
-                time_sec=round(last_ts / 1000.0, 2),
-                details="Playwright recording complete",
-                session=session,
-            )
-        )
-        step += 1
-
-        obs_count = len([e for e in events if e.get("provenance") == "observed"])
-        inf_count = len([e for e in events if e.get("provenance") == "inferred"])
-        events[-1][
-            "details"
-        ] = f"Playwright recording finished: {obs_count} observed browser event(s), {inf_count} inferred dependency step(s)"
-
-        init_count = len([e for e in events if e.get("phase") == "init"])
-        interact_count = len([e for e in events if e.get("phase") == "interaction"])
-        first_interact = next(
-            (i for i, e in enumerate(events) if e.get("phase") == "interaction"), 0
-        )
-
-        return {
-            "success": True,
-            "version": "1.0",
-            "session": session,
-            "trace_kind": "inferred_simulation_with_recorded_browser_events",
-            "nodes": nodes,
-            "sources": graph.get("sources", {}),
-            "entry_file": graph.get("entry_file", ""),
-            "edges": edges,
-            "events": events,
-            "log": events,
-            "action_waves": action_waves,
-            "marks": user_marks,
-            "steps_total": len(events),
-            "init_steps_count": init_count,
-            "interaction_steps_count": interact_count,
-            "first_interaction_step": first_interact,
-            "observed_events_count": obs_count,
-            "inferred_events_count": inf_count,
-            "unmatched_inputs": unmatched_inputs,
-            "unmatched_inputs_count": len(unmatched_inputs),
-            "recorded_actions": deduped_actions,
-            "video_path": video_path,
-            "disclaimer": "Server reactive execution is statically inferred from AST dependency analysis. Dynamic dependencies or isolated reactives may not appear in this graph.",
-            "summary": f"Observed {obs_count} browser event(s); inferred {inf_count} simulated dependency steps across {len(nodes)} graph nodes",
-        }
-
-    sim_inputs = dict(inputs or {})
-    if not sim_inputs:
-        input_nodes = [n for n in nodes if n["role"] == "source"]
-        for n in input_nodes:
-            sim_inputs[n["name"]] = 10
-
-    invalidated_nodes_static: Set[str] = set()
-
-    def cascade_invalidate(nid: str, cur_step: int) -> int:
-        nid_lbl = nodes_by_id.get(nid, {}).get("label", nid)
-        for down in adj_downstream.get(nid, []):
-            if down not in invalidated_nodes_static:
-                invalidated_nodes_static.add(down)
-                node_obj = nodes_by_id.get(down, {})
-                down_lbl = node_obj.get("label", down)
-                events.append(
-                    _make_event(
-                        step=cur_step,
-                        event="propagate",
-                        phase="interaction",
-                        provenance="inferred",
-                        node_id=down,
-                        node_label=down_lbl,
-                        node_type=node_obj.get("role", "conductor"),
-                        status="affected",
-                        timestamp=0,
-                        time_sec=0.0,
-                        edge_from=nid,
-                        edge_to=down,
-                        details=f"Inferred invalidation of '{down_lbl}' from '{nid_lbl}'",
-                        session=session,
-                    )
-                )
-                cur_step += 1
-                cur_step = cascade_invalidate(down, cur_step)
-        return cur_step
-
-    for input_name, input_val in sim_inputs.items():
-        node_id = (
-            f"input:{input_name}"
-            if f"input:{input_name}" in nodes_by_id
-            else (input_name if input_name in nodes_by_id else input_name)
-        )
-        node_lbl = nodes_by_id.get(node_id, {}).get("label", f"input.{input_name}")
-        events.append(
-            _make_event(
-                step=step,
-                event="assumeValue",
-                phase="interaction",
-                provenance="inferred",
-                node_id=node_id,
-                node_label=node_lbl,
-                node_type="source",
-                status="assumed",
-                timestamp=0,
-                time_sec=0.0,
-                value=str(input_val),
-                details=f"Simulation assumes {node_lbl} is set to {input_val!r}",
-                session=session,
-            )
-        )
-        step += 1
-        step = cascade_invalidate(node_id, step)
-
-    events.append(
-        _make_event(
-            step=step,
-            event="orderingStart",
-            phase="interaction",
-            provenance="inferred",
-            node_id=None,
-            node_label="reactiveEnvironment",
-            node_type="engine",
-            status="active",
-            timestamp=0,
-            time_sec=0.0,
-            details=f"Simulating static ordering for {len(invalidated_nodes_static)} affected node(s)",
-            session=session,
-        )
-    )
-    step += 1
-
-    eval_order = compute_evaluation_order(invalidated_nodes_static)
-    for target in eval_order:
-        tid = target["id"]
-        tlabel = target["label"]
-        trole = target["role"]
-
-        events.append(
-            _make_event(
-                step=step,
-                event="wouldEvaluate",
-                phase="interaction",
-                provenance="inferred",
-                node_id=tid,
-                node_label=tlabel,
-                node_type=trole,
-                status="scheduled",
-                timestamp=0,
-                time_sec=0.0,
-                details=f"Inferred evaluation: '{tlabel}' (static topological order; not executed)",
-                session=session,
-            )
-        )
-        step += 1
-
-        for dep in adj_upstream.get(tid, []):
-            dep_lbl = nodes_by_id.get(dep, {}).get("label", dep)
-            events.append(
-                _make_event(
-                    step=step,
-                    event="dependsOn",
-                    phase="interaction",
-                    provenance="inferred",
-                    node_id=tid,
-                    node_label=tlabel,
-                    node_type=trole,
-                    status="scheduled",
-                    timestamp=0,
-                    time_sec=0.0,
-                    edge_from=dep,
-                    edge_to=tid,
-                    details=f"Inferred dependency edge: '{dep_lbl}' used by '{tlabel}'",
-                    session=session,
-                )
-            )
-            step += 1
-
-        events.append(
-            _make_event(
-                step=step,
-                event="ordered",
-                phase="interaction",
-                provenance="inferred",
-                node_id=tid,
-                node_label=tlabel,
-                node_type=trole,
-                status="scheduled",
-                timestamp=0,
-                time_sec=0.0,
-                details=f"Inferred completed state for '{tlabel}'",
-                session=session,
-            )
-        )
-        step += 1
-
-    step = append_user_marks(step)
-
-    events.append(
-        _make_event(
-            step=step,
-            event="orderingComplete",
-            phase="interaction",
-            provenance="inferred",
-            node_id=None,
-            node_label="reactiveEnvironment",
-            node_type="engine",
-            status="idle",
-            timestamp=0,
-            time_sec=0.0,
-            details=f"Static ordering contains {len(eval_order)} nodes; no reactive update occurred",
-            session=session,
-        )
-    )
-
-    init_count = len([e for e in events if e.get("phase") == "init"])
-    interact_count = len([e for e in events if e.get("phase") == "interaction"])
-    first_interact = next(
-        (i for i, e in enumerate(events) if e.get("phase") == "interaction"), 0
-    )
-
-    return {
-        "success": True,
-        "version": "1.0",
-        "session": session,
-        "trace_kind": "static_inferred_simulation",
-        "sources": graph.get("sources", {}),
-        "entry_file": graph.get("entry_file", ""),
-        "nodes": nodes,
-        "edges": edges,
-        "events": events,
-        "log": events,
-        "action_waves": action_waves,
-        "marks": user_marks,
-        "steps_total": len(events),
-        "init_steps_count": init_count,
-        "interaction_steps_count": interact_count,
-        "first_interaction_step": first_interact,
-        "observed_events_count": 0,
-        "inferred_events_count": len(events),
-        "unmatched_inputs": [],
-        "unmatched_inputs_count": 0,
-        "disclaimer": "Server reactive execution is statically inferred from AST dependency analysis. Dynamic dependencies or isolated reactives may not appear in this graph.",
-        "summary": f"Static dependency simulation: {len(events)} steps across {len(nodes)} nodes ({len(invalidated_nodes_static)} affected); app code was not executed",
-    }
-
-
 def load_reactlog_json(
     json_data: str | Dict[str, Any] | List[Any] | Any,
-    source_code: Optional[str] = None,
 ) -> Dict[str, Any]:
     if isinstance(json_data, str):
         try:
@@ -1647,12 +267,35 @@ def load_reactlog_json(
 
     normalized_events: List[Dict[str, Any]] = []
     step_idx = 0
+    init_end = -1
+    for i, item in enumerate(raw_events):
+        act = item.get("action") or item.get("event")
+        if act in ("userClick", "userAction", "userMark"):
+            break
+        if init_end != -1 and act == "valueChange":
+            ntype = item.get("type") or item.get("node_type")
+            nid = str(
+                item.get("reactId") or item.get("node_id") or item.get("id") or ""
+            )
+            lbl = str(item.get("label") or item.get("node_label") or "")
+            if ntype == "input" or lbl.startswith("input.") or nid.startswith("input:"):
+                break
+        if act == "queueEmpty":
+            init_end = i
 
-    for item in raw_events:
+    for item_idx, item in enumerate(raw_events):
         action = str(item.get("action") or item.get("event") or "")
         nid = item.get("reactId") or item.get("node_id") or item.get("id")
         lbl = item.get("label") or item.get("node_label") or nid or ""
-        ntype = item.get("type") or item.get("node_type") or "calc"
+        ntype = item.get("type") or item.get("node_type")
+        if not ntype and nid and str(nid) in nodes_map:
+            ntype = nodes_map[str(nid)].get("type") or nodes_map[str(nid)].get(
+                "node_type"
+            )
+        if not ntype:
+            ntype = "calc"
+        if (not lbl or lbl == nid) and nid and str(nid) in nodes_map:
+            lbl = nodes_map[str(nid)].get("label") or lbl
         val = item.get("value")
         val_str = str(val) if val is not None else None
 
@@ -1678,14 +321,11 @@ def load_reactlog_json(
         )
         t_ms = int(t_sec * 1000)
 
-        prov = item.get("provenance") or (
-            "observed"
-            if action in ("valueChange", "inputChange", "userClick", "userAction")
-            else "inferred"
-        )
+        prov = item.get("provenance") or "observed"
         phase = item.get("phase") or (
             "init"
-            if action in ("define", "analysisInit", "createContext", "sessionInit")
+            if item_idx <= init_end
+            or action in ("define", "analysisInit", "createContext", "sessionInit")
             else "interaction"
         )
         status = item.get("status")
@@ -1763,9 +403,9 @@ def load_reactlog_json(
                 "line": item.get("line"),
                 **{
                     key: value
-                    for key, value in nodes_map.get(str(nid), {}).items()
-                    if key in ("module", "render_type", "line", "source_file")
-                    and value is not None
+                    for key in ("module", "render_type", "line", "source_file")
+                    if (value := item.get(key, nodes_map.get(str(nid), {}).get(key)))
+                    is not None
                 },
             }
 
@@ -1785,6 +425,29 @@ def load_reactlog_json(
                 label=mark_label, time_sec=round(t_sec, 3), step=step_idx, index=0
             )
         else:
+            is_inval = action in ("invalidate", "invalidateStart", "propagate")
+            if (
+                is_inval
+                and normalized_events
+                and normalized_events[-1].get("action")
+                in ("invalidate", "invalidateStart", "propagate")
+                and normalized_events[-1].get("phase") == phase
+            ):
+                prev = normalized_events[-1]
+                if nid:
+                    nid_str = str(nid)
+                    if nid_str not in prev.setdefault("invalidated_node_ids", []):
+                        prev["invalidated_node_ids"].append(nid_str)
+                if lbl:
+                    lbl_str = str(lbl)
+                    if lbl_str not in prev.setdefault("invalidated_node_labels", []):
+                        prev["invalidated_node_labels"].append(lbl_str)
+                count = len(prev.get("invalidated_node_ids", []))
+                prev["details"] = (
+                    f"Invalidated {count} reactive node{'s' if count != 1 else ''}"
+                )
+                continue
+
             # A removed dependency is not an active edge; only `details` names it.
             is_removal = action == "dependsOnRemove"
             ev_dict = _make_event(
@@ -1813,6 +476,27 @@ def load_reactlog_json(
                 session=event_session,
                 action=action,
             )
+            if is_inval:
+                raw_inv_ids = item.get("invalidated_node_ids")
+                if isinstance(raw_inv_ids, list):
+                    ev_dict["invalidated_node_ids"] = [
+                        str(x) for x in cast(list[Any], raw_inv_ids) if x
+                    ]
+                else:
+                    ev_dict["invalidated_node_ids"] = [str(nid)] if nid else list[str]()
+                raw_inv_lbls = item.get("invalidated_node_labels")
+                if isinstance(raw_inv_lbls, list):
+                    ev_dict["invalidated_node_labels"] = [
+                        str(x) for x in cast(list[Any], raw_inv_lbls) if x
+                    ]
+                else:
+                    ev_dict["invalidated_node_labels"] = (
+                        [str(lbl)] if lbl else list[str]()
+                    )
+                if not item.get("details"):
+                    ev_dict["details"] = (
+                        f"Invalidated '{lbl}'" if lbl else "Invalidation phase"
+                    )
         preview = item.get("plot")
         if isinstance(preview, dict):
             plot_dict = cast(Dict[str, Any], preview)
@@ -1839,7 +523,7 @@ def load_reactlog_json(
                     step=i,
                     event="define",
                     phase="init",
-                    provenance="inferred",
+                    provenance="observed",
                     node_id=n["id"],
                     node_label=n["label"],
                     node_type=n["role"],
@@ -1856,8 +540,6 @@ def load_reactlog_json(
         (i for i, e in enumerate(normalized_events) if e.get("phase") == "interaction"),
         0,
     )
-    obs_count = len([e for e in normalized_events if e.get("provenance") == "observed"])
-    inf_count = len([e for e in normalized_events if e.get("provenance") == "inferred"])
 
     parsed_dict: Optional[Dict[str, Any]] = (
         cast(Dict[str, Any], parsed) if isinstance(parsed, dict) else None
@@ -1882,393 +564,11 @@ def load_reactlog_json(
         "init_steps_count": init_count,
         "interaction_steps_count": interact_count,
         "first_interaction_step": first_interact,
-        "observed_events_count": obs_count,
-        "inferred_events_count": inf_count,
         "unmatched_inputs": [],
         "unmatched_inputs_count": 0,
         "disclaimer": "Imported reactive log data from JSON format.",
         "summary": f"Imported Reactlog graph: {len(final_nodes)} nodes, {len(final_edges)} edges, {len(normalized_events)} log events",
     }
-
-
-def _record_session_sync(
-    app_path: str,
-    video_path: Optional[str] = "recording.webm",
-    headless: bool = False,
-    record_script: Optional[Callable[[Any], None]] = None,
-    timeout_secs: float = 60.0,
-    auto_interact: bool = False,
-    redact_inputs: bool = False,
-    viewport_size: Optional[Dict[str, int]] = None,
-) -> Dict[str, Any]:
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return {
-            "success": False,
-            "error": "Playwright is not installed. Install it with: pip install playwright && playwright install chromium",
-            "actions": [],
-            "video_path": None,
-        }
-
-    app_target = Path(app_path).resolve()
-    if not app_target.exists():
-        return {
-            "success": False,
-            "error": f"App file not found: {app_path}",
-            "actions": [],
-            "video_path": None,
-        }
-
-    from .run._run import run_shiny_app
-
-    start_time = time.time()
-    try:
-        sa = run_shiny_app(
-            app_target,
-            wait_for_start=True,
-            timeout_secs=min(timeout_secs, 30.0),
-            env={"SHINY_TESTMODE": "1", "PYTHONUNBUFFERED": "1", "SHINY_REACTLOG": "1"},
-        )
-    except Exception as err:
-        return {
-            "success": False,
-            "error": f"Failed to start Shiny app: {err}",
-            "actions": [],
-            "video_path": None,
-        }
-
-    app_url = sa.url
-    temp_dir = tempfile.mkdtemp(prefix="shiny_record_")
-    recorded_actions: List[Dict[str, Any]] = []
-    saved_video_path: Optional[str] = None
-
-    try:
-        with sync_playwright() as p:
-            ws_endpoint = os.environ.get("PW_TEST_CONNECT_WS_ENDPOINT")
-            if ws_endpoint:
-                connect_kwargs: Dict[str, Any] = {}
-                connect_param_name = (
-                    "endpoint"
-                    if "endpoint" in inspect.signature(p.chromium.connect).parameters
-                    else "ws_endpoint"
-                )
-                connect_kwargs[connect_param_name] = ws_endpoint
-                expose_net = os.environ.get("PW_TEST_CONNECT_EXPOSE_NETWORK")
-                if expose_net:
-                    connect_kwargs["expose_network"] = expose_net
-                browser = p.chromium.connect(**connect_kwargs)
-            else:
-                browser = p.chromium.launch(headless=headless)
-            v_width = (
-                int(viewport_size["width"])
-                if viewport_size and "width" in viewport_size
-                else 1280
-            )
-            v_height = (
-                int(viewport_size["height"])
-                if viewport_size and "height" in viewport_size
-                else 1440
-            )
-            context = browser.new_context(
-                record_video_dir=temp_dir,
-                record_video_size={"width": v_width, "height": v_height},
-                viewport={"width": v_width, "height": v_height},
-            )
-            page = context.new_page()
-            page_start_time = time.time()
-
-            redact_all_js = "true" if redact_inputs else "false"
-            recorder_init_script = f"""
-            window.__recordedActions = [];
-            window.__recordStartTime = Date.now();
-            const recentInputs = new Map();
-            let lastClickTime = 0;
-            let lastClickTarget = '';
-            const shouldRedactAll = {redact_all_js};
-
-            function isSensitiveInput(name, el) {{
-                if (shouldRedactAll) return true;
-                if (el && (el.type === 'password' || el.getAttribute('type') === 'password')) return true;
-                const lower = (name || '').toLowerCase();
-                return lower.includes('password') || lower.includes('secret') || lower.includes('token') || lower.includes('api_key') || lower.includes('apikey');
-            }}
-
-            function trackAction(item) {{
-                item.timestamp = Date.now() - window.__recordStartTime;
-                window.__recordedActions.push(item);
-            }}
-
-            function attachShinyListeners() {{
-                if (window.$ && window.Shiny) {{
-                    $(document).off('.shinyRecorder');
-                    $(document).on('shiny:inputchanged.shinyRecorder', (e) => {{
-                        if (e.name.startsWith('.')) return;
-                        const el = document.getElementById(e.name) || document.querySelector('[name="' + e.name + '"]');
-                        const sensitive = isSensitiveInput(e.name, el);
-                        const safeVal = sensitive ? '[REDACTED]' : e.value;
-                        const valKey = typeof safeVal === 'object' ? JSON.stringify(safeVal) : String(safeVal);
-                        recentInputs.set(e.name, {{ val: valKey, t: Date.now() }});
-                        trackAction({{
-                            type: 'input',
-                            name: e.name,
-                            value: safeVal,
-                            inputType: e.inputType || 'shiny'
-                        }});
-                    }});
-                    $(document).on('shiny:value.shinyRecorder', (e) => {{
-                        trackAction({{
-                            type: 'output',
-                            name: e.name,
-                            plot: e.value && typeof e.value.src === 'string' && /^data:image\\/(png|jpeg|gif|webp);base64,/.test(e.value.src)
-                                ? {{ src: e.value.src, alt: e.value.alt || e.name }} : undefined
-                        }});
-                    }});
-                }}
-            }}
-
-            document.addEventListener('DOMContentLoaded', attachShinyListeners);
-            window.addEventListener('load', attachShinyListeners);
-            document.addEventListener('shiny:connected', attachShinyListeners);
-
-            document.addEventListener('change', (e) => {{
-                const target = e.target;
-                if (!target || !target.id || target.id.startsWith('.')) return;
-                const id = target.id;
-                const sensitive = isSensitiveInput(id, target);
-                const rawVal = target.value !== undefined ? target.value : target.checked;
-                const val = sensitive ? '[REDACTED]' : rawVal;
-                const valKey = String(val);
-                const rec = recentInputs.get(id);
-                if (rec && (Date.now() - rec.t < 350) && rec.val === valKey) {{
-                    return;
-                }}
-                if (window.Shiny && window.Shiny.setInputValue && target.closest('.shiny-input-container')) {{
-                    return;
-                }}
-                recentInputs.set(id, {{ val: valKey, t: Date.now() }});
-                trackAction({{
-                    type: 'input',
-                    name: id,
-                    value: val,
-                    inputType: target.type || target.tagName.toLowerCase()
-                }});
-            }}, true);
-
-            document.addEventListener('click', (e) => {{
-                const target = e.target.closest('button, input, select, textarea, a, .btn');
-                if (!target) return;
-                const tgtName = target.id || target.name || target.tagName.toLowerCase();
-                const now = Date.now();
-                if (tgtName === lastClickTarget && (now - lastClickTime < 200)) {{
-                    return;
-                }}
-                lastClickTime = now;
-                lastClickTarget = tgtName;
-                trackAction({{
-                    type: 'click',
-                    target: tgtName,
-                    text: (target.innerText || target.value || '').trim().slice(0, 50)
-                }});
-            }}, true);
-            """
-            page.add_init_script(recorder_init_script)
-
-            page.goto(app_url, wait_until="domcontentloaded")
-            time.sleep(0.5)
-
-            if record_script:
-                record_script(page)
-                time.sleep(0.5)
-            elif not headless:
-                try:
-                    sys.stderr.write(
-                        "\n🔴 Recording browser session... Interact with your Shiny app.\n"
-                        "Press [Enter] here (or close the browser window) when done recording: "
-                    )
-                    sys.stderr.flush()
-                    deadline = time.time() + timeout_secs
-                    while time.time() < deadline:
-                        if page.is_closed():
-                            break
-                        import select
-
-                        empty_r: List[Any] = []
-                        empty_w: List[Any] = []
-                        r, _, _ = select.select([sys.stdin], empty_r, empty_w, 0.3)
-                        if r:
-                            sys.stdin.readline()
-                            break
-                except Exception:
-                    time.sleep(2.0)
-            elif auto_interact:
-                try:
-                    time.sleep(0.8)
-                    input_locators = page.locator(
-                        "input.shiny-input-number, input.shiny-input-text, input[type='number'], input[type='text']"
-                    ).all()
-                    for inp in input_locators[:3]:
-                        try:
-                            val = inp.input_value()
-                            if val.isdigit():
-                                inp.fill(str(int(val) + 5))
-                            elif val:
-                                inp.fill(f"{val} Updated")
-                            time.sleep(0.4)
-                        except Exception:
-                            pass
-
-                    buttons = page.locator(
-                        "button.action-button, button.btn-primary, button.btn"
-                    ).all()
-                    for btn in buttons[:2]:
-                        try:
-                            btn.click()
-                            time.sleep(0.5)
-                        except Exception:
-                            pass
-                except Exception:
-                    time.sleep(1.0)
-            else:
-                time.sleep(1.0)
-
-            try:
-                if not page.is_closed():
-                    raw_actions = page.evaluate("() => window.__recordedActions || []")
-                    if isinstance(raw_actions, list):
-                        recorded_actions = cast(List[Dict[str, Any]], raw_actions)
-            except Exception:
-                pass
-
-            app_marks: List[Dict[str, Any]] = []
-            try:
-                import urllib.request
-
-                req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
-                with urllib.request.urlopen(req, timeout=3.0) as resp:
-                    mark_data = json.loads(resp.read().decode())
-                    if isinstance(mark_data, dict) and "marks" in mark_data:
-                        raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
-                        for rm in raw_marks:
-                            item = dict(rm)
-                            raw_t = float(item.get("time") or 0.0)
-                            if raw_t > 1_000_000_000:
-                                rel_sec = max(0.0, round(raw_t - page_start_time, 2))
-                                item["time"] = rel_sec
-                                item["timestamp"] = int(rel_sec * 1000)
-                            app_marks.append(item)
-            except Exception:
-                pass
-
-            page_video = page.video
-
-            page.close()
-            context.close()
-
-            if page_video and video_path:
-                out_v = Path(video_path).resolve()
-                out_v.parent.mkdir(parents=True, exist_ok=True)
-                try:
-                    page_video.save_as(str(out_v))
-                    saved_video_path = str(out_v)
-                except Exception:
-                    pass
-            elif page_video:
-                temp_video = Path(temp_dir) / "recording.webm"
-                try:
-                    page_video.save_as(str(temp_video))
-                    saved_video_path = str(temp_video)
-                except Exception:
-                    pass
-
-            browser.close()
-
-        if not saved_video_path:
-            video_files = list(Path(temp_dir).glob("*.webm"))
-            if video_files and video_path:
-                out_v = Path(video_path).resolve()
-                out_v.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(video_files[0], out_v)
-                saved_video_path = str(out_v)
-            elif video_files:
-                saved_video_path = str(video_files[0])
-
-        if not app_marks:
-            try:
-                import urllib.request
-
-                req = urllib.request.Request(f"{app_url.rstrip('/')}/__reactlog__/mark")
-                with urllib.request.urlopen(req, timeout=3.0) as resp:
-                    mark_data = json.loads(resp.read().decode())
-                    if isinstance(mark_data, dict) and "marks" in mark_data:
-                        raw_marks = cast(List[Dict[str, Any]], mark_data["marks"])
-                        for rm in raw_marks:
-                            item = dict(rm)
-                            raw_t = float(item.get("time") or 0.0)
-                            if raw_t > 1_000_000_000:
-                                rel_sec = max(0.0, round(raw_t - page_start_time, 2))
-                                item["time"] = rel_sec
-                                item["timestamp"] = int(rel_sec * 1000)
-                            app_marks.append(item)
-            except Exception:
-                pass
-
-        return {
-            "success": True,
-            "actions": recorded_actions,
-            "marks": app_marks,
-            "video_path": saved_video_path,
-            "duration_secs": round(time.time() - start_time, 2),
-        }
-
-    finally:
-        sa.close()
-        try:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        except Exception:
-            pass
-
-
-def record_shiny_session(
-    app_path: str,
-    video_path: Optional[str] = "recording.webm",
-    headless: bool = False,
-    record_script: Optional[Callable[[Any], None]] = None,
-    timeout_secs: float = 60.0,
-    auto_interact: bool = False,
-    redact_inputs: bool = False,
-    viewport_size: Optional[Dict[str, int]] = None,
-) -> Dict[str, Any]:
-    try:
-        asyncio.get_running_loop()
-        has_running_loop = True
-    except RuntimeError:
-        has_running_loop = False
-
-    if has_running_loop:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                _record_session_sync,
-                app_path,
-                video_path,
-                headless,
-                record_script,
-                timeout_secs,
-                auto_interact,
-                redact_inputs,
-                viewport_size,
-            )
-            return future.result()
-    return _record_session_sync(
-        app_path,
-        video_path,
-        headless,
-        record_script,
-        timeout_secs,
-        auto_interact,
-        redact_inputs,
-        viewport_size,
-    )
 
 
 def format_graph_mermaid(graph: Dict[str, Any]) -> str:
@@ -2284,7 +584,7 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
             lines.append(f'    {syn_id}["{label}"]:::inputClass')
         elif ntype == "calc":
             lines.append(f'    {syn_id}["{label}"]:::calcClass')
-        elif ntype == "effect":
+        elif ntype in ("effect", "observer"):
             lines.append(f'    {syn_id}["{label}"]:::effectClass')
         else:
             lines.append(f'    {syn_id}["{label}"]:::outputClass')
@@ -2293,7 +593,8 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
         f = node_id_map.get(str(edge["from"]))
         t = node_id_map.get(str(edge["to"]))
         if f and t:
-            lines.append(f"    {f} --> {t}")
+            arrow = "-.->" if edge.get("isolated") else "-->"
+            lines.append(f"    {f} {arrow} {t}")
 
     lines.append(
         "    classDef inputClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;"
@@ -2305,39 +606,6 @@ def format_graph_mermaid(graph: Dict[str, Any]) -> str:
     lines.append(
         "    classDef outputClass fill:#dcfce7,stroke:#16a34a,stroke-width:2px;"
     )
-    return "\n".join(lines)
-
-
-def format_graph_dot(graph: Dict[str, Any]) -> str:
-    lines = [
-        "digraph ReactiveGraph {",
-        "    rankdir=LR;",
-        "    node [shape=box, style=rounded];",
-    ]
-    node_id_map: Dict[str, str] = {}
-    for idx, node in enumerate(graph.get("nodes", [])):
-        raw_id = str(node["id"])
-        syn_id = f"n{idx}"
-        node_id_map[raw_id] = syn_id
-        label = str(node.get("label", raw_id)).replace('"', '\\"')
-        ntype = node.get("type", "")
-        if ntype == "input":
-            color = "#0284c7"
-        elif ntype == "calc":
-            color = "#d97706"
-        elif ntype == "effect":
-            color = "#9333ea"
-        else:
-            color = "#16a34a"
-        lines.append(f'    "{syn_id}" [label="{label}", color="{color}"];')
-
-    for edge in graph.get("edges", []):
-        f = node_id_map.get(str(edge["from"]))
-        t = node_id_map.get(str(edge["to"]))
-        if f and t:
-            lines.append(f'    "{f}" -> "{t}";')
-
-    lines.append("}")
     return "\n".join(lines)
 
 
@@ -2422,6 +690,8 @@ def format_reactlog_html(
     escaped_title = html_lib.escape(clean_title)
     formatted_source = _format_python_source_html(source_code)
     actual_video = video_path or reactlog.get("video_path")
+    if actual_video and "video_path" not in reactlog:
+        reactlog["video_path"] = actual_video
 
     video_tab_btn = ""
     video_panel = ""
@@ -2735,6 +1005,8 @@ def format_reactlog_html(
     .graph-edge[data-active="true"] {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }}
     .graph-node.is-dimmed, .module-box.is-dimmed, .app-box.is-dimmed {{ opacity: 0.3; filter: grayscale(1); }}
     .graph-edge.is-dimmed {{ opacity: 0.15 !important; stroke: var(--text-muted) !important; stroke-width: 1.8px !important; filter: grayscale(1); animation: none; }}
+    .graph-edge.is-connected {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.5px !important; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent)); }}
+    .graph-node.is-connected .node-card {{ stroke: color-mix(in srgb, var(--accent) 70%, var(--border-strong)) !important; stroke-width: 2.2px !important; }}
     #btn-clear-selection[hidden], #btn-inspect-selection[hidden] {{ display: none; }}
     #btn-toggle-inspector-bottom.has-selection {{ border-color: var(--accent); color: var(--accent); position: relative; }}
     #btn-toggle-inspector-bottom.has-selection::after {{ content: ''; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }}
@@ -2858,12 +1130,6 @@ def format_reactlog_html(
     .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
     .event-details {{ overflow-wrap: anywhere; font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
 
-    /* View Mode Switcher */
-    .view-mode-buttons {{ display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; padding: 2px; gap: 2px; }}
-    .view-mode-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.22rem 0.55rem; border-radius: 5px; font: 700 0.68rem var(--sans); cursor: pointer; transition: all 120ms ease; }}
-    .view-mode-btn:hover {{ color: var(--text); background: var(--surface-3); }}
-    .view-mode-btn.is-active {{ background: var(--surface-elevated); color: var(--accent); font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }}
-
     /* Flush Stepper & Nav */
     .flush-nav-group {{ display: flex; align-items: center; gap: 0.3rem; }}
     .flush-selector {{ max-width: 240px; text-overflow: ellipsis; }}
@@ -2986,6 +1252,32 @@ def format_reactlog_html(
     .status-center .nav-idle svg {{ color: var(--state-ready); }}
     .status-center .nav-output svg {{ color: var(--output); }}
     .status-center .nav-mark svg {{ color: var(--text-muted); }}
+    .secondary-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface-2); padding: 5px 16px 6px 16px; gap: 4px; z-index: 2; }}
+    .secondary-timeline-bar[hidden] {{ display: none !important; }}
+    .secondary-timeline-header {{ display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 600 .72rem var(--sans); }}
+    .secondary-timeline-info {{ display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; }}
+    .secondary-timeline-tag {{ padding: 2px 7px; border-radius: 4px; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }}
+    .secondary-timeline-title {{ font-weight: 650; color: var(--text); overflow: hidden; text-overflow: ellipsis; max-width: 380px; font-size: 0.76rem; }}
+    .secondary-timeline-meta {{ color: var(--text-muted); font-size: 0.68rem; font-weight: 400; }}
+    .secondary-timeline-close {{ border: none; background: transparent; cursor: pointer; color: var(--text-muted); padding: 0 4px; font-size: 0.75rem; border-radius: 4px; height: 20px; min-height: 20px; width: 20px; line-height: 1; }}
+    .secondary-timeline-close:hover {{ color: var(--text); background: var(--surface-3); }}
+    .secondary-timeline-track-wrap {{ overflow-x: auto; overflow-y: hidden; display: flex; align-items: center; padding: 2px 0; scrollbar-width: thin; }}
+    .secondary-timeline-chips {{ display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; width: max-content; }}
+    .secondary-stage-pill {{ display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px; font-family: var(--sans); background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; white-space: nowrap; transition: all 0.15s ease; line-height: 1.3; }}
+    .secondary-stage-pill:hover {{ border-color: var(--accent); background: var(--surface-3); }}
+    .secondary-stage-pill.is-active {{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--surface)); box-shadow: 0 0 8px rgba(99, 179, 255, 0.3); font-weight: 600; }}
+    .secondary-stage-pill .stage-icon {{ display: inline-flex; align-items: center; justify-content: center; }}
+    .secondary-stage-pill .stage-icon svg {{ display: block; }}
+    .secondary-stage-pill .stage-kind {{ font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }}
+    .secondary-stage-pill .stage-name {{ font-size: 0.7rem; font-family: var(--mono); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }}
+    .secondary-stage-pill.pill-trigger .stage-kind, .secondary-stage-pill.pill-trigger .stage-icon {{ color: var(--source); }}
+    .secondary-stage-pill.pill-invalidation .stage-kind, .secondary-stage-pill.pill-invalidation .stage-icon {{ color: var(--warning); }}
+    .secondary-stage-pill.pill-calc .stage-kind, .secondary-stage-pill.pill-calc .stage-icon {{ color: var(--calc); }}
+    .secondary-stage-pill.pill-output .stage-kind, .secondary-stage-pill.pill-output .stage-icon {{ color: var(--output); }}
+    .secondary-stage-pill.pill-idle .stage-kind, .secondary-stage-pill.pill-idle .stage-icon {{ color: var(--text-muted); }}
+    .secondary-stage-arrow {{ display: inline-flex; align-items: center; justify-content: center; color: var(--border-strong); user-select: none; margin: 0 1px; }}
+    .secondary-stage-arrow svg {{ display: block; opacity: 0.7; }}
+    .graph-node.is-invalidated rect {{ stroke: var(--warning) !important; stroke-width: 2.5px !important; filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.5)); }}
     .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
     .status-left, .status-center, .status-right {{ flex-wrap: wrap; }}
     @media (max-width: 1000px) {{
@@ -3049,7 +1341,6 @@ def format_reactlog_html(
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
       <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
       <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open Reactlog JSON recording"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
-      <button class="btn icon" id="btn-shortcuts" aria-label="Keyboard shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg></button>
       <button class="btn icon" id="btn-toggle-inspector" onclick="toggleInspector()" aria-label="Toggle inspector details" title="Toggle inspector details panel"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg></button>
     </div>
   </header>
@@ -3058,7 +1349,7 @@ def format_reactlog_html(
   <footer class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
     <div class="timeline-navigation">
       <div class="flush-picker-wrap">
-        <span class="flush-counter-badge" id="flush-counter-badge" title="An activity is a group of recorded events. Some activities have no visible changes.">Activity 1 of 1</span>
+        <span class="flush-counter-badge" id="flush-counter-badge" onclick="toggleSecondaryTimelineForFlush()" style="cursor:pointer" title="An activity is a group of recorded events. Some activities have no visible changes.">Activity 1 of 1</span>
         <button type="button" class="btn icon mini flush-picker-btn" id="btn-flush-picker" onclick="toggleFlushPicker(event)" aria-label="Jump to activity" aria-expanded="false" title="Jump to any activity"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
         <div id="flush-picker-menu" class="flush-picker-menu" role="menu" aria-label="Activities list" hidden></div>
       </div>
@@ -3068,6 +1359,8 @@ def format_reactlog_html(
       </div>
     </div>
     <div class="status-right">
+      <button class="btn icon mini" id="btn-shortcuts" aria-label="Keyboard shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg></button>
+
       <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
         <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show activity for this group">
           <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Current activity
@@ -3079,12 +1372,12 @@ def format_reactlog_html(
     </div>
   </footer>
 
-  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
+  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline" ondblclick="toggleSecondaryTimelineForFlush()">
     <div class="timeline-current">
-      <span id="active-flush-label" role="status"></span>
+      <span id="active-flush-label" role="status" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()" title="Double-click to toggle update details"></span>
       <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
     </div>
-    <div id="trace-track-wrap" class="trace-track-wrap">
+    <div id="trace-track-wrap" class="trace-track-wrap" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()">
       <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
       <div id="timeline-playhead" class="timeline-playhead" aria-hidden="true"></div>
       <div id="timeline-tooltip" class="timeline-tooltip" role="tooltip" hidden></div>
@@ -3093,6 +1386,20 @@ def format_reactlog_html(
     <div class="timeline-key" id="timeline-key" aria-label="Timeline key">
       <span><i></i>Idle</span><span><i class="key-output"></i>Output calculation</span>
       <span><i class="key-mark"></i>User mark</span><span><i class="key-position"></i>Current step</span>
+    </div>
+  </div>
+
+  <div class="secondary-timeline-bar" id="secondary-timeline-bar" hidden aria-label="Detailed secondary timeline">
+    <div class="secondary-timeline-header">
+      <div class="secondary-timeline-info">
+        <span class="secondary-timeline-tag tag-flush" id="secondary-timeline-tag">Update</span>
+        <span class="secondary-timeline-title" id="secondary-timeline-title">Update details</span>
+        <span class="secondary-timeline-meta" id="secondary-timeline-meta"></span>
+      </div>
+      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="secondary-timeline-track-wrap" id="secondary-timeline-track-wrap">
+      <div class="secondary-timeline-chips" id="secondary-timeline-chips" role="list" aria-label="Step events"></div>
     </div>
   </div>
 
@@ -3165,7 +1472,7 @@ def format_reactlog_html(
       <aside class="sidebar" id="sidebar" aria-label="Details and events" hidden>
         <div class="sidebar-header">
           <span id="detail-panel-title">Node details</span>
-          <button class="btn icon mini" onclick="toggleInspector(false)" aria-label="Close Inspector" title="Close Inspector">✕</button>
+          <button class="btn icon mini" onclick="toggleInspector(false)" aria-label="Close Inspector" title="Close Inspector"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
 
         <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-label="Node details">
@@ -3257,6 +1564,10 @@ def format_reactlog_html(
       zap: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
       clock: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
       arrowRight: '<svg class="inline-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+      warn: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      gear: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+      check: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+      close: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
       flame: '<svg class="inline-icon flame-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--danger, #ef4444);vertical-align:-1px;margin-left:4px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>'
     }};
 
@@ -3432,33 +1743,6 @@ def format_reactlog_html(
       fitGraph();
     }}
 
-    function prepareEventTimings() {{
-      const events = reactlogData.events || reactlogData.log || [];
-      if (!events || events.length === 0) return;
-
-      let i = 0;
-      while (i < events.length) {{
-        const baseTime = events[i].time_sec !== undefined ? events[i].time_sec : (events[i].time !== undefined ? events[i].time : 0);
-        let j = i;
-        while (j < events.length && Math.abs(((events[j].time_sec !== undefined ? events[j].time_sec : events[j].time) || 0) - baseTime) < 0.04) {{
-          j++;
-        }}
-        const clusterLen = j - i;
-        const nextTime = (j < events.length && (events[j].time_sec !== undefined || events[j].time !== undefined)) ? (events[j].time_sec ?? events[j].time) : (baseTime + 1.2);
-        const windowDuration = Math.min(0.75, Math.max(0.25, (nextTime - baseTime) * 0.7));
-
-        for (let k = 0; k < clusterLen; k++) {{
-          const evIdx = i + k;
-          if (events[evIdx].time_sec !== undefined || events[evIdx].time !== undefined) {{
-            events[evIdx].effective_time = baseTime + (clusterLen > 1 ? (k / (clusterLen - 1)) * windowDuration : 0);
-          }} else {{
-            events[evIdx].effective_time = baseTime;
-          }}
-        }}
-        i = j;
-      }}
-    }}
-
     function filterItems(arr, predicate) {{
       const out = [];
       for (const item of (arr || [])) {{
@@ -3475,9 +1759,54 @@ def format_reactlog_html(
       s = s.replace(/^(input|output|calc|effect)[:.]/, '');
       s = s.replace(/^(input#|#)/, '');
       s = s.replace(/^(on[,\\s]+)/i, '');
-      s = s.replace(/^[.#]/, '');
+      s = s.replace(/^[.#$]/, '');
       s = s.split('=')[0].trim();
       return s;
+    }}
+
+    function friendlyNodeName(nodeOrId) {{
+      if (!nodeOrId) return '';
+      const node = (typeof nodeIndex !== 'undefined' && nodeIndex.get(nodeOrId)) ||
+        ((reactlogData.nodes || []).find(n => n.id === nodeOrId)) ||
+        (typeof nodeOrId === 'object' ? nodeOrId : null);
+
+      let raw = node ? (node.label || node.name || node.id || '') : String(nodeOrId);
+      const mod = node ? (node.module || '') : '';
+      const line = node ? node.line : null;
+      const role = node ? (node.role || node.type || '') : '';
+
+      let cleanMod = mod;
+      if (cleanMod) {{
+        cleanMod = cleanMod.replace(/_wrapper(-[a-zA-Z0-9_]+)?$/, '').replace(/-[a-zA-Z0-9_]+$/, '');
+      }}
+
+      const isAnon = raw.includes('<anonymous>');
+      const isRawId = /^r\\d+$/.test(raw);
+      if (isAnon || isRawId) {{
+        const prefix = (role === 'conductor' || role === 'calc' || raw.includes('calc')) ? 'calc' : 'effect';
+        if (cleanMod) return `${{prefix}} (${{cleanMod}})`;
+        if (line) return `${{prefix}} (line ${{line}})`;
+        return prefix;
+      }}
+
+      let s = cleanName(raw);
+      s = s.replace(/^(reactive\\.effect|reactive\\.calc)\\s*/, '');
+      s = s.replace(/^\\.clientdata_output_/, '').replace(/^\\.clientdata_/, '').replace(/_hidden$/, '');
+      s = s.replace(/^[.#$]/, '');
+
+      const colonParts = s.split(':');
+      if (colonParts.length === 2 && colonParts[0] && colonParts[1]) {{
+        const prefixMod = colonParts[0].trim();
+        const name = colonParts[1].trim();
+        const displayMod = cleanMod || prefixMod;
+        return displayMod ? `${{name}} (${{displayMod}})` : name;
+      }}
+
+      s = s.trim();
+      if (cleanMod && !s.endsWith(`(${{cleanMod}})`)) {{
+        return `${{s}} (${{cleanMod}})`;
+      }}
+      return s || raw;
     }}
 
     function formatHumanValue(val) {{
@@ -3486,7 +1815,7 @@ def format_reactlog_html(
       return String(val);
     }}
 
-    // Maps a server-built wave (see action_waves in generate_reactlog) to a burst.
+    // Maps a server-built wave to a burst.
     function waveToBurst(w, idx) {{
       const inputs = [];
       if (w.trigger_node_id) {{
@@ -3546,7 +1875,9 @@ def format_reactlog_html(
     }}
 
     function buildActionWaves() {{
-      if (reactlogData.action_waves && reactlogData.action_waves.length > 0) {{
+      const events = reactlogData.events || reactlogData.log || [];
+      const hasFlushBoundaries = events.some(ev => (ev.action || ev.event) === 'queueEmpty');
+      if (!hasFlushBoundaries && reactlogData.action_waves && reactlogData.action_waves.length > 0) {{
         const rawWaves = reactlogData.action_waves;
         const coalesced = [];
         for (let i = 0; i < rawWaves.length; i++) {{
@@ -3565,24 +1896,30 @@ def format_reactlog_html(
       }}
       actionWaves = [];
       allBursts = [];
-      const events = reactlogData.events || reactlogData.log || [];
+      const nodeMap = new Map();
       const lastKnownValues = new Map();
+      const waveInitialValues = new Map();
       (reactlogData.nodes || []).forEach(n => {{
+        if (n.id) nodeMap.set(n.id, n);
         if (n.value !== undefined && n.value !== null) {{
           lastKnownValues.set(nodeDisplayName(n), n.value);
         }}
       }});
       let initWave = null;
       let curWave = null;
+      // Recorded ids (`r3`) carry no name; use friendlyNodeName instead.
+      const waveNodeName = nId => /<anonymous>/.test(nodeMap.get(nId)?.label || '') ? friendlyNodeName(nId) : nodeDisplayName(nId);
 
       events.forEach((ev, idx) => {{
         const evAction = ev.action || ev.event || '';
         const isInit = ev.phase === 'init' || ['define', 'analysisInit', 'createContext', 'sessionInit'].includes(evAction);
         const t = ev.time_sec !== undefined ? ev.time_sec : (ev.time !== undefined ? ev.time : 0);
 
-        if (isInit) {{
+        if (isInit && !hasFlushBoundaries) {{
           if (ev.value !== undefined && ev.value !== null) {{
-            const raw = ev.node_id || ev.id || ev.node_label || ev.label || '';
+            const initId = ev.node_id || ev.id || '';
+            // Recorded inputs are named by label, as in the interaction branch below.
+            const raw = ((ev.type === 'input' || ev.node_type === 'input') && !initId.startsWith('input:') ? (ev.node_label || ev.label) : '') || initId || ev.node_label || ev.label || '';
             const name = nodeDisplayName(raw);
             if (name) lastKnownValues.set(name, ev.value);
           }}
@@ -3610,37 +1947,61 @@ def format_reactlog_html(
           initWave.endStep = idx;
           initWave.endTime = t;
           initWave.totalEvents++;
+          const initType = ev.type || ev.node_type;
+          if (evAction === 'enter' && (initType === 'calc' || initType === 'output')) {{
+            const nId = ev.node_id || ev.id || '';
+            const name = waveNodeName(nId);
+            const ran = initType === 'calc' ? initWave.calcs : initWave.outputs;
+            if (name && !ran.some(item => item.name === name)) {{
+              ran.push({{ name, nodeId: nId, step: idx, details: ev.details }});
+            }}
+          }}
         }} else {{
-          if (evAction === 'userMark' && ev.mark_wave) {{
-            // Same bookmark wave the server builds for generated reactlogs.
-            const markIdx = actionWaves.length + 1;
-            actionWaves.push(waveToBurst({{ ...ev.mark_wave, action_id: `mark-${{markIdx}}`, index: markIdx }}, markIdx));
-            curWave = null;
+          if (evAction === 'userMark') {{
+            if (!hasFlushBoundaries && ev.mark_wave) {{
+              const markIdx = actionWaves.length + 1;
+              actionWaves.push(waveToBurst({{ ...ev.mark_wave, action_id: `mark-${{markIdx}}`, index: markIdx }}, markIdx));
+              curWave = null;
+            }}
             return;
           }}
           const nId = ev.node_id || ev.id || '';
+          const nNode = nodeMap.get(nId);
           // Recorded (live) reactlogs identify inputs by type, not an `input:` id.
-          const isInputNode = ev.type === 'input' || ev.node_type === 'input';
+          const isInputNode = ev.type === 'input' || ev.node_type === 'input' || (nNode && (nNode.type === 'input' || nNode.role === 'source'));
           const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || (isInputNode && evAction === 'valueChange');
-          const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0;
-          if (!curWave || (t - curWave.startTime) > 0.25 || isNewTrigger) {{
+          const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label || (nNode && nNode.label)) : '') || nId || ev.details || (nNode && nNode.label) || '';
+          const inputName = nodeDisplayName(raw);
+          const isSameInput = Boolean(curWave && inputName && curWave.inputs.some(item => item.name === inputName));
+          const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0 && !isSameInput;
+          const isExecution = evAction === 'enter' || evAction === 'recalculate' || evAction === 'output' || evAction === 'render';
+          const isInvalidation = evAction === 'invalidate' || evAction === 'invalidateStart' || evAction === 'propagate' || ev.semantic_state === 'invalidated';
+
+          if (!hasFlushBoundaries && !curWave && !isUserAction && !isExecution) {{
+            return;
+          }}
+
+          if (!curWave || (!hasFlushBoundaries && ((t - curWave.startTime) > 0.25 || isNewTrigger))) {{
             curWave = {{
               id: `burst-${{actionWaves.length + 1}}`,
               index: actionWaves.length + 1,
-              isInit: false,
+              isInit: isInit,
+              recorded: hasFlushBoundaries,
+              completed: false,
               startTime: t,
               endTime: t,
               time: t,
               startStep: idx,
               endStep: idx,
-              triggerLabel: '',
-              shortLabel: '',
-              humanAction: '',
+              triggerLabel: isInit ? 'Init' : '',
+              shortLabel: isInit ? 'Init' : '',
+              humanAction: isInit ? 'Init' : '',
               triggerNodeId: '',
               triggerValue: ev.value,
               inputs: [],
               calcs: [],
               outputs: [],
+              invalidatedNodes: new Set(),
               totalEvents: 0,
               userChanges: 0,
               details: ev.details || evAction,
@@ -3651,53 +2012,72 @@ def format_reactlog_html(
           curWave.endTime = t;
           curWave.totalEvents++;
 
-          if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:') || isInputNode) {{
-            const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
-            if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
-              const name = nodeDisplayName(raw) || 'input';
-              const prevVal = lastKnownValues.get(name);
+          if (evAction === 'queueEmpty') {{
+            curWave.completed = true;
+            curWave = null;
+            return;
+          }}
+
+          if (isUserAction || nId.startsWith('input:') || isInputNode) {{
+            if (isInit) {{
+              if (inputName && ev.value !== undefined && ev.value !== null) lastKnownValues.set(inputName, ev.value);
+            }} else if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {{
+              const name = inputName || 'input';
+              if (!waveInitialValues.has(curWave)) {{
+                waveInitialValues.set(curWave, new Map(lastKnownValues));
+              }}
+              const waveBaseValues = waveInitialValues.get(curWave);
+              const prevVal = waveBaseValues.get(name);
               const newVal = ev.value !== undefined ? ev.value : null;
               if (newVal !== null) lastKnownValues.set(name, newVal);
 
-              if (!curWave.triggerLabel) {{
-                curWave.shortLabel = name;
-                if (evAction === 'userClick') {{
-                  curWave.humanAction = `Click: ${{name}}`;
-                  curWave.triggerLabel = name;
-                  curWave.shortLabel = `Click: ${{name}}`;
-                }} else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {{
-                  curWave.humanAction = `${{name}}: ${{formatHumanValue(prevVal)}} → ${{formatHumanValue(newVal)}}`;
-                  curWave.triggerLabel = name;
-                }} else if (newVal !== null) {{
-                  curWave.humanAction = `${{name}}: ${{formatHumanValue(newVal)}}`;
-                  curWave.triggerLabel = name;
-                }} else {{
-                  curWave.humanAction = `${{name}} changed`;
-                  curWave.triggerLabel = name;
-                }}
-                curWave.triggerNodeId = nId;
-                curWave.triggerValue = ev.value;
+              curWave.shortLabel = name;
+              curWave.triggerLabel = name;
+              curWave.triggerNodeId = nId;
+              curWave.triggerValue = newVal;
+              if (evAction === 'userClick') {{
+                curWave.humanAction = `Click: ${{name}}`;
+                curWave.shortLabel = `Click: ${{name}}`;
+              }} else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {{
+                curWave.humanAction = `${{name}}: ${{formatHumanValue(prevVal)}} → ${{formatHumanValue(newVal)}}`;
+              }} else if (newVal !== null) {{
+                curWave.humanAction = `${{name}}: ${{formatHumanValue(newVal)}}`;
+              }} else {{
+                curWave.humanAction = `${{name}} changed`;
               }}
-              if (!curWave.inputs.some(item => item.name === name)) {{
+
+              const existingInput = curWave.inputs.find(item => item.name === name);
+              if (!existingInput) {{
                 curWave.inputs.push({{ name, nodeId: nId, step: idx, isClick: evAction === 'userClick' || evAction === 'userAction', details: ev.details, value: ev.value }});
                 curWave.userChanges++;
+              }} else {{
+                existingInput.value = newVal;
               }}
             }}
-          }} else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || ['calc', 'effect'].includes(nodeIndex.get(nId)?.type) || (ev.node_type === 'conductor'))) {{
-            const name = nodeDisplayName(nId);
+          }} else if (isExecution && nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor') || (nNode && (nNode.type === 'calc' || nNode.role === 'conductor')))) {{
+            const name = waveNodeName(nId);
             if (name && !curWave.calcs.some(item => item.name === name)) {{
               curWave.calcs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
             }}
-          }} else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || nodeIndex.get(nId)?.type === 'output' || (ev.node_type === 'observer'))) {{
-            const name = nodeDisplayName(nId);
+          }} else if (isExecution && nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer') || (nNode && (nNode.type === 'output' || nNode.role === 'observer')))) {{
+            const name = waveNodeName(nId);
             if (name && !curWave.outputs.some(item => item.name === name)) {{
               curWave.outputs.push({{ name, nodeId: nId, step: idx, details: ev.details }});
+            }}
+          }} else if (isInvalidation) {{
+            if (!curWave.invalidatedNodes) curWave.invalidatedNodes = new Set();
+            if (nId) curWave.invalidatedNodes.add(nId);
+            if (Array.isArray(ev.invalidated_node_ids)) {{
+              ev.invalidated_node_ids.forEach(id => {{ if (id) curWave.invalidatedNodes.add(id); }});
             }}
           }}
         }}
       }});
 
-      actionWaves.forEach(w => {{
+      actionWaves = filterItems(actionWaves, w => w.completed || w.inputs.length > 0 || w.calcs.length > 0 || w.outputs.length > 0 || w.isMark || (!hasFlushBoundaries && w.invalidatedNodes && w.invalidatedNodes.size > 0));
+      actionWaves.forEach((w, i) => {{
+        w.index = i + 1;
+        w.id = `burst-${{i + 1}}`;
         if (!w.triggerLabel) {{
           if (w.inputs.length > 0) {{
             w.humanAction = `${{w.inputs[0].name}} changed`;
@@ -3720,6 +2100,7 @@ def format_reactlog_html(
       }});
 
       allBursts = (initWave && initWave.totalEvents > 0 ? [initWave] : []).concat(actionWaves);
+      actionWaves = filterItems(allBursts, w => !w.isInit && !w.isMark);
       if (allBursts.length === 0) {{
         allBursts = [{{
           id: 'burst-init',
@@ -3753,13 +2134,13 @@ def format_reactlog_html(
     function getCurrentStepTime() {{
       const events = reactlogData.events || reactlogData.log || [];
       const ev = events[currentStep];
-      return ev ? (ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0)) : 0;
+      return ev ? (ev.time_sec ?? ev.time ?? 0) : 0;
     }}
 
     function initTraceTimeline() {{
       const events = reactlogData.events || reactlogData.log || [];
       const video = document.getElementById('session-video');
-      maxSessionDuration = events.reduce((max, ev) => Math.max(max, ev.effective_time ?? ev.time_sec ?? ev.time ?? 0), Number.isFinite(video?.duration) ? video.duration : 1);
+      maxSessionDuration = events.reduce((max, ev) => Math.max(max, ev.time_sec ?? ev.time ?? 0), Number.isFinite(video?.duration) ? video.duration : 1);
       document.getElementById('trace-total-time').textContent = formatTime(maxSessionDuration);
       const markers = document.getElementById('trace-markers');
       markers.replaceChildren();
@@ -3822,17 +2203,239 @@ def format_reactlog_html(
       updateTraceTimelineScrubber(getCurrentStepTime());
     }}
 
+    let secondaryTimelineMode = null;
+    let secondaryTimelineTarget = null;
+
+    function openSecondaryTimelineForFlush(wave) {{
+      if (!wave) {{
+        wave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
+      }}
+      if (!wave) return;
+      secondaryTimelineMode = 'flush';
+      secondaryTimelineTarget = wave;
+      renderSecondaryTimeline();
+    }}
+
+    function openSecondaryTimelineForNode(nodeId) {{
+      openSecondaryTimelineForFlush();
+    }}
+
+    function toggleSecondaryTimelineForFlush(wave) {{
+      const bar = document.getElementById('secondary-timeline-bar');
+      if (secondaryTimelineMode === 'flush' && bar && !bar.hidden) {{
+        closeSecondaryTimeline();
+      }} else {{
+        openSecondaryTimelineForFlush(wave);
+      }}
+    }}
+
+    function closeSecondaryTimeline() {{
+      secondaryTimelineMode = null;
+      secondaryTimelineTarget = null;
+      const bar = document.getElementById('secondary-timeline-bar');
+      if (bar) bar.hidden = true;
+    }}
+
+    function renderSecondaryTimeline() {{
+      const bar = document.getElementById('secondary-timeline-bar');
+      if (!bar) return;
+      if (!secondaryTimelineMode) {{
+        bar.hidden = true;
+        return;
+      }}
+      bar.hidden = false;
+      const tag = document.getElementById('secondary-timeline-tag');
+      const title = document.getElementById('secondary-timeline-title');
+      const meta = document.getElementById('secondary-timeline-meta');
+      const chips = document.getElementById('secondary-timeline-chips');
+      chips.replaceChildren();
+
+      const events = reactlogData.events || reactlogData.log || [];
+      const wave = secondaryTimelineTarget;
+      if (!wave) return;
+
+      const waveIndex = allBursts.indexOf(wave);
+      const flushNum = waveIndex >= 0 ? waveIndex + 1 : (wave.index || 1);
+      tag.textContent = `Activity ${{flushNum}} of ${{allBursts.length}}`;
+      tag.className = 'secondary-timeline-tag tag-flush';
+
+      const waveStart = wave.startStep !== undefined ? wave.startStep : 0;
+      const waveEnd = wave.endStep !== undefined ? wave.endStep : (events.length - 1);
+      const flushTitle = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : `Activity ${{flushNum}}`);
+      title.textContent = flushTitle;
+
+      const invCount = wave.invalidatedNodes ? wave.invalidatedNodes.size : 0;
+      const calcCount = wave.calcs ? wave.calcs.length : 0;
+      const outCount = wave.outputs ? wave.outputs.length : 0;
+      const stepCount = Math.max(1, waveEnd - waveStart + 1);
+      meta.textContent = `${{stepCount}} step${{stepCount === 1 ? '' : 's'}} · ${{invCount}} invalidated · ${{calcCount}} calcs · ${{outCount}} outputs`;
+
+      const stages = [];
+
+      let triggerStep = waveStart;
+      let triggerLabel = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : 'Trigger');
+      for (let s = waveStart; s <= waveEnd && s < events.length; s++) {{
+        const ev = events[s];
+        const act = ev.action || ev.event || '';
+        if (ev.phase === 'interaction' || act === 'inputChange' || act === 'userClick' || act === 'userAction' || act === 'valueChange') {{
+          triggerStep = s;
+          if (!wave.humanAction && (ev.node_id || ev.id || ev.node_label || ev.label)) {{
+            triggerLabel = friendlyNodeName(ev.node_id || ev.id || ev.node_label || ev.label);
+          }}
+          break;
+        }}
+      }}
+      stages.push({{
+        step: triggerStep,
+        kind: 'Trigger',
+        label: triggerLabel,
+        fullName: triggerLabel,
+        icon: ICONS.zap,
+        cssClass: 'pill-trigger'
+      }});
+
+      if (invCount > 0) {{
+        let invStep = waveStart;
+        for (let s = waveStart; s <= waveEnd && s < events.length; s++) {{
+          const ev = events[s];
+          const act = ev.action || ev.event || '';
+          if (act === 'invalidate' || act === 'invalidateStart' || act === 'propagate' || ev.semantic_state === 'invalidated') {{
+            invStep = s;
+            break;
+          }}
+        }}
+        const invArray = [...new Set(filterItems(Array.from(wave.invalidatedNodes).map(friendlyNodeName), Boolean))];
+        let invLabel = '';
+        if (invArray.length === 1) {{
+          invLabel = invArray[0];
+        }} else if (invArray.length <= 2) {{
+          invLabel = invArray.join(', ');
+        }} else {{
+          invLabel = `${{invArray.length}} nodes`;
+        }}
+        stages.push({{
+          step: invStep,
+          kind: 'Invalidated',
+          label: invLabel,
+          fullName: invArray.join(', '),
+          icon: ICONS.warn,
+          cssClass: 'pill-invalidation'
+        }});
+      }}
+
+      if (calcCount > 0) {{
+        let calcStep = wave.recorded ? null : waveStart;
+        for (let s = waveStart; s <= waveEnd && s < events.length; s++) {{
+          const ev = events[s];
+          const act = ev.action || ev.event || '';
+          if (act === 'exit' && (ev.type === 'calc' || ev.node_type === 'calc' || ev.node_type === 'conductor')) {{
+            calcStep = s;
+          }}
+        }}
+        const calcArray = [...new Set(filterItems(wave.calcs.map(c => friendlyNodeName(c.nodeId || c.name || c.id)), Boolean))];
+        let calcLabel = '';
+        if (calcArray.length === 1) {{
+          calcLabel = calcArray[0];
+        }} else if (calcArray.length <= 2) {{
+          calcLabel = calcArray.join(', ');
+        }} else {{
+          calcLabel = `${{calcArray.length}} calcs`;
+        }}
+        if (calcStep !== null) stages.push({{
+          step: calcStep,
+          kind: 'Calculated',
+          label: calcLabel,
+          fullName: calcArray.join(', '),
+          icon: ICONS.gear,
+          cssClass: 'pill-calc'
+        }});
+      }}
+
+      if (outCount > 0) {{
+        let outStep = wave.recorded ? null : waveStart;
+        for (let s = waveStart; s <= waveEnd && s < events.length; s++) {{
+          const ev = events[s];
+          const act = ev.action || ev.event || '';
+          if ((act === 'output' || act === 'render' || act === 'outputUpdated') || (act === 'exit' && (ev.type === 'output' || ev.node_type === 'output' || ev.node_type === 'observer'))) {{
+            outStep = s;
+          }}
+        }}
+        const outArray = [...new Set(filterItems(wave.outputs.map(o => friendlyNodeName(o.nodeId || o.name || o.id)), Boolean))];
+        let outLabel = '';
+        if (outArray.length === 1) {{
+          outLabel = outArray[0];
+        }} else if (outArray.length <= 2) {{
+          outLabel = outArray.join(', ');
+        }} else {{
+          outLabel = `${{outArray.length}} outputs`;
+        }}
+        if (outStep !== null) stages.push({{
+          step: outStep,
+          kind: 'Rendered',
+          label: outLabel,
+          fullName: outArray.join(', '),
+          icon: ICONS.eye,
+          cssClass: 'pill-output'
+        }});
+      }}
+
+      if (!wave.recorded || wave.completed) {{
+        stages.push({{
+          step: waveEnd,
+          kind: 'Idle',
+          label: 'Idle',
+          fullName: 'Update complete / idle',
+          icon: ICONS.check,
+          cssClass: 'pill-idle'
+        }});
+      }}
+
+      stages.sort((a, b) => a.step - b.step);
+
+      let activeIndex = 0;
+      stages.forEach((stg, i) => {{
+        if (currentStep >= stg.step) {{
+          activeIndex = i;
+        }}
+      }});
+
+      stages.forEach((stg, i) => {{
+        if (i > 0) {{
+          const arrow = document.createElement('span');
+          arrow.className = 'secondary-stage-arrow';
+          arrow.setAttribute('aria-hidden', 'true');
+          arrow.innerHTML = ICONS.arrowRight;
+          chips.appendChild(arrow);
+        }}
+
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = 'secondary-stage-pill ' + stg.cssClass + (i === activeIndex ? ' is-active' : '');
+        pill.dataset.step = stg.step;
+        pill.innerHTML = `<span class="stage-icon">${{stg.icon}}</span><span class="stage-kind">${{escapeHTML(stg.kind)}}:</span><span class="stage-name" title="${{escapeHTML(stg.fullName)}}">${{escapeHTML(stg.label)}}</span>`;
+        pill.onclick = (e) => {{
+          e.stopPropagation();
+          seekTo(stg.step);
+        }};
+        chips.appendChild(pill);
+      }});
+    }}
+
     function updateTraceTimelineScrubber(curSec) {{
       document.getElementById('trace-current-time').textContent = formatTime(curSec);
       const events = reactlogData.events || reactlogData.log || [];
       const curWave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
       activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
       const activeLabel = document.getElementById('active-flush-label');
-      activeLabel.textContent = curWave
+      activeLabel.textContent = !events.length
+        ? (reactlogData.summary || 'No recorded activity')
+        : curWave
         ? `Activity ${{activeBurstIndex + 1}} of ${{allBursts.length}} · ${{curWave.humanAction || curWave.triggerLabel || 'Initial render'}}`
         : 'No recorded activity';
-      activeLabel.title = activeLabel.textContent;
       const ev = events[currentStep];
+      if (curWave?.recorded && !curWave.completed) activeLabel.textContent += ' (in progress)';
+      if ((ev?.action || ev?.event) === 'userMark') activeLabel.textContent = `Mark: ${{ev.node_label || ev.label || ev.details || ''}}`;
+      activeLabel.title = activeLabel.textContent;
       const status = document.getElementById('trace-status-line');
       status.textContent = ev ? (isIdleEvent(ev) ? 'Idle' : ['mark', 'userMark'].includes(ev.action || ev.event) ? `User mark${{ev.details ? ' · ' + ev.details : ''}}` : (ev.details || ev.action || ev.event || '')) : 'No events';
       status.title = status.textContent;
@@ -3841,6 +2444,28 @@ def format_reactlog_html(
       range.style.setProperty('--progress', `${{percent}}%`);
       document.getElementById('timeline-playhead').style.left = `calc(${{percent}}% - ${{3 * percent / 100}}px)`;
       range.setAttribute('aria-valuetext', `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}}. ${{activeLabel.textContent}}. ${{status.textContent}}`);
+
+      if (secondaryTimelineMode === 'flush') {{
+        if (curWave && curWave !== secondaryTimelineTarget) {{
+          secondaryTimelineTarget = curWave;
+          renderSecondaryTimeline();
+        }} else {{
+          const pills = Array.from(document.querySelectorAll('.secondary-stage-pill'));
+          let activePill = null;
+          pills.forEach(p => {{
+            const s = Number(p.dataset.step);
+            p.classList.remove('is-active');
+            if (currentStep >= s) {{
+              activePill = p;
+            }}
+          }});
+          if (activePill) {{
+            activePill.classList.add('is-active');
+          }} else if (pills.length > 0) {{
+            pills[0].classList.add('is-active');
+          }}
+        }}
+      }}
     }}
 
     function nextAction() {{
@@ -3879,7 +2504,7 @@ def format_reactlog_html(
     function getActiveFlushNodeIds(wave) {{
       if (!wave) return new Set();
       const set = new Set();
-      if (wave.isInit) {{
+      if (wave.isInit && !wave.recorded) {{
         (reactlogData.nodes || []).forEach(n => {{
           set.add(n.id);
           set.add(cleanName(n.id));
@@ -4106,7 +2731,7 @@ def format_reactlog_html(
 
 
       const badge = document.getElementById('flush-counter-badge');
-      if (badge) badge.textContent = `Activity ${{curIdx + 1}} of ${{allBursts.length}}`;
+      if (badge) badge.textContent = `Activity ${{curIdx + 1}} of ${{allBursts.length}}${{curWave.recorded && !curWave.completed ? ' (in progress)' : ''}}`;
       const pickerMenu = document.getElementById('flush-picker-menu');
       if (pickerMenu) {{
         pickerMenu.replaceChildren();
@@ -4133,7 +2758,7 @@ def format_reactlog_html(
 
       const cardTitle = document.getElementById('flush-card-title');
       if (cardTitle) {{
-        cardTitle.textContent = curWave.isInit ? 'Activity 1: Initial render' : `Activity ${{curIdx + 1}}: ${{curWave.shortLabel || 'Action'}}`;
+        cardTitle.textContent = `Activity ${{curIdx + 1}}: ${{curWave.isInit ? 'Initialization' : curWave.shortLabel || 'Action'}}`;
       }}
       const cardTime = document.getElementById('flush-card-time');
       if (cardTime) {{
@@ -4188,7 +2813,7 @@ def format_reactlog_html(
         if (lineage ? !lineage.has(n.id) : ((!activeRoles.has(roleKey) || !activeRoles.has(n.role)) || (searchQuery && !Number.isFinite(nodeSearchScore(n, searchQuery))))) return false;
         if (hideClientData && isClientDataNode(n)) return false;
         if (changedNodesOnly && changedNodeIds && !changedNodeIds.has(n.id)) return false;
-        if (active && active.size && !active.has(n.id) && !active.has(cleanName(n.id))) return false;
+        if (active && !active.has(n.id) && !active.has(cleanName(n.id))) return false;
         if (selectedStageFilter && wave) {{
           const members = selectedStageFilter === 'invalidated' ? wave.invalidatedNodes || new Set()
             : new Set((selectedStageFilter === 'calcs' ? wave.calcs || [] : wave.outputs || []).map(x => x.nodeId || x.name));
@@ -4257,7 +2882,6 @@ def format_reactlog_html(
         }}
       }});
       initTheme();
-      prepareEventTimings();
       buildGraphIndices();
       buildActionWaves();
       changedNodeIds = findChangedNodes();
@@ -4474,7 +3098,7 @@ def format_reactlog_html(
         }}
 
         const provBadge = document.createElement('span');
-        const prov = ev.provenance || 'inferred';
+        const prov = ev.provenance || 'observed';
         provBadge.className = `event-badge provenance-${{prov}}`;
         provBadge.innerHTML = `${{prov === 'observed' ? ICONS.eye : ICONS.zap}} ${{prov.toUpperCase()}}`;
         badgesWrap.appendChild(provBadge);
@@ -4516,6 +3140,8 @@ def format_reactlog_html(
 
       const cleanTargetName = cleanName(targetNode.name || targetNode.id);
       const burstEventForNode = burstEvents.find(e => {{
+        // Dropping a dependency (e.g. an isolated read being invalidated) is not a run.
+        if (e.event === 'dependsOnRemove') return false;
         const eid = e.node_id || e.id || '';
         return eid === nodeId || cleanName(eid) === cleanTargetName || (e.node_label && cleanName(e.node_label) === cleanTargetName);
       }});
@@ -4587,7 +3213,7 @@ def format_reactlog_html(
             upstreamNote = `Upstream dependencies invalidated: ${{invParents.map(p => escapeHTML(p.label)).join(', ')}}`;
           }}
         }}
-        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was observed or inferred during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
+        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was recorded during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
         if (lastExec) {{
           const lastTime = lastExec.time_sec !== undefined ? lastExec.time_sec : (lastExec.time || 0);
           narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${{escapeHTML(formatTime(lastTime))}}</span><button type="button" class="btn mini" data-seek-step="${{lastExec.step}}">Jump to run</button></div>`;
@@ -4873,7 +3499,6 @@ def format_reactlog_html(
     function selectNode(nodeId) {{
       selectedNodeId = nodeId;
       focusedNodeId = nodeId;
-      showSidebarPanel('timeline');
       renderInspector();
       renderGraph();
       updateSourceHighlight();
@@ -4955,7 +3580,7 @@ def format_reactlog_html(
       events.forEach(ev => {{
         const nid = ev.node_id || ev.id;
         if (!nid) return;
-        if (ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
+        if (ev.event === 'enter' || ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {{
           counts.set(nid, (counts.get(nid) || 0) + 1);
         }}
       }});
@@ -5020,7 +3645,12 @@ def format_reactlog_html(
       const ranks = dependencyRanks(nodes, edges);
       const colWidth = 350, rowHeight = 92, nodeWidth = 280, nodeHeight = 64;
       const pos = {{}};
-      // Module bands keep boxes disjoint while dependency rank sets horizontal position.
+      const totalNodesByModule = new Map();
+      (reactlogData.nodes || []).forEach(n => {{
+        const mKey = n.module || '';
+        totalNodesByModule.set(mKey, (totalNodesByModule.get(mKey) || 0) + 1);
+      }});
+
       const bands = new Map();
       nodes.forEach(n => {{ const key = n.module || ''; if (!bands.has(key)) bands.set(key, []); bands.get(key).push(n); }});
       let top = 70;
@@ -5047,11 +3677,15 @@ def format_reactlog_html(
           rect.setAttribute('height', rows * rowHeight + 20); rect.setAttribute('rx', '12');
           rect.setAttribute('fill', isLight ? '#e0f2fe55' : '#17314b55'); rect.setAttribute('stroke', isLight ? '#7ba6c9' : '#507291');
           rect.setAttribute('stroke-dasharray', '5 4'); box.appendChild(rect);
+          const totalModNodes = totalNodesByModule.get(name) || members.length;
+          const countText = members.length < totalModNodes
+            ? `${{members.length}}/${{totalModNodes}} nodes`
+            : `${{members.length}} node${{members.length === 1 ? '' : 's'}}`;
           const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           label.setAttribute('x', left + 14); label.setAttribute('y', top - 8); label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
           label.setAttribute('font-size', '12'); label.innerHTML = name
-            ? nodeLabelHTML({{ label: name, module: name }}, true) + escapeHTML(` · ${{members.length}} nodes · Enter to collapse`)
-            : escapeHTML(`App (no namespace) · ${{members.length}} nodes`);
+            ? nodeLabelHTML({{ label: name, module: name }}, true) + escapeHTML(` · ${{countText}} · Enter to collapse`)
+            : escapeHTML(`App · ${{countText}}`);
           box.appendChild(label); svg.appendChild(box);
         }}
         top += rows * rowHeight + 75;
@@ -5087,9 +3721,11 @@ def format_reactlog_html(
 
           const fromMatch = representatives.get(activeEvent.edge_from || activeEvent.dependsOn);
           const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
+          const isInvalidatedEdge = (activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart' || activeEvent.semantic_state === 'invalidated') &&
+            ((activeEvent.invalidated_node_ids && activeEvent.invalidated_node_ids.includes(e.to)) || activeEvent.node_id === e.to);
           const isEdgeActive = !e.inactive && ((fromMatch && toMatch)
             ? (fromMatch === e.from && toMatch === e.to)
-            : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart')));
+            : (isInvalidatedEdge || (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn'))));
 
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{c1x}} ${{y1}}, ${{c2x}} ${{y2}}, ${{x2}} ${{y2}}`);
@@ -5098,7 +3734,8 @@ def format_reactlog_html(
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
-          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (!e.related ? ' is-dimmed' : ''));
+          const isConnected = focusedNodeId && e.related;
+          path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (isConnected ? ' is-connected' : '') + (!e.related ? ' is-dimmed' : ''));
           const edgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
           if (e.isolated) {{
             path.setAttribute('stroke-dasharray', '5 4');
@@ -5121,13 +3758,16 @@ def format_reactlog_html(
         const p = pos[n.id] || {{ x: 200, y: 200 }};
         const isActive = activeNodeId === n.id || (n.members || []).includes(activeNodeId);
         const isSelected = selectedNodeId === n.id || (n.members || []).includes(selectedNodeId);
+        const isConnected = focusedNodeId && focusedNodes && (n.members || [n.id]).some(id => focusedNodes.has(id)) && !isSelected;
         const isExecuted = (n.members || []).some(id => executedInBurst.has(id)) || executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
+        const isInvalidated = (activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart' || activeEvent.semantic_state === 'invalidated') &&
+          ((activeEvent.invalidated_node_ids && activeEvent.invalidated_node_ids.includes(n.id)) || activeNodeId === n.id);
         const kind = nodeKind(n);
         const isDimmed = focusedNodes && !(n.members || [n.id]).some(id => focusedNodes.has(id));
         const isClientData = isClientDataNode(n);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isClientData ? ' is-clientdata' : ''));
+        g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isConnected ? ' is-connected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isInvalidated ? ' is-invalidated' : '') + (isClientData ? ' is-clientdata' : ''));
         g.setAttribute('data-id', n.id);
         g.setAttribute('data-role', n.role);
         const state = replay.states.get(n.id) || 'ready';
@@ -5143,17 +3783,30 @@ def format_reactlog_html(
           e.stopPropagation();
           if (n.type !== 'module') selectNode(n.id);
         }};
+        g.ondblclick = (e) => {{
+          e.stopPropagation();
+          if (n.type === 'module') {{
+            toggleModule(n.module);
+          }} else {{
+            const term = n.label || n.name || n.id;
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = term;
+            handleSearch(term);
+            const results = document.getElementById('search-results');
+            if (results) results.hidden = true;
+            openSecondaryTimelineForFlush();
+          }}
+        }};
         g.onkeydown = e => {{
           if (e.key === 'Enter' || e.key === ' ') {{
-            e.preventDefault(); e.stopPropagation(); selectNode(n.id);
+            e.preventDefault(); e.stopPropagation();
+            if (n.type === 'module') toggleModule(n.module); else selectNode(n.id);
             document.querySelectorAll('.graph-node').forEach(el => {{ if (el.dataset.id === n.id) el.focus(); }});
           }}
         }};
         if (n.type === 'module') {{
           g.setAttribute('aria-expanded', 'false');
           g.setAttribute('aria-label', `Expand module ${{n.module}}`);
-          g.ondblclick = e => {{ e.stopPropagation(); toggleModule(n.module); }};
-          g.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(n.module); }} }};
         }};
         g.onmouseenter = () => highlightDependencies(n.id);
         g.onmouseleave = () => resetHighlight();
@@ -5228,7 +3881,11 @@ def format_reactlog_html(
         subText.setAttribute('y', p.y + 14);
         subText.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#17212b');
         subText.setAttribute('font-size', '12px');
-        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · Enter to expand` : `${{kind.label}} · ${{state}}`;
+        const totalModNodes = n.module ? (totalNodesByModule.get(n.module) || n.members.length) : (n.members ? n.members.length : 0);
+        const modCountText = n.members && n.members.length < totalModNodes
+          ? `${{n.members.length}}/${{totalModNodes}} nodes`
+          : `${{n.members ? n.members.length : 0}} node${{n.members && n.members.length === 1 ? '' : 's'}}`;
+        subText.textContent = n.type === 'module' ? `${{modCountText}} · Enter to expand` : `${{kind.label}} · ${{state}}`;
         g.appendChild(subText);
 
         const execCount = execCounts.get(n.id) || 0;
@@ -5388,7 +4045,7 @@ def format_reactlog_html(
         const events = reactlogData.events || reactlogData.log || [];
         for (let i = 0; i < events.length; i++) {{
           const ev = events[i];
-          const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
+          const t = ev.time_sec ?? ev.time ?? 0;
           if (t <= curSec) matchIdx = i;
         }}
         if (matchIdx !== currentStep) {{
@@ -5637,6 +4294,7 @@ def format_reactlog_html(
             updateSourceHighlight();
             updateTraceTimelineScrubber(getCurrentStepTime());
             fitGraph();
+            openSecondaryTimelineForFlush();
           }};
           results.appendChild(button);
         }});
@@ -5767,7 +4425,7 @@ def format_reactlog_html(
           const rawT = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
           const tSec = Math.max(0, baseEpoch > 0 ? (rawT - baseEpoch) : rawT);
           const tMs = Number(item.timestamp || (tSec * 1000));
-          const prov = item.provenance || (['valueChange', 'inputChange', 'userClick', 'userAction'].includes(act) ? 'observed' : 'inferred');
+          const prov = item.provenance || 'observed';
           const phase = item.phase || (['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act) ? 'init' : 'interaction');
 
           if (act === 'dependsOn' && depFrom && depTo) {{
@@ -5903,6 +4561,11 @@ def format_reactlog_html(
           e.preventDefault();
           return;
         }}
+        if (secondaryTimelineMode) {{
+          closeSecondaryTimeline();
+          e.preventDefault();
+          return;
+        }}
       }}
 
       if ((e.shiftKey && e.key === 'ArrowLeft') || e.key === '[') {{
@@ -5957,7 +4620,7 @@ def format_reactlog_html(
     <div class="modal-dialog" role="dialog" aria-labelledby="shortcuts-modal-title" aria-modal="true">
       <div class="modal-header">
         <h2 class="modal-title" id="shortcuts-modal-title">Keyboard Navigation Shortcuts</h2>
-        <button class="modal-close-btn" onclick="toggleShortcutsModal()" aria-label="Close shortcuts dialog">✕</button>
+        <button class="modal-close-btn" onclick="toggleShortcutsModal()" aria-label="Close shortcuts dialog"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <table class="shortcuts-table">
         <tbody>
