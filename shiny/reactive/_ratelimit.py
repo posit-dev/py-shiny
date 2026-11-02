@@ -44,7 +44,6 @@ T = TypeVar("T")
 @overload
 def debounce(
     delay_secs: float | Callable[[], float],
-    /,
     *,
     priority: int = 100,
     session: MISSING_TYPE | Session | None = MISSING,
@@ -75,9 +74,8 @@ def debounce(
 
 @add_example()
 def debounce(
-    fn: Any = MISSING,
-    /,
     delay_secs: Any = MISSING,
+    fn_delay_secs: Any = MISSING,
     *,
     priority: int = 100,
     session: MISSING_TYPE | Session | None = MISSING,
@@ -156,7 +154,12 @@ def debounce(
     * :func:`~shiny.reactive.invalidate_later`
     """
     return _decorator_or_calc(
-        _debounce, fn, delay_secs, kind="debounce", priority=priority, session=session
+        _debounce,
+        delay_secs,
+        fn_delay_secs,
+        kind="debounce",
+        priority=priority,
+        session=session,
     )
 
 
@@ -223,7 +226,6 @@ def _debounce(
 @overload
 def throttle(
     delay_secs: float | Callable[[], float],
-    /,
     *,
     priority: int = 100,
     session: MISSING_TYPE | Session | None = MISSING,
@@ -254,9 +256,8 @@ def throttle(
 
 @add_example()
 def throttle(
-    fn: Any = MISSING,
-    /,
     delay_secs: Any = MISSING,
+    fn_delay_secs: Any = MISSING,
     *,
     priority: int = 100,
     session: MISSING_TYPE | Session | None = MISSING,
@@ -336,7 +337,12 @@ def throttle(
     * :func:`~shiny.reactive.invalidate_later`
     """
     return _decorator_or_calc(
-        _throttle, fn, delay_secs, kind="throttle", priority=priority, session=session
+        _throttle,
+        delay_secs,
+        fn_delay_secs,
+        kind="throttle",
+        priority=priority,
+        session=session,
     )
 
 
@@ -404,8 +410,8 @@ def _throttle(
 
 def _decorator_or_calc(
     limiter: Callable[..., Callable[[Callable[[], Any]], Callable[[], Any]]],
-    fn: Any,
     delay_secs: Any,
+    fn_delay_secs: Any,
     *,
     kind: Literal["debounce", "throttle"],
     priority: int,
@@ -414,14 +420,15 @@ def _decorator_or_calc(
     """
     Handle both ways to call `debounce`/`throttle`: `(delay_secs)` gives a decorator,
     and `(fn, delay_secs)` gives a calc.
-    """
-    if isinstance(fn, MISSING_TYPE):
-        # Called as `(delay_secs=...)`
-        return limiter(delay_secs, priority=priority, session=session)
-    if isinstance(delay_secs, MISSING_TYPE):
-        # Called as `(delay_secs)`; the one argument landed in `fn`
-        return limiter(fn, priority=priority, session=session)
 
+    The public functions name their first parameter `delay_secs`, so the decorator
+    form can take it by keyword. In the `(fn, delay_secs)` form, which is
+    positional-only, that parameter holds `fn` and `fn_delay_secs` holds the delay.
+    """
+    if isinstance(fn_delay_secs, MISSING_TYPE):
+        return limiter(delay_secs, priority=priority, session=session)
+
+    fn, delay_secs = delay_secs, fn_delay_secs
     # Called as `(fn, delay_secs)`. `fn` may be a calc here: there's no decorator to
     # put in the wrong order. Wrapping it in `_call` lets it past the decorator's
     # checks, and keeps `functools.wraps()` from copying a calc's attributes.

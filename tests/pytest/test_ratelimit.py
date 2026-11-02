@@ -118,7 +118,7 @@ async def test_errors_reach_readers_only(limit: Callable[..., Any]):
     async with session:
 
         @calc
-        @limit(1)
+        @limit(delay_secs=1)
         def r() -> int:
             raise ValueError("boom")
 
@@ -183,9 +183,9 @@ async def test_function_form_returns_a_calc(limit: Callable[..., Any]):
             async def doubled_async() -> int:
                 return a() * 2
 
-            # An existing calc, an async calc, and a value, with the delay by keyword too
+            # An existing calc, an async calc, and a value
             from_calc: Calc_[int] = limit(doubled, 1)
-            from_async: CalcAsync_[int] = limit(doubled_async, delay_secs=1)
+            from_async: CalcAsync_[int] = limit(doubled_async, 1)
             from_value: Calc_[int] = limit(a, 1)
             assert isinstance(from_calc, Calc_)
             assert isinstance(from_async, CalcAsync_)

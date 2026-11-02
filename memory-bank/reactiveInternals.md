@@ -264,9 +264,12 @@ reactive effect queue, round, idle, cycle, output flush, and what the public
   form by whether a second argument was given. There `fn` may be a `Calc_`
   or a `Value`: it is checked with `_check_fn` (everything but the `Calc_`
   check), then wrapped in `_call` so the decorator's checks pass and
-  `functools.wraps` doesn't copy an object's `__dict__`. The decorator
-  overload is positional-only (`delay_secs, /`): Pyright rejects an overload
-  whose keyword name differs from the implementation's first parameter.
+  `functools.wraps` doesn't copy an object's `__dict__`. The implementation's
+  parameters are `(delay_secs, fn_delay_secs)`: Pyright requires an
+  overload's keyword names to match the implementation's, so naming the
+  first one `delay_secs` keeps `@debounce(delay_secs=1)` valid. The
+  `(fn, delay_secs)` overload is positional-only, so in that form the first
+  parameter holds `fn`.
 - The decorated function is wrapped in a hidden (suppressed) calc, the
   *source*. A second hidden calc, the *result*, is
   `event(trigger, ignore_none=False)` over the source, so only bumping
