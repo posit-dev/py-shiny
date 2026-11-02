@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import re
 import runpy
+import shutil
+import subprocess
+import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
@@ -727,6 +730,166 @@ def test_load_reactlog_json_with_r_reactlog_schema():
     assert loaded_raw["success"] is True
     assert len(loaded_raw["nodes"]) == 3
     assert len(loaded_raw["edges"]) == 2
+
+
+def test_format_reactlog_html_compact_controls():
+    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
+    parser = _TagCollector()
+    parser.feed(html)
+    for control_id in (
+        "timeline-more-controls",
+        "btn-prev-activity",
+        "btn-next-activity",
+        "btn-step-back",
+        "btn-step-forward",
+        "btn-prev-flush",
+        "btn-next-flush",
+    ):
+        assert not any(attrs.get("id") == control_id for _, attrs in parser.tags)
+    assert parser.has_tag(
+        "button", id="btn-shortcuts", **{"aria-label": "Keyboard shortcuts"}
+    )
+    shortcuts = re.search(
+        r'<button[^>]*id="btn-shortcuts"[^>]*>(.*?)</button>', html, re.DOTALL
+    )
+    assert shortcuts is not None
+    assert re.sub(r"<[^>]*>", "", shortcuts[1]).strip() == ""
+    assert parser.has_tag("input", id="scrubber-range")
+    assert parser.has_tag("button", id="btn-flush-picker")
+
+
+@pytest.mark.parametrize("label", ["Zoom in", "Zoom out"])
+def test_format_reactlog_html_zoom_icons_have_valid_svg(label: str):
+    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
+    button = re.search(rf'<button[^>]*aria-label="{label}"[^>]*>(.*?)</button>', html)
+    assert button is not None
+    svg = ET.fromstring(button[1])
+    assert int(svg.attrib["width"]) >= 18
+    handle = svg.find("line")
+    assert handle is not None
+    assert handle.attrib == {"x1": "21", "x2": "16.65", "y1": "21", "y2": "16.65"}
+    lines = svg.findall("line")
+    assert len(lines) == (3 if label == "Zoom in" else 2)
+    assert lines[-1].attrib == {"x1": "8", "x2": "14", "y1": "11", "y2": "11"}
+
+
+def test_format_reactlog_html_node_names_and_module_markup():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to run the report's label formatter")
+    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
+    functions: list[str] = []
+    for name in ("escapeHTML", "nodeDisplayName", "nodeLabelHTML"):
+        match = re.search(rf"    function {name}\([\s\S]*?\n    \}}", html)
+        assert match is not None
+        functions.append(match[0])
+    script = "\n".join(functions) + """
+const node = {id: 'R45', label: 'input.scatter-y_var', module: 'scatter'};
+console.log(JSON.stringify([
+  nodeDisplayName(node), nodeLabelHTML(node), nodeLabelHTML(node, true),
+  nodeLabelHTML({id: 'R46', label: 'input.<img>', module: '<img>'})
+]));
+"""
+    result = subprocess.run(
+        [node, "-e", script], capture_output=True, text=True, check=True
+    )
+    assert json.loads(result.stdout) == [
+        "input.scatter-y_var",
+        'input.<span class="module-name">scatter</span>-y_var',
+        'input.<tspan class="module-name">scatter</tspan>-y_var',
+        'input.<span class="module-name">&lt;img&gt;</span>',
+    ]
+
+
+@pytest.mark.parametrize("precomputed", [False, True])
+def test_activity_and_explanation_use_node_names(precomputed: bool):
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to run the report's activity formatter")
+    report: dict[str, Any] = {
+        "nodes": [
+            {
+                "id": "r45",
+                "name": "r45",
+                "label": "reactive.calc filtered_data",
+                "type": "calc",
+            },
+            {
+                "id": "r9",
+                "label": "input.summary-metric",
+                "type": "input",
+                "role": "source",
+            },
+        ],
+        "events": [
+            {"node_id": "r45", "type": "calc", "action": "enter", "time": 1, "step": 0}
+        ],
+    }
+    if precomputed:
+        report["action_waves"] = [
+            {
+                "short_label": "r45",
+                "trigger_label": "r45",
+                "human_action": "Recalc: r45",
+                "inferred_executions": ["r45"],
+                "start_step": 0,
+                "end_step": 0,
+            }
+        ]
+    html = format_reactlog_html(report, "")
+    functions: list[str] = []
+    for name in (
+        "escapeHTML",
+        "filterItems",
+        "cleanName",
+        "formatHumanValue",
+        "formatTime",
+        "nodeDisplayName",
+        "buildActionWaves",
+        "getCurrentFlushIndex",
+        "updateFlushUI",
+        "nodeKind",
+        "explainWhyNodeRan",
+    ):
+        match = re.search(rf"    function {name}\([\s\S]*?\n    \}}", html)
+        assert match is not None
+        functions.append(match[0])
+    script = (
+        "const reactlogData = "
+        + json.dumps(report)
+        + ";\n"
+        + """
+const nodeIndex = new Map(reactlogData.nodes.map(n => [n.id, n]));
+const adjUpstream = new Map();
+let allBursts = [], actionWaves = [], currentStep = 0;
+const elements = Object.fromEntries(['flush-card-title', 'flush-card-trigger'].map(id => [id, {}]));
+const document = {getElementById: id => elements[id] || null};
+"""
+        + "\n".join(functions)
+        + """
+buildActionWaves();
+updateFlushUI();
+console.log(JSON.stringify({
+  name: allBursts[0].shortLabel, action: allBursts[0].humanAction,
+  title: elements['flush-card-title'].textContent,
+  trigger: elements['flush-card-trigger'].textContent,
+  narrative: explainWhyNodeRan('r9', 0).narrative
+}));
+"""
+    )
+    result = subprocess.run(
+        [node, "-e", script], capture_output=True, text=True, check=True
+    )
+    labels = json.loads(result.stdout)
+    assert labels["name"] == "reactive.calc filtered_data"
+    assert labels["action"] == "Recalc: reactive.calc filtered_data"
+    assert labels["title"] == "Activity 1: reactive.calc filtered_data"
+    assert labels["trigger"] == labels["action"]
+    assert (
+        "Did not change during Recalc: reactive.calc filtered_data"
+        in labels["narrative"]
+    )
+    assert "r45" not in result.stdout
 
 
 def test_format_reactlog_html_theme_support():
@@ -2029,8 +2192,8 @@ def out():
     reactlog = generate_reactlog(code)
     html = format_reactlog_html(reactlog, source_code=code)
     assert 'id="flush-select"' not in html
-    assert 'id="btn-prev-flush"' in html
-    assert 'id="btn-next-flush"' in html
+    assert 'id="btn-prev-flush"' not in html
+    assert 'id="btn-next-flush"' not in html
     assert 'id="flush-counter-badge"' in html
     assert 'id="flush-pipeline-bar"' not in html
     assert 'id="pipe-trigger"' not in html

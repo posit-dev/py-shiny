@@ -306,8 +306,8 @@ def out_txt():
     )
 
     expect(page.locator("#btn-skip-init")).to_have_count(0)
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
 
     first_interact_step = reactlog["first_interaction_step"]
     expect(page.locator("#step-display")).to_have_text(
@@ -725,8 +725,8 @@ def separate_out():
     expect(page.locator('.graph-node[data-id="input:y"]')).to_have_count(0)
     expect(page.locator('.graph-node[data-id="output:separate_out"]')).to_have_count(0)
 
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Step forward").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowRight")
     expect(page.locator(".graph-node")).to_have_count(3)
 
     page.get_by_role("button", name="Reset view", exact=True).click()
@@ -799,8 +799,8 @@ def summary():
         wait_until="domcontentloaded",
     )
 
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
     expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
 
     # 2. Causal Story Banner above graph is removed as requested
@@ -858,8 +858,8 @@ def client_badge():
     )
 
     # 1. Skip to the price action burst
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
 
     expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
 
@@ -1449,8 +1449,8 @@ def out():
         ],
     )
     load_graph_report(page, format_reactlog_html(report, code))
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
     graph_node(page, '.graph-node[data-id="output:out"]').click()
     expect(page.locator("#why-title")).to_contain_text("did not render")
     expect(page.locator("#insp-upstream-list")).not_to_contain_text("input.b")
@@ -1514,8 +1514,8 @@ def out():
     expect(page.locator("#flush-card")).to_be_visible()
 
     # Step to flush 1
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
     expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 2")
     expect(page.locator("#flush-card-invalidated")).to_contain_text("2 nodes")
     expect(page.locator("#flush-card-calcs")).to_contain_text("1 calcs")

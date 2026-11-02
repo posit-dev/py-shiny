@@ -1,5 +1,6 @@
 import re
 from collections.abc import Generator
+from typing import Any
 
 import pytest
 from playwright.sync_api import Error, Page, expect
@@ -89,8 +90,8 @@ def test_empty_recording_can_open_graph(page: Page):
 def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#btn-mode-flush").click()
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Clear all filters").click()
     expect(page.locator(".graph-node")).to_have_count(5)
@@ -109,16 +110,16 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
         )
     ).to_have_count(0)
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 1 of 3")
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3 · x")
     expect(page.locator(".graph-node")).to_have_count(3)
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 3 of 3 · y")
     expect(page.locator(".graph-node")).to_have_count(2)
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-prev-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowUp")
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3 · x")
 
 
@@ -228,40 +229,42 @@ def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
     node = page.locator('.graph-node[data-id="calc:doubled"]')
     for step, (state, color) in enumerate(
         [
-            ("calculating", "#fcbf49"),
-            ("invalidating", "#969696"),
-            ("invalidated", "#d9d9d9"),
-            ("ready", "#a3c586"),
-            ("frozen", "#2171b5"),
-            ("ready", "#a3c586"),
+            ("calculating", "var(--state-calculating)"),
+            ("invalidating", "var(--state-invalidating)"),
+            ("invalidated", "var(--state-invalidated)"),
+            ("ready", "var(--state-ready)"),
+            ("frozen", "var(--state-frozen)"),
+            ("ready", "var(--state-ready)"),
         ]
     ):
         page.locator("#scrubber-range").fill(str(step))
         expect(node).to_have_attribute("data-state", state)
         expect(node.locator(".node-card")).to_have_attribute("fill", color)
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Next idle", exact=True).click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Shift+ArrowRight")
     expect(page.locator("#scrubber-range")).to_have_value("6")
     expect(page.locator("#trace-status-line")).to_have_text("Idle")
     page.locator("#scrubber-range").fill("7")
     edge = page.locator('.graph-edge[data-from="input:x"][data-to="calc:doubled"]')
     expect(edge).to_have_class(re.compile("is-inactive"))
-    expect(edge).to_have_css("stroke-dasharray", "1px, 4px")
+    expect(edge).to_have_css("stroke-dasharray", "1px, 5px")
     node.hover()
     page.locator(".toolbar").hover()
-    expect(edge).to_have_css("stroke", "rgb(129, 129, 129)")
+    expect(edge).to_have_css("stroke", "rgb(145, 161, 179)")
     page.locator("#scrubber-range").fill("8")
     expect(edge).not_to_have_class(re.compile("is-inactive"))
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Next idle", exact=True).click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Shift+ArrowRight")
     expect(page.locator("#scrubber-range")).to_have_value("9")
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Previous idle", exact=True).click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Shift+ArrowLeft")
     expect(page.locator("#scrubber-range")).to_have_value("6")
 
     page.locator("#scrubber-range").fill("0")
     expect(node).to_have_attribute("data-state", "calculating")
-    expect(node.locator(".node-card")).to_have_attribute("fill", "#fcbf49")
+    expect(node.locator(".node-card")).to_have_attribute(
+        "fill", "var(--state-calculating)"
+    )
 
 
 def timeline_report():
@@ -316,20 +319,20 @@ def test_timeline_marks_are_inside_band_and_click_to_seek(page: Page):
 
 def test_timeline_navigates_user_marks_and_outer_calculations(page: Page):
     page.set_content(format_reactlog_html(timeline_report(), CODE))
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Next output calculation", exact=True).click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowRight")
     expect(page.locator("#scrubber-range")).to_have_value("4")
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Next user mark", exact=True).click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowDown")
     expect(page.locator("#scrubber-range")).to_have_value("6")
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Next user mark", exact=True).click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowDown")
     expect(page.locator("#scrubber-range")).to_have_value("10")
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Previous user mark", exact=True).click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowUp")
     expect(page.locator("#scrubber-range")).to_have_value("6")
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.get_by_role("button", name="Previous output calculation", exact=True).click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowLeft")
     expect(page.locator("#scrubber-range")).to_have_value("4")
     page.keyboard.press("Alt+ArrowRight")
     expect(page.locator("#scrubber-range")).to_have_value("8")
@@ -363,8 +366,8 @@ def test_update_labels_and_view_controls(page: Page):
     expect(page.locator(".graph-node")).to_have_count(5)
     current.click()
     expect(page.get_by_role("button", name="Remove activity filter")).to_be_visible()
-    page.locator("#timeline-more-controls").evaluate("element => element.open = true")
-    page.locator("#btn-next-action").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
     expect(page.locator("#active-flush-label")).to_contain_text("Activity 2 of 3")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Node details", exact=True).click()
@@ -670,7 +673,7 @@ def test_empty_search_choices_respect_default_filters(page: Page):
     page.set_content(format_reactlog_html(data, CODE))
     page.get_by_role("button", name="Show node choices").click()
     expect(page.locator("#search-results button")).to_have_count(1)
-    expect(page.locator("#search-results button").first).to_contain_text("input:x")
+    expect(page.locator("#search-results button").first).to_contain_text("input.x")
 
 
 def test_search_escape_closes_dropdown_after_keyboard_navigation(page: Page):
@@ -684,32 +687,67 @@ def test_search_escape_closes_dropdown_after_keyboard_navigation(page: Page):
     expect(search).to_be_focused()
 
 
-def test_timeline_prioritizes_activity_navigation(page: Page):
+def test_timeline_uses_keyboard_navigation(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    more = page.locator("#timeline-more-controls")
-    expect(more).not_to_have_attribute("open", "")
+    expect(page.locator("#timeline-more-controls")).to_have_count(0)
     expect(
         page.get_by_role("button", name="Previous activity", exact=True)
-    ).to_be_visible()
-    expect(page.get_by_role("button", name="Next activity", exact=True)).to_be_visible()
-    expect(page.locator("#btn-step-forward")).to_be_hidden()
-    expect(page.locator("#step-display")).to_be_hidden()
-    page.get_by_role("button", name="Next activity", exact=True).click()
-    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 2")
-    page.get_by_role("button", name="Previous activity", exact=True).click()
-    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 1")
-    page.get_by_text("More controls", exact=True).click()
-    expect(page.locator("#btn-step-forward")).to_be_visible()
+    ).to_have_count(0)
+    expect(page.get_by_role("button", name="Next activity", exact=True)).to_have_count(
+        0
+    )
     expect(page.locator("#step-display")).to_be_visible()
-    page.locator("#btn-step-forward").click()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 2")
+    page.keyboard.press("ArrowUp")
+    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 1")
+    page.keyboard.press("ArrowRight")
     expect(page.locator("#step-display")).to_contain_text("Step 1 /")
 
 
-def test_timeline_more_controls_fit_small_screen(page: Page):
+def test_timeline_controls_fit_small_screen(page: Page):
     page.set_viewport_size({"width": 390, "height": 844})
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_text("More controls", exact=True).click()
-    panel = page.locator(".timeline-advanced").bounding_box()
-    assert panel is not None
-    assert panel["x"] >= 0
-    assert panel["x"] + panel["width"] <= 390
+    controls = page.locator(".timeline-navigation").bounding_box()
+    assert controls is not None
+    assert controls["x"] >= 0
+    assert controls["x"] + controls["width"] <= 390
+
+
+def test_report_uses_names_and_highlights_module_names(page: Page):
+    data: dict[str, Any] = {
+        "nodes": [
+            {
+                "id": "R45",
+                "label": "input.scatter-y_var",
+                "module": "scatter",
+                "type": "input",
+                "role": "source",
+            }
+        ],
+        "edges": [],
+        "events": [
+            {
+                "action": "valueChange",
+                "node_id": "R45",
+                "node_label": "input.scatter-y_var",
+                "step": 0,
+                "time": 0.1,
+            }
+        ],
+    }
+    page.set_content(format_reactlog_html(data, ""))
+    node = page.locator('.graph-node[data-id="R45"]')
+    expect(node).to_have_attribute("aria-label", re.compile("input.scatter-y_var"))
+    expect(node.locator(".module-name")).to_have_text("scatter")
+    expect(node.locator(".module-name")).to_have_css("fill", "rgb(59, 7, 100)")
+    search = page.locator("#search-input")
+    search.fill("scatter")
+    choice = page.locator("#search-results button").first
+    expect(choice).to_contain_text("input.scatter-y_var")
+    expect(choice).not_to_contain_text("R45")
+    expect(choice.locator(".module-name")).to_have_css("color", "rgb(196, 181, 253)")
+    choice.click()
+    expect(search).to_have_value("input.scatter-y_var")
+    expect(page.locator("#insp-title .module-name")).to_have_text("scatter")
