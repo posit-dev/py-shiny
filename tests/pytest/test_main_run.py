@@ -1,16 +1,28 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncGenerator, Callable
+from urllib.parse import urlencode
 
 import pytest
 from click.testing import CliRunner
+from starlette.requests import Request
+from starlette.testclient import TestClient
+from starlette.types import Message
 
+from shiny import App, Inputs, Outputs, Session, reactive, ui
+from shiny._connection import MockConnection
 from shiny._main import _run, main
 from shiny.express._utils import escape_to_var_name
+from shiny.reactive._trace import hooks
+from shiny.session._session import AppSession
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 @pytest.mark.parametrize(
     "option,expected", [(None, True), (True, True), (False, False)]
 )
@@ -21,10 +33,6 @@ def test_reactlog_runner_preserves_config_unless_overridden(
     expected: bool,
     existing_app: bool,
 ) -> None:
-    from starlette.testclient import TestClient
-
-    from shiny import App, ui
-
     monkeypatch.setenv("SHINY_REACTLOG", "1")
     app = App(ui.page_fluid("test"), None)
 
@@ -42,13 +50,10 @@ def test_reactlog_runner_preserves_config_unless_overridden(
     assert os.environ["SHINY_REACTLOG"] == "1"
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_reactlog_runner_preserves_explicit_app_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from starlette.testclient import TestClient
-
-    from shiny import App, ui
-
     monkeypatch.delenv("SHINY_REACTLOG", raising=False)
     app = App(ui.page_fluid("test"), None, reactlog=True)
 
@@ -60,13 +65,10 @@ def test_reactlog_runner_preserves_explicit_app_config(
     assert "SHINY_REACTLOG" not in os.environ
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_reactlog_runner_enables_existing_disabled_app(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from starlette.testclient import TestClient
-
-    from shiny import App, ui
-
     app = App(ui.page_fluid("test"), None, reactlog=False)
     statuses: list[int] = []
 
@@ -81,32 +83,27 @@ def test_reactlog_runner_enables_existing_disabled_app(
     assert statuses == [200, 404]
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_reactlog_proxied_requests_are_not_local() -> None:
-    from starlette.testclient import TestClient
-
-    from shiny import App, ui
-
     def server(input: Any, output: Any, session: Any) -> None:
         "REACTLOG_SOURCE_MARKER"
 
     app = App(ui.page_fluid("test"), server, reactlog=True)
+    session = app._create_session(MockConnection())
     client = TestClient(app.starlette_app)
     proxied = {"X-Forwarded-For": "203.0.113.5"}
+    url = f"/__reactlog__?session_id={session.id}"
 
-    assert "REACTLOG_SOURCE_MARKER" in client.get("/__reactlog__").text
-    assert client.get("/__reactlog__", headers=proxied).status_code == 403
+    assert "REACTLOG_SOURCE_MARKER" in client.get(url).text
+    assert client.get(url, headers=proxied).status_code == 403
 
-    token_url = f"/__reactlog__?token={app.reactlog_token}"
-    response = client.get(token_url, headers=proxied)
+    response = client.get(f"{url}&token={app.reactlog_token}", headers=proxied)
     assert response.status_code == 200
     assert "REACTLOG_SOURCE_MARKER" not in response.text
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 def test_reactlog_script_uses_relative_urls() -> None:
-    from starlette.testclient import TestClient
-
-    from shiny import App, ui
-
     app = App(ui.page_fluid("test"), None, reactlog=True)
     page = TestClient(app.starlette_app).get("/").text
     assert "'__reactlog__?token=" in page
@@ -114,16 +111,13 @@ def test_reactlog_script_uses_relative_urls() -> None:
     assert "'/__reactlog__" not in page
 
 
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
 @pytest.mark.parametrize(
     "flags,expected", [([], True), (["--reactlog"], True), (["--no-reactlog"], False)]
 )
 def test_reactlog_cli_respects_environment(
     monkeypatch: pytest.MonkeyPatch, flags: list[str], expected: bool
 ) -> None:
-    from starlette.testclient import TestClient
-
-    from shiny import App, ui
-
     monkeypatch.setenv("SHINY_REACTLOG", "1")
 
     def serve(target: Any, **kwargs: Any) -> None:
@@ -358,3 +352,235 @@ def test_try_import_module() -> None:
     assert _run.try_import_module("foo/bar.baz") is None
     # Leading '.' makes find_spec throw ImportError
     assert _run.try_import_module(".relative") is None
+
+
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+def test_reactlog_toggle_installs_and_removes_tracer() -> None:
+    def subscribed(rec: object) -> bool:
+        return any(getattr(cb, "__self__", None) is rec for cb in hooks.add_dependency)
+
+    app = App(ui.TagList(), None, reactlog=False)
+    assert app._reactlog_recorder is None
+    app.reactlog_enabled = True
+    rec = app._reactlog_recorder
+    assert rec is not None and subscribed(rec)
+    app.reactlog_enabled = False
+    assert app._reactlog_recorder is None and not subscribed(rec)
+
+
+def _reactlog_request(
+    app: App,
+    *,
+    path: str = "/__reactlog__",
+    session_id: str | None = None,
+    local: bool = False,
+    method: str = "GET",
+    body: bytes = b"",
+) -> Request:
+    """A reactlog request; non-local ones authenticate with the app's token."""
+    query: dict[str, str] = {} if local else {"token": app.reactlog_token}
+    if session_id is not None:
+        query["session_id"] = session_id
+    sent = False
+
+    async def receive() -> Message:
+        nonlocal sent
+        if sent:
+            return {"type": "http.disconnect"}
+        sent = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    return Request(
+        {
+            "type": "http",
+            "method": method,
+            "path": path,
+            "headers": [(b"content-type", b"application/json")],
+            "query_string": urlencode(query).encode(),
+            "client": ("127.0.0.1", 1) if local else ("203.0.113.5", 1),
+        },
+        receive=receive,
+    )
+
+
+def _viewer_payload(body: bytes | memoryview) -> tuple[dict[str, Any], str]:
+    """The reactlog data and app source embedded in the viewer page."""
+    text = bytes(body).decode()
+    decoder = json.JSONDecoder()
+    data, _ = decoder.raw_decode(text.split("const reactlogData = ", 1)[1])
+    source, _ = decoder.raw_decode(text.split("const rawAppSource = ", 1)[1])
+    return data, source
+
+
+@asynccontextmanager
+async def _live_session(
+    app: App, init: dict[str, Any], ready: Callable[[list[dict[str, Any]]], bool]
+) -> AsyncGenerator[AppSession, None]:
+    """Run a mock session until its recorded log satisfies `ready`."""
+    conn = MockConnection()
+    sess = app._create_session(conn)
+    conn.cause_receive(json.dumps({"method": "init", "data": init}))
+    task = asyncio.create_task(sess._run())
+    recorder = app._reactlog_recorder
+    assert recorder is not None
+    try:
+        for _ in range(500):
+            if ready(recorder.export(sess.id)["log"]):
+                break
+            await asyncio.sleep(0.01)
+        yield sess
+    finally:
+        conn.cause_disconnect()
+        await task
+
+
+def _entered(label: str) -> Callable[[list[dict[str, Any]]], bool]:
+    return lambda log: any(x["action"] == "enter" and x["label"] == label for x in log)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+async def test_reactlog_endpoint_shows_runtime_dependency() -> None:
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        "REACTLOG_SOURCE_MARKER"
+
+        @reactive.effect
+        def watcher() -> None:
+            input[f"dyn_{1}"]()  # computed name: invisible to static analysis
+
+    app = App(ui.TagList(), server, reactlog=True)
+    try:
+        async with _live_session(
+            app, {"dyn_1": 5}, _entered("reactive.effect watcher")
+        ) as sess:
+            # Remote (token) request: no app source is embedded, so everything
+            # below must come from the recorded runtime graph.
+            response = await app._on_reactlog_request_cb(
+                _reactlog_request(app, session_id=sess.id)
+            )
+            data, source = _viewer_payload(response.body)
+        assert source == ""
+        assert data["trace_kind"] == "loaded_reactlog_json"
+        ids = {n["label"]: n["id"] for n in data["nodes"]}
+        assert {"input.dyn_1", "reactive.effect watcher"} <= ids.keys()
+        assert {
+            "from": ids["input.dyn_1"],
+            "to": ids["reactive.effect watcher"],
+        } in data["edges"]
+        # The ended session stays viewable, now with an end time.
+        recorder = app._reactlog_recorder
+        assert recorder is not None
+        info = recorder.session(sess.id)
+        assert info is not None and info.end is not None
+        response = await app._on_reactlog_request_cb(
+            _reactlog_request(app, session_id=sess.id)
+        )
+        data, _ = _viewer_payload(response.body)
+        assert "input.dyn_1" in {n["label"] for n in data["nodes"]}
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+def test_reactlog_without_session_id_redirects_to_only_session() -> None:
+    app = App(ui.TagList(), None, reactlog=True)
+    try:
+        session = app._create_session(MockConnection())
+        client = TestClient(app.starlette_app)
+        response = client.get("/__reactlog__", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == f"?session_id={session.id}"
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+async def test_reactlog_without_session_id_lists_sessions_for_local_users() -> None:
+    app = App(ui.TagList(), None, reactlog=True)
+    try:
+        client = TestClient(app.starlette_app)
+        empty = client.get("/__reactlog__").text
+        assert "No sessions recorded yet" in empty
+
+        first = app._create_session(MockConnection())
+        second = app._create_session(MockConnection())
+        app._remove_session(first)
+        page = client.get("/__reactlog__").text
+        assert "choose a session" in page
+        # Newest first; the ended session shows an end time, the live one "Active".
+        assert page.index(second.id) < page.index(first.id)
+        assert page.count("Active") == 1
+        assert f'href="?session_id={first.id}"' in page
+
+        unknown = client.get("/__reactlog__?session_id=nope").text
+        assert "Session 'nope' was not found." in unknown
+
+        # Session ids grant access to session routes: never list them remotely.
+        remote = await app._on_reactlog_request_cb(_reactlog_request(app))
+        assert second.id not in bytes(remote.body).decode()
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+async def test_reactlog_endpoint_shows_posted_marks() -> None:
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @reactive.effect
+        def watcher() -> None:
+            input.x()
+
+    app = App(ui.TagList(), server, reactlog=True)
+    try:
+        async with _live_session(
+            app, {"x": 1}, _entered("reactive.effect watcher")
+        ) as sess:
+            posted = await app._on_reactlog_mark_cb(
+                _reactlog_request(
+                    app,
+                    path="/__reactlog__/mark",
+                    session_id=sess.id,
+                    method="POST",
+                    body=b'{"label": "checkpoint"}',
+                )
+            )
+            assert json.loads(bytes(posted.body)) == {
+                "status": "ok",
+                "marks_count": 1,
+            }
+            response = await app._on_reactlog_request_cb(
+                _reactlog_request(app, session_id=sess.id)
+            )
+            data, _ = _viewer_payload(response.body)
+        marks = [e for e in data["events"] if e["action"] == "userMark"]
+        assert len(marks) == 1
+        assert marks[0]["node_label"] == "🔖 checkpoint"
+        assert marks[0]["mark_wave"]["is_mark"] is True
+        assert marks[0]["mark_wave"]["trigger"] == "Bookmark: checkpoint"
+    finally:
+        app.reactlog_enabled = False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("no_leaked_reactlog_tracer")
+async def test_reactlog_remote_requests_must_name_the_session() -> None:
+    app = App(ui.TagList(), None, reactlog=True)
+    try:
+        sess = app._create_session(MockConnection())
+        sess._reactlog_marks.append({"action": "userMark", "label": "private"})
+        path = "/__reactlog__/mark"
+
+        async def labels(request: Request) -> list[str]:
+            response = await app._on_reactlog_mark_cb(request)
+            return [m["label"] for m in json.loads(bytes(response.body))["marks"]]
+
+        assert await labels(_reactlog_request(app, path=path, local=True)) == [
+            "private"
+        ]
+        assert await labels(_reactlog_request(app, path=path)) == []
+        assert await labels(_reactlog_request(app, path=path, session_id=sess.id)) == [
+            "private"
+        ]
+    finally:
+        app.reactlog_enabled = False
