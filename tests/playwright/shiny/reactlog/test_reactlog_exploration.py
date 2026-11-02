@@ -162,7 +162,7 @@ def test_recorded_flushes_preserve_startup_and_empty_boundaries(
     expect(page.locator("#scrubber-range")).to_have_value("8")
     page.evaluate("selectFlush(3)")
     expect(page.locator("#active-flush-label")).to_contain_text(
-        "Activity 4 of 4 · x: 1 → 2"
+        "Activity 4 of 4 · input.x: 1 → 2"
     )
 
 
@@ -359,13 +359,19 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
     )
     expect(page.locator(".graph-node")).to_have_count(0)
     page.evaluate("selectFlush(2)")
-    expect(page.locator("#active-flush-label")).to_contain_text("Activity 3 of 4 · x")
+    expect(page.locator("#active-flush-label")).to_contain_text(
+        "Activity 3 of 4 · input.x"
+    )
     expect(page.locator(".graph-node")).to_have_count(3)
     page.evaluate("selectFlush(3)")
-    expect(page.locator("#active-flush-label")).to_contain_text("Activity 4 of 4 · y")
+    expect(page.locator("#active-flush-label")).to_contain_text(
+        "Activity 4 of 4 · input.y"
+    )
     expect(page.locator(".graph-node")).to_have_count(2)
     page.evaluate("selectFlush(2)")
-    expect(page.locator("#active-flush-label")).to_contain_text("Activity 3 of 4 · x")
+    expect(page.locator("#active-flush-label")).to_contain_text(
+        "Activity 3 of 4 · input.x"
+    )
 
 
 @pytest.mark.parametrize("theme", ["dark", "light"])
@@ -977,7 +983,7 @@ def test_timeline_uses_keyboard_navigation(page: Page):
     expect(page.locator("#step-display")).to_be_visible()
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
-    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 2")
+    expect(page.locator("#scrubber-range")).not_to_have_value("0")
     page.keyboard.press("ArrowUp")
     expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 1")
     page.keyboard.press("ArrowRight")

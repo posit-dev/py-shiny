@@ -5,8 +5,8 @@ import re
 import runpy
 import shutil
 import subprocess
-import xml.etree.ElementTree as ET
 import textwrap
+import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
@@ -312,6 +312,7 @@ def test_format_reactlog_html_compact_controls():
     assert parser.has_tag(
         "button", id="btn-shortcuts", **{"aria-label": "Keyboard shortcuts"}
     )
+    assert sum(attrs.get("id") == "btn-shortcuts" for _, attrs in parser.tags) == 1
     shortcuts = re.search(
         r'<button[^>]*id="btn-shortcuts"[^>]*>(.*?)</button>', html, re.DOTALL
     )
@@ -1294,8 +1295,8 @@ def test_recorded_module_attribution_of_inputs_and_client_data() -> None:
 def test_format_reactlog_html_flush_navigation_and_pipeline():
     html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert 'id="flush-select"' not in html
-    assert 'id="btn-prev-flush"' in html
-    assert 'id="btn-next-flush"' in html
+    assert 'id="btn-prev-flush"' not in html
+    assert 'id="btn-next-flush"' not in html
     assert 'id="flush-counter-badge"' in html
     assert 'id="flush-pipeline-bar"' not in html
     assert 'id="pipe-trigger"' not in html
