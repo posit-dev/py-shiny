@@ -259,6 +259,14 @@ reactive effect queue, round, idle, cycle, output flush, and what the public
   `_DownloadBase.__call__` call `check_not_rate_limited()`, which rejects a
   function marked with `FUNC_ATTR_RATE_LIMIT` (set by `_user_reader`, carried
   through `functools.wraps`). The error says to read a limited calc instead.
+- They can also be called as `debounce(fn, delay_secs)`, which returns a
+  suppressed calc over the decorator's reader; `_decorator_or_calc` picks the
+  form by whether a second argument was given. There `fn` may be a `Calc_`
+  or a `Value`: it is checked with `_check_fn` (everything but the `Calc_`
+  check), then wrapped in `_call` so the decorator's checks pass and
+  `functools.wraps` doesn't copy an object's `__dict__`. The decorator
+  overload is positional-only (`delay_secs, /`): Pyright rejects an overload
+  whose keyword name differs from the implementation's first parameter.
 - The decorated function is wrapped in a hidden (suppressed) calc, the
   *source*. A second hidden calc, the *result*, is
   `event(trigger, ignore_none=False)` over the source, so only bumping

@@ -6,7 +6,17 @@ __all__ = ("debounce", "throttle")
 
 import functools
 import time
-from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Literal,
+    Optional,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from .. import _utils, otel
 from .._docstring import add_example
@@ -16,6 +26,7 @@ from ._core import invalidate_later, isolate
 from ._reactives import (
     FUNC_ATTR_RATE_LIMIT,
     Calc_,
+    CalcAsync_,
     Effect_,
     Value,
     calc,
@@ -30,13 +41,47 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-@add_example()
+@overload
 def debounce(
     delay_secs: float | Callable[[], float],
+    /,
     *,
     priority: int = 100,
     session: MISSING_TYPE | Session | None = MISSING,
-) -> Callable[[Callable[[], T]], Callable[[], T]]:
+) -> Callable[[Callable[[], T]], Callable[[], T]]: ...
+
+
+@overload
+def debounce(
+    fn: Callable[[], Awaitable[T]],
+    delay_secs: float | Callable[[], float],
+    /,
+    *,
+    priority: int = 100,
+    session: MISSING_TYPE | Session | None = MISSING,
+) -> CalcAsync_[T]: ...
+
+
+@overload
+def debounce(
+    fn: Callable[[], T],
+    delay_secs: float | Callable[[], float],
+    /,
+    *,
+    priority: int = 100,
+    session: MISSING_TYPE | Session | None = MISSING,
+) -> Calc_[T]: ...
+
+
+@add_example()
+def debounce(
+    fn: Any = MISSING,
+    /,
+    delay_secs: Any = MISSING,
+    *,
+    priority: int = 100,
+    session: MISSING_TYPE | Session | None = MISSING,
+) -> Any:
     """
     Wait for a reactive function to stop changing before invalidating its readers.
 
@@ -55,6 +100,10 @@ def debounce(
 
     Parameters
     ----------
+    fn
+        Only when called as ``debounce(fn, delay_secs)`` instead of as a decorator: the
+        no-argument function to limit, such as a :func:`~shiny.reactive.calc` or an
+        input (``input.text``).
     delay_secs
         The number of seconds to wait after the last change. You may also pass a
         synchronous no-argument function or :func:`~shiny.reactive.calc` that returns the
@@ -77,6 +126,8 @@ def debounce(
         A decorator for a no-argument function (regular or async). The result returns
         the decorated function's value, but its readers are invalidated only after the
         changes stop.
+        Called as ``(fn, delay_secs)``, it returns a :func:`~shiny.reactive.calc`
+        that does the same for `fn`.
 
     Note
     ----
@@ -95,11 +146,26 @@ def debounce(
     wait on: read the limited calc from them instead. An effect can react to it with
     ``@reactive.event(<calc>)``.
 
+    To limit a function you already have, such as an existing calc or an input, call
+    it as ``debounce(fn, delay_secs)``. That returns a calc, so there's no decorator to
+    put in order.
+
     See Also
     --------
     * :func:`~shiny.reactive.throttle`
     * :func:`~shiny.reactive.invalidate_later`
     """
+    return _decorator_or_calc(
+        _debounce, fn, delay_secs, kind="debounce", priority=priority, session=session
+    )
+
+
+def _debounce(
+    delay_secs: float | Callable[[], float],
+    *,
+    priority: int,
+    session: MISSING_TYPE | Session | None,
+) -> Callable[[Callable[[], T]], Callable[[], T]]:
     delay_fn = _as_delay_fn(delay_secs)
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
@@ -154,13 +220,47 @@ def debounce(
     return wrapper
 
 
-@add_example()
+@overload
 def throttle(
     delay_secs: float | Callable[[], float],
+    /,
     *,
     priority: int = 100,
     session: MISSING_TYPE | Session | None = MISSING,
-) -> Callable[[Callable[[], T]], Callable[[], T]]:
+) -> Callable[[Callable[[], T]], Callable[[], T]]: ...
+
+
+@overload
+def throttle(
+    fn: Callable[[], Awaitable[T]],
+    delay_secs: float | Callable[[], float],
+    /,
+    *,
+    priority: int = 100,
+    session: MISSING_TYPE | Session | None = MISSING,
+) -> CalcAsync_[T]: ...
+
+
+@overload
+def throttle(
+    fn: Callable[[], T],
+    delay_secs: float | Callable[[], float],
+    /,
+    *,
+    priority: int = 100,
+    session: MISSING_TYPE | Session | None = MISSING,
+) -> Calc_[T]: ...
+
+
+@add_example()
+def throttle(
+    fn: Any = MISSING,
+    /,
+    delay_secs: Any = MISSING,
+    *,
+    priority: int = 100,
+    session: MISSING_TYPE | Session | None = MISSING,
+) -> Any:
     """
     Invalidate the readers of a reactive function at most once per time window.
 
@@ -180,6 +280,10 @@ def throttle(
 
     Parameters
     ----------
+    fn
+        Only when called as ``throttle(fn, delay_secs)`` instead of as a decorator: the
+        no-argument function to limit, such as a :func:`~shiny.reactive.calc` or an
+        input (``input.text``).
     delay_secs
         The minimum number of seconds between invalidations. You may also pass a
         synchronous no-argument function or :func:`~shiny.reactive.calc` that returns the
@@ -202,6 +306,8 @@ def throttle(
         A decorator for a no-argument function (regular or async). The result returns
         the decorated function's value, but its readers are invalidated at most once
         per `delay_secs`.
+        Called as ``(fn, delay_secs)``, it returns a :func:`~shiny.reactive.calc`
+        that does the same for `fn`.
 
     Note
     ----
@@ -220,11 +326,26 @@ def throttle(
     wait on: read the limited calc from them instead. An effect can react to it with
     ``@reactive.event(<calc>)``.
 
+    To limit a function you already have, such as an existing calc or an input, call
+    it as ``throttle(fn, delay_secs)``. That returns a calc, so there's no decorator to
+    put in order.
+
     See Also
     --------
     * :func:`~shiny.reactive.debounce`
     * :func:`~shiny.reactive.invalidate_later`
     """
+    return _decorator_or_calc(
+        _throttle, fn, delay_secs, kind="throttle", priority=priority, session=session
+    )
+
+
+def _throttle(
+    delay_secs: float | Callable[[], float],
+    *,
+    priority: int,
+    session: MISSING_TYPE | Session | None,
+) -> Callable[[Callable[[], T]], Callable[[], T]]:
     delay_fn = _as_delay_fn(delay_secs)
 
     def wrapper(fn: Callable[[], T]) -> Callable[[], T]:
@@ -281,6 +402,36 @@ def throttle(
     return wrapper
 
 
+def _decorator_or_calc(
+    limiter: Callable[..., Callable[[Callable[[], Any]], Callable[[], Any]]],
+    fn: Any,
+    delay_secs: Any,
+    *,
+    kind: Literal["debounce", "throttle"],
+    priority: int,
+    session: MISSING_TYPE | Session | None,
+) -> Any:
+    """
+    Handle both ways to call `debounce`/`throttle`: `(delay_secs)` gives a decorator,
+    and `(fn, delay_secs)` gives a calc.
+    """
+    if isinstance(fn, MISSING_TYPE):
+        # Called as `(delay_secs=...)`
+        return limiter(delay_secs, priority=priority, session=session)
+    if isinstance(delay_secs, MISSING_TYPE):
+        # Called as `(delay_secs)`; the one argument landed in `fn`
+        return limiter(fn, priority=priority, session=session)
+
+    # Called as `(fn, delay_secs)`. `fn` may be a calc here: there's no decorator to
+    # put in the wrong order. Wrapping it in `_call` lets it past the decorator's
+    # checks, and keeps `functools.wraps()` from copying a calc's attributes.
+    _check_fn(fn, kind=kind, stacklevel=5)
+    reader = limiter(delay_secs, priority=priority, session=session)(_call(fn))
+    # `fn` records its own spans, if it's a calc
+    with otel.suppress():
+        return calc(session=session)(reader)
+
+
 def _as_delay_fn(delay_secs: float | Callable[[], float]) -> Callable[[], float]:
     """Check `delay_secs`, then return a function that gives the delay in seconds."""
     if not callable(delay_secs):
@@ -314,13 +465,26 @@ def _source_calc(
     session: MISSING_TYPE | Session | None,
 ) -> Calc_[T]:
     """Check the decorated function, then wrap it in a hidden calc."""
-    name = f"reactive.{kind}"
-
     if isinstance(fn, Calc_):
+        name = f"reactive.{kind}"
         raise TypeError(
             f"`@{name}()` must be applied before `@reactive.calc`.\n"
             + f"In other words, `@reactive.calc` must be above `@{name}()`."
         )
+
+    _check_fn(fn, kind=kind, stacklevel=5)
+
+    # The effects and the result share this calc's runs. It calls `fn` through
+    # `_call`, so that the calc doesn't check (and warn about) `fn`'s parameters again.
+    with otel.suppress():
+        return calc(session=session)(_call(fn))
+
+
+def _check_fn(
+    fn: object, *, kind: Literal["debounce", "throttle"], stacklevel: int
+) -> None:
+    """Raise if `fn` isn't a no-argument function that may be limited."""
+    name = f"reactive.{kind}"
 
     # This is here instead of at the top of the .py file in order to avoid a
     # circular dependency.
@@ -333,12 +497,7 @@ def _source_calc(
     if not callable(fn):
         raise TypeError(f"`@{name}()` must be applied to a function.")
 
-    _utils.validate_no_params(fn, name, stacklevel=4)
-
-    # The effects and the result share this calc's runs. It calls `fn` through
-    # `_call`, so that the calc doesn't check (and warn about) `fn`'s parameters again.
-    with otel.suppress():
-        return calc(session=session)(_call(fn))
+    _utils.validate_no_params(fn, name, stacklevel=stacklevel)
 
 
 async def _read_quietly(source: Calc_[Any]) -> None:

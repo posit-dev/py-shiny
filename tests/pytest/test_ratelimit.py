@@ -10,6 +10,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from shiny import otel, render
 from shiny.reactive import (
     Calc_,
+    CalcAsync_,
     Value,
     calc,
     debounce,
@@ -164,6 +165,64 @@ async def test_async_functions_and_effects(limit: Callable[..., Any]):
             await flush()
             assert seen[0] == 0
             assert seen[-1] == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [debounce, throttle])
+async def test_function_form_returns_a_calc(limit: Callable[..., Any]):
+    async with OnEndedSessionCallbacks():
+        mock_time = MockTime()
+        with mock_time():
+            a = Value(0)
+
+            @calc
+            def doubled() -> int:
+                return a() * 2
+
+            @calc
+            async def doubled_async() -> int:
+                return a() * 2
+
+            # An existing calc, an async calc, and a value, with the delay by keyword too
+            from_calc: Calc_[int] = limit(doubled, 1)
+            from_async: CalcAsync_[int] = limit(doubled_async, delay_secs=1)
+            from_value: Calc_[int] = limit(a, 1)
+            assert isinstance(from_calc, Calc_)
+            assert isinstance(from_async, CalcAsync_)
+
+            seen: list[Tuple[int, int, int]] = []
+
+            @effect()
+            async def _():
+                seen.append((from_calc(), await from_async(), from_value()))
+
+            await flush()
+            with isolate():
+                a.set(1)
+            await flush()
+            if limit is debounce:
+                # Still waiting for the changes to stop
+                assert seen == [(0, 0, 0)]
+            await mock_time.advance_time(1.1)
+            await flush()
+            assert seen[-1] == (2, 2, 1)
+
+
+@pytest.mark.parametrize("limit", [debounce, throttle])
+def test_function_form_checks_fn(limit: Callable[..., Any]):
+    with pytest.raises(TypeError, match="must be applied to a function"):
+        limit(1, 1)
+    with pytest.raises(TypeError, match="`@reactive.effect` cannot"):
+        plain_effect = effect(lambda: None)
+        try:
+            limit(plain_effect, 1)
+        finally:
+            plain_effect.destroy()
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        limit(lambda x=1: x, 1)
+    assert len(w) == 1
+    assert w[0].filename == __file__
 
 
 @pytest.mark.parametrize("limit", [debounce, throttle])

@@ -157,7 +157,9 @@ def query():
 
 Both still run the decorated function on every change; only the readers wait.
 They only go below `@reactive.calc`; effects and outputs read the limited calc
-(an effect reacts to it with `@reactive.event(query)`).
+(an effect reacts to it with `@reactive.event(query)`). To limit an existing calc
+or input, call it directly; this returns a calc:
+`query = reactive.debounce(input.search, 0.5)`.
 
 To change reactive state from a background `asyncio` task, call `.set()`
 directly. Setting a value schedules its dependents to re-run, so there's no lock
