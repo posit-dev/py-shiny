@@ -6,6 +6,9 @@ from ._core import (  # noqa: F401
     lock,
     on_flushed,
     get_current_context,  # pyright: ignore[reportUnusedImport]
+    mark,
+    get_marks,
+    clear_marks,
 )
 from ._poll import poll, file_reader
 from ._reactives import (  # noqa: F401
@@ -40,4 +43,7 @@ __all__ = (
     "event",
     "ExtendedTask",
     "extended_task",
+    "mark",
+    "get_marks",
+    "clear_marks",
 )
