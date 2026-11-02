@@ -72,9 +72,10 @@ def rate_limit_misuse_message(name: str, kind: str) -> str:
     readers to wait on.
     """
     return (
-        f"`@{name}` can not be combined with `@reactive.{kind}()`.\n"
-        + f"Instead, make a `@reactive.calc` that is {kind}d and read it from "
-        + f"`@{name}`. An effect can react to it with `@reactive.event(<calc>)`."
+        f"`@{name}` cannot be combined with `@reactive.{kind}()`.\n"
+        + f"Instead, put `@reactive.{kind}()` below a `@reactive.calc` and read that "
+        + f"calc from `@{name}`. An effect can react to it with "
+        + "`@reactive.event(<calc>)`."
     )
 
 

@@ -161,8 +161,8 @@ def throttle(
     Invalidate the readers of a reactive function at most once per time window.
 
     When the decorated function's reactive dependencies change, its readers are
-    invalidated right away unless they were already invalidated in the last `delay_secs`. In that case they
-    are invalidated once at the end of the window. Unlike
+    invalidated right away unless they were already invalidated in the last
+    `delay_secs`. In that case they are invalidated once at the end of the window. Unlike
     :func:`~shiny.reactive.debounce`, new changes don't restart the window, so a source
     that keeps changing still updates its readers regularly.
 
