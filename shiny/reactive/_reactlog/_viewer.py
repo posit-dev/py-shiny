@@ -2028,11 +2028,14 @@ def format_reactlog_html(
       }});
       let initWave = null;
       let curWave = null;
+      let execDepth = 0;
       // Recorded ids (`r3`) carry no name; use friendlyNodeName instead.
       const waveNodeName = nId => /<anonymous>/.test(nodeMap.get(nId)?.label || '') ? friendlyNodeName(nId) : nodeDisplayName(nId);
 
       events.forEach((ev, idx) => {{
         const evAction = ev.action || ev.event || '';
+        if (evAction === 'enter') execDepth++;
+        if (evAction === 'exit') execDepth = Math.max(0, execDepth - 1);
         const isInit = ev.phase === 'init' || ['define', 'analysisInit', 'createContext', 'sessionInit'].includes(evAction);
         const t = ev.time_sec !== undefined ? ev.time_sec : (ev.time !== undefined ? ev.time : 0);
 
@@ -2134,8 +2137,10 @@ def format_reactlog_html(
           curWave.totalEvents++;
 
           if (evAction === 'queueEmpty') {{
-            curWave.completed = true;
-            curWave = null;
+            if (execDepth === 0) {{
+              curWave.completed = true;
+              curWave = null;
+            }}
             return;
           }}
 

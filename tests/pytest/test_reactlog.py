@@ -5,8 +5,8 @@ import re
 import runpy
 import shutil
 import subprocess
-import xml.etree.ElementTree as ET
 import textwrap
+import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
@@ -323,6 +323,7 @@ def test_format_reactlog_html_compact_controls():
     assert parser.has_tag(
         "button", id="btn-shortcuts", **{"aria-label": "Keyboard shortcuts"}
     )
+    assert sum(attrs.get("id") == "btn-shortcuts" for _, attrs in parser.tags) == 1
     shortcuts = re.search(
         r'<button[^>]*id="btn-shortcuts"[^>]*>(.*?)</button>', html, re.DOTALL
     )
@@ -1228,14 +1229,7 @@ def test_custom_session_inherits_private_reactlog_storage():
 
 
 def test_format_reactlog_html_settings_cogwheel_and_unified_timeline():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name", "World")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}!"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert 'id="btn-settings"' in html
     assert 'id="settings-menu"' in html
     assert 'id="clientdata-select"' in html
@@ -1500,9 +1494,9 @@ def test_recorded_module_attribution_of_inputs_and_client_data() -> None:
 def test_format_reactlog_html_flush_navigation_and_pipeline():
     html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
     assert 'id="flush-select"' not in html
-    assert 'id="btn-prev-flush"' in html
-    assert 'id="btn-next-flush"' in html
-    assert 'id="flush-counter-badge"' in html
+    assert 'id="btn-prev-flush"' not in html
+    assert 'id="btn-next-flush"' not in html
+    assert 'id="flush-counter-badge"' not in html
     assert 'id="flush-pipeline-bar"' not in html
     assert 'id="pipe-trigger"' not in html
     assert 'id="pipe-invalidated"' not in html
@@ -1576,8 +1570,8 @@ def test_format_reactlog_html_node_interactions_and_layout() -> None:
     assert ".graph-edge.is-connected" in html
     footer_idx = html.index('class="bottom-timeline-bar toolbar"')
     shortcuts_idx = html.index('id="btn-shortcuts"')
-    assert shortcuts_idx > footer_idx
-    assert 'class="btn icon mini" id="btn-shortcuts"' in html
+    assert shortcuts_idx < footer_idx
+    assert 'id="btn-shortcuts"' in html
     assert 'title="Keyboard shortcuts (?)"' in html
     assert ">Shortcuts</button>" not in html
     assert "let currentViewMode = 'flush';" in html

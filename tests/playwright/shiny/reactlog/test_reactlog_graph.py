@@ -24,6 +24,7 @@ def load_graph_report(
     page.set_content(html, wait_until=wait_until)
     page.locator("#btn-settings").click()
     page.locator("#activity-select").select_option("full")
+    page.locator("#clientdata-select").select_option("show")
     page.locator("#btn-settings").click()
     page.locator("#btn-toggle-inspector").click()
     page.locator("#event-history").evaluate("el => el.open = true")
@@ -988,6 +989,7 @@ def test_malicious_node_id_no_code_execution_xss_protection(
     page.evaluate("data => loadReactlogObject(data)", malicious_json)
     page.locator("#btn-settings").click()
     page.locator("#activity-select").select_option("full")
+    page.locator("#clientdata-select").select_option("show")
     page.locator("#btn-settings").click()
 
     # Click nodes and buttons to trigger any handlers
@@ -1270,7 +1272,9 @@ def server(input, output, session):
     assert page.locator('.module-box[data-module="west"]').count() == 1
 
 
-def test_module_header_collapse_icon_and_click_behavior(page: Page) -> None:
+def test_module_header_collapse_icon_and_click_behavior(
+    page: Page, tmp_path: Path
+) -> None:
     code = """
 from shiny import module, reactive, render
 @module.server
@@ -1285,12 +1289,13 @@ def server(input, output, session):
     def res():
         return m()
 """
-    load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
+    reactlog = _record(tmp_path, code, [{"sub-n": 1, **_visible("sub-res")}])
+    load_graph_report(page, format_reactlog_html(reactlog, code))
     expect(page.locator(".module-box[data-module='sub'] text")).to_contain_text(
         "click to collapse"
     )
     page.locator(".module-box[data-module='sub'] rect").first.click(
-        position={"x": 500, "y": 10}
+        position={"x": 280, "y": 10}
     )
     expect(page.locator(".module-box[data-module='sub']")).to_have_count(1)
 
@@ -1425,6 +1430,7 @@ def server(input, output, session):
     page.evaluate("data => loadReactlogObject(data)", report)
     page.locator("#btn-settings").click()
     page.locator("#activity-select").select_option("full")
+    page.locator("#clientdata-select").select_option("show")
     page.locator("#btn-settings").click()
     graph_node(page, revenue).click()
     expect(page.get_by_label("Source file")).to_have_value("sales.py")
@@ -1653,8 +1659,9 @@ def test_reactlog_flush_pipeline_and_stepper(page: Page, tmp_path: Path) -> None
     data = _record(tmp_path, _VAL_CODE, [*_VAL_STEPS, {"val": 20}])
     load_graph_report(page, format_reactlog_html(data, _VAL_CODE))
     expect(page.locator("#flush-select, #flush-pipeline-bar")).to_have_count(0)
-    page.evaluate("selectFlush(1)")
-    expect(page.locator("#active-flush-label")).to_contain_text("Activity 2")
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
+    expect(page.locator("#active-flush-label")).to_contain_text("val: 10 → 20")
     expect(page.locator("#flush-card")).to_be_visible()
 
 

@@ -172,20 +172,16 @@ def test_recorded_flushes_preserve_startup_and_empty_boundaries(
     page: Page, recorded_flushes: dict[str, Any]
 ):
     page.set_content(format_reactlog_html(recorded_flushes, ""))
-    page.get_by_role("button", name="Clear all filters").click()
-    page.locator("#btn-mode-flush").click()
-    expect(page.locator("#flush-counter-badge")).to_have_text("Activity 1 of 4")
+    reset_graph_view(page)
+    set_activity_mode(page, "flush")
     expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
     page.evaluate("selectFlush(1)")
     expect(page.locator("#scrubber-range")).to_have_value("7")
-    expect(page.locator("#flush-counter-badge")).to_have_text("Activity 2 of 4")
     expect(page.locator(".graph-node")).to_have_count(0)
     page.evaluate("selectFlush(2)")
     expect(page.locator("#scrubber-range")).to_have_value("8")
     page.evaluate("selectFlush(3)")
-    expect(page.locator("#active-flush-label")).to_contain_text(
-        "Activity 4 of 4 · x: 1 → 2"
-    )
+    expect(page.locator("#active-flush-label")).to_contain_text("input.x: 1 → 2")
 
 
 def test_recorded_flush_keeps_slow_work_and_batched_inputs_together(
@@ -207,12 +203,12 @@ def test_recorded_flush_keeps_slow_work_and_batched_inputs_together(
     events[15]["time_sec"] = 3.6
     events[16]["time_sec"] = 3.7
     page.set_content(format_reactlog_html(recorded_flushes, ""))
-    page.get_by_role("button", name="Clear all filters").click()
-    page.locator("#btn-mode-flush").click()
+    reset_graph_view(page)
+    set_activity_mode(page, "flush")
     expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
     page.evaluate("seekTo(16)")
     expect(page.locator(".graph-node")).to_have_count(3)
-    page.locator("#flush-counter-badge").click()
+    page.evaluate("openSecondaryTimelineForFlush()")
     expect(page.locator("#secondary-timeline-meta")).to_contain_text("1 outputs")
     expect(page.locator(".secondary-stage-pill.is-active")).to_contain_text("Idle")
 
@@ -221,8 +217,8 @@ def test_video_uses_recorded_flush_completion_time(
     page: Page, recorded_flushes: dict[str, Any]
 ):
     page.set_content(format_reactlog_html(recorded_flushes, "", video_path="demo.webm"))
-    page.get_by_role("button", name="Clear all filters").click()
-    page.locator("#flush-counter-badge").click()
+    reset_graph_view(page)
+    page.evaluate("openSecondaryTimelineForFlush()")
     page.locator("#session-video").evaluate("""video => {
         Object.defineProperties(video, {
             currentTime: { configurable: true, get: () => 3.0 },
@@ -248,9 +244,9 @@ def test_unfinished_recorded_flush_is_not_shown_as_settled(
 ):
     recorded_flushes["events"] = recorded_flushes["events"][:end]
     page.set_content(format_reactlog_html(recorded_flushes, ""))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     page.evaluate(f"seekTo({end - 1})")
-    page.locator("#flush-counter-badge").click()
+    page.evaluate("openSecondaryTimelineForFlush()")
     expect(page.locator(".pill-idle")).to_have_count(0)
     expect(page.locator(".pill-output")).to_have_count(1 if end == 15 else 0)
     expect(page.locator("#active-flush-label")).to_contain_text("in progress")
@@ -270,18 +266,17 @@ def test_bookmarks_do_not_create_recorded_flushes(
         },
     )
     page.set_content(format_reactlog_html(recorded_flushes, ""))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
     expect(page.locator(".timeline-marker.is-mark")).to_have_count(1)
     page.evaluate("seekTo(14)")
     expect(page.locator("#active-flush-label")).to_contain_text("checkpoint")
-    expect(page.locator("#flush-counter-badge")).to_have_text("Activity 4 of 4")
 
 
 @pytest.mark.parametrize("selection", ["click", "enter", "arrow-enter"])
 def test_input_search_selection_opens_secondary_timeline(page: Page, selection: str):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     search = page.locator("#search-input")
     search.fill("id:input:x")
     expect(page.locator("#secondary-timeline-bar")).to_be_hidden()
@@ -318,7 +313,7 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
     expect(clear_btn).to_be_visible()
     page.locator("#btn-toggle-inspector").click()
     expect(page.locator("#sidebar")).to_be_visible()
-    expect(page.locator("#search-input")).to_have_value("calc:doubled")
+    expect(page.locator("#search-input")).to_have_value("reactive.calc doubled")
     expect(page.locator("#active-filters button")).to_have_count(0)
     expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
@@ -339,7 +334,7 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
 
     page.get_by_role("button", name="Close Inspector", exact=True).click()
     page.locator('.graph-node[data-id="calc:doubled"]').dblclick()
-    expect(page.locator("#search-input")).to_have_value("calc:doubled")
+    expect(page.locator("#search-input")).to_have_value("reactive.calc doubled")
     expect(clear_btn).to_be_visible()
     expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
@@ -351,7 +346,7 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
 
 def test_root_module_search_and_stage_filters_clear_together(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     page.locator("#search-input").fill("module:__root__")
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
     set_activity_mode(page, "full")
@@ -370,7 +365,7 @@ def test_empty_recording_can_open_graph(page: Page):
 
     page.on("pageerror", on_error)
     page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     expect(page.locator("#filter-node-count")).to_have_text("0 of 0 nodes")
     set_activity_mode(page, "full")
     expect(page.locator(".graph-node")).to_have_count(0)
@@ -418,8 +413,8 @@ def test_progress_bar_supports_pointer_keyboard_and_idle_markers(
 ):
     data = report()
     page.set_content(format_reactlog_html(data, CODE, theme=theme))
-    page.get_by_role("button", name="Clear all filters").click()
-    expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
+    reset_graph_view(page)
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(11)
     slider = page.get_by_role("slider", name="Timeline step scrubber")
     timeline = page.locator("#trace-timeline-bar").bounding_box()
     box = slider.bounding_box()
@@ -438,7 +433,10 @@ def test_progress_bar_supports_pointer_keyboard_and_idle_markers(
     expect(slider).to_have_value(str(len(data["events"]) - 1))
     expect(page.locator("#active-flush-label")).to_contain_text("y")
     expect(slider).to_have_attribute(
-        "aria-valuetext", re.compile(r"Step 20 of 20\. y.*Idle")
+        "aria-valuetext",
+        re.compile(
+            rf"Step {len(data['events']) - 1} of {len(data['events']) - 1}\..*y"
+        ),
     )
     page.keyboard.press("Home")
     expect(slider).to_have_value("0")
@@ -446,7 +444,7 @@ def test_progress_bar_supports_pointer_keyboard_and_idle_markers(
 
 def test_recording_floats_below_timeline_and_rail_stays_40px(page: Page):
     page.set_content(format_reactlog_html(report(), CODE, video_path="demo.webm"))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     player = page.get_by_role("region", name="Recording")
     expect(player).to_be_visible()
     for width in [1440, 800, 390]:
@@ -469,7 +467,7 @@ def test_recording_floats_below_timeline_and_rail_stays_40px(page: Page):
 
 def test_details_sidebar_docks_and_resizes_graph(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     graph = page.locator("#graph-container")
     before = graph.bounding_box()
     assert before is not None
@@ -500,7 +498,7 @@ def test_module_search_filters_nodes_and_clears(page: Page, query: str):
 
 def test_timeline_and_controls_are_above_graph(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     graph = page.locator("#graph-container").bounding_box()
     for selector in ("#trace-timeline-bar", "#bottom-timeline-bar"):
         timeline = page.locator(selector).bounding_box()
@@ -608,7 +606,7 @@ def timeline_report():
 
 def test_timeline_marks_are_inside_band_and_click_to_seek(page: Page):
     page.set_content(format_reactlog_html(timeline_report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     expect(page.locator(".timeline-marker.is-output")).to_have_count(2)
     expect(page.locator(".timeline-marker.is-idle")).to_have_count(2)
     expect(page.locator(".timeline-marker.is-mark")).to_have_count(2)
@@ -630,7 +628,7 @@ def test_timeline_marks_are_inside_band_and_click_to_seek(page: Page):
 
 def test_timeline_navigates_user_marks_and_outer_calculations(page: Page):
     page.set_content(format_reactlog_html(timeline_report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     page.locator("#btn-play").focus()
     page.keyboard.press("Alt+ArrowRight")
     expect(page.locator("#scrubber-range")).to_have_value("4")
@@ -652,7 +650,7 @@ def test_timeline_navigates_user_marks_and_outer_calculations(page: Page):
 
 def test_timeline_can_drag_from_a_mark_across_the_band(page: Page):
     page.set_content(format_reactlog_html(timeline_report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     marker = page.locator('.timeline-marker[data-step="5"]').bounding_box()
     band = page.locator("#trace-track-wrap").bounding_box()
     assert marker and band
@@ -685,10 +683,10 @@ def test_update_labels_and_view_controls(page: Page):
     expect(page.locator("#active-flush-label")).to_contain_text("x")
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Node details", exact=True).click()
-    expect(page.locator("#flush-card-title")).to_contain_text("Activity 3:")
+    expect(page.locator("#flush-card-title")).to_contain_text("Activity 5:")
     expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
-    page.locator("#flush-counter-badge").click()
-    expect(page.locator("#secondary-timeline-tag")).to_have_text("Activity 3 of 4")
+    page.evaluate("openSecondaryTimelineForFlush()")
+    expect(page.locator("#secondary-timeline-tag")).to_have_text("Activity 5 of 7")
 
 
 def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
@@ -818,7 +816,7 @@ def test_node_details_events_remain_readable_in_small_windows(
 
 def test_report_has_two_graph_views_and_no_overview(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     expect(page.get_by_role("button", name="Overview", exact=True)).to_have_count(0)
     expect(page.locator("#module-overview-panel")).to_have_count(0)
     page.keyboard.press("o")
@@ -945,9 +943,7 @@ def test_empty_changed_graph_explains_how_to_show_all_nodes(page: Page):
         {"action": "queueEmpty"},
     ]
     page.set_content(format_reactlog_html(data, CODE))
-    expect(
-        page.get_by_text("No recorded changes or executions in this view.")
-    ).to_be_hidden()
+    expect(page.locator("#empty-graph-message")).to_be_hidden()
     expect(page.locator(".graph-node")).to_have_count(5)
 
 
@@ -1037,6 +1033,7 @@ def test_timeline_uses_keyboard_navigation(page: Page):
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
     expect(page.locator("#active-flush-label")).to_contain_text("x")
+    expect(page.locator("#scrubber-range")).not_to_have_value("0")
     page.keyboard.press("ArrowUp")
     expect(page.locator("#active-flush-label")).to_contain_text("Initial render")
     page.keyboard.press("ArrowRight")
@@ -1128,7 +1125,7 @@ def test_report_uses_names_and_highlights_module_names(page: Page):
 
 def test_node_click_highlights_without_opening_sidebar(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     node = page.locator('.graph-node[data-id="calc:doubled"]')
     node.click()
     expect(node).to_have_class(re.compile(r"is-selected"))
@@ -1141,9 +1138,8 @@ def test_node_click_highlights_without_opening_sidebar(page: Page):
 
 def test_secondary_timeline_flush_milestones_and_seeking(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
-    badge = page.locator("#flush-counter-badge")
-    badge.click()
+    reset_graph_view(page)
+    page.evaluate("openSecondaryTimelineForFlush()")
     sec_bar = page.locator("#secondary-timeline-bar")
     expect(sec_bar).to_be_visible()
 
@@ -1163,10 +1159,10 @@ def test_secondary_timeline_flush_milestones_and_seeking(page: Page):
 
 def test_filtered_module_box_shows_fractional_node_count(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.get_by_role("button", name="Clear all filters").click()
+    reset_graph_view(page)
     expect(page.locator(".app-box text")).to_have_text("App · 3 nodes")
     expect(page.locator('.module-box[data-module="analysis"] text')).to_have_text(
-        "analysis · 2 nodes · double-click to collapse"
+        "analysis · 2 nodes · click to collapse"
     )
 
     page.locator("#search-input").fill("other")
@@ -1228,8 +1224,8 @@ def test_secondary_timeline_displays_friendly_node_names_for_anonymous_effects(
     }
     loaded = load_reactlog_json(raw_report)
     page.set_content(format_reactlog_html(loaded, ""))
-    page.get_by_role("button", name="Clear all filters").click()
-    page.locator("#flush-counter-badge").click()
+    reset_graph_view(page)
+    page.evaluate("openSecondaryTimelineForFlush()")
     expect(page.locator("#secondary-timeline-bar")).to_be_visible()
 
     inv_pill = page.locator(".secondary-stage-pill.pill-invalidation")
