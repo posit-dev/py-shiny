@@ -25,6 +25,8 @@ from shiny.reactive._trace import (
     hooks,
 )
 
+from ._reactlog_connection import SettledConnection
+
 
 class FakeNode:
     def __init__(self, node_id: int, label: str = "", kind: NodeKind = "calc") -> None:
@@ -546,7 +548,7 @@ def test_top_level_isolate_has_no_edges(rec: Recorder) -> None:
 
 
 async def _run_session(server: Any, *messages: str) -> Any:
-    conn = MockConnection()
+    conn = SettledConnection()
     sess = App(ui.TagList(), server)._create_session(conn)
 
     async def mock_client() -> None:

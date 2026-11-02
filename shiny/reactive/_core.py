@@ -303,17 +303,18 @@ class ReactiveEnvironment:
         self._next_round_waiters = []
         token = _enclosing_run.set(asyncio.current_task())
         try:
-            # No span here: a round can serve several sessions. Each session's
-            # `reactive_update` span follows its own cycle (see
-            # `AppSession._increment_busy_count()`).
-            while not self._effect_queue.empty():
-                ctx = self._effect_queue.get()
-                self._spawn(self._run_context(ctx))
-                # CPython runs ready callbacks FIFO, so the task's sync part runs
-                # now, and anything it invalidates is queued before we take the
-                # next ctx.
-                await _yield_to_loop()
-            await self._round_finished_callbacks.invoke()
+            with _trace.flush_span() if hooks.flush else _trace.NULL_CM:
+                # No OTel span here: a round can serve several sessions. Each session's
+                # `reactive_update` span follows its own cycle (see
+                # `AppSession._increment_busy_count()`).
+                while not self._effect_queue.empty():
+                    ctx = self._effect_queue.get()
+                    self._spawn(self._run_context(ctx))
+                    # CPython runs ready callbacks FIFO, so the task's sync part runs
+                    # now, and anything it invalidates is queued before we take the
+                    # next ctx.
+                    await _yield_to_loop()
+                await self._round_finished_callbacks.invoke()
         finally:
             _enclosing_run.reset(token)
             self._round_running = False
