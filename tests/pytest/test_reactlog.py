@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import runpy
 from html.parser import HTMLParser
 from pathlib import Path
@@ -300,7 +301,9 @@ def out_c():
     reactlog = generate_reactlog(code)
     html = format_reactlog_html(reactlog, source_code=code)
     assert ".graph-edge" in html
-    assert "opacity: 0.75;" in html
+    edge_style = re.search(r"^    \.graph-edge \{([^}]+)\}", html, re.MULTILINE)
+    assert edge_style is not None
+    assert "opacity: 1;" in edge_style[1]
     assert ".graph-edge { opacity: 0;" not in html
 
 
@@ -748,6 +751,47 @@ def out():
     assert 'id="btn-flush-picker"' in html_light
     assert 'id="btn-toggle-clientdata"' in html_light
     assert 'class="legend-role-btn is-active"' in html_light
+
+
+@pytest.mark.parametrize("theme", ["dark", "light", "auto"])
+def test_format_reactlog_html_accessible_palette(theme: str):
+    html = format_reactlog_html(
+        {"nodes": [], "edges": [], "events": []}, "", theme=theme
+    )
+    style = re.search(r"<style>(.*?)</style>", html, re.DOTALL)
+    assert style is not None
+    palettes = []
+    for selector, declarations in re.findall(r"([^{}]+)\{([^{}]*)\}", style[1]):
+        tokens = dict(re.findall(r"(--[\w-]+):\s*(#[\da-fA-F]{6});", declarations))
+        if "--source" not in tokens:
+            continue
+        is_light = any(value in selector for value in ('"light"', '"auto"'))
+        expected = (
+            ["#005a9c", "#9c4f00", "#994a78", "#006e59"]
+            if is_light
+            else ["#56b4e9", "#e9b44c", "#e3a4c8", "#5fc7a7"]
+        )
+        roles = [tokens[f"--{role}"] for role in ("source", "calc", "effect", "output")]
+        assert roles == expected
+        palettes.append(is_light)
+
+        def luminance(color: str) -> float:
+            channels = [int(color[i : i + 2], 16) / 255 for i in (1, 3, 5)]
+            linear = [
+                c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+                for c in channels
+            ]
+            return sum(
+                c * weight for c, weight in zip(linear, (0.2126, 0.7152, 0.0722))
+            )
+
+        for foreground in roles + [tokens["--text-muted"]]:
+            for background in (tokens["--surface"], tokens["--surface-2"]):
+                levels = sorted((luminance(foreground), luminance(background)))
+                assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
+
+    # Explicit light/dark themes and the automatic light-mode fallback agree.
+    assert palettes == [False, True, True]
 
 
 def test_cli_inspect_theme_and_json_file(tmp_path: Path):

@@ -2436,6 +2436,15 @@ def format_reactlog_html(
   <meta name="theme-color" content="#090d12" />
   <title>{escaped_title}</title>
   <style>
+    /* Okabe–Ito-based state fills; shared across themes, graph, legend, and timeline.
+       Labels also identify each node state. */
+    :root {{
+      --state-ready: #56b4e9;
+      --state-calculating: #f0e442;
+      --state-invalidating: #cc79a7;
+      --state-invalidated: #e2e2e2;
+      --state-frozen: #005a8d;
+    }}
     :root, [data-theme="dark"] {{
       color-scheme: dark;
       --bg: #090d12;
@@ -2449,12 +2458,12 @@ def format_reactlog_html(
       --text-muted: #91a1b3;
       --accent: #63b3ff;
       --accent-hover: #82c4ff;
-      --source: #38bdf8;
-      --calc: #fbbf24;
-      --effect: #c084fc;
-      --output: #4ade80;
-      --warning: #fb923c;
-      --danger: #f87171;
+      --source: #56b4e9;
+      --calc: #e9b44c;
+      --effect: #e3a4c8;
+      --output: #5fc7a7;
+      --warning: #e69f00;
+      --danger: #f28c50;
       --grid-line: rgba(105, 128, 151, 0.035);
       --header-bg: rgba(17, 24, 33, 0.96);
       --node-fill: #121b25;
@@ -2472,7 +2481,7 @@ def format_reactlog_html(
       --legend-bg: rgba(17, 24, 33, 0.92);
       --card-bg: #141e2b;
       --track-bg: #1b2634;
-      --track-fill: #2d4f3e;
+      --track-fill: #29475b;
       --playhead-bg: #f8fafc;
       --playhead-ring: #17212b;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -2488,15 +2497,15 @@ def format_reactlog_html(
       --border: #cbd5e1;
       --border-strong: #94a3b8;
       --text: #0f172a;
-      --text-muted: #64748b;
-      --accent: #0284c7;
+      --text-muted: #526277;
+      --accent: #005a9c;
       --accent-hover: #0369a1;
-      --source: #0284c7;
-      --calc: #d97706;
-      --effect: #9333ea;
-      --output: #16a34a;
-      --warning: #ea580c;
-      --danger: #dc2626;
+      --source: #005a9c;
+      --calc: #9c4f00;
+      --effect: #994a78;
+      --output: #006e59;
+      --warning: #925f00;
+      --danger: #a64700;
       --grid-line: rgba(15, 23, 42, 0.04);
       --header-bg: rgba(255, 255, 255, 0.96);
       --node-fill: #ffffff;
@@ -2529,15 +2538,15 @@ def format_reactlog_html(
         --border: #cbd5e1;
         --border-strong: #94a3b8;
         --text: #0f172a;
-        --text-muted: #64748b;
-        --accent: #0284c7;
+        --text-muted: #526277;
+        --accent: #005a9c;
         --accent-hover: #0369a1;
-        --source: #0284c7;
-        --calc: #d97706;
-        --effect: #9333ea;
-        --output: #16a34a;
-        --warning: #ea580c;
-        --danger: #dc2626;
+        --source: #005a9c;
+        --calc: #9c4f00;
+        --effect: #994a78;
+        --output: #006e59;
+        --warning: #925f00;
+        --danger: #a64700;
         --grid-line: rgba(15, 23, 42, 0.04);
         --header-bg: rgba(255, 255, 255, 0.96);
         --node-fill: #ffffff;
@@ -2621,19 +2630,22 @@ def format_reactlog_html(
     .action-toast[hidden] {{ display: none; }}
     .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 0.35rem 0.9rem; color: var(--text); font: 650 0.72rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.45rem; pointer-events: none; }}
     .legend-item {{ display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.1rem 0.2rem; }}
-    .legend-dot {{ width: 7px; height: 7px; border-radius: 50%; background: var(--role-color); }}
+    .legend-dot {{ width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--role-color); }}
+    [data-role="conductor"] .legend-dot {{ border-radius: 1px; }}
+    [data-role="effect"] .legend-dot {{ border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); }}
+    [data-role="output"] .legend-dot {{ border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }}
     .zoom-controls {{ display: flex; gap: 0.25rem; pointer-events: auto; }}
     .action-toast[hidden] {{ display: none; }}
     .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 0.4rem 1rem; color: var(--text); font: 650 0.74rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.5rem; pointer-events: none; }}
 
     #reactlog-svg {{ width: 100%; height: 100%; min-height: 430px; display: block; }}
     .graph-node, .graph-edge {{ transition: opacity 180ms ease, filter 180ms ease, stroke 180ms ease, stroke-width 180ms ease; }}
-    .graph-edge {{ opacity: 0.75; stroke: #676767; stroke-width: 1.8px; pointer-events: stroke; cursor: pointer; }}
+    .graph-edge {{ opacity: 1; stroke: var(--text-muted); stroke-width: 2px; pointer-events: stroke; cursor: pointer; }}
     .graph-edge:hover {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }}
-    .graph-edge.is-isolated {{ opacity: 0.65; stroke: #818181; stroke-dasharray: 5 4; }}
-    .graph-edge.is-inactive {{ stroke: #818181; stroke-dasharray: 1 4; opacity: 0.5; }}
+    .graph-edge.is-isolated {{ opacity: 1; stroke: var(--text-muted); stroke-dasharray: 5 4; }}
+    .graph-edge.is-inactive {{ stroke: var(--text-muted); stroke-dasharray: 1 5; opacity: 1; }}
     .legend-swatch {{ width: 14px; height: 14px; border: 1px solid #0004; border-radius: 2px; }}
-    .legend-line {{ display: inline-block; width: 16px; border-top: 2px solid #676767; }}
+    .legend-line {{ display: inline-block; width: 16px; border-top: 2px solid var(--text-muted); }}
     .legend-line.is-isolated {{ border-top-style: dashed; }}
     .legend-line.is-inactive {{ border-top-style: dotted; }}
     .legend-sep {{ width: 1px; height: 14px; background: var(--border); margin: 0 2px; align-self: center; }}
@@ -2645,7 +2657,7 @@ def format_reactlog_html(
     [data-theme="dark"] .burst-anchor.is-mark {{ color: #fbbf24; }}
     .burst-anchor.is-mark .burst-anchor-dot {{ background: #f59e0b; }}
     .node-exec-badge {{ pointer-events: none; }}
-    .hotspot-badge {{ display: inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: #f87171; font-weight: 700; font-size: 0.72rem; margin-left: 6px; }}
+    .hotspot-badge {{ display: inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: var(--danger); font-weight: 700; font-size: 0.72rem; margin-left: 6px; }}
     .node-meta-exec {{ font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }}
     .modal-backdrop {{ position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; }}
     .modal-backdrop[hidden] {{ display: none; }}
@@ -2671,8 +2683,8 @@ def format_reactlog_html(
     }}
     .graph-node {{ cursor: pointer; }}
     .graph-node:hover .node-card {{ filter: brightness(1.1); }}
-    .graph-node.is-selected .node-card {{ stroke: var(--accent) !important; stroke-width: 2.8px !important; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 65%, transparent)); }}
-    .graph-node.is-executed .node-card {{ stroke: var(--accent) !important; stroke-width: 2.2px !important; }}
+    .graph-node.is-selected .node-card {{ stroke: var(--node-selection-stroke) !important; stroke-width: 3.5px !important; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 65%, transparent)); }}
+    .graph-node.is-executed:not(.is-selected) .node-card {{ stroke: var(--node-selection-stroke) !important; stroke-width: 2.5px !important; stroke-dasharray: 7 4; }}
     .module-box {{ cursor: pointer; }}
     .module-box:focus rect {{ stroke: var(--accent); stroke-width: 3; }}
     #insp-plot {{ margin: 12px 0; }}
@@ -2747,11 +2759,11 @@ def format_reactlog_html(
     .video-sync-status {{ color: var(--output); font: 700 0.68rem var(--mono); display: inline-flex; align-items: center; gap: 0.3rem; }}
     .video-filename {{ color: var(--text-muted); font: 500 0.7rem var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
     .video-help {{ color: var(--text-muted); font-size: 0.72rem; line-height: 1.5; text-wrap: pretty; }}
-    .syntax-keyword {{ color: #c084fc; font-weight: 700; }}
+    .syntax-keyword {{ color: var(--effect); font-weight: 700; }}
     [data-theme="light"] .syntax-keyword {{ color: #7e22ce; font-weight: 700; }}
-    .syntax-string {{ color: #4ade80; }}
+    .syntax-string {{ color: var(--output); }}
     [data-theme="light"] .syntax-string {{ color: #15803d; }}
-    .syntax-number {{ color: #fbbf24; }}
+    .syntax-number {{ color: var(--calc); }}
     [data-theme="light"] .syntax-number {{ color: #b45309; }}
     .syntax-operator {{ color: var(--text-muted); }}
     .syntax-comment {{ color: var(--text-muted); font-style: italic; }}
@@ -2891,17 +2903,17 @@ def format_reactlog_html(
     #scrubber-range::-moz-range-thumb {{ height: 24px; width: 3px; border: 0; border-radius: 0; background: transparent; }}
     #scrubber-range:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
     #trace-markers {{ position: absolute; inset: 0 1.5px; pointer-events: none; z-index: 1; }}
-    .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: #a3c586; pointer-events: auto; cursor: pointer; }}
+    .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: var(--state-ready); pointer-events: auto; cursor: pointer; }}
     .timeline-marker.is-output {{ top: 6px; height: 12px; background: var(--output); }}
-    .timeline-marker.is-mark {{ background: #666666; z-index: 2; }}
-    .timeline-marker:hover, .timeline-marker:focus-visible {{ outline: 2px solid #17212b; outline-offset: 1px; z-index: 3; }}
+    .timeline-marker.is-mark {{ background: var(--text-muted); z-index: 2; }}
+    .timeline-marker:hover, .timeline-marker:focus-visible {{ outline: 2px solid var(--text); outline-offset: 1px; z-index: 3; }}
     .timeline-playhead {{ position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); pointer-events: none; z-index: 4; }}
     .timeline-playhead::before {{ content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--playhead-bg); }}
     .timeline-key {{ display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font: .7rem var(--sans); }}
     .timeline-key span {{ display: inline-flex; align-items: center; gap: 5px; }}
-    .timeline-key i {{ display: inline-block; width: 3px; height: 14px; background: #a3c586; }}
+    .timeline-key i {{ display: inline-block; width: 3px; height: 14px; background: var(--state-ready); }}
     .timeline-key .key-output {{ height: 6px; background: var(--output); }}
-    .timeline-key .key-mark {{ background: #666666; }}
+    .timeline-key .key-mark {{ background: var(--text-muted); }}
     .timeline-key .key-position {{ width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); }}
     .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
     .timeline-tooltip[hidden] {{ display: none; }}
@@ -2915,7 +2927,7 @@ def format_reactlog_html(
     @media (max-width: 1000px) {{ .timeline-advanced {{ position: fixed; left: 16px; }} }}
     .status-center {{ gap: 3px; }}
     .status-center .btn {{ width: 28px; min-height: 28px; height: 28px; }}
-    .status-center .nav-idle svg {{ color: #a3c586; }}
+    .status-center .nav-idle svg {{ color: var(--state-ready); }}
     .status-center .nav-output svg {{ color: var(--output); }}
     .status-center .nav-mark svg {{ color: var(--text-muted); }}
     .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
@@ -2924,6 +2936,26 @@ def format_reactlog_html(
       .workspace-layout {{ flex: 1; min-height: 350px; overflow: hidden; }}
       .main-view {{ flex: 1; flex-direction: row; min-height: 350px; overflow: hidden; }}
       .graph-container {{ flex: 1; width: auto; height: auto; min-height: 350px; }}
+    }}
+
+    /* Readable graph keys, controls, and keyboard focus in both themes. */
+    .legend {{ gap: 6px 14px; align-items: center; }}
+    .legend-group {{ display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; }}
+    .legend-label {{ color: var(--text); font: 700 12px var(--sans); }}
+    .legend-item, .legend-role-btn {{ font: 600 12px var(--sans); }}
+    .legend-role-btn {{ min-height: 28px; padding: 3px 7px; opacity: 1; color: var(--text); border: 1px dashed var(--border-strong); }}
+    .legend-role-btn[aria-pressed="false"] {{ text-decoration: line-through; }}
+    .legend-role-btn:hover {{ opacity: 1; }}
+    .legend-dot {{ width: 12px; height: 12px; }}
+    .legend-swatch {{ border-color: var(--text-muted); }}
+    .graph-top-row {{ align-items: start; }}
+    .node-focus-ring {{ opacity: 0; stroke: var(--text); stroke-width: 3px; pointer-events: none; }}
+    .graph-node:focus-visible {{ outline: none; }}
+    .graph-node:focus-visible .node-focus-ring {{ opacity: 1; }}
+    .graph-node.is-clientdata {{ opacity: 1; }}
+    .source-line-num, .source-drawer-code .source-line-num {{ opacity: 1; }}
+    @media (prefers-reduced-motion: reduce) {{
+      *, *::before, *::after {{ scroll-behavior: auto !important; transition: none !important; }}
     }}
   </style>
 </head>
@@ -2981,7 +3013,7 @@ def format_reactlog_html(
         <div class="timeline-advanced" aria-label="Detailed timeline controls">
       <button class="btn mini" id="btn-reset" onclick="resetTimeline()" aria-label="Reset timeline" title="Go to start (Home)">Go to start</button>
       <button class="btn icon mini nav-mark" onclick="seekTimelineStop('mark', -1)" aria-label="Previous user mark" title="Previous user mark"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="var(--text-muted)"/></svg></button>
-      <button class="btn icon mini nav-idle" id="btn-prev-flush" onclick="seekTimelineStop('idle', -1)" aria-label="Previous idle" title="Previous idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="#a3c586"/></svg></button>
+      <button class="btn icon mini nav-idle" id="btn-prev-flush" onclick="seekTimelineStop('idle', -1)" aria-label="Previous idle" title="Previous idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="3" width="3" height="18" fill="var(--state-ready)"/></svg></button>
       <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', -1)" aria-label="Previous output calculation" title="Previous output calculation (Alt+Left)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="18 5 7 12 18 19" fill="var(--text-muted)"/><rect x="1" y="8" width="3" height="8" fill="var(--output)"/></svg></button>
       <button class="btn icon mini" id="btn-step-back" onclick="stepBack()" aria-label="Step back" title="Step back (Left)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg>
@@ -2990,7 +3022,7 @@ def format_reactlog_html(
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
       </button>
       <button class="btn icon mini nav-output" onclick="seekTimelineStop('output', 1)" aria-label="Next output calculation" title="Next output calculation (Alt+Right)"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="8" width="3" height="8" fill="var(--output)"/></svg></button>
-      <button class="btn icon mini nav-idle" id="btn-next-flush" onclick="seekTimelineStop('idle', 1)" aria-label="Next idle" title="Next idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="#a3c586"/></svg></button>
+      <button class="btn icon mini nav-idle" id="btn-next-flush" onclick="seekTimelineStop('idle', 1)" aria-label="Next idle" title="Next idle"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="var(--state-ready)"/></svg></button>
       <button class="btn icon mini nav-mark" onclick="seekTimelineStop('mark', 1)" aria-label="Next user mark" title="Next user mark"><svg width="14" height="14" viewBox="0 0 24 24"><polygon points="6 5 17 12 6 19" fill="var(--text-muted)"/><rect x="20" y="3" width="3" height="18" fill="var(--text-muted)"/></svg></button>
       <button class="btn icon mini" id="btn-prev-action" onclick="prevAction()" aria-label="Previous action" title="Previous user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
       <button class="btn icon mini" id="btn-next-action" onclick="nextAction()" aria-label="Next action" title="Next user action"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
@@ -3033,20 +3065,25 @@ def format_reactlog_html(
       <div class="graph-container" id="graph-container">
         <div class="graph-topbar">
           <div class="graph-top-row">
-            <div class="legend" aria-label="Reactive states and dependencies legend">
-              <div class="legend-item"><span class="legend-swatch" style="background:#a3c586"></span>Ready</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:#fcbf49"></span>Calculating</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:#969696"></span>Invalidating</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:#d9d9d9"></span>Invalidated</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:#2171b5"></span>Frozen</div>
+            <div class="legend" aria-label="Graph legend">
+              <div class="legend-group"><span class="legend-label">State</span>
+              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-ready)"></span>Ready</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-calculating)"></span>Calculating</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidating)"></span>Invalidating</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidated)"></span>Invalidated</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-frozen)"></span>Frozen</div>
+              </div>
+              <div class="legend-group"><span class="legend-label">Links</span>
               <div class="legend-item"><span class="legend-line"></span>Dependency</div>
               <div class="legend-item"><span class="legend-line is-isolated"></span>Isolated dependency</div>
               <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
-              <span class="legend-sep" aria-hidden="true"></span>
+              </div>
+              <div class="legend-group"><span class="legend-label">Type</span>
               <button type="button" class="legend-role-btn is-active" data-role="source" onclick="toggleRoleFilter('source')" aria-pressed="true" title="Filter Input nodes"><span class="legend-dot" style="--role-color:var(--source)"></span>Input</button>
               <button type="button" class="legend-role-btn is-active" data-role="conductor" onclick="toggleRoleFilter('conductor')" aria-pressed="true" title="Filter Calc nodes"><span class="legend-dot" style="--role-color:var(--calc)"></span>Calc</button>
               <button type="button" class="legend-role-btn is-active" data-role="effect" onclick="toggleRoleFilter('effect')" aria-pressed="true" title="Filter Effect nodes"><span class="legend-dot" style="--role-color:var(--effect)"></span>Effect</button>
               <button type="button" class="legend-role-btn is-active" data-role="output" onclick="toggleRoleFilter('output')" aria-pressed="true" title="Filter Output nodes"><span class="legend-dot" style="--role-color:var(--output)"></span>Output</button>
+              </div>
             </div>
             <div class="zoom-controls">
               <button class="btn mini" id="btn-toggle-collapse-all" onclick="toggleCollapseAllModules()" title="Collapse all modules into macro boxes">Collapse modules</button>
@@ -3065,10 +3102,10 @@ def format_reactlog_html(
         <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#676767" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--text-muted)" />
             </marker>
             <marker id="arrow-isolated" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#818181" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--text-muted)" />
             </marker>
             <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
               <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
@@ -4197,7 +4234,7 @@ def format_reactlog_html(
       setViewMode('full');
     }}
 
-    const reactiveStateColors = {{ ready: '#a3c586', calculating: '#fcbf49', invalidating: '#969696', invalidated: '#d9d9d9', frozen: '#2171b5' }};
+    const reactiveStateColors = {{ ready: 'var(--state-ready)', calculating: 'var(--state-calculating)', invalidating: 'var(--state-invalidating)', invalidated: 'var(--state-invalidated)', frozen: 'var(--state-frozen)' }};
 
     function reactiveEventState(ev) {{
       const action = ev.action || ev.event;
@@ -4232,12 +4269,12 @@ def format_reactlog_html(
     }}
 
     function nodeKind(n) {{
-      if (n.type === 'module') return {{ label: 'Module', color: '#6366f1', verb: 'run' }};
-      if (n.render_type === 'plot' || n.render_type === 'image') return {{ label: 'Plot', color: '#16a34a', verb: 'render' }};
-      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: '#0284c7', verb: 'change' }};
-      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: '#d97706', verb: 'run' }};
-      if (n.type === 'effect') return {{ label: 'Effect', color: '#9333ea', verb: 'trigger' }};
-      return {{ label: 'Output', color: '#16a34a', verb: 'render' }};
+      if (n.type === 'module') return {{ label: 'Module', color: 'var(--effect)', shape: 'M1 1H11V11H1Z', verb: 'run' }};
+      if (n.render_type === 'plot' || n.render_type === 'image') return {{ label: 'Plot', color: 'var(--output)', shape: 'M6 0L12 6L6 12L0 6Z', verb: 'render' }};
+      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: 'var(--source)', shape: 'M6 1A5 5 0 1 0 6 11A5 5 0 1 0 6 1Z', verb: 'change' }};
+      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: 'var(--calc)', shape: 'M1 1H11V11H1Z', verb: 'run' }};
+      if (n.type === 'effect') return {{ label: 'Effect', color: 'var(--effect)', shape: 'M6 1L11 11H1Z', verb: 'trigger' }};
+      return {{ label: 'Output', color: 'var(--output)', shape: 'M6 0L12 6L6 12L0 6Z', verb: 'render' }};
     }}
 
     function toggleInspector(forceState) {{
@@ -4899,7 +4936,7 @@ def format_reactlog_html(
       }});
 
       const ranks = dependencyRanks(nodes, edges);
-      const colWidth = 300, rowHeight = 92, nodeWidth = 230, nodeHeight = 58;
+      const colWidth = 350, rowHeight = 92, nodeWidth = 280, nodeHeight = 64;
       const pos = {{}};
       // Module bands keep boxes disjoint while dependency rank sets horizontal position.
       const bands = new Map();
@@ -5013,6 +5050,8 @@ def format_reactlog_html(
         g.setAttribute('data-role', n.role);
         const state = replay.states.get(n.id) || 'ready';
         g.setAttribute('data-state', state);
+        g.setAttribute('aria-pressed', String(isSelected));
+        g.style.setProperty('--node-selection-stroke', state === 'frozen' ? '#ffffff' : '#17212b');
         g.setAttribute('data-active', isActive ? 'true' : 'false');
         g.setAttribute('tabindex', '0');
         g.setAttribute('role', 'button');
@@ -5056,37 +5095,61 @@ def format_reactlog_html(
         rect.setAttribute('class', 'node-card');
         g.appendChild(rect);
 
-        const accent = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        accent.setAttribute('x', p.x - (nodeWidth / 2));
-        accent.setAttribute('y', p.y - (nodeHeight / 2) + 6);
-        accent.setAttribute('width', '4');
-        accent.setAttribute('height', nodeHeight - 12);
-        accent.setAttribute('rx', '2');
+        const focusRing = rect.cloneNode(false);
+        focusRing.setAttribute('class', 'node-focus-ring');
+        focusRing.setAttribute('x', p.x - (nodeWidth / 2) - 5);
+        focusRing.setAttribute('y', p.y - (nodeHeight / 2) - 5);
+        focusRing.setAttribute('width', nodeWidth + 10);
+        focusRing.setAttribute('height', nodeHeight + 10);
+        focusRing.setAttribute('rx', '11');
+        focusRing.setAttribute('fill', 'none');
+        focusRing.removeAttribute('filter');
+        focusRing.setAttribute('aria-hidden', 'true');
+        g.appendChild(focusRing);
+
+        // A neutral backing keeps type colors independent of the node's state fill.
+        const markerBacking = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        markerBacking.setAttribute('class', 'node-kind-backing');
+        markerBacking.setAttribute('x', p.x - (nodeWidth / 2) + 8);
+        markerBacking.setAttribute('y', p.y - 13);
+        markerBacking.setAttribute('width', '26');
+        markerBacking.setAttribute('height', '26');
+        markerBacking.setAttribute('rx', '5');
+        markerBacking.setAttribute('fill', 'var(--surface)');
+        markerBacking.setAttribute('stroke', 'var(--text-muted)');
+        markerBacking.setAttribute('aria-hidden', 'true');
+        g.appendChild(markerBacking);
+
+        const accent = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        accent.setAttribute('class', 'node-kind-marker');
+        accent.setAttribute('d', kind.shape);
+        accent.setAttribute('transform', `translate(${{p.x - (nodeWidth / 2) + 13.8}}, ${{p.y - 7.2}}) scale(1.2)`);
         accent.setAttribute('fill', kind.color);
+        accent.setAttribute('aria-hidden', 'true');
         g.appendChild(accent);
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', p.x - (nodeWidth / 2) + 14);
+        text.setAttribute('x', p.x - (nodeWidth / 2) + 43);
         text.setAttribute('y', p.y - 4);
         text.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#17212b');
         text.setAttribute('font-family', 'var(--mono)');
-        text.setAttribute('font-size', '12px');
+        text.setAttribute('font-size', '14px');
         text.setAttribute('font-weight', '700');
         const fullLabel = String(n.label || n.id);
         const label = n.module && n.type !== 'module' ? fullLabel.replace(n.module + '-', '') : fullLabel;
-        const maxChars = 28;
+        const maxChars = 26;
         text.textContent = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-        title.textContent = `${{n.id}}: ${{label}}`;
+        title.textContent = `${{n.id}}: ${{label}} · ${{state}}${{n.line ? ' · line ' + n.line : ''}}`;
         g.appendChild(title);
         g.appendChild(text);
 
         const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        subText.setAttribute('x', p.x - (nodeWidth / 2) + 14);
+        subText.setAttribute('x', p.x - (nodeWidth / 2) + 43);
         subText.setAttribute('y', p.y + 14);
-        subText.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#374151');
-        subText.setAttribute('font-size', '10px');
-        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · double-click to expand` : `${{kind.label}} · ${{state}}${{n.line ? ' · line ' + n.line : ''}}`;
+        subText.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#17212b');
+        subText.setAttribute('font-size', '12px');
+        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · Enter to expand` : `${{kind.label}} · ${{state}}`;
         g.appendChild(subText);
 
         const execCount = execCounts.get(n.id) || 0;
