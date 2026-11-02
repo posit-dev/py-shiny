@@ -237,6 +237,8 @@ quartodoc:
         - reactive.flush
         - reactive.poll
         - reactive.file_reader
+        - reactive.debounce
+        - reactive.throttle
         - req
     - title: Create and run applications
       desc: ""
