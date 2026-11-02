@@ -620,7 +620,10 @@ _timer_tasks: set[asyncio.Task[None]] = set()
 
 @add_example()
 def invalidate_later(
-    delay: float, *, session: "MISSING_TYPE | Session | None" = MISSING
+    delay_secs: "float | MISSING_TYPE" = MISSING,
+    *,
+    session: "MISSING_TYPE | Session | None" = MISSING,
+    delay: "float | MISSING_TYPE" = MISSING,
 ) -> None:
     """
     Scheduled Invalidation
@@ -630,8 +633,13 @@ def invalidate_later(
 
     Parameters
     ----------
+    delay_secs
+        The number of seconds (not milliseconds) to wait before invalidating.
+    session
+        A :class:`~shiny.Session` instance. If not provided, it is inferred via
+        :func:`~shiny.session.get_current_session`.
     delay
-        The number of seconds to wait before invalidating.
+        Deprecated. Use `delay_secs` instead.
 
     Note
     ----
@@ -644,6 +652,23 @@ def invalidate_later(
     run.
     """
 
+    if not isinstance(delay, MISSING_TYPE):
+        if not isinstance(delay_secs, MISSING_TYPE):
+            raise TypeError(
+                "invalidate_later() got both `delay_secs` and `delay`. "
+                "Use only `delay_secs`."
+            )
+        # Imported here because `shiny._deprecated` imports `shiny.reactive`.
+        from .._deprecated import warn_deprecated
+
+        warn_deprecated(
+            "The `delay` argument of `reactive.invalidate_later()` is deprecated. "
+            "Use `delay_secs` instead."
+        )
+        delay_secs = delay
+    if isinstance(delay_secs, MISSING_TYPE):
+        raise TypeError("invalidate_later() missing required argument: `delay_secs`")
+
     if isinstance(session, MISSING_TYPE):
         from ..session import get_current_session
 
@@ -655,7 +680,7 @@ def invalidate_later(
     # Pass an absolute time to our subtask, rather than passing the delay directly, in
     # case the subtask doesn't get a chance to start sleeping until a significant amount
     # of time has passed.
-    deadline = time.monotonic() + delay
+    deadline = time.monotonic() + delay_secs
 
     cancellable = True
     # unsub is used to unsubscribe from session.on_ended when time expires. We don't
