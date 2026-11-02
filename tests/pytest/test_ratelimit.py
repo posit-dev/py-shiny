@@ -209,8 +209,11 @@ def test_effects_and_outputs_reject_it(limit: Callable[..., Any]):
     ):
         render.download_button(limited())
 
+    plain_effect = effect(lambda: None)
     with pytest.raises(TypeError, match=f"(?s)`@reactive.effect` cannot .* {hint}"):
-        limit(1)(effect(lambda: None))
+        limit(1)(plain_effect)
+    # Otherwise it would run (and record a span) in a later test's flush
+    plain_effect.destroy()
     with pytest.raises(TypeError, match=f"(?s)`@render.xx` cannot .* {hint}"):
         limit(1)(render.text(lambda: "x"))
 
@@ -257,6 +260,41 @@ async def test_delay_can_be_a_function():
             await mock_time.advance_time(4)
             with isolate():
                 assert d() == 1
+
+
+@pytest.mark.parametrize("limit", [debounce, throttle])
+def test_bad_delay_is_rejected(limit: Callable[..., Any]):
+    async def async_delay() -> float:
+        return 1
+
+    for bad in [None, "1", True, async_delay]:
+        with pytest.raises(TypeError, match="delay_secs"):
+            limit(bad)
+    with pytest.raises(ValueError, match="delay_secs"):
+        limit(-1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [debounce, throttle])
+async def test_bad_delay_function_value_is_reported(limit: Callable[..., Any]):
+    session = RecordingSession()
+    async with session:
+        a = Value(0)
+
+        @calc
+        @limit(lambda: "1")
+        def d() -> int:
+            return a()
+
+        @effect()
+        def _():
+            d()
+
+        await flush()
+        a.set(1)
+        await flush()
+        messages = [str(e) for e in session.unhandled_errors]
+        assert any("delay_secs" in m for m in messages)
 
 
 @pytest.mark.asyncio

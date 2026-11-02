@@ -57,8 +57,8 @@ def debounce(
     ----------
     delay_secs
         The number of seconds to wait after the last change. You may also pass a
-        no-argument function or :func:`~shiny.reactive.calc` that returns the number of
-        seconds, for example to let the user control the window.
+        synchronous no-argument function or :func:`~shiny.reactive.calc` that returns the
+        number of seconds, for example to let the user control the window.
     priority
         Debouncing is implemented with :func:`~shiny.reactive.effect`s. Use this
         argument to set their priority. It should be higher than the priority of the
@@ -178,8 +178,8 @@ def throttle(
     ----------
     delay_secs
         The minimum number of seconds between invalidations. You may also pass a
-        no-argument function or :func:`~shiny.reactive.calc` that returns the number of
-        seconds, for example to let the user control the window.
+        synchronous no-argument function or :func:`~shiny.reactive.calc` that returns the
+        number of seconds, for example to let the user control the window.
     priority
         Throttling is implemented with :func:`~shiny.reactive.effect`s. Use this
         argument to set their priority. It should be higher than the priority of the
@@ -274,9 +274,29 @@ def throttle(
 
 
 def _as_delay_fn(delay_secs: float | Callable[[], float]) -> Callable[[], float]:
-    if callable(delay_secs):
-        return delay_secs
-    return lambda: delay_secs
+    """Check `delay_secs`, then return a function that gives the delay in seconds."""
+    if not callable(delay_secs):
+        _check_delay(delay_secs)
+        return lambda: delay_secs
+    if _utils.is_async_callable(delay_secs):
+        raise TypeError("`delay_secs` must be a number or a synchronous function.")
+    delay_fn = delay_secs
+
+    def checked_delay() -> float:
+        return _check_delay(delay_fn())
+
+    return checked_delay
+
+
+def _check_delay(delay_secs: object) -> float:
+    """Raise if `delay_secs` isn't a non-negative number of seconds."""
+    if isinstance(delay_secs, bool) or not isinstance(delay_secs, (int, float)):
+        raise TypeError(
+            f"`delay_secs` must be a number of seconds, not {type(delay_secs).__name__}."
+        )
+    if delay_secs < 0:
+        raise ValueError(f"`delay_secs` must be 0 or more, not {delay_secs}.")
+    return delay_secs
 
 
 def _source_calc(
