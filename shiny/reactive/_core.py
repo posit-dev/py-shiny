@@ -28,6 +28,7 @@ from typing import (
     Literal,
     Optional,
     TypeVar,
+    overload,
 )
 
 from .. import _utils
@@ -614,8 +615,21 @@ def lock() -> asyncio.Lock:
 
 
 _lock_warned: bool = False
+_invalidate_later_delay_warned: bool = False
 
 _timer_tasks: set[asyncio.Task[None]] = set()
+
+
+@overload
+def invalidate_later(
+    delay_secs: float, *, session: "MISSING_TYPE | Session | None" = MISSING
+) -> None: ...
+
+
+@overload
+def invalidate_later(
+    *, delay: float, session: "MISSING_TYPE | Session | None" = MISSING
+) -> None: ...
 
 
 @add_example()
@@ -658,13 +672,17 @@ def invalidate_later(
                 "invalidate_later() got both `delay_secs` and `delay`. "
                 "Use only `delay_secs`."
             )
-        # Imported here because `shiny._deprecated` imports `shiny.reactive`.
-        from .._deprecated import warn_deprecated
+        global _invalidate_later_delay_warned
+        # Once per process: `invalidate_later()` is usually called in a loop.
+        if not _invalidate_later_delay_warned:
+            _invalidate_later_delay_warned = True
+            # Imported here because `shiny._deprecated` imports `shiny.reactive`.
+            from .._deprecated import warn_deprecated
 
-        warn_deprecated(
-            "The `delay` argument of `reactive.invalidate_later()` is deprecated. "
-            "Use `delay_secs` instead."
-        )
+            warn_deprecated(
+                "The `delay` argument of `reactive.invalidate_later()` is deprecated. "
+                "Use `delay_secs` instead."
+            )
         delay_secs = delay
     if isinstance(delay_secs, MISSING_TYPE):
         raise TypeError("invalidate_later() missing required argument: `delay_secs`")
