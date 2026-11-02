@@ -760,7 +760,7 @@ def test_format_reactlog_html_accessible_palette(theme: str):
     )
     style = re.search(r"<style>(.*?)</style>", html, re.DOTALL)
     assert style is not None
-    palettes = []
+    palettes: list[bool] = []
     for selector, declarations in re.findall(r"([^{}]+)\{([^{}]*)\}", style[1]):
         tokens = dict(re.findall(r"(--[\w-]+):\s*(#[\da-fA-F]{6});", declarations))
         if "--source" not in tokens:
