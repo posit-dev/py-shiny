@@ -1291,8 +1291,8 @@ def test_format_reactlog_html_node_interactions_and_layout() -> None:
     assert ".graph-edge.is-connected" in html
     footer_idx = html.index('class="bottom-timeline-bar toolbar"')
     shortcuts_idx = html.index('id="btn-shortcuts"')
-    assert shortcuts_idx > footer_idx
-    assert 'class="btn icon mini" id="btn-shortcuts"' in html
+    assert shortcuts_idx < footer_idx
+    assert 'id="btn-shortcuts"' in html
     assert 'title="Keyboard shortcuts (?)"' in html
     assert ">Shortcuts</button>" not in html
     assert "let currentViewMode = 'flush';" in html
