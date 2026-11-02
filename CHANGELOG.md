@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### New features
+
+* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, Playwright session recording with synchronized video playback, and interactive HTML Reactlog export with action-scoped execution causality and "Why did this run?" root-cause inspection. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
+
 ### Bug fixes and minor improvements
 
 * Lowered the minimum `orjson` version from 3.10.7 to 3.10.2. Shiny uses only `orjson.dumps()`, `orjson.loads()`, and `OPT_SORT_KEYS`, which all predate 3.10, and 3.10.2 fixes a crash serializing `str` that 3.10.1 introduced. The lower floor lets Shiny install alongside packages or environments that ship an older `orjson`, such as Pyodide 0.27 (#2594).
@@ -102,8 +106,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `playwright.controller.OutputTextVerbatim` is deprecated alongside `ui.output_text_verbatim()` and now emits a `ShinyDeprecationWarning` when constructed. Please use `playwright.controller.OutputCode` instead. (#2097)
 
 ### New features
-
-* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, Playwright session recording with synchronized video playback, and interactive HTML Reactlog export with action-scoped execution causality and "Why did this run?" root-cause inspection. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
 
 * Added `local_server`, a pytest fixture that is the in-memory counterpart of `local_app`: a function-scoped `test_server()` session for the `app.py` next to the test file. (#2495)
 
