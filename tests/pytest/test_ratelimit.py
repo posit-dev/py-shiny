@@ -150,9 +150,9 @@ async def test_async_functions_and_effects(limit: Callable[..., Any]):
 
             seen: list[int] = []
 
-            # Like @reactive.event, it also works right under an effect
+            # An effect reacts to a limited calc through @reactive.event
             @effect()
-            @limit(1)
+            @event(r_async)
             async def _():
                 seen.append(await r_async())
 
@@ -188,12 +188,26 @@ def test_must_be_below_other_decorators(limit: Callable[..., Any]):
         def _():
             return "x"
 
-    with pytest.raises(
-        TypeError, match=f"`@reactive.effect` must be above `@reactive.{name}"
-    ):
+    # An effect has no value to wait on, in either order
+    with pytest.raises(TypeError, match="react to it with `@reactive.event"):
 
         @limit(1)
         @effect
+        def _():
+            pass
+
+    with pytest.raises(TypeError, match="react to it with `@reactive.event"):
+
+        @effect
+        @limit(1)
+        def _():
+            pass
+
+    with pytest.raises(TypeError, match="react to it with `@reactive.event"):
+
+        @effect
+        @event(lambda: 1)
+        @limit(1)
         def _():
             pass
 

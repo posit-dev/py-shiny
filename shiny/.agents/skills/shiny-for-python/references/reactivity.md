@@ -156,8 +156,9 @@ def query():
 ```
 
 Both still run the decorated function on every change; only the readers wait.
-Like `@reactive.event`, they go below `@reactive.calc`, `@reactive.effect`, or
-`@render.*`.
+Like `@reactive.event`, they go below `@reactive.calc` or `@render.*`. For a
+side effect, react to the limited calc with `@reactive.effect` +
+`@reactive.event(query)`.
 
 To change reactive state from a background `asyncio` task, call `.set()`
 directly. Setting a value schedules its dependents to re-run, so there's no lock

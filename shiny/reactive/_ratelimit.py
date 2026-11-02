@@ -13,7 +13,7 @@ from .._docstring import add_example
 from ..otel._labels import set_otel_label_modifier
 from ..types import MISSING, MISSING_TYPE
 from ._core import invalidate_later, isolate
-from ._reactives import Calc_, Effect_, Value, calc, effect, event
+from ._reactives import FUNC_ATTR_RATE_LIMIT, Calc_, Effect_, Value, calc, effect, event
 
 if TYPE_CHECKING:
     from ..session import Session
@@ -77,8 +77,10 @@ def debounce(
     Tip
     ---
     Like :func:`~shiny.reactive.event`, this decorator must be applied before the
-    relevant reactivity decorator (i.e., ``@reactive.calc``, ``@reactive.effect``,
-    ``@render.ui``, etc. must be above it).
+    relevant reactivity decorator (i.e., ``@reactive.calc``, ``@render.ui``, etc. must
+    be above it). It can't be used with ``@reactive.effect``, which has no value to
+    wait on: make a ``@reactive.calc`` with this decorator instead, and react to it
+    with ``@reactive.event(<calc>)``.
 
     See Also
     --------
@@ -196,8 +198,10 @@ def throttle(
     Tip
     ---
     Like :func:`~shiny.reactive.event`, this decorator must be applied before the
-    relevant reactivity decorator (i.e., ``@reactive.calc``, ``@reactive.effect``,
-    ``@render.ui``, etc. must be above it).
+    relevant reactivity decorator (i.e., ``@reactive.calc``, ``@render.ui``, etc. must
+    be above it). It can't be used with ``@reactive.effect``, which has no value to
+    wait on: make a ``@reactive.calc`` with this decorator instead, and react to it
+    with ``@reactive.event(<calc>)``.
 
     See Also
     --------
@@ -292,8 +296,9 @@ def _source_calc(
         )
     if isinstance(fn, Effect_):
         raise TypeError(
-            f"`@{name}()` must be applied before `@reactive.effect`.\n"
-            + f"In other words, `@reactive.effect` must be above `@{name}()`."
+            f"`@{name}()` can not be applied to a `@reactive.effect`.\n"
+            + f"Instead, make a `@reactive.calc` that is {kind}d and react to it "
+            + "with `@reactive.event(<calc>)`."
         )
     if not callable(fn):
         raise TypeError(f"`@{name}()` must be applied to a function.")
@@ -335,11 +340,12 @@ def _user_reader(
     """
     The function users get: it reads `result`, so its readers wait for `trigger`.
 
-    It carries `fn`'s name, source location, and OTel marks, so a calc or effect
-    above it records its span as e.g. `reactive.calc <kind> <name>`.
+    It carries `fn`'s name, source location, and OTel marks, so a calc above it
+    records its span as `reactive.calc <kind> <name>`.
     """
     read = functools.wraps(fn)(_call(result))
     set_otel_label_modifier(read, kind, mode="prepend")
+    setattr(read, FUNC_ATTR_RATE_LIMIT, kind)
     return read
 
 

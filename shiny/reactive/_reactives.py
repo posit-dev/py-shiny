@@ -57,6 +57,12 @@ from ..types import (
 from ._core import Context, Dependents, ReactiveWarning, _enclosing_run, isolate
 from ._utils import is_user_code_frame
 
+FUNC_ATTR_RATE_LIMIT = "_shiny_rate_limit"
+"""
+Attribute set on the function returned by `reactive.debounce()` or
+`reactive.throttle()` (to `"debounce"` or `"throttle"`), so `Effect_` can reject it.
+"""
+
 
 def _current_task() -> Optional[asyncio.Task[object]]:
     try:
@@ -1060,6 +1066,16 @@ class Effect_:
             raise TypeError(
                 "`@reactive.effect` can not be combined with `@render.xx`.\n"
                 + "Please remove your call of `@reactive.effect`."
+            )
+
+        rate_limit = getattr(fn, FUNC_ATTR_RATE_LIMIT, None)
+        if rate_limit is not None:
+            # An effect has no value for its readers to wait on
+            raise TypeError(
+                f"`@reactive.effect` can not be applied to a `@reactive.{rate_limit}()` "
+                + "function.\n"
+                + f"Instead, make a `@reactive.calc` that is {rate_limit}d and react "
+                + "to it with `@reactive.event(<calc>)`."
             )
 
         _utils.validate_no_params(fn, "reactive.effect", stacklevel=5)

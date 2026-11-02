@@ -253,8 +253,11 @@ reactive effect queue, round, idle, cycle, output flush, and what the public
 ## debounce, throttle (`_ratelimit.py`)
 
 - Ported from Shiny for R's `debounce()`/`throttle()`, but used like `event`:
-  they go below `@calc`/`@effect`/`@render.*`, and `_source_calc` raises
-  `TypeError` if given a `Calc_`, `Renderer`, or `Effect_`.
+  they go below `@calc`/`@render.*`, and `_source_calc` raises `TypeError` if
+  given a `Calc_`, `Renderer`, or `Effect_`. An effect has no value to wait on,
+  so `Effect_.__init__` also rejects a function marked with
+  `FUNC_ATTR_RATE_LIMIT` (set by `_user_reader`, carried through
+  `functools.wraps`); the error points to a limited calc + `@reactive.event`.
 - The decorated function is wrapped in a hidden (suppressed) calc, the
   *source*. A second hidden calc, the *result*, is
   `event(trigger, ignore_none=False)` over the source, so only bumping
