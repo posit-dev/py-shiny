@@ -8,8 +8,9 @@ import json
 from typing import Any, Callable
 
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny._connection import MockConnection
 from shiny.reactive._reactlog import load_reactlog_json
+
+from ._reactlog_connection import SettledConnection
 
 
 def record_export(
@@ -22,7 +23,7 @@ def record_export(
     try:
 
         async def run() -> str:
-            conn = MockConnection()
+            conn = SettledConnection()
             sess = app._create_session(conn)
             conn.cause_receive(
                 json.dumps({"method": "init", "data": steps[0] if steps else {}})
