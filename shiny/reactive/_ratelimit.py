@@ -58,7 +58,11 @@ def debounce(
     delay_secs
         The number of seconds to wait after the last change. You may also pass a
         synchronous no-argument function or :func:`~shiny.reactive.calc` that returns the
-        number of seconds, for example to let the user control the window.
+        number of seconds, for example to let the user control the window. It must
+        always return a number. If it stops early (for example with
+        :func:`~shiny.req`), the timer doesn't start, and readers aren't invalidated
+        until it returns a number again. If it raises any other error, the session
+        closes.
     priority
         Debouncing is implemented with :func:`~shiny.reactive.effect`s. Use this
         argument to set their priority. It should be higher than the priority of the
@@ -179,7 +183,11 @@ def throttle(
     delay_secs
         The minimum number of seconds between invalidations. You may also pass a
         synchronous no-argument function or :func:`~shiny.reactive.calc` that returns the
-        number of seconds, for example to let the user control the window.
+        number of seconds, for example to let the user control the window. It must
+        always return a number. If it stops early (for example with
+        :func:`~shiny.req`), the timer doesn't start, and readers aren't invalidated
+        until it returns a number again. If it raises any other error, the session
+        closes.
     priority
         Throttling is implemented with :func:`~shiny.reactive.effect`s. Use this
         argument to set their priority. It should be higher than the priority of the
