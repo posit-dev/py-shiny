@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = ("debounce", "throttle")
 
 import functools
+import numbers
 import time
 from typing import (
     TYPE_CHECKING,
@@ -25,6 +26,7 @@ from ..types import MISSING, MISSING_TYPE
 from ._core import invalidate_later, isolate
 from ._reactives import (
     FUNC_ATTR_RATE_LIMIT,
+    FUNC_ATTR_RATE_LIMIT_DECORATOR,
     Calc_,
     CalcAsync_,
     Effect_,
@@ -220,6 +222,7 @@ def _debounce(
 
         return _user_reader(fn, result, kind="debounce")
 
+    setattr(wrapper, FUNC_ATTR_RATE_LIMIT_DECORATOR, "debounce")
     return wrapper
 
 
@@ -405,6 +408,7 @@ def _throttle(
         result = _result_calc(source, trigger, session=session)
         return _user_reader(fn, result, kind="throttle")
 
+    setattr(wrapper, FUNC_ATTR_RATE_LIMIT_DECORATOR, "throttle")
     return wrapper
 
 
@@ -442,8 +446,8 @@ def _decorator_or_calc(
 def _as_delay_fn(delay_secs: float | Callable[[], float]) -> Callable[[], float]:
     """Check `delay_secs`, then return a function that gives the delay in seconds."""
     if not callable(delay_secs):
-        _check_delay(delay_secs)
-        return lambda: delay_secs
+        checked = _check_delay(delay_secs)
+        return lambda: checked
     if _utils.is_async_callable(delay_secs):
         raise TypeError("`delay_secs` must be a number or a synchronous function.")
     delay_fn = delay_secs
@@ -456,13 +460,16 @@ def _as_delay_fn(delay_secs: float | Callable[[], float]) -> Callable[[], float]
 
 def _check_delay(delay_secs: object) -> float:
     """Raise if `delay_secs` isn't a non-negative number of seconds."""
-    if isinstance(delay_secs, bool) or not isinstance(delay_secs, (int, float)):
+    # `numbers.Real` also covers numpy numbers
+    if isinstance(delay_secs, bool) or not isinstance(delay_secs, numbers.Real):
         raise TypeError(
             f"`delay_secs` must be a number of seconds, not {type(delay_secs).__name__}."
         )
-    if delay_secs < 0:
-        raise ValueError(f"`delay_secs` must be 0 or more, not {delay_secs}.")
-    return delay_secs
+    secs = float(delay_secs)
+    # Written this way so that NaN fails too
+    if not secs >= 0:
+        raise ValueError(f"`delay_secs` must be 0 or more, not {secs}.")
+    return secs
 
 
 def _source_calc(

@@ -3,6 +3,7 @@
 import warnings
 from typing import Any, Callable, Tuple
 
+import numpy as np
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -329,19 +330,41 @@ def test_bad_delay_is_rejected(limit: Callable[..., Any]):
     for bad in [None, "1", True, async_delay]:
         with pytest.raises(TypeError, match="delay_secs"):
             limit(bad)
-    with pytest.raises(ValueError, match="delay_secs"):
-        limit(-1)
+    for bad in [-1, float("nan")]:
+        with pytest.raises(ValueError, match="delay_secs"):
+            limit(bad)
+    # numpy numbers are fine
+    limit(np.int64(1))
+    limit(np.float32(0.5))
+
+
+@pytest.mark.parametrize("limit", [debounce, throttle])
+def test_missing_delay_is_reported(limit: Callable[..., Any]):
+    hint = f"`@reactive.{limit.__name__}` must be given a delay"
+
+    def f() -> int:
+        return 1
+
+    with pytest.raises(TypeError, match=hint):
+        calc(limit(f))
+    with pytest.raises(TypeError, match=hint):
+        effect(limit(f))
+    with pytest.raises(TypeError, match=hint):
+        render.text(limit(f))
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("limit", [debounce, throttle])
-async def test_bad_delay_function_value_is_reported(limit: Callable[..., Any]):
+@pytest.mark.parametrize("bad_delay", ["1", float("nan")])
+async def test_bad_delay_function_value_is_reported(
+    limit: Callable[..., Any], bad_delay: Any
+):
     session = RecordingSession()
     async with session:
         a = Value(0)
 
         @calc
-        @limit(lambda: "1")
+        @limit(lambda: bad_delay)
         def d() -> int:
             return a()
 

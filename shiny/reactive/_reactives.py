@@ -79,8 +79,27 @@ def rate_limit_misuse_message(name: str, kind: str) -> str:
     )
 
 
+FUNC_ATTR_RATE_LIMIT_DECORATOR = "_shiny_rate_limit_decorator"
+"""
+Attribute set on the decorator returned by `reactive.debounce(delay_secs)` or
+`reactive.throttle(delay_secs)` (to `"debounce"` or `"throttle"`), so that using it
+without `(delay_secs)` gets a clear error.
+"""
+
+
+def check_not_rate_limit_decorator(fn: object) -> None:
+    """Raise `TypeError` if `fn` is `@reactive.debounce`/`throttle` used without a delay."""
+    kind = getattr(fn, FUNC_ATTR_RATE_LIMIT_DECORATOR, None)
+    if kind is not None:
+        raise TypeError(
+            f"`@reactive.{kind}` must be given a delay, as in "
+            + f"`@reactive.{kind}(0.5)`."
+        )
+
+
 def check_not_rate_limited(fn: object, name: str) -> None:
     """Raise `TypeError` if `fn` came from `reactive.debounce()`/`throttle()`."""
+    check_not_rate_limit_decorator(fn)
     kind = getattr(fn, FUNC_ATTR_RATE_LIMIT, None)
     if kind is not None:
         raise TypeError(rate_limit_misuse_message(name, kind))
@@ -703,6 +722,7 @@ class Calc_(Generic[T]):
         *,
         session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
+        check_not_rate_limit_decorator(fn)
         _utils.validate_no_params(fn, "reactive.calc", stacklevel=5)
 
         self.__name__ = fn.__name__
