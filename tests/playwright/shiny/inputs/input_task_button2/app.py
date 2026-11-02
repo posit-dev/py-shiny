@@ -36,8 +36,8 @@ def button_server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(input.btn)
     def increment_counter():
         # Deadline so a broken test fails instead of wedging the app forever
-        deadline = time.time() + 30
-        while not release_path.exists() and time.time() < deadline:
+        deadline = time.monotonic() + 30
+        while not release_path.exists() and time.monotonic() < deadline:
             time.sleep(0.05)
         release_path.unlink(missing_ok=True)
         counter.set(counter() + 1)

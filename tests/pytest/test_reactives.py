@@ -2,13 +2,16 @@
 
 import asyncio
 import warnings
-from typing import List
+from typing import Any, List
 
 import pytest
 
 from shiny import App, render, req, ui
 from shiny._connection import MockConnection
-from shiny.reactive import Value, calc, effect, event, flush, invalidate_later, isolate
+from shiny._deprecated import ShinyDeprecationWarning
+from shiny.reactive import Value
+from shiny.reactive import _core as reactive_core
+from shiny.reactive import calc, effect, event, flush, invalidate_later, isolate
 from shiny.reactive._core import ReactiveWarning
 from shiny.types import ActionButtonValue, SilentException
 
@@ -782,6 +785,49 @@ async def test_invalidate_later():
         obs1.destroy()
         await mock_time.advance_time(10)
         assert obs1._exec_count == 12
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "args, kwargs, warns",
+    [
+        ((1,), {}, False),
+        ((), {"delay_secs": 1}, False),
+        ((), {"delay": 1}, True),
+    ],
+)
+async def test_invalidate_later_delay_args(
+    args: tuple[float, ...],
+    kwargs: dict[str, Any],
+    warns: bool,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(reactive_core, "_invalidate_later_delay_warned", False)
+    mock_time = MockTime()
+    with mock_time(), warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+
+        @effect()
+        def obs1():
+            invalidate_later(*args, **kwargs)
+
+        await flush()
+        await mock_time.advance_time(1)
+        assert obs1._exec_count == 2
+        obs1.destroy()
+
+    deprecations = [w for w in record if w.category is ShinyDeprecationWarning]
+    # Warns once per process, not on every re-execution.
+    assert len(deprecations) == (1 if warns else 0)
+    if warns:
+        assert "delay_secs" in str(deprecations[0].message)
+
+
+def test_invalidate_later_delay_bad_args():
+    with pytest.raises(TypeError, match="both"):
+        invalidate_later(1, delay=1)  # pyright: ignore[reportCallIssue]
+    with pytest.raises(TypeError, match="missing required argument"):
+        invalidate_later()  # pyright: ignore[reportCallIssue]
 
 
 @pytest.mark.asyncio

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Lifecycle changes
+
+* The first argument of `reactive.invalidate_later()` is renamed from `delay` to `delay_secs`, to make clear that it is in seconds, not milliseconds. Passing `delay=` still works but emits a `ShinyDeprecationWarning`. Calls that pass the delay by position are unaffected (#2604).
+
 ### New features
 
 * Added `reactive.debounce()` and `reactive.throttle()`, decorators that slow down how often a reactive function invalidates its readers. They go below `@reactive.calc`; effects and outputs read the debounced calc instead (an effect reacts to it with `@reactive.event()`). To limit an existing calc or input, call them directly, as in `reactive.debounce(input.text, 0.5)`, which returns a calc. `debounce` waits until the changes stop for a set time; `throttle` lets a change through at most once per time window. Use them when a value changes often (typing, slider drags, plot hover) and the work that reads it is slow. Under OpenTelemetry, the calc above them records its span as `reactive.calc debounce <name>` or `reactive.calc throttle <name>`; the reactives behind them record none. (#564)
