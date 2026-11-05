@@ -724,6 +724,12 @@ def test_load_reactlog_json_with_r_reactlog_schema():
     input_node = next(n for n in loaded["nodes"] if n["id"] == "input:num")
     assert input_node["role"] == "source"
     assert input_node["type"] == "input"
+    dep_events = [e for e in loaded["events"] if e["action"] == "dependsOn"]
+    assert dep_events[0]["details"] == "Dependency: 'input:num' used by 'calc:double'"
+    assert dep_events[1]["details"] == "Dependency: 'calc:double' used by 'output:txt'"
+    val_event = next(e for e in loaded["events"] if e["action"] == "valueChange")
+    assert val_event["node_label"] == "num"
+    assert val_event["details"] == "Value change for 'num': 42"
 
     raw_events_list = r_reactlog["log"]
     loaded_raw = load_reactlog_json(raw_events_list)
@@ -744,6 +750,11 @@ def test_format_reactlog_html_compact_controls():
         "btn-step-forward",
         "btn-prev-flush",
         "btn-next-flush",
+        "flush-counter-badge",
+        "btn-flush-picker",
+        "flush-picker-menu",
+        "btn-toggle-clientdata",
+        "btn-toggle-changes",
     ):
         assert not any(attrs.get("id") == control_id for _, attrs in parser.tags)
     assert parser.has_tag(
@@ -755,7 +766,9 @@ def test_format_reactlog_html_compact_controls():
     assert shortcuts is not None
     assert re.sub(r"<[^>]*>", "", shortcuts[1]).strip() == ""
     assert parser.has_tag("input", id="scrubber-range")
-    assert parser.has_tag("button", id="btn-flush-picker")
+    assert parser.has_tag("button", id="search-clear")
+    assert parser.has_tag("select", id="clientdata-select")
+    assert parser.has_tag("select", id="activity-select")
 
 
 @pytest.mark.parametrize("label", ["Zoom in", "Zoom out"])
@@ -892,6 +905,95 @@ console.log(JSON.stringify({
     assert "r45" not in result.stdout
 
 
+def test_graph_routes_stay_outside_node_cards():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to run the graph router")
+    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
+    router = re.search(r"    function routeGraphEdge\([\s\S]*?\n    \}", html)
+    assert router is not None
+    edge_path = re.search(r"    function graphEdgePath\([\s\S]*?\n    \}", html)
+    assert edge_path is not None
+    filters = re.search(r"    function filterItems\([\s\S]*?\n    \}", html)
+    assert filters is not None
+    script = filters[0] + router[0] + edge_path[0] + """
+const positions = {
+  source: {x: 150, y: 650}, blocker: {x: 150, y: 450},
+  calc: {x: 500, y: 110}, middle: {x: 500, y: 650},
+  output: {x: 850, y: 650}, cycle: {x: 150, y: 850}
+};
+const edges = [
+  {from: 'source', to: 'calc'}, {from: 'source', to: 'output'},
+  {from: 'source', to: 'cycle'}, {from: 'cycle', to: 'source'},
+  {from: 'output', to: 'source'}
+];
+console.log(JSON.stringify({
+  routes: edges.map(edge => routeGraphEdge(edge, positions, 280, 64, edges)),
+  paths: edges.map(edge => graphEdgePath(edge, positions, 280, 64, edges))
+}));
+"""
+    result = subprocess.run(
+        [node, "-e", script], capture_output=True, text=True, check=True
+    )
+    payload = json.loads(result.stdout)
+    for d in payload["paths"]:
+        assert d.startswith("M ")
+        assert " C " in d
+    centers = [(150, 650), (150, 450), (500, 110), (500, 650), (850, 650), (150, 850)]
+    for points in payload["routes"]:
+        assert len(points) >= 2
+        for first, second in zip(points, points[1:]):
+            x1, y1 = first
+            x2, y2 = second
+            assert x1 == x2 or y1 == y2
+            for x, y in centers:
+                if x1 == x2:
+                    assert not (
+                        x - 140 < x1 < x + 140
+                        and max(y1, y2) > y - 32
+                        and min(y1, y2) < y + 32
+                    )
+                else:
+                    assert not (
+                        y - 32 < y1 < y + 32
+                        and max(x1, x2) > x - 140
+                        and min(x1, x2) < x + 140
+                    )
+
+
+def test_graph_layout_groups_connected_inputs_and_aligns_dependencies():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to run the graph layout")
+    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
+    layout = re.search(r"    function arrangeGraphBand\([\s\S]*?\n    \}", html)
+    assert layout is not None
+    filters = re.search(r"    function filterItems\([\s\S]*?\n    \}", html)
+    assert filters is not None
+    script = filters[0] + layout[0] + """
+const nodes = ['a', 'b', 'c', 'calc', 'plot', 'summary'].map(id => ({id}));
+const ranks = new Map([['a', 0], ['b', 0], ['c', 0], ['calc', 1], ['plot', 2], ['summary', 2]]);
+const edges = [
+  {from: 'a', to: 'plot'}, {from: 'b', to: 'calc'},
+  {from: 'c', to: 'plot'}, {from: 'calc', to: 'summary'}
+];
+console.log(JSON.stringify(arrangeGraphBand(nodes, edges, ranks, 70, 350, 92)));
+"""
+    result = subprocess.run(
+        [node, "-e", script], capture_output=True, text=True, check=True
+    )
+    layout_result = json.loads(result.stdout)
+    positions = layout_result["positions"]
+    assert layout_result["rows"] == 3
+    assert abs(positions["a"]["y"] - positions["c"]["y"]) == 92
+    assert positions["b"]["y"] == positions["calc"]["y"] == positions["summary"]["y"]
+    assert positions["b"]["x"] < positions["calc"]["x"] < positions["summary"]["x"]
+    assert (
+        abs(positions["plot"]["y"] - (positions["a"]["y"] + positions["c"]["y"]) / 2)
+        <= 46
+    )
+
+
 def test_format_reactlog_html_theme_support():
     code = """from shiny.express import input, render, ui
 ui.input_numeric("n", "N", 5)
@@ -911,8 +1013,8 @@ def out():
     assert '[data-theme="light"]' in html_light
     assert "--bg: #f8fafc;" in html_light
     assert "--track-bg: #1b2634;" in html_light
-    assert 'id="btn-flush-picker"' in html_light
-    assert 'id="btn-toggle-clientdata"' in html_light
+    assert 'id="clientdata-select"' in html_light
+    assert 'id="activity-select"' in html_light
     assert 'class="legend-role-btn is-active"' in html_light
 
 
@@ -948,13 +1050,82 @@ def test_format_reactlog_html_accessible_palette(theme: str):
                 c * weight for c, weight in zip(linear, (0.2126, 0.7152, 0.0722))
             )
 
-        for foreground in roles + [tokens["--text-muted"]]:
+        for foreground in roles + [tokens["--text-muted"], tokens["--module-text"]]:
             for background in (tokens["--surface"], tokens["--surface-2"]):
                 levels = sorted((luminance(foreground), luminance(background)))
                 assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
 
+        for marker in (
+            tokens["--timeline-idle"],
+            tokens["--timeline-mark"],
+            tokens["--output"],
+        ):
+            for track in (tokens["--track-bg"], tokens["--track-fill"]):
+                levels = sorted((luminance(marker), luminance(track)))
+                assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 3.0
+
+        stroke_levels = sorted(
+            (luminance(tokens["--node-stroke"]), luminance(tokens["--bg"]))
+        )
+        assert (stroke_levels[1] + 0.05) / (stroke_levels[0] + 0.05) >= 3.0
+
+        if "--state-ready" in tokens:
+            for state_token in (
+                "--state-ready",
+                "--state-calculating",
+                "--state-invalidating",
+                "--state-invalidated",
+            ):
+                fill = tokens[state_token]
+                for fg in ("#0f172a", "#1e293b", "#3b0764"):
+                    levels = sorted((luminance(fg), luminance(fill)))
+                    assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
+            frozen_fill = tokens["--state-frozen"]
+            for fg in ("#ffffff", "#e2e8f0", "#e9d5ff"):
+                levels = sorted((luminance(fg), luminance(frozen_fill)))
+                assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
+
     # Explicit light/dark themes and the automatic light-mode fallback agree.
     assert palettes == [False, True, True]
+
+
+def test_format_reactlog_html_distinct_node_and_marker_shapes():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to inspect nodeKind shapes")
+    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
+    match = re.search(r"    function nodeKind\([\s\S]*?\n    \}", html)
+    assert match is not None
+    script = match[0] + """
+const samples = [
+  {role: 'source', type: 'input'},
+  {role: 'conductor', type: 'calc'},
+  {role: 'observer', type: 'effect'},
+  {role: 'observer', type: 'output'},
+  {role: 'observer', type: 'output', render_type: 'plot'},
+  {role: 'conductor', type: 'module'},
+];
+console.log(JSON.stringify(samples.map(n => nodeKind(n))));
+"""
+    result = subprocess.run(
+        [node, "-e", script], capture_output=True, text=True, check=True
+    )
+    kinds = json.loads(result.stdout)
+    shapes = [k["shape"] for k in kinds]
+    assert len(set(shapes)) == 6
+    legend_paths = re.findall(
+        r'<span class="legend-dot"[^>]*><svg[^>]*><path[^>]*d="([^"]+)"',
+        html,
+    )
+    assert len(legend_paths) == 4
+    assert set(legend_paths).issubset(set(shapes))
+    assert 'id="arrow-isolated"' in html
+    isolated_marker = re.search(
+        r'<marker id="arrow-isolated"[^>]*>(.*?)</marker>', html, re.DOTALL
+    )
+    assert isolated_marker is not None
+    assert 'fill="var(--bg)"' in isolated_marker[1]
+    assert 'stroke="var(--text-muted)"' in isolated_marker[1]
 
 
 def test_cli_inspect_theme_and_json_file(tmp_path: Path):
@@ -2194,7 +2365,9 @@ def out():
     assert 'id="flush-select"' not in html
     assert 'id="btn-prev-flush"' not in html
     assert 'id="btn-next-flush"' not in html
-    assert 'id="flush-counter-badge"' in html
+    assert 'id="flush-counter-badge"' not in html
+    assert 'id="btn-flush-picker"' not in html
+    assert 'id="flush-picker-menu"' not in html
     assert 'id="flush-pipeline-bar"' not in html
     assert 'id="pipe-trigger"' not in html
     assert 'id="pipe-invalidated"' not in html
@@ -2217,8 +2390,13 @@ def display():
 """
     reactlog = generate_reactlog(code)
     html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="btn-mode-flush"' in html
-    assert 'id="btn-mode-full"' in html
+    assert 'id="activity-select"' in html
+    assert "Show current activity" in html
+    assert "Show all activity" in html
+    assert 'id="clientdata-select"' in html
+    assert "Show clientdata" in html
+    assert "Hide clientdata" in html
+    assert 'id="btn-toggle-clientdata"' not in html
     assert 'id="module-filter-select"' not in html
     assert "setViewMode(" in html
 

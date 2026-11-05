@@ -1621,13 +1621,94 @@ def load_reactlog_json(
     if raw_times and min(raw_times) > 100000.0:
         min_epoch_time = min(raw_times)
 
+    for item in raw_events:
+        act = str(item.get("action") or item.get("event") or "")
+        nid = item.get("reactId") or item.get("node_id") or item.get("id")
+        if not nid:
+            continue
+        nid_str = str(nid)
+        raw_lbl = item.get("label") or item.get("node_label")
+        existing = nodes_map.get(nid_str, {})
+        if (
+            nid_str not in nodes_map
+            or act == "define"
+            or (
+                raw_lbl
+                and str(raw_lbl) != nid_str
+                and existing.get("label") in (None, "", nid_str)
+            )
+        ):
+            ntype = (
+                item.get("type")
+                or item.get("node_type")
+                or existing.get("type")
+                or "calc"
+            )
+            role = "conductor"
+            clean_type = str(ntype).lower()
+            if clean_type in (
+                "input",
+                "reactiveval",
+                "reactivevalueskey",
+                "reactivevaluesnames",
+                "reactivevaluesaslist",
+            ) or nid_str.startswith("input:"):
+                role = "source"
+                clean_type = "input"
+            elif (
+                clean_type in ("observer", "output", "effect")
+                or nid_str.startswith("output:")
+                or nid_str.startswith("effect:")
+            ):
+                role = "observer"
+                clean_type = "output"
+            elif clean_type in ("calc", "reactive", "observable"):
+                role = "conductor"
+                clean_type = "calc"
+
+            resolved_lbl = (
+                str(raw_lbl)
+                if raw_lbl and str(raw_lbl) != nid_str
+                else str(existing.get("label") or raw_lbl or nid_str)
+            )
+            name_val = (
+                nid_str.split(":", 1)[1]
+                if ":" in nid_str
+                else (resolved_lbl if resolved_lbl != nid_str else nid_str)
+            )
+            merged_meta = {**existing, **item}
+            nodes_map[nid_str] = {
+                "id": nid_str,
+                "name": name_val,
+                "type": clean_type,
+                "role": role,
+                "label": resolved_lbl,
+                "line": merged_meta.get("line"),
+                **{
+                    key: value
+                    for key, value in merged_meta.items()
+                    if key in ("module", "render_type", "line", "source_file")
+                    and value is not None
+                },
+            }
+
+    def _resolve_node_label(raw_id: Any, fallback_label: Any = None) -> str:
+        sid = str(raw_id or "")
+        mapped = str(nodes_map.get(sid, {}).get("label") or "")
+        fb = str(fallback_label or "")
+        if mapped and mapped != sid:
+            return mapped
+        if fb and fb != sid:
+            return fb
+        return mapped or fb or sid
+
     normalized_events: List[Dict[str, Any]] = []
     step_idx = 0
 
     for item in raw_events:
         action = str(item.get("action") or item.get("event") or "")
         nid = item.get("reactId") or item.get("node_id") or item.get("id")
-        lbl = item.get("label") or item.get("node_label") or nid or ""
+        lbl = _resolve_node_label(nid, item.get("label") or item.get("node_label"))
         ntype = item.get("type") or item.get("node_type") or "calc"
         val = item.get("value")
         val_str = str(val) if val is not None else None
@@ -1685,7 +1766,11 @@ def load_reactlog_json(
                 details = f"Defined reactive node '{lbl}'"
             elif action == "dependsOn":
                 details = f"Dependency: '{dep_from}' used by '{dep_to}'"
-            elif action == "invalidate":
+            elif action == "dependsOnRemove":
+                details = (
+                    f"Removed dependency: '{dep_from}' no longer used by '{dep_to}'"
+                )
+            elif action in ("invalidate", "invalidateStart", "invalidateEnd"):
                 details = f"Invalidated '{lbl}'"
             elif action in ("valueChange", "inputChange"):
                 details = f"Value change for '{lbl}': {val_str}"
@@ -1693,50 +1778,17 @@ def load_reactlog_json(
                 details = f"Evaluating '{lbl}'"
             elif action in ("exit", "ordered"):
                 details = f"Completed evaluation of '{lbl}'"
+            elif action in ("idle", "queueEmpty"):
+                details = "Idle"
+            elif action == "freeze":
+                details = f"Froze '{lbl}'"
+            elif action == "thaw":
+                details = f"Thawed '{lbl}'"
             else:
-                details = f"Event '{action}' on '{lbl}'"
+                details = f"Event '{action}' on '{lbl}'" if lbl else f"Event '{action}'"
 
         if action == "dependsOn" and dep_from and dep_to:
             edges_set.add((str(dep_from), str(dep_to)))
-
-        if nid and (str(nid) not in nodes_map or action == "define"):
-            role = "conductor"
-            clean_type = str(ntype).lower()
-            if clean_type in (
-                "input",
-                "reactiveval",
-                "reactivevalueskey",
-                "reactivevaluesnames",
-                "reactivevaluesaslist",
-            ) or str(nid).startswith("input:"):
-                role = "source"
-                clean_type = "input"
-            elif (
-                clean_type in ("observer", "output", "effect")
-                or str(nid).startswith("output:")
-                or str(nid).startswith("effect:")
-            ):
-                role = "observer"
-                clean_type = "output"
-            elif clean_type in ("calc", "reactive", "observable"):
-                role = "conductor"
-                clean_type = "calc"
-
-            name_val = str(nid).split(":", 1)[1] if ":" in str(nid) else str(nid)
-            nodes_map[str(nid)] = {
-                "id": str(nid),
-                "name": name_val,
-                "type": clean_type,
-                "role": role,
-                "label": str(lbl),
-                "line": item.get("line"),
-                **{
-                    key: value
-                    for key, value in nodes_map.get(str(nid), {}).items()
-                    if key in ("module", "render_type", "line", "source_file")
-                    and value is not None
-                },
-            }
 
         ev_dict = _make_event(
             step=step_idx,
@@ -2439,11 +2491,11 @@ def format_reactlog_html(
     /* Okabe–Ito-based state fills; shared across themes, graph, legend, and timeline.
        Labels also identify each node state. */
     :root {{
-      --state-ready: #56b4e9;
-      --state-calculating: #f0e442;
-      --state-invalidating: #cc79a7;
-      --state-invalidated: #e2e2e2;
-      --state-frozen: #005a8d;
+      --state-ready: #66bce8;
+      --state-calculating: #f6cf45;
+      --state-invalidating: #e899c0;
+      --state-invalidated: #dce4ee;
+      --state-frozen: #0b5384;
     }}
     :root, [data-theme="dark"] {{
       color-scheme: dark;
@@ -2468,7 +2520,7 @@ def format_reactlog_html(
       --grid-line: rgba(105, 128, 151, 0.035);
       --header-bg: rgba(17, 24, 33, 0.96);
       --node-fill: #121b25;
-      --node-stroke: #35475a;
+      --node-stroke: #64748b;
       --node-text: #edf4fb;
       --node-subtext: #91a1b3;
       --source-panel-bg: #0c1219;
@@ -2482,7 +2534,9 @@ def format_reactlog_html(
       --legend-bg: rgba(17, 24, 33, 0.92);
       --card-bg: #141e2b;
       --track-bg: #1b2634;
-      --track-fill: #29475b;
+      --track-fill: #24384d;
+      --timeline-idle: #56b4e9;
+      --timeline-mark: #f59e0b;
       --playhead-bg: #f8fafc;
       --playhead-ring: #17212b;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -2511,7 +2565,7 @@ def format_reactlog_html(
       --grid-line: rgba(15, 23, 42, 0.04);
       --header-bg: rgba(255, 255, 255, 0.96);
       --node-fill: #ffffff;
-      --node-stroke: #cbd5e1;
+      --node-stroke: #475569;
       --node-text: #0f172a;
       --node-subtext: #64748b;
       --source-panel-bg: #f8fafc;
@@ -2524,9 +2578,11 @@ def format_reactlog_html(
       --toast-bg: rgba(255, 255, 255, 0.95);
       --legend-bg: rgba(255, 255, 255, 0.92);
       --card-bg: #f8fafc;
-      --track-bg: #f0f0f0;
-      --track-fill: #8e8e8e;
-      --playhead-bg: #262626;
+      --track-bg: #e2e8f0;
+      --track-fill: #cbd5e1;
+      --timeline-idle: #026aa7;
+      --timeline-mark: #b45309;
+      --playhead-bg: #0f172a;
       --playhead-ring: #ffffff;
     }}
     @media (prefers-color-scheme: light) {{
@@ -2553,7 +2609,7 @@ def format_reactlog_html(
         --grid-line: rgba(15, 23, 42, 0.04);
         --header-bg: rgba(255, 255, 255, 0.96);
         --node-fill: #ffffff;
-        --node-stroke: #cbd5e1;
+        --node-stroke: #475569;
         --node-text: #0f172a;
         --node-subtext: #64748b;
         --source-panel-bg: #f8fafc;
@@ -2566,9 +2622,11 @@ def format_reactlog_html(
         --toast-bg: rgba(255, 255, 255, 0.95);
         --legend-bg: rgba(255, 255, 255, 0.92);
         --card-bg: #f8fafc;
-        --track-bg: #f0f0f0;
-        --track-fill: #8e8e8e;
-        --playhead-bg: #262626;
+        --track-bg: #e2e8f0;
+        --track-fill: #cbd5e1;
+        --timeline-idle: #026aa7;
+        --timeline-mark: #b45309;
+        --playhead-bg: #0f172a;
         --playhead-ring: #ffffff;
       }}
     }}
@@ -2598,15 +2656,24 @@ def format_reactlog_html(
     .btn.active-filter {{ background: var(--surface-3); border-color: var(--accent); color: var(--accent); }}
     .inline-icon {{ display: inline-block; vertical-align: -0.15em; margin-right: 0.25rem; flex-shrink: 0; }}
     .btn.icon svg {{ display: block; margin: auto; }}
-    .search-wrap {{ position: relative; width: 200px; flex-shrink: 0; }}
-    .search-results {{ position: absolute; top: 100%; right: 0; left: auto; min-width: 360px; max-width: min(540px, calc(100vw - 32px)); width: max-content; max-height: 340px; overflow-y: auto; overflow-x: hidden; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px; z-index: 1000; box-shadow: 0 10px 28px rgba(0,0,0,0.28); }}
-    .search-results button {{ display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 7px 10px; background: var(--surface-2); color: var(--text); border: 0; border-radius: 6px; cursor: pointer; word-break: break-word; font-family: var(--mono); font-size: 0.73rem; line-height: 1.4; white-space: normal; }}
+    .search-wrap {{ position: relative; width: 210px; flex-shrink: 0; }}
+    .search-results {{ position: absolute; top: calc(100% + 4px); left: 0; right: auto; min-width: 340px; max-width: min(540px, calc(100vw - 32px)); width: max-content; max-height: 340px; overflow-y: auto; overflow-x: hidden; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px; z-index: 1000; box-shadow: 0 10px 28px rgba(0,0,0,0.28); }}
+    .search-results button {{ display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 7px 10px; background: var(--surface-2); color: var(--text); border: 1px solid transparent; border-radius: 6px; cursor: pointer; word-break: break-word; font-family: var(--mono); font-size: 0.73rem; line-height: 1.4; white-space: normal; }}
+    .search-results button + button {{ margin-top: 2px; }}
     .search-results button:hover, .search-results button:focus {{ background: var(--surface-3); outline: 1px solid var(--accent); }}
+    .search-results button.is-selected {{ background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }}
+    .search-item-main {{ display: inline-flex; align-items: center; gap: 7px; min-width: 0; }}
+    .search-check {{ display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; flex-shrink: 0; color: var(--accent); opacity: 0; }}
+    .search-results button.is-selected .search-check {{ opacity: 1; }}
     .search-icon {{ position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }}
-    .search-input {{ width: 100%; height: 28px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 0.55rem 0 1.75rem; font-size: 0.72rem; }}
-    .search-toggle {{ position: absolute; right: 2px; top: 2px; width: 28px; height: 28px; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }}
-    .search-input {{ padding-right: 2rem; }}
+    .search-input {{ width: 100%; height: 28px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 3.1rem 0 1.75rem; font-size: 0.72rem; }}
+    .search-input::-webkit-search-cancel-button, .search-input::-webkit-search-decoration {{ -webkit-appearance: none; appearance: none; display: none; }}
+    .search-clear {{ position: absolute; right: 24px; top: 2px; width: 22px; height: 24px; border: 0; border-radius: 4px; background: transparent; color: var(--accent); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.92rem; font-weight: 700; line-height: 1; padding: 0; }}
+    .search-clear:hover {{ background: var(--surface-3); color: var(--accent-hover); }}
+    .search-toggle {{ position: absolute; right: 2px; top: 2px; width: 24px; height: 24px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: pointer; }}
     .search-input::placeholder {{ color: var(--text-muted); }}
+    .filter-select {{ height: 28px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 0.5rem; font-size: 0.72rem; font-weight: 600; cursor: pointer; }}
+    .filter-select:hover {{ border-color: var(--border-strong); background: var(--surface-2); }}
     .empty-graph-message {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: .75rem; text-align: center; z-index: 1; }}
     .step-display {{ white-space: nowrap; flex-shrink: 0; font: 700 0.68rem var(--mono); color: var(--accent); min-width: 72px; text-align: right; font-variant-numeric: tabular-nums; }}
 
@@ -2627,17 +2694,10 @@ def format_reactlog_html(
     .graph-topbar {{ position: relative; z-index: 3; padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.45rem; flex-shrink: 0; }}
     .graph-top-row {{ display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }}
     .legend {{ display: flex; gap: 0.35rem; flex-wrap: wrap; padding: 0.25rem 0.45rem; border: 1px solid var(--border); border-radius: 6px; background: var(--legend-bg); backdrop-filter: blur(8px); pointer-events: auto; }}
-    .legend-item {{ display: inline-flex; align-items: center; gap: 0.3rem; color: var(--text-muted); font: 650 0.62rem var(--mono); padding: 0.08rem 0.15rem; }}
-    .legend-dot {{ width: 6px; height: 6px; border-radius: 50%; background: var(--role-color); }}
-    .zoom-controls {{ display: flex; gap: 0.25rem; pointer-events: auto; align-items: center; }}
-    .action-toast[hidden] {{ display: none; }}
-    .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 0.35rem 0.9rem; color: var(--text); font: 650 0.72rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.45rem; pointer-events: none; }}
     .legend-item {{ display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.1rem 0.2rem; }}
-    .legend-dot {{ width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--role-color); }}
-    [data-role="conductor"] .legend-dot {{ border-radius: 1px; }}
-    [data-role="effect"] .legend-dot {{ border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); }}
-    [data-role="output"] .legend-dot {{ border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }}
-    .zoom-controls {{ display: flex; gap: 0.25rem; pointer-events: auto; }}
+    .legend-dot {{ width: 12px; height: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--role-color); }}
+    .legend-dot svg {{ width: 12px; height: 12px; display: block; }}
+    .zoom-controls {{ display: flex; gap: 0.25rem; pointer-events: auto; align-items: center; }}
     .action-toast[hidden] {{ display: none; }}
     .action-toast {{ position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 0.4rem 1rem; color: var(--text); font: 650 0.74rem var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.5rem; pointer-events: none; }}
 
@@ -2647,14 +2707,14 @@ def format_reactlog_html(
     .graph-edge:hover {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }}
     .graph-edge.is-isolated {{ opacity: 1; stroke: var(--text-muted); stroke-dasharray: 5 4; }}
     .graph-edge.is-inactive {{ stroke: var(--text-muted); stroke-dasharray: 1 5; opacity: 1; }}
-    .legend-swatch {{ width: 14px; height: 14px; border: 1px solid #0004; border-radius: 2px; }}
+    .legend-swatch {{ width: 14px; height: 14px; border: 1.5px solid var(--node-stroke); border-radius: 4px; }}
     .legend-line {{ display: inline-block; width: 16px; border-top: 2px solid var(--text-muted); }}
     .legend-line.is-isolated {{ border-top-style: dashed; }}
     .legend-line.is-inactive {{ border-top-style: dotted; }}
     .legend-sep {{ width: 1px; height: 14px; background: var(--border); margin: 0 2px; align-self: center; }}
-    .legend-role-btn {{ display: inline-flex; align-items: center; gap: 0.3rem; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.08rem 0.3rem; cursor: pointer; opacity: 0.45; transition: opacity 120ms ease, border-color 120ms ease, background 120ms ease; }}
-    .legend-role-btn:hover {{ background: var(--surface-2); opacity: 0.85; }}
-    .legend-role-btn.is-active {{ opacity: 1; color: var(--text); border-color: var(--border); background: var(--surface-2); }}
+    .legend-role-btn {{ display: inline-flex; align-items: center; gap: 0.35rem; background: transparent; border: 1px solid transparent; border-radius: 6px; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.08rem 0.35rem; cursor: pointer; opacity: 0.55; transition: opacity 120ms ease, border-color 120ms ease, background 120ms ease; }}
+    .legend-role-btn:hover {{ background: var(--surface-3); opacity: 0.92; }}
+    .legend-role-btn.is-active {{ opacity: 1; color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }}
     .graph-node.is-clientdata {{ opacity: 0.78; }}
     .burst-anchor.is-mark {{ border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); color: #b45309; }}
     [data-theme="dark"] .burst-anchor.is-mark {{ color: #fbbf24; }}
@@ -2685,9 +2745,9 @@ def format_reactlog_html(
     .action-toast {{ animation: none; }}
     }}
     .graph-node {{ cursor: pointer; }}
-    .graph-node:hover .node-card {{ filter: brightness(1.1); }}
+    .graph-node:hover .node-card {{ filter: brightness(1.06); }}
     .graph-node.is-selected .node-card {{ stroke: var(--node-selection-stroke) !important; stroke-width: 3.5px !important; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 65%, transparent)); }}
-    .graph-node.is-executed:not(.is-selected) .node-card {{ stroke: var(--node-selection-stroke) !important; stroke-width: 2.5px !important; stroke-dasharray: 7 4; }}
+    .graph-node.is-active:not(.is-selected) .node-card {{ stroke: var(--node-selection-stroke) !important; stroke-width: 2.5px !important; }}
     .module-box {{ cursor: pointer; }}
     .module-box:focus rect {{ stroke: var(--accent); stroke-width: 3; }}
     #insp-plot {{ margin: 12px 0; }}
@@ -2798,26 +2858,6 @@ def format_reactlog_html(
     .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
     .event-details {{ overflow-wrap: anywhere; font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
 
-    /* View Mode Switcher */
-    .view-mode-buttons {{ display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; padding: 2px; gap: 2px; }}
-    .view-mode-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.22rem 0.55rem; border-radius: 5px; font: 700 0.68rem var(--sans); cursor: pointer; transition: all 120ms ease; }}
-    .view-mode-btn:hover {{ color: var(--text); background: var(--surface-3); }}
-    .view-mode-btn.is-active {{ background: var(--surface-elevated); color: var(--accent); font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }}
-
-    /* Flush Stepper & Nav */
-    .flush-nav-group {{ display: flex; align-items: center; gap: 0.3rem; }}
-    .flush-selector {{ max-width: 240px; text-overflow: ellipsis; }}
-    .flush-picker-wrap {{ position: relative; display: inline-flex; align-items: center; gap: 2px; }}
-    .flush-counter-badge {{ font: 700 0.68rem var(--mono); color: var(--text-muted); background: var(--surface-2); padding: 0.18rem 0.45rem; border-radius: 5px; border: 1px solid var(--border); white-space: nowrap; }}
-    .flush-picker-btn {{ width: 22px !important; min-height: 24px !important; height: 24px !important; padding: 0; color: var(--text-muted); }}
-    .flush-picker-menu {{ position: absolute; top: calc(100% + 6px); left: 0; min-width: 220px; max-width: 320px; max-height: 260px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 4px; z-index: 120; box-shadow: 0 10px 28px rgba(0,0,0,0.35); display: flex; flex-direction: column; gap: 2px; }}
-    .flush-picker-menu[hidden] {{ display: none !important; }}
-    .flush-picker-item {{ width: 100%; text-align: left; background: transparent; border: 0; border-radius: 5px; padding: 5px 8px; color: var(--text); font: 600 0.68rem var(--mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-    .flush-picker-item:hover, .flush-picker-item:focus-visible {{ background: var(--surface-3); color: var(--accent); }}
-    .flush-picker-item.is-active {{ background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); color: var(--accent); font-weight: 700; }}
-
-    /* Flush Pipeline Bar */
-
     .filter-state {{ display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; font-size:.75rem; }}
     #active-filters {{ display:flex; flex-wrap:wrap; gap:.5rem; }}
     #why-card {{ order:-2; }}
@@ -2844,7 +2884,7 @@ def format_reactlog_html(
 
     /* Keep controls readable and reserve the canvas for the graph. */
     .app-header, .toolbar, .trace-timeline-bar {{ flex-shrink: 0; }}
-    .btn, .search-input {{ min-height: 32px; }}
+    .btn, .search-input, .filter-select {{ min-height: 32px; }}
     .btn.icon {{ width: 32px; flex-shrink: 0; }}
     .search-wrap {{ flex: 1 1 200px; max-width: 320px; }}
     .search-results {{ top: calc(100% + 6px); right: 0; left: auto; padding: 8px; }}
@@ -2906,26 +2946,26 @@ def format_reactlog_html(
     #scrubber-range::-moz-range-thumb {{ height: 24px; width: 3px; border: 0; border-radius: 0; background: transparent; }}
     #scrubber-range:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
     #trace-markers {{ position: absolute; inset: 0 1.5px; pointer-events: none; z-index: 1; }}
-    .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: var(--state-ready); pointer-events: auto; cursor: pointer; }}
-    .timeline-marker.is-output {{ top: 6px; height: 12px; background: var(--output); }}
-    .timeline-marker.is-mark {{ background: var(--text-muted); z-index: 2; }}
+    .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: var(--timeline-idle); pointer-events: auto; cursor: pointer; }}
+    .timeline-marker.is-output {{ top: 5px; height: 14px; border-radius: 2px; background: var(--output); }}
+    .timeline-marker.is-mark {{ background: var(--timeline-mark); z-index: 2; }}
     .timeline-marker:hover, .timeline-marker:focus-visible {{ outline: 2px solid var(--text); outline-offset: 1px; z-index: 3; }}
     .timeline-playhead {{ position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); pointer-events: none; z-index: 4; }}
     .timeline-playhead::before {{ content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--playhead-bg); }}
     .timeline-key {{ display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font: .7rem var(--sans); }}
     .timeline-key span {{ display: inline-flex; align-items: center; gap: 5px; }}
-    .timeline-key i {{ display: inline-block; width: 3px; height: 14px; background: var(--state-ready); }}
-    .timeline-key .key-output {{ height: 6px; background: var(--output); }}
-    .timeline-key .key-mark {{ background: var(--text-muted); }}
+    .timeline-key i {{ display: inline-block; width: 3px; height: 14px; border-radius: 1px; background: var(--timeline-idle); }}
+    .timeline-key .key-output {{ height: 8px; border-radius: 2px; background: var(--output); }}
+    .timeline-key .key-mark {{ background: var(--timeline-mark); border-radius: 1px; }}
     .timeline-key .key-position {{ width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); }}
     .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
     .timeline-tooltip[hidden] {{ display: none; }}
     .timeline-navigation {{ display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }}
     .status-center {{ gap: 3px; }}
     .status-center .btn {{ width: 28px; min-height: 28px; height: 28px; }}
-    .status-center .nav-idle svg {{ color: var(--state-ready); }}
+    .status-center .nav-idle svg {{ color: var(--timeline-idle); }}
     .status-center .nav-output svg {{ color: var(--output); }}
-    .status-center .nav-mark svg {{ color: var(--text-muted); }}
+    .status-center .nav-mark svg {{ color: var(--timeline-mark); }}
     .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
     .status-left, .status-center, .status-right {{ flex-wrap: wrap; }}
     @media (max-width: 1000px) {{
@@ -2939,11 +2979,11 @@ def format_reactlog_html(
     .legend-group {{ display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; }}
     .legend-label {{ color: var(--text); font: 700 12px var(--sans); }}
     .legend-item, .legend-role-btn {{ font: 600 12px var(--sans); }}
-    .legend-role-btn {{ min-height: 28px; padding: 3px 7px; opacity: 1; color: var(--text); border: 1px dashed var(--border-strong); }}
-    .legend-role-btn[aria-pressed="false"] {{ text-decoration: line-through; }}
-    .legend-role-btn:hover {{ opacity: 1; }}
+    .legend-role-btn {{ min-height: 28px; padding: 3px 8px; opacity: 1; color: var(--text); border: 1px solid var(--border-strong); background: var(--surface-2); }}
+    .legend-role-btn[aria-pressed="false"] {{ text-decoration: line-through; border-style: dashed; opacity: 0.6; background: transparent; }}
+    .legend-role-btn:hover {{ opacity: 1; border-color: var(--accent); }}
     .legend-dot {{ width: 12px; height: 12px; }}
-    .legend-swatch {{ border-color: var(--text-muted); }}
+    .legend-swatch {{ border-color: var(--node-stroke); }}
     .graph-top-row {{ align-items: start; }}
     .node-focus-ring {{ opacity: 0; stroke: var(--text); stroke-width: 3px; pointer-events: none; }}
     .graph-node:focus-visible {{ outline: none; }}
@@ -2952,6 +2992,10 @@ def format_reactlog_html(
     .source-line-num, .source-drawer-code .source-line-num {{ opacity: 1; }}
     @media (prefers-reduced-motion: reduce) {{
       *, *::before, *::after {{ scroll-behavior: auto !important; transition: none !important; }}
+    }}
+    @media (forced-colors: active) {{
+      .legend-swatch, .timeline-marker {{ forced-color-adjust: none; }}
+      .graph-node.is-selected .node-card {{ stroke: Highlight !important; }}
     }}
     .module-name {{ color: var(--module-text); fill: var(--module-text); font-weight: 700; }}
     .graph-node .module-name {{ fill: #3b0764; }}
@@ -2973,16 +3017,22 @@ def format_reactlog_html(
     <div class="header-center">
       <div class="search-wrap">
         <svg class="search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" placeholder="Search names or module:name" onfocus="handleSearch(this.value)" oninput="handleSearch(this.value)" aria-label="Filter reactive nodes by name, type, id, or module" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results" onkeydown="handleSearchKey(event)" />
+        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search names or module:name" onfocus="handleSearch(this.value, false)" oninput="handleSearch(this.value, true)" aria-label="Filter reactive nodes by name, type, id, or module" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results" onkeydown="handleSearchKey(event)" />
+        <button type="button" class="search-clear" id="search-clear" aria-label="Clear node filter" title="Clear filter" onclick="clearSearchFilter()" hidden>×</button>
         <button type="button" class="search-toggle" aria-label="Show node choices" aria-controls="search-results" aria-expanded="false" onclick="toggleSearchChoices()">▾</button>
         <div id="search-results" class="search-results" role="listbox" aria-label="Node search results" onkeydown="handleSearchKey(event)" hidden></div>
       </div>
+      <select class="filter-select" id="clientdata-select" aria-label="Clientdata visibility" onchange="setClientDataVisibility(this.value)">
+        <option value="hide">Hide clientdata</option>
+        <option value="show">Show clientdata</option>
+      </select>
+      <select class="filter-select" id="activity-select" aria-label="Activity view" onchange="setViewMode(this.value)">
+        <option value="full">Show all activity</option>
+        <option value="flush">Show current activity</option>
+      </select>
       <div class="filter-state" aria-label="Current exploration scope">
         <span id="filter-node-count" role="status" aria-live="polite"></span>
         <div id="active-filters"></div>
-        <button type="button" class="btn mini" id="btn-toggle-clientdata" onclick="toggleClientData()" aria-pressed="true" hidden>Show clientdata</button>
-        <button type="button" class="btn mini" id="btn-toggle-changes" onclick="toggleChangedNodes()" aria-pressed="true" hidden>Show all nodes</button>
-        <button class="btn mini" onclick="resetGraphView()" aria-label="Clear all filters">Clear all</button>
       </div>
     </div>
     <div class="header-actions">
@@ -2997,24 +3047,9 @@ def format_reactlog_html(
   <!-- Timeline playback controls -->
   <footer class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
     <div class="timeline-navigation">
-      <div class="flush-picker-wrap">
-        <span class="flush-counter-badge" id="flush-counter-badge" title="An activity is a group of recorded events. Some activities have no visible changes.">Activity 1 of 1</span>
-        <button type="button" class="btn icon mini flush-picker-btn" id="btn-flush-picker" onclick="toggleFlushPicker(event)" aria-label="Jump to activity" aria-expanded="false" title="Jump to any activity"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <div id="flush-picker-menu" class="flush-picker-menu" role="menu" aria-label="Activities list" hidden></div>
-      </div>
       <button class="btn mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">▶ Play</button>
       <div class="status-time-group">
         <span class="trace-clock" id="trace-current-time">0.0s</span><span class="trace-sep">/</span><span class="trace-total" id="trace-total-time">0.0s</span><span class="step-display" id="step-display">Step 0 / 0</span>
-      </div>
-    </div>
-    <div class="status-right">
-      <div class="view-mode-buttons" role="group" aria-label="Graph view mode">
-        <button class="btn mini view-mode-btn" id="btn-mode-flush" onclick="setViewMode('flush')" title="Show activity for this group">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Current activity
-        </button>
-        <button class="btn mini view-mode-btn" id="btn-mode-full" onclick="setViewMode('full')" title="Show all items">
-          <svg class="inline-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> All items
-        </button>
       </div>
     </div>
   </footer>
@@ -3056,10 +3091,10 @@ def format_reactlog_html(
               <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
               </div>
               <div class="legend-group"><span class="legend-label">Type</span>
-              <button type="button" class="legend-role-btn is-active" data-role="source" onclick="toggleRoleFilter('source')" aria-pressed="true" title="Filter Input nodes"><span class="legend-dot" style="--role-color:var(--source)"></span>Input</button>
-              <button type="button" class="legend-role-btn is-active" data-role="conductor" onclick="toggleRoleFilter('conductor')" aria-pressed="true" title="Filter Calc nodes"><span class="legend-dot" style="--role-color:var(--calc)"></span>Calc</button>
-              <button type="button" class="legend-role-btn is-active" data-role="effect" onclick="toggleRoleFilter('effect')" aria-pressed="true" title="Filter Effect nodes"><span class="legend-dot" style="--role-color:var(--effect)"></span>Effect</button>
-              <button type="button" class="legend-role-btn is-active" data-role="output" onclick="toggleRoleFilter('output')" aria-pressed="true" title="Filter Output nodes"><span class="legend-dot" style="--role-color:var(--output)"></span>Output</button>
+              <button type="button" class="legend-role-btn is-active" data-role="source" onclick="toggleRoleFilter('source')" aria-pressed="true" title="Filter Input nodes"><span class="legend-dot" style="--role-color:var(--source)"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 0.8A5.2 5.2 0 1 0 6 11.2A5.2 5.2 0 1 0 6 0.8ZM6 3.7A2.3 2.3 0 1 1 6 8.3A2.3 2.3 0 1 1 6 3.7Z"/></svg></span>Input</button>
+              <button type="button" class="legend-role-btn is-active" data-role="conductor" onclick="toggleRoleFilter('conductor')" aria-pressed="true" title="Filter Calc nodes"><span class="legend-dot" style="--role-color:var(--calc)"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 0.6L10.8 3.3V8.7L6 11.4L1.2 8.7V3.3ZM6 3.6L8.1 4.8V7.2L6 8.4L3.9 7.2V4.8Z"/></svg></span>Calc</button>
+              <button type="button" class="legend-role-btn is-active" data-role="effect" onclick="toggleRoleFilter('effect')" aria-pressed="true" title="Filter Effect nodes"><span class="legend-dot" style="--role-color:var(--effect)"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 0.9L11.3 10.3H0.7ZM6 4.5L8.4 8.7H3.6Z"/></svg></span>Effect</button>
+              <button type="button" class="legend-role-btn is-active" data-role="output" onclick="toggleRoleFilter('output')" aria-pressed="true" title="Filter Output nodes"><span class="legend-dot" style="--role-color:var(--output)"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 0.5L11.5 6L6 11.5L0.5 6ZM6 3.6L8.4 6L6 8.4L3.6 6Z"/></svg></span>Output</button>
               </div>
             </div>
             <div class="zoom-controls">
@@ -3078,14 +3113,14 @@ def format_reactlog_html(
         <div class="empty-graph-message" id="empty-graph-message" role="status" hidden>No recorded changes or executions in this view. Select Show all nodes to see the full graph.</div>
         <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--text-muted)" />
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M 0.5 1.5 L 8.5 5 L 0.5 8.5 L 2.3 5 z" fill="var(--text-muted)" />
             </marker>
-            <marker id="arrow-isolated" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--text-muted)" />
+            <marker id="arrow-isolated" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M 0.8 1.8 L 8 5 L 0.8 8.2 z" fill="var(--bg)" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round" />
             </marker>
-            <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
+            <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
+              <path d="M 0.5 1.5 L 8.5 5 L 0.5 8.5 L 2.3 5 z" fill="var(--accent)" />
             </marker>
             <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
               <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.22" />
@@ -3206,10 +3241,11 @@ def format_reactlog_html(
     let playTimer = null;
     let selectedNodeId = null;
     let focusedNodeId = null;
+    let selectedSearchNodeId = null;
     let searchQuery = "";
     let activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
     let hideClientData = true;
-    let changedNodesOnly = true;
+    let changedNodesOnly = false;
     let changedNodeIds = null;
     let activeBurstIndex = 0;
     let zoomLevel = 1;
@@ -3335,24 +3371,33 @@ def format_reactlog_html(
     }}
 
     function getActiveLineageSet() {{
-      if (!searchQuery || !searchQuery.startsWith('id:')) return null;
-      const needle = searchQuery.slice(3).trim().toLowerCase();
-      if (!needle) return null;
-      const matchingIds = [];
-      (reactlogData.nodes || []).forEach(n => {{
-        const nid = String(n.id || '').toLowerCase();
-        const nlabel = String(n.label || '').toLowerCase();
-        const nname = String(n.name || '').toLowerCase();
-        if (
-          nid === needle ||
-          nid.endsWith(':' + needle) ||
-          nid.includes(needle) ||
-          nlabel === needle ||
-          nname === needle
-        ) {{
-          matchingIds.push(n.id);
-        }}
-      }});
+      if (!searchQuery) return null;
+      const isIdQuery = searchQuery.startsWith('id:');
+      const selectedSearchNode = selectedSearchNodeId ? nodeIndex.get(selectedSearchNodeId) : null;
+      const focusedNode = focusedNodeId ? nodeIndex.get(focusedNodeId) : null;
+      const matchedNode = (selectedSearchNode && searchQuery === nodeDisplayName(selectedSearchNode).toLowerCase())
+        ? selectedSearchNode
+        : ((focusedNode && searchQuery === nodeDisplayName(focusedNode).toLowerCase()) ? focusedNode : null);
+      if (!isIdQuery && !matchedNode) return null;
+      const matchingIds = matchedNode ? [matchedNode.id] : [];
+      if (isIdQuery) {{
+        const needle = searchQuery.slice(3).trim().toLowerCase();
+        if (!needle) return null;
+        (reactlogData.nodes || []).forEach(n => {{
+          const nid = String(n.id || '').toLowerCase();
+          const nlabel = String(n.label || '').toLowerCase();
+          const nname = String(n.name || '').toLowerCase();
+          if (
+            nid === needle ||
+            nid.endsWith(':' + needle) ||
+            nid.includes(needle) ||
+            nlabel === needle ||
+            nname === needle
+          ) {{
+            matchingIds.push(n.id);
+          }}
+        }});
+      }}
       if (matchingIds.length === 0) return null;
       const lineage = new Set(matchingIds);
       matchingIds.forEach(id => {{
@@ -3362,13 +3407,28 @@ def format_reactlog_html(
       return lineage;
     }}
 
+    function syncSearchClearButton() {{
+      const input = document.getElementById('search-input');
+      const clearBtn = document.getElementById('search-clear');
+      if (!clearBtn) return;
+      const hasValue = Boolean((input && input.value && input.value.trim()) || searchQuery || selectedSearchNodeId);
+      clearBtn.hidden = !hasValue;
+    }}
+
     function filterLineageForNode(nodeId) {{
       if (!nodeId) return;
-      const filterVal = `id:${{nodeId}}`;
-      document.getElementById('search-input').value = filterVal;
+      const node = nodeIndex.get(nodeId);
+      const filterVal = node ? nodeDisplayName(node) : `id:${{nodeId}}`;
+      selectedSearchNodeId = nodeId;
       searchQuery = filterVal.toLowerCase();
-      renderGraph();
-      renderInspector();
+      document.getElementById('search-input').value = filterVal;
+      syncSearchClearButton();
+      closeSearchChoices();
+      if (node && isClientDataNode(node)) setClientDataVisibility('show');
+      if (node && changedNodeIds && !changedNodeIds.has(node.id)) changedNodesOnly = false;
+      activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
+      selectNode(nodeId);
+      refreshExploration();
       fitGraph();
     }}
 
@@ -3706,7 +3766,9 @@ def format_reactlog_html(
         timelineStops.push({{ step, kind }});
         const label = kind === 'mark' ? 'User mark' : kind === 'idle' ? 'Idle' : 'Output calculation';
         const time = formatTime(ev.time_sec ?? ev.time ?? 0);
-        const description = ev.node_label || ev.label || ev.node_id || (kind === 'mark' ? ev.details : '');
+        const description = kind === 'mark'
+          ? (ev.node_label || ev.label || ev.details || '')
+          : nodeDisplayName(ev.node_id || ev.id || ev.node_label || ev.label || '');
         const text = `${{label}} · Step ${{step}} · ${{time}}${{description ? ' · ' + description : ''}}`;
         const marker = document.createElement('button');
         marker.type = 'button';
@@ -3757,12 +3819,12 @@ def format_reactlog_html(
       activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
       const activeLabel = document.getElementById('active-flush-label');
       activeLabel.textContent = curWave
-        ? `Activity ${{activeBurstIndex + 1}} of ${{allBursts.length}} · ${{curWave.humanAction || curWave.triggerLabel || 'Initial render'}}`
+        ? (curWave.isInit ? 'Initial render' : (curWave.humanAction || curWave.triggerLabel || 'Initial render'))
         : 'No recorded activity';
       activeLabel.title = activeLabel.textContent;
       const ev = events[currentStep];
       const status = document.getElementById('trace-status-line');
-      status.textContent = ev ? (isIdleEvent(ev) ? 'Idle' : ['mark', 'userMark'].includes(ev.action || ev.event) ? `User mark${{ev.details ? ' · ' + ev.details : ''}}` : (ev.details || ev.action || ev.event || '')) : 'No events';
+      status.textContent = ev ? (isIdleEvent(ev) ? 'Idle' : ['mark', 'userMark'].includes(ev.action || ev.event) ? `User mark${{ev.details ? ' · ' + nodeDisplayName(String(ev.details)) : ''}}` : (formatEventDetails(ev) || ev.action || ev.event || '')) : 'No events';
       status.title = status.textContent;
       const range = document.getElementById('scrubber-range');
       const percent = 100 * currentStep / Math.max(1, events.length - 1);
@@ -3909,10 +3971,9 @@ def format_reactlog_html(
 
     function setViewMode(mode) {{
       currentViewMode = mode;
-      document.querySelectorAll('.view-mode-btn').forEach(btn => {{
-        btn.classList.toggle('is-active', btn.id === `btn-mode-${{mode}}`);
-      }});
-      renderGraph();
+      const activitySelect = document.getElementById('activity-select');
+      if (activitySelect) activitySelect.value = mode;
+      refreshExploration();
       fitGraph();
     }}
 
@@ -3998,32 +4059,20 @@ def format_reactlog_html(
 
     function toggleChangedNodes() {{
       changedNodesOnly = !changedNodesOnly;
-      if (!changedNodesOnly) hideClientData = false;
+      refreshExploration();
+      fitGraph();
+    }}
+
+    function setClientDataVisibility(mode) {{
+      hideClientData = mode === 'hide';
+      const clientSelect = document.getElementById('clientdata-select');
+      if (clientSelect) clientSelect.value = hideClientData ? 'hide' : 'show';
       refreshExploration();
       fitGraph();
     }}
 
     function toggleClientData() {{
-      hideClientData = !hideClientData;
-      refreshExploration();
-      fitGraph();
-    }}
-
-    function closeFlushPicker() {{
-      const menu = document.getElementById('flush-picker-menu');
-      const btn = document.getElementById('btn-flush-picker');
-      if (menu) menu.hidden = true;
-      if (btn) btn.setAttribute('aria-expanded', 'false');
-    }}
-
-    function toggleFlushPicker(event) {{
-      if (event) event.stopPropagation();
-      const menu = document.getElementById('flush-picker-menu');
-      const btn = document.getElementById('btn-flush-picker');
-      if (!menu || !btn) return;
-      const shouldOpen = menu.hidden;
-      menu.hidden = !shouldOpen;
-      btn.setAttribute('aria-expanded', String(shouldOpen));
+      setClientDataVisibility(hideClientData ? 'show' : 'hide');
     }}
 
     function updateFlushUI() {{
@@ -4031,29 +4080,6 @@ def format_reactlog_html(
       const curIdx = getCurrentFlushIndex();
       const curWave = allBursts[curIdx] || allBursts[0];
       if (!curWave) return;
-
-
-      const badge = document.getElementById('flush-counter-badge');
-      if (badge) badge.textContent = `Activity ${{curIdx + 1}} of ${{allBursts.length}}`;
-      const pickerMenu = document.getElementById('flush-picker-menu');
-      if (pickerMenu) {{
-        pickerMenu.replaceChildren();
-        allBursts.forEach((burst, idx) => {{
-          const item = document.createElement('button');
-          item.type = 'button';
-          item.className = 'flush-picker-item' + (idx === curIdx ? ' is-active' : '');
-          item.setAttribute('role', 'menuitem');
-          item.setAttribute('data-flush-index', String(idx));
-          const lbl = burst.humanAction || burst.triggerLabel || (burst.isInit ? 'Initial render' : `Activity ${{idx + 1}}`);
-          item.textContent = `Activity ${{idx + 1}}: ${{lbl}}`;
-          item.onclick = (e) => {{
-            e.stopPropagation();
-            closeFlushPicker();
-            selectFlush(idx);
-          }};
-          pickerMenu.appendChild(item);
-        }});
-      }}
 
       const invCount = curWave.invalidatedNodes ? curWave.invalidatedNodes.size : 0;
       const calcCount = curWave.calcs ? curWave.calcs.length : 0;
@@ -4133,17 +4159,11 @@ def format_reactlog_html(
 
     function updateFilterState(nodes) {{
       document.getElementById('filter-node-count').textContent = `${{nodes.length}} of ${{(reactlogData.nodes || []).length}} nodes`;
-      const clientBtn = document.getElementById('btn-toggle-clientdata');
-      if (clientBtn) {{
-        clientBtn.hidden = !(reactlogData.nodes || []).some(isClientDataNode);
-        clientBtn.classList.toggle('active-filter', hideClientData);
-        clientBtn.setAttribute('aria-pressed', String(hideClientData));
-        clientBtn.textContent = hideClientData ? 'Show clientdata' : 'Hide clientdata';
-      }}
-      const changedBtn = document.getElementById('btn-toggle-changes');
-      changedBtn.hidden = changedNodeIds === null;
-      changedBtn.setAttribute('aria-pressed', String(changedNodesOnly));
-      changedBtn.textContent = changedNodesOnly ? 'Show all nodes' : 'Show active nodes';
+      syncSearchClearButton();
+      const clientSelect = document.getElementById('clientdata-select');
+      if (clientSelect) clientSelect.value = hideClientData ? 'hide' : 'show';
+      const activitySelect = document.getElementById('activity-select');
+      if (activitySelect) activitySelect.value = currentViewMode;
       syncRoleFilterButtons();
       const chips = document.getElementById('active-filters');
       chips.replaceChildren();
@@ -4154,10 +4174,6 @@ def format_reactlog_html(
         button.onclick = () => {{ clear(); refreshExploration(); }};
         chips.appendChild(button);
       }};
-      if (currentViewMode === 'flush') add('activity', 'Current activity', () => setViewMode('full'));
-      if (searchQuery) add('search', searchQuery, () => {{
-        searchQuery = ''; document.getElementById('search-input').value = ''; document.getElementById('search-results').hidden = true;
-      }});
       if (selectedStageFilter) add('stage', selectedStageFilter, () => {{ selectedStageFilter = null; }});
       if (ALL_ROLES.some(r => !activeRoles.has(r))) add('role', 'Role filter', () => {{
         activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
@@ -4170,9 +4186,6 @@ def format_reactlog_html(
     function init() {{
       document.addEventListener('click', (e) => {{
         if (!e.target.closest('.search-wrap')) closeSearchChoices();
-        if (!e.target.closest('.flush-picker-wrap')) {{
-          closeFlushPicker();
-        }}
         const nodeBtn = e.target.closest('[data-node-id]');
         if (nodeBtn && nodeBtn.dataset.nodeId) {{
           selectNode(nodeBtn.dataset.nodeId);
@@ -4246,12 +4259,12 @@ def format_reactlog_html(
     }}
 
     function nodeKind(n) {{
-      if (n.type === 'module') return {{ label: 'Module', color: 'var(--effect)', shape: 'M1 1H11V11H1Z', verb: 'run' }};
-      if (n.render_type === 'plot' || n.render_type === 'image') return {{ label: 'Plot', color: 'var(--output)', shape: 'M6 0L12 6L6 12L0 6Z', verb: 'render' }};
-      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: 'var(--source)', shape: 'M6 1A5 5 0 1 0 6 11A5 5 0 1 0 6 1Z', verb: 'change' }};
-      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: 'var(--calc)', shape: 'M1 1H11V11H1Z', verb: 'run' }};
-      if (n.type === 'effect') return {{ label: 'Effect', color: 'var(--effect)', shape: 'M6 1L11 11H1Z', verb: 'trigger' }};
-      return {{ label: 'Output', color: 'var(--output)', shape: 'M6 0L12 6L6 12L0 6Z', verb: 'render' }};
+      if (n.type === 'module') return {{ label: 'Module', color: 'var(--effect)', lightColor: '#994a78', darkColor: '#e3a4c8', shape: 'M3.2 0.8H11.2V8.8H9.6V2.4H3.2V0.8ZM0.8 3.2H8.8V11.2H0.8V3.2ZM2.6 5V9.4H7V5H2.6Z', verb: 'run' }};
+      if (n.render_type === 'plot' || n.render_type === 'image') return {{ label: 'Plot', color: 'var(--output)', lightColor: '#006e59', darkColor: '#5fc7a7', shape: 'M6 0.5L11.5 6L6 11.5L0.5 6ZM6 3.2L8.8 6L6 8.8L3.2 6ZM6 4.6L7.4 6L6 7.4L4.6 6Z', verb: 'render' }};
+      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: 'var(--source)', lightColor: '#005a9c', darkColor: '#56b4e9', shape: 'M6 0.8A5.2 5.2 0 1 0 6 11.2A5.2 5.2 0 1 0 6 0.8ZM6 3.7A2.3 2.3 0 1 1 6 8.3A2.3 2.3 0 1 1 6 3.7Z', verb: 'change' }};
+      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: 'var(--calc)', lightColor: '#9c4f00', darkColor: '#e9b44c', shape: 'M6 0.6L10.8 3.3V8.7L6 11.4L1.2 8.7V3.3ZM6 3.6L8.1 4.8V7.2L6 8.4L3.9 7.2V4.8Z', verb: 'run' }};
+      if (n.type === 'effect') return {{ label: 'Effect', color: 'var(--effect)', lightColor: '#994a78', darkColor: '#e3a4c8', shape: 'M6 0.9L11.3 10.3H0.7ZM6 4.5L8.4 8.7H3.6Z', verb: 'trigger' }};
+      return {{ label: 'Output', color: 'var(--output)', lightColor: '#006e59', darkColor: '#5fc7a7', shape: 'M6 0.5L11.5 6L6 11.5L0.5 6ZM6 3.6L8.4 6L6 8.4L3.6 6Z', verb: 'render' }};
     }}
 
     function toggleInspector(forceState) {{
@@ -4306,13 +4319,48 @@ def format_reactlog_html(
 
     function nodeDisplayName(value) {{
       if (typeof value === 'string') {{
-        const node = nodeIndex.get(value);
+        const map = typeof nodeIndex !== 'undefined' ? nodeIndex : null;
+        const node = map ? map.get(value) : null;
         if (node) return nodeDisplayName(node);
         const action = value.match(/^(Recalc: |Render: |Click: )(.+)$/);
-        if (action && nodeIndex.has(action[2])) return action[1] + nodeDisplayName(nodeIndex.get(action[2]));
+        if (action && map && map.has(action[2])) return action[1] + nodeDisplayName(map.get(action[2]));
+        if (map && value.includes("'")) {{
+          return value.replace(/'([^']+)'/g, (match, token) =>
+            map.has(token) ? `'${{nodeDisplayName(map.get(token))}}'` : match
+          );
+        }}
         return value;
       }}
       return String(value?.label || value?.name || value?.id || '');
+    }}
+
+    function formatEventDetails(ev) {{
+      if (!ev) return '';
+      const act = ev.action || ev.event || '';
+      if (ev.details) return nodeDisplayName(String(ev.details));
+      const nid = ev.node_id || ev.reactId || ev.id || '';
+      const lbl = nodeDisplayName(nid || ev.node_label || ev.label || '');
+      const fromId = ev.edge_from || ev.depOnReactId || ev.dependsOn || '';
+      const toId = ev.edge_to || nid || '';
+      if (act === 'dependsOn' && (fromId || toId)) {{
+        return `Dependency: '${{nodeDisplayName(fromId)}}' used by '${{nodeDisplayName(toId || lbl)}}'`;
+      }}
+      if (act === 'dependsOnRemove' && (fromId || toId)) {{
+        return `Removed dependency: '${{nodeDisplayName(fromId)}}' used by '${{nodeDisplayName(toId || lbl)}}'`;
+      }}
+      if (act === 'define' && lbl) return `Defined reactive node '${{lbl}}'`;
+      if ((act === 'invalidate' || act === 'invalidateEnd') && lbl) return `Invalidated '${{lbl}}'`;
+      if (act === 'invalidateStart' && lbl) return `Invalidating '${{lbl}}'`;
+      if ((act === 'valueChange' || act === 'inputChange') && lbl) {{
+        return ev.value !== undefined && ev.value !== null
+          ? `Value change for '${{lbl}}': ${{ev.value}}`
+          : `Value change for '${{lbl}}'`;
+      }}
+      if ((act === 'enter' || act === 'wouldEvaluate') && lbl) return `Evaluating '${{lbl}}'`;
+      if ((act === 'exit' || act === 'ordered') && lbl) return `Completed evaluation of '${{lbl}}'`;
+      if (act === 'freeze' && lbl) return `Froze '${{lbl}}'`;
+      if (act === 'thaw' && lbl) return `Thawed '${{lbl}}'`;
+      return lbl ? `Event '${{act}}' on '${{lbl}}'` : act;
     }}
 
     function nodeLabelHTML(node, svg = false, maxChars = Infinity) {{
@@ -4366,11 +4414,13 @@ def format_reactlog_html(
         item.className = 'event-item' + (idx === currentStep ? ' is-current' : '');
         item.setAttribute('data-step', String(idx));
         const nodeId = ev.node_id || ev.id || '';
+        const evName = nodeIndex.has(nodeId) ? nodeDisplayName(nodeIndex.get(nodeId)) : nodeDisplayName(ev.node_label || ev.label || ev.event || ev.action);
+        const evDetails = formatEventDetails(ev);
         if (nodeId.startsWith('input:')) item.classList.add('kind-input');
         else if (nodeId.startsWith('calc:')) item.classList.add('kind-calc');
         else if (nodeId.startsWith('output:')) item.classList.add('kind-output');
         else if (nodeId.startsWith('effect:')) item.classList.add('kind-effect');
-        item.setAttribute('aria-label', `Step ${{idx}}: ${{ev.node_label || ev.label || ev.event || ev.action}}. ${{ev.details || ''}}`);
+        item.setAttribute('aria-label', `Step ${{idx}}: ${{evName}}. ${{evDetails}}`);
         item.onclick = () => seekTo(idx);
 
         const header = document.createElement('div');
@@ -4385,7 +4435,7 @@ def format_reactlog_html(
 
         const nameSpan = document.createElement('span');
         nameSpan.className = 'event-name';
-        nameSpan.innerHTML = nodeIndex.has(nodeId) ? nodeLabelHTML(nodeIndex.get(nodeId)) : escapeHTML(ev.node_label || ev.label || ev.event || ev.action);
+        nameSpan.innerHTML = nodeIndex.has(nodeId) ? nodeLabelHTML(nodeIndex.get(nodeId)) : escapeHTML(evName);
 
         nameWrap.appendChild(stepSpan);
         nameWrap.appendChild(nameSpan);
@@ -4417,7 +4467,7 @@ def format_reactlog_html(
 
         const details = document.createElement('div');
         details.className = 'event-details';
-        details.textContent = ev.details || '';
+        details.textContent = evDetails;
 
         item.appendChild(header);
         item.appendChild(details);
@@ -4442,51 +4492,60 @@ def format_reactlog_html(
         ? events.slice(curWave.startStep, curWave.endStep + 1)
         : events;
 
-      const cleanTargetName = cleanName(targetNode.name || targetNode.id);
+      const targetLabel = nodeDisplayName(targetNode);
+      const cleanTargetName = cleanName(targetLabel);
+      const cleanTargetId = cleanName(targetNode.name || targetNode.id);
       const burstEventForNode = burstEvents.find(e => {{
         const eid = e.node_id || e.id || '';
-        return eid === nodeId || cleanName(eid) === cleanTargetName || (e.node_label && cleanName(e.node_label) === cleanTargetName);
+        return eid === nodeId || cleanName(eid) === cleanTargetId || cleanName(eid) === cleanTargetName || (e.node_label && (cleanName(e.node_label) === cleanTargetName || cleanName(e.node_label) === cleanTargetId));
       }});
 
       const ranInBurst = Boolean(curWave && (curWave.isInit || burstEventForNode));
-      const directParents = Array.from(adjUpstream.get(nodeId) || []).map(p => nodeIndex.get(p) || {{ id: p, label: p }});
+      const directParents = Array.from(adjUpstream.get(nodeId) || []).map(p => nodeIndex.get(p) || {{ id: p, label: nodeDisplayName(p) }});
 
       if (ranInBurst) {{
-        const question = `Why did ${{targetNode.label}} ${{questionVerb}}?`;
+        const question = `Why did ${{targetLabel}} ${{questionVerb}}?`;
         const execTime = (burstEventForNode && (burstEventForNode.time_sec !== undefined ? burstEventForNode.time_sec : burstEventForNode.time))
           || (curWave ? curWave.time : 0);
 
         const executedNamesInBurst = new Set();
         burstEvents.forEach(e => {{
           const eid = e.node_id || e.id || '';
-          if (eid) executedNamesInBurst.add(cleanName(eid));
+          if (eid) {{
+            executedNamesInBurst.add(eid);
+            executedNamesInBurst.add(cleanName(eid));
+          }}
           if (e.node_label) executedNamesInBurst.add(cleanName(e.node_label));
         }});
 
-        const activeParents = filterItems(directParents, p => executedNamesInBurst.has(cleanName(p.name || p.id)));
+        const activeParents = filterItems(directParents, p =>
+          executedNamesInBurst.has(p.id) ||
+          executedNamesInBurst.has(cleanName(p.name || p.id)) ||
+          executedNamesInBurst.has(cleanName(nodeDisplayName(p)))
+        );
         const inactiveParents = filterItems(directParents, p => !activeParents.includes(p));
 
         let narrative = '';
         if (targetNode.role === 'source' || targetNode.type === 'input') {{
-          const valChange = curWave && curWave.humanAction ? curWave.humanAction : targetNode.label;
-          narrative = `<p><strong>${{escapeHTML(targetNode.label)}}</strong> changed (${{escapeHTML(valChange)}}) at ${{escapeHTML(formatTime(execTime))}}.</p>`;
+          const valChange = curWave && curWave.humanAction ? curWave.humanAction : targetLabel;
+          narrative = `<p><strong>${{escapeHTML(targetLabel)}}</strong> changed (${{escapeHTML(valChange)}}) at ${{escapeHTML(formatTime(execTime))}}.</p>`;
         }} else {{
-          narrative = `<p><strong>${{escapeHTML(targetNode.label)}}</strong> ${{escapeHTML(questionVerb)}} at ${{escapeHTML(formatTime(execTime))}}.</p>`;
+          narrative = `<p><strong>${{escapeHTML(targetLabel)}}</strong> ${{escapeHTML(questionVerb)}} at ${{escapeHTML(formatTime(execTime))}}.</p>`;
           if (activeParents.length > 0) {{
-            narrative += `<div class="why-section-title">Immediate causes:</div><ul class="why-causes-list">${{activeParents.map(p => '<li><strong>' + escapeHTML(p.label) + '</strong> recalculated</li>').join('')}}</ul>`;
+            narrative += `<div class="why-section-title">Immediate causes:</div><ul class="why-causes-list">${{activeParents.map(p => '<li><strong>' + escapeHTML(nodeDisplayName(p)) + '</strong> recalculated</li>').join('')}}</ul>`;
           }} else if (directParents.length > 0) {{
-            narrative += `<div class="why-section-title">Immediate causes:</div><ul class="why-causes-list">${{directParents.map(p => '<li><strong>' + escapeHTML(p.label) + '</strong> changed</li>').join('')}}</ul>`;
+            narrative += `<div class="why-section-title">Immediate causes:</div><ul class="why-causes-list">${{directParents.map(p => '<li><strong>' + escapeHTML(nodeDisplayName(p)) + '</strong> changed</li>').join('')}}</ul>`;
           }} else if (curWave && curWave.humanAction) {{
             narrative += `<div class="why-section-title">Immediate causes:</div><ul class="why-causes-list"><li><strong>${{escapeHTML(curWave.humanAction)}}</strong></li></ul>`;
           }}
           if (inactiveParents.length > 0) {{
-            narrative += `<div class="why-section-title" style="margin-top:0.4rem;opacity:0.75">Other potential dependencies:</div><div style="font:500 0.68rem var(--mono);color:var(--text-muted)">${{inactiveParents.map(p => escapeHTML(p.label)).join(', ')}}</div>`;
+            narrative += `<div class="why-section-title" style="margin-top:0.4rem;opacity:0.75">Other potential dependencies:</div><div style="font:500 0.68rem var(--mono);color:var(--text-muted)">${{inactiveParents.map(p => escapeHTML(nodeDisplayName(p))).join(', ')}}</div>`;
           }}
         }}
 
         return {{
           nodeId,
-          targetLabel: targetNode.label,
+          targetLabel,
           question,
           time: execTime,
           narrative,
@@ -4496,13 +4555,13 @@ def format_reactlog_html(
         }};
       }} else {{
         const actionName = curWave ? (curWave.humanAction || curWave.triggerLabel || 'this action') : 'this action';
-        const question = `${{targetNode.label}} did not ${{questionVerb}}`;
+        const question = `${{targetLabel}} did not ${{questionVerb}}`;
 
         let lastExec = null;
         for (let i = (curWave ? curWave.startStep - 1 : stepIdx); i >= 0; i--) {{
           const e = events[i];
           const eid = e.node_id || e.id || '';
-          if (eid === nodeId || cleanName(eid) === cleanTargetName) {{
+          if (eid === nodeId || cleanName(eid) === cleanTargetId || cleanName(eid) === cleanTargetName) {{
             lastExec = e;
             break;
           }}
@@ -4512,21 +4571,21 @@ def format_reactlog_html(
         if (curWave && curWave.invalidatedNodes && curWave.invalidatedNodes.size > 0) {{
           const invParents = filterItems(directParents, p => curWave.invalidatedNodes.has(p.id));
           if (invParents.length > 0) {{
-            upstreamNote = `Upstream dependencies invalidated: ${{invParents.map(p => escapeHTML(p.label)).join(', ')}}`;
+            upstreamNote = `Upstream dependencies invalidated: ${{invParents.map(p => escapeHTML(nodeDisplayName(p))).join(', ')}}`;
           }}
         }}
-        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetNode.label)}}</strong> was observed or inferred during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
+        let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${{questionVerb}} during ${{escapeHTML(actionName)}}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${{escapeHTML(targetLabel)}}</strong> was observed or inferred during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${{upstreamNote}}</div></div>`;
         if (lastExec) {{
           const lastTime = lastExec.time_sec !== undefined ? lastExec.time_sec : (lastExec.time || 0);
           narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${{escapeHTML(formatTime(lastTime))}}</span><button type="button" class="btn mini" data-seek-step="${{lastExec.step}}">Jump to run</button></div>`;
         }}
         if (directParents.length > 0) {{
-          narrative += `<div class="why-section-title" style="margin-top:0.5rem">Potential dependencies:</div><div style="font:500 0.68rem var(--mono);color:var(--text-muted)">${{directParents.map(p => escapeHTML(p.label)).join(', ')}}</div>`;
+          narrative += `<div class="why-section-title" style="margin-top:0.5rem">Potential dependencies:</div><div style="font:500 0.68rem var(--mono);color:var(--text-muted)">${{directParents.map(p => escapeHTML(nodeDisplayName(p))).join(', ')}}</div>`;
         }}
 
         return {{
           nodeId,
-          targetLabel: targetNode.label,
+          targetLabel,
           question,
           time: null,
           narrative,
@@ -4671,11 +4730,12 @@ def format_reactlog_html(
         const filterBtn = document.getElementById('btn-filter-lineage');
         if (filterBtn) filterBtn.style.display = 'none';
 
-        whyTitle.textContent = ev.node_label || ev.label || ev.action || ev.event;
-        whyStory.innerHTML = `<p>${{escapeHTML(ev.details || 'Step #' + currentStep)}}</p>`;
+        const evTitle = nodeDisplayName(ev.node_id || ev.id || ev.node_label || ev.label || ev.action || ev.event);
+        whyTitle.textContent = evTitle;
+        whyStory.innerHTML = `<p>${{escapeHTML(formatEventDetails(ev) || 'Step #' + currentStep)}}</p>`;
         whyFlow.innerHTML = '';
 
-        document.getElementById('insp-title').textContent = ev.node_label || ev.label || ev.action || ev.event;
+        document.getElementById('insp-title').textContent = evTitle;
         document.getElementById('insp-meta-line').textContent = '—';
         const runsEl = document.getElementById('insp-runs-badge');
         if (runsEl) runsEl.textContent = '';
@@ -4776,7 +4836,7 @@ def format_reactlog_html(
           refsBlock.hidden = false;
           const refButtons = children.map(c => {{
             const cNode = nodeIndex.get(c);
-            const lbl = cNode ? cNode.label : c;
+            const lbl = cNode ? nodeDisplayName(cNode) : nodeDisplayName(c);
             const lineStr = cNode && cNode.line ? ` · line ${{cNode.line}}` : '';
             return `<button type="button" class="conn-pill" data-node-id="${{escapeHTML(c)}}">${{escapeHTML(lbl)}}${{lineStr}}</button>`;
           }}).join(' ');
@@ -4811,6 +4871,11 @@ def format_reactlog_html(
     function clearNodeSelection() {{
       focusedNodeId = null;
       selectedNodeId = null;
+      if (selectedSearchNodeId) {{
+        selectedSearchNodeId = null;
+        searchQuery = '';
+        document.getElementById('search-input').value = '';
+      }}
       renderInspector();
       renderGraph();
       updateSourceHighlight();
@@ -4850,6 +4915,127 @@ def format_reactlog_html(
         outgoing[from].forEach(to => {{ ranks[to] = Math.max(ranks[to], ranks[from] + 1); if (--incoming[to] === 0) queue.push(to); }});
       }}
       return new Map(nodes.map(n => [n.id, ranks[component.get(n.id)]]));
+    }}
+
+    function arrangeGraphBand(members, edges, ranks, top, colWidth, rowHeight) {{
+      const columns = new Map();
+      members.forEach(n => {{
+        const rank = ranks.get(n.id);
+        if (!columns.has(rank)) columns.set(rank, []);
+        columns.get(rank).push(n);
+      }});
+      const ordered = [...columns.keys()].sort((a, b) => a - b);
+      const order = new Map();
+      columns.forEach(col => col.forEach((n, i) => order.set(n.id, i)));
+      // Alternate sweeps group nodes by their neighbours without moving them across modules.
+      for (let pass = 0; pass < 4; pass++) {{
+        const reverse = pass % 2 === 1;
+        for (const rank of reverse ? ordered.slice().reverse() : ordered) {{
+          const col = columns.get(rank), scores = new Map();
+          col.forEach(n => {{
+            const peers = filterItems(filterItems(edges, e => reverse ? e.from === n.id : e.to === n.id)
+              .map(e => reverse ? e.to : e.from), id => order.has(id));
+            scores.set(n.id, peers.length
+              ? peers.reduce((sum, id) => sum + order.get(id) + ranks.get(id) / 1000, 0) / peers.length
+              : order.get(n.id));
+          }});
+          col.sort((a, b) => scores.get(a.id) - scores.get(b.id) || order.get(a.id) - order.get(b.id));
+          col.forEach((n, i) => order.set(n.id, i));
+        }}
+      }}
+      const rows = Math.max(1, ...[...columns.values()].map(col => col.length));
+      const positions = {{}};
+      for (const rank of ordered) {{
+        const col = columns.get(rank);
+        let previous = -1;
+        col.forEach((n, i) => {{
+          const parents = filterItems(edges, e => e.to === n.id && positions[e.from]).map(e => positions[e.from].y);
+          const preferred = parents.length
+            ? Math.round((parents.reduce((sum, y) => sum + y, 0) / parents.length - top - 40) / rowHeight)
+            : i;
+          const row = Math.max(previous + 1, Math.min(rows - col.length + i, preferred));
+          positions[n.id] = {{ x: 150 + rank * colWidth, y: top + 40 + row * rowHeight }};
+          previous = row;
+        }});
+      }}
+      return {{ positions, rows }};
+    }}
+
+    function routeGraphEdge(edge, positions, nodeWidth, nodeHeight, edges = []) {{
+      const from = positions[edge.from], to = positions[edge.to];
+      if (!from || !to) return [];
+      const offset = (outgoing, id) => {{
+        const peers = filterItems(edges, e => outgoing ? e.from === id : e.to === id)
+          .sort((a, b) => {{
+            const first = outgoing ? a.to : a.from, second = outgoing ? b.to : b.from;
+            return positions[first].y - positions[second].y || first.localeCompare(second);
+          }});
+        const index = peers.indexOf(edge);
+        return peers.length > 1 && index >= 0
+          ? (index / (peers.length - 1) - 0.5) * Math.min(nodeHeight - 24, (peers.length - 1) * 12) : 0;
+      }};
+      const x1 = from.x + nodeWidth / 2, y1 = from.y + offset(true, edge.from);
+      const forward = to.x > from.x;
+      const x2 = to.x + (forward ? -1 : 1) * nodeWidth / 2, y2 = to.y + offset(false, edge.to);
+      const lane = Math.max(0, edges.indexOf(edge));
+      let points;
+      if (forward && x2 - x1 < nodeWidth) {{
+        const gutter = x1 + (x2 - x1) * (0.35 + (lane % 5) * 0.075);
+        points = [[x1, y1], [gutter, y1], [gutter, y2], [x2, y2]];
+      }} else {{
+        const clearance = 12, inset = 18 + (lane % 4) * 4;
+        const exit = x1 + inset, entry = x2 + (forward ? -inset : inset);
+        const left = Math.min(exit, entry), right = Math.max(exit, entry);
+        const obstacles = filterItems(Object.values(positions), p =>
+          p.x + nodeWidth / 2 + clearance > left && p.x - nodeWidth / 2 - clearance < right);
+        const candidates = [y1, y2, (y1 + y2) / 2, ...obstacles.flatMap(p =>
+          [p.y - nodeHeight / 2 - clearance, p.y + nodeHeight / 2 + clearance])];
+        const cost = y => Math.abs(y1 - y) + Math.abs(y2 - y) + Math.abs(y - (y1 + y2) / 2) * 0.01;
+        // Connections that skip a column travel through an empty horizontal lane.
+        const y = filterItems(candidates, candidate => obstacles.every(p =>
+          candidate <= p.y - nodeHeight / 2 - clearance || candidate >= p.y + nodeHeight / 2 + clearance))
+          .sort((a, b) => cost(a) - cost(b))[0];
+        points = [[x1, y1], [exit, y1], [exit, y], [entry, y], [entry, y2], [x2, y2]];
+      }}
+      const route = [];
+      for (const point of points) {{
+        const last = route[route.length - 1];
+        if (last && last[0] === point[0] && last[1] === point[1]) continue;
+        while (route.length > 1) {{
+          const a = route[route.length - 2], b = route[route.length - 1];
+          if ((a[0] === b[0] && b[0] === point[0]) || (a[1] === b[1] && b[1] === point[1])) route.pop();
+          else break;
+        }}
+        route.push(point);
+      }}
+      return route;
+    }}
+
+    function graphEdgePath(edge, positions, nodeWidth, nodeHeight, edges = []) {{
+      const route = routeGraphEdge(edge, positions, nodeWidth, nodeHeight, edges);
+      if (route.length < 2) return '';
+      const [x1, y1] = route[0], [x2, y2] = route[route.length - 1];
+      const clearance = 12;
+      const canCurveDirectly = x2 > x1 && Object.entries(positions).every(([id, p]) => {{
+        if (id === edge.from || id === edge.to) return true;
+        if (p.x + nodeWidth / 2 + clearance <= x1 || p.x - nodeWidth / 2 - clearance >= x2) return true;
+        const u = Math.max(0, Math.min(1, (p.x - x1) / (x2 - x1)));
+        const curveY = y1 + (y2 - y1) * (3 * u * u - 2 * u * u * u);
+        return Math.abs(curveY - p.y) >= nodeHeight / 2 + clearance;
+      }});
+      if (canCurveDirectly) {{
+        const dx = Math.max(28, (x2 - x1) * 0.42);
+        return `M ${{x1}} ${{y1}} C ${{x1 + dx}} ${{y1}}, ${{x2 - dx}} ${{y2}}, ${{x2}} ${{y2}}`;
+      }}
+      const laneY = route.length >= 4 ? route[2][1] : (y1 + y2) / 2;
+      if (x2 > x1) {{
+        const exitX = Math.min((x1 + x2) / 2, x1 + 56);
+        const entryX = Math.max(exitX, x2 - 56);
+        return `M ${{x1}} ${{y1}} C ${{(x1 + exitX) / 2}} ${{y1}}, ${{(x1 + exitX) / 2}} ${{laneY}}, ${{exitX}} ${{laneY}} C ${{(2 * exitX + entryX) / 3}} ${{laneY}}, ${{(exitX + 2 * entryX) / 3}} ${{laneY}}, ${{entryX}} ${{laneY}} C ${{(entryX + x2) / 2}} ${{laneY}}, ${{(entryX + x2) / 2}} ${{y2}}, ${{x2}} ${{y2}}`;
+      }}
+      const exitX = route[1][0], entryX = route[route.length - 2][0];
+      const midStart = (x1 + exitX) / 2, midEnd = (x2 + entryX) / 2;
+      return `M ${{x1}} ${{y1}} C ${{exitX}} ${{y1}}, ${{exitX}} ${{laneY}}, ${{midStart}} ${{laneY}} C ${{(2 * midStart + midEnd) / 3}} ${{laneY}}, ${{(midStart + 2 * midEnd) / 3}} ${{laneY}}, ${{midEnd}} ${{laneY}} C ${{entryX}} ${{laneY}}, ${{entryX}} ${{y2}}, ${{x2}} ${{y2}}`;
     }}
 
     function toggleModule(name) {{
@@ -4953,10 +5139,9 @@ def format_reactlog_html(
       nodes.forEach(n => {{ const key = n.module || ''; if (!bands.has(key)) bands.set(key, []); bands.get(key).push(n); }});
       let top = 70;
       for (const [name, members] of bands) {{
-        const columns = new Map();
-        members.forEach(n => {{ const rank = ranks.get(n.id); if (!columns.has(rank)) columns.set(rank, []); columns.get(rank).push(n); }});
-        const rows = Math.max(...Array.from(columns.values(), col => col.length));
-        columns.forEach((col, rank) => col.forEach((n, i) => {{ pos[n.id] = {{ x: 150 + rank * colWidth, y: top + 40 + i * rowHeight }}; }}));
+        const layout = arrangeGraphBand(members, edges, ranks, top, colWidth, rowHeight);
+        const rows = layout.rows;
+        Object.assign(pos, layout.positions);
         if (!name || !collapsedModules.has(name)) {{
           const left = Math.min(...members.map(n => pos[n.id].x)) - nodeWidth / 2 - 20;
           const right = Math.max(...members.map(n => pos[n.id].x)) + nodeWidth / 2 + 20;
@@ -4973,7 +5158,7 @@ def format_reactlog_html(
           const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           rect.setAttribute('x', left); rect.setAttribute('y', top - 28); rect.setAttribute('width', Math.max(320, right - left));
           rect.setAttribute('height', rows * rowHeight + 20); rect.setAttribute('rx', '12');
-          rect.setAttribute('fill', isLight ? '#e0f2fe55' : '#17314b55'); rect.setAttribute('stroke', isLight ? '#7ba6c9' : '#507291');
+          rect.setAttribute('fill', isLight ? '#e0f2fe66' : '#17314b55'); rect.setAttribute('stroke', isLight ? '#3b6b91' : '#5b82a6');
           rect.setAttribute('stroke-dasharray', '5 4'); box.appendChild(rect);
           const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           label.setAttribute('x', left + 14); label.setAttribute('y', top - 8); label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
@@ -5001,18 +5186,6 @@ def format_reactlog_html(
         const p1 = pos[e.from];
         const p2 = pos[e.to];
         if (p1 && p2) {{
-          const x1 = p1.x + (nodeWidth / 2);
-          const y1 = p1.y;
-          const x2 = p2.x - (nodeWidth / 2);
-          const y2 = p2.y;
-          const midX = x1 + Math.max(35, (x2 - x1) * 0.5);
-          const dy = y2 - y1;
-          const dx = x2 - x1;
-          const crossBand = Math.abs(dy) > rowHeight * 1.25;
-          const arcOffset = crossBand ? Math.min(90, Math.abs(dy) * 0.22) * (dx < 80 ? -1 : 1) : 0;
-          const c1x = midX + arcOffset;
-          const c2x = midX + arcOffset;
-
           const fromMatch = representatives.get(activeEvent.edge_from || activeEvent.dependsOn);
           const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
           const isEdgeActive = !e.inactive && ((fromMatch && toMatch)
@@ -5020,22 +5193,23 @@ def format_reactlog_html(
             : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate')));
 
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', `M ${{x1}} ${{y1}} C ${{c1x}} ${{y1}}, ${{c2x}} ${{y2}}, ${{x2}} ${{y2}}`);
+          path.setAttribute('d', graphEdgePath(e, pos, nodeWidth, nodeHeight, edges));
           path.setAttribute('fill', 'none');
           path.setAttribute('stroke-linecap', 'round');
+          path.setAttribute('stroke-linejoin', 'round');
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
           path.setAttribute('data-active', isEdgeActive ? 'true' : 'false');
           path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (!e.related ? ' is-dimmed' : ''));
           const edgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+          const fromLabel = nodeDisplayName(e.from);
+          const toLabel = nodeDisplayName(e.to);
           if (e.isolated) {{
             path.setAttribute('stroke-dasharray', '5 4');
             path.setAttribute('data-isolated', 'true');
-            edgeTitle.textContent = `Isolated read (reactive.isolate) from ${{e.from}} to ${{e.to}}`;
+            edgeTitle.textContent = `Isolated read (reactive.isolate) from ${{fromLabel}} to ${{toLabel}}`;
           }} else {{
-            const fromNode = nodeIndex.get(e.from);
-            const toNode = nodeIndex.get(e.to);
-            edgeTitle.textContent = `${{fromNode ? (fromNode.label || e.from) : e.from}} → ${{toNode ? (toNode.label || e.to) : e.to}}`;
+            edgeTitle.textContent = `${{fromLabel}} → ${{toLabel}}`;
           }}
           path.appendChild(edgeTitle);
           path.setAttribute('marker-end', isEdgeActive ? 'url(#arrow-active)' : (e.isolated ? 'url(#arrow-isolated)' : 'url(#arrow)'));
@@ -5061,7 +5235,7 @@ def format_reactlog_html(
         const state = replay.states.get(n.id) || 'ready';
         g.setAttribute('data-state', state);
         g.setAttribute('aria-pressed', String(isSelected));
-        g.style.setProperty('--node-selection-stroke', state === 'frozen' ? '#ffffff' : '#17212b');
+        g.style.setProperty('--node-selection-stroke', isLight ? '#0f172a' : '#ffffff');
         g.setAttribute('data-active', isActive ? 'true' : 'false');
         g.setAttribute('tabindex', '0');
         g.setAttribute('role', 'button');
@@ -5069,7 +5243,20 @@ def format_reactlog_html(
 
         g.onclick = (e) => {{
           e.stopPropagation();
-          if (n.type !== 'module') selectNode(n.id);
+          if (n.type === 'module') return;
+          if (e.detail >= 2) {{
+            filterLineageForNode(n.id);
+            return;
+          }}
+          selectNode(n.id);
+        }};
+        g.ondblclick = (e) => {{
+          e.stopPropagation();
+          if (n.type === 'module') {{
+            toggleModule(n.module);
+            return;
+          }}
+          filterLineageForNode(n.id);
         }};
         g.onkeydown = e => {{
           if (e.key === 'Enter' || e.key === ' ') {{
@@ -5080,7 +5267,6 @@ def format_reactlog_html(
         if (n.type === 'module') {{
           g.setAttribute('aria-expanded', 'false');
           g.setAttribute('aria-label', `Expand module ${{n.module}}`);
-          g.ondblclick = e => {{ e.stopPropagation(); toggleModule(n.module); }};
           g.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(n.module); }} }};
         }};
         g.onmouseenter = () => highlightDependencies(n.id);
@@ -5091,11 +5277,14 @@ def format_reactlog_html(
         rect.setAttribute('y', p.y - (nodeHeight / 2));
         rect.setAttribute('width', nodeWidth);
         rect.setAttribute('height', nodeHeight);
-        rect.setAttribute('rx', '8');
+        rect.setAttribute('rx', '10');
 
         const fillCol = reactiveStateColors[state];
-        const strokeCol = isSelected ? (isLight ? '#0284c7' : '#63b3ff') : (isLight ? '#cbd5e1' : '#35475a');
-        const strokeW = isSelected ? '2.8' : '1';
+        const defaultStroke = state === 'frozen'
+          ? (isLight ? '#073859' : '#7dd3fc')
+          : (isLight ? '#475569' : '#1e293b');
+        const strokeCol = isSelected ? (isLight ? '#0f172a' : '#ffffff') : defaultStroke;
+        const strokeW = isSelected ? '3' : '1.5';
         const filterVal = isSelected ? (isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.35))' : 'drop-shadow(0 0 10px rgba(99,179,255,0.4))') : 'url(#card-shadow)';
 
         rect.setAttribute('fill', fillCol);
@@ -5111,37 +5300,39 @@ def format_reactlog_html(
         focusRing.setAttribute('y', p.y - (nodeHeight / 2) - 5);
         focusRing.setAttribute('width', nodeWidth + 10);
         focusRing.setAttribute('height', nodeHeight + 10);
-        focusRing.setAttribute('rx', '11');
+        focusRing.setAttribute('rx', '13');
         focusRing.setAttribute('fill', 'none');
         focusRing.removeAttribute('filter');
         focusRing.setAttribute('aria-hidden', 'true');
         g.appendChild(focusRing);
 
-        // A neutral backing keeps type colors independent of the node's state fill.
+        // A high-contrast badge keeps role shapes crisp across all state fills.
         const markerBacking = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         markerBacking.setAttribute('class', 'node-kind-backing');
         markerBacking.setAttribute('x', p.x - (nodeWidth / 2) + 8);
         markerBacking.setAttribute('y', p.y - 13);
         markerBacking.setAttribute('width', '26');
         markerBacking.setAttribute('height', '26');
-        markerBacking.setAttribute('rx', '5');
-        markerBacking.setAttribute('fill', 'var(--surface)');
-        markerBacking.setAttribute('stroke', 'var(--text-muted)');
+        markerBacking.setAttribute('rx', '7');
+        markerBacking.setAttribute('fill', state === 'frozen' ? '#09131c' : '#f8fafc');
+        markerBacking.setAttribute('stroke', state === 'frozen' ? 'rgba(255, 255, 255, 0.35)' : 'rgba(15, 23, 42, 0.24)');
+        markerBacking.setAttribute('stroke-width', '1.2');
         markerBacking.setAttribute('aria-hidden', 'true');
         g.appendChild(markerBacking);
 
         const accent = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         accent.setAttribute('class', 'node-kind-marker');
         accent.setAttribute('d', kind.shape);
+        accent.setAttribute('fill-rule', 'evenodd');
         accent.setAttribute('transform', `translate(${{p.x - (nodeWidth / 2) + 13.8}}, ${{p.y - 7.2}}) scale(1.2)`);
-        accent.setAttribute('fill', kind.color);
+        accent.setAttribute('fill', state === 'frozen' ? kind.darkColor : kind.lightColor);
         accent.setAttribute('aria-hidden', 'true');
         g.appendChild(accent);
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', p.x - (nodeWidth / 2) + 43);
         text.setAttribute('y', p.y - 4);
-        text.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#17212b');
+        text.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#0f172a');
         text.setAttribute('font-family', 'var(--mono)');
         text.setAttribute('font-size', '14px');
         text.setAttribute('font-weight', '700');
@@ -5154,7 +5345,7 @@ def format_reactlog_html(
         const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         subText.setAttribute('x', p.x - (nodeWidth / 2) + 43);
         subText.setAttribute('y', p.y + 14);
-        subText.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#17212b');
+        subText.setAttribute('fill', state === 'frozen' ? '#e2e8f0' : '#1e293b');
         subText.setAttribute('font-size', '12px');
         subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · Enter to expand` : `${{kind.label}} · ${{state}}`;
         g.appendChild(subText);
@@ -5282,7 +5473,7 @@ def format_reactlog_html(
       if (ev && (ev.phase === 'interaction' || !['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act)) && (act === 'inputChange' || act === 'userClick' || act === 'userAction' || act === 'outputUpdated' || act === 'valueChange')) {{
         const evTime = ev.time_sec !== undefined ? ev.time_sec : ev.time;
         const timeStr = evTime !== undefined ? `[${{formatTime(evTime)}}] ` : '';
-        toast.innerHTML = `${{ICONS.video}} ${{escapeHTML(timeStr)}}${{escapeHTML(ev.details || act)}}`;
+        toast.innerHTML = `${{ICONS.video}} ${{escapeHTML(timeStr)}}${{escapeHTML(formatEventDetails(ev) || act)}}`;
         toast.hidden = false;
       }} else {{
         toast.hidden = true;
@@ -5522,11 +5713,45 @@ def format_reactlog_html(
 
     function toggleSearchChoices() {{
       if (!document.getElementById('search-results').hidden) closeSearchChoices();
-      else {{ handleSearch(document.getElementById('search-input').value); document.getElementById('search-input').focus(); }}
+      else {{ handleSearch(document.getElementById('search-input').value, false); document.getElementById('search-input').focus(); }}
     }}
 
-    function handleSearch(q) {{
-      searchQuery = (q || '').trim().toLowerCase();
+    function clearSearchFilter() {{
+      selectedSearchNodeId = null;
+      focusedNodeId = null;
+      selectedNodeId = null;
+      searchQuery = '';
+      document.getElementById('search-input').value = '';
+      syncSearchClearButton();
+      closeSearchChoices();
+      refreshExploration();
+      renderInspector();
+      updateSourceHighlight();
+      updateTraceTimelineScrubber(getCurrentStepTime());
+      fitGraph();
+    }}
+
+    function handleSearch(q, isTyping = true) {{
+      const rawQuery = (q || '').trim().toLowerCase();
+      if (isTyping) {{
+        searchQuery = rawQuery;
+        if (!rawQuery) {{
+          selectedSearchNodeId = null;
+          focusedNodeId = null;
+          selectedNodeId = null;
+        }} else if (selectedSearchNodeId) {{
+          const selNode = nodeIndex.get(selectedSearchNodeId);
+          if (!selNode || rawQuery !== nodeDisplayName(selNode).toLowerCase()) {{
+            selectedSearchNodeId = null;
+            focusedNodeId = null;
+            selectedNodeId = null;
+          }}
+        }}
+      }} else {{
+        searchQuery = rawQuery;
+      }}
+      syncSearchClearButton();
+      const dropdownQuery = (!isTyping && selectedSearchNodeId) ? '' : searchQuery;
       const results = document.getElementById('search-results');
       results.replaceChildren();
       results.hidden = false;
@@ -5534,37 +5759,32 @@ def format_reactlog_html(
       document.querySelector('.search-toggle').setAttribute('aria-expanded', 'true');
       {{
         const matches = filterItems(
-          filterItems(reactlogData.nodes || [], n => searchQuery || ((!hideClientData || !isClientDataNode(n)) && (!changedNodesOnly || !changedNodeIds || changedNodeIds.has(n.id)))).map(n => ({{ node: n, score: searchQuery ? nodeSearchScore(n, searchQuery) : 0 }})),
+          filterItems(reactlogData.nodes || [], n => dropdownQuery || n.id === selectedSearchNodeId || ((!hideClientData || !isClientDataNode(n)) && (!changedNodesOnly || !changedNodeIds || changedNodeIds.has(n.id)))).map(n => ({{ node: n, score: dropdownQuery ? nodeSearchScore(n, dropdownQuery) : (n.id === selectedSearchNodeId ? -1 : 0) }})),
           m => Number.isFinite(m.score)
         ).sort((a, b) => a.score - b.score);
         const summary = document.createElement('div');
         summary.className = 'search-summary';
         summary.setAttribute('role', 'status');
         summary.textContent = matches.length
-          ? `${{matches.length}} matches${{matches.length > 50 ? ' · showing first 50' : ''}} · ↓ to select`
+          ? `${{matches.length}} matches${{matches.length > 50 ? ' · showing first 50' : ''}}${{selectedSearchNodeId ? ' · click checked item to clear' : ' · ↓ to select'}}`
           : '0 matches. Try a node name or module:name. Press Escape to clear.';
         results.appendChild(summary);
         matches.slice(0, 50).forEach(({{node}}) => {{
+          const isSelected = selectedSearchNodeId === node.id;
           const button = document.createElement('button');
           button.type = 'button';
+          button.className = 'search-option' + (isSelected ? ' is-selected' : '');
           button.setAttribute('role', 'option');
-          button.setAttribute('aria-selected', 'false');
+          button.setAttribute('aria-selected', String(isSelected));
           const kind = nodeKind(node);
-          button.innerHTML = '<span><b>' + nodeLabelHTML(node) + '</b></span><span style="color:var(--text-muted);font-size:0.68rem;flex-shrink:0;">' + escapeHTML(kind.label) + '</span>';
+          const checkSvg = '<span class="search-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
+          button.innerHTML = '<span class="search-item-main">' + checkSvg + '<span><b>' + nodeLabelHTML(node) + '</b></span></span><span style="color:var(--text-muted);font-size:0.68rem;flex-shrink:0;">' + escapeHTML(kind.label) + '</span>';
           button.onclick = () => {{
-            const filterVal = nodeDisplayName(node);
-            searchQuery = filterVal.toLowerCase();
-            document.getElementById('search-input').value = filterVal;
-            closeSearchChoices();
-            if (isClientDataNode(node)) hideClientData = false;
-            if (changedNodeIds && !changedNodeIds.has(node.id)) changedNodesOnly = false;
-            selectNode(node.id);
-            activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
-            renderGraph();
-            renderInspector();
-            updateSourceHighlight();
-            updateTraceTimelineScrubber(getCurrentStepTime());
-            fitGraph();
+            if (isSelected) {{
+              clearSearchFilter();
+              return;
+            }}
+            filterLineageForNode(node.id);
           }};
           results.appendChild(button);
         }});
@@ -5576,6 +5796,7 @@ def format_reactlog_html(
     function resetGraphView() {{
       selectedNodeId = null;
       focusedNodeId = null;
+      selectedSearchNodeId = null;
       searchQuery = '';
       selectedStageFilter = null;
       hideClientData = false;
@@ -5688,10 +5909,53 @@ def format_reactlog_html(
         rawEvents.forEach(item => {{
           const act = item.action || item.event || '';
           const nid = item.reactId || item.node_id || item.id;
-          const lbl = item.label || item.node_label || nid || '';
+          if (!nid) return;
+          const rawLbl = item.label || item.node_label;
+          const existing = nodesMap[nid];
+          if (!existing || act === 'define' || (rawLbl && rawLbl !== nid && (!existing.label || existing.label === nid))) {{
+            const ntype = item.type || item.node_type || existing?.type || 'calc';
+            let role = 'conductor';
+            let ctype = String(ntype).toLowerCase();
+            if (['observable', 'reactive'].includes(ctype)) ctype = 'calc';
+            if (['input', 'reactiveval', 'reactivevalueskey', 'reactivevaluesnames', 'reactivevaluesaslist'].includes(ctype) || String(nid).startsWith('input:') || String(nid).startsWith('input$')) {{
+              role = 'source'; ctype = 'input';
+            }} else if (['observer', 'output', 'effect'].includes(ctype) || String(nid).startsWith('output:') || String(nid).startsWith('output$') || String(nid).startsWith('effect:')) {{
+              role = 'observer'; ctype = 'output';
+            }}
+            const resolvedLbl = (rawLbl && rawLbl !== nid) ? String(rawLbl) : String(existing?.label || rawLbl || nid);
+            const fallbackName = String(nid).includes(':') ? String(nid).split(':')[1] : (String(nid).includes('$') ? String(nid).split('$')[1] : (resolvedLbl !== String(nid) ? resolvedLbl : String(nid)));
+            nodesMap[nid] = {{
+              id: nid,
+              name: fallbackName,
+              type: ctype,
+              role: role,
+              label: resolvedLbl,
+              line: item.line ?? existing?.line,
+              module: item.module ?? existing?.module,
+              render_type: item.render_type ?? existing?.render_type,
+              source_file: item.source_file ?? existing?.source_file
+            }};
+          }}
+        }});
+
+        const resolveNodeLabel = (id, fallback) => {{
+          const sid = String(id || '');
+          const mapped = String(nodesMap[sid]?.label || '');
+          const fb = String(fallback || '');
+          if (mapped && mapped !== sid) return mapped;
+          if (fb && fb !== sid) return fb;
+          return mapped || fb || sid;
+        }};
+
+        rawEvents.forEach(item => {{
+          const act = item.action || item.event || '';
+          const nid = item.reactId || item.node_id || item.id;
+          const lbl = resolveNodeLabel(nid, item.label || item.node_label);
           const ntype = item.type || item.node_type || 'calc';
           const depFrom = item.depOnReactId || item.dependsOn || item.edge_from;
           const depTo = nid || item.reactId || item.edge_to;
+          const depFromLbl = depFrom ? resolveNodeLabel(depFrom) : '';
+          const depToLbl = depTo ? resolveNodeLabel(depTo, lbl) : lbl;
           const rawT = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
           const tSec = Math.max(0, baseEpoch > 0 ? (rawT - baseEpoch) : rawT);
           const tMs = Number(item.timestamp || (tSec * 1000));
@@ -5702,23 +5966,18 @@ def format_reactlog_html(
             edgesSet.add(`${{depFrom}}==>${{depTo}}`);
           }}
 
-          if (nid && (!nodesMap[nid] || act === 'define')) {{
-            let role = 'conductor';
-            let ctype = String(ntype).toLowerCase();
-            if (['observable', 'reactive'].includes(ctype)) ctype = 'calc';
-            if (['input', 'reactiveval', 'reactivevalueskey', 'reactivevaluesnames', 'reactivevaluesaslist'].includes(ctype) || String(nid).startsWith('input:') || String(nid).startsWith('input$')) {{
-              role = 'source'; ctype = 'input';
-            }} else if (['observer', 'output', 'effect'].includes(ctype) || String(nid).startsWith('output:') || String(nid).startsWith('output$') || String(nid).startsWith('effect:')) {{
-              role = 'observer'; ctype = 'output';
-            }}
-            nodesMap[nid] = {{
-              id: nid,
-              name: String(nid).includes(':') ? String(nid).split(':')[1] : (String(nid).includes('$') ? String(nid).split('$')[1] : nid),
-              type: ctype,
-              role: role,
-              label: lbl,
-              line: item.line
-            }};
+          let details = item.details;
+          if (!details) {{
+            if (act === 'define') details = `Defined reactive node '${{lbl}}'`;
+            else if (act === 'dependsOn') details = `Dependency: '${{depFromLbl}}' used by '${{depToLbl}}'`;
+            else if (act === 'dependsOnRemove') details = `Removed dependency: '${{depFromLbl}}' used by '${{depToLbl}}'`;
+            else if (act === 'invalidate' || act === 'invalidateEnd') details = `Invalidated '${{lbl}}'`;
+            else if (act === 'invalidateStart') details = `Invalidating '${{lbl}}'`;
+            else if (act === 'valueChange' || act === 'inputChange') details = `Value change for '${{lbl}}': ${{item.value !== undefined ? String(item.value) : ''}}`;
+            else if (act === 'enter' || act === 'wouldEvaluate') details = `Evaluating '${{lbl}}'`;
+            else if (act === 'exit' || act === 'ordered') details = `Completed evaluation of '${{lbl}}'`;
+            else if (act === 'idle' || act === 'queueEmpty') details = 'Idle';
+            else details = lbl ? `Event '${{act}}' on '${{lbl}}'` : `Event '${{act}}'`;
           }}
 
           normEvents.push({{
@@ -5742,7 +6001,7 @@ def format_reactlog_html(
             depOnReactId: depFrom,
             edge_from: depFrom,
             edge_to: depTo,
-            details: item.details || `Event ${{act}} on ${{lbl}}`
+            details: details
           }});
           sIdx++;
         }});
@@ -5814,12 +6073,6 @@ def format_reactlog_html(
       }}
 
       if (e.key === 'Escape') {{
-        const pickerMenu = document.getElementById('flush-picker-menu');
-        if (pickerMenu && !pickerMenu.hidden) {{
-          closeFlushPicker();
-          e.preventDefault();
-          return;
-        }}
         const modal = document.getElementById('shortcuts-modal');
         if (modal && !modal.hidden) {{
           toggleShortcutsModal();

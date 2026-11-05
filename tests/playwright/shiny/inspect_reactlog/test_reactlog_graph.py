@@ -22,7 +22,7 @@ def load_graph_report(
     """Open the graph and inspector explicitly for tests of those surfaces."""
     page.set_default_timeout(5000)
     page.set_content(html, wait_until=wait_until)
-    page.locator("#btn-mode-full").click()
+    page.locator("#activity-select").select_option("full")
     page.locator("#btn-toggle-inspector").click()
     page.locator("#event-history").evaluate("el => el.open = true")
     page.locator("#flush-card").evaluate("el => el.open = true")
@@ -953,7 +953,7 @@ def out():
         wait_until="domcontentloaded",
     )
     page.evaluate("data => loadReactlogObject(data)", malicious_json)
-    page.locator("#btn-mode-full").click()
+    page.locator("#activity-select").select_option("full")
 
     # Click nodes and buttons to trigger any handlers
     graph_node(page, '.graph-node[data-id="calc:safe_node"]').click()
@@ -1325,7 +1325,7 @@ def result():
         "def result():"
     )
     page.evaluate("data => loadReactlogObject(data)", report)
-    page.locator("#btn-mode-full").click()
+    page.locator("#activity-select").select_option("full")
     graph_node(page, '.graph-node[data-id="calc:west-revenue"]').click()
     expect(page.get_by_label("Source file")).to_have_value("sales.py")
 
@@ -1510,13 +1510,14 @@ def out():
     load_graph_report(page, format_reactlog_html(rlog, code))
 
     expect(page.locator("#flush-select")).to_have_count(0)
+    expect(page.locator("#flush-counter-badge")).to_have_count(0)
     expect(page.locator("#flush-pipeline-bar")).to_have_count(0)
     expect(page.locator("#flush-card")).to_be_visible()
 
     # Step to flush 1
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
-    expect(page.locator("#flush-counter-badge")).to_contain_text("Activity 2")
+    expect(page.locator("#flush-card-title")).to_contain_text("Activity 2")
     expect(page.locator("#flush-card-invalidated")).to_contain_text("2 nodes")
     expect(page.locator("#flush-card-calcs")).to_contain_text("1 calcs")
     expect(page.locator("#flush-card-outputs")).to_contain_text("Outputs that ran: 1")
