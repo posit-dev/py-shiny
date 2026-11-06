@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `playwright.controller.OutputPlot` now finds a plot output by its `shiny-plot-output` class alone (#2596).
 
+* When a client message's `method` is not a string, the session now prints `Message 'method' must be a string.` and closes, instead of printing an unrelated `TypeError` traceback. A client message that is not a JSON object (such as `1`) now prints `Message does not contain 'method'.` and closes the session the same way (#2607).
+
 ## [1.9.0] - 2026-10-29
 
 ### Breaking changes

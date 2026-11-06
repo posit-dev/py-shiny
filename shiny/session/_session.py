@@ -1188,9 +1188,16 @@ class AppSession(Session):
                         )
                         return
 
-                    if "method" not in message_obj:
+                    if not isinstance(message_obj, dict) or "method" not in message_obj:
                         self._print_error_message(
                             "Message does not contain 'method'.",
+                        )
+                        return
+                    message_obj = cast(dict[str, Any], message_obj)
+
+                    if not isinstance(message_obj["method"], str):
+                        self._print_error_message(
+                            "Message 'method' must be a string.",
                         )
                         return
 
@@ -1340,12 +1347,6 @@ class AppSession(Session):
         try:
             async_func, handler_session = self._message_handlers[message["method"]]
         except KeyError:
-            await self._send_error_response(
-                message,
-                "Unknown method: " + message["method"],
-            )
-            return
-        except AttributeError:
             await self._send_error_response(
                 message,
                 "Unknown method: " + message["method"],
