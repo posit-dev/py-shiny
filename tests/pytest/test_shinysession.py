@@ -53,6 +53,40 @@ async def test_module_session_user_groups():
     assert captured["mod_groups"] == ["admin", "dev"]
 
 
+@pytest.mark.parametrize("method", [1, ["a"], None])
+@pytest.mark.asyncio
+async def test_non_string_method_closes_session(
+    method: object, capsys: pytest.CaptureFixture[str]
+):
+    conn = MockConnection()
+    sess = App(ui.TagList(), None)._create_session(conn)
+    conn.cause_receive(json.dumps({"method": method, "tag": 1, "args": []}))
+
+    # `_run()` returning means the session ended.
+    await asyncio.wait_for(sess._run(), timeout=5)
+
+    err = capsys.readouterr().err
+    assert "Message 'method' must be a string." in err
+    assert "Traceback" not in err
+
+
+@pytest.mark.parametrize("message", ["1", "null", '"method"', "[]"])
+@pytest.mark.asyncio
+async def test_non_object_message_closes_session(
+    message: str, capsys: pytest.CaptureFixture[str]
+):
+    conn = MockConnection()
+    sess = App(ui.TagList(), None)._create_session(conn)
+    conn.cause_receive(message)
+
+    # `_run()` returning means the session ended.
+    await asyncio.wait_for(sess._run(), timeout=5)
+
+    err = capsys.readouterr().err
+    assert "Message does not contain 'method'." in err
+    assert "Traceback" not in err
+
+
 def test_require_active_session_error_messages():
     # require_active_session() should report the caller's name when an error occurs.
     with pytest.raises(RuntimeError, match=r"Progress\(\) must be called"):
