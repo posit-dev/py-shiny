@@ -13,6 +13,18 @@ layout, widgets, client-side behavior. Do **not** call the server function
 directly with hand-built `Inputs`/`Session` objects, and do not launch a
 subprocess just to check an output's value.
 
+## Contents
+
+- Setup
+- Write a test
+- What `test_server()` accepts
+- Values and their status
+- Modules
+- Client data (plots and URL readers)
+- Snapshots and fixtures
+- Async tests
+- Common mistakes
+
 ## Setup
 
 Nothing beyond `pytest`. `test_server` ships with shiny.

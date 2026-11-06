@@ -15,6 +15,17 @@ Compiling a customized theme requires `libsass` (`pip install "shiny[theme]"`);
 the bundled `"bootstrap"` and `"shiny"` presets are pre-compiled and need no
 extra install.
 
+## Contents
+
+- Apply a preset
+- Pre-built themes and a runtime picker: shinyswatch
+- Customize Sass variables (colors, fonts)
+- Dark mode
+- brand.yml
+- Custom CSS / JS assets
+- Quick reference
+- Common mistakes
+
 ## Apply a preset
 
 Pass a `ui.Theme` (or just its preset name via the constructor) to the page's

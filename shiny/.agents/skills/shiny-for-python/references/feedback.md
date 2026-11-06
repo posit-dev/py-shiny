@@ -12,6 +12,15 @@ Do NOT fake these with `ui.panel_conditional` + `@render.ui`, do NOT
 loop with no visible indication that the app is working. Use the built-in
 overlays below.
 
+## Contents
+
+- Toast notifications
+- Modal dialogs
+- Progress bars for multi-step work
+- Busy indicators (spinners and pulse)
+- Quick reference
+- Common mistakes
+
 ## Toast notifications
 
 Non-blocking messages that stack in a corner and auto-dismiss. Call

@@ -6,6 +6,17 @@ Bookmarking snapshots an app's `input` values (plus optional custom values) and
 restores them later from a URL. Use it instead of manually encoding state into
 query strings or building a custom persistence layer.
 
+## Contents
+
+- Store values
+- Enable bookmarking
+- Trigger a bookmark
+- Save and restore custom (non-input) values
+- Exclude inputs
+- Server-side storage location
+- Quick reference
+- Common mistakes
+
 ## Store values
 
 `bookmark_store` (on `App(...)` or `app_opts(...)`) accepts three values:

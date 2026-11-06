@@ -15,6 +15,14 @@ only need custom *client* rendering (a JS widget), you still author the payload
 here; the browser side is a separate output binding — see the
 `references/custom-components.md`.
 
+## Contents
+
+- Subclass and transform the value
+- Accept decorator arguments
+- Core vs Express, and async
+- Quick reference
+- Common mistakes
+
 ## Subclass and transform the value
 
 Implement `async def transform(self, value)` to convert a non-`None` return
