@@ -18,7 +18,7 @@ def _available_skills() -> list[Path]:
 
 def _skill_description(skill_dir: Path) -> str:
     """Extract the one-line `description:` from a SKILL.md's YAML frontmatter."""
-    text = (skill_dir / "SKILL.md").read_text()
+    text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         return ""
     frontmatter = text.split("---", 2)[1]
