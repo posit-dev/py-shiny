@@ -22,16 +22,22 @@ def load_graph_report(
     """Open the graph and inspector explicitly for tests of those surfaces."""
     page.set_default_timeout(5000)
     page.set_content(html, wait_until=wait_until)
+    page.locator("#btn-settings").click()
     page.locator("#activity-select").select_option("full")
+    page.locator("#btn-settings").click()
     page.locator("#btn-toggle-inspector").click()
     page.locator("#event-history").evaluate("el => el.open = true")
     page.locator("#flush-card").evaluate("el => el.open = true")
 
 
 def graph_node(page: Page, selector: str) -> Locator:
-    if page.locator("#sidebar").is_visible():
-        page.get_by_role("button", name="Close Inspector", exact=True).click()
     return page.locator(selector)
+
+
+def reset_graph_view(page: Page) -> None:
+    if not page.locator("#btn-reset-view").is_visible():
+        page.locator("#btn-settings").click()
+    page.locator("#btn-reset-view").click()
 
 
 def test_graph_elements_visible_on_initialization(page: Page) -> None:
@@ -150,7 +156,7 @@ def other():
     page.keyboard.press("Escape")
     expect(page.locator(".is-dimmed")).to_have_count(0)
     graph_node(page, '.graph-node[data-id="calc:doubled"]').click()
-    page.get_by_role("button", name="Clear node selection", exact=True).click()
+    page.get_by_role("button", name="Close Inspector", exact=True).click()
     expect(page.locator(".is-dimmed")).to_have_count(0)
 
 
@@ -187,7 +193,7 @@ def chart():
     )
     steps = [i for i, e in enumerate(report["events"]) if e.get("plot")]
     load_graph_report(page, format_reactlog_html(report, code))
-    expect(page.locator(".app-box")).to_contain_text("App (no namespace)")
+    expect(page.locator(".app-box")).to_contain_text("App ·")
     graph_node(page, '.graph-node[data-id="output:chart"]').click()
     expect(page.locator("#insp-plot-image")).to_be_hidden()
     page.evaluate(f"seekTo({steps[1]})")
@@ -729,7 +735,7 @@ def separate_out():
     page.keyboard.press("ArrowRight")
     expect(page.locator(".graph-node")).to_have_count(3)
 
-    page.get_by_role("button", name="Reset view", exact=True).click()
+    reset_graph_view(page)
     expect(page.locator(".graph-node")).to_have_count(5)
 
 
@@ -953,7 +959,9 @@ def out():
         wait_until="domcontentloaded",
     )
     page.evaluate("data => loadReactlogObject(data)", malicious_json)
+    page.locator("#btn-settings").click()
     page.locator("#activity-select").select_option("full")
+    page.locator("#btn-settings").click()
 
     # Click nodes and buttons to trigger any handlers
     graph_node(page, '.graph-node[data-id="calc:safe_node"]').click()
@@ -1049,7 +1057,7 @@ def test_r_import_search_preserves_all_nodes(page: Page) -> None:
     expect(page.locator(".graph-node")).to_have_count(3)
     expect(page.locator('.graph-node[data-id="r4"]')).to_have_count(0)
     expect(page.locator("#search-results")).to_be_hidden()
-    page.get_by_role("button", name="Reset view", exact=True).click()
+    reset_graph_view(page)
     expect(page.locator(".graph-node")).to_have_count(4)
     page.locator("#search-input").fill("no match xyz")
     expect(page.locator("#search-results")).to_contain_text("0 matches")
@@ -1096,7 +1104,7 @@ def result():
     expect(page.locator("#search-results button")).to_be_focused()
     page.keyboard.press("Enter")
     expect(page.locator("#search-results")).to_be_hidden()
-    page.get_by_role("button", name="Reset view", exact=True).click()
+    reset_graph_view(page)
     expect(page.locator(".graph-node")).to_have_count(2)
     search.fill("unfindablenode")
     expect(page.locator("#search-results")).to_contain_text(
@@ -1125,12 +1133,11 @@ def result():
                 const controls = document.querySelector('.toolbar').getBoundingClientRect();
                 return {width: document.documentElement.scrollWidth,
                     viewport: innerWidth, graphWidth: graph.width,
-                    overlay: sidebar.top >= graph.top && sidebar.bottom <= graph.bottom,
+                    docked: sidebar.left >= graph.right - 1,
                     controlsFit: controls.right <= innerWidth};
             }""")
             assert bounds["width"] <= bounds["viewport"]
-            assert bounds["graphWidth"] == width - 40
-            assert bounds["overlay"]
+            assert bounds["docked"]
             assert bounds["controlsFit"]
             page.locator("#search-input").fill("result")
             expect(page.locator("#search-results button")).to_have_count(1)
@@ -1158,7 +1165,7 @@ def result():
     report = generate_reactlog(code)
     load_graph_report(page, format_reactlog_html(report, code))
     positions = page.locator(".graph-node").evaluate_all(
-        "nodes => Object.fromEntries(nodes.map(n => [n.dataset.id, +n.querySelector('rect').getAttribute('x')]))"
+        "nodes => Object.fromEntries(nodes.map(n => [n.dataset.id, n.querySelector('.node-card').getBBox().x]))"
     )
     assert positions["calc:total_revenue"] > positions["calc:subtotal"]
     assert positions["calc:total_revenue"] > positions["calc:discount_multiplier"]
@@ -1208,6 +1215,44 @@ def server(input, output, session):
     page.locator('.graph-node[data-id="module:west"]').focus()
     page.keyboard.press("Space")
     assert page.locator('.module-box[data-module="west"]').count() == 1
+
+
+def test_module_header_collapse_icon_and_click_behavior(page: Page) -> None:
+    code = """
+from shiny import module, reactive, render
+@module.server
+def mod(input, output, session):
+    @reactive.calc
+    def val():
+        return input.n()
+    return val
+def server(input, output, session):
+    m = mod("sub")
+    @render.text
+    def res():
+        return m()
+"""
+    load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
+    expect(page.locator(".module-box[data-module='sub'] text")).to_contain_text(
+        "click to collapse"
+    )
+    page.locator(".module-box[data-module='sub'] rect").first.click(
+        position={"x": 500, "y": 10}
+    )
+    expect(page.locator(".module-box[data-module='sub']")).to_have_count(1)
+
+    btn = page.locator(".module-box[data-module='sub'] .module-collapse-btn")
+    expect(btn.locator(".module-collapse-icon")).to_have_count(1)
+
+    btn.click()
+    expect(page.locator(".module-box[data-module='sub']")).to_have_count(0)
+    collapsed_node = page.locator(".graph-node[data-id='module:sub']")
+    expect(collapsed_node).to_have_count(1)
+    expect(collapsed_node).to_contain_text("click to expand")
+
+    collapsed_node.click()
+    expect(page.locator(".module-box[data-module='sub']")).to_have_count(1)
+    expect(page.locator(".graph-node[data-id='module:sub']")).to_have_count(0)
 
 
 def test_plot_preview_follows_timeline_without_future_images(page: Page) -> None:
@@ -1325,7 +1370,9 @@ def result():
         "def result():"
     )
     page.evaluate("data => loadReactlogObject(data)", report)
+    page.locator("#btn-settings").click()
     page.locator("#activity-select").select_option("full")
+    page.locator("#btn-settings").click()
     graph_node(page, '.graph-node[data-id="calc:west-revenue"]').click()
     expect(page.get_by_label("Source file")).to_have_value("sales.py")
 

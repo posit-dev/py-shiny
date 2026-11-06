@@ -21,6 +21,28 @@ def no_report_errors(page: Page) -> Generator[None, None, None]:
     assert errors == []
 
 
+def set_activity_mode(page: Page, mode: str) -> None:
+    if not page.locator("#activity-select").is_visible():
+        page.locator("#btn-settings").click()
+    page.locator("#activity-select").select_option(mode)
+    if page.locator("#settings-menu").is_visible():
+        page.locator("#btn-settings").click()
+
+
+def set_clientdata_mode(page: Page, mode: str) -> None:
+    if not page.locator("#clientdata-select").is_visible():
+        page.locator("#btn-settings").click()
+    page.locator("#clientdata-select").select_option(mode)
+    if page.locator("#settings-menu").is_visible():
+        page.locator("#btn-settings").click()
+
+
+def reset_graph_view(page: Page) -> None:
+    if not page.locator("#btn-reset-view").is_visible():
+        page.locator("#btn-settings").click()
+    page.locator("#btn-reset-view").click()
+
+
 CODE = """from shiny import reactive, render
 @reactive.calc
 def doubled():
@@ -93,9 +115,9 @@ def test_root_module_search_and_stage_filters_clear_together(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
     page.locator("#search-input").fill("module:__root__")
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
-    page.locator("#activity-select").select_option("full")
+    set_activity_mode(page, "full")
     expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
-    page.get_by_role("button", name="Reset view").click()
+    reset_graph_view(page)
     expect(page.locator("#search-input")).to_have_value("")
     expect(page.locator("#active-filters button")).to_have_count(0)
     expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
@@ -110,24 +132,24 @@ def test_empty_recording_can_open_graph(page: Page):
     page.on("pageerror", on_error)
     page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
     expect(page.locator("#filter-node-count")).to_have_text("0 of 0 nodes")
-    page.locator("#activity-select").select_option("full")
+    set_activity_mode(page, "full")
     expect(page.locator(".graph-node")).to_have_count(0)
     assert errors == []
 
 
 def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#activity-select").select_option("flush")
+    set_activity_mode(page, "flush")
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
     expect(page.locator(".graph-node")).to_have_count(3)
-    page.get_by_role("button", name="Reset view").click()
+    reset_graph_view(page)
     expect(page.locator(".graph-node")).to_have_count(5)
 
 
 def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#activity-select").select_option("flush")
+    set_activity_mode(page, "flush")
     expect(page.locator("#reactlog-svg")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
     expect(page.locator("#sidebar-rail")).to_have_css("width", "40px")
@@ -193,23 +215,28 @@ def test_recording_floats_below_timeline_and_rail_stays_40px(page: Page):
     expect(player).to_be_visible()
 
 
-def test_details_overlay_does_not_resize_graph(page: Page):
+def test_details_sidebar_docks_and_resizes_graph(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
     graph = page.locator("#graph-container")
     before = graph.bounding_box()
+    assert before is not None
     page.get_by_role("button", name="Node details", exact=True).click()
     expect(page.locator("#sidebar")).to_be_visible()
-    assert graph.bounding_box() == before
+    sidebar_box = page.locator("#sidebar").bounding_box()
+    after = graph.bounding_box()
+    assert sidebar_box is not None and after is not None
+    assert after["width"] < before["width"]
+    assert after["x"] + after["width"] <= sidebar_box["x"] + 1
     page.get_by_role("tab", name="App code").click()
     expect(page.locator("#source-panel")).to_be_visible()
     expect(page.locator("#timeline-panel")).to_be_hidden()
-    assert graph.bounding_box() == before
+    assert graph.bounding_box() == after
 
 
 @pytest.mark.parametrize("query", ["module:analysis", "analysis", "MODULE:ANALYSIS"])
 def test_module_search_filters_nodes_and_clears(page: Page, query: str):
     page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#activity-select").select_option("full")
+    set_activity_mode(page, "full")
     page.locator("#search-input").fill(query)
     expect(page.locator(".graph-node")).to_have_count(2)
     expect(page.locator("#search-results button")).to_have_count(2)
@@ -254,7 +281,7 @@ def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
         for i, action in enumerate(actions)
     ]
     page.set_content(format_reactlog_html(data, CODE))
-    page.locator("#activity-select").select_option("full")
+    set_activity_mode(page, "full")
     node = page.locator('.graph-node[data-id="calc:doubled"]')
     for step, (state, color) in enumerate(
         [
@@ -385,6 +412,7 @@ def test_timeline_can_drag_from_a_mark_across_the_band(page: Page):
 
 def test_update_labels_and_view_controls(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-settings").click()
     activity_select = page.locator("#activity-select")
     expect(activity_select).to_be_visible()
     expect(activity_select).to_have_value("full")
@@ -393,6 +421,7 @@ def test_update_labels_and_view_controls(page: Page):
     expect(page.locator(".graph-node")).to_have_count(5)
     activity_select.select_option("flush")
     expect(activity_select).to_have_value("flush")
+    page.locator("#btn-settings").click()
     expect(page.locator("#active-filters button")).to_have_count(0)
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
@@ -441,6 +470,7 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     expect(page.locator("#btn-toggle-clientdata")).to_have_count(0)
     expect(page.locator("#btn-toggle-changes")).to_have_count(0)
 
+    page.locator("#btn-settings").click()
     page.locator("#activity-select").select_option("full")
     expect(page.locator(".graph-node")).to_have_count(5)
 
@@ -453,9 +483,10 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     expect(page.locator(".graph-node")).to_have_count(5)
     client_select.select_option("show")
     expect(page.locator(".graph-node")).to_have_count(6)
+    page.locator("#btn-settings").click()
 
-    calc_role_btn = page.locator('.legend-role-btn[data-role="conductor"]')
-    calc_role_btn.click()
+    expect(page.locator(".legend-role-btn")).to_have_count(0)
+    page.evaluate("toggleRoleFilter('conductor')")
     expect(page.locator(".graph-node")).to_have_count(5)
     expect(page.get_by_role("button", name="Remove role filter")).to_be_visible()
     page.get_by_role("button", name="Remove role filter").click()
@@ -475,18 +506,23 @@ def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     assert video_box_open["x"] < video_box_closed["x"]
     assert video_box_open["x"] + video_box_open["width"] <= sidebar_box["x"]
 
-    page.get_by_role("button", name="Close Inspector", exact=True).click()
+    page.locator("#btn-toggle-inspector").click()
     expect(page.locator("#sidebar")).to_be_hidden()
-    expect(page.locator("#btn-inspect-selection")).to_be_visible()
     expect(page.locator("#btn-toggle-inspector-bottom")).to_have_class(
         re.compile(r"has-selection")
     )
-    page.locator("#btn-inspect-selection").click()
+    page.locator("#btn-toggle-inspector").click()
     expect(page.locator("#sidebar")).to_be_visible()
 
     page.get_by_role("tab", name="App code").click()
     expect(page.locator("#source-panel .source-line.is-active")).to_have_attribute(
         "data-line", "51"
+    )
+
+    page.get_by_role("button", name="Close Inspector", exact=True).click()
+    expect(page.locator("#sidebar")).to_be_hidden()
+    expect(page.locator("#btn-toggle-inspector-bottom")).not_to_have_class(
+        re.compile(r"has-selection")
     )
 
 
@@ -498,7 +534,7 @@ def test_node_details_events_remain_readable_in_small_windows(
     code = CODE.replace("doubled", "filtered_data_with_a_very_long_reactive_name")
     data = generate_reactlog(code)
     page.set_content(format_reactlog_html(data, code))
-    page.locator("#activity-select").select_option("full")
+    set_activity_mode(page, "full")
     page.locator("#btn-toggle-inspector-bottom").click()
     page.locator("#event-history > summary").click()
     history = page.locator("#event-history")
@@ -520,9 +556,9 @@ def test_report_has_two_graph_views_and_no_overview(page: Page):
     expect(page.locator("#module-overview-panel")).to_have_count(0)
     page.keyboard.press("o")
     expect(page.locator("#reactlog-svg")).to_be_visible()
-    page.locator("#activity-select").select_option("full")
+    set_activity_mode(page, "full")
     expect(page.locator(".graph-node")).to_have_count(5)
-    page.locator("#activity-select").select_option("flush")
+    set_activity_mode(page, "flush")
     expect(page.locator("#reactlog-svg")).to_be_visible()
     page.get_by_role("button", name="Shortcuts").click()
     expect(page.locator("#shortcuts-modal")).not_to_contain_text("Overview")
@@ -539,11 +575,11 @@ def test_clientdata_is_hidden_by_default_and_can_be_shown(page: Page):
         }
     )
     page.set_content(format_reactlog_html(data, CODE))
-    page.locator("#activity-select").select_option("full")
+    set_activity_mode(page, "full")
     expect(
         page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
     ).to_have_count(0)
-    page.locator("#clientdata-select").select_option("show")
+    set_clientdata_mode(page, "show")
     expect(
         page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
     ).to_have_count(1)
@@ -563,9 +599,20 @@ def test_search_dropdown_opens_and_filters_nodes(page: Page):
 
 def test_node_count_and_controls_share_header(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    expect(page.locator(".app-header #filter-node-count")).to_be_visible()
-    expect(page.locator(".app-header #clientdata-select")).to_have_count(1)
-    expect(page.locator(".app-header #activity-select")).to_have_count(1)
+    expect(page.locator(".zoom-controls #filter-node-count")).to_be_visible()
+    expect(page.locator(".app-header #filter-node-count")).to_have_count(0)
+    expect(page.locator(".app-header #clientdata-select")).to_have_count(0)
+    expect(page.locator(".app-header #activity-select")).to_have_count(0)
+    expect(page.locator("#btn-settings")).to_be_visible()
+    expect(page.locator("#settings-menu")).to_be_hidden()
+    page.locator("#btn-settings").click()
+    expect(page.locator("#settings-menu")).to_be_visible()
+    expect(page.locator("#settings-menu #clientdata-select")).to_be_visible()
+    expect(page.locator("#settings-menu #activity-select")).to_be_visible()
+    expect(page.locator("#settings-menu #btn-toggle-collapse-all")).to_be_visible()
+    expect(page.locator("#settings-menu #btn-reset-view")).to_be_visible()
+    expect(page.locator(".zoom-controls > #btn-toggle-collapse-all")).to_have_count(0)
+    expect(page.locator(".zoom-controls > #btn-reset-view")).to_have_count(0)
     expect(page.locator(".app-header #btn-toggle-clientdata")).to_have_count(0)
     expect(page.locator(".app-header #btn-toggle-changes")).to_have_count(0)
     expect(page.get_by_role("button", name="Clear all filters")).to_have_count(0)
@@ -598,7 +645,7 @@ def test_only_nodes_with_recorded_value_changes_are_shown(page: Page):
         {"action": "valueChange", "node_id": "input:changed", "value": "2"},
     ]
     page.set_content(format_reactlog_html(data, CODE))
-    page.locator("#activity-select").select_option("full")
+    set_activity_mode(page, "full")
     expect(page.locator('.graph-node[data-id="input:fixed"]')).to_have_count(1)
     expect(page.locator('.graph-node[data-id="input:changed"]')).to_have_count(1)
 
@@ -641,7 +688,7 @@ def test_clear_all_shows_hidden_nodes(page: Page):
     )
     data["events"] = [{"action": "queueEmpty"}]
     page.set_content(format_reactlog_html(data, CODE))
-    page.get_by_role("button", name="Reset view").click()
+    reset_graph_view(page)
     expect(
         page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
     ).to_have_count(1)
@@ -724,8 +771,9 @@ def test_timeline_uses_keyboard_navigation(page: Page):
 
 def test_smooth_connecting_edges_and_header_dropdowns(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
-    client_select = page.locator(".header-center #clientdata-select")
-    activity_select = page.locator(".header-center #activity-select")
+    page.locator("#btn-settings").click()
+    client_select = page.locator("#settings-menu #clientdata-select")
+    activity_select = page.locator("#settings-menu #activity-select")
     expect(client_select).to_be_visible()
     expect(activity_select).to_be_visible()
     expect(client_select.locator("option")).to_have_text(
@@ -734,6 +782,7 @@ def test_smooth_connecting_edges_and_header_dropdowns(page: Page):
     expect(activity_select.locator("option")).to_have_text(
         ["Show all activity", "Show current activity"]
     )
+    page.locator("#btn-settings").click()
     edges = page.locator(".graph-edge")
     expect(edges).not_to_have_count(0)
     for i in range(edges.count()):

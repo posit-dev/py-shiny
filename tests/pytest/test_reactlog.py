@@ -1015,7 +1015,9 @@ def out():
     assert "--track-bg: #1b2634;" in html_light
     assert 'id="clientdata-select"' in html_light
     assert 'id="activity-select"' in html_light
-    assert 'class="legend-role-btn is-active"' in html_light
+    assert 'class="legend"' in html_light
+    assert '<span class="legend-label">Type</span>' not in html_light
+    assert 'class="legend-role-btn' not in html_light
 
 
 @pytest.mark.parametrize("theme", ["dark", "light", "auto"])
@@ -1094,9 +1096,11 @@ def test_format_reactlog_html_distinct_node_and_marker_shapes():
     if node is None:
         pytest.skip("Node.js is needed to inspect nodeKind shapes")
     html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
-    match = re.search(r"    function nodeKind\([\s\S]*?\n    \}", html)
-    assert match is not None
-    script = match[0] + """
+    match_kind = re.search(r"    function nodeKind\([\s\S]*?\n    \}", html)
+    assert match_kind is not None
+    match_card = re.search(r"    function getNodeShapePath\([\s\S]*?\n    \}", html)
+    assert match_card is not None
+    script = match_kind[0] + "\n" + match_card[0] + """
 const samples = [
   {role: 'source', type: 'input'},
   {role: 'conductor', type: 'calc'},
@@ -1105,20 +1109,22 @@ const samples = [
   {role: 'observer', type: 'output', render_type: 'plot'},
   {role: 'conductor', type: 'module'},
 ];
-console.log(JSON.stringify(samples.map(n => nodeKind(n))));
+const pos = {x: 100, y: 100};
+console.log(JSON.stringify({
+  kinds: samples.map(n => nodeKind(n)),
+  paths: samples.map(n => getNodeShapePath(n, pos, 280, 64))
+}));
 """
     result = subprocess.run(
         [node, "-e", script], capture_output=True, text=True, check=True
     )
-    kinds = json.loads(result.stdout)
-    shapes = [k["shape"] for k in kinds]
+    payload = json.loads(result.stdout)
+    shapes = [k["shape"] for k in payload["kinds"]]
     assert len(set(shapes)) == 6
-    legend_paths = re.findall(
-        r'<span class="legend-dot"[^>]*><svg[^>]*><path[^>]*d="([^"]+)"',
-        html,
-    )
-    assert len(legend_paths) == 4
-    assert set(legend_paths).issubset(set(shapes))
+    paths = payload["paths"]
+    assert len(set(paths)) == 4
+    assert '<span class="legend-label">Type</span>' not in html
+    assert 'class="legend-role-btn' not in html
     assert 'id="arrow-isolated"' in html
     isolated_marker = re.search(
         r'<marker id="arrow-isolated"[^>]*>(.*?)</marker>', html, re.DOTALL
@@ -2415,3 +2421,28 @@ def greeting():
     assert 'id="flush-card-trigger"' in html
     assert 'id="flush-execution-order"' in html
     assert "getActiveFlushNodeIds(" in html
+
+
+def test_format_reactlog_html_settings_cogwheel_and_unified_timeline():
+    code = """from shiny.express import input, render, ui
+ui.input_text("name", "Name", "World")
+@render.text
+def greeting():
+    return f"Hello, {input.name()}!"
+"""
+    reactlog = generate_reactlog(code)
+    html = format_reactlog_html(reactlog, source_code=code)
+    assert 'id="btn-settings"' in html
+    assert 'id="settings-menu"' in html
+    assert 'id="clientdata-select"' in html
+    assert 'id="activity-select"' in html
+    assert 'id="btn-toggle-collapse-all"' in html
+    assert 'id="btn-reset-view"' in html
+    assert 'id="btn-close-sidebar"' in html
+    assert "closeSidebarAndClearSelection()" in html
+    assert 'id="btn-clear-selection"' not in html
+    assert '<footer class="bottom-timeline-bar' not in html
+    assert 'id="bottom-timeline-bar"' in html
+    assert (
+        '<div class="zoom-controls">\n              <div class="filter-state"' in html
+    )

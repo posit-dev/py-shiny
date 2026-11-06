@@ -2681,7 +2681,7 @@ def format_reactlog_html(
     .workspace-layout {{ display: flex; flex: 1; min-height: 0; overflow: hidden; position: relative; }}
 
     /* Timeline playback controls */
-    .bottom-timeline-bar {{ flex-shrink: 0; height: 38px; min-height: 38px; background: var(--surface-2); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 0.75rem; gap: 0.6rem; z-index: 30; user-select: none; }}
+    .bottom-timeline-bar {{ flex-shrink: 0; background: transparent; border: none; display: flex; align-items: center; justify-content: space-between; padding: 0; gap: 0.75rem; z-index: 30; user-select: none; flex-wrap: wrap; }}
     .status-left, .status-center, .status-right {{ display: flex; align-items: center; gap: 0.4rem; }}
     .trace-status-line {{ font: 650 0.72rem var(--sans); color: var(--text-muted); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
     .status-time-group {{ display: flex; align-items: center; gap: 0.25rem; font: 700 0.68rem var(--mono); color: var(--accent); }}
@@ -2712,9 +2712,6 @@ def format_reactlog_html(
     .legend-line.is-isolated {{ border-top-style: dashed; }}
     .legend-line.is-inactive {{ border-top-style: dotted; }}
     .legend-sep {{ width: 1px; height: 14px; background: var(--border); margin: 0 2px; align-self: center; }}
-    .legend-role-btn {{ display: inline-flex; align-items: center; gap: 0.35rem; background: transparent; border: 1px solid transparent; border-radius: 6px; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.08rem 0.35rem; cursor: pointer; opacity: 0.55; transition: opacity 120ms ease, border-color 120ms ease, background 120ms ease; }}
-    .legend-role-btn:hover {{ background: var(--surface-3); opacity: 0.92; }}
-    .legend-role-btn.is-active {{ opacity: 1; color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }}
     .graph-node.is-clientdata {{ opacity: 0.78; }}
     .burst-anchor.is-mark {{ border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); color: #b45309; }}
     [data-theme="dark"] .burst-anchor.is-mark {{ color: #fbbf24; }}
@@ -2748,8 +2745,16 @@ def format_reactlog_html(
     .graph-node:hover .node-card {{ filter: brightness(1.06); }}
     .graph-node.is-selected .node-card {{ stroke: var(--node-selection-stroke) !important; stroke-width: 3.5px !important; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 65%, transparent)); }}
     .graph-node.is-active:not(.is-selected) .node-card {{ stroke: var(--node-selection-stroke) !important; stroke-width: 2.5px !important; }}
-    .module-box {{ cursor: pointer; }}
-    .module-box:focus rect {{ stroke: var(--accent); stroke-width: 3; }}
+    .module-box {{ cursor: default; }}
+    .module-box:focus {{ outline: none; }}
+    .module-box:focus rect {{ stroke: var(--accent); stroke-width: 2.5; }}
+    .module-collapse-btn {{ cursor: pointer; }}
+    .module-collapse-btn:focus {{ outline: none; }}
+    .module-collapse-btn:focus text {{ fill: var(--accent) !important; text-decoration: underline; }}
+    .module-collapse-btn:hover text {{ fill: var(--accent) !important; }}
+    .module-collapse-icon {{ opacity: 0; transition: opacity 120ms ease; pointer-events: none; }}
+    .module-collapse-btn:hover .module-collapse-icon,
+    .module-collapse-btn:focus .module-collapse-icon {{ opacity: 1; }}
     #insp-plot {{ margin: 12px 0; }}
     #insp-plot-image {{ width: 100%; border-radius: 8px; background: white; }}
     #insp-plot-caption {{ font-size: 12px; color: var(--text-muted); margin-top: 6px; }}
@@ -2858,7 +2863,8 @@ def format_reactlog_html(
     .event-badge.active {{ background: color-mix(in srgb, var(--effect) 20%, var(--surface)); color: var(--effect); }}
     .event-details {{ overflow-wrap: anywhere; font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }}
 
-    .filter-state {{ display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; font-size:.75rem; }}
+    .filter-state {{ display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--text-muted); margin-right: 0.35rem; }}
+    #filter-node-count {{ font: 600 0.74rem var(--sans); white-space: nowrap; color: var(--text-muted); }}
     #active-filters {{ display:flex; flex-wrap:wrap; gap:.5rem; }}
     #why-card {{ order:-2; }}
     #node-details-card {{ order:-1; }}
@@ -2907,7 +2913,7 @@ def format_reactlog_html(
       .app-header {{ flex-wrap: wrap; }}
       .header-center {{ order: 3; width: 100%; flex: 1 0 100%; }}
       .toolbar-group {{ width: 100%; }}
-      .bottom-timeline-bar.toolbar {{ width: 100%; max-width: 100%; box-sizing: border-box; overflow: visible; flex-wrap: wrap; height: auto; min-height: 38px; }}
+      .bottom-timeline-bar.toolbar {{ width: 100%; max-width: 100%; box-sizing: border-box; overflow: visible; flex-wrap: wrap; height: auto; min-height: 0; }}
     }}
     @media (max-width: 520px) {{
       html, body {{ overflow-x: hidden; max-width: 100vw; }}
@@ -2923,7 +2929,7 @@ def format_reactlog_html(
     }}
 
     .sidebar-rail {{ width: 40px; min-width: 40px; flex: 0 0 40px; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; box-sizing: border-box; z-index: 20; }}
-    .sidebar {{ position: absolute; top: 56px; right: 48px; bottom: 8px; width: min(420px, calc(100% - 64px)); min-width: 0; height: auto; z-index: 25; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 32px #0004; }}
+    .sidebar {{ position: relative; width: clamp(340px, 28vw, 480px); min-width: 0; max-width: calc(100vw - 42px); flex: 0 0 clamp(340px, 28vw, 480px); height: 100%; border-left: 1px solid var(--border); border-right: none; border-top: none; border-bottom: none; border-radius: 0; box-shadow: none; z-index: 10; }}
     .sidebar-header {{ justify-content: space-between; font: 650 .75rem var(--sans); }}
     .video-panel {{ position: absolute; right: 48px; bottom: 12px; width: min(440px, 48vw, calc(100% - 64px)); padding: 0; gap: 0; z-index: 26; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 24px #0005; overflow: hidden; transition: left 180ms ease, right 180ms ease; }}
     .main-view.is-inspector-open .video-panel {{ right: auto; left: 12px; }}
@@ -2932,9 +2938,9 @@ def format_reactlog_html(
     .video-sync-status {{ font: 600 .65rem var(--sans); }}
     .video-container {{ border: 0; border-radius: 0; aspect-ratio: 16 / 9; }}
     .video-container video {{ width: 100%; height: 100%; object-fit: contain; }}
-    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface); padding: 8px 16px; gap: 8px; }}
-    .timeline-current {{ display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font: 650 .75rem var(--sans); }}
-    #active-flush-label {{ color: var(--text-muted); }}
+    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--bg); padding: 8px 16px; gap: 8px; }}
+    .timeline-current {{ display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; font: 650 .75rem var(--sans); min-width: 0; }}
+    #active-flush-label {{ color: var(--text-muted); font-size: 0.72rem; flex-shrink: 0; }}
     .trace-status-line {{ max-width: none; white-space: normal; font: 600 .75rem var(--sans); }}
     .trace-track-wrap {{ position: relative; height: 24px; flex: none; background: var(--track-bg); touch-action: none; }}
     .header-center .search-wrap {{ flex: 1 1 250px; min-width: min(250px, 100%); max-width: 420px; }}
@@ -2966,26 +2972,33 @@ def format_reactlog_html(
     .status-center .nav-idle svg {{ color: var(--timeline-idle); }}
     .status-center .nav-output svg {{ color: var(--output); }}
     .status-center .nav-mark svg {{ color: var(--timeline-mark); }}
-    .bottom-timeline-bar {{ height: auto; min-height: 38px; flex-wrap: wrap; padding: 4px 12px; }}
+    .settings-wrap {{ position: relative; display: inline-flex; }}
+    .settings-menu {{ position: absolute; top: calc(100% + 6px); right: 0; width: 220px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 10px 12px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28); z-index: 100; display: flex; flex-direction: column; gap: 10px; }}
+    .settings-menu[hidden] {{ display: none !important; }}
+    .settings-menu-header {{ font: 700 0.72rem var(--sans); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; padding-bottom: 5px; border-bottom: 1px solid var(--border); }}
+    .settings-menu-item {{ display: flex; flex-direction: column; gap: 4px; }}
+    .settings-menu-label {{ font: 650 0.7rem var(--sans); color: var(--text); }}
+    .settings-select {{ width: 100%; }}
+    .settings-menu-divider {{ height: 1px; background: var(--border); margin: 2px 0; }}
+    .settings-menu-actions {{ display: flex; flex-direction: column; gap: 6px; }}
+    .settings-action-btn {{ width: 100%; justify-content: center; }}
     .status-left, .status-center, .status-right {{ flex-wrap: wrap; }}
     @media (max-width: 1000px) {{
       .workspace-layout {{ flex: 1; min-height: 350px; overflow: hidden; }}
       .main-view {{ flex: 1; flex-direction: row; min-height: 350px; overflow: hidden; }}
       .graph-container {{ flex: 1; width: auto; height: auto; min-height: 350px; }}
+      .sidebar {{ width: clamp(280px, 35vw, 420px); flex: 0 0 clamp(280px, 35vw, 420px); height: 100%; border-top: none; border-left: 1px solid var(--border); }}
     }}
 
     /* Readable graph keys, controls, and keyboard focus in both themes. */
     .legend {{ gap: 6px 14px; align-items: center; }}
     .legend-group {{ display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; }}
     .legend-label {{ color: var(--text); font: 700 12px var(--sans); }}
-    .legend-item, .legend-role-btn {{ font: 600 12px var(--sans); }}
-    .legend-role-btn {{ min-height: 28px; padding: 3px 8px; opacity: 1; color: var(--text); border: 1px solid var(--border-strong); background: var(--surface-2); }}
-    .legend-role-btn[aria-pressed="false"] {{ text-decoration: line-through; border-style: dashed; opacity: 0.6; background: transparent; }}
-    .legend-role-btn:hover {{ opacity: 1; border-color: var(--accent); }}
+    .legend-item {{ font: 600 12px var(--sans); }}
     .legend-dot {{ width: 12px; height: 12px; }}
     .legend-swatch {{ border-color: var(--node-stroke); }}
     .graph-top-row {{ align-items: start; }}
-    .node-focus-ring {{ opacity: 0; stroke: var(--text); stroke-width: 3px; pointer-events: none; }}
+    .node-focus-ring {{ opacity: 0; stroke: var(--text); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }}
     .graph-node:focus-visible {{ outline: none; }}
     .graph-node:focus-visible .node-focus-ring {{ opacity: 1; }}
     .graph-node.is-clientdata {{ opacity: 1; }}
@@ -3022,18 +3035,6 @@ def format_reactlog_html(
         <button type="button" class="search-toggle" aria-label="Show node choices" aria-controls="search-results" aria-expanded="false" onclick="toggleSearchChoices()">▾</button>
         <div id="search-results" class="search-results" role="listbox" aria-label="Node search results" onkeydown="handleSearchKey(event)" hidden></div>
       </div>
-      <select class="filter-select" id="clientdata-select" aria-label="Clientdata visibility" onchange="setClientDataVisibility(this.value)">
-        <option value="hide">Hide clientdata</option>
-        <option value="show">Show clientdata</option>
-      </select>
-      <select class="filter-select" id="activity-select" aria-label="Activity view" onchange="setViewMode(this.value)">
-        <option value="full">Show all activity</option>
-        <option value="flush">Show current activity</option>
-      </select>
-      <div class="filter-state" aria-label="Current exploration scope">
-        <span id="filter-node-count" role="status" aria-live="polite"></span>
-        <div id="active-filters"></div>
-      </div>
     </div>
     <div class="header-actions">
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
@@ -3044,20 +3045,18 @@ def format_reactlog_html(
     </div>
   </header>
 
-  <!-- Timeline playback controls -->
-  <footer class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
-    <div class="timeline-navigation">
-      <button class="btn mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">▶ Play</button>
-      <div class="status-time-group">
-        <span class="trace-clock" id="trace-current-time">0.0s</span><span class="trace-sep">/</span><span class="trace-total" id="trace-total-time">0.0s</span><span class="step-display" id="step-display">Step 0 / 0</span>
-      </div>
-    </div>
-  </footer>
-
   <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
-    <div class="timeline-current">
-      <span id="active-flush-label" role="status"></span>
-      <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
+    <div class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
+      <div class="timeline-navigation">
+        <button class="btn mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">▶ Play</button>
+        <div class="status-time-group">
+          <span class="trace-clock" id="trace-current-time">0.0s</span><span class="trace-sep">/</span><span class="trace-total" id="trace-total-time">0.0s</span><span class="step-display" id="step-display">Step 0 / 0</span>
+        </div>
+      </div>
+      <div class="timeline-current">
+        <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
+        <span id="active-flush-label" role="status"></span>
+      </div>
     </div>
     <div id="trace-track-wrap" class="trace-track-wrap">
       <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
@@ -3090,25 +3089,45 @@ def format_reactlog_html(
               <div class="legend-item"><span class="legend-line is-isolated"></span>Isolated dependency</div>
               <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
               </div>
-              <div class="legend-group"><span class="legend-label">Type</span>
-              <button type="button" class="legend-role-btn is-active" data-role="source" onclick="toggleRoleFilter('source')" aria-pressed="true" title="Filter Input nodes"><span class="legend-dot" style="--role-color:var(--source)"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 0.8A5.2 5.2 0 1 0 6 11.2A5.2 5.2 0 1 0 6 0.8ZM6 3.7A2.3 2.3 0 1 1 6 8.3A2.3 2.3 0 1 1 6 3.7Z"/></svg></span>Input</button>
-              <button type="button" class="legend-role-btn is-active" data-role="conductor" onclick="toggleRoleFilter('conductor')" aria-pressed="true" title="Filter Calc nodes"><span class="legend-dot" style="--role-color:var(--calc)"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 0.6L10.8 3.3V8.7L6 11.4L1.2 8.7V3.3ZM6 3.6L8.1 4.8V7.2L6 8.4L3.9 7.2V4.8Z"/></svg></span>Calc</button>
-              <button type="button" class="legend-role-btn is-active" data-role="effect" onclick="toggleRoleFilter('effect')" aria-pressed="true" title="Filter Effect nodes"><span class="legend-dot" style="--role-color:var(--effect)"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 0.9L11.3 10.3H0.7ZM6 4.5L8.4 8.7H3.6Z"/></svg></span>Effect</button>
-              <button type="button" class="legend-role-btn is-active" data-role="output" onclick="toggleRoleFilter('output')" aria-pressed="true" title="Filter Output nodes"><span class="legend-dot" style="--role-color:var(--output)"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 0.5L11.5 6L6 11.5L0.5 6ZM6 3.6L8.4 6L6 8.4L3.6 6Z"/></svg></span>Output</button>
-              </div>
             </div>
             <div class="zoom-controls">
-              <button class="btn mini" id="btn-toggle-collapse-all" onclick="toggleCollapseAllModules()" title="Collapse all modules into macro boxes">Collapse modules</button>
-              <button class="btn mini" onclick="resetGraphView()" title="Clear node selection and filters, then fit the full graph">Reset view</button>
+              <div class="filter-state" aria-label="Current exploration scope">
+                <span id="filter-node-count" role="status" aria-live="polite"></span>
+                <div id="active-filters"></div>
+              </div>
               <button class="btn icon mini" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="18" height="18" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
               <button class="btn icon mini" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="18" height="18" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
               <button class="btn icon mini" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+              <div class="settings-wrap" id="settings-wrap">
+                <button class="btn icon mini" id="btn-settings" onclick="toggleSettingsMenu()" aria-label="Graph settings" aria-expanded="false" title="Graph view settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                <div class="settings-menu" id="settings-menu" hidden>
+                  <div class="settings-menu-header">View Settings</div>
+                  <div class="settings-menu-item">
+                    <label for="clientdata-select" class="settings-menu-label">Clientdata</label>
+                    <select class="filter-select settings-select" id="clientdata-select" aria-label="Clientdata visibility" onchange="setClientDataVisibility(this.value)">
+                      <option value="hide">Hide clientdata</option>
+                      <option value="show">Show clientdata</option>
+                    </select>
+                  </div>
+                  <div class="settings-menu-item">
+                    <label for="activity-select" class="settings-menu-label">Activity</label>
+                    <select class="filter-select settings-select" id="activity-select" aria-label="Activity view" onchange="setViewMode(this.value)">
+                      <option value="full">Show all activity</option>
+                      <option value="flush">Show current activity</option>
+                    </select>
+                  </div>
+                  <div class="settings-menu-divider"></div>
+                  <div class="settings-menu-actions">
+                    <button type="button" class="btn mini settings-action-btn" id="btn-toggle-collapse-all" onclick="toggleCollapseAllModules()" title="Collapse all modules into macro boxes">Collapse modules</button>
+                    <button type="button" class="btn mini settings-action-btn" id="btn-reset-view" onclick="resetGraphView()" title="Clear node selection and filters, then fit the full graph">Reset view</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
         <div id="live-action-toast" class="action-toast" role="status" aria-live="polite" hidden></div>
-        <button class="btn mini" id="btn-clear-selection" onclick="clearNodeSelection()" aria-label="Clear node selection" hidden style="position:absolute;left:1rem;bottom:1rem;z-index:28;">Clear selection · Esc</button>
-        <button class="btn mini primary" id="btn-inspect-selection" onclick="showSidebarPanel('timeline')" aria-label="Open selected node details" hidden style="position:absolute;left:9.75rem;bottom:1rem;z-index:28;">Inspect node</button>
+        <button class="btn mini primary" id="btn-inspect-selection" onclick="showSidebarPanel('timeline')" aria-label="Open selected node details" hidden style="position:absolute;left:1rem;bottom:1rem;z-index:28;">Inspect node</button>
 
         <div class="empty-graph-message" id="empty-graph-message" role="status" hidden>No recorded changes or executions in this view. Select Show all nodes to see the full graph.</div>
         <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
@@ -3130,17 +3149,10 @@ def format_reactlog_html(
         </svg>
       </div>
 
-      <nav class="sidebar-rail" id="sidebar-rail" aria-label="Graph tools">
-        <button class="btn icon" id="btn-toggle-inspector-bottom" onclick="showSidebarPanel('timeline')" aria-label="Node details" title="Node details"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg></button>
-        {source_tab}
-        {video_tab_btn}
-      </nav>
-      {video_panel}
-
       <aside class="sidebar" id="sidebar" aria-label="Details and events" hidden>
         <div class="sidebar-header">
           <span id="detail-panel-title">Node details</span>
-          <button class="btn icon mini" onclick="toggleInspector(false)" aria-label="Close Inspector" title="Close Inspector">✕</button>
+          <button class="btn icon mini" id="btn-close-sidebar" onclick="closeSidebarAndClearSelection()" aria-label="Close Inspector" title="Close Inspector">✕</button>
         </div>
 
         <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-label="Node details">
@@ -3218,6 +3230,13 @@ def format_reactlog_html(
 
         {source_panel}
       </aside>
+
+      <nav class="sidebar-rail" id="sidebar-rail" aria-label="Graph tools">
+        <button class="btn icon" id="btn-toggle-inspector-bottom" onclick="showSidebarPanel('timeline')" aria-label="Node details" title="Node details"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg></button>
+        {source_tab}
+        {video_tab_btn}
+      </nav>
+      {video_panel}
     </main>
   </div>
 
@@ -3991,6 +4010,7 @@ def format_reactlog_html(
     }}
 
     function toggleCollapseAllModules() {{
+      toggleSettingsMenu(false);
       const allMods = new Set(filterItems((reactlogData.nodes || []).map(n => n.module), Boolean));
       if (collapsedModules.size >= allMods.size) {{
         collapsedModules.clear();
@@ -4186,6 +4206,7 @@ def format_reactlog_html(
     function init() {{
       document.addEventListener('click', (e) => {{
         if (!e.target.closest('.search-wrap')) closeSearchChoices();
+        if (!e.target.closest('.settings-wrap')) toggleSettingsMenu(false);
         const nodeBtn = e.target.closest('[data-node-id]');
         if (nodeBtn && nodeBtn.dataset.nodeId) {{
           selectNode(nodeBtn.dataset.nodeId);
@@ -4260,11 +4281,11 @@ def format_reactlog_html(
 
     function nodeKind(n) {{
       if (n.type === 'module') return {{ label: 'Module', color: 'var(--effect)', lightColor: '#994a78', darkColor: '#e3a4c8', shape: 'M3.2 0.8H11.2V8.8H9.6V2.4H3.2V0.8ZM0.8 3.2H8.8V11.2H0.8V3.2ZM2.6 5V9.4H7V5H2.6Z', verb: 'run' }};
-      if (n.render_type === 'plot' || n.render_type === 'image') return {{ label: 'Plot', color: 'var(--output)', lightColor: '#006e59', darkColor: '#5fc7a7', shape: 'M6 0.5L11.5 6L6 11.5L0.5 6ZM6 3.2L8.8 6L6 8.8L3.2 6ZM6 4.6L7.4 6L6 7.4L4.6 6Z', verb: 'render' }};
-      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: 'var(--source)', lightColor: '#005a9c', darkColor: '#56b4e9', shape: 'M6 0.8A5.2 5.2 0 1 0 6 11.2A5.2 5.2 0 1 0 6 0.8ZM6 3.7A2.3 2.3 0 1 1 6 8.3A2.3 2.3 0 1 1 6 3.7Z', verb: 'change' }};
-      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: 'var(--calc)', lightColor: '#9c4f00', darkColor: '#e9b44c', shape: 'M6 0.6L10.8 3.3V8.7L6 11.4L1.2 8.7V3.3ZM6 3.6L8.1 4.8V7.2L6 8.4L3.9 7.2V4.8Z', verb: 'run' }};
-      if (n.type === 'effect') return {{ label: 'Effect', color: 'var(--effect)', lightColor: '#994a78', darkColor: '#e3a4c8', shape: 'M6 0.9L11.3 10.3H0.7ZM6 4.5L8.4 8.7H3.6Z', verb: 'trigger' }};
-      return {{ label: 'Output', color: 'var(--output)', lightColor: '#006e59', darkColor: '#5fc7a7', shape: 'M6 0.5L11.5 6L6 11.5L0.5 6ZM6 3.6L8.4 6L6 8.4L3.6 6Z', verb: 'render' }};
+      if (n.render_type === 'plot' || n.render_type === 'image') return {{ label: 'Plot', color: 'var(--output)', lightColor: '#006e59', darkColor: '#5fc7a7', shape: 'M0.8 1H11.2V11H0.8L3.8 6ZM5.2 4.4H8.4V7.6H5.2Z', verb: 'render' }};
+      if (n.role === 'source' || n.type === 'input') return {{ label: 'Input', color: 'var(--source)', lightColor: '#005a9c', darkColor: '#56b4e9', shape: 'M0.8 1H8.2L11.2 6L8.2 11H0.8Z', verb: 'change' }};
+      if (n.role === 'conductor' || n.type === 'calc') return {{ label: 'Reactive Calc', color: 'var(--calc)', lightColor: '#9c4f00', darkColor: '#e9b44c', shape: 'M0.8 1H8.2L11.2 6L8.2 11H0.8L3.8 6Z', verb: 'run' }};
+      if (n.type === 'effect') return {{ label: 'Effect', color: 'var(--effect)', lightColor: '#994a78', darkColor: '#e3a4c8', shape: 'M6 1.2L11.2 10.8H0.8Z', verb: 'trigger' }};
+      return {{ label: 'Output', color: 'var(--output)', lightColor: '#006e59', darkColor: '#5fc7a7', shape: 'M0.8 1H11.2V11H0.8L3.8 6Z', verb: 'render' }};
     }}
 
     function toggleInspector(forceState) {{
@@ -4280,6 +4301,21 @@ def format_reactlog_html(
         button.classList.toggle('is-active', shouldOpen);
         button.setAttribute('aria-expanded', String(shouldOpen));
       }}
+    }}
+
+    function closeSidebarAndClearSelection() {{
+      clearNodeSelection();
+      toggleInspector(false);
+    }}
+
+    function toggleSettingsMenu(forceState) {{
+      const menu = document.getElementById('settings-menu');
+      const btn = document.getElementById('btn-settings');
+      if (!menu || !btn) return;
+      const shouldOpen = forceState !== undefined ? Boolean(forceState) : menu.hidden;
+      menu.hidden = !shouldOpen;
+      btn.setAttribute('aria-expanded', String(shouldOpen));
+      btn.classList.toggle('is-active', shouldOpen);
     }}
 
     function showSidebarPanel(panelName) {{
@@ -5086,6 +5122,27 @@ def format_reactlog_html(
       }}
     }}
 
+    function getNodeShapePath(n, p, width, height) {{
+      const role = n.role || n.type;
+      const x0 = p.x - width / 2;
+      const x1 = p.x + width / 2;
+      const y0 = p.y - height / 2;
+      const y1 = p.y + height / 2;
+      const ym = p.y;
+      const wc = 20;
+
+      if (n.type === 'module') {{
+        return `M ${{x0}} ${{y0}} H ${{x1}} V ${{y1}} H ${{x0}} Z`;
+      }}
+      if (role === 'source' || n.type === 'input') {{
+        return `M ${{x0}} ${{y0}} H ${{x1 - wc}} L ${{x1}} ${{ym}} L ${{x1 - wc}} ${{y1}} H ${{x0}} Z`;
+      }}
+      if (role === 'conductor' || n.type === 'calc') {{
+        return `M ${{x0}} ${{y0}} H ${{x1 - wc}} L ${{x1}} ${{ym}} L ${{x1 - wc}} ${{y1}} H ${{x0}} L ${{x0 + wc}} ${{ym}} Z`;
+      }}
+      return `M ${{x0}} ${{y0}} H ${{x1}} V ${{y1}} H ${{x0}} L ${{x0 + wc}} ${{ym}} Z`;
+    }}
+
     function renderGraph() {{
       const svg = document.getElementById('viewport-g');
       if (!svg) return;
@@ -5097,7 +5154,8 @@ def format_reactlog_html(
       const focusedNodes = focusedNodeId ? new Set([
         focusedNodeId, ...getUpstreamNodes(focusedNodeId), ...getDownstreamNodes(focusedNodeId)
       ]) : null;
-      document.getElementById('btn-clear-selection').hidden = !focusedNodeId;
+      const clearBtn = document.getElementById('btn-clear-selection');
+      if (clearBtn) clearBtn.hidden = !focusedNodeId;
       const inspectBtn = document.getElementById('btn-inspect-selection');
       if (inspectBtn) inspectBtn.hidden = !focusedNodeId || !document.getElementById('sidebar').hidden;
       const railInspectorBtn = document.getElementById('btn-toggle-inspector-bottom');
@@ -5150,22 +5208,91 @@ def format_reactlog_html(
           box.setAttribute('class', (name ? 'module-box' : 'app-box') + (dimmed ? ' is-dimmed' : ''));
           if (name) {{
             box.setAttribute('data-module', name);
-            box.setAttribute('tabindex', '0'); box.setAttribute('role', 'button'); box.setAttribute('aria-expanded', 'true');
-            box.setAttribute('aria-label', `Collapse module ${{name}}`);
-            box.ondblclick = e => {{ e.stopPropagation(); toggleModule(name); }};
+            box.setAttribute('tabindex', '0');
+            box.setAttribute('role', 'region');
+            box.setAttribute('aria-label', `Module ${{name}}`);
             box.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(name); }} }};
           }}
           const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          rect.setAttribute('x', left); rect.setAttribute('y', top - 28); rect.setAttribute('width', Math.max(320, right - left));
-          rect.setAttribute('height', rows * rowHeight + 20); rect.setAttribute('rx', '12');
-          rect.setAttribute('fill', isLight ? '#e0f2fe66' : '#17314b55'); rect.setAttribute('stroke', isLight ? '#3b6b91' : '#5b82a6');
-          rect.setAttribute('stroke-dasharray', '5 4'); box.appendChild(rect);
-          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          label.setAttribute('x', left + 14); label.setAttribute('y', top - 8); label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
-          label.setAttribute('font-size', '12'); label.innerHTML = name
-            ? nodeLabelHTML({{ label: name, module: name }}, true) + escapeHTML(` · ${{members.length}} nodes · Enter to collapse`)
-            : escapeHTML(`App (no namespace) · ${{members.length}} nodes`);
-          box.appendChild(label); svg.appendChild(box);
+          rect.setAttribute('x', left);
+          rect.setAttribute('y', top - 28);
+          rect.setAttribute('width', Math.max(320, right - left));
+          rect.setAttribute('height', rows * rowHeight + 20);
+          rect.setAttribute('rx', '12');
+          rect.setAttribute('fill', isLight ? '#e0f2fe66' : '#17314b55');
+          rect.setAttribute('stroke', isLight ? '#3b6b91' : '#5b82a6');
+          rect.setAttribute('stroke-dasharray', '5 4');
+          rect.onclick = e => e.stopPropagation();
+          box.appendChild(rect);
+
+          if (name) {{
+            const headerBtn = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            headerBtn.setAttribute('class', 'module-collapse-btn');
+            headerBtn.setAttribute('tabindex', '0');
+            headerBtn.setAttribute('role', 'button');
+            headerBtn.setAttribute('aria-expanded', 'true');
+            headerBtn.setAttribute('aria-label', `Collapse module ${{name}}`);
+            headerBtn.onclick = e => {{ e.stopPropagation(); toggleModule(name); }};
+            headerBtn.ondblclick = e => {{ e.stopPropagation(); toggleModule(name); }};
+            headerBtn.onkeydown = e => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); e.stopPropagation(); toggleModule(name); }} }};
+
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', left + 14);
+            label.setAttribute('y', top - 8);
+            label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
+            label.setAttribute('font-size', '12');
+            label.innerHTML = nodeLabelHTML({{ label: name, module: name }}, true) + escapeHTML(` · ${{members.length}} nodes · click to collapse`);
+            headerBtn.appendChild(label);
+
+            const textWidth = (label.getComputedTextLength && label.getComputedTextLength()) || (name.length * 8 + 190);
+            const iconX = left + 14 + textWidth + 8;
+            const iconY = top - 19;
+
+            const iconG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            iconG.setAttribute('class', 'module-collapse-icon');
+            iconG.setAttribute('transform', `translate(${{iconX}}, ${{iconY}})`);
+            iconG.setAttribute('aria-hidden', 'true');
+
+            const iconBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            iconBg.setAttribute('width', '16');
+            iconBg.setAttribute('height', '16');
+            iconBg.setAttribute('rx', '3');
+            iconBg.setAttribute('fill', isLight ? '#e2e8f0' : '#1e293b');
+            iconBg.setAttribute('stroke', isLight ? '#94a3b8' : '#475569');
+            iconBg.setAttribute('stroke-width', '1');
+            iconG.appendChild(iconBg);
+
+            const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            iconPath.setAttribute('d', 'M3.5 6.5h3v-3M3.5 3.5l3 3M12.5 9.5h-3v3M12.5 12.5l-3-3');
+            iconPath.setAttribute('fill', 'none');
+            iconPath.setAttribute('stroke', isLight ? '#0284c7' : '#38bdf8');
+            iconPath.setAttribute('stroke-width', '1.5');
+            iconPath.setAttribute('stroke-linecap', 'round');
+            iconPath.setAttribute('stroke-linejoin', 'round');
+            iconG.appendChild(iconPath);
+
+            headerBtn.appendChild(iconG);
+
+            const hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            hitRect.setAttribute('x', left + 8);
+            hitRect.setAttribute('y', top - 24);
+            hitRect.setAttribute('width', textWidth + 30);
+            hitRect.setAttribute('height', 22);
+            hitRect.setAttribute('fill', 'transparent');
+            hitRect.setAttribute('class', 'module-header-hit');
+            headerBtn.insertBefore(hitRect, label);
+
+            box.appendChild(headerBtn);
+          }} else {{
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', left + 14);
+            label.setAttribute('y', top - 8);
+            label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
+            label.setAttribute('font-size', '12');
+            label.textContent = escapeHTML(`App · ${{members.length}} nodes`);
+            box.appendChild(label);
+          }}
+          svg.appendChild(box);
         }}
         top += rows * rowHeight + 75;
       }}
@@ -5243,7 +5370,10 @@ def format_reactlog_html(
 
         g.onclick = (e) => {{
           e.stopPropagation();
-          if (n.type === 'module') return;
+          if (n.type === 'module') {{
+            toggleModule(n.module);
+            return;
+          }}
           if (e.detail >= 2) {{
             filterLineageForNode(n.id);
             return;
@@ -5272,12 +5402,9 @@ def format_reactlog_html(
         g.onmouseenter = () => highlightDependencies(n.id);
         g.onmouseleave = () => resetHighlight();
 
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', p.x - (nodeWidth / 2));
-        rect.setAttribute('y', p.y - (nodeHeight / 2));
-        rect.setAttribute('width', nodeWidth);
-        rect.setAttribute('height', nodeHeight);
-        rect.setAttribute('rx', '10');
+        const role = n.role || n.type;
+        const cardPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        cardPath.setAttribute('d', getNodeShapePath(n, p, nodeWidth, nodeHeight));
 
         const fillCol = reactiveStateColors[state];
         const defaultStroke = state === 'frozen'
@@ -5287,67 +5414,43 @@ def format_reactlog_html(
         const strokeW = isSelected ? '3' : '1.5';
         const filterVal = isSelected ? (isLight ? 'drop-shadow(0 0 8px rgba(2,132,199,0.35))' : 'drop-shadow(0 0 10px rgba(99,179,255,0.4))') : 'url(#card-shadow)';
 
-        rect.setAttribute('fill', fillCol);
-        rect.setAttribute('stroke', strokeCol);
-        rect.setAttribute('stroke-width', strokeW);
-        rect.setAttribute('filter', filterVal);
-        rect.setAttribute('class', 'node-card');
-        g.appendChild(rect);
+        cardPath.setAttribute('fill', fillCol);
+        cardPath.setAttribute('stroke', strokeCol);
+        cardPath.setAttribute('stroke-width', strokeW);
+        cardPath.setAttribute('stroke-linejoin', 'round');
+        cardPath.setAttribute('stroke-linecap', 'round');
+        cardPath.setAttribute('filter', filterVal);
+        cardPath.setAttribute('class', 'node-card');
+        g.appendChild(cardPath);
 
-        const focusRing = rect.cloneNode(false);
+        const focusRing = cardPath.cloneNode(false);
         focusRing.setAttribute('class', 'node-focus-ring');
-        focusRing.setAttribute('x', p.x - (nodeWidth / 2) - 5);
-        focusRing.setAttribute('y', p.y - (nodeHeight / 2) - 5);
-        focusRing.setAttribute('width', nodeWidth + 10);
-        focusRing.setAttribute('height', nodeHeight + 10);
-        focusRing.setAttribute('rx', '13');
         focusRing.setAttribute('fill', 'none');
         focusRing.removeAttribute('filter');
         focusRing.setAttribute('aria-hidden', 'true');
         g.appendChild(focusRing);
 
-        // A high-contrast badge keeps role shapes crisp across all state fills.
-        const markerBacking = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        markerBacking.setAttribute('class', 'node-kind-backing');
-        markerBacking.setAttribute('x', p.x - (nodeWidth / 2) + 8);
-        markerBacking.setAttribute('y', p.y - 13);
-        markerBacking.setAttribute('width', '26');
-        markerBacking.setAttribute('height', '26');
-        markerBacking.setAttribute('rx', '7');
-        markerBacking.setAttribute('fill', state === 'frozen' ? '#09131c' : '#f8fafc');
-        markerBacking.setAttribute('stroke', state === 'frozen' ? 'rgba(255, 255, 255, 0.35)' : 'rgba(15, 23, 42, 0.24)');
-        markerBacking.setAttribute('stroke-width', '1.2');
-        markerBacking.setAttribute('aria-hidden', 'true');
-        g.appendChild(markerBacking);
-
-        const accent = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        accent.setAttribute('class', 'node-kind-marker');
-        accent.setAttribute('d', kind.shape);
-        accent.setAttribute('fill-rule', 'evenodd');
-        accent.setAttribute('transform', `translate(${{p.x - (nodeWidth / 2) + 13.8}}, ${{p.y - 7.2}}) scale(1.2)`);
-        accent.setAttribute('fill', state === 'frozen' ? kind.darkColor : kind.lightColor);
-        accent.setAttribute('aria-hidden', 'true');
-        g.appendChild(accent);
+        const textX = p.x - (nodeWidth / 2) + ((role === 'source' || n.type === 'input' || n.type === 'module') ? 22 : 36);
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', p.x - (nodeWidth / 2) + 43);
+        text.setAttribute('x', textX);
         text.setAttribute('y', p.y - 4);
         text.setAttribute('fill', state === 'frozen' ? '#ffffff' : '#0f172a');
         text.setAttribute('font-family', 'var(--mono)');
         text.setAttribute('font-size', '14px');
         text.setAttribute('font-weight', '700');
-        text.innerHTML = nodeLabelHTML(n, true, 26);
+        text.innerHTML = nodeLabelHTML(n, true, 28);
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
         title.textContent = `${{nodeDisplayName(n)}} · ${{state}}${{n.line ? ' · line ' + n.line : ''}}`;
         g.appendChild(title);
         g.appendChild(text);
 
         const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        subText.setAttribute('x', p.x - (nodeWidth / 2) + 43);
+        subText.setAttribute('x', textX);
         subText.setAttribute('y', p.y + 14);
         subText.setAttribute('fill', state === 'frozen' ? '#e2e8f0' : '#1e293b');
         subText.setAttribute('font-size', '12px');
-        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · Enter to expand` : `${{kind.label}} · ${{state}}`;
+        subText.textContent = n.type === 'module' ? `${{n.members.length}} nodes · click to expand` : `${{kind.label}} · ${{state}}`;
         g.appendChild(subText);
 
         const execCount = execCounts.get(n.id) || 0;
@@ -5356,7 +5459,8 @@ def format_reactlog_html(
           badgeG.setAttribute('class', 'node-exec-badge');
           const badgeWidth = 34;
           const badgeHeight = 18;
-          const badgeX = p.x + (nodeWidth / 2) - badgeWidth - 4;
+          const hasRightChevron = (role === 'source' || n.type === 'input' || role === 'conductor' || n.type === 'calc');
+          const badgeX = p.x + (nodeWidth / 2) - badgeWidth - (hasRightChevron ? 28 : 10);
           const badgeY = p.y - (nodeHeight / 2) - 9;
 
           const badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -5794,6 +5898,7 @@ def format_reactlog_html(
     }}
 
     function resetGraphView() {{
+      toggleSettingsMenu(false);
       selectedNodeId = null;
       focusedNodeId = null;
       selectedSearchNodeId = null;
@@ -6067,6 +6172,13 @@ def format_reactlog_html(
           if (modal && !modal.hidden) {{
             toggleShortcutsModal();
             e.preventDefault();
+            return;
+          }}
+          const settingsMenu = document.getElementById('settings-menu');
+          if (settingsMenu && !settingsMenu.hidden) {{
+            toggleSettingsMenu(false);
+            e.preventDefault();
+            return;
           }}
         }}
         return;
@@ -6076,6 +6188,12 @@ def format_reactlog_html(
         const modal = document.getElementById('shortcuts-modal');
         if (modal && !modal.hidden) {{
           toggleShortcutsModal();
+          e.preventDefault();
+          return;
+        }}
+        const settingsMenu = document.getElementById('settings-menu');
+        if (settingsMenu && !settingsMenu.hidden) {{
+          toggleSettingsMenu(false);
           e.preventDefault();
           return;
         }}
