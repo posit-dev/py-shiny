@@ -33,7 +33,8 @@ uv run shiny run app.py --reload --launch-browser
 ## Optional: help your coding agent
 In this project, run `uvx library-skills` (Claude Code: add `--claude`).
 Locate the bundled skill: `uv run shiny skills path shiny-for-python`.
-Read `SKILL.md` there, or browse topics with `uv run shiny guide`.
+Read `SKILL.md`: `uv run shiny get skill --name shiny-for-python`.
+Add `--reference reactivity` to read a reference (close names work too).
 
 ## What's new and docs
 [What's new in {__version__}](https://github.com/posit-dev/py-shiny/blob/{ref}/CHANGELOG.md)

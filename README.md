@@ -66,6 +66,16 @@ Run this from your own project rather than a clone of this repository: [`library
 
 To see what's bundled without installing anything, run `shiny skills list`.
 
+To read a skill or one of its references from your project:
+
+```sh
+uv run shiny get skill --name shiny-for-python
+uv run shiny get skill --name shiny-for-python --reference reactivity
+```
+
+Reference names accept partial names and close spellings, such as `reactive`
+for `reactivity`. If several references match, the command lists their names.
+
 ## Development
 
 * Shinylive built from the `main` branch: https://posit-dev.github.io/py-shiny/shinylive/py/examples/

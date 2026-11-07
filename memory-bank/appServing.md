@@ -86,7 +86,7 @@ Entry point `shiny = "shiny._main:main"` (pyproject `[project.scripts]`);
 | `add test` | `_generate_test.py` | AI-generated Playwright test (`--provider anthropic\|openai`) |
 | `skills list` / `skills path NAME` | `_skills.py` | lists/locates `shiny/.agents/skills/*/SKILL.md`; install is delegated to `library-skills` |
 | `quickstart` | `_quickstart.py` | short Markdown welcome with setup, optional skill installation, and version-specific release notes; does not print the skill |
-| `guide [TOPIC]` | `_guide.py` | lists bundled reference topics or prints one, rewriting topic links as CLI commands |
+| `get skill --name NAME [--reference TOPIC]` | `_get.py` | prints a bundled skill's index or a reference; accepts partial names and close spellings, and rewrites reference links as CLI commands |
 | `static` | `_static.py` | always exits 1, pointing to `shinylive export` |
 | `static-assets remove\|info` | `_static.py` | deprecated shinylive asset cache management |
 | `cells-to-app`, `get-shiny-deps` | `_static.py` | Quarto hooks -> `shiny/quarto.py` |
