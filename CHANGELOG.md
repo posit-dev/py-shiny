@@ -63,6 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* New `shiny quickstart` prints a short welcome with setup steps, an optional Agent Skill install command, and links to release notes and docs for the installed version. Run it with `uvx shiny quickstart`, or `uv run shiny quickstart` in an existing project. `shiny guide` lists bundled reference topics, and `shiny guide <topic>` prints one. Running `shiny` with no command now lists every command with its full description (#2589).
+
 * New `session.run_once_when_idle()` runs a function once, after the session's effects have finished and its outputs have been sent. Use it to change reactive state from a background task or a custom timer without changing a value that a running effect is still reading (#2546).
 
 * `ui.sidebar()` gains a `role` argument (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark (#2526).
