@@ -85,9 +85,98 @@ Entry point `shiny = "shiny._main:main"` (pyproject `[project.scripts]`);
 | `create` | `_create.py` | templates (below) |
 | `add test` | `_generate_test.py` | AI-generated Playwright test (`--provider anthropic\|openai`) |
 | `skills list` / `skills path NAME` | `_skills.py` | lists/locates `shiny/.agents/skills/*/SKILL.md`; install is delegated to `library-skills` |
+| `validate` | `_validate.py` | static checks of the entry file and local imports; `--json`, `--strict`, and extra `--validator module:attr` rules |
 | `static` | `_static.py` | always exits 1, pointing to `shinylive export` |
 | `static-assets remove\|info` | `_static.py` | deprecated shinylive asset cache management |
 | `cells-to-app`, `get-shiny-deps` | `_static.py` | Quarto hooks -> `shiny/quarto.py` |
+
+## Static validation
+
+`shiny/_validate.py` implements the public helpers re-exported by
+`shiny/validate.py`. `validate_shiny_code()` checks one source string;
+`validate_shiny_file()` follows statically named local imports within the entry
+file's directory. It reads source without importing it, visits each resolved
+file once (including package initializers), and skips paths outside that
+directory, installed packages, and unresolved imports. Each file gets a fresh
+validator so module IDs and suppression comments do not collide across files.
+File diagnostics add an optional `file` key to the usual line/message/code.
+
+Scope rule: only report what a type checker or linter cannot. Syntax errors,
+unknown imports, redeclared function names, and attribute/subscript access on
+a `reactive.Value` are all pyright/pylance territory and are deliberately not
+rules here (a syntax error is still reported, since nothing else can be
+checked). Input assignment is also left to type checkers and the runtime.
+Rules encode Shiny semantics: reactive context, renderer/ID uniqueness,
+extended-task constraints.
+
+`ShinyCodeValidator` checks IDs, inputs, and decorators. Duplicate input/output
+IDs are keyed by `(kind, enclosing Shiny module function, id)`: only
+`@module.ui` / `@module.server` functions open a namespace, because those are
+the only functions that get one at runtime; ordinary UI helper functions share
+the app-level scope, so two helpers that both emit `ui.input_text("x")` warn.
+App-level IDs (scope `""`) are also compared across the imported file set in
+`validate_shiny_file()`, while module namespaces stay per file. `input`
+references respect local shadowing: `input = {...}` in a function or at
+module level hides the import, comprehension variables do not (they have
+their own scope), and a parameter named `input` is Shiny's only in a server
+function (named `server`, `@module.server`, or `(input, output, session)`)
+or when annotated `Inputs`; otherwise it is an ordinary local. Uncalled inputs
+warn only in `str()`, f-strings, comparisons, arithmetic, and renderer return
+values. Passing a callable to any helper, including `reactive.event(...)`, or
+storing it for later is allowed. It also checks `@reactive.event`
+position, effects that return a value, and Core-mode output/renderer pairing:
+`app_outputs` (`ui.output_*` and `ui.download_*` IDs, plus any call with a
+string `id=` and a `class_=` containing `-output`, for hand-built
+placeholders), `app_renderers`
+(`@render.*` IDs, honoring `@output(id=)`), and `app_functions` are collected
+outside `@module.*` functions and outside other render functions, merged
+across the file set in `validate_shiny_file()`, and compared only when both
+sides are non-empty (so a UI or server in an uninspected file is not judged).
+Custom renderer decorators are not recognised, so a function carrying any
+decorator outside `_NON_RENDERER_DECORATORS` (reactive, module, output, and a
+few stdlib ones) counts as a candidate for a placeholder; undecorated helpers
+and known reactive decorators do not. IDs are read from the first positional
+argument or `id=` via `_literal_id()`, and `input` is matched through
+`_is_input_ref()` so import aliases such as `input as inp` are covered.
+Both visitors share lexical binding collection, function parameter resolution,
+and lambda/comprehension scope handling in `shiny/_validate_names.py`.
+The first parameter of a server function is an input even when renamed, and
+`Inputs` annotations identify inputs in other functions. Imports inside a
+function stay local. Express aliases resolve to the same APIs as Core aliases.
+Exception-handler targets also shadow imported names. Both visitors recognize
+generic value constructors such as `reactive.Value[int](0)`. Reactive reads in
+function and lambda defaults are checked in the enclosing context, where Python
+evaluates them. Uncalled-input checks cover attribute and subscript access.
+`run_app(validate=None)` reads `SHINY_VALIDATE`; an explicit bool (or the
+tri-state `--validate/--no-validate` flag) wins. If neither is set, validation
+follows `dev_mode`. `shiny/_validate_reactivity.py` tracks
+known values, calc functions, extended tasks, and `reactive.Value` parameter
+annotations lexically. It reports reads outside a reactive context (module
+level, or directly in a function named `server`, decorated `@module.server`,
+or taking `(input, output, session)`; `with reactive.isolate():` and lambdas
+are exempt, and decorator arguments are checked in the enclosing scope) and
+reads inside extended tasks as errors; an effect without `reactive.event`
+that reads and sets the same value, a calc that calls `.set()`, same-object
+mutation/set, and swallowed task-result exceptions are warnings. `Inputs`
+methods that configure rather than read (`set_serializer`,
+`set_snapshot_preprocess`) are exempt from the context check. Import aliases
+and string annotations are supported. This is a targeted static check, not
+type inference across function arguments or a runtime guarantee. Before
+adding a rule, sweep `shiny/api-examples`, `examples`, `shiny/templates`, and
+`tests/playwright` apps with `validate_shiny_file()` for false positives:
+`shiny run` prints findings to stderr, and the Playwright example tests fail
+on unexpected stderr.
+
+The CLI, startup `_validate_app_file()`, and public file helper share this path.
+Startup labels every issue as a warning without preventing launch and logs
+analyzer failures at debug level without configuring logging. The CLI exits 1 on errors,
+or on warnings with `--strict`. Plugins run per file before local suppression
+comments are applied. Tests are in `test_validate*.py` and
+`test_main_validate.py` under `tests/pytest/`.
+
+`test_validate_apps.py` includes one false-positive sweep over the existing apps
+under `tests/playwright/ai_generated_apps/` and focused regressions for the
+binding and syntax bugs found while testing them.
 
 ## `shiny run` / `run_app`
 

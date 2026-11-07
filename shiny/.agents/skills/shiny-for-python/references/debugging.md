@@ -7,6 +7,42 @@ snapshot of its `input`, `output`, and `export` values over HTTP. Use it instead
 of print statements, hidden outputs, or websocket spelunking to observe
 server-side state.
 
+## Check source before running
+
+Run `shiny validate app.py` to check the entry file and its local Python imports
+without executing them. Diagnostics include the file and line to fix. Use
+`--json` for structured results and `--strict` to fail on warnings as well as
+errors. In dev mode, `shiny run` also reports these checks as startup warnings.
+The `--validate` and `--no-validate` flags override `SHINY_VALIDATE`, which
+overrides the dev-mode default. Use `SHINY_VALIDATE=0` to disable validation
+or `SHINY_VALIDATE=1` to enable it.
+
+Checks are Shiny-specific and complement, rather than repeat, pyright or a
+linter: reads of `input.*()`, a `reactive.value`, or a `reactive.calc` outside
+a reactive context (module level or directly in the server body), reads inside
+extended tasks, uncalled inputs used as values, `@reactive.event` above
+the decorator it should sit under, duplicate IDs, Core-mode `ui.output_*()`
+placeholders with no renderer and renderers with no placeholder, effects that
+return a value or that read and set the same value (an infinite loop), calcs
+that set values, mutating and setting the same stored object, and broad
+exception handlers around extended-task results. Fix outside-context reads by
+moving them into a render function, calc, or effect, or wrapping a one-time
+read in `with reactive.isolate():`. Fix self-triggering effects with
+`@reactive.event(...)` or by reading inside `reactive.isolate()`. Fix task
+reads by passing values as task arguments. Copy stored lists or dictionaries
+before changing them. Let `task.result()` propagate Shiny's pending-result
+signals.
+
+An uncalled input produces a warning in `str()`, f-strings, comparisons,
+arithmetic, or a renderer's return value. Passing the input callable to a
+helper or storing it for later is allowed. Type checkers and the runtime
+report assignments to inputs.
+
+For intentional exceptions, add `# shiny: ignore RULE_CODE` on the reported
+line. Import traversal stays within the entry file's directory; installed
+packages and dynamic imports are not inspected. Continue with runtime tests to
+check interaction behavior.
+
 ## Enable test mode
 
 - Env var: `SHINY_TESTMODE=1 shiny run app.py`
