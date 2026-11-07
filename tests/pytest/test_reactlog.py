@@ -249,7 +249,7 @@ def greeting():
     assert 'src="http' not in html
     assert 'href="http' not in html
     assert 'aria-label="Filter reactive nodes by name, type, id, or module"' in html
-    assert 'aria-label="Fit graph to view"' in html
+    assert 'aria-label="Full screen"' in html
     assert 'aria-label="Zoom in"' in html
     assert 'aria-label="Zoom out"' in html
     assert 'aria-label="Timeline step scrubber"' in html
@@ -1059,6 +1059,7 @@ def test_format_reactlog_html_accessible_palette(theme: str):
 
         for marker in (
             tokens["--timeline-idle"],
+            tokens["--timeline-output"],
             tokens["--timeline-mark"],
             tokens["--output"],
         ):
@@ -2446,3 +2447,6 @@ def greeting():
     assert (
         '<div class="zoom-controls">\n              <div class="filter-state"' in html
     )
+    assert 'id="btn-fullscreen"' in html
+    assert "toggleFullscreen()" in html
+    assert "--timeline-output:" in html

@@ -1080,7 +1080,7 @@ def test_fit_large_graph(page: Page) -> None:
     load_graph_report(
         page, format_reactlog_html(load_reactlog_json(raw), source_code="")
     )
-    page.get_by_role("button", name="Fit graph to view", exact=True).click()
+    reset_graph_view(page)
     bounds = page.evaluate("""() => {
         const svg = document.getElementById('reactlog-svg').getBoundingClientRect();
         const graph = document.getElementById('viewport-g').getBoundingClientRect();
@@ -1088,6 +1088,20 @@ def test_fit_large_graph(page: Page) -> None:
     }""")
     assert bounds["fits"]
     assert bounds["zoom"] < 0.4
+
+
+def test_fullscreen_toggle_button(page: Page) -> None:
+    code = """from shiny.express import input, render, ui
+ui.input_numeric("x", "X", 1)
+@render.text
+def result():
+    return str(input.x())
+"""
+    load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
+    btn = page.locator("#btn-fullscreen")
+    expect(btn).to_be_visible()
+    expect(btn).to_have_attribute("aria-label", "Full screen")
+    expect(btn).to_have_attribute("title", "Full screen")
 
 
 def test_search_keyboard_and_reset_view(page: Page) -> None:

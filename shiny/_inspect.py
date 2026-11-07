@@ -2535,7 +2535,8 @@ def format_reactlog_html(
       --card-bg: #141e2b;
       --track-bg: #1b2634;
       --track-fill: #24384d;
-      --timeline-idle: #56b4e9;
+      --timeline-idle: #5fc7a7;
+      --timeline-output: #56b4e9;
       --timeline-mark: #f59e0b;
       --playhead-bg: #f8fafc;
       --playhead-ring: #17212b;
@@ -2580,7 +2581,8 @@ def format_reactlog_html(
       --card-bg: #f8fafc;
       --track-bg: #e2e8f0;
       --track-fill: #cbd5e1;
-      --timeline-idle: #026aa7;
+      --timeline-idle: #006e59;
+      --timeline-output: #026aa7;
       --timeline-mark: #b45309;
       --playhead-bg: #0f172a;
       --playhead-ring: #ffffff;
@@ -2624,7 +2626,8 @@ def format_reactlog_html(
         --card-bg: #f8fafc;
         --track-bg: #e2e8f0;
         --track-fill: #cbd5e1;
-        --timeline-idle: #026aa7;
+        --timeline-idle: #006e59;
+        --timeline-output: #026aa7;
         --timeline-mark: #b45309;
         --playhead-bg: #0f172a;
         --playhead-ring: #ffffff;
@@ -2953,7 +2956,7 @@ def format_reactlog_html(
     #scrubber-range:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
     #trace-markers {{ position: absolute; inset: 0 1.5px; pointer-events: none; z-index: 1; }}
     .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: var(--timeline-idle); pointer-events: auto; cursor: pointer; }}
-    .timeline-marker.is-output {{ top: 5px; height: 14px; border-radius: 2px; background: var(--output); }}
+    .timeline-marker.is-output {{ top: 5px; height: 14px; border-radius: 2px; background: var(--timeline-output); }}
     .timeline-marker.is-mark {{ background: var(--timeline-mark); z-index: 2; }}
     .timeline-marker:hover, .timeline-marker:focus-visible {{ outline: 2px solid var(--text); outline-offset: 1px; z-index: 3; }}
     .timeline-playhead {{ position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); pointer-events: none; z-index: 4; }}
@@ -2961,7 +2964,7 @@ def format_reactlog_html(
     .timeline-key {{ display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font: .7rem var(--sans); }}
     .timeline-key span {{ display: inline-flex; align-items: center; gap: 5px; }}
     .timeline-key i {{ display: inline-block; width: 3px; height: 14px; border-radius: 1px; background: var(--timeline-idle); }}
-    .timeline-key .key-output {{ height: 8px; border-radius: 2px; background: var(--output); }}
+    .timeline-key .key-output {{ height: 8px; border-radius: 2px; background: var(--timeline-output); }}
     .timeline-key .key-mark {{ background: var(--timeline-mark); border-radius: 1px; }}
     .timeline-key .key-position {{ width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); }}
     .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
@@ -2970,7 +2973,7 @@ def format_reactlog_html(
     .status-center {{ gap: 3px; }}
     .status-center .btn {{ width: 28px; min-height: 28px; height: 28px; }}
     .status-center .nav-idle svg {{ color: var(--timeline-idle); }}
-    .status-center .nav-output svg {{ color: var(--output); }}
+    .status-center .nav-output svg {{ color: var(--timeline-output); }}
     .status-center .nav-mark svg {{ color: var(--timeline-mark); }}
     .settings-wrap {{ position: relative; display: inline-flex; }}
     .settings-menu {{ position: absolute; top: calc(100% + 6px); right: 0; width: 220px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 10px 12px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28); z-index: 100; display: flex; flex-direction: column; gap: 10px; }}
@@ -3097,7 +3100,7 @@ def format_reactlog_html(
               </div>
               <button class="btn icon mini" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="18" height="18" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
               <button class="btn icon mini" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="18" height="18" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
-              <button class="btn icon mini" onclick="fitGraph()" aria-label="Fit graph to view" title="Fit to view"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+              <button class="btn icon mini" id="btn-fullscreen" onclick="toggleFullscreen()" aria-label="Full screen" title="Full screen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
               <div class="settings-wrap" id="settings-wrap">
                 <button class="btn icon mini" id="btn-settings" onclick="toggleSettingsMenu()" aria-label="Graph settings" aria-expanded="false" title="Graph view settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
                 <div class="settings-menu" id="settings-menu" hidden>
@@ -5992,6 +5995,47 @@ def format_reactlog_html(
                      y: (height - box.height * zoomLevel) / 2 - box.y * zoomLevel }};
       applyZoom();
     }}
+    function isFullscreen() {{
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }}
+    function updateFullscreenButton() {{
+      const btn = document.getElementById('btn-fullscreen');
+      if (!btn) return;
+      const fs = isFullscreen();
+      btn.setAttribute('aria-label', fs ? 'Exit full screen' : 'Full screen');
+      btn.title = fs ? 'Exit full screen' : 'Full screen';
+      btn.innerHTML = fs
+        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>'
+        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+    }}
+    function toggleFullscreen() {{
+      if (!isFullscreen()) {{
+        const root = document.documentElement;
+        if (root.requestFullscreen) {{
+          root.requestFullscreen().catch(() => {{}});
+        }} else if (root.webkitRequestFullscreen) {{
+          root.webkitRequestFullscreen();
+        }} else if (root.msRequestFullscreen) {{
+          root.msRequestFullscreen();
+        }}
+      }} else {{
+        if (document.exitFullscreen) {{
+          document.exitFullscreen().catch(() => {{}});
+        }} else if (document.webkitExitFullscreen) {{
+          document.webkitExitFullscreen();
+        }} else if (document.msExitFullscreen) {{
+          document.msExitFullscreen();
+        }}
+      }}
+    }}
+    document.addEventListener('fullscreenchange', () => {{
+      updateFullscreenButton();
+      setTimeout(fitGraph, 100);
+    }});
+    document.addEventListener('webkitfullscreenchange', () => {{
+      updateFullscreenButton();
+      setTimeout(fitGraph, 100);
+    }});
 
     function loadReactlogObject(loadedData) {{
       let normalized = loadedData;
