@@ -66,6 +66,21 @@ ui.input_slider("n", "Second N", 1, 10, 5)
     )
 
 
+def test_cli_uncalled_input_only_fails_in_strict_mode() -> None:
+    code = (
+        "from shiny.express import input, render\n"
+        "@render.text\ndef shown():\n    return input.n\n"
+    )
+    runner = CliRunner()
+    args = ["validate", "--code", code, "--json"]
+    result = runner.invoke(main, args=args)
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    assert report["errors"] == []
+    assert [issue["code"] for issue in report["warnings"]] == ["UNCALLED_INPUT"]
+    assert runner.invoke(main, args=[*args, "--strict"]).exit_code == 1
+
+
 def test_cli_validate_file(tmp_path: Path):
     runner = CliRunner()
     app_file = tmp_path / "app.py"
@@ -131,3 +146,16 @@ def test_cli_validate_bad_validator_spec() -> None:
     assert res.exit_code == 2
     assert "--validator" in res.output
     assert "ModuleNotFoundError" in res.output
+
+
+def test_cli_validate_stdin() -> None:
+    result = CliRunner().invoke(
+        main,
+        args=["validate", "-", "--json"],
+        input="from shiny.express import input\ninput.n()\n",
+    )
+    assert result.exit_code == 1
+    report = json.loads(result.output)
+    assert [issue["code"] for issue in report["errors"]] == [
+        "REACTIVE_READ_OUTSIDE_CONTEXT"
+    ]

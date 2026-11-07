@@ -174,10 +174,8 @@ any of the following will work:
 )
 @click.option(
     "--validate/--no-validate",
-    default=True,
-    envvar="SHINY_VALIDATE",
-    help="Run static validation on the app file before startup.",
-    show_default=True,
+    default=None,
+    help="Run static validation before startup. Defaults to SHINY_VALIDATE, then dev mode.",
 )
 @no_example()
 def run(
@@ -196,7 +194,7 @@ def run(
     factory: bool,
     launch_browser: bool,
     dev_mode: bool,
-    validate: bool,
+    validate: bool | None,
     **kwargs: object,
 ) -> None:
     reload_includes_list = reload_includes.split(",")
@@ -284,8 +282,9 @@ def run_app(
     validate
         Run static validation on the app file before startup and print any
         findings to stderr. ``None`` (the default) reads the ``SHINY_VALIDATE``
-        environment variable, treating ``0``, ``false``, and ``no`` as off. An
-        explicit ``True`` or ``False`` overrides the environment variable.
+        environment variable, treating ``0``, ``false``, and ``no`` as off.
+        When the variable is unset, validation follows ``dev_mode``. An explicit
+        ``True`` or ``False`` overrides the environment variable.
     **kwargs
         Additional keyword arguments which are passed to ``uvicorn.run``. For more
         information see [Uvicorn documentation](https://www.uvicorn.org/).
@@ -315,7 +314,7 @@ def run_app(
     run_app("myapp:my_app", app_dir="..")
     ```
     """
-    validate = _validate_enabled(validate)
+    validate = _validate_enabled(validate, dev_mode=dev_mode)
 
     # If port is 0, randomize
     if port == 0:
@@ -505,39 +504,28 @@ def resolve_app(
     return f"{module}:{attr}", app_dir
 
 
-def _validate_enabled(validate: bool | None) -> bool:
-    """Resolve ``run_app(validate=)``: an explicit value wins over ``SHINY_VALIDATE``."""
+def _validate_enabled(validate: bool | None, *, dev_mode: bool) -> bool:
+    """Resolve an explicit value, then ``SHINY_VALIDATE``, then dev mode."""
     if validate is not None:
         return validate
-    return os.environ.get("SHINY_VALIDATE", "1").lower() not in ("0", "false", "no")
+    env = os.environ.get("SHINY_VALIDATE")
+    return dev_mode if env is None else env.lower() not in ("0", "false", "no")
 
 
 def _validate_app_file(app_file: Path | str) -> None:
     try:
         report = validate_shiny_file(app_file)
-        if report.errors:
-            for err in report.errors:
-                line = err["line"]
-                msg = err["message"]
-                print(
-                    f"Validation error ({err.get('file', str(app_file))}:{line}): {msg}",
-                    file=sys.stderr,
-                )
-        if report.warnings:
-            for warn in report.warnings:
-                line = warn["line"]
-                msg = warn["message"]
-                print(
-                    f"Validation warning ({warn.get('file', str(app_file))}:{line}): {msg}",
-                    file=sys.stderr,
-                )
+        for issue in [*report.errors, *report.warnings]:
+            line = issue["line"]
+            msg = issue["message"]
+            print(
+                f"Validation warning ({issue.get('file', str(app_file))}:{line}): {msg}",
+                file=sys.stderr,
+            )
     except Exception:
-        logger = logging.getLogger("shiny")
-        if os.environ.get("SHINY_LOG_LEVEL", "").upper() == "DEBUG":
-            if not logger.handlers and not logging.getLogger().handlers:
-                logging.basicConfig(level=logging.DEBUG)
-            logger.setLevel(logging.DEBUG)
-        logger.debug("Static validation failed for %s", app_file, exc_info=True)
+        logging.getLogger("shiny").debug(
+            "Static validation failed for %s", app_file, exc_info=True
+        )
 
 
 def try_import_module(module: str) -> Optional[types.ModuleType]:

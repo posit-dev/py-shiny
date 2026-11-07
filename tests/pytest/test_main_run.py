@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -49,7 +50,7 @@ def test_run_defaults(captured_run_app: dict[str, Any]) -> None:
     assert captured_run_app["reload_excludes"] == list(_run.RELOAD_EXCLUDES_DEFAULT)
     assert captured_run_app["launch_browser"] is False
     assert captured_run_app["dev_mode"] is True
-    assert captured_run_app["validate"] is True
+    assert captured_run_app["validate"] is None
 
 
 def test_run_options_are_forwarded(
@@ -106,7 +107,7 @@ def test_run_validate_flag_overrides_environment(
 
     result = CliRunner().invoke(main, ["run", "myapp.py:my_app"])
     assert result.exit_code == 0
-    assert captured_run_app["validate"] is False
+    assert captured_run_app["validate"] is None
 
 
 def test_run_rejects_missing_reload_dir(captured_run_app: dict[str, Any]) -> None:
@@ -249,33 +250,49 @@ def test_try_import_module() -> None:
     assert _run.try_import_module(".relative") is None
 
 
-def test_run_app_startup_validation_and_opt_out(
+@pytest.mark.parametrize("express", [False, True])
+@pytest.mark.parametrize(
+    "dev_mode, env, validate, enabled",
+    [
+        (True, None, None, True),
+        (False, None, None, False),
+        (True, "0", None, False),
+        (False, "1", None, True),
+        (False, "0", True, True),
+        (True, "1", False, False),
+    ],
+)
+def test_run_startup_validation_precedence(
     captured_uvicorn: dict[str, Any],
     tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
+    express: bool,
+    dev_mode: bool,
+    env: str | None,
+    validate: bool | None,
+    enabled: bool,
 ) -> None:
     app_file = tmp_path / "app.py"
-    app_file.write_text("from shiny.express import input, ui\ninput.x = 1\n")
-
-    _run.run_app(str(app_file), dev_mode=False)
-    err = capsys.readouterr().err
-    assert "Validation error" in err
-    assert "Cannot" in err or "read-only" in err
-    assert captured_uvicorn["app"] == express_entrypoint(app_file)
-
-    captured_uvicorn.clear()
-    _run.run_app(str(app_file), dev_mode=False, validate=False)
-    assert not capsys.readouterr().err
-    assert captured_uvicorn["app"] == express_entrypoint(app_file)
-
-    monkeypatch.setenv("SHINY_VALIDATE", "0")
-    _run.run_app(str(app_file), dev_mode=False)
-    assert not capsys.readouterr().err
-
-    # An explicit flag or argument wins over the environment variable.
-    _run.run_app(str(app_file), dev_mode=False, validate=True)
-    assert "Validation error" in capsys.readouterr().err
+    app_file.write_text(
+        "from shiny.express import input, ui\nui.h1(input.x())\n"
+        if express
+        else "def server(input, output, session):\n    input.x()\n"
+    )
+    monkeypatch.delenv("SHINY_VALIDATE", raising=False)
+    monkeypatch.delenv("SHINY_DEV_MODE", raising=False)
+    if env is not None:
+        monkeypatch.setenv("SHINY_VALIDATE", env)
+    args = ["run", str(app_file)]
+    args.append("--dev-mode" if dev_mode else "--no-dev-mode")
+    if validate is not None:
+        args.append("--validate" if validate else "--no-validate")
+    result = CliRunner().invoke(main, args=args)
+    assert result.exit_code == 0, result.output
+    assert ("Validation warning" in result.output) is enabled
+    assert "Validation error" not in result.output
+    assert captured_uvicorn["app"] == (
+        express_entrypoint(app_file) if express else "app:app"
+    )
 
 
 def test_validate_app_file_logs_exception_at_debug(
@@ -283,19 +300,20 @@ def test_validate_app_file_logs_exception_at_debug(
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import logging
-
     def boom(_path: Path | str) -> Any:
         raise RuntimeError("validator crash")
 
     monkeypatch.setattr(_run, "validate_shiny_file", boom)
     monkeypatch.setenv("SHINY_LOG_LEVEL", "DEBUG")
     logger = logging.getLogger("shiny")
-    prev_level = logger.level
-    try:
-        logger.setLevel(logging.WARNING)
+    with caplog.at_level(logging.DEBUG, logger="shiny"):
+        root_handlers = logging.getLogger().handlers.copy()
+        handlers = logger.handlers.copy()
         _run._validate_app_file(tmp_path / "app.py")
         assert logger.level == logging.DEBUG
+        assert logger.handlers == handlers
+        assert logging.getLogger().handlers == root_handlers
         assert "validator crash" in caplog.text
-    finally:
-        logger.setLevel(prev_level)
+    with caplog.at_level(logging.WARNING, logger="shiny"):
+        _run._validate_app_file(tmp_path / "app.py")
+        assert logger.level == logging.WARNING

@@ -17,7 +17,9 @@ def test_cli_checks_local_imports_without_executing_them(
     monkeypatch.chdir(tmp_path)
     (tmp_path / "app.py").write_text("from allocation import server\n")
     imported = tmp_path / "allocation.py"
-    imported.write_text("raise RuntimeError('must not execute')\ninput.n = 1\n")
+    imported.write_text(
+        "from shiny.express import input; raise RuntimeError('must not execute')\ninput.n()\n"
+    )
     args = ["validate", target]
     if json_output:
         args.append("--json")
@@ -26,7 +28,7 @@ def test_cli_checks_local_imports_without_executing_them(
     if json_output:
         errors = json.loads(response.output)["errors"]
         assert [(issue["file"], issue["line"], issue["code"]) for issue in errors] == [
-            (str(imported), 2, "INPUT_ASSIGNMENT")
+            (str(imported), 2, "REACTIVE_READ_OUTSIDE_CONTEXT")
         ]
     else:
         assert f"{imported}:2" in response.output
@@ -38,11 +40,15 @@ def test_imported_package_relative_imports_and_cycles(tmp_path: Path) -> None:
     package = tmp_path / "modules"
     package.mkdir()
     (package / "__init__.py").write_text("from . import allocation\n")
-    (package / "allocation.py").write_text("from .nested import helper\ninput.a = 1\n")
+    (package / "allocation.py").write_text(
+        "from shiny.express import input; from .nested import helper\ninput.a()\n"
+    )
     nested = package / "nested"
     nested.mkdir()
     (nested / "__init__.py").write_text("")
-    (nested / "helper.py").write_text("from .. import allocation\ninput.b = 2\n")
+    (nested / "helper.py").write_text(
+        "from shiny.express import input; from .. import allocation\ninput.b()\n"
+    )
     result = validate_shiny_file(app)
     assert sorted(
         (Path(issue.get("file", "")).name, issue["line"]) for issue in result.errors
@@ -56,7 +62,9 @@ def test_only_imported_local_files_are_checked(tmp_path: Path) -> None:
     app = tmp_path / "app.py"
     app.write_text("import unavailable_external_package\nfrom good import value\n")
     (tmp_path / "good.py").write_text("value = 1\n")
-    (tmp_path / "unrelated.py").write_text("input.n = 1\n")
+    (tmp_path / "unrelated.py").write_text(
+        "from shiny.express import input; input.n()\n"
+    )
     assert validate_shiny_file(app).clean
 
 
@@ -128,9 +136,13 @@ def test_imported_syntax_errors_are_reported(tmp_path: Path) -> None:
 
 def test_suppressions_are_local_to_each_imported_file(tmp_path: Path) -> None:
     app = tmp_path / "app.py"
-    app.write_text("import other  # shiny: ignore\ninput.a = 1  # shiny: ignore\n")
+    app.write_text(
+        "from shiny.express import input; import other  # shiny: ignore\ninput.a()  # shiny: ignore\n"
+    )
     other = tmp_path / "other.py"
-    other.write_text("input.b = 2\ninput.c = 3  # shiny: ignore INPUT_ASSIGNMENT\n")
+    other.write_text(
+        "from shiny.express import input; input.b()\ninput.c()  # shiny: ignore REACTIVE_READ_OUTSIDE_CONTEXT\n"
+    )
     result = validate_shiny_file(app)
     assert [(issue.get("file"), issue["line"]) for issue in result.errors] == [
         (str(other), 1)
@@ -141,7 +153,9 @@ def test_absolute_import_does_not_load_app_directory_init(tmp_path: Path) -> Non
     app = tmp_path / "app.py"
     app.write_text("import good\n")
     (tmp_path / "good.py").write_text("value = 1\n")
-    (tmp_path / "__init__.py").write_text("input.n = 1\n")
+    (tmp_path / "__init__.py").write_text(
+        "from shiny.express import input; input.n()\n"
+    )
     assert validate_shiny_file(app).clean
 
 
@@ -151,7 +165,7 @@ def test_symlink_cannot_pull_in_sources_outside_app(tmp_path: Path) -> None:
     app = directory / "app.py"
     app.write_text("import outside\n")
     outside = tmp_path / "outside.py"
-    outside.write_text("input.n = 1\n")
+    outside.write_text("from shiny.express import input; input.n()\n")
     (directory / "outside.py").symlink_to(outside)
     assert validate_shiny_file(app).clean
 
@@ -182,6 +196,6 @@ def test_startup_diagnostics_name_the_imported_file(
     app = tmp_path / "app.py"
     app.write_text("import other\n")
     other = tmp_path / "other.py"
-    other.write_text("input.n = 1\n")
+    other.write_text("from shiny.express import input; input.n()\n")
     _validate_app_file(app)
     assert f"{other}:1" in capsys.readouterr().err

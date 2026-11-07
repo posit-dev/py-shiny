@@ -12,25 +12,17 @@ from shiny._validate import validate_shiny_code
 from shiny.session._session import Inputs, Outputs, Session
 
 
-def test_validate_direct_input_assignment() -> None:
-    code = "from shiny.express import input, ui\ninput.x = 10"
-    report = validate_shiny_code(code)
-    assert not report.valid
-    assert any(err["code"] == "INPUT_ASSIGNMENT" for err in report.errors)
-    assert any("read-only" in err["message"] for err in report.errors)
-
-
 def test_validate_uncalled_input() -> None:
-    code = "from shiny import render, input\n@render.text\ndef txt():\n    return input.val"
+    code = "from shiny.express import render, input\n@render.text\ndef txt():\n    return input.val"
     report = validate_shiny_code(code)
-    assert not report.valid
-    assert any(err["code"] == "UNCALLED_INPUT" for err in report.errors)
-    assert any("parentheses" in err["message"] for err in report.errors)
+    assert report.valid and not report.clean
+    assert any(err["code"] == "UNCALLED_INPUT" for err in report.warnings)
+    assert any("parentheses" in err["message"] for err in report.warnings)
     assert (
         "Code structure matches Python Shiny best practices." not in report.suggestions
     )
     assert validate_shiny_code(
-        "from shiny import render, input\n@render.text\ndef txt():\n    return input.val.is_set()"
+        "from shiny.express import render, input\n@render.text\ndef txt():\n    return input.val.is_set()"
     ).clean
 
 
@@ -48,17 +40,6 @@ def test_validate_duplicate_output_ids() -> None:
     assert any(warn["code"] == "DUPLICATE_ID" for warn in report.warnings)
 
 
-def test_validate_assignment_does_not_report_uncalled_input() -> None:
-    code = """from shiny import reactive
-@reactive.effect
-def reset():
-    input.count = 0
-"""
-    report = validate_shiny_code(code)
-    assert [err["code"] for err in report.errors] == ["INPUT_ASSIGNMENT"]
-    assert not report.warnings
-
-
 def test_validate_multiple_renderers() -> None:
     code = "from shiny import render\n@render.text\n@render.ui\ndef out():\n    return 'hello'"
     report = validate_shiny_code(code)
@@ -70,6 +51,7 @@ def test_python_level_mistakes_are_left_to_type_checkers() -> None:
     # Unknown imports, redeclared function names, and attribute access on a
     # reactive object are all reported by pyright/pylance already.
     assert validate_shiny_code("from shiny import shinyApp, fluidPage").clean
+    assert validate_shiny_code("from shiny.express import input\ninput.x = 1").clean
     report = validate_shiny_code(
         "from shiny import render\n"
         "@render.text\ndef dup():\n    return 'one'\n"
@@ -119,27 +101,10 @@ def test_input_rules_follow_import_aliases(imports: str, name: str) -> None:
     uncalled = validate_shiny_code(
         f"{imports}\n@render.text\ndef summary():\n    return {name}.sales\n"
     )
-    assert [(e["code"], e["line"]) for e in uncalled.errors] == [("UNCALLED_INPUT", 4)]
-    assert f"'{name}.sales'" in uncalled.errors[0]["message"]
-    assigned = validate_shiny_code(f"{imports}\n{name}.sales = 100\n")
-    assert [(e["code"], e["line"]) for e in assigned.errors] == [
-        ("INPUT_ASSIGNMENT", 2)
+    assert [(e["code"], e["line"]) for e in uncalled.warnings] == [
+        ("UNCALLED_INPUT", 4)
     ]
-
-
-@pytest.mark.parametrize(
-    "statement",
-    ["input.n += 1", "input.n: int = 4", "input.n -= 1", "input.n = input.m = 1"],
-)
-def test_all_assignment_forms_to_inputs_are_errors(statement: str) -> None:
-    report = validate_shiny_code(
-        "from shiny.express import input, render\n"
-        "@render.text\ndef summary():\n"
-        f"    {statement}\n"
-        "    return input.n()\n"
-    )
-    assert {e["code"] for e in report.errors} == {"INPUT_ASSIGNMENT"}
-    assert all(e["line"] == 4 for e in report.errors)
+    assert f"'{name}.sales'" in uncalled.warnings[0]["message"]
 
 
 def test_duplicate_ids_are_scoped_to_shiny_modules_only() -> None:
@@ -192,7 +157,7 @@ def test_local_variable_shadowing_input_is_not_a_shiny_input() -> None:
         "@render.text\ndef label():\n    input = {}\n    return input.n\n"
         "@render.text\ndef other():\n    return input.n\n"
     )
-    assert [(e["code"], e["line"]) for e in report.errors] == [("UNCALLED_INPUT", 10)]
+    assert [(e["code"], e["line"]) for e in report.warnings] == [("UNCALLED_INPUT", 10)]
 
 
 def test_helper_parameter_named_input_is_an_ordinary_binding() -> None:
@@ -216,7 +181,7 @@ def test_helper_parameter_named_input_is_an_ordinary_binding() -> None:
         "def by_signature(input, output, session):\n"
         "    @render.text\n    def d():\n        return input.n\n"
     )
-    assert [(e["code"], e["line"]) for e in report.errors] == [
+    assert [(e["code"], e["line"]) for e in report.warnings] == [
         ("UNCALLED_INPUT", 5),
         ("UNCALLED_INPUT", 10),
         ("UNCALLED_INPUT", 14),
@@ -232,31 +197,17 @@ def test_comprehension_variables_do_not_shadow_input() -> None:
         "    total = sum(input for input in range(3))\n"
         "    return input.n\n"
     )
-    assert [(e["code"], e["line"]) for e in report.errors] == [("UNCALLED_INPUT", 6)]
+    assert [(e["code"], e["line"]) for e in report.warnings] == [("UNCALLED_INPUT", 6)]
 
 
-def test_only_reactive_event_may_take_an_uncalled_input() -> None:
-    report = validate_shiny_code(
+def test_reactive_event_and_helpers_accept_input_callables() -> None:
+    assert validate_shiny_code(
         "from shiny import reactive\n"
         "from shiny.express import input, render\n"
         "def log_event(value):\n    return value\n"
         "@render.text\ndef summary():\n    return log_event(input.n)\n"
         "@reactive.effect\n@reactive.event(input.n)\ndef react():\n    pass\n"
-    )
-    assert [(e["code"], e["line"]) for e in report.errors] == [("UNCALLED_INPUT", 7)]
-
-
-def test_destructuring_assignment_to_inputs_is_an_error() -> None:
-    report = validate_shiny_code(
-        "from shiny.express import input\n"
-        "input.x, input.y = 1, 2\n"
-        "[input.a, *rest] = [1, 2]\n"
-    )
-    assert [(e["code"], e["line"]) for e in report.errors] == [
-        ("INPUT_ASSIGNMENT", 2),
-        ("INPUT_ASSIGNMENT", 2),
-        ("INPUT_ASSIGNMENT", 3),
-    ]
+    ).clean
 
 
 def test_runtime_inputs_assignment_error() -> None:
@@ -276,65 +227,31 @@ class _StubSession:
         return False
 
 
-def test_runtime_outputs_duplicate_warning(tmp_path: Path) -> None:
-    import warnings
-
-    from shiny.express import wrap_express_app
-    from shiny.express._stub_session import ExpressStubSession
-    from shiny.session._utils import session_context
-
+@pytest.mark.parametrize("renderer", [render.ui, render.express])
+def test_dynamic_renderers_can_replace_outputs(renderer: Any) -> None:
     session = cast(Session, _StubSession())
     outputs_map: dict[str, Any] = {}
     outputs = Outputs(session, ns=ResolvedId(""), outputs=outputs_map)
+    version = 0
 
     @outputs
-    @render.text
-    def result() -> str:
-        return "first"
-
-    with pytest.warns(RuntimeWarning, match="Duplicate output 'result'") as record:
+    @renderer
+    def outer() -> None:
+        value = str(version)
 
         @outputs
         @render.text
-        def result() -> str:  # noqa: F811
-            return "second"
+        def inner() -> str:
+            return value
 
-    assert record[0].filename == __file__
-
-    # The legacy `@output` above `@render.*` re-registers the same renderer
-    # that `@render.*` auto-registered, which is not a duplicate.
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", RuntimeWarning)
-
-        @outputs
-        @render.text
-        def legacy() -> str:
-            return "legacy"
-
-        outputs(legacy)
-
-    app_file = tmp_path / "app.py"
-    app_file.write_text(
-        "from shiny.express import render\n"
-        "@render.text\n"
-        "def dup():\n"
-        "    return 'one'\n"
-        "@render.text\n"
-        "def dup():\n"
-        "    return 'two'\n"
-    )
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always", RuntimeWarning)
-        app = wrap_express_app(app_file)
-        s2 = ExpressStubSession()
-        with session_context(s2):
-            assert app.server is not None
-            app.server(s2.input, s2.output, s2)
-
-    dup_warnings = [w for w in caught if "Duplicate output 'dup'" in str(w.message)]
-    assert len(dup_warnings) == 1
-    assert Path(dup_warnings[0].filename).resolve() == app_file.resolve()
-    assert dup_warnings[0].lineno == 6
+    try:
+        for version in range(2):
+            outer.fn.get_sync_fn()()
+            assert outputs_map["inner"].renderer.fn.get_sync_fn()() == str(version)
+        assert set(outputs_map) == {"outer", "inner"}
+    finally:
+        for name in list(outputs_map):
+            outputs.remove(name)
 
 
 def test_core_shiny_output_id_order_independent() -> None:
@@ -559,14 +476,17 @@ def test_typed_result_and_subclass_validation() -> None:
 
 @pytest.mark.parametrize("directive", ["ignore", "ignore-next-line"])
 @pytest.mark.parametrize(
-    "rules", ["", " INPUT_ASSIGNMENT", " INPUT_ASSIGNMENT, UNCALLED_INPUT"]
+    "rules",
+    [
+        "",
+        " REACTIVE_READ_OUTSIDE_CONTEXT",
+        " REACTIVE_READ_OUTSIDE_CONTEXT, UNCALLED_INPUT",
+    ],
 )
 def test_comment_suppression(directive: str, rules: str) -> None:
     comment = f"# shiny: {directive}{rules}"
-    code = (
-        f"input.x = 10  {comment}"
-        if directive == "ignore"
-        else f"{comment}\ninput.x = 10"
+    code = "from shiny.express import input\n" + (
+        f"input.x()  {comment}" if directive == "ignore" else f"{comment}\ninput.x()"
     )
     report = validate_shiny_code(code)
     assert report.valid
@@ -574,12 +494,18 @@ def test_comment_suppression(directive: str, rules: str) -> None:
 
 
 def test_suppression_is_specific_and_only_reads_comments() -> None:
-    report = validate_shiny_code('message = "# shiny: ignore-next-line"\ninput.x = 10')
+    report = validate_shiny_code(
+        'from shiny.express import input\nmessage = "# shiny: ignore-next-line"\ninput.x()'
+    )
     assert not report.valid
-    report = validate_shiny_code("input.x = 10  # shiny: ignore UNCALLED_INPUT")
+    report = validate_shiny_code(
+        "from shiny.express import input\ninput.x()  # shiny: ignore UNCALLED_INPUT"
+    )
     assert not report.valid
-    report = validate_shiny_code("input.x = 10  # shiny: ignore\ninput.y = 20")
-    assert [issue["line"] for issue in report.errors] == [2]
+    report = validate_shiny_code(
+        "from shiny.express import input\ninput.x()  # shiny: ignore\ninput.y()"
+    )
+    assert [issue["line"] for issue in report.errors] == [3]
 
 
 def test_suppression_reaches_cli_and_startup(
@@ -590,7 +516,7 @@ def test_suppression_reaches_cli_and_startup(
     from shiny._main import main
     from shiny._main._run import _validate_app_file
 
-    code = "input.x = 10  # shiny: ignore INPUT_ASSIGNMENT"
+    code = "from shiny.express import input\ninput.x()  # shiny: ignore REACTIVE_READ_OUTSIDE_CONTEXT"
     result = CliRunner().invoke(main, ["validate", "--code", code, "--json"])
     assert result.exit_code == 0
     path = tmp_path / "app.py"
@@ -756,8 +682,10 @@ def test_plugin_crash_does_not_stop_validation() -> None:
     def crashing(tree: ast.Module, result: ValidateResult) -> None:
         raise RuntimeError("boom")
 
-    result = validate_shiny_code("input.x = 1", rules=[crashing])
-    assert [e["code"] for e in result.errors] == ["INPUT_ASSIGNMENT"]
+    result = validate_shiny_code(
+        "from shiny.express import input\ninput.x()", rules=[crashing]
+    )
+    assert [e["code"] for e in result.errors] == ["REACTIVE_READ_OUTSIDE_CONTEXT"]
     assert result.warnings[0]["code"] == "VALIDATOR_PLUGIN_ERROR"
     assert "RuntimeError: boom" in result.warnings[0]["message"]
 
@@ -847,6 +775,7 @@ def test_validate_import_styles_and_aliases(
 ) -> None:
     code = (
         f"{imports}\n"
+        "from shiny.express import input\n"
         f'{ui_call}("n", "N", 1, 10, 5)\n'
         f"@{calc_dec}\n"
         "def doubled():\n"
@@ -859,4 +788,125 @@ def test_validate_import_styles_and_aliases(
     assert result.detected_inputs == ["n"]
     assert result.detected_reactives == ["doubled"]
     assert result.detected_outputs == ["out"]
-    assert [err["code"] for err in result.errors] == ["UNCALLED_INPUT"]
+    assert [err["code"] for err in result.warnings] == ["UNCALLED_INPUT"]
+
+
+def test_input_callable_can_be_stored_and_called() -> None:
+    assert validate_shiny_code(
+        "from shiny.express import input, render\n@render.text\ndef shown():\n"
+        "    f = input.n\n    return str(f())\n"
+    ).clean
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "str(input.n)",
+        "f'{input.n}'",
+        "input.n == 1",
+        "input.n + 1",
+        "-input.n",
+    ],
+)
+def test_uncalled_inputs_used_as_values_are_warnings(expression: str) -> None:
+    result = validate_shiny_code(
+        "from shiny.express import input, render\n@render.text\ndef shown():\n"
+        f"    return {expression}\n"
+    )
+    assert result.valid
+    assert [(issue["code"], issue["line"]) for issue in result.warnings] == [
+        ("UNCALLED_INPUT", 4)
+    ]
+
+
+def test_returning_an_input_from_a_calc_can_preserve_its_callable() -> None:
+    assert validate_shiny_code(
+        "from shiny import reactive\nfrom shiny.express import input\n"
+        "@reactive.calc\ndef callback():\n    return input.n\n"
+    ).clean
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [
+        "def server(inp, output, session):",
+        "@module.server\ndef counter(inp, output, session):",
+        "def app_server(inp, output, session):",
+        "def typed(inp: Inputs):",
+        "def typed(inp: 'Inputs'):",
+    ],
+)
+def test_both_validators_resolve_server_input_names(declaration: str) -> None:
+    result = validate_shiny_code(
+        "from shiny import Inputs, module, reactive, render\n"
+        f"{declaration}\n"
+        "    @render.text\n    def shown():\n        return inp.n\n"
+        "    @reactive.extended_task\n    async def work():\n        return inp.n()\n"
+    )
+    assert [issue["code"] for issue in result.errors] == ["EXTENDED_TASK_REACTIVE_READ"]
+    assert [issue["code"] for issue in result.warnings] == ["UNCALLED_INPUT"]
+
+
+def test_local_import_aliases_do_not_leak_into_sibling_functions() -> None:
+    result = validate_shiny_code(
+        "def first():\n"
+        "    from shiny.express import input as inp, render as r\n"
+        "    from shiny import reactive as rx\n"
+        "    @r.text\n    def shown():\n        return inp.n\n"
+        "    @rx.extended_task\n    async def work():\n        return inp.n()\n"
+        "def second(inp):\n"
+        "    import unrelated as r\n    @r.text\n    def unrelated_output():\n        return inp.n\n"
+    )
+    assert [issue["code"] for issue in result.errors] == ["EXTENDED_TASK_REACTIVE_READ"]
+    assert [issue["code"] for issue in result.warnings] == ["UNCALLED_INPUT"]
+    assert result.detected_outputs == ["shown"]
+
+
+@pytest.mark.parametrize(
+    "expression", ["[input.n() for input in records]", "lambda input: input.n()"]
+)
+def test_nested_scope_parameters_hide_shiny_input(expression: str) -> None:
+    assert validate_shiny_code(
+        "from shiny import reactive\nfrom shiny.express import input\n"
+        "@reactive.extended_task\nasync def work():\n"
+        f"    return {expression}\n"
+    ).clean
+
+
+@pytest.mark.parametrize(
+    "imports, reactive_name, input_name",
+    [
+        ("from shiny.express import reactive as rx, input as inp", "rx", "inp"),
+        ("import shiny.express as sx", "sx.reactive", "sx.input"),
+    ],
+)
+def test_express_aliases_are_resolved_by_both_validators(
+    imports: str, reactive_name: str, input_name: str
+) -> None:
+    result = validate_shiny_code(
+        f"{imports}\nfrom shiny.express import render\n"
+        f"@{reactive_name}.extended_task\nasync def work():\n    return {input_name}.n()\n"
+        f"@render.text\ndef shown():\n    return {input_name}.n\n"
+    )
+    assert [issue["code"] for issue in result.errors] == ["EXTENDED_TASK_REACTIVE_READ"]
+    assert [issue["code"] for issue in result.warnings] == ["UNCALLED_INPUT"]
+
+
+def test_typed_output_parameter_preserves_explicit_output_id() -> None:
+    assert validate_shiny_code(
+        "from shiny import Inputs, Outputs, Session, render, ui\n"
+        "ui.output_text('renamed')\n"
+        "def server(input: Inputs, output: Outputs, session: Session):\n"
+        "    @output(id='renamed')\n    @render.text\n    def shown():\n        return 'hi'\n"
+    ).clean
+
+
+def test_chained_tag_methods_are_not_output_constructors() -> None:
+    result = validate_shiny_code(
+        "from shiny import render, ui\n"
+        "ui.output_text('shown').add_class('shiny-report-theme').add_style('width: 100px;')\n"
+        "def server(input, output, session):\n"
+        "    @render.text\n    def shown():\n        return 'hi'\n"
+    )
+    assert result.clean
+    assert result.detected_outputs == ["shown"]

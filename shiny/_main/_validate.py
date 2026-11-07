@@ -23,8 +23,8 @@ from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success, cli_w
     help="""Check Shiny for Python code for reactivity mistakes without running it.
 
     Reports Shiny-specific problems only: inputs, values, or calcs read outside
-    a reactive context, reads inside extended tasks, uncalled inputs, assignment
-    to inputs, multiple render decorators, reactive.event in the wrong decorator
+    a reactive context, reads inside extended tasks, uncalled inputs used as
+    values, multiple render decorators, reactive.event in the wrong decorator
     position, duplicate input/output IDs, UI outputs without a renderer (and
     the reverse), effects that return a value or re-trigger themselves, calcs
     with side effects, mutating an object held by a reactive value, and handlers
