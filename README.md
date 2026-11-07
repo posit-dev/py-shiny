@@ -30,6 +30,16 @@ To get started with shiny follow the [installation instructions](https://shiny.p
 uv pip install shiny
 ```
 
+If you use a coding agent, you can optionally start with a short welcome:
+
+```sh
+uvx shiny quickstart
+```
+
+It shows setup steps, how to install the bundled Agent Skill, and links to
+release notes and docs. Use `uv run shiny quickstart` from an existing project
+to see the welcome for that project's installed Shiny version.
+
 To install the latest development version:
 
 ```sh

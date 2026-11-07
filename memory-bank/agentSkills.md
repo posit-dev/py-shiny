@@ -18,8 +18,13 @@ list|path` CLI subcommands (implemented in `shiny/_main/_skills.py`) are a
 zero-dependency way to inspect it: `list` shows each bundled skill's name and
 description, and `path <name>` prints the skill's directory so its `SKILL.md`
 and supporting files (`references/`, `scripts/`) can be read from the installed
-package. `shiny quickstart` prints `SKILL.md` and `shiny guide <topic>` prints a
-reference file (both in `shiny/_main/`). Both rewrite each backticked
+package. `shiny quickstart` prints a short, version-aware welcome with setup
+steps, an optional `library-skills` install command, a pointer to the bundled
+skill, and links to release notes and docs. Use `uvx shiny quickstart` without
+installing Shiny first, or `uv run shiny quickstart` for the project's installed
+version. It does not print `SKILL.md`. `shiny guide <topic>` prints a reference
+file (both commands live in `shiny/_main/`). The guide command rewrites each
+backticked
 `` `references/<topic>.md` `` link to `` `shiny guide <topic>` ``, so write topic
 links in exactly that form.
 
