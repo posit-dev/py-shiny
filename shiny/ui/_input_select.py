@@ -116,7 +116,7 @@ def input_selectize(
     x = _input_select_impl(
         id=resolved_id,
         label=label,
-        choices=restore_input(resolved_id, choices),
+        choices=choices,
         selected=selected,
         multiple=multiple,
         selectize=True,
