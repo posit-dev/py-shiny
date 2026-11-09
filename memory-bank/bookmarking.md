@@ -230,6 +230,10 @@ wait:
   requires a `ResolvedId`. Trust the code.
 - A static (non-callable) `ui` with bookmarking enabled raises at `App()`
   construction.
+- Saved dates and datetimes are ISO strings after JSON decoding. Sliders must
+  convert them to numeric timestamps before rendering, including each endpoint
+  of a range; `_input_slider._restore_slider_value()` decodes them before
+  `_as_numeric()` applies the usual UTC timestamp conversion.
 - Custom `input_bookmark_button(id=...)` (multiple buttons or inside a module)
   is not wired up: exclude the id and add your own effect calling
   `session.bookmark()`.

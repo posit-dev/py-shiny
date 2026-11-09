@@ -11,7 +11,7 @@ __all__ = (
 
 import math
 from datetime import date, datetime, timedelta, timezone
-from typing import Iterable, Optional, TypeVar, Union, cast
+from typing import Any, Iterable, Optional, TypeVar, Union, cast
 
 from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
 
@@ -146,6 +146,7 @@ def input_slider(
     value = restore_input(resolved_id, value)
     # Thanks to generic typing, max, value, etc. should be of the same type
     data_type = _slider_type(min)
+    value = _restore_slider_value(value, data_type)
     # Make sure min, max, value, and step are all numeric
     # (converts dates/datetimes to milliseconds since epoch...this is the value JS wants)
     min_num = _as_numeric(min)
@@ -242,6 +243,29 @@ def _slider_type(x: SliderValueArg) -> str:
     if isinstance(x, date):
         return "date"
     return "number"
+
+
+def _restore_slider_value(value: Any, data_type: str) -> Any:
+    # Bookmark JSON stores dates and datetimes as ISO strings. Only decode date
+    # sliders; numeric slider values and all non-string values pass through.
+    if data_type not in ("date", "datetime"):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [
+            _restore_slider_value(item, data_type)
+            for item in cast(Iterable[Any], value)
+        ]
+    if isinstance(value, str):
+        try:
+            return (
+                date.fromisoformat(value)
+                if data_type == "date"
+                else datetime.fromisoformat(value)
+            )
+        except ValueError:
+            # Preserve the client's existing handling of malformed bookmark values.
+            return value
+    return value
 
 
 def _as_numeric(x: SliderStepArg | datetime | date) -> float:
