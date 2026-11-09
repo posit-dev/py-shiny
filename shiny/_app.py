@@ -50,7 +50,7 @@ from .bookmark._types import (
     BookmarkStore,
 )
 from .html_dependencies import _page_deps
-from .http_staticfiles import FileResponse, StaticFiles
+from .http_staticfiles import FileResponse, StaticFiles, package_static_files
 from .reactive._core import _reactive_environment
 from .session._session import AppSession, Inputs, Outputs, Session, session_context
 from .types import MISSING, MISSING_TYPE
@@ -296,7 +296,7 @@ class App:
                 0,
                 starlette.routing.Mount(
                     "/__shared",
-                    app=StaticFiles(directory=shared_dir),
+                    app=package_static_files(shared_dir),
                 ),
             )
             middleware.append(
@@ -535,7 +535,7 @@ class App:
                     0,
                     starlette.routing.Mount(
                         "/" + paths["href"],
-                        StaticFiles(directory=paths["source"]),
+                        package_static_files(paths["source"]),
                         name=dep_name,
                     ),
                 )
