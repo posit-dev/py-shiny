@@ -134,6 +134,9 @@ no longer uses it.
   become `<anonymous>`. `@reactive.event` prepends the `event` modifier via
   `set_otel_label_modifier(..., mode="prepend")` (stored in
   `_shiny_otel_label_modifier`, carried through `functools.wraps`).
+  `@reactive.debounce`/`@reactive.throttle` prepend `debounce`/`throttle` the
+  same way, so `@calc @debounce(1) @event(x) def f` is
+  `reactive.calc debounce event f`.
 - Attributes follow OTel semconv: `session.id`; `code.file.path`,
   `code.line.number`, `code.column.number`, `code.function.name` from
   `extract_source_ref` (unwraps `__wrapped__`, scans past decorator lines);
@@ -185,7 +188,8 @@ no longer uses it.
    see `output_obs` (`@otel_suppress`), `bind_task_button`'s
    `effect_sync_button`, bookmark effects in `shiny/bookmark/_bookmark.py`,
    `data_frame._init_reactives` and `@otel.suppress` calcs in
-   `shiny/render/_data_frame.py`, and `with otel.suppress()` in `poll()`.
+   `shiny/render/_data_frame.py`, and `with otel.suppress()` in `poll()` and
+   in `debounce()`/`throttle()` (`shiny/reactive/_ratelimit.py`).
 7. If the public API changes, update the user guide docstring in
    `shiny/otel/__init__.py`, `docs/_quartodoc-core.yml` (`otel` section), and
    the bundled skill reference (below).

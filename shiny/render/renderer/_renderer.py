@@ -17,6 +17,7 @@ from htmltools import MetadataNode, Tag, TagList
 from ..._docstring import add_example
 from ..._typing_extensions import Self
 from ..._utils import is_async_callable, wrap_async
+from ...reactive._reactives import check_not_rate_limited
 from ...types import Jsonifiable
 
 if TYPE_CHECKING:
@@ -163,6 +164,8 @@ class Renderer(Generic[IT]):
 
         if not callable(_fn):
             raise TypeError("Value function must be callable")
+
+        check_not_rate_limited(_fn, f"render.{type(self).__name__}")
 
         validate_no_params(_fn, f"render.{type(self).__name__}", stacklevel=5)
 

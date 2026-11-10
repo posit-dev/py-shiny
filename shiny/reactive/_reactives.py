@@ -57,6 +57,53 @@ from ..types import (
 from ._core import Context, Dependents, ReactiveWarning, _enclosing_run, isolate
 from ._utils import is_user_code_frame
 
+FUNC_ATTR_RATE_LIMIT = "_shiny_rate_limit"
+"""
+Attribute set on the function returned by `reactive.debounce()` or
+`reactive.throttle()` (to `"debounce"` or `"throttle"`), so effects and renderers can
+reject it.
+"""
+
+
+def rate_limit_misuse_message(name: str, kind: str) -> str:
+    """
+    The error for `@{name}` (an effect or renderer) combined with
+    `@reactive.{kind}()`. Only a calc may use it: effects and outputs have no value for
+    readers to wait on.
+    """
+    return (
+        f"`@{name}` cannot be combined with `@reactive.{kind}()`.\n"
+        + f"Instead, put `@reactive.{kind}()` below a `@reactive.calc` and read that "
+        + f"calc from `@{name}`. An effect can react to it with "
+        + "`@reactive.event(<calc>)`."
+    )
+
+
+FUNC_ATTR_RATE_LIMIT_DECORATOR = "_shiny_rate_limit_decorator"
+"""
+Attribute set on the decorator returned by `reactive.debounce(delay_secs)` or
+`reactive.throttle(delay_secs)` (to `"debounce"` or `"throttle"`), so that using it
+without `(delay_secs)` gets a clear error.
+"""
+
+
+def check_not_rate_limit_decorator(fn: object) -> None:
+    """Raise `TypeError` if `fn` is `@reactive.debounce`/`throttle` used without a delay."""
+    kind = getattr(fn, FUNC_ATTR_RATE_LIMIT_DECORATOR, None)
+    if kind is not None:
+        raise TypeError(
+            f"`@reactive.{kind}` must be given a delay, as in "
+            + f"`@reactive.{kind}(0.5)`."
+        )
+
+
+def check_not_rate_limited(fn: object, name: str) -> None:
+    """Raise `TypeError` if `fn` came from `reactive.debounce()`/`throttle()`."""
+    check_not_rate_limit_decorator(fn)
+    kind = getattr(fn, FUNC_ATTR_RATE_LIMIT, None)
+    if kind is not None:
+        raise TypeError(rate_limit_misuse_message(name, kind))
+
 
 def _current_task() -> Optional[asyncio.Task[object]]:
     try:
@@ -675,6 +722,7 @@ class Calc_(Generic[T]):
         *,
         session: "MISSING_TYPE | Session | None" = MISSING,
     ) -> None:
+        check_not_rate_limit_decorator(fn)
         _utils.validate_no_params(fn, "reactive.calc", stacklevel=5)
 
         self.__name__ = fn.__name__
@@ -1061,6 +1109,8 @@ class Effect_:
                 "`@reactive.effect` can not be combined with `@render.xx`.\n"
                 + "Please remove your call of `@reactive.effect`."
             )
+
+        check_not_rate_limited(fn, "reactive.effect")
 
         _utils.validate_no_params(fn, "reactive.effect", stacklevel=5)
 

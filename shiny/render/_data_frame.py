@@ -856,8 +856,8 @@ class data_frame(
             The new value to set the cell to.
         row
             The row index of the cell to update.
-        column
-            The column index of the cell to update.
+        col
+            The column index or name of the cell to update.
         """
         # TODO-barret; Test these assertions
         # Convert column name to index if necessary

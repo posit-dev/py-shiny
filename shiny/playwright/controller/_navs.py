@@ -146,12 +146,16 @@ class NavPanel(UiWithContainer):
         Clicks the nav panel.
 
         If the nav panel is inside a dropdown, playwright will first open the dropdown before selecting the nav panel.
+        If the nav panel is inside a navbar that has collapsed behind its toggler (as `ui.page_navbar()` and
+        `ui.navset_bar()` do in a narrow window), the navbar is expanded first.
 
         Parameters
         ----------
         timeout
             The maximum time to wait for the nav panel to be visible and interactable. Defaults to `None`.
         """
+
+        self._expand_collapsed_navbar(timeout=timeout)
 
         parent_ul_loc = self.loc.locator("..").locator("..")
 
@@ -175,6 +179,35 @@ class NavPanel(UiWithContainer):
                 grandparent_li_loc.click()
 
         self.loc.click(timeout=timeout)
+
+    def _expand_collapsed_navbar(self, *, timeout: Timeout = None) -> None:
+        """
+        Open the navbar that holds this nav panel, if it has collapsed behind its toggler.
+
+        Below the navbar's breakpoint, Bootstrap hides the tabs in a `.navbar-collapse`
+        that only its `.navbar-toggler` button opens. The toggler is only visible
+        below that breakpoint, so it decides whether to expand, not the panel's
+        visibility (a panel in a closed dropdown is hidden too).
+        """
+        collapse = self.loc_container.locator(
+            "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '),"
+            " ' navbar-collapse ')][1]"
+        )
+        if collapse.count() == 0:
+            return
+        show_regex = re.compile(r"(^|\s)show(\s|$)")
+        if show_regex.search(collapse.get_attribute("class", timeout=timeout) or ""):
+            return
+        collapse_id = collapse.get_attribute("id", timeout=timeout)
+        toggler = self.page.locator(
+            "button.navbar-toggler"
+            if collapse_id is None
+            else f"button.navbar-toggler[data-bs-target='#{collapse_id}']"
+        )
+        if toggler.count() == 0 or not toggler.first.is_visible():
+            return
+        toggler.first.click(timeout=timeout)
+        playwright_expect(collapse).to_have_class(show_regex, timeout=timeout)
 
     def expect_active(self, value: bool, *, timeout: Timeout = None) -> None:
         """
