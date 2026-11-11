@@ -17,9 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes and minor improvements
 
-* `@render.data_frame` now sends large data frames faster and with less memory. For 1 million rows of 10 numeric columns, preparing the message took 0.4 seconds instead of 3.2, and peak memory fell from 1.8 GB to 1.0 GB. Other large messages to the browser, such as a big `session.send_custom_message()` payload, are also encoded several times faster.
+* `@render.data_frame` now sends large data frames faster and with less memory. For 1 million rows of 10 numeric columns, preparing the message took 0.4 seconds instead of 3.2, and peak memory fell from 1.8 GB to 1.0 GB. Other large messages to the browser, such as a big `session.send_custom_message()` payload, are also encoded several times faster (#2614).
 
-* A `float` that is `NaN` or infinite is now sent to the browser as `null`, whether in an output value, an input update, or `session.send_custom_message()`. It used to be sent as a bare `NaN` or `Infinity`, which is not valid JSON, so the browser discarded the whole message with a console error. NumPy floats (such as `numpy.float64("nan")`) are not covered by this fix.
+* A `float` that is `NaN` or infinite is now sent to the browser as `null`, whether in an output value, an input update, or `session.send_custom_message()`. It used to be sent as a bare `NaN` or `Infinity`, which is not valid JSON, so the browser discarded the whole message with a console error. NumPy floats (such as `numpy.float64("nan")`) are not covered by this fix (#2614).
 
 * Lowered the minimum `orjson` version from 3.10.7 to 3.10.2. Shiny uses only `orjson.dumps()`, `orjson.loads()`, `orjson.Fragment`, and `OPT_SORT_KEYS`, which all predate 3.10, and 3.10.2 fixes a crash serializing `str` that 3.10.1 introduced. The lower floor lets Shiny install alongside packages or environments that ship an older `orjson`, such as Pyodide 0.27 (#2594).
 
