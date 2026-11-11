@@ -112,8 +112,10 @@ session ids get a 404.
 
 ## Server -> client messages
 
-All of them go through `AppSession._send_message` (async, `json.dumps`, logs
-`SEND:` when `debug=True`) or `_send_message_sync`. The sync version uses
+All of them go through `AppSession._send_message` (async, `encode_message()`, logs
+`SEND:` when `debug=True`) or `_send_message_sync`. `encode_message()` uses
+`orjson`, and falls back to stdlib `json` for the values `orjson` rejects (see
+Pitfalls). The sync version uses
 `_utils.run_coro_hybrid`, which runs the send right away up to its first await
 instead of scheduling a task. `SessionProxy` forwards everything to the root;
 only `send_input_message` (`ns(id)`), `set_message_handler`, and `dynamic_route`
@@ -291,6 +293,15 @@ Output lifecycle (`Outputs.__call__` -> `output_obs`, an `Effect_`):
 - **Hidden-by-default outputs.** An output only renders after the client
   reports `.clientdata_output_<id>_hidden = False`. Server-only tests with
   `MockConnection` have to send that input, or pass `suspend_when_hidden=False`.
+- **Two JSON encoders.** `encode_message()` tries `orjson` first: `NaN` and
+  `Infinity` become `null`, `datetime`/dataclass/`Enum`/`UUID` values are
+  encoded, and an `orjson.Fragment` (already-encoded JSON, e.g. a data frame's
+  rows) is embedded as it is. Values `orjson` rejects but stdlib `json` accepts
+  (non-`str` dict keys, ints beyond 64 bits, `float` subclasses such as
+  `numpy.float64`, named tuples, lone surrogates) send the whole message through
+  `json.dumps`, where `NaN` is still emitted as a bare `NaN` that the browser
+  can't parse. Don't hand a `Fragment` to anything but `encode_message()` or
+  `orjson.dumps()`.
 - **`_send_message_sync` doesn't guarantee completion.** It returns a future;
   large messages or backpressure finish later, and errors end up in the
   ignored future, not raised at the call site.
