@@ -99,7 +99,8 @@ otel = [
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
-    "pytest-playwright[base-url]>=0.5.2",
+    "pytest-playwright>=0.5.2",
+    "pytest-base-url>=2.0.0",
     "playwright>=1.48.0",
     "pytest-xdist",
     "pytest-shard",
