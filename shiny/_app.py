@@ -647,9 +647,36 @@ window.addEventListener('keydown', function(e) {{
                 else recorded_session.marks
             )
             recorded = recorder.export(recorded_session.id)
+            for mark in marks:
+                path = mark.get("source_file")
+                if (
+                    app_file is not None
+                    and isinstance(path, str)
+                    and Path(path).resolve() == app_file.resolve()
+                ):
+                    recorded["log"].append(
+                        {k: v for k, v in mark.items() if k != "source_file"}
+                    )
+                else:
+                    recorded["log"].append(
+                        {
+                            k: v
+                            for k, v in mark.items()
+                            if k not in ("source_file", "line")
+                        }
+                    )
             recorded["log"] = sorted(
-                [*recorded["log"], *marks], key=lambda entry: entry.get("time", 0)
+                recorded["log"], key=lambda entry: entry.get("time", 0)
             )
+            if self.sanitize_errors:
+                recorded["log"] = [
+                    (
+                        dict(entry, error=self.sanitize_error_msg)
+                        if entry.get("action") == "exit" and "error" in entry
+                        else entry
+                    )
+                    for entry in recorded["log"]
+                ]
             reactlog_data = load_reactlog_json(recorded)
         else:
             marks = list(self._app_marks) + reactive.get_marks()

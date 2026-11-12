@@ -3162,6 +3162,10 @@ class Outputs:
                         # Recorded only in test mode; never sent to the client.
                         traceback_text=traceback.format_exc(),
                     )
+                    if (recorder := session.app._reactlog_recorder) is not None:
+                        recorder.record_output_error(
+                            output_obs, session_id=session.id, message=err_msg
+                        )
 
                 await session._send_message(
                     {

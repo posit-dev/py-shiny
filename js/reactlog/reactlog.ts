@@ -1044,7 +1044,8 @@ function graphStateAtStep() {
     const ev = events[i]!, action = ev.action || ev.event;
     const id = ev.node_id || ev.reactId || ev.id;
     const state = reactiveEventState(ev);
-    if (id && state) states.set(id, state);
+    // Output observers exit normally after handling a renderer error.
+    if (id && state && !(action === 'exit' && state === 'ready' && states.get(id) === 'error')) states.set(id, state);
     if (action === 'freeze') frozen.add(id);
     if (action === 'thaw') frozen.delete(id);
     const from = ev.edge_from || ev.dependsOn || ev.depOnReactId;
@@ -1207,7 +1208,7 @@ function graphNodeLabel(node: any) {
   if (node.type === 'module') return nodeLabelHTML(node, true, 28);
   let label = nodeDisplayName(node);
   if (node.module) {
-    const [, prefix = '', name = label] = label.match(/^(input[.]|(?:output|calc|effect|reactive)[: ])(.+)$/) || [];
+    const [, prefix = '', name = label] = label.match(/^(input[.]|(?:output|(?:reactive[.])?(?:calc|effect))[: ])(.+)$/) || [];
     const namespace = [node.module + '-', node.module + ':'].find((value: any) => name.startsWith(value));
     if (namespace) label = prefix + name.slice(namespace.length);
   }

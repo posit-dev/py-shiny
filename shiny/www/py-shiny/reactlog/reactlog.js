@@ -1195,7 +1195,7 @@ var ReactlogViewer = (() => {
       const ev = events[i], action = ev.action || ev.event;
       const id = ev.node_id || ev.reactId || ev.id;
       const state = reactiveEventState(ev);
-      if (id && state)
+      if (id && state && !(action === "exit" && state === "ready" && states.get(id) === "error"))
         states.set(id, state);
       if (action === "freeze")
         frozen.add(id);
@@ -1365,7 +1365,7 @@ var ReactlogViewer = (() => {
       return nodeLabelHTML(node, true, 28);
     let label = nodeDisplayName(node);
     if (node.module) {
-      const [, prefix = "", name = label] = label.match(/^(input[.]|(?:output|calc|effect|reactive)[: ])(.+)$/) || [];
+      const [, prefix = "", name = label] = label.match(/^(input[.]|(?:output|(?:reactive[.])?(?:calc|effect))[: ])(.+)$/) || [];
       const namespace = [node.module + "-", node.module + ":"].find((value) => name.startsWith(value));
       if (namespace)
         label = prefix + name.slice(namespace.length);
