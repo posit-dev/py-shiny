@@ -33,7 +33,7 @@ def test_quickstart_points_to_the_bundled_skill() -> None:
 
     assert "`uv run shiny skills path shiny-for-python`" in result.output
     assert "SKILL.md" in result.output
-    assert "`uv run shiny get skill --name shiny-for-python`" in result.output
+    assert "`uv run shiny skill get shiny-for-python`" in result.output
     assert "--reference reactivity" in result.output
     assert "name: shiny-for-python" not in result.output
     assert "| Topic |" not in result.output

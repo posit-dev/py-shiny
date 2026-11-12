@@ -5,13 +5,12 @@ import click
 from .. import __version__
 from ._create import create
 from ._generate_test import add
-from ._get import get
 from ._quickstart import quickstart
 
 # Re-exported as `shiny.run_app` (see `shiny/__init__.py`)
 from ._run import run
 from ._run import run_app as run_app  # noqa: F401
-from ._skills import skills
+from ._skills import skill, skills
 from ._static import cells_to_app, get_shiny_deps, static, static_assets
 
 
@@ -39,8 +38,8 @@ def _command_listing(ctx: click.Context) -> str:
 main.add_command(run)
 main.add_command(add)
 main.add_command(create)
-main.add_command(get)
 main.add_command(quickstart)
+main.add_command(skill)
 main.add_command(skills)
 main.add_command(static)
 main.add_command(static_assets)

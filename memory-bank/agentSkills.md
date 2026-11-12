@@ -24,15 +24,15 @@ skill, and links to release notes and docs. Use `uvx shiny quickstart` without
 installing Shiny first, or `uv run shiny quickstart` for the project's installed
 version. It does not print `SKILL.md`.
 
-`shiny get skill --name shiny-for-python` prints the skill's index. Add
+`shiny skill get shiny-for-python` prints the skill's index. Add
 `--reference <topic>` to print one reference file. This command lives in
-`shiny/_main/_get.py` and reuses `_skills._find_skill()` to select the bundled
-skill. Exact reference names take priority. Otherwise it accepts a unique
+`shiny/_main/_skills.py` and reuses `_skills._find_skill()` to select the bundled
+or discovered skill. Exact reference names take priority. Otherwise it accepts a unique
 partial name, then uses `difflib.get_close_matches()` for close spellings.
 Ambiguous names produce an error with the matching names. It selects from
 the skill's existing `references/*.md` files, so a supplied path cannot read
 an arbitrary file. Each backticked `` `references/<topic>.md` `` link becomes
-`` `shiny get skill --name <name> --reference <topic>` `` in stdout, so write
+`` `shiny skill get <name> --reference <topic>` `` in stdout, so write
 topic links in exactly that form.
 
 **Audience:** coding agents *using* shiny to build, test, and debug apps — not
