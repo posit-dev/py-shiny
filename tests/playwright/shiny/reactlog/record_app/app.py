@@ -15,6 +15,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def out():
+        if input.n() == 1:
+            raise ValueError("Choose a number greater than one.")
         return str(doubled())
 
 

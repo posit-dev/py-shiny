@@ -1,14 +1,16 @@
 import os
+import re
 import signal
 import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
 from shiny.reactive._reactlog._record import record_session
+from shiny.reactive._reactlog._viewer import format_reactlog_html, load_reactlog_json
 
 APP = Path(__file__).parent / "record_app" / "app.py"
 
@@ -28,6 +30,48 @@ def test_record_session_records_real_events(tmp_path: Path) -> None:
     assert any(a.get("type") == "input" and a.get("name") == "n" for a in rec.actions)
     assert rec.video_path is not None and rec.video_path.stat().st_size > 0
     assert all(0 <= x["time"] < 600 for x in rec.export["log"])  # rebased seconds
+
+
+def test_report_replays_a_render_error_and_recovery(page: Page) -> None:
+    def script(app_page: Page, url: str) -> None:
+        app_page.goto(url)
+        output = controller.OutputText(app_page, "out")
+        output.expect_value("6")
+        slider = controller.InputSlider(app_page, "n")
+        slider.set("1")
+        expect(app_page.locator("#out")).to_contain_text(
+            "Choose a number greater than one."
+        )
+        slider.set("7")
+        output.expect_value("14")
+
+    recording = record_session(APP, video_path=None, script=script)
+    report = load_reactlog_json(recording.export)
+    page.set_content(format_reactlog_html(report, source_code=APP.read_text()))
+
+    marker = page.locator(".timeline-marker.is-error")
+    expect(marker).to_have_count(1)
+    expect(marker).to_have_attribute(
+        "aria-label",
+        re.compile(r"output out failed: Choose a number greater than one\."),
+    )
+    marker.click()
+    expect(page.locator("#trace-status-line")).to_contain_text(
+        "output out failed: Choose a number greater than one."
+    )
+    output_node = page.get_by_role("button", name=re.compile(r"Output output out,"))
+    expect(output_node).to_have_attribute("data-state", "error")
+    failure = next(ev for ev in report["events"] if ev["action"] == "outputError")
+    handled, recovered = (
+        ev["step"]
+        for ev in report["events"][failure["step"] + 1 :]
+        if ev["node_id"] == failure["node_id"] and ev["action"] == "exit"
+    )
+    scrubber = page.get_by_role("slider", name="Timeline step scrubber")
+    scrubber.fill(str(handled))
+    expect(output_node).to_have_attribute("data-state", "error")
+    scrubber.fill(str(recovered))
+    expect(output_node).to_have_attribute("data-state", "ready")
 
 
 def test_record_session_survives_window_close(tmp_path: Path) -> None:
