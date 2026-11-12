@@ -798,6 +798,12 @@ def test_timeline_controls_fit_small_screen(page: Page):
     assert controls is not None
     assert controls["x"] >= 0
     assert controls["x"] + controls["width"] <= 390
+    update = page.locator("#trace-status-line").bounding_box()
+    play = page.get_by_role("button", name="Play timeline").bounding_box()
+    assert update is not None and play is not None
+    assert update["x"] + update["width"] <= play["x"]
+    assert update["y"] < play["y"] + play["height"]
+    assert play["y"] < update["y"] + update["height"]
 
 
 def test_report_uses_names_and_highlights_module_names(page: Page):

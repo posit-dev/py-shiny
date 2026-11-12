@@ -2712,9 +2712,11 @@ def format_reactlog_html(
     .workspace-layout {{ display: flex; flex: 1; min-height: 0; overflow: hidden; position: relative; }}
 
     /* Timeline playback controls */
-    .bottom-timeline-bar {{ flex-shrink: 0; background: transparent; border: none; display: flex; align-items: center; justify-content: space-between; padding: 0; gap: 0.75rem; z-index: 30; user-select: none; flex-wrap: wrap; }}
+    .bottom-timeline-bar {{ flex-shrink: 0; background: transparent; border: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; padding: 0; gap: 0.75rem; z-index: 30; user-select: none; }}
     .status-left, .status-center, .status-right {{ display: flex; align-items: center; gap: 0.4rem; }}
-    .trace-status-line {{ font: 650 0.72rem var(--sans); color: var(--text-muted); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+    .trace-status-line, #active-flush-label {{ color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+    .trace-status-line {{ font: 600 .75rem var(--sans); }}
+    #active-flush-label {{ font: 650 .72rem var(--sans); text-align: end; }}
     .status-time-group {{ display: flex; align-items: center; gap: 0.25rem; font: 700 0.68rem var(--mono); color: var(--accent); }}
 
     /* Main View & Graph */
@@ -2947,7 +2949,7 @@ def format_reactlog_html(
       .app-header {{ flex-wrap: wrap; }}
       .header-center {{ order: 3; width: 100%; flex: 1 0 100%; }}
       .toolbar-group {{ width: 100%; }}
-      .bottom-timeline-bar.toolbar {{ width: 100%; max-width: 100%; box-sizing: border-box; overflow: visible; flex-wrap: wrap; height: auto; min-height: 0; }}
+      .bottom-timeline-bar.toolbar {{ width: 100%; max-width: 100%; box-sizing: border-box; overflow: visible; height: auto; min-height: 0; }}
     }}
     @media (max-width: 520px) {{
       html, body {{ overflow-x: hidden; max-width: 100vw; }}
@@ -2960,6 +2962,8 @@ def format_reactlog_html(
       .graph-top-row {{ grid-template-columns: 1fr; }}
       .zoom-controls {{ justify-content: flex-end; }}
       .trace-controls {{ flex-wrap: wrap; }}
+      .bottom-timeline-bar {{ grid-template-columns: minmax(0, 1fr) auto; }}
+      #active-flush-label {{ grid-column: 1 / -1; text-align: start; }}
     }}
 
     .sidebar-rail {{ width: 40px; min-width: 40px; flex: 0 0 40px; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; box-sizing: border-box; z-index: 20; }}
@@ -2973,9 +2977,6 @@ def format_reactlog_html(
     .video-container {{ border: 0; border-radius: 0; aspect-ratio: 16 / 9; }}
     .video-container video {{ width: 100%; height: 100%; object-fit: contain; }}
     .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--bg); padding: 8px 16px; gap: 8px; }}
-    .timeline-current {{ display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; font: 650 .75rem var(--sans); min-width: 0; }}
-    #active-flush-label {{ color: var(--text-muted); font-size: 0.72rem; flex-shrink: 0; }}
-    .trace-status-line {{ max-width: none; white-space: normal; font: 600 .75rem var(--sans); }}
     .trace-track-wrap {{ position: relative; height: 24px; flex: none; background: var(--track-bg); touch-action: none; }}
     .header-center .search-wrap {{ flex: 1 1 250px; min-width: min(250px, 100%); max-width: 420px; }}
     #scrubber-range {{ appearance: none; -webkit-appearance: none; background: transparent; position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; cursor: pointer; }}
@@ -3003,7 +3004,7 @@ def format_reactlog_html(
     .timeline-key .key-position {{ width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); }}
     .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
     .timeline-tooltip[hidden] {{ display: none; }}
-    .timeline-navigation {{ display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }}
+    .timeline-navigation {{ display: flex; align-items: center; gap: 6px; white-space: nowrap; }}
     .status-center {{ gap: 3px; }}
     .status-center .btn {{ width: 28px; min-height: 28px; height: 28px; }}
     .status-center .nav-idle svg {{ color: var(--timeline-idle); }}
@@ -3084,16 +3085,14 @@ def format_reactlog_html(
 
   <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
     <div class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
+      <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
       <div class="timeline-navigation">
         <button class="btn mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">▶ Play</button>
         <div class="status-time-group">
           <span class="trace-clock" id="trace-current-time">0.0s</span><span class="trace-sep">/</span><span class="trace-total" id="trace-total-time">0.0s</span><span class="step-display" id="step-display">Step 0 / 0</span>
         </div>
       </div>
-      <div class="timeline-current">
-        <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
-        <span id="active-flush-label" role="status"></span>
-      </div>
+      <span id="active-flush-label" role="status"></span>
     </div>
     <div id="trace-track-wrap" class="trace-track-wrap">
       <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
