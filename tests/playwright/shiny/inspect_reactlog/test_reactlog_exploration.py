@@ -839,8 +839,10 @@ def test_report_uses_names_and_highlights_module_names(page: Page):
     expect(page.locator("#trace-status-line")).not_to_contain_text("r49")
     node = page.locator('.graph-node[data-id="R45"]')
     expect(node).to_have_attribute("aria-label", re.compile("input.scatter-y_var"))
-    expect(node.locator(".module-name")).to_have_text("scatter")
-    expect(node.locator(".module-name")).to_have_css("fill", "rgb(59, 7, 100)")
+    expect(node.locator("text").first).to_have_text("input.y_var")
+    expect(
+        page.locator('.module-box[data-module="scatter"] .module-name')
+    ).to_have_text("scatter")
     search = page.locator("#search-input")
     search.fill("scatter")
     choice = page.locator("#search-results button").first

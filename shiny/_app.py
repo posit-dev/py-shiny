@@ -632,6 +632,11 @@ window.addEventListener('keydown', function(e) {{
                 marks = reactive.get_marks(target_session)
             else:
                 marks = list(self._app_marks) + reactive.get_marks()
+            if not self._is_direct_local_request(request):
+                marks = [
+                    {k: v for k, v in mark.items() if k not in ("source_file", "line")}
+                    for mark in marks
+                ]
             return JSONResponse({"status": "ok", "marks": marks})
 
         label = "User mark"

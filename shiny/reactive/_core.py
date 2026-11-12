@@ -17,6 +17,7 @@ __all__ = (
 import asyncio
 import contextlib
 import contextvars
+import sys
 import time
 import traceback
 import types
@@ -733,12 +734,15 @@ def _get_active_session() -> Optional[Any]:
 
 
 def mark(label: str = "User mark") -> None:
+    caller = sys._getframe(1)
     entry: dict[str, typing.Any] = {
         "action": "userMark",
         "label": label,
         "details": label,
         "time": time.time(),
         "phase": "mark",
+        "source_file": caller.f_code.co_filename,
+        "line": caller.f_lineno,
     }
     session = _get_active_session()
     if session is not None:

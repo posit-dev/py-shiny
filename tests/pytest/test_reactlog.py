@@ -170,6 +170,26 @@ def display():
     assert "recordingComplete" in event_types
 
 
+def test_recorded_output_error_survives_json_reload():
+    code = "from shiny import render\n@render.text\ndef result():\n    return 'ok'"
+    report = generate_reactlog(
+        code,
+        recorded_actions=[
+            {"type": "outputError", "name": "result", "error": "Bad measurement"},
+            {"type": "output", "name": "result", "timestamp": 1000},
+        ],
+    )
+    events = load_reactlog_json(report)["events"]
+    error = next(e for e in events if e.get("error"))
+    assert error["node_id"] == "output:result"
+    assert error["error"] == "Bad measurement"
+    assert error["provenance"] == "observed"
+    assert any(
+        e["node_id"] == "output:result" and e["action"] == "valueChange"
+        for e in events[error["step"] + 1 :]
+    )
+
+
 def test_deduplicate_input_actions():
     code = """from shiny.express import input, render, ui
 ui.input_numeric("val", "Val", 1)
@@ -1028,8 +1048,11 @@ def test_format_reactlog_html_accessible_palette(theme: str):
     style = re.search(r"<style>(.*?)</style>", html, re.DOTALL)
     assert style is not None
     palettes: list[bool] = []
+    shared: dict[str, str] = {}
     for selector, declarations in re.findall(r"([^{}]+)\{([^{}]*)\}", style[1]):
         tokens = dict(re.findall(r"(--[\w-]+):\s*(#[\da-fA-F]{6});", declarations))
+        if "--state-ready" in tokens:
+            shared = tokens
         if "--source" not in tokens:
             continue
         is_light = any(value in selector for value in ('"light"', '"auto"'))
@@ -1058,9 +1081,10 @@ def test_format_reactlog_html_accessible_palette(theme: str):
                 assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
 
         for marker in (
-            tokens["--timeline-idle"],
+            "#355c23" if is_light else shared["--state-ready"],
             tokens["--timeline-output"],
             tokens["--timeline-mark"],
+            tokens["--timeline-error"],
             tokens["--output"],
         ):
             for track in (tokens["--track-bg"], tokens["--track-fill"]):
@@ -1072,21 +1096,21 @@ def test_format_reactlog_html_accessible_palette(theme: str):
         )
         assert (stroke_levels[1] + 0.05) / (stroke_levels[0] + 0.05) >= 3.0
 
-        if "--state-ready" in tokens:
-            for state_token in (
-                "--state-ready",
-                "--state-calculating",
-                "--state-invalidating",
-                "--state-invalidated",
-            ):
-                fill = tokens[state_token]
-                for fg in ("#0f172a", "#1e293b", "#3b0764"):
-                    levels = sorted((luminance(fg), luminance(fill)))
-                    assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
-            frozen_fill = tokens["--state-frozen"]
-            for fg in ("#ffffff", "#e2e8f0", "#e9d5ff"):
-                levels = sorted((luminance(fg), luminance(frozen_fill)))
+        for state_token in (
+            "--state-ready",
+            "--state-calculating",
+            "--state-invalidating",
+            "--state-invalidated",
+            "--state-error",
+        ):
+            fill = shared[state_token]
+            for fg in ("#0f172a", "#1e293b", "#3b0764"):
+                levels = sorted((luminance(fg), luminance(fill)))
                 assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
+        frozen_fill = shared["--state-frozen"]
+        for fg in ("#ffffff", "#e2e8f0", "#e9d5ff"):
+            levels = sorted((luminance(fg), luminance(frozen_fill)))
+            assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
 
     # Explicit light/dark themes and the automatic light-mode fallback agree.
     assert palettes == [False, True, True]
@@ -1994,20 +2018,24 @@ def txt():
     } in edges
 
 
-def test_reactive_marks_api_and_generate_reactlog():
+def test_reactive_marks_api_and_generate_reactlog(tmp_path: Path):
     from shiny import reactive
 
+    code = 'from shiny import reactive\nreactive.mark("checkpoint-1")\n'
+    app = tmp_path / "app.py"
+    app.write_text(code, encoding="utf-8")
     reactive.clear_marks()
-    reactive.mark("checkpoint-1")
+    runpy.run_path(str(app))
     assert len(reactive.get_marks()) == 1
     assert reactive.get_marks()[0]["label"] == "checkpoint-1"
 
-    code = "from shiny.express import input\ninput.x()"
-    rlog = generate_reactlog(code, marks=reactive.get_marks())
+    rlog = generate_reactlog(code, source_path=app, marks=reactive.get_marks())
     assert rlog["success"] is True
     mark_events = [e for e in rlog["events"] if e.get("action") == "userMark"]
     assert len(mark_events) == 1
     assert mark_events[0]["details"] == "User mark: checkpoint-1"
+    assert mark_events[0]["source_file"] == "app.py"
+    assert mark_events[0]["line"] == 2
     reactive.clear_marks()
 
 

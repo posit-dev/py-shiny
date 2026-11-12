@@ -9,6 +9,7 @@ from playwright.sync_api import Locator, Page, expect
 from shiny._inspect import (
     format_reactlog_html,
     generate_reactlog,
+    load_reactlog_json,
     record_shiny_session,
 )
 
@@ -32,6 +33,63 @@ def load_graph_report(
 
 def graph_node(page: Page, selector: str) -> Locator:
     return page.locator(selector)
+
+
+def test_timeline_user_mark_highlights_its_call_site(page: Page) -> None:
+    code = 'from shiny import reactive\n\nreactive.mark("Check data")\n'
+    report = load_reactlog_json(
+        {
+            "sources": {"app.py": code},
+            "entry_file": "app.py",
+            "log": [
+                {
+                    "action": "userMark",
+                    "label": "Check data",
+                    "source_file": "app.py",
+                    "line": 3,
+                    "time": 1,
+                },
+            ],
+        }
+    )
+    page.set_content(format_reactlog_html(report, source_code=code, theme="light"))
+    page.get_by_role("tab", name="App code").click()
+    marker = page.locator(".timeline-marker.is-mark")
+    active = page.locator("#source-panel .source-line.is-active")
+    expect(active).to_have_count(1)
+    expect(active).to_have_attribute("data-line", "3")
+    expect(active.locator(".syntax-string")).to_have_css(
+        "color", marker.evaluate("el => getComputedStyle(el).backgroundColor")
+    )
+    expect(page.locator("#source-panel mark")).to_have_count(0)
+
+
+def test_module_graph_uses_local_labels_with_full_hover_title(page: Page) -> None:
+    code = """from shiny import module, render
+@module.server
+def panel(input, output, session):
+    @render.text
+    def result():
+        return input.x_var(), input.very_long_measurement_axis_setting()
+panel("scatter")
+"""
+    load_graph_report(page, format_reactlog_html(generate_reactlog(code), code))
+    expect(page.locator('.module-box[data-module="scatter"]')).to_be_visible()
+    short = page.locator('.graph-node[data-id="input:scatter-x_var"]')
+    expect(short.locator("text").first).to_have_text("input.x_var")
+    long = page.locator(
+        '.graph-node[data-id="input:scatter-very_long_measurement_axis_setting"]'
+    )
+    expect(long.locator("text").first).to_have_text(re.compile(r"^input\..+\.\.\.$"))
+    expect(long.locator("title")).to_contain_text(
+        "input.scatter-very_long_measurement_axis_setting", use_inner_text=False
+    )
+    expect(short.locator(".node-card")).to_have_css(
+        "fill",
+        page.locator(".timeline-marker.is-idle").first.evaluate(
+            "el => getComputedStyle(el).backgroundColor"
+        ),
+    )
 
 
 def reset_graph_view(page: Page) -> None:
@@ -242,7 +300,7 @@ def greeting():
     expect(source_panel).to_be_visible()
 
     page.locator("#scrubber-range").fill(str(input_step))
-    source_highlight = page.locator("#source-line-highlight")
+    source_highlight = source_panel.locator(".source-line.is-active")
     expect(source_highlight).to_be_visible()
     expect(source_highlight).to_have_attribute("data-line", "2")
 

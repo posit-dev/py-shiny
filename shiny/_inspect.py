@@ -766,6 +766,16 @@ def generate_reactlog(
 
     nodes = graph.get("nodes", [])
     edges = graph.get("edges", [])
+    entry_file = graph.get("entry_file")
+    source_files: dict[Path, str] = {}
+    if source_path and entry_file:
+        source_root = (
+            Path(source_path).resolve().parents[len(Path(entry_file).parts) - 1]
+        )
+        source_files = {
+            (source_root / filename).resolve(): filename
+            for filename in graph.get("sources", {})
+        }
     events: List[Dict[str, Any]] = []
     step = 0
 
@@ -954,6 +964,11 @@ def generate_reactlog(
                 session=session,
             )
         )
+        filename = m.get("source_file")
+        if isinstance(filename, str):
+            source_file = source_files.get(Path(filename).resolve())
+            if source_file:
+                events[-1].update(source_file=source_file, line=m.get("line"))
         action_waves.append(
             {
                 "action_id": f"mark-{len(action_waves)}",
@@ -1183,7 +1198,8 @@ def generate_reactlog(
                     )
                     step += 1
 
-            elif action_type == "output":
+            elif action_type in ("output", "outputError"):
+                is_error = action_type == "outputError"
                 out_id = (
                     f"output:{raw_name}"
                     if f"output:{raw_name}" in nodes_by_id
@@ -1197,7 +1213,7 @@ def generate_reactlog(
                 events.append(
                     _make_event(
                         step=step,
-                        event="outputUpdated",
+                        event="outputError" if is_error else "outputUpdated",
                         phase="interaction",
                         provenance="observed",
                         node_id=out_id,
@@ -1206,10 +1222,16 @@ def generate_reactlog(
                         status="scheduled",
                         timestamp=ts_ms,
                         time_sec=ts_sec,
-                        details=f"Observed browser output render: {node_lbl}",
+                        details=(
+                            f"Observed browser output error: {node_lbl}"
+                            if is_error
+                            else f"Observed browser output render: {node_lbl}"
+                        ),
                         session=session,
                     )
                 )
+                if is_error:
+                    events[-1]["error"] = str(action.get("error", ""))
                 preview = action.get("plot")
                 if isinstance(preview, dict):
                     plot_dict = cast(Dict[str, Any], preview)
@@ -1808,6 +1830,9 @@ def load_reactlog_json(
             session=str(item.get("session") or session_name),
             action=action,
         )
+        for key in ("error", "source_file", "line"):
+            if key in item:
+                ev_dict[key] = item[key]
         preview = item.get("plot")
         if isinstance(preview, dict):
             plot_dict = cast(Dict[str, Any], preview)
@@ -2015,6 +2040,9 @@ def _record_session_sync(
                             plot: e.value && typeof e.value.src === 'string' && /^data:image\\/(png|jpeg|gif|webp);base64,/.test(e.value.src)
                                 ? {{ src: e.value.src, alt: e.value.alt || e.name }} : undefined
                         }});
+                    }});
+                    $(document).on('shiny:error.shinyRecorder', (e) => {{
+                        trackAction({{ type: 'outputError', name: e.name, error: e.error.message }});
                     }});
                 }}
             }}
@@ -2459,8 +2487,7 @@ def format_reactlog_html(
     )
     source_panel = (
         '<pre class="source-panel sidebar-panel" id="source-panel" role="tabpanel" '
-        'aria-labelledby="source-tab" hidden><mark class="source-line-highlight" '
-        'id="source-line-highlight" aria-hidden="true" hidden></mark>'
+        'aria-labelledby="source-tab" hidden>'
         '<select id="source-file-select" aria-label="Source file" onchange="showSourceFile(this.value)" hidden></select><code>'
         f"{formatted_source}</code></pre>"
     )
@@ -2488,14 +2515,14 @@ def format_reactlog_html(
   <meta name="theme-color" content="#090d12" />
   <title>{escaped_title}</title>
   <style>
-    /* Okabe–Ito-based state fills; shared across themes, graph, legend, and timeline.
-       Labels also identify each node state. */
     :root {{
-      --state-ready: #66bce8;
-      --state-calculating: #f6cf45;
-      --state-invalidating: #e899c0;
-      --state-invalidated: #dce4ee;
+      --state-ready: #a3c586;
+      --state-calculating: #fcbf49;
+      --state-invalidating: #969696;
+      --state-invalidated: #d9d9d9;
       --state-frozen: #0b5384;
+      --state-error: #f3a6af;
+      --timeline-idle: var(--state-ready);
     }}
     :root, [data-theme="dark"] {{
       color-scheme: dark;
@@ -2535,9 +2562,10 @@ def format_reactlog_html(
       --card-bg: #141e2b;
       --track-bg: #1b2634;
       --track-fill: #24384d;
-      --timeline-idle: #5fc7a7;
+      --timeline-idle-outline: #355c23;
       --timeline-output: #56b4e9;
       --timeline-mark: #f59e0b;
+      --timeline-error: #ff8e91;
       --playhead-bg: #f8fafc;
       --playhead-ring: #17212b;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -2581,9 +2609,9 @@ def format_reactlog_html(
       --card-bg: #f8fafc;
       --track-bg: #e2e8f0;
       --track-fill: #cbd5e1;
-      --timeline-idle: #006e59;
       --timeline-output: #026aa7;
       --timeline-mark: #b45309;
+      --timeline-error: #a92334;
       --playhead-bg: #0f172a;
       --playhead-ring: #ffffff;
     }}
@@ -2626,9 +2654,9 @@ def format_reactlog_html(
         --card-bg: #f8fafc;
         --track-bg: #e2e8f0;
         --track-fill: #cbd5e1;
-        --timeline-idle: #006e59;
         --timeline-output: #026aa7;
         --timeline-mark: #b45309;
+        --timeline-error: #a92334;
         --playhead-bg: #0f172a;
         --playhead-ring: #ffffff;
       }}
@@ -2739,7 +2767,7 @@ def format_reactlog_html(
     #btn-toggle-inspector-bottom.has-selection {{ border-color: var(--accent); color: var(--accent); position: relative; }}
     #btn-toggle-inspector-bottom.has-selection::after {{ content: ''; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }}
     @media (prefers-reduced-motion: reduce) {{
-      .graph-node, .graph-edge, .source-line-highlight, .trace-chip, .trace-playhead {{ transition: none; }}
+      .graph-node, .graph-edge, .source-line, .trace-chip, .trace-playhead {{ transition: none; }}
       .graph-edge[data-active="true"] {{ animation: none; }}
       .action-toast[hidden] {{ display: none; }}
     .action-toast {{ animation: none; }}
@@ -2817,11 +2845,12 @@ def format_reactlog_html(
     .source-panel code {{ position: relative; z-index: 1; font: inherit; display: block; min-width: 100%; }}
     .source-line {{ display: flex; padding: 0 1rem 0 0; min-height: 1.62em; line-height: 1.62em; transition: background 120ms ease; }}
     .source-line:hover {{ background: color-mix(in srgb, var(--surface-3) 40%, transparent); }}
-    .source-line.is-active {{ background: color-mix(in srgb, var(--accent) 18%, transparent); }}
+    .source-line.is-active {{ background: color-mix(in srgb, var(--line-accent, var(--accent)) 14%, transparent); box-shadow: inset 3px 0 var(--line-accent, var(--accent)); }}
+    .source-line.is-active.is-mark {{ --line-accent: var(--timeline-mark); }}
+    .source-line.is-active.is-error {{ --line-accent: var(--timeline-error); }}
+    .source-line.is-active.is-mark .source-line-content, .source-line.is-active.is-mark .source-line-content span {{ color: var(--timeline-mark); }}
     .source-line-num {{ display: inline-block; width: 3.2rem; min-width: 3.2rem; padding-right: 1rem; text-align: right; color: var(--text-muted); user-select: none; -webkit-user-select: none; font-size: 0.7rem; opacity: 0.65; }}
     .source-line-content {{ flex: 1; white-space: pre; }}
-    .source-line-highlight {{ position: absolute; z-index: 0; left: 0; right: 0; margin: 0; padding: 0; border: 0; border-left: 3px solid var(--source-highlight-color, var(--accent)); border-radius: 0; background: color-mix(in srgb, var(--source-highlight-color, var(--accent)) 16%, transparent); pointer-events: none; transition: top 150ms ease, background 150ms ease; }}
-    .source-line-highlight[hidden] {{ display: none; }}
     .video-panel {{ display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; background: var(--surface); overflow: auto; }}
     .video-container {{ width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #000; }}
     .video-container video {{ width: 100%; display: block; }}
@@ -2958,6 +2987,8 @@ def format_reactlog_html(
     .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: var(--timeline-idle); pointer-events: auto; cursor: pointer; }}
     .timeline-marker.is-output {{ top: 5px; height: 14px; border-radius: 2px; background: var(--timeline-output); }}
     .timeline-marker.is-mark {{ background: var(--timeline-mark); z-index: 2; }}
+    .timeline-marker.is-error {{ background: var(--timeline-error); min-width: 5px; z-index: 3; }}
+    .timeline-marker.is-idle, .timeline-key .key-idle {{ box-shadow: inset 1px 0 var(--timeline-idle-outline); }}
     .timeline-marker:hover, .timeline-marker:focus-visible {{ outline: 2px solid var(--text); outline-offset: 1px; z-index: 3; }}
     .timeline-playhead {{ position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); pointer-events: none; z-index: 4; }}
     .timeline-playhead::before {{ content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--playhead-bg); }}
@@ -2966,6 +2997,7 @@ def format_reactlog_html(
     .timeline-key i {{ display: inline-block; width: 3px; height: 14px; border-radius: 1px; background: var(--timeline-idle); }}
     .timeline-key .key-output {{ height: 8px; border-radius: 2px; background: var(--timeline-output); }}
     .timeline-key .key-mark {{ background: var(--timeline-mark); border-radius: 1px; }}
+    .timeline-key .key-error {{ background: var(--timeline-error); width: 5px; }}
     .timeline-key .key-position {{ width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); }}
     .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
     .timeline-tooltip[hidden] {{ display: none; }}
@@ -3068,8 +3100,8 @@ def format_reactlog_html(
       <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
     </div>
     <div class="timeline-key" id="timeline-key" aria-label="Timeline key">
-      <span><i></i>Idle</span><span><i class="key-output"></i>Output calculation</span>
-      <span><i class="key-mark"></i>User mark</span><span><i class="key-position"></i>Current step</span>
+      <span><i class="key-idle"></i>Idle</span><span><i class="key-output"></i>Output calculation</span>
+      <span><i class="key-mark"></i>User mark</span><span><i class="key-error"></i>Error</span><span><i class="key-position"></i>Current step</span>
     </div>
   </div>
 
@@ -3086,6 +3118,7 @@ def format_reactlog_html(
               <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidating)"></span>Invalidating</div>
               <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidated)"></span>Invalidated</div>
               <div class="legend-item"><span class="legend-swatch" style="background:var(--state-frozen)"></span>Frozen</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-error)"></span>Error</div>
               </div>
               <div class="legend-group"><span class="legend-label">Links</span>
               <div class="legend-item"><span class="legend-line"></span>Dependency</div>
@@ -3783,12 +3816,12 @@ def format_reactlog_html(
           depth = Math.max(0, depth - 1);
           outputComplete = depth === 0;
         }}
-        const kind = ['mark', 'userMark'].includes(action) ? 'mark' : isIdleEvent(ev) ? 'idle' : outputComplete ? 'output' : null;
+        const kind = isErrorEvent(ev) ? 'error' : ['mark', 'userMark'].includes(action) ? 'mark' : isIdleEvent(ev) ? 'idle' : outputComplete ? 'output' : null;
         if (!kind) return;
         timelineStops.push({{ step, kind }});
-        const label = kind === 'mark' ? 'User mark' : kind === 'idle' ? 'Idle' : 'Output calculation';
+        const label = kind === 'error' ? 'Error' : kind === 'mark' ? 'User mark' : kind === 'idle' ? 'Idle' : 'Output calculation';
         const time = formatTime(ev.time_sec ?? ev.time ?? 0);
-        const description = kind === 'mark'
+        const description = kind === 'error' ? formatEventDetails(ev) : kind === 'mark'
           ? (ev.node_label || ev.label || ev.details || '')
           : nodeDisplayName(ev.node_id || ev.id || ev.node_label || ev.label || '');
         const text = `${{label}} · Step ${{step}} · ${{time}}${{description ? ' · ' + description : ''}}`;
@@ -4248,10 +4281,15 @@ def format_reactlog_html(
       setViewMode('full');
     }}
 
-    const reactiveStateColors = {{ ready: 'var(--state-ready)', calculating: 'var(--state-calculating)', invalidating: 'var(--state-invalidating)', invalidated: 'var(--state-invalidated)', frozen: 'var(--state-frozen)' }};
+    const reactiveStateColors = {{ ready: 'var(--state-ready)', calculating: 'var(--state-calculating)', invalidating: 'var(--state-invalidating)', invalidated: 'var(--state-invalidated)', frozen: 'var(--state-frozen)', error: 'var(--state-error)' }};
+
+    function isErrorEvent(ev) {{
+      return ev && (typeof ev.error === 'string' || (ev.action || ev.event) === 'outputError');
+    }}
 
     function reactiveEventState(ev) {{
       const action = ev.action || ev.event;
+      if (isErrorEvent(ev)) return 'error';
       if (['enter', 'execStart', 'wouldEvaluate', 'recalculate', 'render', 'output'].includes(action)) return 'calculating';
       if (action === 'invalidateStart') return 'invalidating';
       if (['invalidateEnd', 'invalidate', 'propagate', 'define'].includes(action)) return 'invalidated';
@@ -4376,6 +4414,10 @@ def format_reactlog_html(
     function formatEventDetails(ev) {{
       if (!ev) return '';
       const act = ev.action || ev.event || '';
+      if (isErrorEvent(ev)) {{
+        const node = nodeDisplayName(ev.node_id || ev.reactId || ev.id || ev.node_label || ev.label || '');
+        return `${{node ? node + ' failed' : 'Execution failed'}}${{ev.error ? ': ' + ev.error : ''}}`;
+      }}
       if (ev.details) return nodeDisplayName(String(ev.details));
       const nid = ev.node_id || ev.reactId || ev.id || '';
       const lbl = nodeDisplayName(nid || ev.node_label || ev.label || '');
@@ -4422,6 +4464,18 @@ def format_reactlog_html(
           : escapeHTML(text);
       }}).join('');
       return result + (length > maxChars ? '…' : '');
+    }}
+
+    function graphNodeLabel(node) {{
+      if (node.type === 'module') return nodeLabelHTML(node, true, 28);
+      let label = nodeDisplayName(node);
+      if (node.module) {{
+        const [, prefix = '', name = label] = label.match(/^(input[.]|(?:output|calc|effect|reactive)[: ])(.+)$/) || [];
+        const namespace = [node.module + '-', node.module + ':'].find(value => name.startsWith(value));
+        if (namespace) label = prefix + name.slice(namespace.length);
+      }}
+      const characters = Array.from(label);
+      return escapeHTML(characters.length > 28 ? characters.slice(0, 25).join('') + '...' : label);
     }}
 
     function renderEventList() {{
@@ -4842,7 +4896,6 @@ def format_reactlog_html(
       displayedSourceFile = filename;
       const code = document.querySelector('#source-panel code');
       code.innerHTML = highlightedSourceLines(sources[filename]).map((line, i) => sourceLineHTML(line, i + 1)).join('');
-      document.getElementById('source-line-highlight').hidden = true;
     }}
 
     function renderInlineSource(node) {{
@@ -5442,7 +5495,7 @@ def format_reactlog_html(
         text.setAttribute('font-family', 'var(--mono)');
         text.setAttribute('font-size', '14px');
         text.setAttribute('font-weight', '700');
-        text.innerHTML = nodeLabelHTML(n, true, 28);
+        text.innerHTML = graphNodeLabel(n);
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
         title.textContent = `${{nodeDisplayName(n)}} · ${{state}}${{n.line ? ' · line ' + n.line : ''}}`;
         g.appendChild(title);
@@ -5692,44 +5745,28 @@ def format_reactlog_html(
     }}
 
     function updateSourceHighlight() {{
-      const sourceNode = nodeIndex.get(selectedNodeId);
-      if (sourceNode?.source_file && sourceNode.source_file !== displayedSourceFile) showSourceFile(sourceNode.source_file);
       const events = reactlogData.events || reactlogData.log || [];
       const ev = events[currentStep];
-      const highlight = document.getElementById('source-line-highlight');
-      if (!highlight) return;
-
-      let targetLine = null;
-      if (selectedNodeId) {{
-        const selNode = nodeIndex.get(selectedNodeId);
-        if (selNode && selNode.line) targetLine = selNode.line;
+      const isMark = ['mark', 'userMark'].includes(ev?.action || ev?.event);
+      const isError = isErrorEvent(ev);
+      const eventNode = nodeIndex.get(ev?.node_id || ev?.reactId || ev?.id);
+      const selected = nodeIndex.get(selectedNodeId);
+      const target = ev?.line ? ev : (isError ? eventNode : (selected?.line ? selected : eventNode));
+      const panel = document.getElementById('source-panel');
+      panel.querySelector('.source-line.is-active')?.classList.remove('is-active', 'is-mark', 'is-error');
+      if (!Number.isInteger(target?.line)) return;
+      if (target.source_file && target.source_file !== displayedSourceFile) {{
+        showSourceFile(target.source_file);
+        if (target.source_file !== displayedSourceFile) return;
       }}
-      if (targetLine === null && ev && (ev.node_id || ev.id)) {{
-        const nid = ev.node_id || ev.id;
-        const node = nodeIndex.get(nid);
-        if (node && node.line) targetLine = node.line;
-      }}
-
-      document.querySelectorAll('.source-panel .source-line.is-active').forEach(el => el.classList.remove('is-active'));
-
-      if (targetLine !== null) {{
-        highlight.hidden = false;
-        highlight.setAttribute('data-line', String(targetLine));
-        const lineElement = document.querySelector(`.source-panel .source-line[data-line="${{targetLine}}"]`);
-        highlight.style.top = lineElement ? `${{lineElement.offsetTop}}px` : '0';
-        highlight.style.height = '1.62em';
-
-        const activeLineEl = document.querySelector(`.source-panel .source-line[data-line="${{targetLine}}"]`);
-        if (activeLineEl) {{
-          activeLineEl.classList.add('is-active');
-          const sourcePanel = document.getElementById('source-panel');
-          if (sourcePanel && !sourcePanel.hidden && typeof activeLineEl.scrollIntoView === 'function') {{
-            const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            activeLineEl.scrollIntoView({{ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' }});
-          }}
-        }}
-      }} else {{
-        highlight.hidden = true;
+      const line = panel.querySelector(`.source-line[data-line="${{target.line}}"]`);
+      if (!line) return;
+      line.classList.add('is-active');
+      if (isMark && target === ev) line.classList.add('is-mark');
+      if (isError) line.classList.add('is-error');
+      if (!panel.hidden) {{
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        line.scrollIntoView({{ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' }});
       }}
     }}
 
