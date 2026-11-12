@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `shiny skill` commands to discover, read, and install Agent Skills. Use `list` to see skills from Shiny and installed extensions, `path <name>` to locate a skill, `get <name>` to read it, and `install <name>` to link or copy it into your project. Add `--reference <topic>` to `get` to read a reference by exact, partial, or closely spelled name. The existing `shiny skills list` and `shiny skills path` commands continue to work with Shiny's bundled skills. (#2589)
+
+* Added `shiny quickstart`, a short welcome with project setup, optional Agent Skill installation, and links to release notes and docs. Run it with `uvx shiny quickstart` or `uv run shiny quickstart` in an existing project. Running `shiny` with no command now lists every command with its full one-line description. (#2589)
+
 * Added `reactive.debounce()` and `reactive.throttle()`, decorators that slow down how often a reactive function invalidates its readers. They go below `@reactive.calc`; effects and outputs read the debounced calc instead (an effect reacts to it with `@reactive.event()`). To limit an existing calc or input, call them directly, as in `reactive.debounce(input.text, 0.5)`, which returns a calc. `debounce` waits until the changes stop for a set time; `throttle` lets a change through at most once per time window. Use them when a value changes often (typing, slider drags, plot hover) and the work that reads it is slow. Under OpenTelemetry, the calc above them records its span as `reactive.calc debounce <name>` or `reactive.calc throttle <name>`; the reactives behind them record none. (#564)
 
 ### Bug fixes and minor improvements

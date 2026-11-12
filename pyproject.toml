@@ -99,8 +99,10 @@ otel = [
 test = [
     "pytest>=6.2.4",
     "pytest-asyncio>=0.17.2",
-    "pytest-playwright[base-url]>=0.5.2",
-    "playwright>=1.48.0",
+    "pytest-playwright>=0.5.2",
+    "pytest-base-url>=2.0.0",
+    # The Linux browser jobs need a matching Docker image. 1.65.1 has none.
+    "playwright>=1.48.0,!=1.65.1",
     "pytest-xdist",
     "pytest-shard",
     "pytest-timeout",

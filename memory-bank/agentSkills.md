@@ -13,12 +13,39 @@ grouped router: a short index of topics, each pointing at a
 data**: it ships in the wheel and is discovered by installers such as
 [library-skills](https://library-skills.io), which a user runs from *their*
 project (not from a clone of this repo) to symlink the skills of their
-installed dependencies into `.agents/skills/` or `.claude/skills/`. The `shiny skills
-list|path` CLI subcommands (implemented in `shiny/_main/_skills.py`) are a
-zero-dependency way to inspect it: `list` shows each bundled skill's name and
-description, and `path <name>` prints the skill's directory so its `SKILL.md`
-and supporting files (`references/`, `scripts/`) can be read from the installed
-package.
+installed dependencies into `.agents/skills/` or `.claude/skills/`. The
+`shiny skills list` and `shiny skills path <name>` commands keep their bundled-only
+behavior. The `shiny skill` group in `shiny/_main/_skills.py` also finds skills
+recorded in installed Python distributions under `.agents/skills/<name>/`.
+By default, `shiny skill list` includes distributions whose normalized names
+start with `shiny`, plus `bslib`, `htmltools`, and extensions registered in the
+`shiny.skills` entry point group. Use `--all` to include other installed
+distributions. Packages with editable installs can register a `shiny.skills`
+entry point that exposes a skill directory or a function returning its path.
+Shiny's bundled skill wins if another package supplies the same name.
+
+`shiny skill path <name>` prints the directory containing `SKILL.md` and its
+supporting files. `shiny skill install <name>` links it into `.agents/skills/`,
+with `--claude` for `.claude/skills/` and `--copy` for a standalone copy.
+Existing files and directories are preserved. Running the command again with
+an existing link to the same source succeeds.
+
+`shiny quickstart` prints a short, version-aware welcome with setup
+steps, an optional `library-skills` install command, a pointer to the bundled
+skill, and links to release notes and docs. Use `uvx shiny quickstart` without
+installing Shiny first, or `uv run shiny quickstart` for the project's installed
+version.
+
+`shiny skill get shiny-for-python` prints the skill's index. Add
+`--reference <topic>` to print one reference file. This command lives in
+`shiny/_main/_skills.py` and reuses `_skills._find_skill()` to select the bundled
+or discovered skill. Exact reference names take priority. Otherwise it accepts a unique
+partial name, then uses `difflib.get_close_matches()` for close spellings.
+Ambiguous names produce an error with the matching names. It selects from
+the skill's existing `references/*.md` files, so a supplied path cannot read
+an arbitrary file. Each backticked `` `references/<topic>.md` `` link becomes
+`` `shiny skill get <name> --reference <topic>` `` in stdout, so write
+topic links in exactly that form.
 
 **Audience:** coding agents *using* shiny to build, test, and debug apps — not
 contributors to shiny itself. Contributor-facing guidance belongs in
