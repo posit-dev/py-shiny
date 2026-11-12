@@ -1,7 +1,8 @@
 import json
 import re
+import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from typing import cast
 
 import pytest
 from click.testing import CliRunner
@@ -19,6 +20,7 @@ def test_skills_list_shows_names_and_descriptions() -> None:
     assert result.exit_code == 0
     assert SKILL_NAME in result.output
     skill_line = next(line for line in result.output.splitlines() if SKILL_NAME in line)
+    assert skill_line.startswith(f"{SKILL_NAME}  ")
     skill_md = (SKILLS_DIR / SKILL_NAME / "SKILL.md").read_text()
     match = re.search(r'^description: "?(.+?)"?$', skill_md, re.MULTILINE)
     assert match is not None
@@ -63,37 +65,42 @@ def test_skills_path_with_missing_skills_dir(
     assert "No skills" in result.output
 
 
-def test_skill_command_group_alias() -> None:
-    r1 = CliRunner().invoke(main, ["skill", "list"])
-    r2 = CliRunner().invoke(main, ["skills", "list"])
-    assert r1.exit_code == 0
-    assert r2.exit_code == 0
-    assert r1.output == r2.output
-
-
 def test_skill_list_json() -> None:
     result = CliRunner().invoke(main, ["skill", "list", "--json"])
     assert result.exit_code == 0
-    data = json.loads(result.output)
-    assert isinstance(data, list)
+    data = cast(list[dict[str, str]], json.loads(result.output))
     assert any(s["name"] == SKILL_NAME and s["package"] == "shiny" for s in data)
+
+
+def _add_distribution(site: Path, package: str, *files: Path) -> Path:
+    dist = site / f"{package.replace('-', '_')}-1.0.dist-info"
+    dist.mkdir()
+    (dist / "METADATA").write_text(f"Name: {package}\nVersion: 1.0\n", encoding="utf-8")
+    record = "".join(f"{file.relative_to(site).as_posix()},,\n" for file in files)
+    (dist / "RECORD").write_text(record, encoding="utf-8")
+    return dist
 
 
 def test_skill_list_discovers_ecosystem_packages(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    pkg_dir = tmp_path / "shinywidgets" / ".agents" / "skills" / "custom-widget"
+    pkg_dir = tmp_path / "widget_module" / ".agents" / "skills" / "custom-widget"
     pkg_dir.mkdir(parents=True)
     (pkg_dir / "SKILL.md").write_text(
         "---\nname: custom-widget\ndescription: Widget skill\n---\n# Custom\n",
         encoding="utf-8",
     )
-    monkeypatch.syspath_prepend(str(tmp_path))
+    _add_distribution(tmp_path, "shiny-widgets-extension", pkg_dir / "SKILL.md")
+    monkeypatch.setattr(sys, "path", [str(tmp_path), *sys.path])
 
     result = CliRunner().invoke(main, ["skill", "list"])
     assert result.exit_code == 0
-    assert "[shinywidgets] custom-widget" in result.output
+    assert "[shiny-widgets-extension] custom-widget" in result.output
     assert "Widget skill" in result.output
+
+    legacy = CliRunner().invoke(main, ["skills", "list"])
+    assert legacy.exit_code == 0
+    assert "custom-widget" not in legacy.output
 
 
 def test_skill_list_all_includes_general_packages(
@@ -105,7 +112,8 @@ def test_skill_list_all_includes_general_packages(
         "---\nname: other-tool\ndescription: General tool skill\n---\n# Tool\n",
         encoding="utf-8",
     )
-    monkeypatch.syspath_prepend(str(tmp_path))
+    _add_distribution(tmp_path, "otherpkg", pkg_dir / "SKILL.md")
+    monkeypatch.setattr(sys, "path", [str(tmp_path), *sys.path])
 
     default_res = CliRunner().invoke(main, ["skill", "list"])
     assert default_res.exit_code == 0
@@ -114,6 +122,23 @@ def test_skill_list_all_includes_general_packages(
     all_res = CliRunner().invoke(main, ["skill", "list", "--all"])
     assert all_res.exit_code == 0
     assert "[otherpkg] other-tool" in all_res.output
+
+
+def test_skill_path_prefers_the_skill_shown_in_default_list(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    for package in ("anotherlib", "shiny-extension"):
+        path = tmp_path / package / ".agents" / "skills" / "shared-skill"
+        path.mkdir(parents=True)
+        (path / "SKILL.md").write_text(f"# {package}\n", encoding="utf-8")
+        _add_distribution(tmp_path, package, path / "SKILL.md")
+    monkeypatch.setattr(sys, "path", [str(tmp_path), *sys.path])
+
+    result = CliRunner().invoke(main, ["skill", "path", "shared-skill"])
+    assert result.exit_code == 0
+    assert Path(result.output.strip()) == (
+        tmp_path / "shiny-extension" / ".agents" / "skills" / "shared-skill"
+    )
 
 
 def test_skill_list_discovers_entry_points(
@@ -126,20 +151,23 @@ def test_skill_list_discovers_entry_points(
         encoding="utf-8",
     )
 
-    mock_ep = MagicMock()
-    mock_ep.name = "ep-skill"
-    mock_ep.dist.name = "mockdist"
-    mock_ep.load.return_value = skill_dir
-
-    monkeypatch.setattr(
-        _main_skills.importlib.metadata,
-        "entry_points",
-        lambda group=None: [mock_ep] if group == "shiny.skills" else [],
+    module = tmp_path / "sample_skill_provider.py"
+    module.write_text(
+        "from pathlib import Path\n"
+        "skill = Path(__file__).parent / 'ep-skill'\n"
+        "paths = {'ep-skill': skill, '../outside': skill}\n",
+        encoding="utf-8",
     )
+    dist = _add_distribution(tmp_path, "mockdist", module, skill_dir / "SKILL.md")
+    (dist / "entry_points.txt").write_text(
+        "[shiny.skills]\nsample = sample_skill_provider:paths\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "path", [str(tmp_path), *sys.path])
 
     result = CliRunner().invoke(main, ["skill", "list"])
     assert result.exit_code == 0
     assert "[mockdist] ep-skill" in result.output
+    assert "../outside" not in result.output
 
 
 def test_skill_get_prints_skill_and_rewrites_references() -> None:
@@ -208,17 +236,40 @@ def test_skill_install_all(tmp_path: Path) -> None:
     assert (target / SKILL_NAME).exists()
 
 
-def test_skill_install_replaces_existing(tmp_path: Path) -> None:
+def test_skill_install_preserves_existing_directory(tmp_path: Path) -> None:
     target = tmp_path / "replace_target"
     first = CliRunner().invoke(
         main, ["skill", "install", SKILL_NAME, "--target", str(target), "--copy"]
     )
     assert first.exit_code == 0
+    document = target / SKILL_NAME / "SKILL.md"
+    document.write_text("# Project-specific edits\n", encoding="utf-8")
     second = CliRunner().invoke(
         main, ["skill", "install", SKILL_NAME, "--target", str(target), "--copy"]
     )
-    assert second.exit_code == 0
-    assert (target / SKILL_NAME / "SKILL.md").is_file()
+    assert second.exit_code != 0
+    assert "already exists" in second.output
+    assert document.read_text(encoding="utf-8") == "# Project-specific edits\n"
+
+
+def test_skill_install_cleans_up_failed_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "target"
+
+    def fail_copy(src: Path, dst: Path, **kwargs: object) -> None:
+        dst.mkdir(exist_ok=True)
+        (dst / "SKILL.md").touch()
+        raise OSError("Disk full")
+
+    monkeypatch.setattr(_main_skills.shutil, "copytree", fail_copy)
+    result = CliRunner().invoke(
+        main, ["skill", "install", SKILL_NAME, "--target", str(target), "--copy"]
+    )
+
+    assert result.exit_code != 0
+    assert "Disk full" in result.output
+    assert not (target / SKILL_NAME).exists()
 
 
 def test_skill_install_missing_args() -> None:
@@ -340,6 +391,28 @@ def test_skill_get_reference_cannot_read_files_outside_the_skill(
     )
     assert result.exit_code != 0
     assert "Unknown reference" in result.output
+    assert "private contents" not in result.output
+
+
+def test_skill_get_reference_ignores_symlink_outside_skill(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    skill_dir = tmp_path / "sample"
+    references = skill_dir / "references"
+    references.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("# Sample\n", encoding="utf-8")
+    private = tmp_path / "private.md"
+    private.write_text("private contents", encoding="utf-8")
+    try:
+        (references / "external.md").symlink_to(private)
+    except OSError:
+        pytest.skip("Symlinks are unavailable")
+    monkeypatch.setattr(_main_skills, "SKILLS_DIR", tmp_path)
+
+    result = CliRunner().invoke(
+        main, ["skill", "get", "sample", "--reference", "external"]
+    )
+    assert result.exit_code != 0
     assert "private contents" not in result.output
 
 

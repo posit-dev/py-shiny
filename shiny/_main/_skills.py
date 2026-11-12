@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import importlib.metadata
 import json
-import os
 import re
 import shutil
-import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from difflib import get_close_matches
 from pathlib import Path
+from typing import cast
 
 import click
+from packaging.utils import canonicalize_name
 
 SKILLS_DIR = Path(__file__).parent.parent / ".agents" / "skills"
 REFERENCE_LINK = re.compile(r"`references/([a-z0-9-]+)\.md`")
+NO_BUNDLED_SKILLS = "No skills are bundled in this installation of shiny."
 
 
 @dataclass(frozen=True)
@@ -22,7 +24,6 @@ class DiscoveredSkill:
     package: str
     path: Path
     description: str
-    is_ecosystem: bool = False
 
 
 def _available_skills() -> list[Path]:
@@ -35,18 +36,17 @@ def _available_skills() -> list[Path]:
 
 def _skill_description(skill_dir: Path) -> str:
     skill_file = skill_dir / "SKILL.md"
-    if not skill_file.is_file():
-        return ""
     try:
+        if not skill_file.resolve().is_relative_to(skill_dir.resolve()):
+            return ""
         text = skill_file.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
         return ""
-    if not text.startswith("---\n"):
+    opening, _, rest = text.partition("\n")
+    frontmatter, closing, _ = rest.partition("\n---\n")
+    if opening != "---" or not closing:
         return ""
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return ""
-    for line in parts[1].splitlines():
+    for line in frontmatter.splitlines():
         if line.startswith("description:"):
             value = line.removeprefix("description:").strip()
             if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
@@ -55,170 +55,105 @@ def _skill_description(skill_dir: Path) -> str:
     return ""
 
 
-def _is_shiny_ecosystem(pkg: str) -> bool:
-    pkg_lower = pkg.lower()
-    return "shiny" in pkg_lower or pkg_lower in ("bslib", "htmltools")
+def _is_shiny_ecosystem(package: str) -> bool:
+    name = canonicalize_name(package)
+    return name.startswith("shiny") or name in ("bslib", "htmltools")
 
 
-def _scan_skills_dir(
-    skills_dir: Path,
-    pkg: str,
-    skills: dict[str, DiscoveredSkill],
-    include_all: bool,
-) -> None:
-    is_eco = _is_shiny_ecosystem(pkg)
-    if not include_all and not is_eco:
-        return
-    try:
-        for s in skills_dir.iterdir():
-            if s.is_dir() and (s / "SKILL.md").is_file() and s.name not in skills:
-                skills[s.name] = DiscoveredSkill(
-                    name=s.name,
-                    package=pkg,
-                    path=s,
-                    description=_skill_description(s),
-                    is_ecosystem=is_eco,
-                )
-    except OSError:
-        pass
+def _entry_point_skills(target: object) -> Iterator[tuple[str, Path]]:
+    if isinstance(target, (str, Path)):
+        path = Path(target)
+        if (path / "SKILL.md").is_file():
+            yield path.name, path
+        elif path.is_dir():
+            for child in sorted(path.iterdir()):
+                yield child.name, child
+    elif isinstance(target, (list, tuple)):
+        for item in cast("list[object] | tuple[object, ...]", target):
+            if isinstance(item, (str, Path)):
+                path = Path(item)
+                yield path.name, path
+    elif isinstance(target, dict):
+        for name, value in cast(dict[object, object], target).items():
+            if isinstance(name, str) and isinstance(value, (str, Path)):
+                yield name, Path(value)
 
 
 def _discover_skills(include_all: bool = False) -> dict[str, DiscoveredSkill]:
     skills: dict[str, DiscoveredSkill] = {}
 
-    for p in _available_skills():
-        skills[p.name] = DiscoveredSkill(
-            name=p.name,
-            package="shiny",
-            path=p,
-            description=_skill_description(p),
-            is_ecosystem=True,
-        )
+    def add(name: str, package: str, path: Path) -> None:
+        if len(name) > 64 or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) is None:
+            return
+        if name not in skills and (path / "SKILL.md").is_file():
+            skills[name] = DiscoveredSkill(
+                name=name,
+                package=package,
+                path=path.absolute(),
+                description=_skill_description(path),
+            )
 
-    eps: list[importlib.metadata.EntryPoint] = []
-    try:
-        eps = list(importlib.metadata.entry_points(group="shiny.skills"))
-    except Exception:
-        eps = []
+    for path in _available_skills():
+        add(path.name, package="shiny", path=path)
 
-    for ep in eps:
+    for ep in importlib.metadata.entry_points(group="shiny.skills"):
+        package = ep.dist.name if ep.dist is not None else ep.name
         try:
-            loaded = ep.load()
-            target = loaded() if callable(loaded) else loaded
-            pkg = getattr(ep.dist, "name", ep.name)
-            if isinstance(target, (str, Path)):
-                tpath = Path(target)
-                if tpath.is_dir():
-                    if (tpath / "SKILL.md").is_file() and tpath.name not in skills:
-                        skills[tpath.name] = DiscoveredSkill(
-                            name=tpath.name,
-                            package=pkg,
-                            path=tpath,
-                            description=_skill_description(tpath),
-                            is_ecosystem=True,
-                        )
-                    else:
-                        for sub in tpath.iterdir():
-                            if (
-                                sub.is_dir()
-                                and (sub / "SKILL.md").is_file()
-                                and sub.name not in skills
-                            ):
-                                skills[sub.name] = DiscoveredSkill(
-                                    name=sub.name,
-                                    package=pkg,
-                                    path=sub,
-                                    description=_skill_description(sub),
-                                    is_ecosystem=True,
-                                )
-            elif isinstance(target, (list, tuple)):
-                for item in target:
-                    ipath = Path(item)
-                    if (
-                        ipath.is_dir()
-                        and (ipath / "SKILL.md").is_file()
-                        and ipath.name not in skills
-                    ):
-                        skills[ipath.name] = DiscoveredSkill(
-                            name=ipath.name,
-                            package=pkg,
-                            path=ipath,
-                            description=_skill_description(ipath),
-                            is_ecosystem=True,
-                        )
-            elif isinstance(target, dict):
-                for sname, spath in target.items():
-                    spath_obj = Path(spath)
-                    if (
-                        spath_obj.is_dir()
-                        and (spath_obj / "SKILL.md").is_file()
-                        and sname not in skills
-                    ):
-                        skills[sname] = DiscoveredSkill(
-                            name=sname,
-                            package=pkg,
-                            path=spath_obj,
-                            description=_skill_description(spath_obj),
-                            is_ecosystem=True,
-                        )
-        except Exception:
-            continue
+            loaded: object = ep.load()
+            target: object = loaded() if callable(loaded) else loaded
+            for name, path in _entry_point_skills(target):
+                add(name, package=package, path=path)
+        except Exception as e:
+            # An extension can import or run arbitrary code in its provider.
+            click.echo(f"Could not load skills from {package}: {e}", err=True)
 
-    seen_entries: set[Path] = set()
-    for entry in sys.path:
-        try:
-            entry_path = Path(entry).resolve()
-        except OSError:
+    distributions = [
+        (dist.name, dist)
+        for dist in importlib.metadata.distributions()
+        if dist.name and canonicalize_name(dist.name) != "shiny"
+    ]
+    # Pick the same skill for list, get, path, and install even when names collide.
+    distributions.sort(key=lambda item: (not _is_shiny_ecosystem(item[0]), item[0]))
+    for package, dist in distributions:
+        if not include_all and not _is_shiny_ecosystem(package):
             continue
-        if entry_path in seen_entries or not entry_path.is_dir():
-            continue
-        seen_entries.add(entry_path)
-
-        try:
-            for child in entry_path.iterdir():
-                if not child.is_dir():
-                    continue
-                cname = child.name
-                if (
-                    cname == "shiny"
-                    or cname.startswith(".")
-                    or cname.endswith((".dist-info", ".egg-info", "__pycache__"))
-                ):
-                    continue
-                child_skills = child / ".agents" / "skills"
-                if child_skills.is_dir():
-                    _scan_skills_dir(child_skills, cname, skills, include_all)
-        except OSError:
-            continue
-
-    if not include_all:
-        return {k: v for k, v in skills.items() if v.is_ecosystem}
+        for file in dist.files or ():
+            if file.name != "SKILL.md" or file.parts[-4:-2] != (".agents", "skills"):
+                continue
+            path = file.locate()
+            if isinstance(path, Path):
+                add(path.parent.name, package=package, path=path.parent)
     return skills
 
 
-def _find_skill(name: str) -> Path:
-    bundled = _available_skills()
-    discovered = _discover_skills(include_all=True)
-    if not bundled and not any(s.is_ecosystem for s in discovered.values()):
-        raise click.ClickException(
-            "No skills are bundled in this installation of shiny."
-        )
-    if name not in discovered:
-        available = ", ".join(sorted(discovered.keys()))
+def _lookup_skill(name: str, skills: dict[str, DiscoveredSkill]) -> DiscoveredSkill:
+    if not skills:
+        raise click.ClickException("No skills found in this Python environment.")
+    if name not in skills:
+        available = ", ".join(sorted(skills))
         raise click.ClickException(
             f"Unknown skill {name!r}. Available skills: {available}"
         )
-    return discovered[name].path
+    return skills[name]
+
+
+def _find_skill(name: str) -> Path:
+    # Bundled lookups can skip loading third-party entry points.
+    for path in _available_skills():
+        if path.name == name:
+            return path
+    return _lookup_skill(name, skills=_discover_skills(include_all=True)).path
 
 
 def _read_skill_document(name: str, reference: str | None) -> str:
     skill_dir = _find_skill(name)
+    skill_dir = skill_dir.resolve()
     document = skill_dir / "SKILL.md"
     if reference is not None:
         references = {
             path.stem: path
             for path in sorted((skill_dir / "references").glob("*.md"))
-            if path.is_file()
+            if path.is_file() and path.resolve().is_relative_to(skill_dir)
         }
         if not references:
             raise click.ClickException(
@@ -252,51 +187,53 @@ def _read_skill_document(name: str, reference: str | None) -> str:
             slug = matches[0]
         document = references[slug]
 
+    try:
+        if not document.resolve().is_relative_to(skill_dir):
+            raise click.ClickException(f"Document is outside the skill: {document}")
+        contents = document.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as e:
+        raise click.ClickException(f"Could not read {document}: {e}") from e
+
     return REFERENCE_LINK.sub(
-        rf"`shiny skill get {name} --reference \1`",
-        string=document.read_text(encoding="utf-8"),
+        rf"`shiny skill get {name} --reference \1`", string=contents
     )
 
 
-def install_skill(
-    skill_name: str,
-    target_dir: Path | str | None = None,
-    claude: bool = False,
-    copy: bool = False,
+def _install_skill(
+    skill_info: DiscoveredSkill, target_dir: Path, *, copy: bool
 ) -> Path:
-    discovered = _discover_skills(include_all=True)
-    if not discovered:
-        raise click.ClickException("No skills found to install.")
-    if skill_name not in discovered:
-        available = ", ".join(sorted(discovered.keys()))
-        raise click.ClickException(
-            f"Unknown skill {skill_name!r}. Available skills: {available}"
-        )
-    skill_info = discovered[skill_name]
+    dest = target_dir / skill_info.name
+    try:
+        source = skill_info.path.resolve()
+        if not copy and dest.is_symlink() and dest.readlink() == source:
+            return dest
+        if dest.is_symlink() or dest.exists():
+            raise FileExistsError(f"{dest} already exists")
+        if target_dir.resolve().is_relative_to(source):
+            raise click.ClickException(
+                f"Cannot install a skill inside its source: {source}"
+            )
 
-    if target_dir is not None:
-        dest_base = Path(target_dir)
-    elif claude:
-        dest_base = Path.cwd() / ".claude" / "skills"
-    else:
-        dest_base = Path.cwd() / ".agents" / "skills"
+        target_dir.mkdir(parents=True, exist_ok=True)
+        if not copy:
+            try:
+                dest.symlink_to(source, target_is_directory=True)
+            except FileExistsError:
+                raise
+            except OSError:
+                # Some Windows setups restrict creating symlinks.
+                pass
+            else:
+                return dest
 
-    dest_base.mkdir(parents=True, exist_ok=True)
-    dest = dest_base / skill_name
-
-    if dest.is_symlink() or dest.exists():
-        if dest.is_dir() and not dest.is_symlink():
-            shutil.rmtree(dest)
-        else:
-            dest.unlink()
-
-    if copy:
-        shutil.copytree(skill_info.path, dest)
-    else:
+        dest.mkdir()
         try:
-            os.symlink(skill_info.path.resolve(), dest, target_is_directory=True)
+            shutil.copytree(source, dest, symlinks=True, dirs_exist_ok=True)
         except OSError:
-            shutil.copytree(skill_info.path, dest)
+            shutil.rmtree(dest, ignore_errors=True)
+            raise
+    except OSError as e:
+        raise click.ClickException(f"Could not install {skill_info.name!r}: {e}") from e
     return dest
 
 
@@ -326,7 +263,7 @@ def skill_list(all_skills: bool, as_json: bool) -> None:
         if as_json:
             click.echo("[]")
         else:
-            click.echo("No skills are bundled in this installation of shiny.")
+            click.echo("No skills found in this Python environment.")
         return
 
     if as_json:
@@ -433,30 +370,58 @@ def skill_install(
             "Please specify a skill name to install or use --all."
         )
 
+    if name is not None and all_skills:
+        raise click.UsageError("Specify either a skill name or --all.")
     discovered = _discover_skills(include_all=True)
     if not discovered:
         raise click.ClickException("No skills found to install.")
 
-    if all_skills:
-        target_names = list(discovered.keys())
-    else:
-        assert name is not None
-        target_names = [name]
-
-    for target_name in target_names:
-        dest = install_skill(
-            target_name,
-            target_dir=target,
-            claude=claude,
-            copy=copy,
-        )
-        mode = "copied" if copy or not dest.is_symlink() else "symlinked"
-        click.echo(f"Installed skill '{target_name}' to {dest} ({mode})")
+    target_dir = target
+    if target_dir is None:
+        target_dir = Path.cwd() / (".claude" if claude else ".agents") / "skills"
+    selected = (
+        [_lookup_skill(name, skills=discovered)]
+        if name is not None
+        else list(discovered.values())
+    )
+    for skill_info in selected:
+        dest = _install_skill(skill_info, target_dir=target_dir, copy=copy)
+        mode = "symlinked" if dest.is_symlink() else "copied"
+        click.echo(f"Installed skill '{skill_info.name}' to {dest} ({mode})")
 
 
-skills = click.Group(
-    "skills",
-    help=skill.help,
-)
-for cmd_name, cmd_obj in skill.commands.items():
-    skills.add_command(cmd_obj, cmd_name)
+@click.group("skills", help="List and locate the Agent Skills bundled in Shiny.")
+def skills() -> None:
+    pass
+
+
+@skills.command("list", help="List the bundled Agent Skills.")
+def skills_list() -> None:
+    skill_dirs = _available_skills()
+    if not skill_dirs:
+        click.echo(NO_BUNDLED_SKILLS)
+        return
+    width = max(len(path.name) for path in skill_dirs)
+    for path in skill_dirs:
+        click.echo(f"{path.name:<{width}}  {_skill_description(path)}")
+    click.echo(
+        "\nThese ship with the shiny package. To install them into your coding\n"
+        "agent, run `library-skills` from your project directory:\n"
+        "    uvx library-skills --claude   # Claude Code (.claude/skills)\n"
+        "    uvx library-skills            # any other agent (.agents/skills)\n"
+        "See https://library-skills.io for details."
+    )
+
+
+@skills.command("path", help="Print the directory of a bundled Agent Skill.")
+@click.argument("name")
+def skills_path(name: str) -> None:
+    skill_dirs = _available_skills()
+    if not skill_dirs:
+        raise click.ClickException(NO_BUNDLED_SKILLS)
+    for path in skill_dirs:
+        if path.name == name:
+            click.echo(path)
+            return
+    available = ", ".join(path.name for path in skill_dirs)
+    raise click.ClickException(f"Unknown skill {name!r}. Available skills: {available}")

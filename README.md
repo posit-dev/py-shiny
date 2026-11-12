@@ -64,7 +64,8 @@ uvx library-skills
 
 Run this from your own project rather than a clone of this repository: [`library-skills`](https://library-skills.io) reads your project's dependencies and installs the skills bundled with the packages you actually have installed. It symlinks rather than copies, so the skills keep tracking your version of `shiny` as you upgrade. On Windows, add `--copy` if symlinks are unavailable.
 
-To see available skills without installing anything, run `shiny skill list`.
+To see skills from Shiny and installed extensions, run `uv run shiny skill list`.
+Add `--all` to include skills from other installed packages.
 
 To read a skill or one of its references from your project:
 
@@ -78,6 +79,9 @@ To install a skill directly into your project:
 ```sh
 uv run shiny skill install shiny-for-python
 ```
+
+The installer links the skill into `.agents/skills/` and preserves existing
+files. Use `--claude` for `.claude/skills/` or `--copy` to copy the skill.
 
 Reference names accept partial names and close spellings, such as `reactive`
 for `reactivity`. If several references match, the command lists their names.
