@@ -633,15 +633,19 @@ window.addEventListener('keydown', function(e) {{
         live = self._sessions.get(session_id)
         marks = reactive.get_marks(live) if live is not None else info.marks
         data = recorder.export(session_id)
-        data["log"] = sorted(
-            [dict(entry) for entry in (*data["log"], *marks)],
-            key=lambda entry: entry.get("time", 0),
-        )
+        events = cast(list[dict[str, Any]], data["log"])
+        log = [entry.copy() for entry in (*events, *marks)]
+        log.sort(key=lambda entry: entry.get("time", 0))
+        data["log"] = log
         app_file = self._reactlog_app_file()
         app_dir = app_file.parent if app_file is not None else None
         sources: dict[str, str] = {}
-        for entry in data["log"]:
-            if self.sanitize_errors and entry.get("action") == "exit" and "error" in entry:
+        for entry in log:
+            if (
+                self.sanitize_errors
+                and entry.get("action") == "exit"
+                and "error" in entry
+            ):
                 entry["error"] = self.sanitize_error_msg
             path = entry.get("source_file")
             if not isinstance(path, str):

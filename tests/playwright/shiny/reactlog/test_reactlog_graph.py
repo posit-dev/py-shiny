@@ -153,23 +153,33 @@ def server(input, output, session):
     report = _record(
         tmp_path,
         code,
-        [{
-            "scatter-x_var": "width",
-            "scatter-very_long_measurement_axis_setting": "length",
-            **_visible("scatter-result"),
-        }],
+        [
+            {
+                "scatter-x_var": "width",
+                "scatter-very_long_measurement_axis_setting": "length",
+                **_visible("scatter-result"),
+            }
+        ],
     )
     load_graph_report(page, format_reactlog_html(report, code))
     expect(page.locator('.module-box[data-module="scatter"]')).to_be_visible()
     short = page.get_by_role("button", name=re.compile(r"Input input\.scatter-x_var"))
     expect(short.locator("text").first).to_have_text("input.x_var")
     long = page.get_by_role(
-        "button", name=re.compile(r"Input input\.scatter-very_long_measurement_axis_setting")
+        "button",
+        name=re.compile(r"Input input\.scatter-very_long_measurement_axis_setting"),
     )
     expect(long.locator("text").first).to_have_text(re.compile(r"^input\..+\.\.\.$"))
     expect(long.locator("title")).to_contain_text(
         "input.scatter-very_long_measurement_axis_setting", use_inner_text=False
     )
+    short_id = short.get_attribute("data-id")
+    ready_step = next(
+        ev["step"]
+        for ev in report["events"]
+        if ev.get("node_id") == short_id and ev["action"] == "valueChange"
+    )
+    page.get_by_role("slider", name="Timeline step scrubber").fill(str(ready_step))
     expect(short.locator(".node-card")).to_have_css(
         "fill",
         page.locator(".timeline-marker.is-idle").first.evaluate(

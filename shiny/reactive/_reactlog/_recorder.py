@@ -14,6 +14,7 @@ from urllib.parse import urlencode
 from htmltools import tags
 
 from ...otel._attributes import extract_source_ref
+from ...types import SilentException
 from .._trace import (
     DependencyAdded,
     DependencyRemoved,
@@ -27,7 +28,6 @@ from .._trace import (
     ValueChanged,
     ValueFrozen,
 )
-from ...types import SilentException
 
 # ponytail: fixed cap; make configurable if long sessions need more history.
 _MAX_EVENTS_PER_SESSION = 50_000
