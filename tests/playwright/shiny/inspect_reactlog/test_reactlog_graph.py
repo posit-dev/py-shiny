@@ -35,6 +35,66 @@ def graph_node(page: Page, selector: str) -> Locator:
     return page.locator(selector)
 
 
+def test_dependency_dot_travels_across_a_scrubbed_step(page: Page) -> None:
+    data = {
+        "nodes": [
+            {"id": "input:x", "label": "input.x", "type": "input", "role": "source"},
+            {
+                "id": "output:y",
+                "label": "output y",
+                "type": "output",
+                "role": "observer",
+            },
+        ],
+        "edges": [{"from": "input:x", "to": "output:y"}],
+        "events": [
+            {"action": "idle", "time": 0},
+            {
+                "action": "dependsOn",
+                "node_id": "output:y",
+                "edge_from": "input:x",
+                "edge_to": "output:y",
+                "time": 1,
+            },
+            {"action": "idle", "time": 2},
+            {"action": "idle", "time": 3},
+            {
+                "action": "dependsOn",
+                "node_id": "output:y",
+                "edge_from": "input:x",
+                "edge_to": "output:y",
+                "isolate": True,
+                "time": 4,
+            },
+        ],
+    }
+    load_graph_report(page, format_reactlog_html(data, ""))
+    dot = page.locator(".graph-edge-pulse")
+    expect(dot).to_have_count(0)
+    scrubber = page.get_by_role("slider", name="Timeline step scrubber")
+    page.emulate_media(reduced_motion="reduce")
+    scrubber.fill("2")
+    expect(dot).to_have_count(0)
+    scrubber.fill("0")
+    page.emulate_media(reduced_motion="no-preference")
+
+    graph = page.locator("#reactlog-svg")
+    graph.evaluate("svg => svg.pauseAnimations()")
+    scrubber.fill("2")
+    expect(dot).to_have_count(1)
+    start = dot.bounding_box()
+    assert start is not None
+    graph.evaluate("svg => svg.setCurrentTime(svg.getCurrentTime() + 0.6)")
+    scrubber.fill("3")
+    middle = dot.bounding_box()
+    assert middle is not None and middle["x"] > start["x"] + 10
+    graph.evaluate("svg => svg.setCurrentTime(svg.getCurrentTime() + 0.7)")
+    expect(dot).to_have_count(0)
+    scrubber.fill("4")
+    expect(dot).to_have_count(0)
+    graph.evaluate("svg => svg.unpauseAnimations()")
+
+
 def test_timeline_user_mark_highlights_its_call_site(page: Page) -> None:
     code = 'from shiny import reactive\n\nreactive.mark("Check data")\n'
     report = load_reactlog_json(

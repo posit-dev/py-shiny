@@ -1830,7 +1830,7 @@ def load_reactlog_json(
             session=str(item.get("session") or session_name),
             action=action,
         )
-        for key in ("error", "source_file", "line"):
+        for key in ("error", "source_file", "line", "isolate"):
             if key in item:
                 ev_dict[key] = item[key]
         preview = item.get("plot")
@@ -2738,6 +2738,7 @@ def format_reactlog_html(
     .graph-edge:hover {{ opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }}
     .graph-edge.is-isolated {{ opacity: 1; stroke: var(--text-muted); stroke-dasharray: 5 4; }}
     .graph-edge.is-inactive {{ stroke: var(--text-muted); stroke-dasharray: 1 5; opacity: 1; }}
+    .graph-edge-pulse {{ fill: var(--text); stroke: var(--bg); stroke-width: 1.5px; pointer-events: none; }}
     .legend-swatch {{ width: 14px; height: 14px; border: 1.5px solid var(--node-stroke); border-radius: 4px; }}
     .legend-line {{ display: inline-block; width: 16px; border-top: 2px solid var(--text-muted); }}
     .legend-line.is-isolated {{ border-top-style: dashed; }}
@@ -2769,6 +2770,7 @@ def format_reactlog_html(
     @media (prefers-reduced-motion: reduce) {{
       .graph-node, .graph-edge, .source-line, .trace-chip, .trace-playhead {{ transition: none; }}
       .graph-edge[data-active="true"] {{ animation: none; }}
+      .graph-edge-pulse {{ display: none; }}
       .action-toast[hidden] {{ display: none; }}
     .action-toast {{ animation: none; }}
     }}
@@ -3181,7 +3183,10 @@ def format_reactlog_html(
               <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.22" />
             </filter>
           </defs>
-          <g id="viewport-g"></g>
+          <g id="viewport-g">
+            <g id="graph-content"></g>
+            <g id="graph-edge-pulses" aria-hidden="true"></g>
+          </g>
         </svg>
       </div>
 
@@ -5199,8 +5204,8 @@ def format_reactlog_html(
       return `M ${{x0}} ${{y0}} H ${{x1}} V ${{y1}} H ${{x0}} L ${{x0 + wc}} ${{ym}} Z`;
     }}
 
-    function renderGraph() {{
-      const svg = document.getElementById('viewport-g');
+    function renderGraph(previousStep = currentStep) {{
+      const svg = document.getElementById('graph-content');
       if (!svg) return;
       svg.innerHTML = '';
       const isLight = getActiveTheme() === 'light';
@@ -5365,6 +5370,7 @@ def format_reactlog_html(
         curWave.outputs.forEach(o => executedInBurst.add(o.nodeId));
       }}
 
+      const motionPaths = new Map();
       edges.forEach(e => {{
         const p1 = pos[e.from];
         const p2 = pos[e.to];
@@ -5376,7 +5382,9 @@ def format_reactlog_html(
             : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate')));
 
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', graphEdgePath(e, pos, nodeWidth, nodeHeight, edges));
+          const d = graphEdgePath(e, pos, nodeWidth, nodeHeight, edges);
+          path.setAttribute('d', d);
+          if (e.related && !e.isolated) motionPaths.set(JSON.stringify([e.from, e.to]), d);
           path.setAttribute('fill', 'none');
           path.setAttribute('stroke-linecap', 'round');
           path.setAttribute('stroke-linejoin', 'round');
@@ -5400,6 +5408,7 @@ def format_reactlog_html(
           svg.appendChild(path);
         }}
       }});
+      updateEdgePulses(motionPaths, representatives, events, previousStep);
 
       const execCounts = getNodeExecutionCounts();
       nodes.forEach(n => {{
@@ -5552,6 +5561,48 @@ def format_reactlog_html(
       }});
     }}
 
+    function updateEdgePulses(paths, representatives, events, previousStep) {{
+      const layer = document.getElementById('graph-edge-pulses');
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {{
+        layer.replaceChildren();
+        return;
+      }}
+      const moving = new Set();
+      for (const dot of Array.from(layer.children)) {{
+        const key = dot.dataset.edge;
+        if (paths.get(key) === dot.firstElementChild.getAttribute('path')) moving.add(key);
+        else dot.remove();
+      }}
+
+      // A scrub can skip dependency events. Use the closest visible one to where it landed.
+      const forward = currentStep > previousStep;
+      const direction = forward ? -1 : 1;
+      for (let step = currentStep; forward ? step > previousStep : step < previousStep; step += direction) {{
+        const ev = events[step];
+        if (!ev || ev.isolate || !['dependsOn', 'invalidate', 'invalidateStart', 'propagate'].includes(ev.action || ev.event)) continue;
+        const from = representatives.get(ev.edge_from || ev.depOnReactId || ev.dependsOn);
+        const to = representatives.get(ev.edge_to || ev.node_id || ev.reactId || ev.id);
+        const key = JSON.stringify([from, to]);
+        const path = paths.get(key);
+        if (!path) continue;
+        if (moving.has(key)) return;
+
+        const dot = document.createElementNS(layer.namespaceURI, 'circle');
+        dot.setAttribute('class', 'graph-edge-pulse');
+        dot.setAttribute('r', '6');
+        dot.dataset.edge = key;
+        const motion = document.createElementNS(layer.namespaceURI, 'animateMotion');
+        motion.setAttribute('path', path);
+        motion.setAttribute('dur', '1.1s');
+        motion.setAttribute('begin', 'indefinite');
+        motion.addEventListener('endEvent', () => dot.remove(), {{ once: true }});
+        dot.appendChild(motion);
+        layer.appendChild(dot);
+        motion.beginElement();
+        return;
+      }}
+    }}
+
     function highlightDependencies(nodeId) {{
       if (focusedNodeId) return;
       document.querySelectorAll('.graph-edge').forEach(edge => {{
@@ -5578,6 +5629,7 @@ def format_reactlog_html(
 
     function seekTo(step, fromVideo = false, mediaTime = null) {{
       const events = reactlogData.events || reactlogData.log || [];
+      const previousStep = currentStep;
       currentStep = Math.max(0, Math.min(step, events.length - 1));
       document.getElementById('scrubber-range').value = currentStep;
       document.getElementById('step-display').textContent = `Step ${{currentStep}} / ${{Math.max(0, events.length - 1)}}`;
@@ -5601,7 +5653,7 @@ def format_reactlog_html(
         }}
       }}
       renderInspector();
-      renderGraph();
+      renderGraph(previousStep);
       updateSourceHighlight();
       updateActionToast();
       updateFlushUI();
@@ -6022,7 +6074,7 @@ def format_reactlog_html(
     function resetZoom() {{ zoomLevel = 1; panOffset = {{ x: 0, y: 0 }}; applyZoom(); }}
     function fitGraph() {{
       const svg = document.getElementById('reactlog-svg');
-      const g = document.getElementById('viewport-g');
+      const g = document.getElementById('graph-content');
       if (!svg || !g || !g.childElementCount) return;
       const box = g.getBBox();
       const width = svg.clientWidth, height = svg.clientHeight;
@@ -6187,6 +6239,7 @@ def format_reactlog_html(
             depOnReactId: depFrom,
             edge_from: depFrom,
             edge_to: depTo,
+            isolate: Boolean(item.isolate),
             details: details
           }});
           sIdx++;
@@ -6211,6 +6264,7 @@ def format_reactlog_html(
       }}
 
       Object.assign(reactlogData, normalized);
+      document.getElementById('graph-edge-pulses').replaceChildren();
       selectedNodeId = null;
       focusedNodeId = null;
       collapsedModules.clear();
