@@ -94,16 +94,19 @@ async def test_recorder_keeps_output_error_after_recovery() -> None:
 
     app = App(ui.TagList(), server)
     app.reactlog_enabled = True
+    recorder = app._reactlog_recorder
+    assert recorder is not None
     connection = SettledConnection()
     session = app._create_session(connection)
     connection.cause_receive('{"method":"init","data":{"n":0}}')
     connection.cause_receive('{"method":"update","data":{"n":-1}}')
     connection.cause_receive('{"method":"update","data":{"n":2}}')
     connection.cause_disconnect()
-    await session._run()
+    try:
+        await session._run()
+    finally:
+        app.reactlog_enabled = False
 
-    recorder = app._reactlog_recorder
-    assert recorder is not None
     events = load_reactlog_json(recorder.export(session.id))["events"]
     errors = [event for event in events if "error" in event]
     assert [event["error"] for event in errors] == ["No measurement available"]
