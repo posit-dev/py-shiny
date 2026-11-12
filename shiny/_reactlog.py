@@ -26,6 +26,7 @@ from .reactive._trace import (
     ValueChanged,
     ValueFrozen,
 )
+from .types import SilentException
 
 # ponytail: fixed cap; make configurable if long sessions need more history.
 _MAX_EVENTS_PER_SESSION = 50_000
@@ -232,6 +233,13 @@ class ReactlogRecorder(ReactiveTracer):
     def on_freeze_value(self, event: ValueFrozen) -> None:
         self._record(event.session_id, event.time, {"action": "freeze"}, event.node)
 
+    def record_output_error(
+        self, node: ReactiveNode, *, session_id: str, message: str
+    ) -> None:
+        self._record(
+            session_id, time.time(), {"action": "outputError", "error": message}, node
+        )
+
     @contextlib.contextmanager
     def on_isolate(self, event: IsolateEvent) -> Generator[None, None, None]:
         if event.reader is None:
@@ -265,8 +273,9 @@ class ReactlogRecorder(ReactiveTracer):
         exit_entry: dict[str, Any] = {"action": "exit", "ctxId": event.ctx_id}
         try:
             yield
-        except BaseException as exc:
-            exit_entry["error"] = _safe_repr(exc)
+        except Exception as exc:
+            if not isinstance(exc, SilentException):
+                exit_entry["error"] = _safe_repr(exc)
             raise
         finally:
             self._record(event.session_id, time.time(), exit_entry, event.node)

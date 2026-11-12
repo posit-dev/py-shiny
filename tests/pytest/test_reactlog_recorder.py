@@ -5,12 +5,14 @@ from typing import Any, Callable, Iterator
 
 import pytest
 
-from shiny import App, Inputs, Outputs, Session, _reactlog, ui
+from shiny import App, Inputs, Outputs, Session, _reactlog, render, req, ui
 from shiny._connection import MockConnection
 from shiny._inspect import load_reactlog_json
 from shiny._reactlog import ReactlogRecorder
 from shiny.reactive import Value, calc, effect, flush, isolate
 from shiny.reactive._trace import NodeKind, ValueChanged, add_tracer
+
+from ._reactlog_connection import SettledConnection
 
 
 class FakeNode:
@@ -76,6 +78,43 @@ def test_recorder_separates_and_drops_sessions() -> None:
     assert not any(x["action"] == "valueChange" for x in r.export("s2")["log"])
     r.drop_session("s1")
     assert r.export("s1")["log"] == []
+
+
+@pytest.mark.asyncio
+async def test_recorder_keeps_output_error_after_recovery() -> None:
+    def server(input: Inputs, output: Outputs, session: Session) -> None:
+        @output(suspend_when_hidden=False)
+        @render.text
+        def measurement() -> str:
+            n = input.n()
+            req(n >= 0)
+            if n == 0:
+                raise ValueError("No measurement available")
+            return str(n)
+
+    app = App(ui.TagList(), server)
+    app.reactlog_enabled = True
+    connection = SettledConnection()
+    session = app._create_session(connection)
+    connection.cause_receive('{"method":"init","data":{"n":0}}')
+    connection.cause_receive('{"method":"update","data":{"n":-1}}')
+    connection.cause_receive('{"method":"update","data":{"n":2}}')
+    connection.cause_disconnect()
+    await session._run()
+
+    recorder = app._reactlog_recorder
+    assert recorder is not None
+    events = load_reactlog_json(recorder.export(session.id))["events"]
+    errors = [event for event in events if "error" in event]
+    assert [event["error"] for event in errors] == ["No measurement available"]
+    assert errors[0]["node_label"] == "output measurement"
+    output_events = [
+        event["action"]
+        for event in events[errors[0]["step"] + 1 :]
+        if event["node_id"] == errors[0]["node_id"]
+        and event["action"] in ("enter", "exit")
+    ]
+    assert output_events == ["exit", "enter", "exit", "enter", "exit"]
 
 
 def test_recorder_ignores_foreign_sessions() -> None:
