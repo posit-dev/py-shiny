@@ -31,14 +31,14 @@ def test_quickstart_prints_a_one_screen_welcome() -> None:
 def test_quickstart_points_to_the_bundled_skill() -> None:
     result = CliRunner().invoke(main, args=["quickstart"])
 
-    assert "`uv run shiny skills path shiny-for-python`" in result.output
+    assert "`uv run shiny skill path shiny-for-python`" in result.output
     assert "SKILL.md" in result.output
     assert "`uv run shiny skill get shiny-for-python`" in result.output
     assert "--reference reactivity" in result.output
     assert "name: shiny-for-python" not in result.output
     assert "| Topic |" not in result.output
 
-    skill_path = CliRunner().invoke(main, args=["skills", "path", "shiny-for-python"])
+    skill_path = CliRunner().invoke(main, args=["skill", "path", "shiny-for-python"])
     assert skill_path.exit_code == 0
 
 
