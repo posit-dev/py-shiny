@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Lifecycle changes
+
+* The first argument of `reactive.invalidate_later()` is renamed from `delay` to `delay_secs`, to make clear that it is in seconds, not milliseconds. Passing `delay=` still works but emits a `ShinyDeprecationWarning`. Calls that pass the delay by position are unaffected (#2604).
+
 ### New features
+
+* Added `reactive.debounce()` and `reactive.throttle()`, decorators that slow down how often a reactive function invalidates its readers. They go below `@reactive.calc`; effects and outputs read the debounced calc instead (an effect reacts to it with `@reactive.event()`). To limit an existing calc or input, call them directly, as in `reactive.debounce(input.text, 0.5)`, which returns a calc. `debounce` waits until the changes stop for a set time; `throttle` lets a change through at most once per time window. Use them when a value changes often (typing, slider drags, plot hover) and the work that reads it is slow. Under OpenTelemetry, the calc above them records its span as `reactive.calc debounce <name>` or `reactive.calc throttle <name>`; the reactives behind them record none. (#564)
 
 * Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, Playwright session recording with synchronized video playback, and interactive HTML Reactlog export with action-scoped execution causality and "Why did this run?" root-cause inspection. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
 
@@ -20,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `playwright.controller.NavPanel.click()` now expands a navbar that has collapsed behind its toggler button before clicking the tab, as it already opened a closed dropdown. `ui.page_navbar()` and `ui.navset_bar()` collapse their tabs below 768px wide, so clicking a tab in a narrow window or iframe used to fail (#2597).
 
 * `playwright.controller.OutputPlot` now finds a plot output by its `shiny-plot-output` class alone (#2596).
+
+* When a client message's `method` is not a string, the session now prints `Message 'method' must be a string.` and closes, instead of printing an unrelated `TypeError` traceback. A client message that is not a JSON object (such as `1`) now prints `Message does not contain 'method'.` and closes the session the same way (#2607).
 
 ## [1.9.0] - 2026-10-29
 

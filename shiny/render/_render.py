@@ -20,6 +20,7 @@ from .. import ui as _ui
 from .._docstring import add_example
 from .._typing_extensions import Self
 from ..module import ResolvedId
+from ..reactive._reactives import check_not_rate_limited
 from ..session import require_active_session
 from ..session._session import DownloadHandler, DownloadInfo
 from ..types import MISSING, MISSING_TYPE, ImgData
@@ -684,6 +685,7 @@ class _DownloadBase(Renderer[str]):
     ) -> Self:
         from .._utils import validate_no_params
 
+        check_not_rate_limited(fn, f"render.{type(self).__name__}")
         validate_no_params(fn, f"render.{type(self).__name__}", stacklevel=4)
 
         # For downloads, the value function (which is passed to `__call__()`) is
