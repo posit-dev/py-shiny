@@ -191,8 +191,10 @@ the runner:
 `.github/py-shiny/setup-playwright-remote` starts a `playwright run-server`
 Docker container (image mirrored to GHCR with the npm package baked in,
 falling back to MCR) and exports `PW_TEST_CONNECT_WS_ENDPOINT`. The Playwright
-image version tracks the installed Python `playwright` package. Jobs using it
-need `permissions: packages: write`.
+image version tracks the Python `playwright` package pinned by
+`make ci-install-deps`. Before updating that pin, verify that the matching
+`mcr.microsoft.com/playwright:v<VERSION>-noble` image is published. Jobs using
+the cache need `permissions: packages: write` to populate it.
 
 `.github/py-shiny/check` is a composite version of the `check` steps kept for
 py-htmltools' CI; keep it in sync when changing what `check` runs.
