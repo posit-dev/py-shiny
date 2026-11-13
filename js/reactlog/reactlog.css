@@ -451,7 +451,7 @@
     .video-sync-status { font: 600 .65rem var(--sans); }
     .video-container { border: 0; border-radius: 0; aspect-ratio: 16 / 9; }
     .video-container video { width: 100%; height: 100%; object-fit: contain; }
-    .trace-timeline-bar { display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--bg); padding: 4px 16px 5px; gap: 4px; }
+    .trace-timeline-bar { display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--bg); padding: 5px 16px; }
     .trace-timeline-row { display: flex; align-items: center; gap: 8px; width: 100%; }
     .trace-track-wrap { position: relative; height: 16px; flex: 1; min-width: 0; background: var(--track-bg); border-radius: 3px; touch-action: none; }
     .header-center .search-wrap { flex: 0 1 280px; min-width: min(210px, 100%); max-width: 340px; }
@@ -471,7 +471,8 @@
     .timeline-marker:hover, .timeline-marker:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; z-index: 3; }
     .timeline-playhead { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); pointer-events: none; z-index: 4; }
     .timeline-playhead::before { content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--playhead-bg); }
-    .timeline-key { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font: .7rem var(--sans); }
+    .timeline-key { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; color: var(--text-muted); font: 600 12px var(--sans); }
+    .timeline-key .legend-label { color: var(--text); font: 700 12px var(--sans); }
     .timeline-key span { display: inline-flex; align-items: center; gap: 5px; }
     .timeline-key i { display: inline-block; width: 3px; height: 12px; border-radius: 1px; background: var(--timeline-idle); }
     .timeline-key .key-output { height: 8px; border-radius: 2px; background: var(--timeline-output); }

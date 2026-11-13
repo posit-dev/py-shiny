@@ -99,6 +99,7 @@ var ReactlogViewer = (() => {
     selectFlush: () => selectFlush,
     selectNode: () => selectNode,
     setClientDataVisibility: () => setClientDataVisibility,
+    setPlaybackSpeed: () => setPlaybackSpeed,
     setViewMode: () => setViewMode,
     setupAnchoredPopover: () => setupAnchoredPopover,
     setupPanZoom: () => setupPanZoom,
@@ -172,6 +173,9 @@ var ReactlogViewer = (() => {
   var currentViewMode = "flush";
   var eventListScope = null;
   var selectedStageFilter = null;
+  var playbackSpeed = "step";
+  var currentTimelineTime = 0;
+  var realtimePlayLastTick = null;
   var nodeIndex = /* @__PURE__ */ new Map();
   var adjUpstream = /* @__PURE__ */ new Map();
   var adjDownstream = /* @__PURE__ */ new Map();
@@ -696,7 +700,11 @@ var ReactlogViewer = (() => {
       if (event.button !== 0)
         return;
       event.preventDefault();
-      track.setPointerCapture(event.pointerId);
+      track._dragging = true;
+      try {
+        track.setPointerCapture(event.pointerId);
+      } catch {
+      }
       document.getElementById("scrubber-range").focus({ preventScroll: true });
       const marker = event.target.closest(".timeline-marker");
       if (marker)
@@ -705,18 +713,23 @@ var ReactlogViewer = (() => {
         seekPointer(event);
     };
     track.onpointermove = (event) => {
-      if (track.hasPointerCapture(event.pointerId) && event.buttons === 1) {
+      if ((track._dragging || track.hasPointerCapture(event.pointerId)) && event.buttons === 1) {
         document.getElementById("timeline-tooltip").hidden = true;
         seekPointer(event);
       }
     };
     track.onpointerup = (event) => {
+      track._dragging = false;
       if (track.hasPointerCapture(event.pointerId))
         track.releasePointerCapture(event.pointerId);
+    };
+    track.onpointercancel = () => {
+      track._dragging = false;
     };
     updateTraceTimelineScrubber(getCurrentStepTime());
   }
   function updateTraceTimelineScrubber(curSec) {
+    currentTimelineTime = Number(curSec) || 0;
     document.getElementById("trace-current-time").textContent = formatTime(curSec);
     const events = reactlogData.events || reactlogData.log || [];
     const curWave = allBursts.slice().reverse().find((w) => currentStep >= w.startStep) || allBursts[0];
@@ -881,6 +894,20 @@ var ReactlogViewer = (() => {
       activitySelect.value = mode;
     refreshExploration();
     fitGraph();
+  }
+  function setPlaybackSpeed(mode) {
+    const nextMode = mode === "realtime" ? "realtime" : "step";
+    const wasPlaying = isPlaying;
+    if (wasPlaying) {
+      togglePlay();
+    }
+    playbackSpeed = nextMode;
+    const speedSelect = document.getElementById("playback-speed-select");
+    if (speedSelect)
+      speedSelect.value = playbackSpeed;
+    if (wasPlaying) {
+      togglePlay();
+    }
   }
   function filterFlushStage(stage) {
     if (selectedStageFilter === stage) {
@@ -1078,6 +1105,9 @@ var ReactlogViewer = (() => {
     const activitySelect = document.getElementById("activity-select");
     if (activitySelect)
       activitySelect.value = currentViewMode;
+    const speedSelect = document.getElementById("playback-speed-select");
+    if (speedSelect)
+      speedSelect.value = playbackSpeed;
     syncRoleFilterButtons();
     const chips = document.getElementById("active-filters");
     chips.replaceChildren();
@@ -2714,6 +2744,11 @@ var ReactlogViewer = (() => {
       }
     });
     video.addEventListener("play", () => {
+      if (playTimer) {
+        clearInterval(playTimer);
+        playTimer = null;
+      }
+      realtimePlayLastTick = null;
       graphSeekTime = null;
       isPlaying = true;
       updatePlayButton(true);
@@ -2767,7 +2802,12 @@ var ReactlogViewer = (() => {
   }
   function togglePlay() {
     const video = document.getElementById("session-video");
-    if (video) {
+    if (video && playbackSpeed === "realtime") {
+      if (playTimer) {
+        clearInterval(playTimer);
+        playTimer = null;
+      }
+      realtimePlayLastTick = null;
       if (video.paused) {
         const atVideoEnd = video.ended || Number.isFinite(video.duration) && video.duration > 0 && video.currentTime >= video.duration - 0.05;
         if (atVideoEnd) {
@@ -2780,6 +2820,9 @@ var ReactlogViewer = (() => {
       }
       return;
     }
+    if (video && !video.paused) {
+      video.pause();
+    }
     const events = reactlogData.events || reactlogData.log || [];
     isPlaying = !isPlaying;
     const btn = document.getElementById("btn-play");
@@ -2787,18 +2830,50 @@ var ReactlogViewer = (() => {
       btn.textContent = isPlaying ? "❚❚ Pause" : "▶ Play";
       btn.setAttribute("aria-label", String(isPlaying ? "Pause timeline" : "Play timeline"));
     }
-    if (isPlaying) {
-      if (currentStep >= events.length - 1)
-        currentStep = 0;
-      playTimer = setInterval(() => {
-        if (currentStep < events.length - 1) {
-          seekTo(currentStep + 1);
-        } else {
-          togglePlay();
-        }
-      }, 600);
-    } else {
+    if (playTimer) {
       clearInterval(playTimer);
+      playTimer = null;
+    }
+    realtimePlayLastTick = null;
+    if (isPlaying) {
+      if (playbackSpeed === "realtime") {
+        if (currentTimelineTime >= maxSessionDuration - 0.01 || currentStep >= events.length - 1) {
+          currentTimelineTime = 0;
+          seekTo(0, true, 0);
+        }
+        realtimePlayLastTick = performance.now();
+        playTimer = setInterval(() => {
+          const now = performance.now();
+          const dt = Math.max(0, (now - (realtimePlayLastTick || now)) / 1e3);
+          realtimePlayLastTick = now;
+          const nextSec = Math.min(maxSessionDuration, currentTimelineTime + dt);
+          let matchIdx = 0;
+          for (let i = 0; i < events.length; i++) {
+            const ev = events[i];
+            const t = ev.effective_time !== void 0 ? ev.effective_time : (ev.time_sec !== void 0 ? ev.time_sec : ev.time) || 0;
+            if (t <= nextSec)
+              matchIdx = i;
+          }
+          if (matchIdx !== currentStep) {
+            seekTo(matchIdx, true, nextSec);
+          } else {
+            updateTraceTimelineScrubber(nextSec);
+          }
+          if (nextSec >= maxSessionDuration) {
+            togglePlay();
+          }
+        }, 50);
+      } else {
+        if (currentStep >= events.length - 1)
+          currentStep = 0;
+        playTimer = setInterval(() => {
+          if (currentStep < events.length - 1) {
+            seekTo(currentStep + 1);
+          } else {
+            togglePlay();
+          }
+        }, 600);
+      }
     }
   }
   function stepForward() {
@@ -2950,6 +3025,7 @@ var ReactlogViewer = (() => {
     activeRoles = /* @__PURE__ */ new Set(["source", "conductor", "observer", "effect", "output"]);
     if (currentViewMode === "flush")
       setViewMode("full");
+    setPlaybackSpeed("step");
     refreshExploration();
     renderInspector();
     updateTraceTimelineScrubber(getCurrentStepTime());
@@ -3476,6 +3552,7 @@ var ReactlogViewer = (() => {
     prevFlush,
     nextFlush,
     setViewMode,
+    setPlaybackSpeed,
     filterFlushStage,
     toggleCollapseAllModules,
     nodeRoleKey,
@@ -3571,7 +3648,8 @@ var ReactlogViewer = (() => {
       selectedNodeId: { get: () => selectedNodeId, configurable: true },
       allBursts: { get: () => allBursts, configurable: true },
       actionWaves: { get: () => actionWaves, configurable: true },
-      activeBurstIndex: { get: () => activeBurstIndex, configurable: true }
+      activeBurstIndex: { get: () => activeBurstIndex, configurable: true },
+      playbackSpeed: { get: () => playbackSpeed, configurable: true }
     });
   }
   return __toCommonJS(reactlog_exports);

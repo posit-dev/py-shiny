@@ -59,7 +59,7 @@ __REACTLOG_CSS__
         <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
       </div>
       <div class="legend-popover-anchor">
-        <button type="button" class="btn icon mini" id="btn-graph-legend" popovertarget="graph-legend-popover" popovertargetaction="toggle" aria-label="Show State and Links legend" aria-controls="graph-legend-popover" aria-expanded="false" title="State & Links legend">?</button>
+        <button type="button" class="btn icon mini" id="btn-graph-legend" popovertarget="graph-legend-popover" popovertargetaction="toggle" aria-label="Show State, Links, and Timeline legend" aria-controls="graph-legend-popover" aria-expanded="false" title="State, Links & Timeline legend">?</button>
         <div class="legend graph-legend-popover" id="graph-legend-popover" popover="auto" role="region" aria-label="Graph legend">
           <div class="legend-group"><span class="legend-label">State</span>
             <div class="legend-item"><span class="legend-swatch" style="background:var(--state-ready)"></span>Ready</div>
@@ -74,12 +74,15 @@ __REACTLOG_CSS__
             <div class="legend-item"><span class="legend-line is-isolated"></span>Isolated dependency</div>
             <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
           </div>
+          <div class="legend-group timeline-key" id="timeline-key" aria-label="Timeline key"><span class="legend-label">Timeline</span>
+            <span class="legend-item"><i class="key-idle"></i>Idle</span>
+            <span class="legend-item"><i class="key-output"></i>Output calculation</span>
+            <span class="legend-item"><i class="key-mark"></i>User mark</span>
+            <span class="legend-item"><i class="key-error"></i>Error</span>
+            <span class="legend-item"><i class="key-position"></i>Current step</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="timeline-key" id="timeline-key" aria-label="Timeline key">
-      <span><i class="key-idle"></i>Idle</span><span><i class="key-output"></i>Output calculation</span>
-      <span><i class="key-mark"></i>User mark</span><span><i class="key-error"></i>Error</span><span><i class="key-position"></i>Current step</span>
     </div>
   </div>
 
@@ -113,6 +116,13 @@ __REACTLOG_CSS__
                     <select class="filter-select settings-select" id="activity-select" aria-label="Activity view" onchange="setViewMode(this.value)">
                       <option value="full">Show all activity</option>
                       <option value="flush">Show current activity</option>
+                    </select>
+                  </div>
+                  <div class="settings-menu-item">
+                    <label for="playback-speed-select" class="settings-menu-label">Playback speed</label>
+                    <select class="filter-select settings-select" id="playback-speed-select" aria-label="Timeline playback speed" onchange="setPlaybackSpeed(this.value)">
+                      <option value="step" selected>Progress bar (step-by-step)</option>
+                      <option value="realtime">Real time (video speed)</option>
                     </select>
                   </div>
                   <div class="settings-menu-divider"></div>

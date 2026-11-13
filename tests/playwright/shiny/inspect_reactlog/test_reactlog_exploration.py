@@ -630,6 +630,12 @@ def test_node_count_and_controls_share_header(page: Page):
     expect(page.locator("#settings-menu")).to_be_visible()
     expect(page.locator("#settings-menu #clientdata-select")).to_be_visible()
     expect(page.locator("#settings-menu #activity-select")).to_be_visible()
+    speed_select = page.locator("#settings-menu #playback-speed-select")
+    expect(speed_select).to_be_visible()
+    expect(speed_select).to_have_value("step")
+    expect(speed_select.locator("option")).to_have_text(
+        ["Progress bar (step-by-step)", "Real time (video speed)"]
+    )
     expect(page.locator("#settings-menu #btn-toggle-collapse-all")).to_be_visible()
     expect(page.locator("#settings-menu #btn-reset-view")).to_be_visible()
     expect(page.locator(".zoom-controls > #btn-toggle-collapse-all")).to_have_count(0)
@@ -957,11 +963,19 @@ def out():
 
     legend_btn = page.locator("#btn-graph-legend")
     legend_popover = page.locator("#graph-legend-popover")
+    timeline_key = legend_popover.locator("#timeline-key")
     expect(legend_popover).to_be_hidden()
+    expect(timeline_key).to_be_hidden()
     legend_btn.click()
     expect(legend_popover).to_be_visible()
     expect(legend_popover).to_contain_text("Ready")
     expect(legend_popover).to_contain_text("Isolated dependency")
+    expect(timeline_key).to_be_visible()
+    expect(timeline_key).to_contain_text("Idle")
+    expect(timeline_key).to_contain_text("Output calculation")
+    expect(timeline_key).to_contain_text("User mark")
+    expect(timeline_key).to_contain_text("Error")
+    expect(timeline_key).to_contain_text("Current step")
     page.keyboard.press("Escape")
     expect(legend_popover).to_be_hidden()
 
@@ -1020,3 +1034,30 @@ def test_json_menu_exports_and_imports_reactlog(page: Page, tmp_path: Path):
         page.locator("#btn-import-json").click()
     chooser_info.value.set_files(str(import_path))
     expect(page.locator('.graph-node[data-id="input:extra"]')).to_be_visible()
+
+
+def test_playback_speed_setting_defaults_to_step_and_switches_modes(page: Page):
+    page.set_content(format_reactlog_html(timeline_report(), CODE))
+    expect(page.locator("#playback-speed-select")).to_have_value("step")
+    assert page.evaluate("window.playbackSpeed") == "step"
+
+    page.locator("#btn-play").click()
+    expect(page.locator("#scrubber-range")).not_to_have_value("0")
+    page.locator("#btn-play").click()
+
+    page.locator("#btn-settings").click()
+    speed_select = page.locator("#settings-menu #playback-speed-select")
+    speed_select.select_option("realtime")
+    assert page.evaluate("window.playbackSpeed") == "realtime"
+    expect(speed_select).to_have_value("realtime")
+    page.locator("#btn-settings").click()
+
+    page.evaluate("seekTo(0)")
+    page.locator("#btn-play").click()
+    expect(page.locator("#scrubber-range")).not_to_have_value("0")
+    page.locator("#btn-play").click()
+
+    page.locator("#btn-settings").click()
+    speed_select.select_option("step")
+    assert page.evaluate("window.playbackSpeed") == "step"
+    expect(speed_select).to_have_value("step")

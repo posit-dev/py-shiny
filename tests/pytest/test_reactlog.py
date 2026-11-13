@@ -2469,6 +2469,8 @@ def greeting():
     assert 'id="settings-menu"' in html
     assert 'id="clientdata-select"' in html
     assert 'id="activity-select"' in html
+    assert 'id="playback-speed-select"' in html
+    assert "setPlaybackSpeed(this.value)" in html
     assert 'id="btn-toggle-collapse-all"' in html
     assert 'id="btn-reset-view"' in html
     assert 'id="btn-close-sidebar"' in html
@@ -2513,6 +2515,10 @@ def out():
     )
     assert 'id="btn-graph-legend"' in html
     assert 'popovertarget="graph-legend-popover"' in html
+    legend_popover = re.search(
+        r'id="graph-legend-popover"[\s\S]*?id="timeline-key"[\s\S]*?Current step', html
+    )
+    assert legend_popover is not None
     assert 'id="json-menu"' in html
     assert "exportReactlogJson()" in html
     assert "importReactlogJson()" in html
