@@ -2863,5 +2863,11 @@ def test_load_reactlog_json_marks_match_generated_marks():
 def test_reactlog_viewer_builds_waves_for_recorded_inputs_and_marks():
     # The viewer computes waves client-side for loaded logs; pin the hooks it keys on.
     html = format_reactlog_html(load_reactlog_json({"log": _live_log()}), "")
-    assert "evAction === 'userMark' && ev.mark_wave" in html
-    assert "ev.type === 'input' || ev.node_type === 'input'" in html
+    assert (
+        "evAction === 'userMark' && ev.mark_wave" in html
+        or 'evAction === "userMark" && ev.mark_wave' in html
+    )
+    assert (
+        "ev.type === 'input' || ev.node_type === 'input'" in html
+        or 'ev.type === "input" || ev.node_type === "input"' in html
+    )
