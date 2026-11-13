@@ -47,7 +47,7 @@
       --track-fill: #24384d;
       --timeline-idle-outline: #355c23;
       --timeline-output: #56b4e9;
-      --timeline-mark: #f59e0b;
+      --timeline-mark: #f9df65;
       --timeline-error: #f3a6af;
       --playhead-bg: #f8fafc;
       --playhead-ring: #17212b;
@@ -93,7 +93,7 @@
       --track-bg: #e2e8f0;
       --track-fill: #cbd5e1;
       --timeline-output: #026aa7;
-      --timeline-mark: #b45309;
+      --timeline-mark: #765b00;
       --timeline-error: #be185d;
       --playhead-bg: #0f172a;
       --playhead-ring: #ffffff;
@@ -138,7 +138,7 @@
         --track-bg: #e2e8f0;
         --track-fill: #cbd5e1;
         --timeline-output: #026aa7;
-        --timeline-mark: #b45309;
+        --timeline-mark: #765b00;
         --timeline-error: #be185d;
         --playhead-bg: #0f172a;
         --playhead-ring: #ffffff;

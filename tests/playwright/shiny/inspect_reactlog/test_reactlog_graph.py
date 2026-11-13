@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Literal
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from shiny._inspect import (
@@ -95,7 +96,17 @@ def test_dependency_dot_travels_across_a_scrubbed_step(page: Page) -> None:
     graph.evaluate("svg => svg.unpauseAnimations()")
 
 
-def test_timeline_user_mark_highlights_its_call_site(page: Page) -> None:
+@pytest.mark.parametrize(
+    ("theme", "mark_color"),
+    [
+        ("light", "rgb(118, 91, 0)"),
+        ("dark", "rgb(249, 223, 101)"),
+        ("auto", "rgb(118, 91, 0)"),
+    ],
+)
+def test_timeline_user_mark_highlights_its_call_site(
+    page: Page, theme: str, mark_color: str
+) -> None:
     code = 'from shiny import reactive\n\nreactive.mark("Check data")\n'
     report = load_reactlog_json(
         {
@@ -112,15 +123,18 @@ def test_timeline_user_mark_highlights_its_call_site(page: Page) -> None:
             ],
         }
     )
-    page.set_content(format_reactlog_html(report, source_code=code, theme="light"))
+    page.emulate_media(color_scheme="light")
+    page.set_content(format_reactlog_html(report, source_code=code, theme=theme))
     page.get_by_role("tab", name="App code").click()
     marker = page.locator(".timeline-marker.is-mark")
+    expect(marker).to_have_css("background-color", mark_color)
+    expect(page.locator(".timeline-key .key-mark")).to_have_css(
+        "background-color", mark_color
+    )
     active = page.locator("#source-panel .source-line.is-active")
     expect(active).to_have_count(1)
     expect(active).to_have_attribute("data-line", "3")
-    expect(active.locator(".syntax-string")).to_have_css(
-        "color", marker.evaluate("el => getComputedStyle(el).backgroundColor")
-    )
+    expect(active.locator(".syntax-string")).to_have_css("color", mark_color)
     expect(page.locator("#source-panel mark")).to_have_count(0)
 
 
