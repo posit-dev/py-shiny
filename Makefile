@@ -254,7 +254,7 @@ install-rsconnect: FORCE
 # Stale snapshots can still be cleaned up with an all-browser, unsharded run
 # using `--snapshot-update`.
 playwright: install-playwright ## All end-to-end tests with playwright; (TEST_FILE="" from root of repo)
-	pytest $(PLAYWRIGHT_VERBOSE) --snapshot-warn-unused --timeout=$(PLAYWRIGHT_TEST_TIMEOUT) --timeout-method=$(PLAYWRIGHT_TEST_TIMEOUT_METHOD) -o faulthandler_timeout=$(PLAYWRIGHT_FAULTHANDLER_TIMEOUT) $(TEST_FILE) $(PYTEST_BROWSERS) $(PYTEST_EXTRA_ARGS)
+	python -m pytest $(PLAYWRIGHT_VERBOSE) --snapshot-warn-unused --timeout=$(PLAYWRIGHT_TEST_TIMEOUT) --timeout-method=$(PLAYWRIGHT_TEST_TIMEOUT_METHOD) -o faulthandler_timeout=$(PLAYWRIGHT_FAULTHANDLER_TIMEOUT) $(TEST_FILE) $(PYTEST_BROWSERS) $(PYTEST_EXTRA_ARGS)
 
 playwright-debug: install-playwright ## All end-to-end tests, chrome only, headed; (TEST_FILE="" from root of repo)
 	pytest -c tests/playwright/playwright-pytest.ini $(TEST_FILE) $(PYTEST_EXTRA_ARGS)
