@@ -268,6 +268,64 @@ function formatHumanValue(val: any) {
   return String(val);
 }
 
+function waveToBurst(w: any, idx: any) {
+  const inputs: any[] = [];
+  if (w.trigger_node_id) {
+    inputs.push({
+      name: nodeDisplayName(w.trigger_node_id),
+      nodeId: w.trigger_node_id,
+      step: w.start_step,
+      isClick: !w.trigger_value,
+      details: w.trigger || w.human_action,
+      value: w.trigger_value
+    });
+  }
+  const calcs = filterItems(w.inferred_executions || [], (id: any) => id.startsWith('calc:') || nodeIndex.get(id)?.type === 'calc')
+    .map((id: any) => ({ name: nodeDisplayName(id), nodeId: id, step: w.start_step }));
+  const outputs = filterItems(w.inferred_executions || [], (id: any) => id.startsWith('output:') || nodeIndex.get(id)?.type === 'output')
+    .map((id: any) => ({ name: nodeDisplayName(id), nodeId: id, step: w.start_step }));
+
+  let shortLabel = w.is_mark ? (w.short_label || '') : nodeDisplayName(w.short_label || '');
+  if (!shortLabel) {
+    if (w.is_init) {
+      shortLabel = 'Init';
+    } else if (w.trigger_node_id) {
+      shortLabel = nodeDisplayName(w.trigger_node_id);
+    } else if (w.trigger_label) {
+      shortLabel = nodeDisplayName(w.trigger_label);
+    } else {
+      shortLabel = 'Action';
+    }
+  }
+
+  return {
+    id: w.action_id || `burst-${idx}`,
+    index: w.index !== undefined ? w.index : idx,
+    isInit: Boolean(w.is_init),
+    isMark: Boolean(w.is_mark),
+    startTime: w.start_time || 0.0,
+    endTime: w.end_time || 0.0,
+    time: w.start_time || 0.0,
+    startStep: w.start_step || 0,
+    endStep: w.end_step || 0,
+    triggerLabel: w.is_mark ? (w.trigger_label || w.trigger || 'Action') : nodeDisplayName(w.trigger_label || w.trigger || 'Action'),
+    shortLabel: shortLabel,
+    humanAction: w.is_mark ? (w.human_action || w.trigger || 'Action') : nodeDisplayName(w.human_action || w.trigger || 'Action'),
+    triggerNodeId: w.trigger_node_id || '',
+    triggerValue: w.trigger_value,
+    inputs: inputs,
+    calcs: calcs,
+    outputs: outputs,
+    invalidatedNodes: new Set(w.invalidated_nodes || []),
+    inferredExecutions: new Set(w.inferred_executions || []),
+    observedExecutions: new Set(w.observed_executions || []),
+    observedOutputs: new Set(w.observed_outputs || []),
+    totalEvents: (w.end_step - w.start_step + 1),
+    userChanges: inputs.length,
+    details: w.trigger || 'Action'
+  };
+}
+
 function buildActionWaves() {
   if (reactlogData.action_waves && reactlogData.action_waves.length > 0) {
     const rawWaves = reactlogData.action_waves;
@@ -281,63 +339,7 @@ function buildActionWaves() {
       }
       coalesced.push(w);
     }
-    const mapped = coalesced.map((w: any, idx: any) => {
-      const inputs: any[] = [];
-      if (w.trigger_node_id) {
-        inputs.push({
-          name: nodeDisplayName(w.trigger_node_id),
-          nodeId: w.trigger_node_id,
-          step: w.start_step,
-          isClick: !w.trigger_value,
-          details: w.trigger || w.human_action,
-          value: w.trigger_value
-        });
-      }
-      const calcs = filterItems(w.inferred_executions || [], (id: any) => id.startsWith('calc:') || nodeIndex.get(id)?.type === 'calc')
-        .map((id: any) => ({ name: nodeDisplayName(id), nodeId: id, step: w.start_step }));
-      const outputs = filterItems(w.inferred_executions || [], (id: any) => id.startsWith('output:') || nodeIndex.get(id)?.type === 'output')
-        .map((id: any) => ({ name: nodeDisplayName(id), nodeId: id, step: w.start_step }));
-
-      let shortLabel = w.is_mark ? (w.short_label || '') : nodeDisplayName(w.short_label || '');
-      if (!shortLabel) {
-        if (w.is_init) {
-          shortLabel = 'Init';
-        } else if (w.trigger_node_id) {
-          shortLabel = nodeDisplayName(w.trigger_node_id);
-        } else if (w.trigger_label) {
-          shortLabel = nodeDisplayName(w.trigger_label);
-        } else {
-          shortLabel = 'Action';
-        }
-      }
-
-      return {
-        id: w.action_id || `burst-${idx}`,
-        index: w.index !== undefined ? w.index : idx,
-        isInit: Boolean(w.is_init),
-        isMark: Boolean(w.is_mark),
-        startTime: w.start_time || 0.0,
-        endTime: w.end_time || 0.0,
-        time: w.start_time || 0.0,
-        startStep: w.start_step || 0,
-        endStep: w.end_step || 0,
-        triggerLabel: w.is_mark ? (w.trigger_label || w.trigger || 'Action') : nodeDisplayName(w.trigger_label || w.trigger || 'Action'),
-        shortLabel: shortLabel,
-        humanAction: w.is_mark ? (w.human_action || w.trigger || 'Action') : nodeDisplayName(w.human_action || w.trigger || 'Action'),
-        triggerNodeId: w.trigger_node_id || '',
-        triggerValue: w.trigger_value,
-        inputs: inputs,
-        calcs: calcs,
-        outputs: outputs,
-        invalidatedNodes: new Set(w.invalidated_nodes || []),
-        inferredExecutions: new Set(w.inferred_executions || []),
-        observedExecutions: new Set(w.observed_executions || []),
-        observedOutputs: new Set(w.observed_outputs || []),
-        totalEvents: (w.end_step - w.start_step + 1),
-        userChanges: inputs.length,
-        details: w.trigger || 'Action'
-      };
-    });
+    const mapped = coalesced.map(waveToBurst);
     allBursts = mapped;
     actionWaves = filterItems(mapped, (w: any) => !w.isInit);
     return;
@@ -390,7 +392,15 @@ function buildActionWaves() {
       initWave.endTime = t;
       initWave.totalEvents++;
     } else {
-      const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction';
+      if (evAction === 'userMark' && ev.mark_wave) {
+        const markIdx = actionWaves.length + 1;
+        actionWaves.push(waveToBurst({ ...ev.mark_wave, action_id: `mark-${markIdx}`, index: markIdx }, markIdx));
+        curWave = null;
+        return;
+      }
+      const nId = ev.node_id || ev.id || '';
+      const isInputNode = ev.type === 'input' || ev.node_type === 'input';
+      const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || (isInputNode && evAction === 'valueChange');
       const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0;
       if (!curWave || (t - curWave.startTime) > 0.25 || isNewTrigger) {
         curWave = {
@@ -420,9 +430,8 @@ function buildActionWaves() {
       curWave.endTime = t;
       curWave.totalEvents++;
 
-      const nId = ev.node_id || ev.id || '';
-      if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:') || nodeIndex.get(nId)?.type === 'input') {
-        const raw = nId || ev.details || '';
+      if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:') || isInputNode) {
+        const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
         if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {
           const name = nodeDisplayName(raw) || 'input';
           const prevVal = lastKnownValues.get(name);
@@ -1035,7 +1044,8 @@ function graphStateAtStep() {
     const ev = events[i]!, action = ev.action || ev.event;
     const id = ev.node_id || ev.reactId || ev.id;
     const state = reactiveEventState(ev);
-    if (id && state) states.set(id, state);
+    // Output observers exit normally after handling a renderer error.
+    if (id && state && !(action === 'exit' && state === 'ready' && states.get(id) === 'error')) states.set(id, state);
     if (action === 'freeze') frozen.add(id);
     if (action === 'thaw') frozen.delete(id);
     const from = ev.edge_from || ev.dependsOn || ev.depOnReactId;
@@ -1198,7 +1208,7 @@ function graphNodeLabel(node: any) {
   if (node.type === 'module') return nodeLabelHTML(node, true, 28);
   let label = nodeDisplayName(node);
   if (node.module) {
-    const [, prefix = '', name = label] = label.match(/^(input[.]|(?:output|calc|effect|reactive)[: ])(.+)$/) || [];
+    const [, prefix = '', name = label] = label.match(/^(input[.]|(?:output|(?:reactive[.])?(?:calc|effect))[: ])(.+)$/) || [];
     const namespace = [node.module + '-', node.module + ':'].find((value: any) => name.startsWith(value));
     if (namespace) label = prefix + name.slice(namespace.length);
   }
@@ -2249,7 +2259,7 @@ function renderGraph(previousStep = currentStep) {
       const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
       const isEdgeActive = !e.inactive && ((fromMatch && toMatch)
         ? (fromMatch === e.from && toMatch === e.to)
-        : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate')));
+        : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart')));
 
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       const d = graphEdgePath(e, pos, nodeWidth, nodeHeight, edges);
@@ -3435,6 +3445,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 const reactlogExports = {
   normalizeReactlogData,
+  waveToBurst,
   getActiveTheme,
   updateThemeButton,
   toggleTheme,
@@ -3567,6 +3578,7 @@ if (typeof window !== "undefined") {
 
 export {
   normalizeReactlogData,
+  waveToBurst,
   getActiveTheme,
   updateThemeButton,
   toggleTheme,

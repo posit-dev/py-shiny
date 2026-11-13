@@ -23,6 +23,7 @@ import traceback
 import types
 import typing
 import warnings
+import weakref
 from contextvars import ContextVar
 from typing import (
     TYPE_CHECKING,
@@ -41,6 +42,8 @@ from .._datastructures import PriorityQueueFIFO
 from .._docstring import add_example, no_example
 from .._typing_extensions import TypeGuard
 from ..types import MISSING, MISSING_TYPE
+from . import _trace
+from ._trace import ReactiveNode, hooks
 
 
 def _print_round_finished_error(e: Exception) -> None:
@@ -65,8 +68,14 @@ warnings.simplefilter("always", ReactiveWarning)
 class Context:
     """A reactive context"""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, owner: ReactiveNode | None = None, *, isolated: bool = False
+    ) -> None:
         self.id: int = _reactive_environment.next_id()
+        # The reactive node that runs in this context (None for bare contexts);
+        # used to attribute dependency edges for tracers.
+        self.owner: ReactiveNode | None = owner
+        self.isolated: bool = isolated
         self._invalidated: bool = False
         self._invalidate_callbacks: list[Callable[[], None]] = []
         self._flush_callbacks: list[Callable[[], Awaitable[None]]] = []
@@ -82,6 +91,9 @@ class Context:
             return
 
         self._invalidated = True
+
+        if hooks.invalidate and self.owner is not None and not self.isolated:
+            _trace.emit_invalidate(self.owner, ctx_id=self.id)
 
         for cb in self._invalidate_callbacks:
             cb()
@@ -113,8 +125,27 @@ class Context:
 
 
 class Dependents:
-    def __init__(self) -> None:
+    def __init__(self, owner: ReactiveNode | None = None) -> None:
         self._dependents: dict[int, Context] = {}
+        # Weak, so a Value/Calc does not gain a reference cycle through its
+        # Dependents.
+        self._owner: weakref.ref[ReactiveNode] | None = (
+            None if owner is None else weakref.ref(owner)
+        )
+
+    def _emit_edge(
+        self,
+        ctx: Context,
+        emit: Callable[..., None],
+    ) -> None:
+        # Resolve reader/target at emit time and never keep them in a closure, so
+        # the edge bookkeeping cannot keep a Value/Calc alive.
+        reader = ctx.owner
+        if reader is None or self._owner is None:
+            return
+        target = self._owner()
+        if target is not None:
+            emit(reader=reader, target=target, ctx_id=ctx.id, isolated=ctx.isolated)
 
     def register(self) -> None:
         ctx: Context = get_current_context()
@@ -125,9 +156,14 @@ class Dependents:
 
         self._dependents[ctx.id] = ctx
 
+        if hooks.add_dependency:
+            self._emit_edge(ctx, _trace.emit_add_dependency)
+
         def on_invalidate_cb() -> None:
             if ctx.id in self._dependents:
                 del self._dependents[ctx.id]
+                if hooks.remove_dependency:
+                    self._emit_edge(ctx, _trace.emit_remove_dependency)
 
         ctx.on_invalidate(on_invalidate_cb)
 
@@ -267,17 +303,18 @@ class ReactiveEnvironment:
         self._next_round_waiters = []
         token = _enclosing_run.set(asyncio.current_task())
         try:
-            # No span here: a round can serve several sessions. Each session's
-            # `reactive_update` span follows its own cycle (see
-            # `AppSession._increment_busy_count()`).
-            while not self._effect_queue.empty():
-                ctx = self._effect_queue.get()
-                self._spawn(self._run_context(ctx))
-                # CPython runs ready callbacks FIFO, so the task's sync part runs
-                # now, and anything it invalidates is queued before we take the
-                # next ctx.
-                await _yield_to_loop()
-            await self._round_finished_callbacks.invoke()
+            with _trace.flush_span() if hooks.flush else _trace.NULL_CM:
+                # No OTel span here: a round can serve several sessions. Each session's
+                # `reactive_update` span follows its own cycle (see
+                # `AppSession._increment_busy_count()`).
+                while not self._effect_queue.empty():
+                    ctx = self._effect_queue.get()
+                    self._spawn(self._run_context(ctx))
+                    # CPython runs ready callbacks FIFO, so the task's sync part runs
+                    # now, and anything it invalidates is queued before we take the
+                    # next ctx.
+                    await _yield_to_loop()
+                await self._round_finished_callbacks.invoke()
         finally:
             _enclosing_run.reset(token)
             self._round_running = False
@@ -424,9 +461,21 @@ class ReactiveEnvironment:
 
     @contextlib.contextmanager
     def isolate(self) -> Generator[None, None, None]:
-        token = self._current_context.set(Context())
+        outer = self._current_context.get()
+        reader = None if outer is None else outer.owner
+        isolate_ctx = Context(owner=reader, isolated=True)
+        if outer is not None and reader is not None:
+            # End the isolated edges when the reader re-runs, instead of leaving
+            # the throwaway context registered until the target changes.
+            outer.on_invalidate(isolate_ctx.invalidate)
+        token = self._current_context.set(isolate_ctx)
         try:
-            yield
+            with (
+                _trace.isolate_span(reader, ctx_id=isolate_ctx.id)
+                if hooks.isolate
+                else _trace.NULL_CM
+            ):
+                yield
         finally:
             self._current_context.reset(token)
 

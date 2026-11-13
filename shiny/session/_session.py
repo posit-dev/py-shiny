@@ -76,6 +76,7 @@ from ..otel._span_wrappers import (
 )
 from ..reactive import Effect_, Value, effect, isolate
 from ..reactive._core import _enclosing_run, _reactive_environment
+from ..reactive._trace import attribute_to_session
 from ..render.renderer import Renderer, RendererT
 from ..testmode import _snapshot_preprocess_file_input
 from ..types import (
@@ -1246,7 +1247,8 @@ class AppSession(Session):
 
                         conn_state = ConnectionState.Running
                         message_obj = typing.cast(ClientMessageInit, message_obj)
-                        self._manage_inputs(message_obj["data"])
+                        with attribute_to_session(self.id):
+                            self._manage_inputs(message_obj["data"])
 
                         # Wrap server function initialization in session_start span
                         with session_context(self):
@@ -3160,6 +3162,10 @@ class Outputs:
                         # Recorded only in test mode; never sent to the client.
                         traceback_text=traceback.format_exc(),
                     )
+                    if (recorder := session.app._reactlog_recorder) is not None:
+                        recorder.record_output_error(
+                            output_obs, session_id=session.id, message=err_msg
+                        )
 
                 await session._send_message(
                     {
@@ -3169,6 +3175,9 @@ class Outputs:
                         }
                     }
                 )
+
+            output_obs._trace_kind = "output"
+            output_obs._trace_label = output_otel_label
 
             output_obs.on_invalidate(
                 lambda: require_real_session()._send_progress(
