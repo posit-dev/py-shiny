@@ -241,6 +241,10 @@ jobs:
         with:
           browser: ${{ matrix.browser }}
 
+      # Reactlog recording tests launch their own browser to exercise the recorder.
+      - name: Install Chromium for Reactlog recording tests
+        run: python -m playwright install --with-deps chromium
+
       - name: Run End-to-End tests
         # Healthy shards finish in ~4 minutes; kill stragglers quickly
         timeout-minutes: 10
