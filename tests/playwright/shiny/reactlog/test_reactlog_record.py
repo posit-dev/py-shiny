@@ -1,10 +1,9 @@
-import os
 import re
-import signal
 import sys
 from pathlib import Path
 from typing import Any
 
+import psutil
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -122,11 +121,20 @@ def test_record_session_keeps_export_when_driver_dies(
 ) -> None:
     # A terminal's Ctrl+C reaches the Playwright driver too; once it is gone every
     # Playwright call fails with a plain Exception ("Connection closed").
+    process = psutil.Process()
+    existing_children = {child.pid for child in process.children()}
+
     def script(page: Page, url: str) -> None:
         page.goto(url)
         controller.OutputText(page, "out").expect_value("6")
-        driver = page._impl_obj._connection._transport._proc  # type: ignore
-        os.kill(driver.pid, signal.SIGKILL)  # pyright: ignore
+        drivers = [
+            child
+            for child in process.children()
+            if child.pid not in existing_children
+            and child.cmdline()[-1:] == ["run-driver"]
+        ]
+        assert len(drivers) == 1
+        drivers[0].kill()
 
     rec = record_session(APP, video_path=tmp_path / "v.webm", script=script)
     assert "output out" in _labels(rec.export)
