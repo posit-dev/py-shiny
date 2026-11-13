@@ -514,13 +514,13 @@ async def test_reactlog_endpoint_shows_runtime_dependency() -> None:
         app.reactlog_enabled = False
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("no_leaked_reactlog_tracer")
-def test_reactlog_without_session_id_redirects_to_only_session() -> None:
+async def test_reactlog_without_session_id_redirects_to_only_session() -> None:
     app = App(ui.TagList(), None, reactlog=True)
     try:
         session = app._create_session(MockConnection())
-        client = TestClient(app.starlette_app)
-        response = client.get("/__reactlog__", follow_redirects=False)
+        response = await app._on_reactlog_request_cb(_reactlog_request(app, local=True))
         assert response.status_code == 307
         assert response.headers["location"] == f"?session_id={session.id}"
     finally:
