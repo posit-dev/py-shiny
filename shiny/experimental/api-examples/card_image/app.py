@@ -1,5 +1,9 @@
+from pathlib import Path
+
 import shiny.experimental as x
 from shiny import App, ui
+
+logo = Path(__file__).parent / "posit-logo.png"
 
 app_ui = ui.page_fluid(
     ui.tags.style("""
@@ -11,25 +15,11 @@ app_ui = ui.page_fluid(
         ui.card_header(
             "These two images are in their own individual card_body() container"
         ),
-        x.ui.card_image(
-            file=None,
-            src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
-        ),
-        x.ui.card_image(
-            file=None,
-            src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
-        ),
+        x.ui.card_image(file=logo),
+        x.ui.card_image(file=logo),
         ui.card_header("These two images are in the same card_body() container"),
-        x.ui.card_image(
-            file=None,
-            src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
-            container=ui.tags.span,
-        ),
-        x.ui.card_image(
-            file=None,
-            src="https://posit.co/wp-content/uploads/2022/10/Posit-logo-h-full-color-RGB-TM.svg",
-            container=ui.tags.span,
-        ),
+        x.ui.card_image(file=logo, container=ui.tags.span),
+        x.ui.card_image(file=logo, container=ui.tags.span),
     ),
 )
 

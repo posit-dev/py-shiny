@@ -1,4 +1,6 @@
-from playwright.sync_api import Page
+import re
+
+from playwright.sync_api import Page, expect
 
 from shiny.playwright import controller
 from shiny.run import ShinyAppProc
@@ -20,6 +22,10 @@ def test_card(page: Page, local_app: ShinyAppProc) -> None:
             "\nThis is still the body.\n",
         ]
     )
+    img = card.loc_container.locator("img")
+    expect(img).to_have_attribute("src", re.compile(r"^data:image/png;base64,"))
+    expect(img).to_have_js_property("naturalWidth", 200)
+
     card.expect_full_screen(False)
     card.set_full_screen(True)
     card.expect_full_screen(True)

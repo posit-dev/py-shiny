@@ -5,7 +5,7 @@ from app_utils import load_dotenv
 from chatlas import ChatAzureOpenAI
 
 from shiny import reactive
-from shiny.express import ui
+from shiny.express import input, ui
 
 # ChatAzureOpenAI() requires an API key from Azure OpenAI.
 # See the docs for more information on how to obtain one.

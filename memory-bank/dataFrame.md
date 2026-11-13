@@ -1,6 +1,6 @@
 ---
 title: "Data Frame Rendering"
-description: "How render.data_frame works end to end: narwhals data handling, DataGrid/DataTable payloads, the React client, cell editing via patches, selection/sort/filter inputs, styles, and tests. Read before changing anything under shiny/render/_data_frame*.py or js/data-frame/."
+description: "How render.data_frame works end to end: narwhals data handling, DataGrid/DataTable payloads and serialization performance, the React client, cell editing via patches, selection/sort/filter inputs, styles, and tests. Read before changing anything under shiny/render/_data_frame*.py or js/data-frame/."
 ---
 
 # Data Frame Rendering
@@ -55,13 +55,43 @@ Serialization details (`serialize_frame`, `serialize_dtype`):
   (+ `categories`), `boolean`, `date`, `datetime`, `duration`, `time`, `binary`,
   `object`, `unknown`, `html`. `object`/`unknown` become `html` if
   `series_contains_htmltoolslike()` finds a tag node in the first ~1000 values.
+  pandas `date` columns have `object` dtype, so they get the `object` hint (and
+  the HTML scan), not `date`.
 - Rows go through `orjson` with a `default=` hook: tag nodes are rendered with
   `session._process_ui()` into `CellHtml` (`{"isShinyHtml": true, "obj": ...}`)
-  with deps stripped and collected into deduped `htmlDeps`; **any other
-  non-JSON value becomes `str(val)`**.
+  with deps stripped and collected into deduped `htmlDeps`; any other non-JSON
+  value becomes `str(val)`. orjson encodes stdlib `datetime`/`date`/`time`
+  itself (ISO, `T` separator) but not pandas `Timestamp`/`Timedelta`/`NaT`/`NA`,
+  `timedelta`, or `Decimal`, which go through the hook. So polars sends
+  `"2000-01-02T00:00:00"` where pandas sends `"2000-01-02 00:00:00"`;
+  `test_serialize_frame` pins both.
+- The rows are decoded back to Python (`orjson.loads`) because the session
+  re-encodes every message with stdlib `json.dumps` (`AppSession._send_message`).
 - The client renders `CellHtml` with `Shiny.renderContentAsync` and
   `unbindAll`s on cleanup (`cell.tsx`). HTML columns have sorting disabled and
   are not editable.
+
+Performance choices (benchmarked; keep them when editing):
+- `serialize_frame()` reads every dtype from one `data.schema` call.
+  `serialize_dtype()` calls `get_col` (a column read) only for categorical,
+  `object`, and unknown dtypes, whose hints depend on the values.
+- Rows are built a column at a time (`zip` of each column's `to_list()`), not
+  with `data.rows()`. That is faster for tall frames (pandas 1.6-1.9x, polars
+  1.1-1.8x except struct columns, pyarrow 1.0-1.5x), but each column has a
+  fixed cost, so frames with at least as many columns as rows are slower on
+  polars and pyarrow. It also keeps pandas' nullable dtypes (`Int64`,
+  `boolean`) as Python scalars. `itertuples()`, behind `rows()`, yields numpy
+  scalars for them, which orjson can't encode, so they used to be sent as
+  strings (`test_serialize_frame_pandas_nullable_dtypes_are_json_scalars`).
+- `orjson.loads` briefly needs several times the payload size (about +530 MB
+  RSS for 1M rows x 10 floats), which makes it the memory peak of
+  `serialize_frame()`. The rows are deleted before it runs so they don't add to
+  that peak.
+- `is_tag_node()` costs 2-3 µs per call (runtime `Protocol` checks), and the
+  hook calls it for every non-JSON cell. `ui_must_be_processed()` returns early
+  for `str` and temporal values (`date`/`time`/`timedelta` and their pandas
+  subclasses), and within one `serialize_frame()` call the hook skips the check
+  for value types it has already found not to be UI.
 
 ## Server -> client updates
 
@@ -106,8 +136,12 @@ per renderer instance (cached in a `WeakKeyDictionary` and pinned on
 `self.__dict__`).
 
 - `data()` - `_updated_data` if set, else the rendered `.data`.
-- `cell_patches()` -> `data_patched()` (`apply_frame_patches`: clone, group by
-  column index, `nw_data[:, i].scatter(...)`, `with_columns`).
+- `cell_patches()` -> `data_patched()` (`apply_frame_patches`: group by column
+  index, `nw_data[:, i].scatter(...)`, `with_columns`). It doesn't copy the
+  frame first. `scatter()` copies only the patched column and `with_columns()`
+  returns a new frame, so `data()` is never modified
+  (`test_apply_frame_patches_does_not_modify_original`), though unpatched
+  columns may share memory with it.
 - `data_view(selected=False)` - `data_patched()` subset to `data_view_rows()`
   (or `cell_selection()["rows"]`); returns the caller's native type
   (`_nw_data_to_original_type`; narwhals in -> narwhals out).
@@ -173,7 +207,7 @@ clicks on a cell that is in edit mode don't toggle row selection
   selection modes, `None` data, `update_cell_value` validation),
   `tests/pytest/test_render_data_frame_tbl_data.py` (serialization, dtypes,
   patches, `subset_frame`, `as_col_indexes`, parametrized over pandas and
-  polars), `tests/pytest/test_otel_data_frame.py`.
+  polars, some also pyarrow), `tests/pytest/test_otel_data_frame.py`.
 - After editing `js/data-frame/`, run `make js-build` and commit the built bundle.
 
 ## Pitfalls
