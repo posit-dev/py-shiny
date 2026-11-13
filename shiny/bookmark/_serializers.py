@@ -71,9 +71,13 @@ def serializer_file_input(
             )
 
         datapath = Path(file_info["datapath"])
+        # Upload jobs name their files by position (`0.csv`, `1.csv`, ...), so
+        # another input saved in this bookmark may already use the name.
         new_path = state_dir / datapath.name
-        if new_path.exists():
-            new_path.unlink()
+        n = 1
+        while new_path.exists():
+            new_path = state_dir / f"{datapath.stem}_{n}{datapath.suffix}"
+            n += 1
         copyfile(datapath, new_path)
 
         # Store back into the file_info dict to update `ret_file_infos`
