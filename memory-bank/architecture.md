@@ -10,7 +10,7 @@ each section; the "Key Files" section of `AGENTS.md` has the consolidated list.
 
 ## Reactive System
 
-Deep dive: `memory-bank/reactiveInternals.md`.
+Deep dive: `memory-bank/reactiveInternals.md`; testing it in `memory-bank/concurrencyTesting.md`.
 
 Implementation: `shiny/reactive/_core.py` (graph machinery),
 `shiny/reactive/_reactives.py` (primitives).
@@ -22,8 +22,10 @@ The reactive system is based on a **push-pull** model with three core abstractio
   sources (Value) it reads from.
 - **Dependents**: Each reactive source maintains a list of downstream consumers
   that depend on it. When a source invalidates, it notifies all dependents.
-- **ReactiveEnvironment**: Global singleton managing the reactive graph,
-  execution queue, and flush cycles.
+- **ReactiveEnvironment**: Global singleton managing the reactive graph, the
+  reactive effect queue, and rounds. Its class docstring in
+  `shiny/reactive/_core.py` defines the terms used for the reactive system:
+  reactive effect queue, round, idle, cycle, and output flush.
 
 Key implementation details:
 
@@ -32,12 +34,13 @@ Key implementation details:
 - `Effect_()` is a side-effect that re-executes when dependencies change
 - `event()` decorator suppresses reactive dependencies for specific reads
 - The reactive graph is built automatically through the Context's dependency tracking
-- Execution uses a priority queue to ensure correct invalidation ordering
-- In tests, `reactive.flush()` forces a synchronous flush of the reactive graph
+- Each round takes effects from the reactive effect queue in priority order
+- In tests, `await reactive.flush()` runs rounds until the reactive environment is
+  idle
 
 ## Session Hierarchy
 
-Deep dives: `memory-bank/sessionMessaging.md` (wire protocol, flush cycle) and `memory-bank/appServing.md` (routes, CLI, autoreload).
+Deep dives: `memory-bank/sessionMessaging.md` (wire protocol, cycles and the output flush) and `memory-bank/appServing.md` (routes, CLI, autoreload).
 
 Implementation: `shiny/session/_session.py`; app entry point in `shiny/_app.py`.
 

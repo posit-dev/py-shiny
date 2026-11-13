@@ -43,7 +43,7 @@ parameter if the task needs access to `input`, `output`, or session state.
 
 **Testing**: Unit tests in `tests/pytest/test_otel_async_context.py` verify
 correct span propagation through various async patterns. Integration tests in
-`tests/playwright/shiny/otel-async/` verify the full reactive flow with async
+`tests/playwright/shiny/otel/async/` verify the full reactive flow with async
 operations.
 
 See Also
@@ -54,16 +54,31 @@ See Also
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, AsyncIterable, Callable, Dict, Mapping, Union
+from contextlib import asynccontextmanager, contextmanager
+from typing import (
+    Any,
+    AsyncGenerator,
+    AsyncIterable,
+    Callable,
+    Dict,
+    Generator,
+    Mapping,
+    Union,
+)
 
-from opentelemetry.trace import Span, Status, StatusCode
+from opentelemetry.context import Context as OtelContext
+from opentelemetry.trace import Span, Status, StatusCode, use_span
 
 from ._collect import OtelCollectLevel, get_level
 from ._constants import ATTR_SESSION_ID
 from ._core import get_otel_tracer, is_otel_tracing_enabled
 
-__all__ = ("shiny_otel_span", "shiny_otel_span_stream")
+__all__ = (
+    "shiny_otel_span",
+    "shiny_otel_span_stream",
+    "start_otel_span",
+    "use_otel_span",
+)
 
 # Type aliases for parameters
 AttributesValue = Mapping[str, Any] | None
@@ -222,6 +237,41 @@ async def shiny_otel_span(
             # Re-raise the original exception (not sanitized_exc) so the exception object
             # propagates unchanged to parent spans with the marking intact
             raise
+
+
+def start_otel_span(
+    name: str,
+    *,
+    attributes: Mapping[str, Any],
+    required_level: OtelCollectLevel,
+    collection_level: OtelCollectLevel,
+    context: OtelContext | None = None,
+) -> Span | None:
+    """
+    Start a span that the caller ends, for work that isn't one block of code.
+
+    Unlike `shiny_otel_span()`, the span doesn't become the current span; run code
+    in it with `use_otel_span()`, and call `span.end()` when the work is done.
+    Returns `None` when tracing is off or `collection_level < required_level`.
+
+    `context` chooses the parent: `None` means the current span, and an empty
+    `Context()` starts a new trace.
+    """
+    if not is_otel_tracing_enabled() or collection_level < required_level:
+        return None
+    return get_otel_tracer().start_span(name, context=context, attributes=attributes)
+
+
+@contextmanager
+def use_otel_span(span: Span | None) -> Generator[None, None, None]:
+    """Make `span` the current span for a block, without ending it. No-op on `None`."""
+    if not isinstance(span, Span):
+        yield
+        return
+    with use_span(
+        span, end_on_exit=False, record_exception=False, set_status_on_exception=False
+    ):
+        yield
 
 
 async def shiny_otel_span_stream(

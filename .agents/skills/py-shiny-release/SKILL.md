@@ -163,10 +163,11 @@ Many phases (2-5, 7) follow this common flow:
 1. Checkout branch `rc-vX.Y.Z`
 2. Verify `pyproject.toml` has no git-based deps (e.g., no `htmltools @ git+https://...`)
 3. Bump version (changelog + `__init__.py`, or tag-based for py-shiny)
-4. Commit, push, open PR, wait for CI
+4. Commit, push, open a PR titled `release: vX.Y.Z` (in every repo of the train), wait for CI
 5. Verify no additional commits were added to the RC branch beyond the release prep
 6. **Run the pre-release gate** (see above) - present summary and get explicit user confirmation
-7. Squash merge the RC PR into main via GitHub (this is the release commit)
+7. Squash merge the RC PR into main via GitHub (this is the release commit), with the subject
+   `release: vX.Y.Z (#N)`
 8. Tag the squash commit on main: `git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
 9. Create GH Release with changelog content, mark as "Latest"
 10. Wait for PyPI publish to succeed

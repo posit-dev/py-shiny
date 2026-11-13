@@ -75,6 +75,46 @@
     ]
   },
   {
+    "controller_name": "playwright.controller.AppTestValues",
+    "methods": [
+      {
+        "name": "expect_export",
+        "description": "Expect the exported value `key` to equal `value` (JSON-decoded), retrying until it matches or `timeout` seconds elapse.",
+        "parameters": ""
+      },
+      {
+        "name": "expect_exports",
+        "description": "Expect the `export` block to contain `values` (JSON-decoded), retrying until it matches or `timeout` seconds elapse.",
+        "parameters": "values (dict\\[str, Any\\]), match (Literal\\['subset', 'exact'\\]), timeout (float \\)"
+      },
+      {
+        "name": "expect_input",
+        "description": "Expect the input `key` to equal `value` (JSON-decoded), retrying until it matches or `timeout` seconds elapse.",
+        "parameters": ""
+      },
+      {
+        "name": "expect_inputs",
+        "description": "Expect the `input` block to contain `values` (JSON-decoded), retrying until it matches or `timeout` seconds elapse.",
+        "parameters": "values (dict\\[str, Any\\]), match (Literal\\['subset', 'exact'\\]), timeout (float \\)"
+      },
+      {
+        "name": "expect_output",
+        "description": "Expect the output `key` to equal `value` (JSON-decoded), retrying until it matches or `timeout` seconds elapse.",
+        "parameters": ""
+      },
+      {
+        "name": "expect_outputs",
+        "description": "Expect the `output` block to contain `values` (JSON-decoded), retrying until it matches or `timeout` seconds elapse.",
+        "parameters": "values (dict\\[str, Any\\]), match (Literal\\['subset', 'exact'\\]), timeout (float \\)"
+      },
+      {
+        "name": "get",
+        "description": "Return the raw test-mode snapshot.",
+        "parameters": ""
+      }
+    ]
+  },
+  {
     "controller_name": "playwright.controller.Card",
     "methods": [
       {
@@ -133,6 +173,11 @@
     "controller_name": "playwright.controller.Chat",
     "methods": [
       {
+        "name": "expect_greeting",
+        "description": "Expects the chat greeting to contain text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
         "name": "expect_latest_message",
         "description": "Expects the last message in the chat.",
         "parameters": "value (PatternOrStr), timeout (Timeout)"
@@ -174,8 +219,8 @@
       },
       {
         "name": "expect_label",
-        "description": "Expect the label of the input button to have a specific value.",
-        "parameters": "value (PatternOrStr), timeout (Timeout)"
+        "description": "Expect the anchor itself to contain the provided label text.",
+        "parameters": ""
       },
       {
         "name": "expect_width",
@@ -199,8 +244,13 @@
       },
       {
         "name": "expect_label",
-        "description": "Expect the label of the input button to have a specific value.",
-        "parameters": "value (PatternOrStr), timeout (Timeout)"
+        "description": "Expect the anchor itself to contain the provided label text.",
+        "parameters": ""
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the `width` attribute of a DOM element to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
       }
     ]
   },
@@ -346,6 +396,76 @@
         "name": "set",
         "description": "Set the selected checkboxes.",
         "parameters": "selected (ListOrTuple\\[str\\]), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.InputCodeEditor",
+    "methods": [
+      {
+        "name": "expect_height",
+        "description": "Expect the height style to have a specific value.",
+        "parameters": "value (StyleValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input to have a specific text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_language",
+        "description": "Expect the language attribute to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_line_numbers",
+        "description": "Expect the line numbers visibility to have a specific value.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_read_only",
+        "description": "Expect the read-only state to have a specific value.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_tab_size",
+        "description": "Expect the tab size to have a specific value.",
+        "parameters": "value (int \\), timeout (Timeout)"
+      },
+      {
+        "name": "expect_theme_dark",
+        "description": "Expect the dark theme attribute to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_theme_light",
+        "description": "Expect the light theme attribute to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_value",
+        "description": "Expect the value of the code editor to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the input element to have a specific width.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_word_wrap",
+        "description": "Expect the word wrap state to have a specific value.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "set",
+        "description": "Sets the code value in the editor.",
+        "parameters": "value (str), submit (bool), timeout (Timeout)"
+      },
+      {
+        "name": "submit",
+        "description": "Triggers a submit by pressing Ctrl/Cmd+Enter.",
+        "parameters": "timeout (Timeout)"
       }
     ]
   },
@@ -950,6 +1070,56 @@
     ]
   },
   {
+    "controller_name": "playwright.controller.InputSubmitTextarea",
+    "methods": [
+      {
+        "name": "expect_button_label",
+        "description": "Expect the submit button to have a specific label.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_data_needs_modifier",
+        "description": "Expect the `data-needs-modifier` attribute to be present or absent.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label of the input to have a specific text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_placeholder",
+        "description": "Expect the `placeholder` attribute of the input to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_rows",
+        "description": "Expect the `rows` attribute to have a specific value.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "expect_value",
+        "description": "Expect the value of the text input to have a specific value.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_width",
+        "description": "Expect the input element to have a specific width.",
+        "parameters": "value (AttrValue), timeout (Timeout)"
+      },
+      {
+        "name": "set",
+        "description": "Sets the text value in the textarea.",
+        "parameters": "value (str), submit (bool), timeout (Timeout)"
+      },
+      {
+        "name": "submit",
+        "description": "Clicks the submit button.",
+        "parameters": "timeout (Timeout)"
+      }
+    ]
+  },
+  {
     "controller_name": "playwright.controller.InputSwitch",
     "methods": [
       {
@@ -1104,7 +1274,7 @@
       },
       {
         "name": "expect_rows",
-        "description": "Expect the `rows` attribute of the input text area to have a specific value.",
+        "description": "Expect the `rows` attribute to have a specific value.",
         "parameters": "value (AttrValue), timeout (Timeout)"
       },
       {
@@ -1126,21 +1296,6 @@
         "name": "set",
         "description": "Sets the text value",
         "parameters": "value (str), timeout (Timeout)"
-      }
-    ]
-  },
-  {
-    "controller_name": "playwright.controller.NavItem",
-    "methods": [
-      {
-        "name": "click",
-        "description": "Clicks the nav item.",
-        "parameters": "timeout"
-      },
-      {
-        "name": "expect_active",
-        "description": "Expects the nav item to be active or inactive.",
-        "parameters": "value"
       }
     ]
   },
@@ -1556,6 +1711,51 @@
         "name": "set",
         "description": "Sets the state of the control to open or closed.",
         "parameters": "value (str)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Offcanvas",
+    "methods": [
+      {
+        "name": "close",
+        "description": "Closes the offcanvas panel.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_body",
+        "description": "Expects the offcanvas body to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_footer",
+        "description": "Expects the offcanvas footer to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_open",
+        "description": "Expects the offcanvas panel to be open or closed.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_placement",
+        "description": "Expects the offcanvas panel to have the specified placement.",
+        "parameters": "value (Literal\\['start', 'end', 'top', 'bottom', 'left', 'right'\\]), timeout (Timeout)"
+      },
+      {
+        "name": "expect_title",
+        "description": "Expects the offcanvas title to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "open",
+        "description": "Opens the offcanvas panel.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "set",
+        "description": "Sets the offcanvas panel to open or closed.",
+        "parameters": "open (bool), timeout (Timeout)"
       }
     ]
   },
@@ -2008,6 +2208,11 @@
         "parameters": "value (Literal\\['left', 'right'\\]), timeout (Timeout)"
       },
       {
+        "name": "expect_resizable",
+        "description": "Asserts that the sidebar is resizable or not.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
         "name": "expect_text",
         "description": "Asserts that the sidebar has the expected text.",
         "parameters": "value (PatternOrStr), timeout (Timeout)"
@@ -2026,6 +2231,131 @@
         "name": "set",
         "description": "Sets the sidebar to be open or closed.",
         "parameters": "open (bool), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.Toast",
+    "methods": [
+      {
+        "name": "expect_autohide",
+        "description": "Expects the toast to have the specified autohide setting.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_body",
+        "description": "Expects the toast body to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_header",
+        "description": "Expects the toast header to have the specified text.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_hidden",
+        "description": "Expects the toast to be hidden.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_position",
+        "description": "Expects the toast's container to be in the specified position.",
+        "parameters": "value (str), timeout (Timeout)"
+      },
+      {
+        "name": "expect_type",
+        "description": "Expects the toast to have the specified type class.",
+        "parameters": "value (ToastType), timeout (Timeout)"
+      },
+      {
+        "name": "expect_visible",
+        "description": "Expects the toast to be visible.",
+        "parameters": "timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.ToolbarInputButton",
+    "methods": [
+      {
+        "name": "click",
+        "description": "Clicks the input action.",
+        "parameters": "timeout (Timeout)"
+      },
+      {
+        "name": "expect_border",
+        "description": "Expect the toolbar button to have a border.",
+        "parameters": "has_border (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_disabled",
+        "description": "Expect the toolbar button to be disabled.",
+        "parameters": "value (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the toolbar button to have an icon.",
+        "parameters": "exists (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon_visible",
+        "description": "Expect the icon to be visible.",
+        "parameters": "visible (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label text of the toolbar button.",
+        "parameters": "value (PatternOrStr), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label_visible",
+        "description": "Expect the label to be visible or hidden.",
+        "parameters": "visible (bool), timeout (Timeout)"
+      }
+    ]
+  },
+  {
+    "controller_name": "playwright.controller.ToolbarInputSelect",
+    "methods": [
+      {
+        "name": "expect_choice_groups",
+        "description": "Expect the optgroup labels of the toolbar select.",
+        "parameters": "labels (list\\[str\\]), timeout (Timeout)"
+      },
+      {
+        "name": "expect_choices",
+        "description": "Expect the available choices of the toolbar select.",
+        "parameters": "choices (list\\[str\\]), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon",
+        "description": "Expect the toolbar select to have an icon.",
+        "parameters": "exists (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_icon_visible",
+        "description": "Expect the icon to be visible.",
+        "parameters": "visible (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label",
+        "description": "Expect the label text of the toolbar select.",
+        "parameters": "value (str), timeout (Timeout)"
+      },
+      {
+        "name": "expect_label_visible",
+        "description": "Expect the label to be visible or hidden.",
+        "parameters": "visible (bool), timeout (Timeout)"
+      },
+      {
+        "name": "expect_selected",
+        "description": "Expect the currently selected value of the toolbar select.",
+        "parameters": "value (str), timeout (Timeout)"
+      },
+      {
+        "name": "set",
+        "description": "Set the selected value of the toolbar select input.",
+        "parameters": "value (str), timeout (Timeout)"
       }
     ]
   },

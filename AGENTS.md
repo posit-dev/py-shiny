@@ -187,6 +187,17 @@ Beyond PEP 8 and standard Python conventions, the following style preferences ar
 - Use type-specific exception handling rather than broad `except Exception`
 - Document exception behavior in function docstrings
 
+### Public-facing text
+
+- Don't compare to Shiny for R in user-facing text (`CHANGELOG.md`, docstrings,
+  docs, bundled Agent Skills, PR descriptions). State the behavior and its
+  Python-side reason. Exception: name the R equivalent when its name is
+  obviously different, so R users can find the mapping (e.g. `ui.page_html()`
+  ↔ `htmlTemplate(document_ = TRUE)`). Skip it when it's only a spelling
+  translation (`session.allow_reconnect()` ↔ `session$allowReconnect()`) or a
+  "matching Shiny for R" note. Dev comments and upstream refs like
+  `rstudio/bslib#1359` are fine.
+
 ## Git Commit and PR Conventions
 
 Commit messages and PR titles use **conventional commits**. Read
@@ -199,13 +210,29 @@ passes. Run it through `uv run` (not bare `make`) so the venv's black/isort/
 pyrefly/pyright are used — a system toolchain can silently miss failures that
 CI then rejects.
 
+## Sibling Repo: Shiny for R
+
+[rstudio/shiny](https://github.com/rstudio/shiny) is Shiny for R. Keep the
+two from drifting apart:
+
+- **Client JS and wire protocol**: `make upgrade-html-deps` vendors R shiny's
+  `inst/www/shared/` (including `shiny.js`) into `shiny/www/shared/`. Fix
+  `shiny.js` bugs and make client protocol changes in rstudio/shiny, then
+  re-vendor; never edit the vendored copy.
+- **Server behavior and bugs**: when a fix or feature here likely applies to
+  Shiny for R too, open an issue there and cross-link it; don't change both
+  repos in one PR. `gh issue create -R rstudio/shiny --label ai-generated-issue`
+- **Agent infrastructure** (`AGENTS.md` conventions, `.agents/skills/memory-bank/`,
+  `memory-bank/commitConventions.md`): mirror shared changes with a PR in
+  rstudio/shiny.
+
 ## Common Pitfalls
 
 - **Forgetting to run `make format`**: Always format before committing
 - **Missing HTML deps**: If styles don't work, ensure `components_dependencies()` is included
 - **Express mode confusion**: Remember Express uses AST transformation; debugging requires understanding the transformed code
 - **Session context errors**: Always access `input`/`output` within reactive context
-- **Reactive graph debugging**: Use `reactive.flush()` to force synchronous execution in tests
+- **Reactive graph debugging**: `await reactive.flush()` runs rounds until the reactive environment is idle (tests)
 - **Playwright timing**: Use `.expect_*()` methods which auto-wait; avoid manual `sleep()`
 - **Asset updates**: After running `make upgrade-html-deps`, verify theme preset files were updated
 - **Out-of-sync Playwright controllers**: When adding or altering UI components, always create or update their companion Playwright controller in `shiny/playwright/controller/` with matching locators, action methods, and expectation methods, and export them from `shiny/playwright/controller/__init__.py`

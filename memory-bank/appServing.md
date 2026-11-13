@@ -189,12 +189,10 @@ Used for the autoreload ws URL, the browser-launch URL, and `ProxyUrlFilter`
 
 - `is_express_app` requires a `.py` suffix: `shiny run myapp` (no `.py`) on an
   Express file goes down the Core path and fails to find `myapp:app`.
-- The `run_app` docstring says `<module>` may be a directory containing
-  `app.py`, but `resolve_app` exits with "is not a file" for any path
-  containing `/` that isn't a file.
-- `ShinyInternalTemplates.stream_enterprise` reads
-  `templates/markdown-stream/llm-enterpise` (typo), but the directory is
-  `llm-enterprise`, so those templates never appear in `shiny create`.
+- Directories are not supported as app targets: `resolve_app` exits with "is
+  not a file" for any path containing `/` that isn't a file, and a bare
+  directory name is imported as a module (only works for a package exporting
+  `app`).
 - Autoreload is decided at `App` construction time (`init_starlette_app`
   checks `SHINY_AUTORELOAD_PORT`); it only works when the process was started
   by `run_app` with `reload=True`.

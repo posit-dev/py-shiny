@@ -202,7 +202,7 @@ def bind_task_button(
 
     Parameters
     ----------
-    id
+    button_id
         ID of the task button to bind to.
     """
 

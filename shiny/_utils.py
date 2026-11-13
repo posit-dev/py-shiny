@@ -22,6 +22,7 @@ from typing import (
     Callable,
     Generator,
     Iterable,
+    NamedTuple,
     Optional,
     TypeVar,
     cast,
@@ -572,13 +573,19 @@ class Callbacks:
 CancelCallback = Callable[[], None]
 
 
+class _AsyncCallback(NamedTuple):
+    fn: Callable[..., Awaitable[None]]
+    once: bool
+    first: bool
+
+
 class AsyncCallbacks:
     def __init__(
         self,
         *,
         on_error: Callable[[Exception], None] | None = None,
     ) -> None:
-        self._callbacks: dict[int, tuple[Callable[..., Awaitable[None]], bool]] = {}
+        self._callbacks: dict[int, _AsyncCallback] = {}
         self._id: int = 0
         self._on_error = on_error
         """
@@ -588,11 +595,19 @@ class AsyncCallbacks:
         """
 
     def register(
-        self, fn: Callable[..., Awaitable[None]], once: bool = False
+        self,
+        fn: Callable[..., Awaitable[None]],
+        once: bool = False,
+        *,
+        first: bool = False,
     ) -> CancelCallback:
+        """
+        Register a callback. Callbacks run in registration order, except that those
+        registered with ``first=True`` run before the others.
+        """
         self._id += 1
         id = self._id
-        self._callbacks[id] = (fn, once)
+        self._callbacks[id] = _AsyncCallback(fn, once, first)
 
         def cancel_callback():
             if id in self._callbacks:
@@ -615,20 +630,20 @@ class AsyncCallbacks:
         **kwargs
             Keyword arguments passed to each callback.
         """
-        # The list() wrapper is necessary to force collection of all the items before
-        # iteration begins. This is necessary because self._callbacks may be mutated
-        # by callbacks.
-        for id, value in list(self._callbacks.items()):
-            fn, once = value
+        # Collect all the items before iteration begins, since self._callbacks may be
+        # mutated by callbacks. The sort is stable, so within each group callbacks
+        # keep their registration order.
+        callbacks = sorted(self._callbacks.items(), key=lambda item: not item[1].first)
+        for id, cb in callbacks:
             try:
-                await fn(*args, **kwargs)
+                await cb.fn(*args, **kwargs)
             except Exception as e:
                 if self._on_error is not None:
                     self._on_error(e)
                 else:
                     raise
             finally:
-                if once:
+                if cb.once:
                     if id in self._callbacks:
                         del self._callbacks[id]
 

@@ -39,10 +39,19 @@ At the `all` level the span hierarchy looks like:
 
 ```text
 session_start
-  └─ reactive_update
-      ├─ reactive.calc filtered_data
+  └─ reactive_update              # the session's first cycle
       └─ output result
+          └─ reactive.calc filtered_data
+reactive_update                   # each later cycle: a trace of its own
+  └─ output result
+      └─ reactive.calc filtered_data
 ```
+
+A `reactive_update` span covers one session cycle: from when the session turns
+busy until all of its effects, including async ones, have finished. A download
+also marks the session busy, so a download handler gets a span of its own. It carries `session.id`. Effects without a session (e.g. a
+module-level `reactive.poll`) have no `reactive_update` parent: each run starts
+a trace of its own.
 
 ## Collection levels: `SHINY_OTEL_COLLECT`
 
@@ -52,7 +61,7 @@ Controls how much Shiny telemetry is emitted (default `all`):
 |---|---|---|
 | `none` | nothing from Shiny | disable Shiny spans, keep your own |
 | `session` | session lifecycle only | low-overhead production |
-| `reactive_update` | + one span per flush cycle | balanced production |
+| `reactive_update` | + one span per session cycle | balanced production |
 | `reactivity` | + per calc/effect/output spans, value-update logs | development, debugging |
 | `all` | everything (currently = `reactivity`) | maximum detail |
 

@@ -148,7 +148,7 @@ class SilentException(Exception):
 
 
 @add_example()
-class SilentCancelOutputException(Exception):
+class SilentCancelOutputException(SilentException):
     """
     Throw a silent exception and don't clear output
 

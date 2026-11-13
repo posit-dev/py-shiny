@@ -1,13 +1,17 @@
 """Tests for `shiny.reactive`."""
 
 import asyncio
-from typing import List
+import warnings
+from typing import Any, List
 
 import pytest
 
 from shiny import App, render, req, ui
 from shiny._connection import MockConnection
-from shiny.reactive import Value, calc, effect, event, flush, invalidate_later, isolate
+from shiny._deprecated import ShinyDeprecationWarning
+from shiny.reactive import Value
+from shiny.reactive import _core as reactive_core
+from shiny.reactive import calc, effect, event, flush, invalidate_later, isolate
 from shiny.reactive._core import ReactiveWarning
 from shiny.types import ActionButtonValue, SilentException
 
@@ -227,21 +231,24 @@ async def test_reactive_value_force_set_preserves_is_set():
 @pytest.mark.asyncio
 async def test_recursive_calc():
     v = Value(5)
+    seen: list[tuple[int, int]] = []
 
     @calc()
-    def r():
+    def r() -> int:
         if v() == 0:
             return 0
         v.set(v() - 1)
-        r()
+        return 1 + r()
 
     @effect()
     def o():
-        r()
+        # The second read is cached: the outermost run's result, not the base case.
+        seen.append((r(), r()))
 
     await flush()
     assert o._exec_count == 2
     assert r._exec_count == 6
+    assert seen == [(5, 5), (5, 5)]
     with isolate():
         assert v() == 0
 
@@ -249,21 +256,23 @@ async def test_recursive_calc():
 @pytest.mark.asyncio
 async def test_recursive_async_calc():
     v = Value(5)
+    seen: list[tuple[int, int]] = []
 
     @calc()
     async def r() -> int:
         if v() == 0:
             return 0
         v.set(v() - 1)
-        return await r()
+        return 1 + await r()
 
     @effect()
     async def o():
-        await r()
+        seen.append((await r(), await r()))
 
     await flush()
     assert o._exec_count == 2
     assert r._exec_count == 6
+    assert seen == [(5, 5), (5, 5)]
     with isolate():
         assert v() == 0
 
@@ -303,15 +312,13 @@ async def test_async_sequential():
 
     assert results == [111, 211, 115, 215]
 
-    # This is the order of execution if the async effects are run sequentially. The
-    # `asyncio.sleep(0)` still yields control, but since there are no other effects
-    # scheduled, it will simply resume at the same point.
+    # A flush starts each effect in priority order and doesn't wait for its async
+    # part, so the two effects interleave at each `await`. The order is deterministic
+    # because CPython runs ready callbacks FIFO.
     # fmt: off
     assert exec_order == [
-        'o1-1', 'o1-2', 'r1-1', 'r1-2', 'o1-3',
-        'o2-1', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
-        'o1-1', 'o1-2', 'r1-1', 'r1-2', 'o1-3',
-        'o2-1', 'o2-2', 'r2-1', 'r2-2', 'o2-3'
+        'o1-1', 'o1-2', 'r1-1', 'o2-1', 'r1-2', 'o1-3', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
+        'o1-1', 'o1-2', 'r1-1', 'o2-1', 'r1-2', 'o1-3', 'o2-2', 'r2-1', 'r2-2', 'o2-3',
     ]
     # fmt: on
 
@@ -778,6 +785,49 @@ async def test_invalidate_later():
         obs1.destroy()
         await mock_time.advance_time(10)
         assert obs1._exec_count == 12
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "args, kwargs, warns",
+    [
+        ((1,), {}, False),
+        ((), {"delay_secs": 1}, False),
+        ((), {"delay": 1}, True),
+    ],
+)
+async def test_invalidate_later_delay_args(
+    args: tuple[float, ...],
+    kwargs: dict[str, Any],
+    warns: bool,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(reactive_core, "_invalidate_later_delay_warned", False)
+    mock_time = MockTime()
+    with mock_time(), warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+
+        @effect()
+        def obs1():
+            invalidate_later(*args, **kwargs)
+
+        await flush()
+        await mock_time.advance_time(1)
+        assert obs1._exec_count == 2
+        obs1.destroy()
+
+    deprecations = [w for w in record if w.category is ShinyDeprecationWarning]
+    # Warns once per process, not on every re-execution.
+    assert len(deprecations) == (1 if warns else 0)
+    if warns:
+        assert "delay_secs" in str(deprecations[0].message)
+
+
+def test_invalidate_later_delay_bad_args():
+    with pytest.raises(TypeError, match="both"):
+        invalidate_later(1, delay=1)  # pyright: ignore[reportCallIssue]
+    with pytest.raises(TypeError, match="missing required argument"):
+        invalidate_later()  # pyright: ignore[reportCallIssue]
 
 
 @pytest.mark.asyncio
@@ -1568,3 +1618,17 @@ def test_event_effect_stacked_warns_only_once():
 
     assert len(w) == 1
     assert w[0].filename == __file__
+
+
+# ------------------------------------------------------------
+# req(cancel_output=True) is silent in an effect
+# ------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_effect_req_cancel_output_is_silent():
+    @effect()
+    def _():
+        req(False, cancel_output=True)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ReactiveWarning)
+        await flush()

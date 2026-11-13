@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import datetime
 import logging
 import os
 import re
 import subprocess
 import sys
 import threading
+import time
 from pathlib import PurePath
 from types import TracebackType
 from typing import IO, Any, Callable, Generator, List, Optional, TextIO, Type, Union
@@ -111,7 +111,7 @@ class OutputStream:
             How long to wait for the predicate to return True before raising a
             TimeoutError.
         """
-        timeout_at = datetime.datetime.now() + datetime.timedelta(seconds=timeout_secs)
+        timeout_at = time.monotonic() + timeout_secs
         pos = 0
         with self._cond:
             while True:
@@ -122,7 +122,7 @@ class OutputStream:
                 if self._closed:
                     return False
                 else:
-                    remaining = (timeout_at - datetime.datetime.now()).total_seconds()
+                    remaining = timeout_at - time.monotonic()
                     if remaining < 0 or not self._cond.wait(timeout=remaining):
                         # Timed out
                         raise TimeoutError(

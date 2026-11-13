@@ -133,6 +133,9 @@ class ExpressStubSession(Session):
     def _decrement_busy_count(self) -> None:
         return
 
+    def run_once_when_idle(self, fn: Callable[[], object]) -> None:
+        return
+
     def on_flush(
         self,
         fn: Callable[[], None] | Callable[[], Awaitable[None]],

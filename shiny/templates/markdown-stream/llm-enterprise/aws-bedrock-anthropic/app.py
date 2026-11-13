@@ -8,7 +8,7 @@ from app_utils import load_dotenv
 from chatlas import ChatBedrockAnthropic
 
 from shiny import reactive
-from shiny.express import ui
+from shiny.express import input, ui
 
 # Either explicitly set the AWS environment variables before launching the app, or set
 # them in a file named `.env`. The `python-dotenv` package will load `.env` as

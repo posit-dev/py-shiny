@@ -83,12 +83,12 @@ def retry_with_timeout(timeout: float = 30):
     def decorator(func: Callable[[], None]) -> Callable[[], None]:
         @functools.wraps(func)
         def wrapper() -> None:
-            start = time.time()
+            start = time.monotonic()
             while True:
                 try:
                     return func()
                 except AssertionError as e:
-                    if time.time() - start > timeout:
+                    if time.monotonic() - start > timeout:
                         raise e
                     time.sleep(0.1)
 
