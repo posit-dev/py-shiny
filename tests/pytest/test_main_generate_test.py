@@ -81,3 +81,28 @@ def test_add_test_rejects_unknown_provider(captured_generate: dict[str, Any]) ->
 
     assert result.exit_code != 0
     assert captured_generate == {}
+
+
+RETIRED_ANTHROPIC_MODELS = {
+    "claude-3-5-haiku-20241022",
+    "claude-3-7-sonnet-latest",
+    "claude-sonnet-4-20250514",
+}
+
+
+def test_generate_test_anthropic_models_are_not_retired() -> None:
+    from shiny.pytest._generate._main import Config
+
+    configured = {Config.DEFAULT_ANTHROPIC_MODEL, *Config.MODEL_ALIASES.values()}
+
+    assert not configured & RETIRED_ANTHROPIC_MODELS
+
+
+def test_anthropic_chat_template_model_is_not_retired() -> None:
+    from pathlib import Path
+
+    import shiny
+
+    app = Path(shiny.__file__).parent / "templates/chat/llms/anthropic/app.py"
+
+    assert not any(model in app.read_text() for model in RETIRED_ANTHROPIC_MODELS)
