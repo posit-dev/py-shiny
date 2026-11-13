@@ -29,8 +29,11 @@ def test_shiny_server_calls_on_started(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_run_app_publishes_ws_max_size(monkeypatch: pytest.MonkeyPatch):
+    def run_uvicorn(app: Any, **kwargs: Any) -> None:
+        pass
+
     monkeypatch.delenv("SHINY_WS_MAX_SIZE", raising=False)
-    monkeypatch.setattr(_main_run, "_run_uvicorn", lambda app, **kwargs: None)
+    monkeypatch.setattr(_main_run, "_run_uvicorn", run_uvicorn)
 
     try:
         _main_run.run_app(
