@@ -1051,6 +1051,29 @@ def test_json_menu_exports_and_imports_reactlog(page: Page, tmp_path: Path):
     expect(page.locator('.graph-node[data-id="input:extra"]')).to_be_visible()
 
 
+def test_import_does_not_duplicate_viewer_event_handlers(page: Page):
+    data = timeline_report()
+    page.set_content(format_reactlog_html(data, CODE, video_path="demo.webm"))
+    page.evaluate("report => loadReactlogObject(report)", data)
+    video = page.locator("#session-video")
+    video.evaluate("video => Object.defineProperty(video, 'duration', { value: 10 })")
+
+    # A metadata event should redraw the markers once, even after importing.
+    redraws = page.evaluate("""() => {
+        const video = document.getElementById('session-video');
+        const markers = document.getElementById('trace-markers');
+        const observer = new MutationObserver(() => {});
+        observer.observe(markers, { childList: true });
+        video.dispatchEvent(new Event('loadedmetadata'));
+        const removed = observer.takeRecords().reduce(
+            (count, record) => count + Number(record.removedNodes.length > 0), 0
+        );
+        observer.disconnect();
+        return removed;
+    }""")
+    assert redraws == 1
+
+
 def test_video_speed_setting_controls_the_recording(page: Page):
     page.set_content(
         format_reactlog_html(timeline_report(), CODE, video_path="demo.webm")

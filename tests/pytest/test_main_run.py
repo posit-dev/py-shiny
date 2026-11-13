@@ -6,7 +6,10 @@ from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from starlette.testclient import TestClient
 
+from shiny import App, ui
+from shiny._connection import MockConnection
 from shiny._main import _run, main
 from shiny.express._utils import escape_to_var_name
 
@@ -82,10 +85,6 @@ def test_reactlog_runner_enables_existing_disabled_app(
 
 
 def test_reactlog_proxied_requests_are_not_local() -> None:
-    from starlette.testclient import TestClient
-
-    from shiny import App, ui
-
     def server(input: Any, output: Any, session: Any) -> None:
         "REACTLOG_SOURCE_MARKER"
 
@@ -100,6 +99,36 @@ def test_reactlog_proxied_requests_are_not_local() -> None:
     response = client.get(token_url, headers=proxied)
     assert response.status_code == 200
     assert "REACTLOG_SOURCE_MARKER" not in response.text
+
+
+def test_reactlog_rejects_non_ascii_token() -> None:
+    app = App(ui.page_fluid("test"), None, reactlog=True)
+    response = TestClient(app.starlette_app).get(
+        "/__reactlog__",
+        params={"token": "é"},
+        headers={"X-Forwarded-For": "203.0.113.5"},
+    )
+    assert response.status_code == 403
+
+
+def test_remote_reactlog_marks_require_the_session_id() -> None:
+    app = App(ui.page_fluid("test"), None, reactlog=True)
+    session = app._create_session(MockConnection())
+    client = TestClient(app.starlette_app)
+    client.post("/__reactlog__/mark", json={"label": "Session A mark"})
+
+    headers = {"X-Forwarded-For": "203.0.113.5", "X-Reactlog-Token": app.reactlog_token}
+    for params in ({}, {"session_id": "unknown"}):
+        report = client.get("/__reactlog__", headers=headers, params=params)
+        assert report.status_code == 200
+        assert "Session A mark" not in report.text
+        marks = client.get("/__reactlog__/mark", headers=headers, params=params)
+        assert marks.json()["marks"] == []
+
+    marks = client.get(
+        "/__reactlog__/mark", headers=headers, params={"session_id": session.id}
+    )
+    assert [mark["label"] for mark in marks.json()["marks"]] == ["Session A mark"]
 
 
 def test_reactlog_script_uses_relative_urls() -> None:

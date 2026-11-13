@@ -1026,7 +1026,7 @@ def client_badge():
     expect(page.locator(".graph-node.is-dimmed")).to_have_count(4)
 
 
-def test_malicious_node_id_no_code_execution_xss_protection(page: Page) -> None:
+def test_imported_reactlog_values_cannot_create_markup(page: Page) -> None:
     code = """from shiny.express import input, render, ui
 ui.input_numeric("val", "Val", 10)
 @render.text
@@ -1047,6 +1047,7 @@ def out():
             {
                 "id": "output:xss'); window.__pwned=1; ('",
                 "label": "<img src=x onerror=window.__pwned=1>",
+                "line": "<img src=x onerror=window.__pwned=1>",
                 "role": "observer",
                 "type": "output",
             },
@@ -1065,7 +1066,7 @@ def out():
                 "id": "calc:safe_node",
                 "node_id": "calc:safe_node",
                 "phase": "init",
-                "provenance": "observed",
+                "provenance": "<img src=x onerror=window.__pwned=1>",
             },
             {
                 "step": 1,
@@ -1101,6 +1102,7 @@ def out():
 
     # Click nodes and buttons to trigger any handlers
     graph_node(page, '.graph-node[data-id="calc:safe_node"]').click()
+    expect(page.locator("#event-list img, #insp-source-refs img")).to_have_count(0)
     is_pwned = page.evaluate("() => Boolean(window.__pwned)")
     assert is_pwned is False
 

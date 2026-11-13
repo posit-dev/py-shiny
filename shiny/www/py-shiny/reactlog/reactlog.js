@@ -1138,30 +1138,12 @@ var ReactlogViewer = (() => {
     if (Array.isArray(reactlogData) || reactlogData && (!reactlogData.nodes || !reactlogData.events)) {
       Object.assign(reactlogData, normalizeReactlogData(reactlogData));
     }
-    document.addEventListener("click", (e) => {
-      if (!e.target.closest(".search-wrap"))
-        closeSearchChoices();
-      if (!e.target.closest(".settings-wrap"))
-        toggleSettingsMenu(false);
-      const nodeBtn = e.target.closest("[data-node-id]");
-      if (nodeBtn && nodeBtn.dataset.nodeId) {
-        selectNode(nodeBtn.dataset.nodeId);
-        return;
-      }
-      const jumpBtn = e.target.closest("[data-seek-step]");
-      if (jumpBtn && jumpBtn.dataset.seekStep) {
-        seekTo(parseInt(jumpBtn.dataset.seekStep, 10));
-        return;
-      }
-    });
     initTheme();
     prepareEventTimings();
     buildGraphIndices();
     buildActionWaves();
     changedNodeIds = findChangedNodes();
     const events = reactlogData.events || reactlogData.log || [];
-    const nodes = reactlogData.nodes || [];
-    const edges = reactlogData.edges || [];
     const scrubber = document.getElementById("scrubber-range");
     scrubber.max = Math.max(0, events.length - 1);
     scrubber.value = 0;
@@ -1171,9 +1153,7 @@ var ReactlogViewer = (() => {
     initTraceTimeline();
     seekTo(0);
     updateFlushUI();
-    setupPanZoom();
     fitGraph();
-    setupVideoSync();
     toggleInspector(false);
     setViewMode("full");
   }
@@ -1448,7 +1428,7 @@ var ReactlogViewer = (() => {
         badgesWrap.appendChild(timeSpan);
       }
       const provBadge = document.createElement("span");
-      const prov = ev.provenance || "inferred";
+      const prov = ev.provenance === "observed" ? "observed" : "inferred";
       provBadge.className = `event-badge provenance-${prov}`;
       provBadge.innerHTML = `${prov === "observed" ? ICONS.eye : ICONS.zap} ${prov.toUpperCase()}`;
       badgesWrap.appendChild(provBadge);
@@ -1799,7 +1779,7 @@ var ReactlogViewer = (() => {
         const refButtons = children.map((c) => {
           const cNode = nodeIndex.get(c);
           const lbl = cNode ? nodeDisplayName(cNode) : nodeDisplayName(c);
-          const lineStr = cNode && cNode.line ? ` · line ${cNode.line}` : "";
+          const lineStr = Number.isInteger(cNode?.line) ? ` · line ${cNode.line}` : "";
           return `<button type="button" class="conn-pill" data-node-id="${escapeHTML(c)}">${escapeHTML(lbl)}${lineStr}</button>`;
         }).join(" ");
         refsBlock.innerHTML = `<span>Referenced by:</span> ${refButtons}`;
@@ -3415,7 +3395,6 @@ var ReactlogViewer = (() => {
     changedNodesOnly = true;
     eventListScope = null;
     init();
-    renderGraph();
   }
   function importReactlogJson() {
     document.getElementById("json-menu")?.hidePopover?.();
@@ -3580,8 +3559,27 @@ var ReactlogViewer = (() => {
     }
   });
   window.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element))
+        return;
+      if (!event.target.closest(".search-wrap"))
+        closeSearchChoices();
+      if (!event.target.closest(".settings-wrap"))
+        toggleSettingsMenu(false);
+      const nodeButton = event.target.closest("[data-node-id]");
+      if (nodeButton?.dataset.nodeId) {
+        selectNode(nodeButton.dataset.nodeId);
+        return;
+      }
+      const jumpButton = event.target.closest("[data-seek-step]");
+      if (jumpButton?.dataset.seekStep) {
+        seekTo(Number(jumpButton.dataset.seekStep));
+      }
+    });
     setupAnchoredPopover("btn-graph-legend", "graph-legend-popover");
     setupAnchoredPopover("btn-json-menu", "json-menu");
+    setupPanZoom();
+    setupVideoSync();
     init();
     new ResizeObserver(() => fitGraph()).observe(document.getElementById("graph-container"));
   });

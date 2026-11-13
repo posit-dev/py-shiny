@@ -541,14 +541,24 @@ window.addEventListener('keydown', function(e) {{
             or request.headers.get("X-Reactlog-Token")
             or ""
         )
-        if secrets.compare_digest(token, self._reactlog_token):
+        if token.isascii() and secrets.compare_digest(token, self._reactlog_token):
             return None
         if self._is_direct_local_request(request):
             return None
         return Response(
-            "Forbidden: Reactlog endpoint is restricted to authenticated or local requests.",
+            "Forbidden: Reactlog requires a valid token or a direct local request.",
             status_code=403,
         )
+
+    def _reactlog_target_session(
+        self, request: Request, *, session_id: str | None
+    ) -> AppSession | None:
+        """Allow only direct local requests to omit a session ID."""
+        if session_id:
+            return self._sessions.get(session_id)
+        if len(self._sessions) == 1 and self._is_direct_local_request(request):
+            return next(iter(self._sessions.values()))
+        return None
 
     async def _on_reactlog_request_cb(self, request: Request) -> Response:
         from . import reactive
@@ -585,11 +595,7 @@ window.addEventListener('keydown', function(e) {{
                     pass
 
         session_id = request.query_params.get("session_id")
-        target_session = None
-        if session_id and session_id in self._sessions:
-            target_session = self._sessions[session_id]
-        elif len(self._sessions) == 1:
-            target_session = next(iter(self._sessions.values()))
+        target_session = self._reactlog_target_session(request, session_id=session_id)
 
         if target_session:
             marks = reactive.get_marks(target_session)
@@ -621,11 +627,7 @@ window.addEventListener('keydown', function(e) {{
             except Exception:
                 pass
 
-        target_session = None
-        if session_id and session_id in self._sessions:
-            target_session = self._sessions[session_id]
-        elif len(self._sessions) == 1:
-            target_session = next(iter(self._sessions.values()))
+        target_session = self._reactlog_target_session(request, session_id=session_id)
 
         if request.method == "GET":
             if target_session:

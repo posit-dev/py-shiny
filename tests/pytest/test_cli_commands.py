@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from shiny._main import _inspect as inspect_cli
 from shiny._main import main
 
 
@@ -97,6 +98,39 @@ def test_cli_inspect_html_before_app_does_not_overwrite_app(
 
     res = CliRunner().invoke(main, ["inspect", str(app_file), "--html", str(app_file)])
     assert res.exit_code == 1
+    assert app_file.read_text(encoding="utf-8") == code
+
+
+@pytest.mark.parametrize("conflict", ["video-input", "html-input", "video-html"])
+def test_cli_inspect_checks_paths_before_recording(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, conflict: str
+) -> None:
+    app_file = tmp_path / "app.py"
+    code = "from shiny.express import ui\nui.input_text('name', 'Name')\n"
+    app_file.write_text(code, encoding="utf-8")
+    video_file = app_file if conflict == "video-input" else tmp_path / "video.webm"
+    html_file = app_file if conflict == "html-input" else tmp_path / "report.html"
+    if conflict == "video-html":
+        html_file = video_file
+
+    def record(*args: object, **kwargs: object) -> None:
+        pytest.fail("Recording started before checking output paths")
+
+    monkeypatch.setattr(inspect_cli, "record_shiny_session", record)
+    result = CliRunner().invoke(
+        main,
+        [
+            "inspect",
+            str(app_file),
+            "--record",
+            "--video",
+            str(video_file),
+            "--html",
+            str(html_file),
+        ],
+    )
+    assert result.exit_code == 1
+    assert "Refusing to overwrite" in result.output
     assert app_file.read_text(encoding="utf-8") == code
 
 

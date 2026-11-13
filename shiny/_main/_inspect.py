@@ -317,6 +317,28 @@ def inspect(
                     )
                 sys.exit(1)
 
+        out_file_path = (
+            (html_out or "reactlog.html") if output_format == "html" else None
+        )
+        effective_video_path = (video_path or "recording.webm") if record_flag else None
+        used_paths: dict[Path, str] = {}
+        if app_file_to_run is not None:
+            used_paths[Path(app_file_to_run).resolve()] = "the inspected file"
+        for path_to_write, purpose in (
+            (out_file_path, "the HTML report"),
+            (effective_video_path, "the video recording"),
+        ):
+            if path_to_write is None:
+                continue
+            resolved_path = Path(path_to_write).resolve()
+            if resolved_path in used_paths:
+                message = f"Refusing to overwrite {used_paths[resolved_path]} at {path_to_write} with {purpose}."
+                if output_format == "json":
+                    click.echo(json.dumps({"success": False, "error": message}))
+                    sys.exit(1)
+                raise click.ClickException(message)
+            used_paths[resolved_path] = purpose
+
         recorded_actions: Optional[List[Dict[str, Any]]] = None
         actual_video_path: Optional[str] = None
 
@@ -335,9 +357,6 @@ def inspect(
                     click.echo(cli_danger("Cannot record without an app file."))
                 sys.exit(1)
 
-            effective_video_path = (
-                video_path if video_path is not None else "recording.webm"
-            )
             is_machine_output = output_format in ("json", "mermaid", "dot")
             click.echo(
                 cli_bold(f"Recording Playwright session for {target_desc}..."),
@@ -409,18 +428,7 @@ def inspect(
                 )
             sys.exit(1)
 
-        if output_format == "html":
-            out_file_path = html_out if html_out is not None else "reactlog.html"
-            if (
-                app_file_to_run is not None
-                and Path(out_file_path).resolve() == Path(app_file_to_run).resolve()
-            ):
-                click.echo(
-                    cli_danger(
-                        f"Refusing to overwrite the inspected file {app_file_to_run} with the HTML report."
-                    )
-                )
-                sys.exit(1)
+        if out_file_path is not None:
             detected_title = title or (
                 _extract_page_title(source_code) if not is_json_input else None
             )
