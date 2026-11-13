@@ -650,6 +650,7 @@ def test_node_count_and_controls_share_header(page: Page):
     expect(speed_select.locator("option")).to_have_text(
         ["Progress bar (step-by-step)", "Real time (video speed)"]
     )
+    expect(page.get_by_label("Video speed", exact=True)).to_be_hidden()
     expect(page.locator("#settings-menu #btn-toggle-collapse-all")).to_be_visible()
     expect(page.locator("#settings-menu #btn-reset-view")).to_be_visible()
     expect(page.locator(".zoom-controls > #btn-toggle-collapse-all")).to_have_count(0)
@@ -1048,6 +1049,21 @@ def test_json_menu_exports_and_imports_reactlog(page: Page, tmp_path: Path):
         page.locator("#btn-import-json").click()
     chooser_info.value.set_files(str(import_path))
     expect(page.locator('.graph-node[data-id="input:extra"]')).to_be_visible()
+
+
+def test_video_speed_setting_controls_the_recording(page: Page):
+    page.set_content(
+        format_reactlog_html(timeline_report(), CODE, video_path="demo.webm")
+    )
+    page.locator("#btn-settings").click()
+    speed = page.get_by_label("Video speed", exact=True)
+    expect(speed).to_have_value("1")
+    expect(speed.locator("option")).to_have_text(["1×", "0.5×", "0.25×"])
+
+    video = page.locator("#session-video")
+    for rate in (0.5, 0.25, 1):
+        speed.select_option(str(rate))
+        expect(video).to_have_js_property("playbackRate", rate)
 
 
 def test_playback_speed_setting_defaults_to_step_and_switches_modes(page: Page):

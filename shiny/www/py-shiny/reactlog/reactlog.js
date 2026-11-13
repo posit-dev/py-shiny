@@ -2730,6 +2730,11 @@ var ReactlogViewer = (() => {
     const video = document.getElementById("session-video");
     if (!video)
       return;
+    const speedSelect = document.querySelector("#video-speed-select");
+    document.getElementById("video-speed-setting").hidden = false;
+    speedSelect.onchange = () => {
+      video.playbackRate = Number(speedSelect.value);
+    };
     const btn = document.getElementById("btn-play");
     const syncStatus = document.getElementById("video-sync-status");
     const updatePlayButton = (playing) => {

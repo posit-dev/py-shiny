@@ -2584,6 +2584,12 @@ function setupVideoSync() {
   const video = (document.getElementById('session-video') as any);
   if (!video) return;
 
+  const speedSelect = document.querySelector<HTMLSelectElement>('#video-speed-select')!;
+  document.getElementById('video-speed-setting')!.hidden = false;
+  speedSelect.onchange = () => {
+    video.playbackRate = Number(speedSelect.value);
+  };
+
   const btn = (document.getElementById('btn-play') as any);
   const syncStatus = (document.getElementById('video-sync-status') as any);
 

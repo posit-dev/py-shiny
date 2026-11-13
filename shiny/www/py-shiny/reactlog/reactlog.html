@@ -119,10 +119,18 @@ __REACTLOG_CSS__
                     </select>
                   </div>
                   <div class="settings-menu-item">
-                    <label for="playback-speed-select" class="settings-menu-label">Playback speed</label>
+                    <label for="playback-speed-select" class="settings-menu-label">Timeline playback</label>
                     <select class="filter-select settings-select" id="playback-speed-select" aria-label="Timeline playback speed" onchange="setPlaybackSpeed(this.value)">
                       <option value="step" selected>Progress bar (step-by-step)</option>
                       <option value="realtime">Real time (video speed)</option>
+                    </select>
+                  </div>
+                  <div class="settings-menu-item" id="video-speed-setting" hidden>
+                    <label for="video-speed-select" class="settings-menu-label">Video speed</label>
+                    <select class="filter-select settings-select" id="video-speed-select">
+                      <option value="1" selected>1×</option>
+                      <option value="0.5">0.5×</option>
+                      <option value="0.25">0.25×</option>
                     </select>
                   </div>
                   <div class="settings-menu-divider"></div>
