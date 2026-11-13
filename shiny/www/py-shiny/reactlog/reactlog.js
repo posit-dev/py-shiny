@@ -1938,12 +1938,19 @@ var ReactlogViewer = (() => {
     if (!from || !to)
       return [];
     const offset = (outgoing, id) => {
+      const refY = positions[id].y;
       const peers = filterItems(edges, (e) => outgoing ? e.from === id : e.to === id).sort((a, b) => {
         const first = outgoing ? a.to : a.from, second = outgoing ? b.to : b.from;
-        return positions[first].y - positions[second].y || first.localeCompare(second);
+        const dy = positions[first].y - positions[second].y;
+        if (dy !== 0)
+          return dy;
+        const dx = positions[first].x - positions[second].x;
+        if (dx !== 0)
+          return positions[first].y <= refY ? dx : -dx;
+        return first.localeCompare(second);
       });
       const index = peers.indexOf(edge);
-      return peers.length > 1 && index >= 0 ? (index / (peers.length - 1) - 0.5) * Math.min(nodeHeight - 24, (peers.length - 1) * 12) : 0;
+      return peers.length > 1 && index >= 0 ? (index / (peers.length - 1) - 0.5) * Math.min(nodeHeight - 20, (peers.length - 1) * 12) : 0;
     };
     const x1 = from.x + nodeWidth / 2, y1 = from.y + offset(true, edge.from);
     const forward = to.x > from.x;
@@ -1970,7 +1977,23 @@ var ReactlogViewer = (() => {
       }
       const candidates = [y1, y2, (y1 + y2) / 2, ...gapMidpoints, ...obstacles.flatMap((p) => [p.y - nodeHeight / 2 - clearance, p.y + nodeHeight / 2 + clearance])];
       const minClear = (y3) => obstacles.length ? Math.min(...obstacles.map((p) => Math.abs(y3 - p.y) - nodeHeight / 2)) : 40;
-      const cost = (y3) => Math.abs(y1 - y3) + Math.abs(y2 - y3) + Math.abs(y3 - (y1 + y2) / 2) * 0.01 - Math.min(40, minClear(y3)) * 0.05;
+      const targetColNodes = filterItems(Object.values(positions), (p) => p !== to && Math.abs(p.x - to.x) < nodeWidth);
+      const spanEdges = filterItems(edges, (o) => o !== edge && positions[o.from] && positions[o.to] && Math.max(positions[o.from].x, positions[o.to].x) >= left && Math.min(positions[o.from].x, positions[o.to].x) <= right);
+      const crossCost = (y3) => {
+        const minY = Math.min(y3, y2), maxY = Math.max(y3, y2);
+        let penalty = 0;
+        for (const p of targetColNodes) {
+          if (p.y >= minY - nodeHeight / 2 && p.y <= maxY + nodeHeight / 2)
+            penalty += 500;
+        }
+        for (const o of spanEdges) {
+          const oy1 = positions[o.from].y, oy2 = positions[o.to].y;
+          if ((y3 - oy1) * (y2 - oy2) < 0 || oy2 > minY && oy2 < maxY)
+            penalty += 250;
+        }
+        return penalty;
+      };
+      const cost = (y3) => Math.abs(y1 - y3) + Math.abs(y2 - y3) + Math.abs(y3 - y2) * 0.15 + crossCost(y3) - Math.min(45, minClear(y3)) * 0.4;
       const valid = filterItems(candidates, (candidate) => obstacles.every((p) => candidate <= p.y - nodeHeight / 2 - clearance || candidate >= p.y + nodeHeight / 2 + clearance));
       let y = (valid.length ? valid : candidates).sort((a, b) => cost(a) - cost(b))[0];
       const stagger = (lane % 5 - 2) * 4;
@@ -2040,6 +2063,9 @@ var ReactlogViewer = (() => {
     const laneY = !isGutterRoute && route.length >= 5 ? route[2][1] : !isGutterRoute && route.length === 4 ? Math.abs(route[1][0] - route[0][0]) >= Math.abs(route[3][0] - route[2][0]) ? route[1][1] : route[2][1] : (y1 + y2) / 2;
     if (forward) {
       const lane = Math.max(0, edges.indexOf(edge));
+      const outPeers = filterItems(edges, (e) => e.from === edge.from && positions[e.to]).sort((a, b) => positions[a.to].y - positions[b.to].y || a.to.localeCompare(b.to));
+      const outIdx = Math.max(0, outPeers.indexOf(edge));
+      const outSlot = laneY < y1 ? outIdx : Math.max(0, outPeers.length - 1 - outIdx);
       const fromRight = from.x + nodeWidth / 2;
       const toLeft = to.x - nodeWidth / 2;
       const midObs = filterItems(Object.values(positions), (p) => p.x - nodeWidth / 2 > fromRight && p.x + nodeWidth / 2 < toLeft);
@@ -2047,19 +2073,42 @@ var ReactlogViewer = (() => {
       if (midObs.length) {
         const firstObsLeft = Math.min(...midObs.map((p) => p.x - nodeWidth / 2));
         const lastObsRight = Math.max(...midObs.map((p) => p.x + nodeWidth / 2));
-        exitX2 = Math.max(fromRight + 14, Math.min(firstObsLeft - 14, fromRight + 28 + lane % 5 * 10));
-        entryX2 = Math.min(toLeft - 14, Math.max(lastObsRight + 14, toLeft - 28 - lane % 5 * 6));
+        exitX2 = Math.max(fromRight + 16, Math.min(firstObsLeft - 16, fromRight + 28 + outSlot * 12));
+        entryX2 = Math.min(toLeft - 24, Math.max(lastObsRight + 16, toLeft - 34 - lane % 4 * 6));
         if (entryX2 < exitX2)
           entryX2 = exitX2 = (exitX2 + entryX2) / 2;
       } else {
-        exitX2 = Math.min((fromRight + toLeft) / 2, fromRight + 56);
-        entryX2 = Math.max(exitX2, toLeft - 56);
+        exitX2 = Math.min((fromRight + toLeft) / 2, fromRight + 42 + outSlot * 10);
+        entryX2 = Math.max(exitX2, toLeft - 42);
       }
-      const c1x = Math.max(x1 + 10, (x1 + exitX2) / 2);
-      const c2x = Math.max(c1x, (fromRight + exitX2) / 2);
-      const c3x = Math.min(x2 - 10, (entryX2 + x2) / 2);
-      const c3px = Math.min(c3x, (entryX2 + toLeft) / 2);
-      return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${laneY}, ${exitX2} ${laneY} C ${(2 * exitX2 + entryX2) / 3} ${laneY}, ${(exitX2 + 2 * entryX2) / 3} ${laneY}, ${entryX2} ${laneY} C ${c3px} ${laneY}, ${c3x} ${y2}, ${x2} ${y2}`;
+      const lineSeg = (ax, ay, bx, by) => `C ${(2 * ax + bx) / 3} ${(2 * ay + by) / 3}, ${(ax + 2 * bx) / 3} ${(ay + 2 * by) / 3}, ${bx} ${by}`;
+      const spanX = Math.max(8, entryX2 - exitX2);
+      const dy1 = laneY - y1, ad1 = Math.abs(dy1), s1 = Math.sign(dy1);
+      const dy2 = y2 - laneY, ad2 = Math.abs(dy2), s2 = Math.sign(dy2);
+      const r1 = Math.min(22, ad1 / 2, spanX / 2);
+      const r2 = Math.min(22, ad2 / 2, spanX / 2, Math.max(6, toLeft - entryX2 - 2));
+      const segs = [`M ${x1} ${y1}`];
+      if (ad1 < 2) {
+        segs.push(lineSeg(x1, y1, exitX2 + r1, laneY));
+      } else {
+        segs.push(`C ${(x1 + exitX2) / 2} ${y1}, ${exitX2} ${y1}, ${exitX2} ${y1 + s1 * r1}`);
+        if (ad1 > 2 * r1 + 0.5)
+          segs.push(lineSeg(exitX2, y1 + s1 * r1, exitX2, laneY - s1 * r1));
+        segs.push(`C ${exitX2} ${laneY - s1 * r1 * 0.45}, ${exitX2 + r1 * 0.45} ${laneY}, ${exitX2 + r1} ${laneY}`);
+      }
+      if (entryX2 - r2 > exitX2 + r1 + 0.5) {
+        segs.push(lineSeg(exitX2 + r1, laneY, entryX2 - r2, laneY));
+      }
+      if (ad2 < 2) {
+        segs.push(lineSeg(Math.max(exitX2 + r1, entryX2 - r2), laneY, x2, y2));
+      } else {
+        segs.push(`C ${entryX2 - r2 * 0.45} ${laneY}, ${entryX2} ${laneY + s2 * r2 * 0.45}, ${entryX2} ${laneY + s2 * r2}`);
+        if (ad2 > 2 * r2 + 0.5)
+          segs.push(lineSeg(entryX2, laneY + s2 * r2, entryX2, y2 - s2 * r2));
+        segs.push(`C ${entryX2} ${y2 - s2 * r2 * 0.45}, ${entryX2 + r2 * 0.45} ${y2}, ${entryX2 + r2} ${y2}`);
+        segs.push(lineSeg(entryX2 + r2, y2, x2, y2));
+      }
+      return segs.join(" ");
     }
     const exitX = route[1][0], entryX = route[route.length - 2][0];
     const midStart = (x1 + exitX) / 2, midEnd = (x2 + entryX) / 2;

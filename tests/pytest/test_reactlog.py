@@ -2544,6 +2544,9 @@ def test_graph_edge_ports_attach_to_chevron_and_concave_notches():
     if node is None:
         pytest.skip("Node.js is needed to run the graph router")
     html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
+    assert 'marker id="arrow" viewBox="0 0 10 10" refX="9.5"' in html
+    assert 'marker id="arrow-isolated" viewBox="0 0 10 10" refX="9.5"' in html
+    assert 'marker id="arrow-active" viewBox="0 0 10 10" refX="9.5"' in html
     router = re.search(r"    function routeGraphEdge\([\s\S]*?\n    \}", html)
     assert router is not None
     edge_path = re.search(r"    function graphEdgePath\([\s\S]*?\n    \}", html)
@@ -2560,18 +2563,46 @@ const edges = [
   {from: 'src', to: 'clc'},
   {from: 'clc', to: 'out'}
 ];
-console.log(JSON.stringify(edges.map(e => graphEdgePath(e, positions, 280, 64, edges))));
+const longPositions = {
+  shared: {x: 500, y: 645, nodeType: 'calc', nodeRole: 'conductor'},
+  inp1: {x: 960, y: 110, nodeType: 'input', nodeRole: 'source'},
+  inp2: {x: 960, y: 202, nodeType: 'input', nodeRole: 'source'},
+  inp3: {x: 960, y: 294, nodeType: 'input', nodeRole: 'source'},
+  inp4: {x: 960, y: 386, nodeType: 'input', nodeRole: 'source'},
+  inp5: {x: 960, y: 478, nodeType: 'input', nodeRole: 'source'},
+  outTop: {x: 1660, y: 110, nodeType: 'output', nodeRole: 'output'},
+  outMid: {x: 1660, y: 294, nodeType: 'output', nodeRole: 'output'}
+};
+const longEdges = [
+  {from: 'shared', to: 'outTop'},
+  {from: 'shared', to: 'outMid'},
+  {from: 'inp1', to: 'outMid'},
+  {from: 'inp3', to: 'outMid'}
+];
+console.log(JSON.stringify({
+  simple: edges.map(e => graphEdgePath(e, positions, 280, 64, edges)),
+  longTop: graphEdgePath(longEdges[0], longPositions, 280, 64, longEdges),
+  longMid: graphEdgePath(longEdges[1], longPositions, 280, 64, longEdges)
+}));
 """
     result = subprocess.run(
         [node, "-e", script], capture_output=True, text=True, check=True
     )
-    paths = json.loads(result.stdout)
+    payload = json.loads(result.stdout)
+    paths = payload["simple"]
     # src tip is 150 + 140 = 290; clc left concave notch is 500 - 140 + 20 = 380
     assert paths[0].startswith("M 290 110 ")
     assert paths[0].endswith(" 380 110")
     # clc tip is 500 + 140 = 640; out left concave notch is 850 - 140 + 20 = 730
     assert paths[1].startswith("M 640 110 ")
     assert paths[1].endswith(" 730 110")
+    # Multi-bend edges must enter concave target notches horizontally at target y.
+    for d in (payload["longTop"], payload["longMid"]):
+        assert " L " not in d
+        coords = [float(v) for v in re.findall(r"-?\d+(?:\.\d+)?", d)]
+        pairs = list(zip(coords[::2], coords[1::2]))
+        assert pairs[-4][1] == pairs[-3][1] == pairs[-2][1] == pairs[-1][1]
+        assert pairs[-4][0] < 1520 < pairs[-1][0]
 
 
 def test_reactlog_shared_viewer_bundle_assets_and_r_adapter():

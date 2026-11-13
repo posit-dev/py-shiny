@@ -1855,24 +1855,35 @@ def test_app_box_left_of_modules_and_edges_avoid_input_nodes(page: Page) -> None
         const appRect = document.querySelector('.app-box rect').getBoundingClientRect();
         const modRects = Array.from(document.querySelectorAll('.module-box rect'))
             .map(el => el.getBoundingClientRect());
-        const inputCards = Array.from(document.querySelectorAll('.graph-node[data-role="source"] .node-card'))
-            .map(el => el.getBoundingClientRect());
+        const allCards = Array.from(document.querySelectorAll('.graph-node'))
+            .map(el => ({id: el.dataset.id, role: el.dataset.role, box: el.querySelector('.node-card').getBoundingClientRect()}));
         const paths = Array.from(document.querySelectorAll('.graph-edge'))
             .map(el => ({from: el.dataset.from, to: el.dataset.to, len: el.getTotalLength(), el}));
         const intersections = [];
         for (const p of paths) {
+            const targetCard = allCards.find(c => c.id === p.to)?.box;
             for (let i = 1; i < 40; i++) {
                 const pt = p.el.getPointAtLength((p.len * i) / 40);
                 const ctm = p.el.getScreenCTM();
                 const screen = pt.matrixTransform(ctm);
-                for (const card of inputCards) {
+                if (targetCard && screen.x > targetCard.left + 1) {
+                    const cy = (targetCard.top + targetCard.bottom) / 2;
+                    const t = Math.min(1, Math.abs(screen.y - cy) / (targetCard.height / 2));
+                    const notchX = targetCard.left + (targetCard.width * 20 / 280) * (1 - t);
+                    if (screen.x > notchX + 1.5) {
+                        intersections.push({from: p.from, to: p.to, hit: 'target-fill'});
+                    }
+                }
+                for (const item of allCards) {
+                    if (item.id === p.from || item.id === p.to) continue;
+                    const card = item.box;
                     if (
                         screen.x > card.left + 2
                         && screen.x < card.right - 2
                         && screen.y > card.top + 2
                         && screen.y < card.bottom - 2
                     ) {
-                        intersections.push({from: p.from, to: p.to});
+                        intersections.push({from: p.from, to: p.to, hit: item.id});
                     }
                 }
             }

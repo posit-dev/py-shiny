@@ -1803,14 +1803,19 @@ function routeGraphEdge(edge: any, positions: any, nodeWidth: any, nodeHeight: a
   const from = positions[edge.from], to = positions[edge.to];
   if (!from || !to) return [];
   const offset = (outgoing: any, id: any) => {
+    const refY = positions[id].y;
     const peers = filterItems(edges, (e: any) => outgoing ? e.from === id : e.to === id)
       .sort((a: any, b: any) => {
         const first = outgoing ? a.to : a.from, second = outgoing ? b.to : b.from;
-        return positions[first].y - positions[second].y || first.localeCompare(second);
+        const dy = positions[first].y - positions[second].y;
+        if (dy !== 0) return dy;
+        const dx = positions[first].x - positions[second].x;
+        if (dx !== 0) return positions[first].y <= refY ? dx : -dx;
+        return first.localeCompare(second);
       });
     const index = peers.indexOf(edge);
     return peers.length > 1 && index >= 0
-      ? (index / (peers.length - 1) - 0.5) * Math.min(nodeHeight - 24, (peers.length - 1) * 12) : 0;
+      ? (index / (peers.length - 1) - 0.5) * Math.min(nodeHeight - 20, (peers.length - 1) * 12) : 0;
   };
   const x1 = from.x + nodeWidth / 2, y1 = from.y + offset(true, edge.from);
   const forward = to.x > from.x;
@@ -1840,7 +1845,22 @@ function routeGraphEdge(edge: any, positions: any, nodeWidth: any, nodeHeight: a
     const minClear = (y: any) => obstacles.length
       ? Math.min(...obstacles.map((p: any) => Math.abs(y - p.y) - nodeHeight / 2))
       : 40;
-    const cost = (y: any) => Math.abs(y1 - y) + Math.abs(y2 - y) + Math.abs(y - (y1 + y2) / 2) * 0.01 - Math.min(40, minClear(y)) * 0.05;
+    const targetColNodes = filterItems(Object.values(positions), (p: any) => p !== to && Math.abs(p.x - to.x) < nodeWidth);
+    const spanEdges = filterItems(edges, (o: any) => o !== edge && positions[o.from] && positions[o.to] &&
+      Math.max(positions[o.from].x, positions[o.to].x) >= left && Math.min(positions[o.from].x, positions[o.to].x) <= right);
+    const crossCost = (y: any) => {
+      const minY = Math.min(y, y2), maxY = Math.max(y, y2);
+      let penalty = 0;
+      for (const p of targetColNodes) {
+        if (p.y >= minY - nodeHeight / 2 && p.y <= maxY + nodeHeight / 2) penalty += 500;
+      }
+      for (const o of spanEdges) {
+        const oy1 = positions[o.from].y, oy2 = positions[o.to].y;
+        if ((y - oy1) * (y2 - oy2) < 0 || (oy2 > minY && oy2 < maxY)) penalty += 250;
+      }
+      return penalty;
+    };
+    const cost = (y: any) => Math.abs(y1 - y) + Math.abs(y2 - y) + Math.abs(y - y2) * 0.15 + crossCost(y) - Math.min(45, minClear(y)) * 0.4;
     const valid = filterItems(candidates, (candidate: any) => obstacles.every((p: any) =>
       candidate <= p.y - nodeHeight / 2 - clearance || candidate >= p.y + nodeHeight / 2 + clearance));
     let y = (valid.length ? valid : candidates).sort((a: any, b: any) => cost(a) - cost(b))[0];
@@ -1908,6 +1928,10 @@ function graphEdgePath(edge: any, positions: any, nodeWidth: any, nodeHeight: an
       : (y1 + y2) / 2;
   if (forward) {
     const lane = Math.max(0, edges.indexOf(edge));
+    const outPeers = filterItems(edges, (e: any) => e.from === edge.from && positions[e.to])
+      .sort((a: any, b: any) => positions[a.to].y - positions[b.to].y || a.to.localeCompare(b.to));
+    const outIdx = Math.max(0, outPeers.indexOf(edge));
+    const outSlot = laneY < y1 ? outIdx : Math.max(0, outPeers.length - 1 - outIdx);
     const fromRight = from.x + nodeWidth / 2;
     const toLeft = to.x - nodeWidth / 2;
     const midObs = filterItems(Object.values(positions), (p: any) => p.x - nodeWidth / 2 > fromRight && p.x + nodeWidth / 2 < toLeft);
@@ -1915,18 +1939,40 @@ function graphEdgePath(edge: any, positions: any, nodeWidth: any, nodeHeight: an
     if (midObs.length) {
       const firstObsLeft = Math.min(...midObs.map((p: any) => p.x - nodeWidth / 2));
       const lastObsRight = Math.max(...midObs.map((p: any) => p.x + nodeWidth / 2));
-      exitX = Math.max(fromRight + 14, Math.min(firstObsLeft - 14, fromRight + 28 + (lane % 5) * 10));
-      entryX = Math.min(toLeft - 14, Math.max(lastObsRight + 14, toLeft - 28 - (lane % 5) * 6));
+      exitX = Math.max(fromRight + 16, Math.min(firstObsLeft - 16, fromRight + 28 + outSlot * 12));
+      entryX = Math.min(toLeft - 24, Math.max(lastObsRight + 16, toLeft - 34 - (lane % 4) * 6));
       if (entryX < exitX) entryX = exitX = (exitX + entryX) / 2;
     } else {
-      exitX = Math.min((fromRight + toLeft) / 2, fromRight + 56);
-      entryX = Math.max(exitX, toLeft - 56);
+      exitX = Math.min((fromRight + toLeft) / 2, fromRight + 42 + outSlot * 10);
+      entryX = Math.max(exitX, toLeft - 42);
     }
-    const c1x = Math.max(x1 + 10, (x1 + exitX) / 2);
-    const c2x = Math.max(c1x, (fromRight + exitX) / 2);
-    const c3x = Math.min(x2 - 10, (entryX + x2) / 2);
-    const c3px = Math.min(c3x, (entryX + toLeft) / 2);
-    return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${laneY}, ${exitX} ${laneY} C ${(2 * exitX + entryX) / 3} ${laneY}, ${(exitX + 2 * entryX) / 3} ${laneY}, ${entryX} ${laneY} C ${c3px} ${laneY}, ${c3x} ${y2}, ${x2} ${y2}`;
+    const lineSeg = (ax: number, ay: number, bx: number, by: number) =>
+      `C ${(2 * ax + bx) / 3} ${(2 * ay + by) / 3}, ${(ax + 2 * bx) / 3} ${(ay + 2 * by) / 3}, ${bx} ${by}`;
+    const spanX = Math.max(8, entryX - exitX);
+    const dy1 = laneY - y1, ad1 = Math.abs(dy1), s1 = Math.sign(dy1);
+    const dy2 = y2 - laneY, ad2 = Math.abs(dy2), s2 = Math.sign(dy2);
+    const r1 = Math.min(22, ad1 / 2, spanX / 2);
+    const r2 = Math.min(22, ad2 / 2, spanX / 2, Math.max(6, toLeft - entryX - 2));
+    const segs = [`M ${x1} ${y1}`];
+    if (ad1 < 2) {
+      segs.push(lineSeg(x1, y1, exitX + r1, laneY));
+    } else {
+      segs.push(`C ${(x1 + exitX) / 2} ${y1}, ${exitX} ${y1}, ${exitX} ${y1 + s1 * r1}`);
+      if (ad1 > 2 * r1 + 0.5) segs.push(lineSeg(exitX, y1 + s1 * r1, exitX, laneY - s1 * r1));
+      segs.push(`C ${exitX} ${laneY - s1 * r1 * 0.45}, ${exitX + r1 * 0.45} ${laneY}, ${exitX + r1} ${laneY}`);
+    }
+    if (entryX - r2 > exitX + r1 + 0.5) {
+      segs.push(lineSeg(exitX + r1, laneY, entryX - r2, laneY));
+    }
+    if (ad2 < 2) {
+      segs.push(lineSeg(Math.max(exitX + r1, entryX - r2), laneY, x2, y2));
+    } else {
+      segs.push(`C ${entryX - r2 * 0.45} ${laneY}, ${entryX} ${laneY + s2 * r2 * 0.45}, ${entryX} ${laneY + s2 * r2}`);
+      if (ad2 > 2 * r2 + 0.5) segs.push(lineSeg(entryX, laneY + s2 * r2, entryX, y2 - s2 * r2));
+      segs.push(`C ${entryX} ${y2 - s2 * r2 * 0.45}, ${entryX + r2 * 0.45} ${y2}, ${entryX + r2} ${y2}`);
+      segs.push(lineSeg(entryX + r2, y2, x2, y2));
+    }
+    return segs.join(' ');
   }
   const exitX = route[1][0], entryX = route[route.length - 2][0];
   const midStart = (x1 + exitX) / 2, midEnd = (x2 + entryX) / 2;
