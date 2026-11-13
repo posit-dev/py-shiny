@@ -9,8 +9,10 @@ from shiny._deprecated import ShinyDeprecationWarning
 from shiny._namespaces import Root
 from shiny._utils import wrap_async
 from shiny.module import ResolvedId
+from shiny.render._data_frame import assert_column_filters
 from shiny.render._data_frame_utils._selection import SelectionModes, as_selection_modes
 from shiny.render._data_frame_utils._tbl_data import as_data_frame
+from shiny.render._data_frame_utils._types import ColumnFilter
 from shiny.session import Session, session_context
 from shiny.session._session import RenderedDeps
 
@@ -182,3 +184,14 @@ async def test_patches_fn_bad_return_value_raises():
             await df._patches_handler(
                 ({"row_index": 0, "column_index": 0, "value": "x"},)
             )
+
+
+def test_assert_column_filters_none_pair_message_has_filter_index():
+    # `(None, None)` is not a valid `ColumnFilter` value, which is the case
+    # the runtime check reports.
+    filters = cast(
+        "list[ColumnFilter]",
+        [{"col": 0, "value": "a"}, {"col": 0, "value": (None, None)}],
+    )
+    with pytest.raises(TypeError, match=r"filter\[1\]\['value'\].*both values"):
+        assert_column_filters(filters, 1)
