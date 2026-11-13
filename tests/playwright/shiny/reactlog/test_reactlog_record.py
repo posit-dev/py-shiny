@@ -1,0 +1,181 @@
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+import psutil
+import pytest
+from playwright.sync_api import Page, expect
+
+from shiny.playwright import controller
+from shiny.reactive._reactlog._record import record_session
+from shiny.reactive._reactlog._viewer import format_reactlog_html, load_reactlog_json
+
+APP = Path(__file__).parent / "record_app" / "app.py"
+
+
+def _labels(export: dict[str, Any]) -> set[str]:
+    return {x["label"] for x in export["log"] if x["action"] == "define"}
+
+
+def test_record_session_records_real_events(tmp_path: Path) -> None:
+    def script(page: Page, url: str) -> None:
+        page.goto(url)
+        controller.InputSlider(page, "n").set("7")
+        controller.OutputText(page, "out").expect_value("14")
+
+    rec = record_session(APP, video_path=tmp_path / "v.webm", script=script)
+    assert {"input.n", "reactive.calc doubled", "output out"} <= _labels(rec.export)
+    assert any(a.get("type") == "input" and a.get("name") == "n" for a in rec.actions)
+    assert rec.video_path is not None and rec.video_path.stat().st_size > 0
+    assert all(0 <= x["time"] < 600 for x in rec.export["log"])  # rebased seconds
+
+
+def test_report_replays_a_render_error_and_recovery(page: Page) -> None:
+    def script(app_page: Page, url: str) -> None:
+        app_page.goto(url)
+        output = controller.OutputText(app_page, "out")
+        output.expect_value("6")
+        slider = controller.InputSlider(app_page, "n")
+        slider.set("1")
+        expect(app_page.locator("#out")).to_contain_text(
+            "Choose a number greater than one."
+        )
+        slider.set("7")
+        output.expect_value("14")
+
+    recording = record_session(APP, video_path=None, script=script)
+    report = load_reactlog_json(recording.export)
+    page.set_content(format_reactlog_html(report, source_code=APP.read_text()))
+
+    marker = page.locator(".timeline-marker.is-error")
+    expect(marker).to_have_count(1)
+    expect(marker).to_have_attribute(
+        "aria-label",
+        re.compile(r"output out failed: Choose a number greater than one\."),
+    )
+    marker.click()
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext",
+        re.compile(r"output out failed: Choose a number greater than one\."),
+    )
+    output_node = page.get_by_role("button", name=re.compile(r"Output output out,"))
+    expect(output_node).to_have_attribute("data-state", "error")
+    failure = next(ev for ev in report["events"] if ev["action"] == "outputError")
+    handled, recovered = (
+        ev["step"]
+        for ev in report["events"][failure["step"] + 1 :]
+        if ev["node_id"] == failure["node_id"] and ev["action"] == "exit"
+    )
+    scrubber = page.get_by_role("slider", name="Timeline step scrubber")
+    scrubber.fill(str(handled))
+    expect(output_node).to_have_attribute("data-state", "error")
+    scrubber.fill(str(recovered))
+    expect(output_node).to_have_attribute("data-state", "ready")
+
+
+def test_record_session_survives_window_close(tmp_path: Path) -> None:
+    def script(page: Page, url: str) -> None:
+        page.goto(url)
+        controller.InputSlider(page, "n").set("5")
+        controller.OutputText(page, "out").expect_value("10")
+        page.close()
+
+    rec = record_session(APP, video_path=None, script=script)
+    assert any(a.get("name") == "n" for a in rec.actions)
+    assert "output out" in _labels(rec.export)
+
+
+def test_record_session_exports_latest_session_after_reload(tmp_path: Path) -> None:
+    seen: list[str] = []
+
+    def script(page: Page, url: str) -> None:
+        page.goto(url)
+        controller.OutputText(page, "out").expect_value("6")
+        seen.append(page.evaluate("Shiny.shinyapp.config.sessionId"))
+        page.reload()
+        controller.InputSlider(page, "n").set("4")
+        controller.OutputText(page, "out").expect_value("8")
+        seen.append(page.evaluate("Shiny.shinyapp.config.sessionId"))
+
+    rec = record_session(APP, video_path=None, script=script)
+    assert rec.session_id == seen[-1] != seen[0]
+
+
+def test_record_session_keeps_export_when_browser_quits(tmp_path: Path) -> None:
+    def script(page: Page, url: str) -> None:
+        page.goto(url)
+        controller.OutputText(page, "out").expect_value("6")
+        browser = page.context.browser
+        assert browser is not None
+        browser.close()
+
+    rec = record_session(APP, video_path=tmp_path / "v.webm", script=script)
+    assert rec.video_path is None
+    assert "output out" in _labels(rec.export)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+def test_record_session_keeps_export_when_driver_dies(
+    tmp_path: Path,
+) -> None:
+    # A terminal's Ctrl+C reaches the Playwright driver too; once it is gone every
+    # Playwright call fails with a plain Exception ("Connection closed").
+    process = psutil.Process()
+    existing_children = {child.pid for child in process.children()}
+
+    def script(page: Page, url: str) -> None:
+        page.goto(url)
+        controller.OutputText(page, "out").expect_value("6")
+        drivers = [
+            child
+            for child in process.children()
+            if child.pid not in existing_children
+            and child.cmdline()[-1:] == ["run-driver"]
+        ]
+        assert len(drivers) == 1
+        drivers[0].kill()
+
+    rec = record_session(APP, video_path=tmp_path / "v.webm", script=script)
+    assert "output out" in _labels(rec.export)
+
+
+def _type_pw_and_txt(page: Page, url: str) -> None:
+    page.goto(url)
+    controller.OutputText(page, "out").expect_value("6")
+    controller.InputPassword(page, "pw").set("hunter2")
+    controller.InputText(page, "txt").set("hello")
+    # Wait for the server to see the text input before the recording ends.
+    page.wait_for_function("Shiny.shinyapp.$inputValues.txt === 'hello'")
+
+
+def _last_value(actions: list[dict[str, Any]], name: str) -> Any:
+    return [a["value"] for a in actions if a.get("name") == name][-1]
+
+
+def _input_values(export: dict[str, Any], label: str) -> list[str]:
+    return [
+        x["value"]
+        for x in export["log"]
+        if x["action"] == "valueChange" and x.get("label") == label
+    ]
+
+
+@pytest.mark.parametrize("redact_inputs", [False, True])
+def test_record_session_redacts_inputs(redact_inputs: bool) -> None:
+    rec = record_session(
+        APP,
+        video_path=None,
+        script=_type_pw_and_txt,
+        redact_inputs=redact_inputs,
+    )
+    assert _last_value(rec.actions, "pw") == "[REDACTED]"
+    txt_values = _input_values(rec.export, "input.txt")
+    assert txt_values
+    if redact_inputs:
+        assert _last_value(rec.actions, "txt") == "[REDACTED]"
+        assert set(txt_values) == {"[REDACTED]"}
+        assert set(_input_values(rec.export, "input.pw")) == {"[REDACTED]"}
+    else:
+        assert _last_value(rec.actions, "txt") == "hello"
+        assert "'hello'" in txt_values

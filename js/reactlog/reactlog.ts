@@ -12,8 +12,13 @@ const ICONS = {
   zap: '<svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
   clock: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   arrowRight: '<svg class="inline-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+  warn: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  gear: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  check: '<svg class="inline-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  close: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
   flame: '<svg class="inline-icon flame-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--danger, #ef4444);vertical-align:-1px;margin-left:4px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>'
-}
+};
+
 const ALL_ROLES = ['source', 'conductor', 'effect', 'output'];
 let currentStep = 0;
 let isPlaying = false;
@@ -214,33 +219,6 @@ function filterLineageForNode(nodeId: any) {
   fitGraph();
 }
 
-function prepareEventTimings() {
-  const events = reactlogData.events || reactlogData.log || [];
-  if (!events || events.length === 0) return;
-
-  let i = 0;
-  while (i < events.length) {
-    const baseTime = Number(events[i]!.time_sec !== undefined ? events[i]!.time_sec : (events[i]!.time !== undefined ? events[i]!.time : 0));
-    let j = i;
-    while (j < events.length && Math.abs(((events[j]!.time_sec !== undefined ? events[j]!.time_sec : events[j]!.time) || 0) - baseTime) < 0.04) {
-      j++;
-    }
-    const clusterLen = j - i;
-    const nextTime = Number((j < events.length && (events[j]!.time_sec !== undefined || events[j]!.time !== undefined)) ? (events[j]!.time_sec ?? events[j]!.time) : (baseTime + 1.2));
-    const windowDuration = Math.min(0.75, Math.max(0.25, (nextTime - baseTime) * 0.7));
-
-    for (let k = 0; k < clusterLen; k++) {
-      const evIdx = i + k;
-      if (events[evIdx]!.time_sec !== undefined || events[evIdx]!.time !== undefined) {
-        events[evIdx]!.effective_time = baseTime + (clusterLen > 1 ? (k / (clusterLen - 1)) * windowDuration : 0);
-      } else {
-        events[evIdx]!.effective_time = baseTime;
-      }
-    }
-    i = j;
-  }
-}
-
 function filterItems(arr: any, predicate: any) {
   const out: any[] = [];
   for (const item of (arr || [])) {
@@ -257,9 +235,54 @@ function cleanName(n: any): string {
   s = s.replace(/^(input|output|calc|effect)[:.]/, '');
   s = s.replace(/^(input#|#)/, '');
   s = s.replace(/^(on[,\s]+)/i, '');
-  s = s.replace(/^[.#]/, '');
+  s = s.replace(/^[.#$]/, '');
   s = (s.split('=')[0] || '').trim();
   return s;
+}
+
+function friendlyNodeName(nodeOrId: any) {
+  if (!nodeOrId) return '';
+  const node = (typeof nodeIndex !== 'undefined' && nodeIndex.get(nodeOrId)) ||
+    ((reactlogData.nodes || []).find((n: any) => n.id === nodeOrId)) ||
+    (typeof nodeOrId === 'object' ? nodeOrId : null);
+
+  const raw = node ? (node.label || node.name || node.id || '') : String(nodeOrId);
+  const mod = node ? (node.module || '') : '';
+  const line = node ? node.line : null;
+  const role = node ? (node.role || node.type || '') : '';
+
+  let cleanMod = mod;
+  if (cleanMod) {
+    cleanMod = cleanMod.replace(/_wrapper(-[a-zA-Z0-9_]+)?$/, '').replace(/-[a-zA-Z0-9_]+$/, '');
+  }
+
+  const isAnon = raw.includes('<anonymous>');
+  const isRawId = /^r\d+$/.test(raw);
+  if (isAnon || isRawId) {
+    const prefix = (role === 'conductor' || role === 'calc' || raw.includes('calc')) ? 'calc' : 'effect';
+    if (cleanMod) return `${prefix} (${cleanMod})`;
+    if (line) return `${prefix} (line ${line})`;
+    return prefix;
+  }
+
+  let s = cleanName(raw);
+  s = s.replace(/^(reactive\.effect|reactive\.calc)\s*/, '');
+  s = s.replace(/^\.clientdata_output_/, '').replace(/^\.clientdata_/, '').replace(/_hidden$/, '');
+  s = s.replace(/^[.#$]/, '');
+
+  const colonParts = s.split(':');
+  if (colonParts.length === 2 && colonParts[0] && colonParts[1]) {
+    const prefixMod = colonParts[0].trim();
+    const name = colonParts[1].trim();
+    const displayMod = cleanMod || prefixMod;
+    return displayMod ? `${name} (${displayMod})` : name;
+  }
+
+  s = s.trim();
+  if (cleanMod && !s.endsWith(`(${cleanMod})`)) {
+    return `${s} (${cleanMod})`;
+  }
+  return s || raw;
 }
 
 function formatHumanValue(val: any) {
@@ -268,6 +291,7 @@ function formatHumanValue(val: any) {
   return String(val);
 }
 
+// Maps a server-built wave to a burst.
 function waveToBurst(w: any, idx: any) {
   const inputs: any[] = [];
   if (w.trigger_node_id) {
@@ -327,7 +351,9 @@ function waveToBurst(w: any, idx: any) {
 }
 
 function buildActionWaves() {
-  if (reactlogData.action_waves && reactlogData.action_waves.length > 0) {
+  const events = reactlogData.events || reactlogData.log || [];
+  const hasFlushBoundaries = events.some((ev: any) => (ev.action || ev.event) === 'queueEmpty');
+  if (!hasFlushBoundaries && reactlogData.action_waves && reactlogData.action_waves.length > 0) {
     const rawWaves = reactlogData.action_waves;
     const coalesced: any[] = [];
     for (let i = 0; i < rawWaves.length; i++) {
@@ -346,24 +372,33 @@ function buildActionWaves() {
   }
   actionWaves = [];
   allBursts = [];
-  const events = reactlogData.events || reactlogData.log || [];
+  const nodeMap: Map<any, any> = new Map();
   const lastKnownValues: Map<any, any> = new Map();
+  const waveInitialValues: Map<any, any> = new Map();
   (reactlogData.nodes || []).forEach((n: any) => {
+    if (n.id) nodeMap.set(n.id, n);
     if (n.value !== undefined && n.value !== null) {
       lastKnownValues.set(nodeDisplayName(n), n.value);
     }
   });
   let initWave: any = null;
   let curWave: any = null;
+  let execDepth = 0;
+  // Recorded ids (`r3`) carry no name; use friendlyNodeName instead.
+  const waveNodeName = (nId: any) => /<anonymous>/.test(nodeMap.get(nId)?.label || '') ? friendlyNodeName(nId) : nodeDisplayName(nId);
 
   events.forEach((ev: any, idx: any) => {
     const evAction = ev.action || ev.event || '';
+    if (evAction === 'enter') execDepth++;
+    if (evAction === 'exit') execDepth = Math.max(0, execDepth - 1);
     const isInit = ev.phase === 'init' || ['define', 'analysisInit', 'createContext', 'sessionInit'].includes(evAction);
     const t = ev.time_sec !== undefined ? ev.time_sec : (ev.time !== undefined ? ev.time : 0);
 
-    if (isInit) {
+    if (isInit && !hasFlushBoundaries) {
       if (ev.value !== undefined && ev.value !== null) {
-        const raw = ev.node_id || ev.id || ev.node_label || ev.label || '';
+        const initId = ev.node_id || ev.id || '';
+        // Recorded inputs are named by label, as in the interaction branch below.
+        const raw = ((ev.type === 'input' || ev.node_type === 'input') && !initId.startsWith('input:') ? (ev.node_label || ev.label) : '') || initId || ev.node_label || ev.label || '';
         const name = nodeDisplayName(raw);
         if (name) lastKnownValues.set(name, ev.value);
       }
@@ -391,35 +426,61 @@ function buildActionWaves() {
       initWave.endStep = idx;
       initWave.endTime = t;
       initWave.totalEvents++;
+      const initType = ev.type || ev.node_type;
+      if (evAction === 'enter' && (initType === 'calc' || initType === 'output')) {
+        const nId = ev.node_id || ev.id || '';
+        const name = waveNodeName(nId);
+        const ran = initType === 'calc' ? initWave.calcs : initWave.outputs;
+        if (name && !ran.some((item: any) => item.name === name)) {
+          ran.push({ name, nodeId: nId, step: idx, details: ev.details });
+        }
+      }
     } else {
-      if (evAction === 'userMark' && ev.mark_wave) {
-        const markIdx = actionWaves.length + 1;
-        actionWaves.push(waveToBurst({ ...ev.mark_wave, action_id: `mark-${markIdx}`, index: markIdx }, markIdx));
-        curWave = null;
+      if (evAction === 'userMark') {
+        if (!hasFlushBoundaries && ev.mark_wave) {
+          const markIdx = actionWaves.length + 1;
+          actionWaves.push(waveToBurst({ ...ev.mark_wave, action_id: `mark-${markIdx}`, index: markIdx }, markIdx));
+          curWave = null;
+        }
         return;
       }
       const nId = ev.node_id || ev.id || '';
-      const isInputNode = ev.type === 'input' || ev.node_type === 'input';
+      const nNode = nodeMap.get(nId);
+      // Recorded (live) reactlogs identify inputs by type, not an `input:` id.
+      const isInputNode = ev.type === 'input' || ev.node_type === 'input' || (nNode && (nNode.type === 'input' || nNode.role === 'source'));
       const isUserAction = evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || (isInputNode && evAction === 'valueChange');
-      const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0;
-      if (!curWave || (t - curWave.startTime) > 0.25 || isNewTrigger) {
+      const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label || (nNode && nNode.label)) : '') || nId || ev.details || (nNode && nNode.label) || '';
+      const inputName = nodeDisplayName(raw);
+      const isSameInput = Boolean(curWave && inputName && curWave.inputs.some((item: any) => item.name === inputName));
+      const isNewTrigger = isUserAction && curWave && curWave.inputs.length > 0 && !isSameInput;
+      const isExecution = evAction === 'enter' || evAction === 'recalculate' || evAction === 'output' || evAction === 'render';
+      const isInvalidation = evAction === 'invalidate' || evAction === 'invalidateStart' || evAction === 'propagate' || ev.semantic_state === 'invalidated';
+
+      if (!hasFlushBoundaries && !curWave && !isUserAction && !isExecution) {
+        return;
+      }
+
+      if (!curWave || (!hasFlushBoundaries && ((t - curWave.startTime) > 0.25 || isNewTrigger))) {
         curWave = {
           id: `burst-${actionWaves.length + 1}`,
           index: actionWaves.length + 1,
-          isInit: false,
+          isInit: isInit,
+          recorded: hasFlushBoundaries,
+          completed: false,
           startTime: t,
           endTime: t,
           time: t,
           startStep: idx,
           endStep: idx,
-          triggerLabel: '',
-          shortLabel: '',
-          humanAction: '',
+          triggerLabel: isInit ? 'Init' : '',
+          shortLabel: isInit ? 'Init' : '',
+          humanAction: isInit ? 'Init' : '',
           triggerNodeId: '',
           triggerValue: ev.value,
           inputs: [],
           calcs: [],
           outputs: [],
+          invalidatedNodes: new Set(),
           totalEvents: 0,
           userChanges: 0,
           details: ev.details || evAction,
@@ -430,53 +491,74 @@ function buildActionWaves() {
       curWave.endTime = t;
       curWave.totalEvents++;
 
-      if (evAction === 'inputChange' || evAction === 'userClick' || evAction === 'userAction' || nId.startsWith('input:') || isInputNode) {
-        const raw = (isInputNode && !nId.startsWith('input:') ? (ev.node_label || ev.label) : '') || nId || ev.details || '';
-        if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {
-          const name = nodeDisplayName(raw) || 'input';
-          const prevVal = lastKnownValues.get(name);
+      if (evAction === 'queueEmpty') {
+        if (execDepth === 0) {
+          curWave.completed = true;
+          curWave = null;
+        }
+        return;
+      }
+
+      if (isUserAction || nId.startsWith('input:') || isInputNode) {
+        if (isInit) {
+          if (inputName && ev.value !== undefined && ev.value !== null) lastKnownValues.set(inputName, ev.value);
+        } else if (!raw.includes('clientdata') && !raw.includes('pixelratio') && !raw.includes('_hidden')) {
+          const name = inputName || 'input';
+          if (!waveInitialValues.has(curWave)) {
+            waveInitialValues.set(curWave, new Map(lastKnownValues));
+          }
+          const waveBaseValues = waveInitialValues.get(curWave);
+          const prevVal = waveBaseValues.get(name);
           const newVal = ev.value !== undefined ? ev.value : null;
           if (newVal !== null) lastKnownValues.set(name, newVal);
 
-          if (!curWave.triggerLabel) {
-            curWave.shortLabel = name;
-            if (evAction === 'userClick') {
-              curWave.humanAction = `Click: ${name}`;
-              curWave.triggerLabel = name;
-              curWave.shortLabel = `Click: ${name}`;
-            } else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {
-              curWave.humanAction = `${name}: ${formatHumanValue(prevVal)} → ${formatHumanValue(newVal)}`;
-              curWave.triggerLabel = name;
-            } else if (newVal !== null) {
-              curWave.humanAction = `${name}: ${formatHumanValue(newVal)}`;
-              curWave.triggerLabel = name;
-            } else {
-              curWave.humanAction = `${name} changed`;
-              curWave.triggerLabel = name;
-            }
-            curWave.triggerNodeId = nId;
-            curWave.triggerValue = ev.value;
+          curWave.shortLabel = name;
+          curWave.triggerLabel = name;
+          curWave.triggerNodeId = nId;
+          curWave.triggerValue = newVal;
+          if (evAction === 'userClick') {
+            curWave.humanAction = `Click: ${name}`;
+            curWave.shortLabel = `Click: ${name}`;
+          } else if (prevVal !== undefined && newVal !== null && prevVal !== newVal) {
+            curWave.humanAction = `${name}: ${formatHumanValue(prevVal)} → ${formatHumanValue(newVal)}`;
+          } else if (newVal !== null) {
+            curWave.humanAction = `${name}: ${formatHumanValue(newVal)}`;
+          } else {
+            curWave.humanAction = `${name} changed`;
           }
-          if (!curWave.inputs.some((item: any) => item.name === name)) {
+
+          const existingInput = curWave.inputs.find((item: any) => item.name === name);
+          if (!existingInput) {
             curWave.inputs.push({ name, nodeId: nId, step: idx, isClick: evAction === 'userClick' || evAction === 'userAction', details: ev.details, value: ev.value });
             curWave.userChanges++;
+          } else {
+            existingInput.value = newVal;
           }
         }
-      } else if (nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || ['calc', 'effect'].includes(nodeIndex.get(nId)?.type) || (ev.node_type === 'conductor'))) {
-        const name = nodeDisplayName(nId);
+      } else if (isExecution && nId && (nId.startsWith('calc:') || nId.startsWith('effect:') || (ev.type === 'calc') || (ev.node_type === 'conductor') || (nNode && (nNode.type === 'calc' || nNode.role === 'conductor')))) {
+        const name = waveNodeName(nId);
         if (name && !curWave.calcs.some((item: any) => item.name === name)) {
           curWave.calcs.push({ name, nodeId: nId, step: idx, details: ev.details });
         }
-      } else if (nId && (nId.startsWith('output:') || (ev.type === 'output') || nodeIndex.get(nId)?.type === 'output' || (ev.node_type === 'observer'))) {
-        const name = nodeDisplayName(nId);
+      } else if (isExecution && nId && (nId.startsWith('output:') || (ev.type === 'output') || (ev.node_type === 'observer') || (nNode && (nNode.type === 'output' || nNode.role === 'observer')))) {
+        const name = waveNodeName(nId);
         if (name && !curWave.outputs.some((item: any) => item.name === name)) {
           curWave.outputs.push({ name, nodeId: nId, step: idx, details: ev.details });
+        }
+      } else if (isInvalidation) {
+        if (!curWave.invalidatedNodes) curWave.invalidatedNodes = new Set();
+        if (nId) curWave.invalidatedNodes.add(nId);
+        if (Array.isArray(ev.invalidated_node_ids)) {
+          ev.invalidated_node_ids.forEach((id: any) => { if (id) curWave.invalidatedNodes.add(id); });
         }
       }
     }
   });
 
-  actionWaves.forEach((w: any) => {
+  actionWaves = filterItems(actionWaves, (w: any) => w.completed || w.inputs.length > 0 || w.calcs.length > 0 || w.outputs.length > 0 || w.isMark || (!hasFlushBoundaries && w.invalidatedNodes && w.invalidatedNodes.size > 0));
+  actionWaves.forEach((w: any, i: any) => {
+    w.index = i + 1;
+    w.id = `burst-${i + 1}`;
     if (!w.triggerLabel) {
       if (w.inputs.length > 0) {
         w.humanAction = `${w.inputs[0].name} changed`;
@@ -499,6 +581,7 @@ function buildActionWaves() {
   });
 
   allBursts = (initWave && initWave.totalEvents > 0 ? [initWave] : []).concat(actionWaves);
+  actionWaves = filterItems(allBursts, (w: any) => !w.isInit && !w.isMark);
   if (allBursts.length === 0) {
     allBursts = [{
       id: 'burst-init',
@@ -532,13 +615,13 @@ function buildActionWaves() {
 function getCurrentStepTime() {
   const events = reactlogData.events || reactlogData.log || [];
   const ev = events[currentStep];
-  return ev ? (ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0)) : 0;
+  return ev ? (ev.time_sec ?? ev.time ?? 0) : 0;
 }
 
 function initTraceTimeline() {
   const events = reactlogData.events || reactlogData.log || [];
   const video = (document.getElementById('session-video') as any);
-  maxSessionDuration = events.reduce((max: any, ev: any) => Math.max(max, ev.effective_time ?? ev.time_sec ?? ev.time ?? 0), Number.isFinite(video?.duration) ? video.duration : 1);
+  maxSessionDuration = events.reduce((max: any, ev: any) => Math.max(max, ev.time_sec ?? ev.time ?? 0), Number.isFinite(video?.duration) ? video.duration : 1);
   (document.getElementById('trace-total-time') as any).textContent = formatTime(maxSessionDuration);
   const markers = (document.getElementById('trace-markers') as any);
   markers.replaceChildren();
@@ -596,6 +679,8 @@ function initTraceTimeline() {
     if ((track._dragging || track.hasPointerCapture(event.pointerId)) && event.buttons === 1) {
       (document.getElementById('timeline-tooltip') as any).hidden = true;
       seekPointer(event);
+    } else if (event.buttons === 0) {
+      track._dragging = false;
     }
   };
   track.onpointerup = (event: any) => {
@@ -606,22 +691,266 @@ function initTraceTimeline() {
   updateTraceTimelineScrubber(getCurrentStepTime());
 }
 
+let secondaryTimelineMode: any = null;
+let secondaryTimelineTarget: any = null;
+
+function openSecondaryTimelineForFlush(wave?: any) {
+  if (!wave) {
+    wave = allBursts.slice().reverse().find((w: any) => currentStep >= w.startStep) || allBursts[0];
+  }
+  if (!wave) return;
+  secondaryTimelineMode = 'flush';
+  secondaryTimelineTarget = wave;
+  renderSecondaryTimeline();
+}
+
+function openSecondaryTimelineForNode(nodeId: any) {
+  openSecondaryTimelineForFlush();
+}
+
+function toggleSecondaryTimelineForFlush(wave: any) {
+  const bar = (document.getElementById('secondary-timeline-bar') as any);
+  if (secondaryTimelineMode === 'flush' && bar && !bar.hidden) {
+    closeSecondaryTimeline();
+  } else {
+    openSecondaryTimelineForFlush(wave);
+  }
+}
+
+function closeSecondaryTimeline() {
+  secondaryTimelineMode = null;
+  secondaryTimelineTarget = null;
+  const bar = (document.getElementById('secondary-timeline-bar') as any);
+  if (bar) bar.hidden = true;
+}
+
+function renderSecondaryTimeline() {
+  const bar = (document.getElementById('secondary-timeline-bar') as any);
+  if (!bar) return;
+  if (!secondaryTimelineMode) {
+    bar.hidden = true;
+    return;
+  }
+  bar.hidden = false;
+  const tag = (document.getElementById('secondary-timeline-tag') as any);
+  const title = (document.getElementById('secondary-timeline-title') as any);
+  const meta = (document.getElementById('secondary-timeline-meta') as any);
+  const chips = (document.getElementById('secondary-timeline-chips') as any);
+  chips.replaceChildren();
+
+  const events = reactlogData.events || reactlogData.log || [];
+  const wave = secondaryTimelineTarget;
+  if (!wave) return;
+
+  const waveIndex = allBursts.indexOf(wave);
+  const flushNum = waveIndex >= 0 ? waveIndex + 1 : (wave.index || 1);
+  tag.textContent = `Activity ${flushNum} of ${allBursts.length}`;
+  tag.className = 'secondary-timeline-tag tag-flush';
+
+  const waveStart = wave.startStep !== undefined ? wave.startStep : 0;
+  const waveEnd = wave.endStep !== undefined ? wave.endStep : (events.length - 1);
+  const flushTitle = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : `Activity ${flushNum}`);
+  title.textContent = flushTitle;
+
+  const invCount = wave.invalidatedNodes ? wave.invalidatedNodes.size : 0;
+  const calcCount = wave.calcs ? wave.calcs.length : 0;
+  const outCount = wave.outputs ? wave.outputs.length : 0;
+  const stepCount = Math.max(1, waveEnd - waveStart + 1);
+  meta.textContent = `${stepCount} step${stepCount === 1 ? '' : 's'} · ${invCount} invalidated · ${calcCount} calcs · ${outCount} outputs`;
+
+  const stages: any[] = [];
+
+  let triggerStep = waveStart;
+  let triggerLabel = wave.humanAction || wave.triggerLabel || (wave.isInit ? 'Initial render' : 'Trigger');
+  for (let s = waveStart; s <= waveEnd && s < events.length; s++) {
+    const ev = events[s]!;
+    const act = ev.action || ev.event || '';
+    if (ev.phase === 'interaction' || act === 'inputChange' || act === 'userClick' || act === 'userAction' || act === 'valueChange') {
+      triggerStep = s;
+      if (!wave.humanAction && (ev.node_id || ev.id || ev.node_label || ev.label)) {
+        triggerLabel = friendlyNodeName(ev.node_id || ev.id || ev.node_label || ev.label);
+      }
+      break;
+    }
+  }
+  stages.push({
+    step: triggerStep,
+    kind: 'Trigger',
+    label: triggerLabel,
+    fullName: triggerLabel,
+    icon: ICONS.zap,
+    cssClass: 'pill-trigger'
+  });
+
+  if (invCount > 0) {
+    let invStep = waveStart;
+    for (let s = waveStart; s <= waveEnd && s < events.length; s++) {
+      const ev = events[s]!;
+      const act = ev.action || ev.event || '';
+      if (act === 'invalidate' || act === 'invalidateStart' || act === 'propagate' || ev.semantic_state === 'invalidated') {
+        invStep = s;
+        break;
+      }
+    }
+    const invArray = [...new Set(filterItems(Array.from(wave.invalidatedNodes).map(friendlyNodeName), Boolean))];
+    let invLabel = '';
+    if (invArray.length === 1) {
+      invLabel = invArray[0];
+    } else if (invArray.length <= 2) {
+      invLabel = invArray.join(', ');
+    } else {
+      invLabel = `${invArray.length} nodes`;
+    }
+    stages.push({
+      step: invStep,
+      kind: 'Invalidated',
+      label: invLabel,
+      fullName: invArray.join(', '),
+      icon: ICONS.warn,
+      cssClass: 'pill-invalidation'
+    });
+  }
+
+  if (calcCount > 0) {
+    let calcStep = wave.recorded ? null : waveStart;
+    for (let s = waveStart; s <= waveEnd && s < events.length; s++) {
+      const ev = events[s]!;
+      const act = ev.action || ev.event || '';
+      if (act === 'exit' && (ev.type === 'calc' || ev.node_type === 'calc' || ev.node_type === 'conductor')) {
+        calcStep = s;
+      }
+    }
+    const calcArray = [...new Set(filterItems(wave.calcs.map((c: any) => friendlyNodeName(c.nodeId || c.name || c.id)), Boolean))];
+    let calcLabel = '';
+    if (calcArray.length === 1) {
+      calcLabel = calcArray[0];
+    } else if (calcArray.length <= 2) {
+      calcLabel = calcArray.join(', ');
+    } else {
+      calcLabel = `${calcArray.length} calcs`;
+    }
+    if (calcStep !== null) stages.push({
+      step: calcStep,
+      kind: 'Calculated',
+      label: calcLabel,
+      fullName: calcArray.join(', '),
+      icon: ICONS.gear,
+      cssClass: 'pill-calc'
+    });
+  }
+
+  if (outCount > 0) {
+    let outStep = wave.recorded ? null : waveStart;
+    for (let s = waveStart; s <= waveEnd && s < events.length; s++) {
+      const ev = events[s]!;
+      const act = ev.action || ev.event || '';
+      if ((act === 'output' || act === 'render' || act === 'outputUpdated') || (act === 'exit' && (ev.type === 'output' || ev.node_type === 'output' || ev.node_type === 'observer'))) {
+        outStep = s;
+      }
+    }
+    const outArray = [...new Set(filterItems(wave.outputs.map((o: any) => friendlyNodeName(o.nodeId || o.name || o.id)), Boolean))];
+    let outLabel = '';
+    if (outArray.length === 1) {
+      outLabel = outArray[0];
+    } else if (outArray.length <= 2) {
+      outLabel = outArray.join(', ');
+    } else {
+      outLabel = `${outArray.length} outputs`;
+    }
+    if (outStep !== null) stages.push({
+      step: outStep,
+      kind: 'Rendered',
+      label: outLabel,
+      fullName: outArray.join(', '),
+      icon: ICONS.eye,
+      cssClass: 'pill-output'
+    });
+  }
+
+  if (!wave.recorded || wave.completed) {
+    stages.push({
+      step: waveEnd,
+      kind: 'Idle',
+      label: 'Idle',
+      fullName: 'Update complete / idle',
+      icon: ICONS.check,
+      cssClass: 'pill-idle'
+    });
+  }
+
+  stages.sort((a: any, b: any) => a.step - b.step);
+
+  let activeIndex = 0;
+  stages.forEach((stg: any, i: any) => {
+    if (currentStep >= stg.step) {
+      activeIndex = i;
+    }
+  });
+
+  stages.forEach((stg: any, i: any) => {
+    if (i > 0) {
+      const arrow = document.createElement('span');
+      arrow.className = 'secondary-stage-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.innerHTML = ICONS.arrowRight;
+      chips.appendChild(arrow);
+    }
+
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'secondary-stage-pill ' + stg.cssClass + (i === activeIndex ? ' is-active' : '');
+    pill.dataset.step = stg.step;
+    pill.innerHTML = `<span class="stage-icon">${stg.icon}</span><span class="stage-kind">${escapeHTML(stg.kind)}:</span><span class="stage-name" title="${escapeHTML(stg.fullName)}">${escapeHTML(stg.label)}</span>`;
+    pill.onclick = (e: any) => {
+      e.stopPropagation();
+      seekTo(stg.step);
+    };
+    chips.appendChild(pill);
+  });
+}
+
 function updateTraceTimelineScrubber(curSec: any) {
   currentTimelineTime = Number(curSec) || 0;
   (document.getElementById('trace-current-time') as any).textContent = formatTime(curSec);
   const events = reactlogData.events || reactlogData.log || [];
   const curWave = allBursts.slice().reverse().find((w: any) => currentStep >= w.startStep) || allBursts[0];
   activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
-  const flushText = curWave
+  let flushText = !events.length
+    ? (reactlogData.summary || 'No recorded activity')
+    : curWave
     ? (curWave.isInit ? 'Initial render' : (curWave.humanAction || curWave.triggerLabel || 'Initial render'))
     : 'No recorded activity';
   const ev = events[currentStep];
+  if (curWave?.recorded && !curWave.completed) flushText += ' (in progress)';
+  if ((ev?.action || ev?.event) === 'userMark') flushText = `Mark: ${ev!.node_label || ev!.label || ev!.details || ''}`;
   const statusText = ev ? (isIdleEvent(ev) ? 'Idle' : ['mark', 'userMark'].includes(ev.action || ev.event || '') ? `User mark${ev.details ? ' · ' + nodeDisplayName(String(ev.details)) : ''}` : (formatEventDetails(ev) || ev.action || ev.event || '')) : 'No events';
   const range = (document.getElementById('scrubber-range') as any);
   const percent = 100 * currentStep / Math.max(1, events.length - 1);
   range.style.setProperty('--progress', `${percent}%`);
   (document.getElementById('timeline-playhead') as any).style.left = `calc(${percent}% - ${3 * percent / 100}px)`;
   range.setAttribute('aria-valuetext', `Step ${currentStep} of ${Math.max(0, events.length - 1)}. ${flushText}. ${statusText}`);
+
+  if (secondaryTimelineMode === 'flush') {
+    if (curWave && curWave !== secondaryTimelineTarget) {
+      secondaryTimelineTarget = curWave;
+      renderSecondaryTimeline();
+    } else {
+      const pills = Array.from(document.querySelectorAll('.secondary-stage-pill'));
+      let activePill: any = null;
+      pills.forEach((p: any) => {
+        const s = Number(p.dataset.step);
+        p.classList.remove('is-active');
+        if (currentStep >= s) {
+          activePill = p;
+        }
+      });
+      if (activePill) {
+        activePill.classList.add('is-active');
+      } else if (pills.length > 0) {
+        pills[0]!.classList.add('is-active');
+      }
+    }
+  }
 }
 
 function nextAction() {
@@ -660,7 +989,7 @@ function getCurrentFlushIndex() {
 function getActiveFlushNodeIds(wave: any) {
   if (!wave) return new Set();
   const set: Set<any> = new Set();
-  if (wave.isInit) {
+  if (wave.isInit && !wave.recorded) {
     (reactlogData.nodes || []).forEach((n: any) => {
       set.add(n.id);
       set.add(cleanName(n.id));
@@ -848,7 +1177,7 @@ function findChangedNodes() {
   if (boundary < 0) return null;
   const values: Map<any, any> = new Map(), changed: Set<any> = new Set();
   events.forEach((ev: any, index: any) => {
-    const action = ev!.action || ev!.event;
+    const action = ev.action || ev.event;
     const id = ev.node_id || ev.reactId || ev.id;
     if (!id || ev.provenance === 'inferred') return;
     if (ev.provenance === 'observed' && (action === 'enter' || ev.event === 'outputUpdated')) {
@@ -893,7 +1222,7 @@ function updateFlushUI() {
 
   const cardTitle = (document.getElementById('flush-card-title') as any);
   if (cardTitle) {
-    cardTitle.textContent = curWave.isInit ? 'Activity 1: Initial render' : `Activity ${curIdx + 1}: ${curWave.shortLabel || 'Action'}`;
+    cardTitle.textContent = `Activity ${curIdx + 1}: ${curWave.isInit ? 'Initialization' : curWave.shortLabel || 'Action'}`;
   }
   const cardTime = (document.getElementById('flush-card-time') as any);
   if (cardTime) {
@@ -948,7 +1277,7 @@ function getScopedNodes() {
     if (lineage ? !lineage.has(n.id) : ((!activeRoles.has(roleKey) || !activeRoles.has(n.role)) || (searchQuery && !Number.isFinite(nodeSearchScore(n, searchQuery))))) return false;
     if (hideClientData && isClientDataNode(n)) return false;
     if (changedNodesOnly && changedNodeIds && !changedNodeIds.has(n.id)) return false;
-    if (active && active.size && !active.has(n.id) && !active.has(cleanName(n.id))) return false;
+    if (active && !active.has(n.id) && !active.has(cleanName(n.id))) return false;
     if (selectedStageFilter && wave) {
       const members = selectedStageFilter === 'invalidated' ? wave.invalidatedNodes || new Set()
         : new Set((selectedStageFilter === 'calcs' ? wave.calcs || [] : wave.outputs || []).map((x: any) => x.nodeId || x.name));
@@ -996,7 +1325,6 @@ function init() {
     Object.assign(reactlogData, normalizeReactlogData(reactlogData));
   }
   initTheme();
-  prepareEventTimings();
   buildGraphIndices();
   buildActionWaves();
   changedNodeIds = findChangedNodes();
@@ -1044,8 +1372,14 @@ function graphStateAtStep() {
     const ev = events[i]!, action = ev.action || ev.event;
     const id = ev.node_id || ev.reactId || ev.id;
     const state = reactiveEventState(ev);
-    // Output observers exit normally after handling a renderer error.
-    if (id && state && !(action === 'exit' && state === 'ready' && states.get(id) === 'error')) states.set(id, state);
+    if (state) {
+      const targets = Array.isArray(ev.invalidated_node_ids) ? ev.invalidated_node_ids : [id];
+      for (const target of targets) {
+        // Output observers exit normally after handling a renderer error.
+        if (action === 'exit' && state === 'ready' && states.get(target) === 'error') continue;
+        if (target) states.set(target, state);
+      }
+    }
     if (action === 'freeze') frozen.add(id);
     if (action === 'thaw') frozen.delete(id);
     const from = ev.edge_from || ev.dependsOn || ev.depOnReactId;
@@ -1283,7 +1617,7 @@ function renderEventList() {
     }
 
     const provBadge = document.createElement('span');
-    const prov = ev.provenance === 'observed' ? 'observed' : 'inferred';
+    const prov = ev.provenance === 'inferred' ? 'inferred' : 'observed';
     provBadge.className = `event-badge provenance-${prov}`;
     provBadge.innerHTML = `${prov === 'observed' ? ICONS.eye : ICONS.zap} ${prov.toUpperCase()}`;
     badgesWrap.appendChild(provBadge);
@@ -1327,6 +1661,8 @@ function explainWhyNodeRan(nodeId: any, stepIdx: any) {
   const cleanTargetName = cleanName(targetLabel);
   const cleanTargetId = cleanName(targetNode.name || targetNode.id);
   const burstEventForNode = burstEvents.find((e: any) => {
+    // Dropping a dependency (e.g. an isolated read being invalidated) is not a run.
+    if (e.event === 'dependsOnRemove') return false;
     const eid = e.node_id || e.id || '';
     return eid === nodeId || cleanName(eid) === cleanTargetId || cleanName(eid) === cleanTargetName || (e.node_label && (cleanName(e.node_label) === cleanTargetName || cleanName(e.node_label) === cleanTargetId));
   });
@@ -1405,7 +1741,7 @@ function explainWhyNodeRan(nodeId: any, stepIdx: any) {
         upstreamNote = `Upstream dependencies invalidated: ${invParents.map((p: any) => escapeHTML(nodeDisplayName(p))).join(', ')}`;
       }
     }
-    let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${questionVerb} during ${escapeHTML(actionName)}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${escapeHTML(targetLabel)}</strong> was observed or inferred during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${upstreamNote}</div></div>`;
+    let narrative = `<div class="did-not-run-banner" style="background:color-mix(in srgb, var(--surface-3) 80%, transparent);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;margin-bottom:0.4rem"><div style="font:700 0.72rem var(--sans);color:var(--text)">Did not ${questionVerb} during ${escapeHTML(actionName)}</div><div style="font:500 0.68rem var(--sans);color:var(--text-muted);margin-top:0.2rem">No execution of <strong>${escapeHTML(targetLabel)}</strong> was recorded during this action.</div><div style="font:500 0.64rem var(--mono);color:var(--text-dim);margin-top:0.2rem">${upstreamNote}</div></div>`;
     if (lastExec) {
       const lastTime = lastExec.time_sec !== undefined ? lastExec.time_sec : (lastExec.time || 0);
       narrative += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.3rem"><span style="font:500 0.66rem var(--mono);color:var(--text-muted)">Last ran at ${escapeHTML(formatTime(lastTime))}</span><button type="button" class="btn mini" data-seek-step="${lastExec.step}">Jump to run</button></div>`;
@@ -1691,7 +2027,6 @@ function toggleSourceDrawer() {
 function selectNode(nodeId: any) {
   selectedNodeId = nodeId;
   focusedNodeId = nodeId;
-  showSidebarPanel('timeline');
   renderInspector();
   renderGraph();
   updateSourceHighlight();
@@ -1705,6 +2040,9 @@ function clearNodeSelection() {
     selectedSearchNodeId = null;
     searchQuery = '';
     (document.getElementById('search-input') as any).value = '';
+  }
+  if (secondaryTimelineMode === 'node') {
+    closeSecondaryTimeline();
   }
   renderInspector();
   renderGraph();
@@ -2011,7 +2349,7 @@ function getNodeExecutionCounts() {
   events.forEach((ev: any) => {
     const nid = ev.node_id || ev.id;
     if (!nid) return;
-    if (ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {
+    if (ev.event === 'enter' || ev.event === 'ordered' || ev.event === 'outputUpdated' || ev.event === 'inputChange' || ev.event === 'assumeValue') {
       counts.set(nid, (counts.get(nid) || 0) + 1);
     }
   });
@@ -2098,7 +2436,12 @@ function renderGraph(previousStep = currentStep) {
   const ranks = dependencyRanks(nodes, edges);
   const colWidth = 350, rowHeight = 92, nodeWidth = 280, nodeHeight = 64;
   const pos: Record<string, any> = {};
-  // Module bands keep boxes disjoint while dependency rank sets horizontal position.
+  const totalNodesByModule: Map<any, any> = new Map();
+  (reactlogData.nodes || []).forEach((n: any) => {
+    const mKey = n.module || '';
+    totalNodesByModule.set(mKey, (totalNodesByModule.get(mKey) || 0) + 1);
+  });
+
   const bands: Map<any, any> = new Map();
   nodes.forEach((n: any) => { const key = n.module || ''; if (!bands.has(key)) bands.set(key, []); bands.get(key).push(n); });
   const hasAppBand = bands.has('');
@@ -2156,6 +2499,10 @@ function renderGraph(previousStep = currentStep) {
         box.onkeydown = (e: any) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); toggleModule(name); } };
       }
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const totalModNodes = totalNodesByModule.get(name) || members.length;
+      const countText = members.length < totalModNodes
+        ? `${members.length}/${totalModNodes} nodes`
+        : `${members.length} node${members.length === 1 ? '' : 's'}`;
       rect.setAttribute('x', String(left));
       rect.setAttribute('y', String(bandTop - 28));
       rect.setAttribute('width', String(Math.max(320, right - left)));
@@ -2183,7 +2530,7 @@ function renderGraph(previousStep = currentStep) {
         label.setAttribute('y', String(bandTop - 8));
         label.setAttribute('fill', String(isLight ? '#315575' : '#a4c7e7'));
         label.setAttribute('font-size', '12');
-        label.innerHTML = nodeLabelHTML({ label: name, module: name }, true) + escapeHTML(` · ${members.length} nodes · click to collapse`);
+        label.innerHTML = nodeLabelHTML({ label: name, module: name }, true) + escapeHTML(` · ${countText} · click to collapse`);
         headerBtn.appendChild(label);
 
         const textWidth = (label.getComputedTextLength && label.getComputedTextLength()) || (name.length * 8 + 190);
@@ -2231,7 +2578,7 @@ function renderGraph(previousStep = currentStep) {
         label.setAttribute('y', String(bandTop - 8));
         label.setAttribute('fill', String(isLight ? '#315575' : '#a4c7e7'));
         label.setAttribute('font-size', '12');
-        label.textContent = escapeHTML(`App · ${members.length} nodes`);
+        label.textContent = escapeHTML(`App · ${countText}`);
         box.appendChild(label);
       }
       svg.appendChild(box);
@@ -2257,9 +2604,11 @@ function renderGraph(previousStep = currentStep) {
     if (p1 && p2) {
       const fromMatch = representatives.get(activeEvent.edge_from || activeEvent.dependsOn);
       const toMatch = representatives.get(activeEvent.edge_to || activeEvent.node_id || activeEvent.id);
+      const isInvalidatedEdge = (activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart' || activeEvent.semantic_state === 'invalidated') &&
+        ((activeEvent.invalidated_node_ids && activeEvent.invalidated_node_ids.includes(e.to)) || activeEvent.node_id === e.to);
       const isEdgeActive = !e.inactive && ((fromMatch && toMatch)
         ? (fromMatch === e.from && toMatch === e.to)
-        : (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn' || activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart')));
+        : (isInvalidatedEdge || (activeEvent.node_id === e.to && (activeEvent.event === 'dependsOn' || activeEvent.event === 'propagate' || activeEvent.action === 'dependsOn'))));
 
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       const d = graphEdgePath(e, pos, nodeWidth, nodeHeight, edges);
@@ -2271,7 +2620,8 @@ function renderGraph(previousStep = currentStep) {
       path.setAttribute('data-from', String(e.from));
       path.setAttribute('data-to', String(e.to));
       path.setAttribute('data-active', String(isEdgeActive ? 'true' : 'false'));
-      path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (!e.related ? ' is-dimmed' : ''));
+      const isConnected = focusedNodeId && e.related;
+      path.setAttribute('class', 'graph-edge' + (e.isolated ? ' is-isolated' : '') + (e.inactive ? ' is-inactive' : '') + (isConnected ? ' is-connected' : '') + (!e.related ? ' is-dimmed' : ''));
       const edgeTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       const fromLabel = nodeDisplayName(e.from);
       const toLabel = nodeDisplayName(e.to);
@@ -2295,13 +2645,16 @@ function renderGraph(previousStep = currentStep) {
     const p = pos[n.id] || { x: 200, y: 200 };
     const isActive = activeNodeId === n.id || (n.members || []).includes(activeNodeId);
     const isSelected = selectedNodeId === n.id || (n.members || []).includes(selectedNodeId);
+    const isConnected = focusedNodeId && focusedNodes && (n.members || [n.id]).some((id: any) => focusedNodes.has(id)) && !isSelected;
     const isExecuted = (n.members || []).some((id: any) => executedInBurst.has(id)) || executedInBurst.has(n.id) || (n.id.startsWith('input:') && executedInBurst.has(n.id.replace('input:', '')));
+    const isInvalidated = (activeEvent.action === 'invalidate' || activeEvent.action === 'invalidateStart' || activeEvent.semantic_state === 'invalidated') &&
+      ((activeEvent.invalidated_node_ids && activeEvent.invalidated_node_ids.includes(n.id)) || activeNodeId === n.id);
     const kind = nodeKind(n);
     const isDimmed = focusedNodes && !(n.members || [n.id]).some((id: any) => focusedNodes.has(id));
     const isClientData = isClientDataNode(n);
 
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isClientData ? ' is-clientdata' : ''));
+    g.setAttribute('class', 'graph-node' + (isSelected ? ' is-selected' : '') + (isConnected ? ' is-connected' : '') + (isActive ? ' is-active' : '') + (isExecuted ? ' is-executed' : '') + (isDimmed ? ' is-dimmed' : '') + (isInvalidated ? ' is-invalidated' : '') + (isClientData ? ' is-clientdata' : ''));
     g.setAttribute('data-id', String(n.id));
     g.setAttribute('data-role', String(n.role));
     const state = replay.states.get(n.id) || 'ready';
@@ -2329,20 +2682,26 @@ function renderGraph(previousStep = currentStep) {
       e.stopPropagation();
       if (n.type === 'module') {
         toggleModule(n.module);
-        return;
+      } else {
+        const term = n.label || n.name || n.id;
+        const searchInput = (document.getElementById('search-input') as any);
+        if (searchInput) searchInput.value = term;
+        handleSearch(term);
+        const results = (document.getElementById('search-results') as any);
+        if (results) results.hidden = true;
+        openSecondaryTimelineForFlush();
       }
-      filterLineageForNode(n.id);
     };
     g.onkeydown = (e: any) => {
       if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault(); e.stopPropagation(); selectNode(n.id);
+        e.preventDefault(); e.stopPropagation();
+        if (n.type === 'module') toggleModule(n.module); else selectNode(n.id);
         document.querySelectorAll('.graph-node').forEach((el: any) => { if (el.dataset.id === n.id) el.focus(); });
       }
     };
     if (n.type === 'module') {
       g.setAttribute('aria-expanded', 'false');
       g.setAttribute('aria-label', `Expand module ${n.module}`);
-      g.onkeydown = (e: any) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); toggleModule(n.module); } };
     }
     g.onmouseenter = () => highlightDependencies(n.id);
     g.onmouseleave = () => resetHighlight();
@@ -2395,7 +2754,11 @@ function renderGraph(previousStep = currentStep) {
     subText.setAttribute('y', String(p.y + 14));
     subText.setAttribute('fill', String(state === 'frozen' ? '#e2e8f0' : '#1e293b'));
     subText.setAttribute('font-size', '12px');
-    subText.textContent = n.type === 'module' ? `${n.members.length} nodes · click to expand` : `${kind.label} · ${state}`;
+    const totalModNodes = n.module ? (totalNodesByModule.get(n.module) || n.members.length) : (n.members ? n.members.length : 0);
+    const modCountText = n.members && n.members.length < totalModNodes
+      ? `${n.members.length}/${totalModNodes} nodes`
+      : `${n.members ? n.members.length : 0} node${n.members && n.members.length === 1 ? '' : 's'}`;
+    subText.textContent = n.type === 'module' ? `${modCountText} · click to expand` : `${kind.label} · ${state}`;
     g.appendChild(subText);
 
     const execCount = execCounts.get(n.id) || 0;
@@ -2605,7 +2968,7 @@ function setupVideoSync() {
     const events = reactlogData.events || reactlogData.log || [];
     for (let i = 0; i < events.length; i++) {
       const ev = events[i]!;
-      const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
+      const t = ev.time_sec ?? ev.time ?? 0;
       if (t <= curSec) matchIdx = i;
     }
     if (matchIdx !== currentStep) {
@@ -2694,7 +3057,7 @@ function updateSourceHighlight() {
   const isError = isErrorEvent(ev);
   const eventNode = nodeIndex.get(ev?.node_id || ev?.reactId || ev?.id);
   const selected = nodeIndex.get(selectedNodeId);
-  const target = ev?.line ? ev : (isError ? eventNode : (selected?.line ? selected : eventNode));
+  const target = (isMark || isError) && ev?.line ? ev : (isError ? eventNode : (selected?.line ? selected : eventNode));
   const panel = (document.getElementById('source-panel') as any);
   panel.querySelector('.source-line.is-active')?.classList.remove('is-active', 'is-mark', 'is-error');
   if (!Number.isInteger(target?.line)) return;
@@ -2913,6 +3276,7 @@ function handleSearch(q: any, isTyping = true) {
           return;
         }
         filterLineageForNode(node.id);
+        openSecondaryTimelineForFlush();
       };
       results.appendChild(button);
     });
@@ -2926,6 +3290,9 @@ function resetGraphView() {
   selectedNodeId = null;
   focusedNodeId = null;
   selectedSearchNodeId = null;
+  if (secondaryTimelineMode === 'node') {
+    closeSecondaryTimeline();
+  }
   searchQuery = '';
   selectedStageFilter = null;
   hideClientData = false;
@@ -3244,7 +3611,7 @@ function loadReactlogObject(loadedData: any) {
   closeSearchChoices();
   activeRoles = new Set(['source', 'conductor', 'observer', 'effect', 'output']);
   hideClientData = true;
-  changedNodesOnly = true;
+  changedNodesOnly = false;
   eventListScope = null;
   init();
 }
@@ -3374,6 +3741,11 @@ document.addEventListener('keydown', (e: any) => {
       e.preventDefault();
       return;
     }
+    if (secondaryTimelineMode) {
+      closeSecondaryTimeline();
+      e.preventDefault();
+      return;
+    }
   }
 
   if ((e.shiftKey && e.key === 'ArrowLeft') || e.key === '[') {
@@ -3444,8 +3816,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 const reactlogExports = {
-  normalizeReactlogData,
-  waveToBurst,
   getActiveTheme,
   updateThemeButton,
   toggleTheme,
@@ -3456,13 +3826,19 @@ const reactlogExports = {
   getActiveLineageSet,
   syncSearchClearButton,
   filterLineageForNode,
-  prepareEventTimings,
   filterItems,
   cleanName,
+  friendlyNodeName,
   formatHumanValue,
+  waveToBurst,
   buildActionWaves,
   getCurrentStepTime,
   initTraceTimeline,
+  openSecondaryTimelineForFlush,
+  openSecondaryTimelineForNode,
+  toggleSecondaryTimelineForFlush,
+  closeSecondaryTimeline,
+  renderSecondaryTimeline,
   updateTraceTimelineScrubber,
   nextAction,
   prevAction,
@@ -3554,6 +3930,7 @@ const reactlogExports = {
   isFullscreen,
   updateFullscreenButton,
   toggleFullscreen,
+  normalizeReactlogData,
   loadReactlogObject,
   importReactlogJson,
   exportReactlogJson,
@@ -3577,8 +3954,6 @@ if (typeof window !== "undefined") {
 }
 
 export {
-  normalizeReactlogData,
-  waveToBurst,
   getActiveTheme,
   updateThemeButton,
   toggleTheme,
@@ -3589,13 +3964,19 @@ export {
   getActiveLineageSet,
   syncSearchClearButton,
   filterLineageForNode,
-  prepareEventTimings,
   filterItems,
   cleanName,
+  friendlyNodeName,
   formatHumanValue,
+  waveToBurst,
   buildActionWaves,
   getCurrentStepTime,
   initTraceTimeline,
+  openSecondaryTimelineForFlush,
+  openSecondaryTimelineForNode,
+  toggleSecondaryTimelineForFlush,
+  closeSecondaryTimeline,
+  renderSecondaryTimeline,
   updateTraceTimelineScrubber,
   nextAction,
   prevAction,
@@ -3687,6 +4068,7 @@ export {
   isFullscreen,
   updateFullscreenButton,
   toggleFullscreen,
+  normalizeReactlogData,
   loadReactlogObject,
   importReactlogJson,
   exportReactlogJson,
