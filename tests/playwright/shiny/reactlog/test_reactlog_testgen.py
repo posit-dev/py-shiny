@@ -43,6 +43,8 @@ def _run_pytest(test_file: Path, *args: str) -> None:
             "chromium",
             "-p",
             "no:cacheprovider",
+            "-o",
+            "asyncio_default_fixture_loop_scope=function",
             "-q",
             *args,
         ],
