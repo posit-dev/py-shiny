@@ -10,6 +10,7 @@ from typing import Any, Union, cast
 import htmltools
 import narwhals.stable.v1 as nw
 import numpy as np
+import orjson
 import pandas as pd
 import polars as pl
 import polars.testing as pl_testing
@@ -30,7 +31,7 @@ from shiny.render._data_frame_utils._tbl_data import (
     serialize_frame,
     subset_frame,
 )
-from shiny.render._data_frame_utils._types import CellPatch, IntoDataFrame
+from shiny.render._data_frame_utils._types import CellPatch, FrameJson, IntoDataFrame
 from shiny.session import Session, session_context
 from shiny.session._session import RenderedDeps
 from shiny.ui import HTML, TagChild, TagList, h1, span
@@ -52,6 +53,11 @@ class _MockSession:
 
 
 test_session = cast(Session, _MockSession())
+
+
+def decode_rows(frame_json: FrameJson) -> object:
+    """The rows of a `serialize_frame()` result, as the browser parses them."""
+    return orjson.loads(orjson.dumps(frame_json["data"]))
 
 
 class C:
@@ -321,7 +327,7 @@ def test_serialize_frame(df_f: IntoDataFrame):
 
     with session_context(test_session):
         res = serialize_frame(df_nw)
-    assert res == {
+    assert {**res, "data": decode_rows(res)} == {
         "columns": [
             "num",
             "chr",
@@ -392,6 +398,16 @@ def test_serialize_frame(df_f: IntoDataFrame):
     }
 
 
+def test_serialize_frame_rows_stay_encoded():
+    # Decoding the rows back into Python objects, only for the session to encode them
+    # again, was the memory peak of `serialize_frame()`
+    with session_context(test_session):
+        res = serialize_frame(pd.DataFrame({"a": [1, 2], "b": ["x", "y"]}))
+
+    assert isinstance(res["data"], orjson.Fragment)
+    assert orjson.dumps(res["data"]) == b'[[1,"x"],[2,"y"]]'
+
+
 def test_serialize_frame_numeric_column_names():
     # Regression test: numeric column names (e.g. `0`, `1`) previously raised in
     # serialize_frame because `data[col_name]` was interpreted as positional/row
@@ -403,7 +419,7 @@ def test_serialize_frame_numeric_column_names():
 
     assert res["columns"] == [0, 1]
     assert [hint["type"] for hint in res["typeHints"]] == ["string", "numeric"]
-    assert res["data"] == [["a", 1], ["b", 2], ["c", 3]]
+    assert decode_rows(res) == [["a", 1], ["b", 2], ["c", 3]]
 
 
 @pytest.mark.parametrize(
@@ -418,7 +434,7 @@ def test_serialize_frame_non_json_values_are_str(into_data: IntoDataFrame):
     with session_context(test_session):
         res = serialize_frame(into_data)
 
-    assert res["data"] == [["1.50"], ["2.25"]]
+    assert decode_rows(res) == [["1.50"], ["2.25"]]
 
 
 def test_serialize_frame_pandas_nullable_dtypes_are_json_scalars():
@@ -440,7 +456,7 @@ def test_serialize_frame_pandas_nullable_dtypes_are_json_scalars():
         "numeric",
         "boolean",
     ]
-    assert res["data"] == [[1, 1.5, True], ["<NA>", "<NA>", "<NA>"]]
+    assert decode_rows(res) == [[1, 1.5, True], ["<NA>", "<NA>", "<NA>"]]
 
 
 def test_serialize_frame_ui_after_non_ui_value_of_another_type():
@@ -453,7 +469,7 @@ def test_serialize_frame_ui_after_non_ui_value_of_another_type():
     with session_context(test_session):
         res = serialize_frame(df)
 
-    assert res["data"] == [
+    assert decode_rows(res) == [
         ["1"],
         ["<NA>"],
         [{"isShinyHtml": True, "obj": {"deps": [], "html": "<b>x</b>"}}],
@@ -564,7 +580,7 @@ def test_serialize_frame_empty_column_name(empty_col_index: int):
         res = serialize_frame(as_data_frame(df))
 
     assert res["columns"] == names
-    assert res["data"] == [[1, 3, 5], [2, 4, 6]]
+    assert decode_rows(res) == [[1, 3, 5], [2, 4, 6]]
 
 
 def test_subset_frame(df_f: IntoDataFrame):

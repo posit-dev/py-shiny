@@ -65,8 +65,12 @@ Serialization details (`serialize_frame`, `serialize_dtype`):
   `timedelta`, or `Decimal`, which go through the hook. So polars sends
   `"2000-01-02T00:00:00"` where pandas sends `"2000-01-02 00:00:00"`;
   `test_serialize_frame` pins both.
-- The rows are decoded back to Python (`orjson.loads`) because the session
-  re-encodes every message with stdlib `json.dumps` (`AppSession._send_message`).
+- The rows stay encoded: `FrameJson["data"]` is an `orjson.Fragment`, which the
+  session embeds in the outgoing message as it is (`encode_message()` in
+  `shiny/session/_session.py`). A `Fragment` is opaque, so server code that needs
+  the rows as Python objects has to round-trip it
+  (`orjson.loads(orjson.dumps(fragment))`, as the tests and the test-mode
+  snapshot do).
 - The client renders `CellHtml` with `Shiny.renderContentAsync` and
   `unbindAll`s on cleanup (`cell.tsx`). HTML columns have sorting disabled and
   are not editable.
@@ -83,10 +87,10 @@ Performance choices (benchmarked; keep them when editing):
   `boolean`) as Python scalars. `itertuples()`, behind `rows()`, yields numpy
   scalars for them, which orjson can't encode, so they used to be sent as
   strings (`test_serialize_frame_pandas_nullable_dtypes_are_json_scalars`).
-- `orjson.loads` briefly needs several times the payload size (about +530 MB
-  RSS for 1M rows x 10 floats), which makes it the memory peak of
-  `serialize_frame()`. The rows are deleted before it runs so they don't add to
-  that peak.
+- The encoded rows are never decoded on the server. `orjson.loads` briefly needs
+  several times the payload size (about +530 MB RSS for 1M rows x 10 floats),
+  and used to be the memory peak of `serialize_frame()`, back when the session
+  encoded messages with stdlib `json` and so needed Python objects.
 - `is_tag_node()` costs 2-3 µs per call (runtime `Protocol` checks), and the
   hook calls it for every non-JSON cell. `ui_must_be_processed()` returns early
   for `str` and temporal values (`date`/`time`/`timedelta` and their pandas

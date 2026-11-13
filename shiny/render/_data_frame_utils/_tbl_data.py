@@ -247,12 +247,6 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
     #   * This would allow for each column to capture the `"html"` type hint properly
     #     for object and unknown columns. Currently, there is no way to determine which
     #     cells are HTML-like during orjson serialization.
-    # * Even better, would be to move `orjson` serialization to the websocket
-    #   serialization.
-    #   * No need to serialize to JSON, then unserialize, then serialize again when
-    #     sending it to the client!
-    #   * The only serialization would occur during "send to browser"
-    #   * This approach would lose the ability to upgrade the column type hints to "html"
 
     # Faster than `data.rows()` for tall frames, and pandas' nullable dtypes stay
     # Python scalars (`itertuples()` yields numpy scalars, which orjson can't encode).
@@ -297,10 +291,6 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
         default=default_orjson_serializer,
         # option=(orjson.OPT_NAIVE_UTC),
     )
-    # Free the row tuples before decoding, so that they are not held in memory
-    # alongside the decoded rows
-    del data_rows
-    data_val = orjson.loads(payload)
 
     deduped_html_deps = (
         _resolve_processed_dependencies(html_deps) if len(html_deps) > 1 else html_deps
@@ -308,7 +298,7 @@ def serialize_frame(into_data: IntoDataFrame) -> FrameJson:
 
     return {
         "columns": data.columns,
-        "data": data_val,
+        "data": orjson.Fragment(payload),
         "typeHints": type_hints,
         "htmlDeps": deduped_html_deps,
     }
