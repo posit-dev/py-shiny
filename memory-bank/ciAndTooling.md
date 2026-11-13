@@ -194,6 +194,8 @@ its npm package use the driver version bundled in Python Playwright, which
 can differ from the Python package version after a Python-only release. Jobs
 using the action need `permissions: packages: write`. The in-repo Narwhals
 job uses the action from its own checkout so it tests changes to the setup.
+The Shiny end-to-end job also installs Chromium on the runner for Reactlog
+recording tests that launch their own browser.
 
 `.github/py-shiny/check` is a composite version of the `check` steps kept for
 py-htmltools' CI; keep it in sync when changing what `check` runs.
