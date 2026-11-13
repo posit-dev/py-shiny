@@ -1,5 +1,7 @@
+import json
 import re
 from collections.abc import Generator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -159,18 +161,26 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
             "#timeline-tab, #actions-tab, #btn-summary-toggle, #flush-pipeline-bar, #timeline-sidebar, #flush-select"
         )
     ).to_have_count(0)
-    expect(page.locator("#active-flush-label")).to_contain_text("Initial render")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"Initial render")
+    )
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
-    expect(page.locator("#active-flush-label")).to_contain_text("x")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. x")
+    )
     expect(page.locator(".graph-node")).to_have_count(3)
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
-    expect(page.locator("#active-flush-label")).to_contain_text("y")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. y")
+    )
     expect(page.locator(".graph-node")).to_have_count(2)
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowUp")
-    expect(page.locator("#active-flush-label")).to_contain_text("x")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. x")
+    )
 
 
 def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
@@ -185,7 +195,6 @@ def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
     assert box is not None
     page.mouse.click(box["x"] + box["width"] - 8, box["y"] + box["height"] / 2)
     expect(slider).to_have_value(str(len(data["events"]) - 1))
-    expect(page.locator("#active-flush-label")).to_contain_text("y")
     expect(slider).to_have_attribute(
         "aria-valuetext", re.compile(r"Step 20 of 20\. y.*Idle")
     )
@@ -247,11 +256,15 @@ def test_module_search_filters_nodes_and_clears(page: Page, query: str):
 
 def test_timeline_and_controls_are_above_graph(page: Page):
     page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.locator("#bottom-timeline-bar")).to_have_count(0)
     graph = page.locator("#graph-container").bounding_box()
-    for selector in ("#trace-timeline-bar", "#bottom-timeline-bar"):
-        timeline = page.locator(selector).bounding_box()
-        assert graph and timeline
-        assert timeline["y"] + timeline["height"] <= graph["y"]
+    timeline = page.locator("#trace-timeline-bar").bounding_box()
+    header_controls = page.locator(".header-center .timeline-navigation").bounding_box()
+    search_box = page.locator(".header-center .search-wrap").bounding_box()
+    assert graph and timeline and header_controls and search_box
+    assert timeline["y"] + timeline["height"] <= graph["y"]
+    assert header_controls["x"] >= search_box["x"] + search_box["width"] - 1
+    assert header_controls["y"] + header_controls["height"] <= timeline["y"]
 
 
 def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
@@ -299,13 +312,15 @@ def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
     page.locator("#btn-play").focus()
     page.keyboard.press("Shift+ArrowRight")
     expect(page.locator("#scrubber-range")).to_have_value("6")
-    expect(page.locator("#trace-status-line")).to_have_text("Idle")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"Idle$")
+    )
     page.locator("#scrubber-range").fill("7")
     edge = page.locator('.graph-edge[data-from="input:x"][data-to="calc:doubled"]')
     expect(edge).to_have_class(re.compile("is-inactive"))
     expect(edge).to_have_css("stroke-dasharray", "1px, 5px")
     node.hover()
-    page.locator(".toolbar").hover()
+    page.locator(".app-header").hover()
     expect(edge).to_have_css("stroke", "rgb(145, 161, 179)")
     page.locator("#scrubber-range").fill("8")
     expect(edge).not_to_have_class(re.compile("is-inactive"))
@@ -369,7 +384,9 @@ def test_timeline_marks_are_inside_band_and_click_to_seek(page: Page):
     expect(page.locator("#scrubber-range")).to_have_value("5")
     page.locator('.timeline-marker[data-step="6"]').click()
     expect(page.locator("#scrubber-range")).to_have_value("6")
-    expect(page.locator("#trace-status-line")).to_contain_text("User mark")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"User mark")
+    )
     expect(page.locator("#timeline-key")).to_contain_text("Output calculation")
 
 
@@ -417,7 +434,9 @@ def test_update_labels_and_view_controls(page: Page):
     expect(activity_select).to_be_visible()
     expect(activity_select).to_have_value("full")
     expect(page.locator("#flush-counter-badge")).to_have_count(0)
-    expect(page.locator("#active-flush-label")).to_contain_text("Initial render")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"Initial render")
+    )
     expect(page.locator(".graph-node")).to_have_count(5)
     activity_select.select_option("flush")
     expect(activity_select).to_have_value("flush")
@@ -425,7 +444,9 @@ def test_update_labels_and_view_controls(page: Page):
     expect(page.locator("#active-filters button")).to_have_count(0)
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
-    expect(page.locator("#active-flush-label")).to_contain_text("x")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. x")
+    )
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Node details", exact=True).click()
     expect(page.locator("#flush-card-title")).to_contain_text("Activity 2:")
@@ -762,9 +783,13 @@ def test_timeline_uses_keyboard_navigation(page: Page):
     expect(page.locator("#step-display")).to_be_visible()
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
-    expect(page.locator("#active-flush-label")).to_contain_text("x")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. x")
+    )
     page.keyboard.press("ArrowUp")
-    expect(page.locator("#active-flush-label")).to_contain_text("Initial render")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"Initial render")
+    )
     page.keyboard.press("ArrowRight")
     expect(page.locator("#step-display")).to_contain_text("Step 1 /")
 
@@ -798,12 +823,12 @@ def test_timeline_controls_fit_small_screen(page: Page):
     assert controls is not None
     assert controls["x"] >= 0
     assert controls["x"] + controls["width"] <= 390
-    update = page.locator("#trace-status-line").bounding_box()
     play = page.get_by_role("button", name="Play timeline").bounding_box()
-    assert update is not None and play is not None
-    assert update["x"] + update["width"] <= play["x"]
-    assert update["y"] < play["y"] + play["height"]
-    assert play["y"] < update["y"] + update["height"]
+    step = page.locator("#step-display").bounding_box()
+    legend_btn = page.locator("#btn-graph-legend").bounding_box()
+    assert play is not None and step is not None and legend_btn is not None
+    assert play["x"] + play["width"] <= step["x"]
+    assert legend_btn["x"] + legend_btn["width"] <= 390
 
 
 def test_report_uses_names_and_highlights_module_names(page: Page):
@@ -838,11 +863,15 @@ def test_report_uses_names_and_highlights_module_names(page: Page):
         ],
     }
     page.set_content(format_reactlog_html(data, ""))
-    expect(page.locator("#trace-status-line")).to_have_text(
-        "Dependency: 'input.scatter-y_var' used by 'output summary:summary'"
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext",
+        re.compile(
+            r"Dependency: 'input\.scatter-y_var' used by 'output summary:summary'"
+        ),
     )
-    expect(page.locator("#trace-status-line")).not_to_contain_text("R45")
-    expect(page.locator("#trace-status-line")).not_to_contain_text("r49")
+    valuetext = page.locator("#scrubber-range").get_attribute("aria-valuetext") or ""
+    assert "R45" not in valuetext
+    assert "r49" not in valuetext
     node = page.locator('.graph-node[data-id="R45"]')
     expect(node).to_have_attribute("aria-label", re.compile("input.scatter-y_var"))
     expect(node.locator("text").first).to_have_text("input.y_var")
@@ -858,3 +887,136 @@ def test_report_uses_names_and_highlights_module_names(page: Page):
     choice.click()
     expect(search).to_have_value("input.scatter-y_var")
     expect(page.locator("#insp-title .module-name")).to_have_text("scatter")
+
+
+def test_timeline_legend_popover_error_pink_no_idle_border_and_code_colors(
+    page: Page,
+):
+    code = """from shiny import reactive
+from shiny.express import input, render
+ui.input_numeric("x", "X", 1)
+@render.text
+def out():
+    reactive.mark("check point")
+    if input.x() < 0:
+        raise ValueError("bad value")
+    return str(input.x())
+"""
+    data: dict[str, Any] = {
+        "sources": {"app.py": code},
+        "nodes": [
+            {"id": "input:x", "label": "input.x", "type": "input", "role": "source"},
+            {
+                "id": "output:out",
+                "label": "output:out",
+                "type": "output",
+                "role": "output",
+                "line": 5,
+                "source_file": "app.py",
+            },
+        ],
+        "edges": [{"from": "input:x", "to": "output:out"}],
+        "events": [
+            {
+                "step": 0,
+                "event": "userMark",
+                "node_id": "output:out",
+                "line": 6,
+                "source_file": "app.py",
+                "time": 0.1,
+            },
+            {
+                "step": 1,
+                "event": "outputError",
+                "error": "ValueError: bad value",
+                "node_id": "output:out",
+                "details": "ValueError: bad value",
+                "line": 8,
+                "source_file": "app.py",
+                "time": 0.2,
+            },
+        ],
+    }
+    page.set_content(format_reactlog_html(data, code))
+
+    styles = page.evaluate("""() => {
+        const root = getComputedStyle(document.documentElement);
+        const idleKey = getComputedStyle(document.querySelector('.timeline-key .key-idle'));
+        const errKey = getComputedStyle(document.querySelector('.timeline-key .key-error'));
+        return {
+            idleShadow: idleKey.boxShadow,
+            errKeyBg: errKey.backgroundColor,
+            stateError: root.getPropertyValue('--state-error').trim(),
+            timelineError: root.getPropertyValue('--timeline-error').trim(),
+            trackHeight: document.getElementById('trace-track-wrap').getBoundingClientRect().height,
+        };
+    }""")
+    assert styles["idleShadow"] == "none"
+    assert styles["timelineError"] == styles["stateError"] == "#f3a6af"
+    assert styles["trackHeight"] <= 18
+
+    legend_btn = page.locator("#btn-graph-legend")
+    legend_popover = page.locator("#graph-legend-popover")
+    expect(legend_popover).to_be_hidden()
+    legend_btn.click()
+    expect(legend_popover).to_be_visible()
+    expect(legend_popover).to_contain_text("Ready")
+    expect(legend_popover).to_contain_text("Isolated dependency")
+    page.keyboard.press("Escape")
+    expect(legend_popover).to_be_hidden()
+
+    page.locator("#btn-toggle-inspector").click()
+    page.get_by_role("tab", name="App code").click()
+    page.evaluate("seekTo(0)")
+    mark_line = page.locator("#source-panel .source-line.is-active.is-mark")
+    expect(mark_line).to_have_css("background-color", "rgba(0, 0, 0, 0)")
+    expect(mark_line).to_have_css("box-shadow", "none")
+    mark_color = mark_line.locator(".source-line-content").evaluate(
+        "el => getComputedStyle(el).color"
+    )
+    legend_mark_color = page.locator(".timeline-key .key-mark").evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    assert mark_color == legend_mark_color
+
+    page.evaluate("seekTo(1)")
+    err_line = page.locator("#source-panel .source-line.is-active.is-error")
+    expect(err_line).to_have_css("background-color", "rgba(0, 0, 0, 0)")
+    expect(err_line).to_have_css("box-shadow", "none")
+    err_color = err_line.locator(".source-line-content").evaluate(
+        "el => getComputedStyle(el).color"
+    )
+    legend_err_color = page.locator(".timeline-key .key-error").evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    assert err_color == legend_err_color
+
+
+def test_json_menu_exports_and_imports_reactlog(page: Page, tmp_path: Path):
+    rlog = report()
+    page.set_content(format_reactlog_html(rlog, CODE, title="Demo Export"))
+    menu_btn = page.locator("#btn-json-menu")
+    menu = page.locator("#json-menu")
+    expect(menu).to_be_hidden()
+    menu_btn.click()
+    expect(menu).to_be_visible()
+
+    with page.expect_download() as download_info:
+        page.locator("#btn-export-json").click()
+    download = download_info.value
+    assert download.suggested_filename == "demo-export-reactlog.json"
+    exported_path = tmp_path / "exported.json"
+    download.save_as(str(exported_path))
+    exported = json.loads(exported_path.read_text())
+    assert len(exported["nodes"]) == len(rlog["nodes"])
+
+    exported["nodes"].append(
+        {"id": "input:extra", "label": "input.extra", "type": "input", "role": "source"}
+    )
+    import_path = tmp_path / "imported.json"
+    import_path.write_text(json.dumps(exported))
+    menu_btn.click()
+    with page.expect_file_chooser() as chooser_info:
+        page.locator("#btn-import-json").click()
+    chooser_info.value.set_files(str(import_path))
+    expect(page.locator('.graph-node[data-id="input:extra"]')).to_be_visible()

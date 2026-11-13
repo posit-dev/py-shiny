@@ -1026,7 +1026,9 @@ def out():
     html_dark = format_reactlog_html(reactlog, source_code=code, theme="dark")
     assert 'data-theme="dark"' in html_dark
     assert 'id="btn-theme-toggle"' in html_dark
-    assert 'id="btn-open-json"' in html_dark
+    assert 'id="btn-json-menu"' in html_dark
+    assert 'id="btn-import-json"' in html_dark
+    assert 'id="btn-export-json"' in html_dark
 
     html_light = format_reactlog_html(reactlog, source_code=code, theme="light")
     assert 'data-theme="light"' in html_light
@@ -1035,7 +1037,8 @@ def out():
     assert "--track-bg: #1b2634;" in html_light
     assert 'id="clientdata-select"' in html_light
     assert 'id="activity-select"' in html_light
-    assert 'class="legend"' in html_light
+    assert 'id="graph-legend-popover"' in html_light
+    assert 'id="btn-graph-legend"' in html_light
     assert '<span class="legend-label">Type</span>' not in html_light
     assert 'class="legend-role-btn' not in html_light
 
@@ -1500,7 +1503,8 @@ def out():
     assert "role-filter-dropdown" not in html
     assert "getActiveLineageSet" in html
     assert "filterLineageForNode" in html
-    assert "trace-status-line" in html
+    assert "trace-status-line" not in html
+    assert 'id="btn-play"' in html
 
 
 def test_password_and_secret_inputs_redacted_at_ast_visitor():
@@ -2471,10 +2475,94 @@ def greeting():
     assert "closeSidebarAndClearSelection()" in html
     assert 'id="btn-clear-selection"' not in html
     assert '<footer class="bottom-timeline-bar' not in html
-    assert 'id="bottom-timeline-bar"' in html
+    assert 'id="bottom-timeline-bar"' not in html
+    assert 'id="active-flush-label"' not in html
     assert (
         '<div class="zoom-controls">\n              <div class="filter-state"' in html
     )
     assert 'id="btn-fullscreen"' in html
     assert "toggleFullscreen()" in html
     assert "--timeline-output:" in html
+
+
+def test_viewer_timeline_legend_code_highlight_and_json_actions():
+    code = """from shiny import reactive
+from shiny.express import input, render
+@reactive.calc
+def val():
+    return input.x()
+@render.text
+def out():
+    reactive.mark("step")
+    return str(val())
+"""
+    html = format_reactlog_html(generate_reactlog(code), source_code=code)
+
+    assert ".timeline-marker.is-idle {" in html
+    assert ".timeline-marker.is-idle, .timeline-key .key-idle" not in html
+    assert "--state-error: #f3a6af;" in html
+    assert "--timeline-error: #f3a6af;" in html
+    assert (
+        ".source-line.is-active.is-mark, .source-line.is-active.is-error "
+        "{ background: transparent; box-shadow: none; }" in html
+    )
+    assert (
+        ".source-line.is-active.is-error .source-line-content, "
+        ".source-line.is-active.is-error .source-line-content span "
+        "{ color: var(--timeline-error); }" in html
+    )
+    assert 'id="btn-graph-legend"' in html
+    assert 'popovertarget="graph-legend-popover"' in html
+    assert 'id="json-menu"' in html
+    assert "exportReactlogJson()" in html
+    assert "importReactlogJson()" in html
+
+    header_center = re.search(
+        r'<div class="header-center">([\s\S]*?)<div class="header-actions">', html
+    )
+    assert header_center is not None
+    assert 'id="search-input"' in header_center[1]
+    assert 'id="btn-play"' in header_center[1]
+    assert 'id="step-display"' in header_center[1]
+
+    topbar = re.search(
+        r'<div class="graph-topbar">([\s\S]*?)<div id="live-action-toast"', html
+    )
+    assert topbar is not None
+    assert "graph-legend-popover" not in topbar[1]
+    assert "legend-swatch" not in topbar[1]
+
+
+def test_graph_edge_ports_attach_to_chevron_and_concave_notches():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to run the graph router")
+    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
+    router = re.search(r"    function routeGraphEdge\([\s\S]*?\n    \}", html)
+    assert router is not None
+    edge_path = re.search(r"    function graphEdgePath\([\s\S]*?\n    \}", html)
+    assert edge_path is not None
+    filters = re.search(r"    function filterItems\([\s\S]*?\n    \}", html)
+    assert filters is not None
+    script = filters[0] + router[0] + edge_path[0] + """
+const positions = {
+  src: {x: 150, y: 110, nodeType: 'input', nodeRole: 'source'},
+  clc: {x: 500, y: 110, nodeType: 'calc', nodeRole: 'conductor'},
+  out: {x: 850, y: 110, nodeType: 'output', nodeRole: 'output'}
+};
+const edges = [
+  {from: 'src', to: 'clc'},
+  {from: 'clc', to: 'out'}
+];
+console.log(JSON.stringify(edges.map(e => graphEdgePath(e, positions, 280, 64, edges))));
+"""
+    result = subprocess.run(
+        [node, "-e", script], capture_output=True, text=True, check=True
+    )
+    paths = json.loads(result.stdout)
+    # src tip is 150 + 140 = 290; clc left concave notch is 500 - 140 + 20 = 380
+    assert paths[0].startswith("M 290 110 ")
+    assert paths[0].endswith(" 380 110")
+    # clc tip is 500 + 140 = 640; out left concave notch is 850 - 140 + 20 = 730
+    assert paths[1].startswith("M 640 110 ")
+    assert paths[1].endswith(" 730 110")

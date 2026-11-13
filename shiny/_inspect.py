@@ -2565,7 +2565,7 @@ def format_reactlog_html(
       --timeline-idle-outline: #355c23;
       --timeline-output: #56b4e9;
       --timeline-mark: #f59e0b;
-      --timeline-error: #ff8e91;
+      --timeline-error: #f3a6af;
       --playhead-bg: #f8fafc;
       --playhead-ring: #17212b;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -2611,7 +2611,7 @@ def format_reactlog_html(
       --track-fill: #cbd5e1;
       --timeline-output: #026aa7;
       --timeline-mark: #b45309;
-      --timeline-error: #a92334;
+      --timeline-error: #be185d;
       --playhead-bg: #0f172a;
       --playhead-ring: #ffffff;
     }}
@@ -2656,7 +2656,7 @@ def format_reactlog_html(
         --track-fill: #cbd5e1;
         --timeline-output: #026aa7;
         --timeline-mark: #b45309;
-        --timeline-error: #a92334;
+        --timeline-error: #be185d;
         --playhead-bg: #0f172a;
         --playhead-ring: #ffffff;
       }}
@@ -2712,21 +2712,16 @@ def format_reactlog_html(
     .workspace-layout {{ display: flex; flex: 1; min-height: 0; overflow: hidden; position: relative; }}
 
     /* Timeline playback controls */
-    .bottom-timeline-bar {{ flex-shrink: 0; background: transparent; border: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; padding: 0; gap: 0.75rem; z-index: 30; user-select: none; }}
-    .status-left, .status-center, .status-right {{ display: flex; align-items: center; gap: 0.4rem; }}
-    .trace-status-line, #active-flush-label {{ color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-    .trace-status-line {{ font: 600 .75rem var(--sans); }}
-    #active-flush-label {{ font: 650 .72rem var(--sans); text-align: end; }}
-    .status-time-group {{ display: flex; align-items: center; gap: 0.25rem; font: 700 0.68rem var(--mono); color: var(--accent); }}
+    .status-time-group {{ display: inline-flex; align-items: center; gap: 0.25rem; font: 700 0.7rem var(--mono); color: var(--accent); }}
 
     /* Main View & Graph */
     .main-view {{ display: flex; flex: 1; min-height: 0; min-width: 0; overflow: hidden; position: relative; }}
     .graph-container {{ flex: 1; min-width: 0; min-height: 0; overflow: hidden; position: relative; background-color: var(--bg); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 24px 24px; display: flex; flex-direction: column; }}
 
     /* Graph Topbar */
-    .graph-topbar {{ position: relative; z-index: 3; padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.45rem; flex-shrink: 0; }}
-    .graph-top-row {{ display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }}
-    .legend {{ display: flex; gap: 0.35rem; flex-wrap: wrap; padding: 0.25rem 0.45rem; border: 1px solid var(--border); border-radius: 6px; background: var(--legend-bg); backdrop-filter: blur(8px); pointer-events: auto; }}
+    .graph-topbar {{ position: relative; z-index: 3; padding: 0.45rem 0.8rem 0; display: flex; flex-direction: column; gap: 0.35rem; flex-shrink: 0; }}
+    .graph-top-row {{ display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; flex-wrap: wrap; }}
+    .legend {{ gap: 0.35rem; flex-wrap: wrap; padding: 0.25rem 0.45rem; border: 1px solid var(--border); border-radius: 6px; background: var(--legend-bg); backdrop-filter: blur(8px); pointer-events: auto; }}
     .legend-item {{ display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font: 650 0.65rem var(--mono); padding: 0.1rem 0.2rem; }}
     .legend-dot {{ width: 12px; height: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--role-color); }}
     .legend-dot svg {{ width: 12px; height: 12px; display: block; }}
@@ -2850,9 +2845,9 @@ def format_reactlog_html(
     .source-line {{ display: flex; padding: 0 1rem 0 0; min-height: 1.62em; line-height: 1.62em; transition: background 120ms ease; }}
     .source-line:hover {{ background: color-mix(in srgb, var(--surface-3) 40%, transparent); }}
     .source-line.is-active {{ background: color-mix(in srgb, var(--line-accent, var(--accent)) 14%, transparent); box-shadow: inset 3px 0 var(--line-accent, var(--accent)); }}
-    .source-line.is-active.is-mark {{ --line-accent: var(--timeline-mark); }}
-    .source-line.is-active.is-error {{ --line-accent: var(--timeline-error); }}
+    .source-line.is-active.is-mark, .source-line.is-active.is-error {{ background: transparent; box-shadow: none; }}
     .source-line.is-active.is-mark .source-line-content, .source-line.is-active.is-mark .source-line-content span {{ color: var(--timeline-mark); }}
+    .source-line.is-active.is-error .source-line-content, .source-line.is-active.is-error .source-line-content span {{ color: var(--timeline-error); }}
     .source-line-num {{ display: inline-block; width: 3.2rem; min-width: 3.2rem; padding-right: 1rem; text-align: right; color: var(--text-muted); user-select: none; -webkit-user-select: none; font-size: 0.7rem; opacity: 0.65; }}
     .source-line-content {{ flex: 1; white-space: pre; }}
     .video-panel {{ display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; background: var(--surface); overflow: auto; }}
@@ -2933,8 +2928,8 @@ def format_reactlog_html(
     .search-results button {{ border-radius: 5px; margin-top: 4px; line-height: 1.5; }}
     .search-summary {{ padding: 6px; color: var(--text-muted); font-size: 0.75rem; }}
     .graph-container {{ display: flex; flex-direction: column; }}
-    .graph-topbar {{ position: relative; top: auto; left: auto; right: auto; padding: 12px; flex-shrink: 0; }}
-    .graph-top-row {{ display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }}
+    .graph-topbar {{ position: relative; top: auto; left: auto; right: auto; padding: 6px 12px 0; flex-shrink: 0; }}
+    .graph-top-row {{ display: flex; justify-content: flex-end; gap: 10px; }}
     .causal-summary-banner {{ grid-column: 1 / -1; line-height: 1.5; border-color: var(--border-strong); box-shadow: none; }}
     .legend {{ flex-wrap: wrap; }}
     .zoom-controls {{ align-items: center; }}
@@ -2949,7 +2944,6 @@ def format_reactlog_html(
       .app-header {{ flex-wrap: wrap; }}
       .header-center {{ order: 3; width: 100%; flex: 1 0 100%; }}
       .toolbar-group {{ width: 100%; }}
-      .bottom-timeline-bar.toolbar {{ width: 100%; max-width: 100%; box-sizing: border-box; overflow: visible; height: auto; min-height: 0; }}
     }}
     @media (max-width: 520px) {{
       html, body {{ overflow-x: hidden; max-width: 100vw; }}
@@ -2958,12 +2952,10 @@ def format_reactlog_html(
       .header-center {{ flex-wrap: wrap; max-width: 100%; }}
       .header-actions {{ margin-left: auto; }}
       .search-wrap {{ flex-basis: 100%; max-width: none; }}
+      .timeline-navigation {{ width: 100%; justify-content: space-between; }}
       .graph-container {{ height: 440px; }}
-      .graph-top-row {{ grid-template-columns: 1fr; }}
       .zoom-controls {{ justify-content: flex-end; }}
       .trace-controls {{ flex-wrap: wrap; }}
-      .bottom-timeline-bar {{ grid-template-columns: minmax(0, 1fr) auto; }}
-      #active-flush-label {{ grid-column: 1 / -1; text-align: start; }}
     }}
 
     .sidebar-rail {{ width: 40px; min-width: 40px; flex: 0 0 40px; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; box-sizing: border-box; z-index: 20; }}
@@ -2976,35 +2968,53 @@ def format_reactlog_html(
     .video-sync-status {{ font: 600 .65rem var(--sans); }}
     .video-container {{ border: 0; border-radius: 0; aspect-ratio: 16 / 9; }}
     .video-container video {{ width: 100%; height: 100%; object-fit: contain; }}
-    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--bg); padding: 8px 16px; gap: 8px; }}
-    .trace-track-wrap {{ position: relative; height: 24px; flex: none; background: var(--track-bg); touch-action: none; }}
-    .header-center .search-wrap {{ flex: 1 1 250px; min-width: min(250px, 100%); max-width: 420px; }}
-    #scrubber-range {{ appearance: none; -webkit-appearance: none; background: transparent; position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; cursor: pointer; }}
-    #scrubber-range::-webkit-slider-runnable-track {{ height: 18px; background: linear-gradient(to right, var(--track-fill) var(--progress, 0%), transparent var(--progress, 0%)); }}
-    #scrubber-range::-moz-range-track {{ height: 18px; background: transparent; }}
-    #scrubber-range::-moz-range-progress {{ height: 18px; background: var(--track-fill); }}
-    #scrubber-range::-webkit-slider-thumb {{ appearance: none; -webkit-appearance: none; height: 24px; width: 3px; margin-top: -3px; background: transparent; }}
-    #scrubber-range::-moz-range-thumb {{ height: 24px; width: 3px; border: 0; border-radius: 0; background: transparent; }}
+    .trace-timeline-bar {{ display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--bg); padding: 4px 16px 5px; gap: 4px; }}
+    .trace-timeline-row {{ display: flex; align-items: center; gap: 8px; width: 100%; }}
+    .trace-track-wrap {{ position: relative; height: 16px; flex: 1; min-width: 0; background: var(--track-bg); border-radius: 3px; touch-action: none; }}
+    .header-center .search-wrap {{ flex: 0 1 280px; min-width: min(210px, 100%); max-width: 340px; }}
+    #scrubber-range {{ appearance: none; -webkit-appearance: none; background: transparent; position: absolute; inset: 0; width: 100%; height: 16px; margin: 0; cursor: pointer; }}
+    #scrubber-range::-webkit-slider-runnable-track {{ height: 16px; background: linear-gradient(to right, var(--track-fill) var(--progress, 0%), transparent var(--progress, 0%)); }}
+    #scrubber-range::-moz-range-track {{ height: 16px; background: transparent; }}
+    #scrubber-range::-moz-range-progress {{ height: 16px; background: var(--track-fill); }}
+    #scrubber-range::-webkit-slider-thumb {{ appearance: none; -webkit-appearance: none; height: 16px; width: 3px; margin-top: 0; background: transparent; }}
+    #scrubber-range::-moz-range-thumb {{ height: 16px; width: 3px; border: 0; border-radius: 0; background: transparent; }}
     #scrubber-range:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
     #trace-markers {{ position: absolute; inset: 0 1.5px; pointer-events: none; z-index: 1; }}
     .timeline-marker {{ position: absolute; top: 0; height: 100%; min-width: 3px; padding: 0; border: 0; border-radius: 0; background: var(--timeline-idle); pointer-events: auto; cursor: pointer; }}
-    .timeline-marker.is-output {{ top: 5px; height: 14px; border-radius: 2px; background: var(--timeline-output); }}
+    .timeline-marker.is-output {{ top: 3px; height: 10px; border-radius: 2px; background: var(--timeline-output); }}
     .timeline-marker.is-mark {{ background: var(--timeline-mark); z-index: 2; }}
     .timeline-marker.is-error {{ background: var(--timeline-error); min-width: 5px; z-index: 3; }}
-    .timeline-marker.is-idle, .timeline-key .key-idle {{ box-shadow: inset 1px 0 var(--timeline-idle-outline); }}
+    .timeline-marker.is-idle {{ box-shadow: inset 1px 0 var(--timeline-idle-outline); }}
     .timeline-marker:hover, .timeline-marker:focus-visible {{ outline: 2px solid var(--text); outline-offset: 1px; z-index: 3; }}
     .timeline-playhead {{ position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); pointer-events: none; z-index: 4; }}
     .timeline-playhead::before {{ content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--playhead-bg); }}
     .timeline-key {{ display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font: .7rem var(--sans); }}
     .timeline-key span {{ display: inline-flex; align-items: center; gap: 5px; }}
-    .timeline-key i {{ display: inline-block; width: 3px; height: 14px; border-radius: 1px; background: var(--timeline-idle); }}
+    .timeline-key i {{ display: inline-block; width: 3px; height: 12px; border-radius: 1px; background: var(--timeline-idle); }}
     .timeline-key .key-output {{ height: 8px; border-radius: 2px; background: var(--timeline-output); }}
     .timeline-key .key-mark {{ background: var(--timeline-mark); border-radius: 1px; }}
     .timeline-key .key-error {{ background: var(--timeline-error); width: 5px; }}
     .timeline-key .key-position {{ width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); }}
     .timeline-tooltip {{ position: absolute; top: calc(100% + 6px); left: 0; max-width: min(440px, 100%); padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); font: .75rem var(--sans); box-shadow: 0 3px 12px #0004; z-index: 50; pointer-events: none; }}
     .timeline-tooltip[hidden] {{ display: none; }}
-    .timeline-navigation {{ display: flex; align-items: center; gap: 6px; white-space: nowrap; }}
+    .timeline-navigation {{ display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0; }}
+    #btn-play {{ min-height: 28px; height: 28px; padding: 0 0.6rem; }}
+    .legend-popover-anchor {{ position: relative; display: inline-flex; flex-shrink: 0; }}
+    #btn-graph-legend {{ anchor-name: --legend-anchor; width: 20px; height: 20px; min-height: 20px; border-radius: 999px; font: 700 0.72rem var(--sans); padding: 0; }}
+    #btn-graph-legend.is-active, #btn-json-menu.is-active {{ background: var(--surface-3); border-color: var(--accent); color: var(--accent); }}
+    .graph-legend-popover:not(:popover-open), .json-menu:not(:popover-open) {{ display: none; }}
+    .graph-legend-popover {{ margin: 0; inset: auto; position: fixed; max-width: min(560px, calc(100vw - 24px)); padding: 0.65rem 0.8rem; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28); z-index: 60; }}
+    .graph-legend-popover:popover-open {{ display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }}
+    .json-menu-wrap {{ position: relative; display: inline-flex; }}
+    #btn-json-menu {{ anchor-name: --json-anchor; gap: 0.25rem; }}
+    .json-menu {{ margin: 0; inset: auto; position: fixed; min-width: 152px; padding: 0.35rem; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28); z-index: 60; }}
+    .json-menu:popover-open {{ display: flex; flex-direction: column; gap: 2px; }}
+    .json-menu-item {{ width: 100%; justify-content: flex-start; border-color: transparent; background: transparent; padding: 0.38rem 0.55rem; font-size: 0.74rem; }}
+    .json-menu-item:hover {{ background: var(--surface-3); border-color: transparent; }}
+    @supports (position-area: block-end) {{
+      .graph-legend-popover {{ position-anchor: --legend-anchor; position-area: block-end span-inline-start; position-try-fallbacks: flip-block, flip-inline; margin-top: 6px; }}
+      .json-menu {{ position-anchor: --json-anchor; position-area: block-end span-inline-start; position-try-fallbacks: flip-block, flip-inline; margin-top: 6px; }}
+    }}
     .status-center {{ gap: 3px; }}
     .status-center .btn {{ width: 28px; min-height: 28px; height: 28px; }}
     .status-center .nav-idle svg {{ color: var(--timeline-idle); }}
@@ -3073,32 +3083,54 @@ def format_reactlog_html(
         <button type="button" class="search-toggle" aria-label="Show node choices" aria-controls="search-results" aria-expanded="false" onclick="toggleSearchChoices()">▾</button>
         <div id="search-results" class="search-results" role="listbox" aria-label="Node search results" onkeydown="handleSearchKey(event)" hidden></div>
       </div>
+      <div class="timeline-navigation" role="group" aria-label="Timeline playback">
+        <button type="button" class="btn mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">▶ Play</button>
+        <div class="status-time-group">
+          <span class="trace-clock" id="trace-current-time">0.0s</span><span class="trace-sep">/</span><span class="trace-total" id="trace-total-time">0.0s</span><span class="step-display" id="step-display">Step 0 / 0</span>
+        </div>
+      </div>
     </div>
     <div class="header-actions">
       <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
       <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
-      <button class="btn" id="btn-open-json" onclick="document.getElementById('reactlog-file-input').click()" title="Open Reactlog JSON recording"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Open JSON</button>
+      <div class="json-menu-wrap">
+        <button type="button" class="btn" id="btn-json-menu" popovertarget="json-menu" popovertargetaction="toggle" aria-label="Import or export Reactlog JSON" aria-controls="json-menu" aria-expanded="false" title="Import or export Reactlog JSON"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>JSON <span aria-hidden="true">▾</span></button>
+        <div class="json-menu" id="json-menu" popover="auto" aria-label="Reactlog JSON actions">
+          <button type="button" class="btn json-menu-item" id="btn-import-json" onclick="importReactlogJson()"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import JSON</button>
+          <button type="button" class="btn json-menu-item" id="btn-export-json" onclick="exportReactlogJson()"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export JSON</button>
+        </div>
+      </div>
       <button class="btn icon" id="btn-shortcuts" aria-label="Keyboard shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg></button>
       <button class="btn icon" id="btn-toggle-inspector" onclick="toggleInspector()" aria-label="Toggle inspector details" title="Toggle inspector details panel"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg></button>
     </div>
   </header>
 
   <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
-    <div class="bottom-timeline-bar toolbar" id="bottom-timeline-bar" role="toolbar" aria-label="Timeline controls">
-      <span class="trace-status-line" id="trace-status-line">Step 0 of 0</span>
-      <div class="timeline-navigation">
-        <button class="btn mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">▶ Play</button>
-        <div class="status-time-group">
-          <span class="trace-clock" id="trace-current-time">0.0s</span><span class="trace-sep">/</span><span class="trace-total" id="trace-total-time">0.0s</span><span class="step-display" id="step-display">Step 0 / 0</span>
+    <div class="trace-timeline-row">
+      <div id="trace-track-wrap" class="trace-track-wrap">
+        <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
+        <div id="timeline-playhead" class="timeline-playhead" aria-hidden="true"></div>
+        <div id="timeline-tooltip" class="timeline-tooltip" role="tooltip" hidden></div>
+        <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
+      </div>
+      <div class="legend-popover-anchor">
+        <button type="button" class="btn icon mini" id="btn-graph-legend" popovertarget="graph-legend-popover" popovertargetaction="toggle" aria-label="Show State and Links legend" aria-controls="graph-legend-popover" aria-expanded="false" title="State & Links legend">?</button>
+        <div class="legend graph-legend-popover" id="graph-legend-popover" popover="auto" role="region" aria-label="Graph legend">
+          <div class="legend-group"><span class="legend-label">State</span>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-ready)"></span>Ready</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-calculating)"></span>Calculating</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidating)"></span>Invalidating</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidated)"></span>Invalidated</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-frozen)"></span>Frozen</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-error)"></span>Error</div>
+          </div>
+          <div class="legend-group"><span class="legend-label">Links</span>
+            <div class="legend-item"><span class="legend-line"></span>Dependency</div>
+            <div class="legend-item"><span class="legend-line is-isolated"></span>Isolated dependency</div>
+            <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
+          </div>
         </div>
       </div>
-      <span id="active-flush-label" role="status"></span>
-    </div>
-    <div id="trace-track-wrap" class="trace-track-wrap">
-      <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
-      <div id="timeline-playhead" class="timeline-playhead" aria-hidden="true"></div>
-      <div id="timeline-tooltip" class="timeline-tooltip" role="tooltip" hidden></div>
-      <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
     </div>
     <div class="timeline-key" id="timeline-key" aria-label="Timeline key">
       <span><i class="key-idle"></i>Idle</span><span><i class="key-output"></i>Output calculation</span>
@@ -3112,21 +3144,6 @@ def format_reactlog_html(
       <div class="graph-container" id="graph-container">
         <div class="graph-topbar">
           <div class="graph-top-row">
-            <div class="legend" aria-label="Graph legend">
-              <div class="legend-group"><span class="legend-label">State</span>
-              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-ready)"></span>Ready</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-calculating)"></span>Calculating</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidating)"></span>Invalidating</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidated)"></span>Invalidated</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-frozen)"></span>Frozen</div>
-              <div class="legend-item"><span class="legend-swatch" style="background:var(--state-error)"></span>Error</div>
-              </div>
-              <div class="legend-group"><span class="legend-label">Links</span>
-              <div class="legend-item"><span class="legend-line"></span>Dependency</div>
-              <div class="legend-item"><span class="legend-line is-isolated"></span>Isolated dependency</div>
-              <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
-              </div>
-            </div>
             <div class="zoom-controls">
               <div class="filter-state" aria-label="Current exploration scope">
                 <span id="filter-node-count" role="status" aria-live="polite"></span>
@@ -3169,13 +3186,13 @@ def format_reactlog_html(
         <div class="empty-graph-message" id="empty-graph-message" role="status" hidden>No recorded changes or executions in this view. Select Show all nodes to see the full graph.</div>
         <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <marker id="arrow" viewBox="0 0 10 10" refX="8.2" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
               <path d="M 0.5 1.5 L 8.5 5 L 0.5 8.5 L 2.3 5 z" fill="var(--text-muted)" />
             </marker>
-            <marker id="arrow-isolated" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
-              <path d="M 0.8 1.8 L 8 5 L 0.8 8.2 z" fill="var(--bg)" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round" />
+            <marker id="arrow-isolated" viewBox="0 0 10 10" refX="8.2" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M 0.8 1.8 L 8.5 5 L 0.8 8.2 z" fill="var(--bg)" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round" />
             </marker>
-            <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
+            <marker id="arrow-active" viewBox="0 0 10 10" refX="8.2" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
               <path d="M 0.5 1.5 L 8.5 5 L 0.5 8.5 L 2.3 5 z" fill="var(--accent)" />
             </marker>
             <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
@@ -3876,20 +3893,16 @@ def format_reactlog_html(
       const events = reactlogData.events || reactlogData.log || [];
       const curWave = allBursts.slice().reverse().find(w => currentStep >= w.startStep) || allBursts[0];
       activeBurstIndex = curWave ? allBursts.indexOf(curWave) : 0;
-      const activeLabel = document.getElementById('active-flush-label');
-      activeLabel.textContent = curWave
+      const flushText = curWave
         ? (curWave.isInit ? 'Initial render' : (curWave.humanAction || curWave.triggerLabel || 'Initial render'))
         : 'No recorded activity';
-      activeLabel.title = activeLabel.textContent;
       const ev = events[currentStep];
-      const status = document.getElementById('trace-status-line');
-      status.textContent = ev ? (isIdleEvent(ev) ? 'Idle' : ['mark', 'userMark'].includes(ev.action || ev.event) ? `User mark${{ev.details ? ' · ' + nodeDisplayName(String(ev.details)) : ''}}` : (formatEventDetails(ev) || ev.action || ev.event || '')) : 'No events';
-      status.title = status.textContent;
+      const statusText = ev ? (isIdleEvent(ev) ? 'Idle' : ['mark', 'userMark'].includes(ev.action || ev.event) ? `User mark${{ev.details ? ' · ' + nodeDisplayName(String(ev.details)) : ''}}` : (formatEventDetails(ev) || ev.action || ev.event || '')) : 'No events';
       const range = document.getElementById('scrubber-range');
       const percent = 100 * currentStep / Math.max(1, events.length - 1);
       range.style.setProperty('--progress', `${{percent}}%`);
       document.getElementById('timeline-playhead').style.left = `calc(${{percent}}% - ${{3 * percent / 100}}px)`;
-      range.setAttribute('aria-valuetext', `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}}. ${{activeLabel.textContent}}. ${{status.textContent}}`);
+      range.setAttribute('aria-valuetext', `Step ${{currentStep}} of ${{Math.max(0, events.length - 1)}}. ${{flushText}}. ${{statusText}}`);
     }}
 
     function nextAction() {{
@@ -5076,7 +5089,7 @@ def format_reactlog_html(
       const lane = Math.max(0, edges.indexOf(edge));
       let points;
       if (forward && x2 - x1 < nodeWidth) {{
-        const gutter = x1 + (x2 - x1) * (0.35 + (lane % 5) * 0.075);
+        const gutter = x1 + (x2 - x1) * (0.3 + (lane % 7) * 0.065);
         points = [[x1, y1], [gutter, y1], [gutter, y2], [x2, y2]];
       }} else {{
         const clearance = 12, inset = 18 + (lane % 4) * 4;
@@ -5084,13 +5097,28 @@ def format_reactlog_html(
         const left = Math.min(exit, entry), right = Math.max(exit, entry);
         const obstacles = filterItems(Object.values(positions), p =>
           p.x + nodeWidth / 2 + clearance > left && p.x - nodeWidth / 2 - clearance < right);
-        const candidates = [y1, y2, (y1 + y2) / 2, ...obstacles.flatMap(p =>
+        const gapMidpoints = [];
+        const ys = obstacles.map(p => p.y).sort((a, b) => a - b);
+        for (let i = 1; i < ys.length; i++) {{
+          if (ys[i] - ys[i - 1] >= nodeHeight + clearance * 2) gapMidpoints.push((ys[i - 1] + ys[i]) / 2);
+        }}
+        if (ys.length) {{
+          gapMidpoints.push(ys[0] - nodeHeight / 2 - clearance - 10);
+          gapMidpoints.push(ys[ys.length - 1] + nodeHeight / 2 + clearance + 10);
+        }}
+        const candidates = [y1, y2, (y1 + y2) / 2, ...gapMidpoints, ...obstacles.flatMap(p =>
           [p.y - nodeHeight / 2 - clearance, p.y + nodeHeight / 2 + clearance])];
-        const cost = y => Math.abs(y1 - y) + Math.abs(y2 - y) + Math.abs(y - (y1 + y2) / 2) * 0.01;
-        // Connections that skip a column travel through an empty horizontal lane.
-        const y = filterItems(candidates, candidate => obstacles.every(p =>
-          candidate <= p.y - nodeHeight / 2 - clearance || candidate >= p.y + nodeHeight / 2 + clearance))
-          .sort((a, b) => cost(a) - cost(b))[0];
+        const minClear = y => obstacles.length
+          ? Math.min(...obstacles.map(p => Math.abs(y - p.y) - nodeHeight / 2))
+          : 40;
+        const cost = y => Math.abs(y1 - y) + Math.abs(y2 - y) + Math.abs(y - (y1 + y2) / 2) * 0.01 - Math.min(40, minClear(y)) * 0.05;
+        const valid = filterItems(candidates, candidate => obstacles.every(p =>
+          candidate <= p.y - nodeHeight / 2 - clearance || candidate >= p.y + nodeHeight / 2 + clearance));
+        let y = (valid.length ? valid : candidates).sort((a, b) => cost(a) - cost(b))[0];
+        const stagger = ((lane % 5) - 2) * 4;
+        if (obstacles.length && y !== y1 && y !== y2 && stagger && obstacles.every(p => (y + stagger) <= p.y - nodeHeight / 2 - clearance || (y + stagger) >= p.y + nodeHeight / 2 + clearance)) {{
+          y += stagger;
+        }}
         points = [[x1, y1], [exit, y1], [exit, y], [entry, y], [entry, y2], [x2, y2]];
       }}
       const route = [];
@@ -5110,24 +5138,66 @@ def format_reactlog_html(
     function graphEdgePath(edge, positions, nodeWidth, nodeHeight, edges = []) {{
       const route = routeGraphEdge(edge, positions, nodeWidth, nodeHeight, edges);
       if (route.length < 2) return '';
-      const [x1, y1] = route[0], [x2, y2] = route[route.length - 1];
+      const from = positions[edge.from], to = positions[edge.to];
+      const portX = (p, yOff, side) => {{
+        const edgeX = p.x + (side === 'right' ? 1 : -1) * nodeWidth / 2;
+        const type = p?.nodeType, role = p?.nodeRole || type;
+        if (!type || type === 'module') return edgeX;
+        const wc = 20, t = Math.min(1, Math.abs(yOff) / (nodeHeight / 2));
+        if (side === 'right' && (role === 'source' || type === 'input' || role === 'conductor' || type === 'calc')) return edgeX - wc * t;
+        if (side === 'left' && role !== 'source' && type !== 'input') return edgeX + wc * (1 - t);
+        return edgeX;
+      }};
+      const forward = to.x > from.x;
+      const [, y1] = route[0], [, y2] = route[route.length - 1];
+      const x1 = portX(from, y1 - from.y, 'right');
+      const x2 = portX(to, y2 - to.y, forward ? 'left' : 'right');
       const clearance = 12;
-      const canCurveDirectly = x2 > x1 && Object.entries(positions).every(([id, p]) => {{
-        if (id === edge.from || id === edge.to) return true;
-        if (p.x + nodeWidth / 2 + clearance <= x1 || p.x - nodeWidth / 2 - clearance >= x2) return true;
-        const u = Math.max(0, Math.min(1, (p.x - x1) / (x2 - x1)));
-        const curveY = y1 + (y2 - y1) * (3 * u * u - 2 * u * u * u);
-        return Math.abs(curveY - p.y) >= nodeHeight / 2 + clearance;
-      }});
+      const dx = Math.max(28, (x2 - x1) * 0.42);
+      const canCurveDirectly = x2 > x1 && (() => {{
+        const obs = Object.entries(positions).filter(([id]) => id !== edge.from && id !== edge.to);
+        if (!obs.length) return true;
+        const cx1 = x1 + dx, cx2 = x2 - dx;
+        for (let step = 1; step < 20; step++) {{
+          const t = step / 20, mt = 1 - t;
+          const bx = mt * mt * mt * x1 + 3 * mt * mt * t * cx1 + 3 * mt * t * t * cx2 + t * t * t * x2;
+          const by = mt * mt * mt * y1 + 3 * mt * mt * t * y1 + 3 * mt * t * t * y2 + t * t * t * y2;
+          if (obs.some(([, p]) => Math.abs(bx - p.x) < nodeWidth / 2 + clearance && Math.abs(by - p.y) < nodeHeight / 2 + clearance)) {{
+            return false;
+          }}
+        }}
+        return true;
+      }})();
       if (canCurveDirectly) {{
-        const dx = Math.max(28, (x2 - x1) * 0.42);
         return `M ${{x1}} ${{y1}} C ${{x1 + dx}} ${{y1}}, ${{x2 - dx}} ${{y2}}, ${{x2}} ${{y2}}`;
       }}
-      const laneY = route.length >= 4 ? route[2][1] : (y1 + y2) / 2;
-      if (x2 > x1) {{
-        const exitX = Math.min((x1 + x2) / 2, x1 + 56);
-        const entryX = Math.max(exitX, x2 - 56);
-        return `M ${{x1}} ${{y1}} C ${{(x1 + exitX) / 2}} ${{y1}}, ${{(x1 + exitX) / 2}} ${{laneY}}, ${{exitX}} ${{laneY}} C ${{(2 * exitX + entryX) / 3}} ${{laneY}}, ${{(exitX + 2 * entryX) / 3}} ${{laneY}}, ${{entryX}} ${{laneY}} C ${{(entryX + x2) / 2}} ${{laneY}}, ${{(entryX + x2) / 2}} ${{y2}}, ${{x2}} ${{y2}}`;
+      const isGutterRoute = forward && (to.x - from.x - nodeWidth) < nodeWidth;
+      const laneY = !isGutterRoute && route.length >= 5
+        ? route[2][1]
+        : !isGutterRoute && route.length === 4
+          ? (Math.abs(route[1][0] - route[0][0]) >= Math.abs(route[3][0] - route[2][0]) ? route[1][1] : route[2][1])
+          : (y1 + y2) / 2;
+      if (forward) {{
+        const lane = Math.max(0, edges.indexOf(edge));
+        const fromRight = from.x + nodeWidth / 2;
+        const toLeft = to.x - nodeWidth / 2;
+        const midObs = filterItems(Object.values(positions), p => p.x - nodeWidth / 2 > fromRight && p.x + nodeWidth / 2 < toLeft);
+        let exitX, entryX;
+        if (midObs.length) {{
+          const firstObsLeft = Math.min(...midObs.map(p => p.x - nodeWidth / 2));
+          const lastObsRight = Math.max(...midObs.map(p => p.x + nodeWidth / 2));
+          exitX = Math.max(fromRight + 14, Math.min(firstObsLeft - 14, fromRight + 28 + (lane % 5) * 10));
+          entryX = Math.min(toLeft - 14, Math.max(lastObsRight + 14, toLeft - 28 - (lane % 5) * 6));
+          if (entryX < exitX) entryX = exitX = (exitX + entryX) / 2;
+        }} else {{
+          exitX = Math.min((fromRight + toLeft) / 2, fromRight + 56);
+          entryX = Math.max(exitX, toLeft - 56);
+        }}
+        const c1x = Math.max(x1 + 10, (x1 + exitX) / 2);
+        const c2x = Math.max(c1x, (fromRight + exitX) / 2);
+        const c3x = Math.min(x2 - 10, (entryX + x2) / 2);
+        const c3px = Math.min(c3x, (entryX + toLeft) / 2);
+        return `M ${{x1}} ${{y1}} C ${{c1x}} ${{y1}}, ${{c2x}} ${{laneY}}, ${{exitX}} ${{laneY}} C ${{(2 * exitX + entryX) / 3}} ${{laneY}}, ${{(exitX + 2 * entryX) / 3}} ${{laneY}}, ${{entryX}} ${{laneY}} C ${{c3px}} ${{laneY}}, ${{c3x}} ${{y2}}, ${{x2}} ${{y2}}`;
       }}
       const exitX = route[1][0], entryX = route[route.length - 2][0];
       const midStart = (x1 + exitX) / 2, midEnd = (x2 + entryX) / 2;
@@ -5255,11 +5325,47 @@ def format_reactlog_html(
       // Module bands keep boxes disjoint while dependency rank sets horizontal position.
       const bands = new Map();
       nodes.forEach(n => {{ const key = n.module || ''; if (!bands.has(key)) bands.set(key, []); bands.get(key).push(n); }});
+      const hasAppBand = bands.has('');
+      const hasNamedModules = [...bands.keys()].some(name => name !== '');
+      const placedBands = [];
       let top = 70;
-      for (const [name, members] of bands) {{
-        const layout = arrangeGraphBand(members, edges, ranks, top, colWidth, rowHeight);
-        const rows = layout.rows;
-        Object.assign(pos, layout.positions);
+      if (hasAppBand && hasNamedModules) {{
+        const appMembers = bands.get('');
+        const appLayout = arrangeGraphBand(appMembers, edges, ranks, 70, colWidth, rowHeight);
+        Object.assign(pos, appLayout.positions);
+        const appLeft = Math.min(...appMembers.map(n => pos[n.id].x)) - nodeWidth / 2 - 20;
+        const appRight = Math.max(appLeft + 320, Math.max(...appMembers.map(n => pos[n.id].x)) + nodeWidth / 2 + 20);
+        const appHeight = appLayout.rows * rowHeight + 20;
+        let modMinX = Infinity;
+        for (const [name, members] of bands) {{
+          if (!name) continue;
+          const layout = arrangeGraphBand(members, edges, ranks, top, colWidth, rowHeight);
+          Object.assign(pos, layout.positions);
+          members.forEach(n => {{ if (pos[n.id].x < modMinX) modMinX = pos[n.id].x; }});
+          placedBands.push({{ name, members, rows: layout.rows, top }});
+          top += layout.rows * rowHeight + 75;
+        }}
+        const modShiftX = (appRight + 140) - (modMinX - nodeWidth / 2 - 20);
+        placedBands.forEach(b => b.members.forEach(n => {{ pos[n.id].x += modShiftX; }}));
+        const modSpan = (top - 75 + 20 - 28) - (70 - 28);
+        const appShiftY = Math.max(0, Math.round((modSpan - appHeight) / 2));
+        appMembers.forEach(n => {{ pos[n.id].y += appShiftY; }});
+        placedBands.unshift({{ name: '', members: appMembers, rows: appLayout.rows, top: 70 + appShiftY }});
+      }} else {{
+        for (const [name, members] of bands) {{
+          const layout = arrangeGraphBand(members, edges, ranks, top, colWidth, rowHeight);
+          Object.assign(pos, layout.positions);
+          placedBands.push({{ name, members, rows: layout.rows, top }});
+          top += layout.rows * rowHeight + 75;
+        }}
+      }}
+      nodes.forEach(n => {{
+        if (pos[n.id]) {{
+          pos[n.id].nodeType = n.type;
+          pos[n.id].nodeRole = n.role || n.type;
+        }}
+      }});
+      for (const {{ name, members, rows, top: bandTop }} of placedBands) {{
         if (!name || !collapsedModules.has(name)) {{
           const left = Math.min(...members.map(n => pos[n.id].x)) - nodeWidth / 2 - 20;
           const right = Math.max(...members.map(n => pos[n.id].x)) + nodeWidth / 2 + 20;
@@ -5275,7 +5381,7 @@ def format_reactlog_html(
           }}
           const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           rect.setAttribute('x', left);
-          rect.setAttribute('y', top - 28);
+          rect.setAttribute('y', bandTop - 28);
           rect.setAttribute('width', Math.max(320, right - left));
           rect.setAttribute('height', rows * rowHeight + 20);
           rect.setAttribute('rx', '12');
@@ -5298,7 +5404,7 @@ def format_reactlog_html(
 
             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             label.setAttribute('x', left + 14);
-            label.setAttribute('y', top - 8);
+            label.setAttribute('y', bandTop - 8);
             label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
             label.setAttribute('font-size', '12');
             label.innerHTML = nodeLabelHTML({{ label: name, module: name }}, true) + escapeHTML(` · ${{members.length}} nodes · click to collapse`);
@@ -5306,7 +5412,7 @@ def format_reactlog_html(
 
             const textWidth = (label.getComputedTextLength && label.getComputedTextLength()) || (name.length * 8 + 190);
             const iconX = left + 14 + textWidth + 8;
-            const iconY = top - 19;
+            const iconY = bandTop - 19;
 
             const iconG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             iconG.setAttribute('class', 'module-collapse-icon');
@@ -5335,7 +5441,7 @@ def format_reactlog_html(
 
             const hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             hitRect.setAttribute('x', left + 8);
-            hitRect.setAttribute('y', top - 24);
+            hitRect.setAttribute('y', bandTop - 24);
             hitRect.setAttribute('width', textWidth + 30);
             hitRect.setAttribute('height', 22);
             hitRect.setAttribute('fill', 'transparent');
@@ -5346,7 +5452,7 @@ def format_reactlog_html(
           }} else {{
             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             label.setAttribute('x', left + 14);
-            label.setAttribute('y', top - 8);
+            label.setAttribute('y', bandTop - 8);
             label.setAttribute('fill', isLight ? '#315575' : '#a4c7e7');
             label.setAttribute('font-size', '12');
             label.textContent = escapeHTML(`App · ${{members.length}} nodes`);
@@ -5354,7 +5460,6 @@ def format_reactlog_html(
           }}
           svg.appendChild(box);
         }}
-        top += rows * rowHeight + 75;
       }}
 
       const events = reactlogData.events || reactlogData.log || [];
@@ -5385,7 +5490,7 @@ def format_reactlog_html(
           path.setAttribute('d', d);
           if (e.related && !e.isolated) motionPaths.set(JSON.stringify([e.from, e.to]), d);
           path.setAttribute('fill', 'none');
-          path.setAttribute('stroke-linecap', 'round');
+          path.setAttribute('stroke-linecap', 'butt');
           path.setAttribute('stroke-linejoin', 'round');
           path.setAttribute('data-from', e.from);
           path.setAttribute('data-to', e.to);
@@ -6281,6 +6386,30 @@ def format_reactlog_html(
       renderGraph();
     }}
 
+    function importReactlogJson() {{
+      document.getElementById('json-menu')?.hidePopover?.();
+      document.getElementById('reactlog-file-input')?.click();
+    }}
+
+    function exportReactlogJson() {{
+      document.getElementById('json-menu')?.hidePopover?.();
+      const json = JSON.stringify(reactlogData, null, 2);
+      const blob = new Blob([json], {{ type: 'application/json' }});
+      const url = URL.createObjectURL(blob);
+      const rawTitle = (document.querySelector('.brand-title')?.textContent || 'reactlog')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'reactlog';
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${{rawTitle}}-reactlog.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }}
+
     function handleReactlogFileUpload(e) {{
       const file = e.target.files && e.target.files[0];
       if (!file) return;
@@ -6291,9 +6420,43 @@ def format_reactlog_html(
           loadReactlogObject(parsed);
         }} catch (err) {{
           alert('Error parsing JSON file: ' + err.message);
+        }} finally {{
+          e.target.value = '';
         }}
       }};
       reader.readAsText(file);
+    }}
+
+    function positionAnchoredPopover(anchor, popover) {{
+      if (typeof CSS !== 'undefined' && CSS.supports && CSS.supports('position-area', 'block-end')) return;
+      const a = anchor.getBoundingClientRect();
+      const pad = 8;
+      popover.style.top = '0px';
+      popover.style.left = '0px';
+      const rect = popover.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const left = Math.max(pad, Math.min(vw - rect.width - pad, a.right - rect.width));
+      let top = a.bottom + 6;
+      if (top + rect.height + pad > vh && a.top - rect.height - 6 >= pad) {{
+        top = a.top - rect.height - 6;
+      }}
+      popover.style.left = `${{Math.round(left)}}px`;
+      popover.style.top = `${{Math.round(top)}}px`;
+    }}
+
+    function setupAnchoredPopover(buttonId, popoverId) {{
+      const btn = document.getElementById(buttonId);
+      const pop = document.getElementById(popoverId);
+      if (!btn || !pop) return;
+      pop.addEventListener('toggle', (e) => {{
+        const open = e.newState === 'open';
+        btn.setAttribute('aria-expanded', String(open));
+        btn.classList.toggle('is-active', open);
+        if (open) positionAnchoredPopover(btn, pop);
+      }});
+      window.addEventListener('resize', () => {{
+        if (pop.matches(':popover-open')) positionAnchoredPopover(btn, pop);
+      }});
     }}
 
     document.addEventListener('keydown', (e) => {{
@@ -6302,6 +6465,12 @@ def format_reactlog_html(
 
       if (isInput) {{
         if (e.key === 'Escape') {{
+          const openPopover = document.querySelector('[popover]:popover-open');
+          if (openPopover) {{
+            openPopover.hidePopover?.();
+            e.preventDefault();
+            return;
+          }}
           const modal = document.getElementById('shortcuts-modal');
           if (modal && !modal.hidden) {{
             toggleShortcutsModal();
@@ -6319,6 +6488,12 @@ def format_reactlog_html(
       }}
 
       if (e.key === 'Escape') {{
+        const openPopover = document.querySelector('[popover]:popover-open');
+        if (openPopover) {{
+          openPopover.hidePopover?.();
+          e.preventDefault();
+          return;
+        }}
         const modal = document.getElementById('shortcuts-modal');
         if (modal && !modal.hidden) {{
           toggleShortcutsModal();
@@ -6382,6 +6557,8 @@ def format_reactlog_html(
     }});
 
     window.addEventListener('DOMContentLoaded', () => {{
+      setupAnchoredPopover('btn-graph-legend', 'graph-legend-popover');
+      setupAnchoredPopover('btn-json-menu', 'json-menu');
       init();
       new ResizeObserver(() => fitGraph()).observe(document.getElementById('graph-container'));
     }});

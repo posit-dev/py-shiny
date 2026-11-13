@@ -226,7 +226,7 @@ def other():
         "() => Array.from(document.querySelectorAll('.graph-edge')).some(edge => parseFloat(edge.style.opacity) === 1)"
     )
 
-    page.locator(".toolbar").hover()
+    page.locator(".app-header").hover()
     page.wait_for_function(
         "() => Array.from(document.querySelectorAll('.graph-edge')).every(edge => parseFloat(window.getComputedStyle(edge).opacity) >= 0.5)"
     )
@@ -251,7 +251,7 @@ def other():
     report = generate_reactlog(code)
     load_graph_report(page, format_reactlog_html(report, code))
     graph_node(page, '.graph-node[data-id="calc:doubled"]').click()
-    page.locator(".toolbar").hover()
+    page.locator(".app-header").hover()
     expect(page.locator(".graph-node.is-dimmed")).to_have_count(3)
     expect(page.locator(".graph-edge.is-dimmed")).to_have_count(2)
     expect(page.locator('.graph-node[data-id="input:x"]')).not_to_have_class(
@@ -925,7 +925,9 @@ def summary():
 
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
-    expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"price: 25 → 30")
+    )
 
     # 2. Causal Story Banner above graph is removed as requested
     causal_banner = page.locator("#causal-summary-banner")
@@ -985,7 +987,9 @@ def client_badge():
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
 
-    expect(page.locator("#active-flush-label")).to_contain_text("price: 25 → 30")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"price: 25 → 30")
+    )
 
     # 3. Clicking output:order_summary shows why it rendered in this burst
     graph_node(page, '.graph-node[data-id="output:order_summary"]').click()
@@ -1262,7 +1266,7 @@ def result():
             bounds = page.evaluate("""() => {
                 const graph = document.getElementById('graph-container').getBoundingClientRect();
                 const sidebar = document.getElementById('sidebar').getBoundingClientRect();
-                const controls = document.querySelector('.toolbar').getBoundingClientRect();
+                const controls = document.querySelector('.timeline-navigation').getBoundingClientRect();
                 return {width: document.documentElement.scrollWidth,
                     viewport: innerWidth, graphWidth: graph.width,
                     docked: sidebar.left >= graph.right - 1,
@@ -1751,3 +1755,133 @@ def out():
 
     toggle_btn.click()
     expect(sidebar).to_be_visible()
+
+
+def test_app_box_left_of_modules_and_edges_avoid_input_nodes(page: Page) -> None:
+    data = {
+        "nodes": [
+            {
+                "id": "input:filter",
+                "label": "filter",
+                "type": "input",
+                "role": "source",
+            },
+            {
+                "id": "input:island",
+                "label": "island",
+                "type": "input",
+                "role": "source",
+            },
+            {
+                "id": "calc:shared",
+                "label": "shared",
+                "type": "calc",
+                "role": "conductor",
+            },
+            {
+                "id": "input:mod1-x",
+                "label": "x",
+                "type": "input",
+                "role": "source",
+                "module": "mod1",
+            },
+            {
+                "id": "input:mod1-y",
+                "label": "y",
+                "type": "input",
+                "role": "source",
+                "module": "mod1",
+            },
+            {
+                "id": "output:mod1-plot",
+                "label": "plot",
+                "type": "output",
+                "role": "output",
+                "module": "mod1",
+            },
+            {
+                "id": "input:mod2-a",
+                "label": "a",
+                "type": "input",
+                "role": "source",
+                "module": "mod2",
+            },
+            {
+                "id": "input:mod2-b",
+                "label": "b",
+                "type": "input",
+                "role": "source",
+                "module": "mod2",
+            },
+            {
+                "id": "output:mod2-tbl",
+                "label": "tbl",
+                "type": "output",
+                "role": "output",
+                "module": "mod2",
+            },
+            {
+                "id": "input:mod3-m",
+                "label": "m",
+                "type": "input",
+                "role": "source",
+                "module": "mod3",
+            },
+            {
+                "id": "output:mod3-sum",
+                "label": "sum",
+                "type": "output",
+                "role": "output",
+                "module": "mod3",
+            },
+        ],
+        "edges": [
+            {"from": "input:filter", "to": "calc:shared"},
+            {"from": "input:island", "to": "calc:shared"},
+            {"from": "input:mod1-x", "to": "output:mod1-plot"},
+            {"from": "input:mod1-y", "to": "output:mod1-plot"},
+            {"from": "calc:shared", "to": "output:mod1-plot"},
+            {"from": "input:mod2-a", "to": "output:mod2-tbl"},
+            {"from": "input:mod2-b", "to": "output:mod2-tbl"},
+            {"from": "calc:shared", "to": "output:mod2-tbl"},
+            {"from": "input:mod3-m", "to": "output:mod3-sum"},
+            {"from": "calc:shared", "to": "output:mod3-sum"},
+        ],
+        "events": [{"step": 0, "event": "idle", "time": 0.1}],
+    }
+    load_graph_report(page, format_reactlog_html(data, ""))
+
+    layout = page.evaluate("""() => {
+        const appRect = document.querySelector('.app-box rect').getBoundingClientRect();
+        const modRects = Array.from(document.querySelectorAll('.module-box rect'))
+            .map(el => el.getBoundingClientRect());
+        const inputCards = Array.from(document.querySelectorAll('.graph-node[data-role="source"] .node-card'))
+            .map(el => el.getBoundingClientRect());
+        const paths = Array.from(document.querySelectorAll('.graph-edge'))
+            .map(el => ({from: el.dataset.from, to: el.dataset.to, len: el.getTotalLength(), el}));
+        const intersections = [];
+        for (const p of paths) {
+            for (let i = 1; i < 40; i++) {
+                const pt = p.el.getPointAtLength((p.len * i) / 40);
+                const ctm = p.el.getScreenCTM();
+                const screen = pt.matrixTransform(ctm);
+                for (const card of inputCards) {
+                    if (
+                        screen.x > card.left + 2
+                        && screen.x < card.right - 2
+                        && screen.y > card.top + 2
+                        && screen.y < card.bottom - 2
+                    ) {
+                        intersections.push({from: p.from, to: p.to});
+                    }
+                }
+            }
+        }
+        return {
+            appRight: appRect.right,
+            modLeftMin: Math.min(...modRects.map(r => r.left)),
+            intersections,
+        };
+    }""")
+    assert layout["appRight"] < layout["modLeftMin"]
+    assert layout["intersections"] == []
