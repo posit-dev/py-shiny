@@ -1289,9 +1289,10 @@ def test_format_reactlog_html_node_interactions_and_layout() -> None:
     assert "g.ondblclick" in html
     assert "handleSearch(term)" in html
     assert ".graph-edge.is-connected" in html
-    footer_idx = html.index('class="bottom-timeline-bar toolbar"')
+    timeline_idx = html.index('id="trace-timeline-bar"')
     shortcuts_idx = html.index('id="btn-shortcuts"')
-    assert shortcuts_idx < footer_idx
+    assert shortcuts_idx < timeline_idx
+    assert 'id="btn-graph-legend"' in html
     assert 'id="btn-shortcuts"' in html
     assert 'title="Keyboard shortcuts (?)"' in html
     assert ">Shortcuts</button>" not in html
