@@ -9,6 +9,15 @@ paired with `ui.output_image(id)` for static image files. Do **not** call
 figure for you. Do **not** poll or add JS listeners to detect clicks — instead, enable
 `click`/`hover`/`brush` on `output_plot` and read the resulting reactive inputs.
 
+## Contents
+
+- Render a plot
+- Render a static image
+- Read plot interactions
+- Map interactions back to data rows
+- Quick reference
+- Common mistakes
+
 ## Render a plot
 
 `@render.plot` accepts a matplotlib `Figure`/`Axes`, a seaborn object (return

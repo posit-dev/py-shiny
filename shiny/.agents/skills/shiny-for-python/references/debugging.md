@@ -7,6 +7,16 @@ snapshot of its `input`, `output`, and `export` values over HTTP. Use it instead
 of print statements, hidden outputs, or websocket spelunking to observe
 server-side state.
 
+## Contents
+
+- Enable test mode
+- Read a session snapshot
+- Expose internal reactive values: `export_test_values()`
+- Assert snapshot values in Playwright tests
+- Scrub unstable values from snapshots
+- Other debugging tools
+- Common mistakes
+
 ## Enable test mode
 
 - Env var: `SHINY_TESTMODE=1 shiny run app.py`

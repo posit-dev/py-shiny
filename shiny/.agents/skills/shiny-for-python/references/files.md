@@ -12,6 +12,13 @@ Do NOT build a raw `<input type="file">`, parse multipart bodies yourself, or
 add a custom Starlette route to serve a file — Shiny already exposes both
 directions through the components below.
 
+## Contents
+
+- Upload a file: `ui.input_file`
+- Download a generated file: `@render.download_button` / `@render.download_link`
+- Quick reference
+- Common mistakes
+
 ## Upload a file: `ui.input_file`
 
 Add the input to the UI; read it in the server as `list[FileInfo]`. The value
