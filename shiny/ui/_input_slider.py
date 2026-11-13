@@ -166,7 +166,7 @@ def input_slider(
         # Make sure there are <= 10 steps.
         # n_ticks can be a noninteger, which is good when the range is not an
         # integer multiple of the step size, e.g., min=1, max=10, step=4
-        scale_factor = math.ceil(n_steps / 10)
+        scale_factor = math.ceil(n_steps / 10) or 1
         n_ticks = n_steps / scale_factor
 
     id = resolve_id(id)
@@ -267,6 +267,10 @@ def _find_step_size(min: int | float, max: int | float) -> int | float:
     # TODO: this is a naive version of shiny::findStepSize() that might be susceptible to
     # rounding errors? https://github.com/rstudio/shiny/pull/1956
     range = max - min
+
+    # No range to divide up (min == max), and log10(0) below would fail
+    if range == 0:
+        return 1
 
     if range < 2 or isinstance(min, float) or isinstance(max, float):
         step = range / 100
