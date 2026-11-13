@@ -453,6 +453,20 @@ def test_update_labels_and_view_controls(page: Page):
     expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
 
 
+@pytest.mark.parametrize(
+    ("theme", "idle_color"),
+    [("dark", "rgb(163, 197, 134)"), ("light", "rgb(53, 92, 35)")],
+)
+def test_timeline_idle_marker_is_solid(page: Page, theme: str, idle_color: str):
+    page.set_content(format_reactlog_html(timeline_report(), CODE, theme=theme))
+    idle = page.locator(".timeline-marker.is-idle").first
+    expect(idle).to_have_css("box-shadow", "none")
+    expect(idle).to_have_css("background-color", idle_color)
+    expect(page.locator(".timeline-key .key-idle")).to_have_css(
+        "background-color", idle_color
+    )
+
+
 def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
     data = timeline_report()
     data["nodes"].append(

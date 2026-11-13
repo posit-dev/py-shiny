@@ -45,7 +45,6 @@
       --card-bg: #141e2b;
       --track-bg: #1b2634;
       --track-fill: #24384d;
-      --timeline-idle-outline: #355c23;
       --timeline-output: #56b4e9;
       --timeline-mark: #f9df65;
       --timeline-error: #f3a6af;
@@ -92,6 +91,7 @@
       --card-bg: #f8fafc;
       --track-bg: #e2e8f0;
       --track-fill: #cbd5e1;
+      --timeline-idle: #355c23;
       --timeline-output: #026aa7;
       --timeline-mark: #765b00;
       --timeline-error: #be185d;
@@ -137,6 +137,7 @@
         --card-bg: #f8fafc;
         --track-bg: #e2e8f0;
         --track-fill: #cbd5e1;
+        --timeline-idle: #355c23;
         --timeline-output: #026aa7;
         --timeline-mark: #765b00;
         --timeline-error: #be185d;
@@ -467,7 +468,6 @@
     .timeline-marker.is-output { top: 3px; height: 10px; border-radius: 2px; background: var(--timeline-output); }
     .timeline-marker.is-mark { background: var(--timeline-mark); z-index: 2; }
     .timeline-marker.is-error { background: var(--timeline-error); min-width: 5px; z-index: 3; }
-    .timeline-marker.is-idle { box-shadow: inset 1px 0 var(--timeline-idle-outline); }
     .timeline-marker:hover, .timeline-marker:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; z-index: 3; }
     .timeline-playhead { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--playhead-bg); box-shadow: 0 0 0 1px var(--playhead-ring); pointer-events: none; z-index: 4; }
     .timeline-playhead::before { content: ''; position: absolute; left: -3px; top: -3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--playhead-bg); }

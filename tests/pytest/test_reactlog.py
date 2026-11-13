@@ -2500,8 +2500,6 @@ def out():
 """
     html = format_reactlog_html(generate_reactlog(code), source_code=code)
 
-    assert ".timeline-marker.is-idle {" in html
-    assert ".timeline-marker.is-idle, .timeline-key .key-idle" not in html
     assert "--state-error: #f3a6af;" in html
     assert "--timeline-error: #f3a6af;" in html
     assert (
