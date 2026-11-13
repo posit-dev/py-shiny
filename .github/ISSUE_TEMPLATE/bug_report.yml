@@ -52,7 +52,7 @@ body:
     attributes:
       label: Python Version
       description: '`python --version`'
-      placeholder: ex. 3.10.6
+      placeholder: ex. 3.11.0
     validations:
       required: true
 

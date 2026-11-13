@@ -10,7 +10,7 @@ py-shiny is a Python web framework for building reactive web applications. It ma
 
 ### Essential Commands
 ```bash
-# Install dev dependencies (requires Python 3.10+)
+# Install dev dependencies (requires Python 3.11+)
 pip install -e ".[dev,test,doc]"
 pre-commit install       # Optional: auto-format/lint on commit
 

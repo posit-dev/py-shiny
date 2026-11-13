@@ -324,7 +324,8 @@ ci-install-wheel: FORCE
 install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
 ci-install-deps: FORCE
-	uv pip install -e ".[dev,test]"
+	# Keep CI on a Playwright release with a matching published Docker image.
+	uv pip install -e ".[dev,test]" "playwright==1.65.0"
 ci-install-py-shiny-templates-deps: FORCE
 	uv pip install -r py-shiny-templates/requirements.txt
 
