@@ -56,8 +56,9 @@ def test_report_replays_a_render_error_and_recovery(page: Page) -> None:
         re.compile(r"output out failed: Choose a number greater than one\."),
     )
     marker.click()
-    expect(page.locator("#trace-status-line")).to_contain_text(
-        "output out failed: Choose a number greater than one."
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext",
+        re.compile(r"output out failed: Choose a number greater than one\."),
     )
     output_node = page.get_by_role("button", name=re.compile(r"Output output out,"))
     expect(output_node).to_have_attribute("data-state", "error")

@@ -1262,17 +1262,7 @@ def test_format_reactlog_html_settings_cogwheel_and_unified_timeline():
 
 
 def test_viewer_timeline_legend_code_highlight_and_json_actions():
-    code = """from shiny import reactive
-from shiny.express import input, render
-@reactive.calc
-def val():
-    return input.x()
-@render.text
-def out():
-    reactive.mark("step")
-    return str(val())
-"""
-    html = format_reactlog_html(generate_reactlog(code), source_code=code)
+    html = format_reactlog_html(_chain_log(), source_code=_CHAIN_SOURCE)
 
     assert "--state-error: #f3a6af;" in html
     assert "--timeline-error: #f3a6af;" in html
@@ -1696,9 +1686,10 @@ def test_format_reactlog_html_node_interactions_and_layout() -> None:
     assert "g.ondblclick" in html
     assert "handleSearch(term)" in html
     assert ".graph-edge.is-connected" in html
-    footer_idx = html.index('class="bottom-timeline-bar toolbar"')
+    timeline_idx = html.index('id="trace-timeline-bar"')
     shortcuts_idx = html.index('id="btn-shortcuts"')
-    assert shortcuts_idx < footer_idx
+    assert shortcuts_idx < timeline_idx
+    assert 'id="btn-graph-legend"' in html
     assert 'id="btn-shortcuts"' in html
     assert 'title="Keyboard shortcuts (?)"' in html
     assert ">Shortcuts</button>" not in html

@@ -183,7 +183,9 @@ def test_recorded_flushes_preserve_startup_and_empty_boundaries(
     page.evaluate("selectFlush(2)")
     expect(page.locator("#scrubber-range")).to_have_value("8")
     page.evaluate("selectFlush(3)")
-    expect(page.locator("#active-flush-label")).to_contain_text("input.x: 1 → 2")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"input\.x: 1 → 2")
+    )
 
 
 def test_recorded_flush_keeps_slow_work_and_batched_inputs_together(
@@ -251,7 +253,9 @@ def test_unfinished_recorded_flush_is_not_shown_as_settled(
     page.evaluate("openSecondaryTimelineForFlush()")
     expect(page.locator(".pill-idle")).to_have_count(0)
     expect(page.locator(".pill-output")).to_have_count(1 if end == 15 else 0)
-    expect(page.locator("#active-flush-label")).to_contain_text("in progress")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"in progress")
+    )
 
 
 def test_bookmarks_do_not_create_recorded_flushes(
@@ -272,7 +276,9 @@ def test_bookmarks_do_not_create_recorded_flushes(
     expect(page.locator(".timeline-marker.is-idle")).to_have_count(4)
     expect(page.locator(".timeline-marker.is-mark")).to_have_count(1)
     page.evaluate("seekTo(14)")
-    expect(page.locator("#active-flush-label")).to_contain_text("checkpoint")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"checkpoint")
+    )
 
 
 @pytest.mark.parametrize("selection", ["click", "enter", "arrow-enter"])
@@ -401,19 +407,19 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
     expect(page.locator("#scrubber-range")).to_have_attribute(
-        "aria-valuetext", re.compile(r"\. x")
+        "aria-valuetext", re.compile(r"\. (?:input\.)?x")
     )
     expect(page.locator(".graph-node")).to_have_count(3)
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
     expect(page.locator("#scrubber-range")).to_have_attribute(
-        "aria-valuetext", re.compile(r"\. y")
+        "aria-valuetext", re.compile(r"\. (?:input\.)?y")
     )
     expect(page.locator(".graph-node")).to_have_count(2)
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowUp")
     expect(page.locator("#scrubber-range")).to_have_attribute(
-        "aria-valuetext", re.compile(r"\. x")
+        "aria-valuetext", re.compile(r"\. (?:input\.)?x")
     )
 
 
@@ -700,7 +706,7 @@ def test_update_labels_and_view_controls(page: Page):
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
     expect(page.locator("#scrubber-range")).to_have_attribute(
-        "aria-valuetext", re.compile(r"\. x")
+        "aria-valuetext", re.compile(r"\. (?:input\.)?x")
     )
     expect(page.locator(".graph-node")).to_have_count(3)
     page.get_by_role("button", name="Node details", exact=True).click()
@@ -1075,7 +1081,7 @@ def test_timeline_uses_keyboard_navigation(page: Page):
     page.locator("#btn-play").focus()
     page.keyboard.press("ArrowDown")
     expect(page.locator("#scrubber-range")).to_have_attribute(
-        "aria-valuetext", re.compile(r"\. x")
+        "aria-valuetext", re.compile(r"\. (?:input\.)?x")
     )
     expect(page.locator("#scrubber-range")).not_to_have_value("0")
     page.keyboard.press("ArrowUp")

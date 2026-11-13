@@ -1004,8 +1004,10 @@ def test_empty_graph_shows_summary_notice(page: Page) -> None:
     reactlog = load_reactlog_json({"log": []})
     reactlog["summary"] = "No session selected."
     page.set_content(format_reactlog_html(reactlog, ""))
-    expect(page.locator("#active-flush-label")).to_have_text("No session selected.")
-    expect(page.locator("#active-flush-label")).to_be_visible()
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"No session selected\.")
+    )
+    expect(page.locator("#scrubber-range")).to_be_visible()
 
 
 def test_action_scoped_causal_story_and_did_not_run_explanation(
