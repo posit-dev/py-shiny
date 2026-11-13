@@ -118,7 +118,8 @@ def test_remote_reactlog_marks_require_the_session_id() -> None:
     client.post("/__reactlog__/mark", json={"label": "Session A mark"})
 
     headers = {"X-Forwarded-For": "203.0.113.5", "X-Reactlog-Token": app.reactlog_token}
-    for params in ({}, {"session_id": "unknown"}):
+    requests: tuple[dict[str, str], ...] = ({}, {"session_id": "unknown"})
+    for params in requests:
         report = client.get("/__reactlog__", headers=headers, params=params)
         assert report.status_code == 200
         assert "Session A mark" not in report.text
