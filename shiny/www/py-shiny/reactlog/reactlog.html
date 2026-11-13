@@ -50,9 +50,9 @@ __REACTLOG_CSS__
     </div>
   </header>
 
-  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
+  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline" ondblclick="toggleSecondaryTimelineForFlush()">
     <div class="trace-timeline-row">
-      <div id="trace-track-wrap" class="trace-track-wrap">
+      <div id="trace-track-wrap" class="trace-track-wrap" ondblclick="event.stopPropagation(); toggleSecondaryTimelineForFlush()">
         <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
         <div id="timeline-playhead" class="timeline-playhead" aria-hidden="true"></div>
         <div id="timeline-tooltip" class="timeline-tooltip" role="tooltip" hidden></div>
@@ -83,6 +83,20 @@ __REACTLOG_CSS__
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="secondary-timeline-bar" id="secondary-timeline-bar" hidden aria-label="Detailed secondary timeline">
+    <div class="secondary-timeline-header">
+      <div class="secondary-timeline-info">
+        <span class="secondary-timeline-tag tag-flush" id="secondary-timeline-tag">Update</span>
+        <span class="secondary-timeline-title" id="secondary-timeline-title">Update details</span>
+        <span class="secondary-timeline-meta" id="secondary-timeline-meta"></span>
+      </div>
+      <button class="btn icon mini secondary-timeline-close" id="btn-close-secondary-timeline" onclick="closeSecondaryTimeline()" title="Close details timeline (Esc)" aria-label="Close details timeline"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="secondary-timeline-track-wrap" id="secondary-timeline-track-wrap">
+      <div class="secondary-timeline-chips" id="secondary-timeline-chips" role="list" aria-label="Step events"></div>
     </div>
   </div>
 
@@ -172,7 +186,7 @@ __REACTLOG_CSS__
       <aside class="sidebar" id="sidebar" aria-label="Details and events" hidden>
         <div class="sidebar-header">
           <span id="detail-panel-title">Node details</span>
-          <button class="btn icon mini" id="btn-close-sidebar" onclick="closeSidebarAndClearSelection()" aria-label="Close Inspector" title="Close Inspector">✕</button>
+          <button class="btn icon mini" id="btn-close-sidebar" onclick="closeSidebarAndClearSelection()" aria-label="Close Inspector" title="Close Inspector"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
 
         <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-label="Node details">
@@ -271,7 +285,7 @@ __REACTLOG_SCRIPT__
     <div class="modal-dialog" role="dialog" aria-labelledby="shortcuts-modal-title" aria-modal="true">
       <div class="modal-header">
         <h2 class="modal-title" id="shortcuts-modal-title">Keyboard Navigation Shortcuts</h2>
-        <button class="modal-close-btn" onclick="toggleShortcutsModal()" aria-label="Close shortcuts dialog">✕</button>
+        <button class="modal-close-btn" onclick="toggleShortcutsModal()" aria-label="Close shortcuts dialog"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <table class="shortcuts-table">
         <tbody>
