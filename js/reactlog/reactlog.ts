@@ -1832,16 +1832,22 @@ function routeGraphEdge(edge: any, positions: any, nodeWidth: any, nodeHeight: a
     const obstacles = filterItems(Object.values(positions), (p: any) =>
       p.x + nodeWidth / 2 + clearance > left && p.x - nodeWidth / 2 - clearance < right);
     const gapMidpoints: any[] = [];
-    const ys = obstacles.map((p: any) => p.y).sort((a: any, b: any) => a - b);
+    const ys = [...new Set(obstacles.map((p: any) => p.y))].sort((a: any, b: any) => a - b);
+    const topPad = (py: any) => {
+      const idx = ys.indexOf(py);
+      return (idx === 0 || (idx > 0 && py - ys[idx - 1] > 120)) ? 42 : clearance;
+    };
     for (let i = 1; i < ys.length; i++) {
-      if (ys[i] - ys[i - 1] >= nodeHeight + clearance * 2) gapMidpoints.push((ys[i - 1] + ys[i]) / 2);
+      const upperBottom = ys[i - 1] + nodeHeight / 2 + clearance;
+      const lowerTop = ys[i] - nodeHeight / 2 - topPad(ys[i]);
+      if (lowerTop >= upperBottom) gapMidpoints.push((upperBottom + lowerTop) / 2);
     }
     if (ys.length) {
-      gapMidpoints.push(ys[0] - nodeHeight / 2 - clearance - 10);
+      gapMidpoints.push(ys[0] - nodeHeight / 2 - topPad(ys[0]) - 6);
       gapMidpoints.push(ys[ys.length - 1] + nodeHeight / 2 + clearance + 10);
     }
     const candidates = [y1, y2, (y1 + y2) / 2, ...gapMidpoints, ...obstacles.flatMap((p: any) =>
-      [p.y - nodeHeight / 2 - clearance, p.y + nodeHeight / 2 + clearance])];
+      [p.y - nodeHeight / 2 - topPad(p.y), p.y + nodeHeight / 2 + clearance])];
     const minClear = (y: any) => obstacles.length
       ? Math.min(...obstacles.map((p: any) => Math.abs(y - p.y) - nodeHeight / 2))
       : 40;
@@ -1862,10 +1868,10 @@ function routeGraphEdge(edge: any, positions: any, nodeWidth: any, nodeHeight: a
     };
     const cost = (y: any) => Math.abs(y1 - y) + Math.abs(y2 - y) + Math.abs(y - y2) * 0.15 + crossCost(y) - Math.min(45, minClear(y)) * 0.4;
     const valid = filterItems(candidates, (candidate: any) => obstacles.every((p: any) =>
-      candidate <= p.y - nodeHeight / 2 - clearance || candidate >= p.y + nodeHeight / 2 + clearance));
+      candidate <= p.y - nodeHeight / 2 - topPad(p.y) || candidate >= p.y + nodeHeight / 2 + clearance));
     let y = (valid.length ? valid : candidates).sort((a: any, b: any) => cost(a) - cost(b))[0];
     const stagger = ((lane % 5) - 2) * 4;
-    if (obstacles.length && y !== y1 && y !== y2 && stagger && obstacles.every((p: any) => (y + stagger) <= p.y - nodeHeight / 2 - clearance || (y + stagger) >= p.y + nodeHeight / 2 + clearance)) {
+    if (obstacles.length && y !== y1 && y !== y2 && stagger && obstacles.every((p: any) => (y + stagger) <= p.y - nodeHeight / 2 - topPad(p.y) || (y + stagger) >= p.y + nodeHeight / 2 + clearance)) {
       y += stagger;
     }
     points = [[x1, y1], [exit, y1], [exit, y], [entry, y], [entry, y2], [x2, y2]];
@@ -1902,14 +1908,19 @@ function graphEdgePath(edge: any, positions: any, nodeWidth: any, nodeHeight: an
   const x1 = portX(from, y1 - from.y, 'right');
   const x2 = portX(to, y2 - to.y, forward ? 'left' : 'right');
   const clearance = 12;
-  const dx = Math.max(28, (x2 - x1) * 0.42);
-  const canCurveDirectly = x2 > x1 && (() => {
+  const toLeft = to.x - nodeWidth / 2;
+  const lineSeg = (ax: number, ay: number, bx: number, by: number) =>
+    `C ${(2 * ax + bx) / 3} ${(2 * ay + by) / 3}, ${(ax + 2 * bx) / 3} ${(ay + 2 * by) / 3}, ${bx} ${by}`;
+  const hasNotchLead = forward && x2 > toLeft + 0.5 && Math.abs(y2 - y1) > 1;
+  const curveEndX = hasNotchLead ? Math.max(x1 + 12, toLeft - 4) : x2;
+  const dx = Math.max(24, (curveEndX - x1) * 0.45);
+  const canCurveDirectly = curveEndX > x1 && (() => {
     const obs = Object.entries(positions).filter(([id]: any) => id !== edge.from && id !== edge.to);
     if (!obs.length) return true;
-    const cx1 = x1 + dx, cx2 = x2 - dx;
+    const cx1 = x1 + dx, cx2 = curveEndX - dx;
     for (let step = 1; step < 20; step++) {
       const t = step / 20, mt = 1 - t;
-      const bx = mt * mt * mt * x1 + 3 * mt * mt * t * cx1 + 3 * mt * t * t * cx2 + t * t * t * x2;
+      const bx = mt * mt * mt * x1 + 3 * mt * mt * t * cx1 + 3 * mt * t * t * cx2 + t * t * t * curveEndX;
       const by = mt * mt * mt * y1 + 3 * mt * mt * t * y1 + 3 * mt * t * t * y2 + t * t * t * y2;
       if (obs.some(([, p]: any) => Math.abs(bx - p.x) < nodeWidth / 2 + clearance && Math.abs(by - p.y) < nodeHeight / 2 + clearance)) {
         return false;
@@ -1918,7 +1929,8 @@ function graphEdgePath(edge: any, positions: any, nodeWidth: any, nodeHeight: an
     return true;
   })();
   if (canCurveDirectly) {
-    return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+    const curve = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${curveEndX - dx} ${y2}, ${curveEndX} ${y2}`;
+    return hasNotchLead ? `${curve} ${lineSeg(curveEndX, y2, x2, y2)}` : curve;
   }
   const isGutterRoute = forward && (to.x - from.x - nodeWidth) < nodeWidth;
   const laneY = !isGutterRoute && route.length >= 5
@@ -1933,7 +1945,6 @@ function graphEdgePath(edge: any, positions: any, nodeWidth: any, nodeHeight: an
     const outIdx = Math.max(0, outPeers.indexOf(edge));
     const outSlot = laneY < y1 ? outIdx : Math.max(0, outPeers.length - 1 - outIdx);
     const fromRight = from.x + nodeWidth / 2;
-    const toLeft = to.x - nodeWidth / 2;
     const midObs = filterItems(Object.values(positions), (p: any) => p.x - nodeWidth / 2 > fromRight && p.x + nodeWidth / 2 < toLeft);
     let exitX: any, entryX: any;
     if (midObs.length) {
@@ -1946,8 +1957,6 @@ function graphEdgePath(edge: any, positions: any, nodeWidth: any, nodeHeight: an
       exitX = Math.min((fromRight + toLeft) / 2, fromRight + 42 + outSlot * 10);
       entryX = Math.max(exitX, toLeft - 42);
     }
-    const lineSeg = (ax: number, ay: number, bx: number, by: number) =>
-      `C ${(2 * ax + bx) / 3} ${(2 * ay + by) / 3}, ${(ax + 2 * bx) / 3} ${(ay + 2 * by) / 3}, ${bx} ${by}`;
     const spanX = Math.max(8, entryX - exitX);
     const dy1 = laneY - y1, ad1 = Math.abs(dy1), s1 = Math.sign(dy1);
     const dy2 = y2 - laneY, ad2 = Math.abs(dy2), s2 = Math.sign(dy2);

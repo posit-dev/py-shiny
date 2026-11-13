@@ -2544,9 +2544,9 @@ def test_graph_edge_ports_attach_to_chevron_and_concave_notches():
     if node is None:
         pytest.skip("Node.js is needed to run the graph router")
     html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
-    assert 'marker id="arrow" viewBox="0 0 10 10" refX="9.5"' in html
-    assert 'marker id="arrow-isolated" viewBox="0 0 10 10" refX="9.5"' in html
-    assert 'marker id="arrow-active" viewBox="0 0 10 10" refX="9.5"' in html
+    assert 'marker id="arrow" viewBox="0 0 10 10" refX="9.6"' in html
+    assert 'marker id="arrow-isolated" viewBox="0 0 10 10" refX="9.6"' in html
+    assert 'marker id="arrow-active" viewBox="0 0 10 10" refX="9.8"' in html
     router = re.search(r"    function routeGraphEdge\([\s\S]*?\n    \}", html)
     assert router is not None
     edge_path = re.search(r"    function graphEdgePath\([\s\S]*?\n    \}", html)
