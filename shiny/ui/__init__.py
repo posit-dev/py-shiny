@@ -3,6 +3,10 @@ Tools for creating user interfaces including: custom components, HTML components
 layout helpers, page-level containers, and more.
 """
 
+# Deferred on Python 3.15+ (PEP 810) so that `shinychat` is not imported unless
+# the chat or markdown-stream components are used.
+__lazy_modules__ = {"shiny.ui._chat", "shiny.ui._markdown_stream"}
+
 from htmltools import (
     HTML,
     Tag,

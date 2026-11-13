@@ -1,5 +1,11 @@
 """A package for building reactive web applications."""
 
+# On Python 3.15+, these imports are deferred until first use (PEP 810); on
+# older versions the declaration is ignored. Deferring `shiny._main` keeps the
+# CLI/server stack (uvicorn, click, questionary, prompt_toolkit, watchfiles)
+# out of `import shiny` for library, notebook, and test usage.
+__lazy_modules__ = {"shiny._main"}
+
 from ._version import __version__
 
 from ._shinyenv import is_pyodide as _is_pyodide
