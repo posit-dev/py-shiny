@@ -446,6 +446,9 @@ jobs:
   test-narwhals-integration:
     runs-on: ubuntu-latest
     if: github.event_name != 'release'
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -466,6 +469,10 @@ jobs:
         uses: ./.github/py-shiny/narwhals-setup
         with:
           shiny-dir: "."
+          setup-playwright: "false"
+
+      - name: Setup remote Playwright
+        uses: ./.github/py-shiny/setup-playwright-remote
 
       - name: Narwhals integration test
         uses: ./.github/py-shiny/narwhals-test

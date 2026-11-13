@@ -4,6 +4,9 @@ inputs:
   shiny-dir:
     description: "Path to the py-shiny checkout"
     required: true
+  setup-playwright:
+    description: "Start the remote Playwright server from py-shiny main"
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -24,4 +27,5 @@ runs:
         make ci-install-deps
 
     - name: Setup remote Playwright
+      if: inputs.setup-playwright == 'true'
       uses: posit-dev/py-shiny/.github/py-shiny/setup-playwright-remote@main
