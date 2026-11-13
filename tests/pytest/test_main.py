@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import warnings
 from typing import Any, Dict, cast
 
@@ -25,6 +26,27 @@ def test_shiny_server_calls_on_started(monkeypatch: pytest.MonkeyPatch):
     asyncio.run(server.startup())
 
     assert calls == ["started"]
+
+
+def test_run_app_publishes_ws_max_size(monkeypatch: pytest.MonkeyPatch):
+    def run_uvicorn(app: Any, **kwargs: Any) -> None:
+        pass
+
+    monkeypatch.delenv("SHINY_WS_MAX_SIZE", raising=False)
+    monkeypatch.setattr(_main_run, "_run_uvicorn", run_uvicorn)
+
+    try:
+        _main_run.run_app(
+            cast(Any, object()),
+            host="127.0.0.1",
+            port=8765,
+            ws_max_size=33_554_432,
+            # Keep run_app() from setting SHINY_DEV_MODE=1 in the pytest process.
+            dev_mode=False,
+        )
+        assert os.environ["SHINY_WS_MAX_SIZE"] == "33554432"
+    finally:
+        os.environ.pop("SHINY_WS_MAX_SIZE", None)
 
 
 def test_launch_browser_callback_ignores_log_level(monkeypatch: pytest.MonkeyPatch):

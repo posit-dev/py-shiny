@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* `run_app()` (and `shiny run`) now publish the server's websocket message size limit as the `SHINY_WS_MAX_SIZE` environment variable, so app code and extensions such as shinywidgets can read the actual `--ws-max-size` value instead of assuming uvicorn's default. The variable is only set when Shiny launches the server; apps served directly by another ASGI server don't get it (#2616).
+
 * Added `reactive.debounce()` and `reactive.throttle()`, decorators that slow down how often a reactive function invalidates its readers. They go below `@reactive.calc`; effects and outputs read the debounced calc instead (an effect reacts to it with `@reactive.event()`). To limit an existing calc or input, call them directly, as in `reactive.debounce(input.text, 0.5)`, which returns a calc. `debounce` waits until the changes stop for a set time; `throttle` lets a change through at most once per time window. Use them when a value changes often (typing, slider drags, plot hover) and the work that reads it is slow. Under OpenTelemetry, the calc above them records its span as `reactive.calc debounce <name>` or `reactive.calc throttle <name>`; the reactives behind them record none. (#564)
 
 ### Bug fixes and minor improvements

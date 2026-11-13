@@ -260,7 +260,11 @@ def run_app(
         List or tuple of file globs to indicate which files should be excluded from
         reload monitoring. Can be combined with `reload_includes`
     ws_max_size
-        WebSocket max size message in bytes.
+        WebSocket max size message in bytes. Published to the app process as the
+        ``SHINY_WS_MAX_SIZE`` environment variable, so extensions (e.g.,
+        shinywidgets) can read the actual limit instead of assuming the default.
+        Only set when Shiny launches the server; apps served directly by another
+        ASGI server don't get it.
     log_level
         Log level.
     app_dir
@@ -305,6 +309,15 @@ def run_app(
 
     if dev_mode:
         os.environ["SHINY_DEV_MODE"] = "1"
+
+    # Publish the server's websocket message size limit so app code (and
+    # extensions like shinywidgets, which guards against session-killing
+    # oversized messages client-side) can read the actual limit. An env var
+    # (rather than an attribute on the App) survives --reload/--workers child
+    # processes and import-string apps. Only set when Shiny launches the
+    # server; apps served directly by uvicorn/gunicorn/etc. must be configured
+    # by their operators.
+    os.environ["SHINY_WS_MAX_SIZE"] = str(ws_max_size)
 
     if isinstance(app, str):
         # Remove ":app" suffix if present. Normally users would just pass in the
