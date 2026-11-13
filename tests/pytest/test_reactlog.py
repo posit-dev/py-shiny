@@ -5,8 +5,8 @@ import re
 import runpy
 import shutil
 import subprocess
-import xml.etree.ElementTree as ET
 import textwrap
+import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
