@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="__REACTLOG_THEME__">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090d12" />
+  <title>__REACTLOG_TITLE__</title>
+  <style>
+__REACTLOG_CSS__
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <div class="brand-copy">
+        <h1 class="brand-title">__REACTLOG_TITLE__</h1>
+        <div class="brand-subtitle">Reactlog report</div>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="search-wrap">
+        <svg class="search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" class="search-input" id="search-input" name="reactive-node-filter" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search names or module:name" onfocus="handleSearch(this.value, false)" oninput="handleSearch(this.value, true)" aria-label="Filter reactive nodes by name, type, id, or module" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results" onkeydown="handleSearchKey(event)" />
+        <button type="button" class="search-clear" id="search-clear" aria-label="Clear node filter" title="Clear filter" onclick="clearSearchFilter()" hidden>×</button>
+        <button type="button" class="search-toggle" aria-label="Show node choices" aria-controls="search-results" aria-expanded="false" onclick="toggleSearchChoices()">▾</button>
+        <div id="search-results" class="search-results" role="listbox" aria-label="Node search results" onkeydown="handleSearchKey(event)" hidden></div>
+      </div>
+      <div class="timeline-navigation" role="group" aria-label="Timeline playback">
+        <button type="button" class="btn mini" id="btn-play" onclick="togglePlay()" aria-label="Play timeline" title="Play / Pause (Space)">▶ Play</button>
+        <div class="status-time-group">
+          <span class="trace-clock" id="trace-current-time">0.0s</span><span class="trace-sep">/</span><span class="trace-total" id="trace-total-time">0.0s</span><span class="step-display" id="step-display">Step 0 / 0</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn icon" id="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+      <input type="file" id="reactlog-file-input" accept=".json" style="display:none" onchange="handleReactlogFileUpload(event)" />
+      <div class="json-menu-wrap">
+        <button type="button" class="btn" id="btn-json-menu" popovertarget="json-menu" popovertargetaction="toggle" aria-label="Import or export Reactlog JSON" aria-controls="json-menu" aria-expanded="false" title="Import or export Reactlog JSON"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>JSON <span aria-hidden="true">▾</span></button>
+        <div class="json-menu" id="json-menu" popover="auto" aria-label="Reactlog JSON actions">
+          <button type="button" class="btn json-menu-item" id="btn-import-json" onclick="importReactlogJson()"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import JSON</button>
+          <button type="button" class="btn json-menu-item" id="btn-export-json" onclick="exportReactlogJson()"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export JSON</button>
+        </div>
+      </div>
+      <button class="btn icon" id="btn-shortcuts" aria-label="Keyboard shortcuts" onclick="toggleShortcutsModal()" title="Keyboard shortcuts (?)"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg></button>
+      <button class="btn icon" id="btn-toggle-inspector" onclick="toggleInspector()" aria-label="Toggle inspector details" title="Toggle inspector details panel"><svg class="inline-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg></button>
+    </div>
+  </header>
+
+  <div class="trace-timeline-bar" id="trace-timeline-bar" aria-label="Execution timeline">
+    <div class="trace-timeline-row">
+      <div id="trace-track-wrap" class="trace-track-wrap">
+        <div id="trace-markers" role="group" aria-label="Timeline marks"></div>
+        <div id="timeline-playhead" class="timeline-playhead" aria-hidden="true"></div>
+        <div id="timeline-tooltip" class="timeline-tooltip" role="tooltip" hidden></div>
+        <input type="range" id="scrubber-range" min="0" max="0" value="0" oninput="seekTo(Number(this.value))" aria-label="Timeline step scrubber" />
+      </div>
+      <div class="legend-popover-anchor">
+        <button type="button" class="btn icon mini" id="btn-graph-legend" popovertarget="graph-legend-popover" popovertargetaction="toggle" aria-label="Show State, Links, and Timeline legend" aria-controls="graph-legend-popover" aria-expanded="false" title="State, Links & Timeline legend">?</button>
+        <div class="legend graph-legend-popover" id="graph-legend-popover" popover="auto" role="region" aria-label="Graph legend">
+          <div class="legend-group"><span class="legend-label">State</span>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-ready)"></span>Ready</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-calculating)"></span>Calculating</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidating)"></span>Invalidating</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-invalidated)"></span>Invalidated</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-frozen)"></span>Frozen</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--state-error)"></span>Error</div>
+          </div>
+          <div class="legend-group"><span class="legend-label">Links</span>
+            <div class="legend-item"><span class="legend-line"></span>Dependency</div>
+            <div class="legend-item"><span class="legend-line is-isolated"></span>Isolated dependency</div>
+            <div class="legend-item"><span class="legend-line is-inactive"></span>Inactive dependency</div>
+          </div>
+          <div class="legend-group timeline-key" id="timeline-key" aria-label="Timeline key"><span class="legend-label">Timeline</span>
+            <span class="legend-item"><i class="key-idle"></i>Idle</span>
+            <span class="legend-item"><i class="key-output"></i>Output calculation</span>
+            <span class="legend-item"><i class="key-mark"></i>User mark</span>
+            <span class="legend-item"><i class="key-error"></i>Error</span>
+            <span class="legend-item"><i class="key-position"></i>Current step</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="workspace-layout">
+    <!-- Main View & Graph Canvas -->
+    <main class="main-view" id="main-view">
+      <div class="graph-container" id="graph-container">
+        <div class="graph-topbar">
+          <div class="graph-top-row">
+            <div class="zoom-controls">
+              <div class="filter-state" aria-label="Current exploration scope">
+                <span id="filter-node-count" role="status" aria-live="polite"></span>
+                <div id="active-filters"></div>
+              </div>
+              <button class="btn icon mini" onclick="zoomIn()" aria-label="Zoom in" title="Zoom in"><svg width="18" height="18" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+              <button class="btn icon mini" onclick="zoomOut()" aria-label="Zoom out" title="Zoom out"><svg width="18" height="18" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+              <button class="btn icon mini" id="btn-fullscreen" onclick="toggleFullscreen()" aria-label="Full screen" title="Full screen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+              <div class="settings-wrap" id="settings-wrap">
+                <button class="btn icon mini" id="btn-settings" onclick="toggleSettingsMenu()" aria-label="Graph settings" aria-expanded="false" title="Graph view settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                <div class="settings-menu" id="settings-menu" hidden>
+                  <div class="settings-menu-header">View Settings</div>
+                  <div class="settings-menu-item">
+                    <label for="clientdata-select" class="settings-menu-label">Clientdata</label>
+                    <select class="filter-select settings-select" id="clientdata-select" aria-label="Clientdata visibility" onchange="setClientDataVisibility(this.value)">
+                      <option value="hide">Hide clientdata</option>
+                      <option value="show">Show clientdata</option>
+                    </select>
+                  </div>
+                  <div class="settings-menu-item">
+                    <label for="activity-select" class="settings-menu-label">Activity</label>
+                    <select class="filter-select settings-select" id="activity-select" aria-label="Activity view" onchange="setViewMode(this.value)">
+                      <option value="full">Show all activity</option>
+                      <option value="flush">Show current activity</option>
+                    </select>
+                  </div>
+                  <div class="settings-menu-item">
+                    <label for="playback-speed-select" class="settings-menu-label">Timeline playback</label>
+                    <select class="filter-select settings-select" id="playback-speed-select" aria-label="Timeline playback speed" onchange="setPlaybackSpeed(this.value)">
+                      <option value="step" selected>Progress bar (step-by-step)</option>
+                      <option value="realtime">Real time (video speed)</option>
+                    </select>
+                  </div>
+                  <div class="settings-menu-item" id="video-speed-setting" hidden>
+                    <label for="video-speed-select" class="settings-menu-label">Video speed</label>
+                    <select class="filter-select settings-select" id="video-speed-select">
+                      <option value="1" selected>1×</option>
+                      <option value="0.5">0.5×</option>
+                      <option value="0.25">0.25×</option>
+                    </select>
+                  </div>
+                  <div class="settings-menu-divider"></div>
+                  <div class="settings-menu-actions">
+                    <button type="button" class="btn mini settings-action-btn" id="btn-toggle-collapse-all" onclick="toggleCollapseAllModules()" title="Collapse all modules into macro boxes">Collapse modules</button>
+                    <button type="button" class="btn mini settings-action-btn" id="btn-reset-view" onclick="resetGraphView()" title="Clear node selection and filters, then fit the full graph">Reset view</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="live-action-toast" class="action-toast" role="status" aria-live="polite" hidden></div>
+        <button class="btn mini primary" id="btn-inspect-selection" onclick="showSidebarPanel('timeline')" aria-label="Open selected node details" hidden style="position:absolute;left:1rem;bottom:1rem;z-index:28;">Inspect node</button>
+
+        <div class="empty-graph-message" id="empty-graph-message" role="status" hidden>No recorded changes or executions in this view. Select Show all nodes to see the full graph.</div>
+        <svg id="reactlog-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9.6" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto">
+              <path d="M 1.2 2.0 L 8.4 5 L 1.2 8.0 L 2.8 5 z" fill="var(--text-muted)" />
+            </marker>
+            <marker id="arrow-isolated" viewBox="0 0 10 10" refX="9.6" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto">
+              <path d="M 1.4 2.2 L 8.4 5 L 1.4 7.8 z" fill="var(--bg)" stroke="var(--text-muted)" stroke-width="1.4" stroke-linejoin="round" />
+            </marker>
+            <marker id="arrow-active" viewBox="0 0 10 10" refX="9.8" refY="5" markerWidth="6.0" markerHeight="6.0" orient="auto">
+              <path d="M 1.2 2.0 L 8.4 5 L 1.2 8.0 L 2.8 5 z" fill="var(--accent)" />
+            </marker>
+            <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+              <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.22" />
+            </filter>
+          </defs>
+          <g id="viewport-g">
+            <g id="graph-content"></g>
+            <g id="graph-edge-pulses" aria-hidden="true"></g>
+          </g>
+        </svg>
+      </div>
+
+      <aside class="sidebar" id="sidebar" aria-label="Details and events" hidden>
+        <div class="sidebar-header">
+          <span id="detail-panel-title">Node details</span>
+          <button class="btn icon mini" id="btn-close-sidebar" onclick="closeSidebarAndClearSelection()" aria-label="Close Inspector" title="Close Inspector">✕</button>
+        </div>
+
+        <div class="timeline-panel sidebar-panel" id="timeline-panel" role="tabpanel" aria-label="Node details">
+          <div class="inspector-container">
+            <details class="flush-card" id="flush-card">
+              <summary class="flush-card-header">
+                <div class="flush-card-title" id="flush-card-title">Activity 1: Initial render</div>
+                <span class="flush-card-time" id="flush-card-time">0.0s</span>
+              </summary>
+              <div class="flush-card-body">
+                <div class="flush-stage-row">
+                  <span class="stage-tag tag-trigger">Trigger</span>
+                  <span class="stage-text" id="flush-card-trigger">Application Initialization</span>
+                </div>
+                <div class="flush-stage-row">
+                  <span class="stage-tag tag-invalidated">Invalidated</span>
+                  <span class="stage-text" id="flush-card-invalidated">0 nodes</span>
+                </div>
+                <div class="flush-stage-row">
+                  <span class="stage-tag tag-calcs">Recalculated</span>
+                  <span class="stage-text" id="flush-card-calcs">0 calcs</span>
+                </div>
+                <div class="flush-stage-row">
+                  <span class="stage-tag tag-outputs">Rendered</span>
+                  <span class="stage-text" id="flush-card-outputs">0 outputs</span>
+                </div>
+                <div class="flush-execution-order" id="flush-execution-order"></div>
+              </div>
+            </details>
+
+            <div class="why-card" id="why-card">
+              <div class="why-header">
+                <div class="why-title" id="why-title">Select a node to inspect causality</div>
+              </div>
+              <div class="why-narrative" id="why-story">
+                Click any node in the reactive graph or step through the timeline to see why it ran and what caused it.
+              </div>
+              <div class="why-dag-tree" id="why-cascade-flow"></div>
+            </div>
+
+            <div class="node-details-card" id="node-details-card">
+              <div class="node-details-header">
+                <div class="node-details-name" id="insp-title">session</div>
+                <span class="node-details-meta" id="insp-meta-line">Line —</span>
+                <span class="node-details-meta" id="insp-runs-badge" style="margin-left: 6px; font-weight: 600;"></span>
+                <button class="btn mini" id="btn-filter-lineage" onclick="filterLineageForNode(selectedNodeId)" title="Filter graph to this node, its ancestors, and descendants" style="display:none;margin-left:auto;">Filter lineage</button>
+                <span id="insp-type" style="display:none">Initialization event</span>
+                <span id="insp-status" style="display:none">active</span>
+              </div>
+              <div class="node-connections" id="insp-downstream-section">
+                <div class="connections-label">Feeds into (Downstream):</div>
+                <div class="connections-pills" id="insp-downstream-list"><span class="conn-pill-empty">None</span></div>
+              </div>
+              <div class="node-connections" id="insp-upstream-section">
+                <div class="connections-label">Depends on (Upstream):</div>
+                <div class="connections-pills" id="insp-upstream-list"><span class="conn-pill-empty">None</span></div>
+              </div>
+            </div>
+
+            <figure id="insp-plot" hidden>
+              <img id="insp-plot-image" alt="Recorded plot" hidden />
+              <figcaption id="insp-plot-caption"></figcaption>
+            </figure>
+            <div class="source-drawer" id="insp-source-drawer" hidden>
+              <button class="source-drawer-toggle" id="btn-toggle-source-drawer" onclick="toggleSourceDrawer()" aria-expanded="false">
+                <span id="source-drawer-label">Source code</span>
+                <span id="source-drawer-arrow">▾</span>
+              </button>
+              <pre class="source-drawer-code" id="insp-source-code" hidden><code></code></pre>
+              <div class="source-drawer-refs" id="insp-source-refs" hidden></div>
+            </div>
+          </div>
+          <details class="event-history" id="event-history"><summary>Event history</summary><div class="event-list" id="event-list"></div></details>
+        </div>
+
+        __REACTLOG_SOURCE_PANEL__
+      </aside>
+
+      <nav class="sidebar-rail" id="sidebar-rail" aria-label="Graph tools">
+        <button class="btn icon" id="btn-toggle-inspector-bottom" onclick="showSidebarPanel('timeline')" aria-label="Node details" title="Node details"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg></button>
+        __REACTLOG_SOURCE_TAB__
+        __REACTLOG_VIDEO_TAB_BTN__
+      </nav>
+      __REACTLOG_VIDEO_PANEL__
+    </main>
+  </div>
+
+  <script>
+    const reactlogData = __REACTLOG_DATA__;
+    const rawAppSource = __REACTLOG_RAW_SOURCE__;
+  </script>
+  <script>
+__REACTLOG_SCRIPT__
+  </script>
+  <div id="shortcuts-modal" class="modal-backdrop" hidden onclick="if(event.target===this)toggleShortcutsModal()">
+    <div class="modal-dialog" role="dialog" aria-labelledby="shortcuts-modal-title" aria-modal="true">
+      <div class="modal-header">
+        <h2 class="modal-title" id="shortcuts-modal-title">Keyboard Navigation Shortcuts</h2>
+        <button class="modal-close-btn" onclick="toggleShortcutsModal()" aria-label="Close shortcuts dialog">✕</button>
+      </div>
+      <table class="shortcuts-table">
+        <tbody>
+          <tr><td><span class="shortcut-key">Shift+←</span> / <span class="shortcut-key">Shift+→</span></td><td>Jump to previous / next idle</td></tr>
+          <tr><td><span class="shortcut-key">Alt+←</span> / <span class="shortcut-key">Alt+→</span></td><td>Previous / next output calculation</td></tr>
+          <tr><td><span class="shortcut-key">Alt+↑</span> / <span class="shortcut-key">Alt+↓</span></td><td>Previous / next user mark</td></tr>
+          <tr><td><span class="shortcut-key">F</span></td><td>Toggle current activity view</td></tr>
+          <tr><td><span class="shortcut-key">←</span> or <span class="shortcut-key">h</span></td><td>Step backward one event</td></tr>
+          <tr><td><span class="shortcut-key">→</span> or <span class="shortcut-key">l</span></td><td>Step forward one event</td></tr>
+          <tr><td><span class="shortcut-key">↑</span> or <span class="shortcut-key">k</span></td><td>Jump to previous action burst</td></tr>
+          <tr><td><span class="shortcut-key">↓</span> or <span class="shortcut-key">j</span></td><td>Jump to next action burst</td></tr>
+          <tr><td><span class="shortcut-key">Space</span></td><td>Play / Pause timeline playback</td></tr>
+          <tr><td><span class="shortcut-key">Home</span> / <span class="shortcut-key">End</span></td><td>Jump to start / end of timeline</td></tr>
+          <tr><td><span class="shortcut-key">Esc</span></td><td>Close dialog / clear node selection</td></tr>
+          <tr><td><span class="shortcut-key">?</span></td><td>Toggle this shortcuts dialog</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

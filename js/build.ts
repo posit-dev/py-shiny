@@ -102,10 +102,24 @@ const opts: Array<BuildOptions> = [
     entryPoints: { "spin/spin": "spin/spin.scss" },
     plugins: [sassPlugin({ type: "css", sourceMap: false })],
   },
+  {
+    entryPoints: { "reactlog/reactlog": "reactlog/reactlog.ts" },
+    format: "iife",
+    globalName: "ReactlogViewer",
+    target: "es2022",
+    charset: "utf8",
+    minify: false,
+    sourcemap: false,
+  },
 ];
 
 (async () => {
   await Promise.all(opts.map(bundle_helper));
+  await fs.mkdir(`${outDir}/reactlog`, { recursive: true });
+  await Promise.all([
+    fs.copyFile("reactlog/reactlog.css", `${outDir}/reactlog/reactlog.css`),
+    fs.copyFile("reactlog/reactlog.html", `${outDir}/reactlog/reactlog.html`),
+  ]);
 
   if (metafile) {
     const mergedMetadata = mergeMetadatas(allEsbuildMetadata);

@@ -186,13 +186,14 @@ isort, flake8, or any type checker.
 Playwright jobs on 3.14 + chromium only. Marking ready for review reruns the
 full matrix.
 
-**Playwright in CI** (except `playwright-windows`) never installs browsers on
-the runner:
+**Playwright in CI** normally runs browsers in a container.
 `.github/py-shiny/setup-playwright-remote` starts a `playwright run-server`
 Docker container (image mirrored to GHCR with the npm package baked in,
-falling back to MCR) and exports `PW_TEST_CONNECT_WS_ENDPOINT`. The Playwright
-image version tracks the installed Python `playwright` package. Jobs using it
-need `permissions: packages: write`.
+falling back to MCR) and exports `PW_TEST_CONNECT_WS_ENDPOINT`. The image and
+its npm package use the driver version bundled in Python Playwright, which
+can differ from the Python package version after a Python-only release. Jobs
+using the action need `permissions: packages: write`. The in-repo Narwhals
+job uses the action from its own checkout so it tests changes to the setup.
 
 `.github/py-shiny/check` is a composite version of the `check` steps kept for
 py-htmltools' CI; keep it in sync when changing what `check` runs.

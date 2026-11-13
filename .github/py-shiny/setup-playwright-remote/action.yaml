@@ -20,7 +20,7 @@ name: "Setup remote Playwright"
 description: "Start a Playwright server in Docker and configure pytest-playwright to connect to it"
 inputs:
   version:
-    description: "Playwright version to use. Defaults to the installed Python package version."
+    description: "Playwright version to use. Defaults to the driver bundled with Python Playwright."
     required: false
     default: ""
   browser:
@@ -48,10 +48,22 @@ runs:
     - name: Resolve Playwright version
       id: resolve-version
       shell: bash
+      env:
+        PLAYWRIGHT_VERSION: ${{ inputs.version }}
       run: |
-        VERSION="${{ inputs.version }}"
+        VERSION="$PLAYWRIGHT_VERSION"
         if [ -z "$VERSION" ]; then
-          VERSION=$(python3 -c "from importlib.metadata import version; print(version('playwright'))")
+          # Python-only patch releases may bundle a different driver version.
+          VERSION=$(python3 - <<'PY'
+        import json
+        from importlib.metadata import distribution
+
+        manifest = distribution("playwright").locate_file(
+            "playwright/driver/package/package.json"
+        )
+        print(json.loads(manifest.read_text(encoding="utf-8"))["version"])
+        PY
+          )
         fi
 
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"

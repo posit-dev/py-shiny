@@ -15,7 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `reactive.debounce()` and `reactive.throttle()`, decorators that slow down how often a reactive function invalidates its readers. They go below `@reactive.calc`; effects and outputs read the debounced calc instead (an effect reacts to it with `@reactive.event()`). To limit an existing calc or input, call them directly, as in `reactive.debounce(input.text, 0.5)`, which returns a calc. `debounce` waits until the changes stop for a set time; `throttle` lets a change through at most once per time window. Use them when a value changes often (typing, slider drags, plot hover) and the work that reads it is slow. Under OpenTelemetry, the calc above them records its span as `reactive.calc debounce <name>` or `reactive.calc throttle <name>`; the reactives behind them record none. (#564)
 
+* Added `shiny inspect` subcommand for static reactive DAG visualization, topological invalidation simulation, Playwright session recording with synchronized video playback, and interactive HTML Reactlog export with action-scoped execution causality and "Why did this run?" root-cause inspection. ([#2467](https://github.com/posit-dev/py-shiny/pull/2467))
+
 ### Bug fixes and minor improvements
+
+* Reactlog reports show recorded output errors on the timeline and graph, highlight user marks in app source, and use shorter graph labels inside module groups. Scrubbing the timeline animates dependency links to show the direction of updates.
 
 * Lowered the minimum `orjson` version from 3.10.7 to 3.10.2. Shiny uses only `orjson.dumps()`, `orjson.loads()`, and `OPT_SORT_KEYS`, which all predate 3.10, and 3.10.2 fixes a crash serializing `str` that 3.10.1 introduced. The lower floor lets Shiny install alongside packages or environments that ship an older `orjson`, such as Pyodide 0.27 (#2594).
 

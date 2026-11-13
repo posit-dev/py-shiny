@@ -1,0 +1,1116 @@
+import json
+import re
+from collections.abc import Generator
+from pathlib import Path
+from typing import Any
+
+import pytest
+from playwright.sync_api import Error, Page, expect
+
+from shiny._inspect import format_reactlog_html, generate_reactlog
+
+
+@pytest.fixture(autouse=True)
+def no_report_errors(page: Page) -> Generator[None, None, None]:
+    errors: list[str] = []
+
+    def on_error(error: Error):
+        errors.append(str(error))
+
+    page.on("pageerror", on_error)
+    yield
+    page.remove_listener("pageerror", on_error)
+    assert errors == []
+
+
+def set_activity_mode(page: Page, mode: str) -> None:
+    if not page.locator("#activity-select").is_visible():
+        page.locator("#btn-settings").click()
+    page.locator("#activity-select").select_option(mode)
+    if page.locator("#settings-menu").is_visible():
+        page.locator("#btn-settings").click()
+
+
+def set_clientdata_mode(page: Page, mode: str) -> None:
+    if not page.locator("#clientdata-select").is_visible():
+        page.locator("#btn-settings").click()
+    page.locator("#clientdata-select").select_option(mode)
+    if page.locator("#settings-menu").is_visible():
+        page.locator("#btn-settings").click()
+
+
+def reset_graph_view(page: Page) -> None:
+    if not page.locator("#btn-reset-view").is_visible():
+        page.locator("#btn-settings").click()
+    page.locator("#btn-reset-view").click()
+
+
+CODE = """from shiny import reactive, render
+@reactive.calc
+def doubled():
+    return input.x() * 2
+@render.text
+def result():
+    return doubled()
+@render.text
+def other():
+    return input.y()
+"""
+
+
+def report():
+    data = generate_reactlog(
+        CODE,
+        recorded_actions=[
+            {"type": "input", "name": "x", "value": 2, "timestamp": 1000},
+            {"type": "input", "name": "y", "value": 3, "timestamp": 2000},
+        ],
+    )
+    for node in data["nodes"]:
+        if node["id"] in ("calc:doubled", "output:result"):
+            node["module"] = "analysis"
+    return data
+
+
+def test_search_selection_opens_details_and_filters_events(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    clear_btn = page.locator("#search-clear")
+    expect(clear_btn).to_be_hidden()
+    page.locator("#search-input").fill("id:calc:doubled")
+    expect(clear_btn).to_be_visible()
+    page.locator("#search-results button").click()
+    page.locator("#btn-play").hover()
+    expect(clear_btn).to_be_visible()
+    expect(page.locator("#sidebar")).to_be_visible()
+    expect(page.locator("#search-input")).to_have_value("calc:doubled")
+    expect(page.locator("#active-filters button")).to_have_count(0)
+    expect(page.locator(".graph-node")).to_have_count(3)
+    expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
+    assert page.locator("#event-list .event-name").all_text_contents()
+    assert all(
+        "other" not in name and "input.y" not in name
+        for name in page.locator("#event-list .event-name").all_text_contents()
+    )
+    page.get_by_role("button", name="Show node choices").click()
+    checked = page.locator("#search-results button.is-selected")
+    expect(checked).to_have_count(1)
+    expect(checked).to_have_attribute("aria-selected", "true")
+    expect(checked.locator(".search-check svg")).to_be_visible()
+    checked.click()
+    expect(page.locator(".graph-node")).to_have_count(5)
+    expect(page.locator("#search-input")).to_have_value("")
+    expect(clear_btn).to_be_hidden()
+
+    page.get_by_role("button", name="Close Inspector", exact=True).click()
+    page.locator('.graph-node[data-id="calc:doubled"]').dblclick()
+    expect(page.locator("#search-input")).to_have_value("calc:doubled")
+    expect(clear_btn).to_be_visible()
+    expect(page.locator(".graph-node")).to_have_count(3)
+    expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
+    clear_btn.click()
+    expect(page.locator("#search-input")).to_have_value("")
+    expect(clear_btn).to_be_hidden()
+    expect(page.locator(".graph-node")).to_have_count(5)
+
+
+def test_root_module_search_and_stage_filters_clear_together(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#search-input").fill("module:__root__")
+    expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
+    set_activity_mode(page, "full")
+    expect(page.locator("#filter-node-count")).to_have_text("3 of 5 nodes")
+    reset_graph_view(page)
+    expect(page.locator("#search-input")).to_have_value("")
+    expect(page.locator("#active-filters button")).to_have_count(0)
+    expect(page.locator("#filter-node-count")).to_have_text("5 of 5 nodes")
+
+
+def test_empty_recording_can_open_graph(page: Page):
+    errors: list[str] = []
+
+    def on_error(error: Error) -> None:
+        errors.append(str(error))
+
+    page.on("pageerror", on_error)
+    page.set_content(format_reactlog_html({"nodes": [], "edges": [], "events": []}, ""))
+    expect(page.locator("#filter-node-count")).to_have_text("0 of 0 nodes")
+    set_activity_mode(page, "full")
+    expect(page.locator(".graph-node")).to_have_count(0)
+    assert errors == []
+
+
+def test_clear_all_restores_entire_graph_from_active_flush(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    set_activity_mode(page, "flush")
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
+    expect(page.locator(".graph-node")).to_have_count(3)
+    reset_graph_view(page)
+    expect(page.locator(".graph-node")).to_have_count(5)
+
+
+def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    set_activity_mode(page, "flush")
+    expect(page.locator("#reactlog-svg")).to_be_visible()
+    expect(page.locator("#sidebar")).to_be_hidden()
+    expect(page.locator("#sidebar-rail")).to_have_css("width", "40px")
+    expect(page.locator("#btn-toggle-inspector")).to_have_text("")
+    expect(
+        page.locator(
+            "#timeline-tab, #actions-tab, #btn-summary-toggle, #flush-pipeline-bar, #timeline-sidebar, #flush-select"
+        )
+    ).to_have_count(0)
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"Initial render")
+    )
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. x")
+    )
+    expect(page.locator(".graph-node")).to_have_count(3)
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. y")
+    )
+    expect(page.locator(".graph-node")).to_have_count(2)
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowUp")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. x")
+    )
+
+
+def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
+    data = report()
+    page.set_content(format_reactlog_html(data, CODE))
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(1)
+    slider = page.get_by_role("slider", name="Timeline step scrubber")
+    slider.focus()
+    page.keyboard.press("ArrowRight")
+    expect(slider).to_have_value("1")
+    box = slider.bounding_box()
+    assert box is not None
+    page.mouse.click(box["x"] + box["width"] - 8, box["y"] + box["height"] / 2)
+    expect(slider).to_have_value(str(len(data["events"]) - 1))
+    expect(slider).to_have_attribute(
+        "aria-valuetext", re.compile(r"Step 20 of 20\. y.*Idle")
+    )
+    page.keyboard.press("Home")
+    expect(slider).to_have_value("0")
+
+
+def test_recording_floats_below_timeline_and_rail_stays_40px(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE, video_path="demo.webm"))
+    player = page.get_by_role("region", name="Recording")
+    expect(player).to_be_visible()
+    for width in [1440, 800, 390]:
+        page.set_viewport_size({"width": width, "height": 900})
+        rail = page.locator("#sidebar-rail").bounding_box()
+        video = player.bounding_box()
+        timeline = page.locator("#trace-timeline-bar").bounding_box()
+        graph = page.locator("#graph-container").bounding_box()
+        assert rail and video and timeline and graph
+        assert rail["width"] == 40
+        assert video["width"] <= 440
+        assert video["x"] + video["width"] < rail["x"]
+        assert timeline["y"] + timeline["height"] <= video["y"]
+        assert graph["width"] == width - 40
+    page.get_by_role("button", name="Hide recording", exact=True).click()
+    expect(player).to_be_hidden()
+    page.get_by_role("button", name="Toggle recording").click()
+    expect(player).to_be_visible()
+
+
+def test_details_sidebar_docks_and_resizes_graph(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    graph = page.locator("#graph-container")
+    before = graph.bounding_box()
+    assert before is not None
+    page.get_by_role("button", name="Node details", exact=True).click()
+    expect(page.locator("#sidebar")).to_be_visible()
+    sidebar_box = page.locator("#sidebar").bounding_box()
+    after = graph.bounding_box()
+    assert sidebar_box is not None and after is not None
+    assert after["width"] < before["width"]
+    assert after["x"] + after["width"] <= sidebar_box["x"] + 1
+    page.get_by_role("tab", name="App code").click()
+    expect(page.locator("#source-panel")).to_be_visible()
+    expect(page.locator("#timeline-panel")).to_be_hidden()
+    assert graph.bounding_box() == after
+
+
+@pytest.mark.parametrize("query", ["module:analysis", "analysis", "MODULE:ANALYSIS"])
+def test_module_search_filters_nodes_and_clears(page: Page, query: str):
+    page.set_content(format_reactlog_html(report(), CODE))
+    set_activity_mode(page, "full")
+    page.locator("#search-input").fill(query)
+    expect(page.locator(".graph-node")).to_have_count(2)
+    expect(page.locator("#search-results button")).to_have_count(2)
+    page.locator("#search-input").press("Escape")
+    expect(page.locator(".graph-node")).to_have_count(5)
+    expect(page.locator("#module-filter-select, #phase-filter-select")).to_have_count(0)
+
+
+def test_timeline_and_controls_are_above_graph(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.locator("#bottom-timeline-bar")).to_have_count(0)
+    graph = page.locator("#graph-container").bounding_box()
+    timeline = page.locator("#trace-timeline-bar").bounding_box()
+    header_controls = page.locator(".header-center .timeline-navigation").bounding_box()
+    search_box = page.locator(".header-center .search-wrap").bounding_box()
+    assert graph and timeline and header_controls and search_box
+    assert timeline["y"] + timeline["height"] <= graph["y"]
+    assert header_controls["x"] >= search_box["x"] + search_box["width"] - 1
+    assert header_controls["y"] + header_controls["height"] <= timeline["y"]
+
+
+def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
+    data = report()
+    actions = [
+        "enter",
+        "invalidateStart",
+        "invalidateEnd",
+        "exit",
+        "freeze",
+        "thaw",
+        "idle",
+        "dependsOnRemove",
+        "dependsOn",
+        "queueEmpty",
+    ]
+    data["events"] = [
+        {
+            "action": action,
+            "event": action,
+            "node_id": "calc:doubled" if action not in ("idle", "queueEmpty") else None,
+            "edge_from": "input:x" if action.startswith("dependsOn") else None,
+            "edge_to": "calc:doubled" if action.startswith("dependsOn") else None,
+            "time_sec": i,
+            "phase": "interaction",
+        }
+        for i, action in enumerate(actions)
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    set_activity_mode(page, "full")
+    node = page.locator('.graph-node[data-id="calc:doubled"]')
+    for step, (state, color) in enumerate(
+        [
+            ("calculating", "var(--state-calculating)"),
+            ("invalidating", "var(--state-invalidating)"),
+            ("invalidated", "var(--state-invalidated)"),
+            ("ready", "var(--state-ready)"),
+            ("frozen", "var(--state-frozen)"),
+            ("ready", "var(--state-ready)"),
+        ]
+    ):
+        page.locator("#scrubber-range").fill(str(step))
+        expect(node).to_have_attribute("data-state", state)
+        expect(node.locator(".node-card")).to_have_attribute("fill", color)
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Shift+ArrowRight")
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"Idle$")
+    )
+    page.locator("#scrubber-range").fill("7")
+    edge = page.locator('.graph-edge[data-from="input:x"][data-to="calc:doubled"]')
+    expect(edge).to_have_class(re.compile("is-inactive"))
+    expect(edge).to_have_css("stroke-dasharray", "1px, 5px")
+    node.hover()
+    page.locator(".app-header").hover()
+    expect(edge).to_have_css("stroke", "rgb(145, 161, 179)")
+    page.locator("#scrubber-range").fill("8")
+    expect(edge).not_to_have_class(re.compile("is-inactive"))
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Shift+ArrowRight")
+    expect(page.locator("#scrubber-range")).to_have_value("9")
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Shift+ArrowLeft")
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+
+    page.locator("#scrubber-range").fill("0")
+    expect(node).to_have_attribute("data-state", "calculating")
+    expect(node.locator(".node-card")).to_have_attribute(
+        "fill", "var(--state-calculating)"
+    )
+
+
+def timeline_report():
+    data = report()
+    entries = [
+        ("define", "output:result"),
+        ("enter", "output:result"),
+        ("enter", "calc:doubled"),
+        ("exit", "calc:doubled"),
+        ("exit", "output:result"),
+        ("idle", None),
+        ("userMark", None),
+        ("enter", "output:other"),
+        ("exit", "output:other"),
+        ("queueEmpty", None),
+        ("userMark", None),
+    ]
+    data["events"] = [
+        {
+            "action": action,
+            "event": action,
+            "node_id": node_id,
+            "time_sec": step / 2,
+            "phase": "interaction",
+            "details": "Check the result" if action == "userMark" else action,
+        }
+        for step, (action, node_id) in enumerate(entries)
+    ]
+    return data
+
+
+def test_timeline_marks_are_inside_band_and_click_to_seek(page: Page):
+    page.set_content(format_reactlog_html(timeline_report(), CODE))
+    expect(page.locator(".timeline-marker.is-output")).to_have_count(2)
+    expect(page.locator(".timeline-marker.is-idle")).to_have_count(2)
+    expect(page.locator(".timeline-marker.is-mark")).to_have_count(2)
+    band = page.locator("#trace-track-wrap").bounding_box()
+    idle = page.locator('.timeline-marker[data-step="5"]')
+    idle_box = idle.bounding_box()
+    assert band and idle_box
+    assert idle_box["y"] == band["y"]
+    assert idle_box["height"] == band["height"]
+    idle.hover()
+    expect(page.get_by_role("tooltip")).to_contain_text("Idle · Step 5 · 2.5s")
+    idle.click()
+    expect(page.locator("#scrubber-range")).to_have_value("5")
+    page.locator('.timeline-marker[data-step="6"]').click()
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"User mark")
+    )
+    expect(page.locator("#timeline-key")).to_contain_text("Output calculation")
+
+
+def test_timeline_navigates_user_marks_and_outer_calculations(page: Page):
+    page.set_content(format_reactlog_html(timeline_report(), CODE))
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowRight")
+    expect(page.locator("#scrubber-range")).to_have_value("4")
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowDown")
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowDown")
+    expect(page.locator("#scrubber-range")).to_have_value("10")
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowUp")
+    expect(page.locator("#scrubber-range")).to_have_value("6")
+    page.locator("#btn-play").focus()
+    page.keyboard.press("Alt+ArrowLeft")
+    expect(page.locator("#scrubber-range")).to_have_value("4")
+    page.keyboard.press("Alt+ArrowRight")
+    expect(page.locator("#scrubber-range")).to_have_value("8")
+
+
+def test_timeline_can_drag_from_a_mark_across_the_band(page: Page):
+    page.set_content(format_reactlog_html(timeline_report(), CODE))
+    marker = page.locator('.timeline-marker[data-step="5"]').bounding_box()
+    band = page.locator("#trace-track-wrap").bounding_box()
+    assert marker and band
+    page.mouse.move(
+        marker["x"] + marker["width"] / 2, marker["y"] + marker["height"] / 2
+    )
+    page.mouse.down()
+    page.mouse.move(
+        band["x"] + band["width"] * 0.8, band["y"] + band["height"] / 2, steps=5
+    )
+    page.mouse.up()
+    expect(page.locator("#scrubber-range")).to_have_value("8")
+
+
+def test_update_labels_and_view_controls(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-settings").click()
+    activity_select = page.locator("#activity-select")
+    expect(activity_select).to_be_visible()
+    expect(activity_select).to_have_value("full")
+    expect(page.locator("#flush-counter-badge")).to_have_count(0)
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"Initial render")
+    )
+    expect(page.locator(".graph-node")).to_have_count(5)
+    activity_select.select_option("flush")
+    expect(activity_select).to_have_value("flush")
+    page.locator("#btn-settings").click()
+    expect(page.locator("#active-filters button")).to_have_count(0)
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. x")
+    )
+    expect(page.locator(".graph-node")).to_have_count(3)
+    page.get_by_role("button", name="Node details", exact=True).click()
+    expect(page.locator("#flush-card-title")).to_contain_text("Activity 2:")
+    expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
+
+
+@pytest.mark.parametrize(
+    ("theme", "idle_color"),
+    [("dark", "rgb(163, 197, 134)"), ("light", "rgb(53, 92, 35)")],
+)
+def test_timeline_idle_marker_is_solid(page: Page, theme: str, idle_color: str):
+    page.set_content(format_reactlog_html(timeline_report(), CODE, theme=theme))
+    idle = page.locator(".timeline-marker.is-idle").first
+    expect(idle).to_have_css("box-shadow", "none")
+    expect(idle).to_have_css("background-color", idle_color)
+    expect(page.locator(".timeline-key .key-idle")).to_have_css(
+        "background-color", idle_color
+    )
+
+
+def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
+    data = timeline_report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_output_result_hidden",
+            "name": ".clientdata_output_result_hidden",
+            "label": ".clientdata_output_result_hidden",
+            "type": "input",
+            "role": "source",
+            "module": "",
+        }
+    )
+    long_code = "\n".join([f"# padding line {i}" for i in range(1, 50)] + [CODE])
+    for node in data["nodes"]:
+        if node.get("id") == "calc:doubled":
+            node["line"] = 51
+    page.set_viewport_size({"width": 1280, "height": 720})
+    page.set_content(format_reactlog_html(data, long_code, video_path="demo.webm"))
+
+    idle_bg = page.locator(".timeline-marker.is-idle").first.evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    out_bg = page.locator(".timeline-marker.is-output").first.evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    assert idle_bg != out_bg
+
+    track_bg = page.locator("#trace-track-wrap").evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    assert track_bg == "rgb(27, 38, 52)"
+
+    expect(page.locator("#btn-flush-picker")).to_have_count(0)
+    expect(page.locator("#flush-picker-menu")).to_have_count(0)
+    expect(page.locator("#flush-counter-badge")).to_have_count(0)
+    expect(page.locator("#btn-toggle-clientdata")).to_have_count(0)
+    expect(page.locator("#btn-toggle-changes")).to_have_count(0)
+
+    page.locator("#btn-settings").click()
+    page.locator("#activity-select").select_option("full")
+    expect(page.locator(".graph-node")).to_have_count(5)
+
+    client_select = page.locator("#clientdata-select")
+    expect(client_select).to_be_visible()
+    expect(client_select).to_have_value("hide")
+    client_select.select_option("show")
+    expect(page.locator(".graph-node")).to_have_count(6)
+    client_select.select_option("hide")
+    expect(page.locator(".graph-node")).to_have_count(5)
+    client_select.select_option("show")
+    expect(page.locator(".graph-node")).to_have_count(6)
+    page.locator("#btn-settings").click()
+
+    expect(page.locator(".legend-role-btn")).to_have_count(0)
+    page.evaluate("toggleRoleFilter('conductor')")
+    expect(page.locator(".graph-node")).to_have_count(5)
+    expect(page.get_by_role("button", name="Remove role filter")).to_be_visible()
+    page.get_by_role("button", name="Remove role filter").click()
+    expect(page.locator(".graph-node")).to_have_count(6)
+
+    edge_titles = page.locator(".graph-edge title").count()
+    assert edge_titles >= 3
+
+    video_box_closed = page.locator("#video-panel").bounding_box()
+    assert video_box_closed and video_box_closed["width"] >= 440
+    page.locator('.graph-node[data-id="calc:doubled"]').click()
+    expect(page.locator("#sidebar")).to_be_visible()
+    expect(page.locator("#main-view")).to_have_class(re.compile(r"is-inspector-open"))
+    video_box_open = page.locator("#video-panel").bounding_box()
+    sidebar_box = page.locator("#sidebar").bounding_box()
+    assert video_box_closed and video_box_open and sidebar_box
+    assert video_box_open["x"] < video_box_closed["x"]
+    assert video_box_open["x"] + video_box_open["width"] <= sidebar_box["x"]
+
+    page.locator("#btn-toggle-inspector").click()
+    expect(page.locator("#sidebar")).to_be_hidden()
+    expect(page.locator("#btn-toggle-inspector-bottom")).to_have_class(
+        re.compile(r"has-selection")
+    )
+    page.locator("#btn-toggle-inspector").click()
+    expect(page.locator("#sidebar")).to_be_visible()
+
+    page.get_by_role("tab", name="App code").click()
+    expect(page.locator("#source-panel .source-line.is-active")).to_have_attribute(
+        "data-line", "51"
+    )
+
+    page.get_by_role("button", name="Close Inspector", exact=True).click()
+    expect(page.locator("#sidebar")).to_be_hidden()
+    expect(page.locator("#btn-toggle-inspector-bottom")).not_to_have_class(
+        re.compile(r"has-selection")
+    )
+
+
+@pytest.mark.parametrize("width,height", [(1366, 768), (1024, 600), (390, 700)])
+def test_node_details_events_remain_readable_in_small_windows(
+    page: Page, width: int, height: int
+):
+    page.set_viewport_size({"width": width, "height": height})
+    code = CODE.replace("doubled", "filtered_data_with_a_very_long_reactive_name")
+    data = generate_reactlog(code)
+    page.set_content(format_reactlog_html(data, code))
+    set_activity_mode(page, "full")
+    page.locator("#btn-toggle-inspector-bottom").click()
+    page.locator("#event-history > summary").click()
+    history = page.locator("#event-history")
+    # The panel must scroll as a whole, without a collapsed nested event scroller.
+    assert history.evaluate("el => el.clientHeight >= el.scrollHeight - 1")
+    events = page.locator("#event-list .event-item")
+    expect(events.first).to_be_visible()
+    events.last.scroll_into_view_if_needed()
+    expect(events.last).to_be_in_viewport()
+    for selector in (".event-item", ".event-header", ".event-name"):
+        assert page.locator(f"#event-list {selector}").evaluate_all(
+            "els => els.every(el => el.scrollWidth <= el.clientWidth + 1)"
+        ), selector
+
+
+def test_report_has_two_graph_views_and_no_overview(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.get_by_role("button", name="Overview", exact=True)).to_have_count(0)
+    expect(page.locator("#module-overview-panel")).to_have_count(0)
+    page.keyboard.press("o")
+    expect(page.locator("#reactlog-svg")).to_be_visible()
+    set_activity_mode(page, "full")
+    expect(page.locator(".graph-node")).to_have_count(5)
+    set_activity_mode(page, "flush")
+    expect(page.locator("#reactlog-svg")).to_be_visible()
+    page.get_by_role("button", name="Shortcuts").click()
+    expect(page.locator("#shortcuts-modal")).not_to_contain_text("Overview")
+
+
+def test_clientdata_is_hidden_by_default_and_can_be_shown(page: Page):
+    data = report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_pixelratio",
+            "label": ".clientdata_pixelratio",
+            "role": "source",
+            "type": "input",
+        }
+    )
+    page.set_content(format_reactlog_html(data, CODE))
+    set_activity_mode(page, "full")
+    expect(
+        page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
+    ).to_have_count(0)
+    set_clientdata_mode(page, "show")
+    expect(
+        page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
+    ).to_have_count(1)
+
+
+def test_search_dropdown_opens_and_filters_nodes(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    page.get_by_role("button", name="Show node choices").click()
+    expect(page.locator("#search-results")).to_be_visible()
+    expect(page.locator("#search-results button")).not_to_have_count(0)
+    page.locator("#search-input").fill("doubled")
+    expect(page.locator("#search-results button")).to_have_count(1)
+    page.keyboard.press("Enter")
+    expect(page.locator("#search-results")).to_be_hidden()
+    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_be_visible()
+
+
+def test_node_count_and_controls_share_header(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.locator(".zoom-controls #filter-node-count")).to_be_visible()
+    expect(page.locator(".app-header #filter-node-count")).to_have_count(0)
+    expect(page.locator(".app-header #clientdata-select")).to_have_count(0)
+    expect(page.locator(".app-header #activity-select")).to_have_count(0)
+    expect(page.locator("#btn-settings")).to_be_visible()
+    expect(page.locator("#settings-menu")).to_be_hidden()
+    page.locator("#btn-settings").click()
+    expect(page.locator("#settings-menu")).to_be_visible()
+    expect(page.locator("#settings-menu #clientdata-select")).to_be_visible()
+    expect(page.locator("#settings-menu #activity-select")).to_be_visible()
+    speed_select = page.locator("#settings-menu #playback-speed-select")
+    expect(speed_select).to_be_visible()
+    expect(speed_select).to_have_value("step")
+    expect(speed_select.locator("option")).to_have_text(
+        ["Progress bar (step-by-step)", "Real time (video speed)"]
+    )
+    expect(page.get_by_label("Video speed", exact=True)).to_be_hidden()
+    expect(page.locator("#settings-menu #btn-toggle-collapse-all")).to_be_visible()
+    expect(page.locator("#settings-menu #btn-reset-view")).to_be_visible()
+    expect(page.locator(".zoom-controls > #btn-toggle-collapse-all")).to_have_count(0)
+    expect(page.locator(".zoom-controls > #btn-reset-view")).to_have_count(0)
+    expect(page.locator(".app-header #btn-toggle-clientdata")).to_have_count(0)
+    expect(page.locator(".app-header #btn-toggle-changes")).to_have_count(0)
+    expect(page.get_by_role("button", name="Clear all filters")).to_have_count(0)
+    expect(page.locator("body > .filter-state")).to_have_count(0)
+
+
+def test_only_nodes_with_recorded_value_changes_are_shown(page: Page):
+    data = report()
+    data["nodes"].extend(
+        [
+            {
+                "id": "input:fixed",
+                "label": "input.fixed",
+                "role": "source",
+                "type": "input",
+            },
+            {
+                "id": "input:changed",
+                "label": "input.changed",
+                "role": "source",
+                "type": "input",
+            },
+        ]
+    )
+    data["events"] = [
+        {"action": "valueChange", "node_id": "input:fixed", "value": "1"},
+        {"action": "valueChange", "node_id": "input:changed", "value": "1"},
+        {"action": "queueEmpty"},
+        {"action": "valueChange", "node_id": "input:fixed", "value": "1"},
+        {"action": "valueChange", "node_id": "input:changed", "value": "2"},
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    set_activity_mode(page, "full")
+    expect(page.locator('.graph-node[data-id="input:fixed"]')).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="input:changed"]')).to_have_count(1)
+
+
+def test_default_graph_includes_observed_executions(page: Page):
+    data = report()
+    data["events"] = [
+        {"action": "queueEmpty"},
+        {"action": "enter", "node_id": "calc:doubled", "provenance": "observed"},
+        {"action": "enter", "node_id": "output:result", "provenance": "observed"},
+        {"action": "enter", "node_id": "output:other", "provenance": "inferred"},
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="output:result"]')).to_have_count(1)
+
+
+def test_empty_changed_graph_explains_how_to_show_all_nodes(page: Page):
+    data = report()
+    data["events"] = [
+        {"action": "valueChange", "node_id": "input:x", "value": "1"},
+        {"action": "queueEmpty"},
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    expect(
+        page.get_by_text("No recorded changes or executions in this view.")
+    ).to_be_hidden()
+    expect(page.locator(".graph-node")).to_have_count(5)
+
+
+def test_clear_all_shows_hidden_nodes(page: Page):
+    data = report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_pixelratio",
+            "label": ".clientdata_pixelratio",
+            "role": "source",
+            "type": "input",
+        }
+    )
+    data["events"] = [{"action": "queueEmpty"}]
+    page.set_content(format_reactlog_html(data, CODE))
+    reset_graph_view(page)
+    expect(
+        page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
+    ).to_have_count(1)
+    expect(page.locator('.graph-node[data-id="output:result"]')).to_have_count(1)
+
+
+def test_search_can_reveal_a_node_hidden_by_default(page: Page):
+    data = report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_pixelratio",
+            "label": ".clientdata_pixelratio",
+            "role": "source",
+            "type": "input",
+        }
+    )
+    data["events"] = [{"action": "queueEmpty"}]
+    page.set_content(format_reactlog_html(data, CODE))
+    search = page.locator("#search-input")
+    search.fill("id:input:.clientdata_pixelratio")
+    expect(search).to_have_attribute("aria-expanded", "true")
+    page.keyboard.press("Enter")
+    expect(search).to_have_attribute("aria-expanded", "false")
+    expect(
+        page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
+    ).to_be_visible()
+    expect(page.locator("#sidebar")).to_be_visible()
+
+
+def test_empty_search_choices_respect_default_filters(page: Page):
+    data = report()
+    data["nodes"].append(
+        {
+            "id": "input:.clientdata_pixelratio",
+            "label": ".clientdata_pixelratio",
+            "role": "source",
+            "type": "input",
+        }
+    )
+    data["events"] = [
+        {"action": "valueChange", "node_id": "input:x", "value": "1"},
+        {"action": "queueEmpty"},
+        {"action": "valueChange", "node_id": "input:x", "value": "2"},
+    ]
+    page.set_content(format_reactlog_html(data, CODE))
+    page.get_by_role("button", name="Show node choices").click()
+    expect(page.locator("#search-results button")).to_have_count(5)
+    expect(page.locator("#search-results button").first).to_contain_text("input.x")
+
+
+def test_search_escape_closes_dropdown_after_keyboard_navigation(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    search = page.locator("#search-input")
+    search.focus()
+    page.keyboard.press("ArrowDown")
+    page.keyboard.press("Escape")
+    expect(page.locator("#search-results")).to_be_hidden()
+    expect(search).to_have_attribute("aria-expanded", "false")
+    expect(search).to_be_focused()
+
+
+def test_timeline_uses_keyboard_navigation(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    expect(page.locator("#timeline-more-controls")).to_have_count(0)
+    expect(
+        page.get_by_role("button", name="Previous activity", exact=True)
+    ).to_have_count(0)
+    expect(page.get_by_role("button", name="Next activity", exact=True)).to_have_count(
+        0
+    )
+    expect(page.locator("#step-display")).to_be_visible()
+    page.locator("#btn-play").focus()
+    page.keyboard.press("ArrowDown")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"\. x")
+    )
+    page.keyboard.press("ArrowUp")
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext", re.compile(r"Initial render")
+    )
+    page.keyboard.press("ArrowRight")
+    expect(page.locator("#step-display")).to_contain_text("Step 1 /")
+
+
+def test_smooth_connecting_edges_and_header_dropdowns(page: Page):
+    page.set_content(format_reactlog_html(report(), CODE))
+    page.locator("#btn-settings").click()
+    client_select = page.locator("#settings-menu #clientdata-select")
+    activity_select = page.locator("#settings-menu #activity-select")
+    expect(client_select).to_be_visible()
+    expect(activity_select).to_be_visible()
+    expect(client_select.locator("option")).to_have_text(
+        ["Hide clientdata", "Show clientdata"]
+    )
+    expect(activity_select.locator("option")).to_have_text(
+        ["Show all activity", "Show current activity"]
+    )
+    page.locator("#btn-settings").click()
+    edges = page.locator(".graph-edge")
+    expect(edges).not_to_have_count(0)
+    for i in range(edges.count()):
+        d_attr = edges.nth(i).get_attribute("d") or ""
+        assert " C " in d_attr
+        assert " L " not in d_attr
+
+
+def test_timeline_controls_fit_small_screen(page: Page):
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.set_content(format_reactlog_html(report(), CODE))
+    controls = page.locator(".timeline-navigation").bounding_box()
+    assert controls is not None
+    assert controls["x"] >= 0
+    assert controls["x"] + controls["width"] <= 390
+    play = page.get_by_role("button", name="Play timeline").bounding_box()
+    step = page.locator("#step-display").bounding_box()
+    legend_btn = page.locator("#btn-graph-legend").bounding_box()
+    assert play is not None and step is not None and legend_btn is not None
+    assert play["x"] + play["width"] <= step["x"]
+    assert legend_btn["x"] + legend_btn["width"] <= 390
+
+
+def test_report_uses_names_and_highlights_module_names(page: Page):
+    data: dict[str, Any] = {
+        "nodes": [
+            {
+                "id": "R45",
+                "label": "input.scatter-y_var",
+                "module": "scatter",
+                "type": "input",
+                "role": "source",
+            },
+            {
+                "id": "r49",
+                "label": "output summary:summary",
+                "module": "summary",
+                "type": "output",
+                "role": "observer",
+            },
+        ],
+        "edges": [{"from": "R45", "to": "r49"}],
+        "events": [
+            {
+                "action": "dependsOn",
+                "node_id": "r49",
+                "edge_from": "R45",
+                "edge_to": "r49",
+                "details": "Dependency: 'R45' used by 'r49'",
+                "step": 0,
+                "time": 0.1,
+            }
+        ],
+    }
+    page.set_content(format_reactlog_html(data, ""))
+    expect(page.locator("#scrubber-range")).to_have_attribute(
+        "aria-valuetext",
+        re.compile(
+            r"Dependency: 'input\.scatter-y_var' used by 'output summary:summary'"
+        ),
+    )
+    valuetext = page.locator("#scrubber-range").get_attribute("aria-valuetext") or ""
+    assert "R45" not in valuetext
+    assert "r49" not in valuetext
+    node = page.locator('.graph-node[data-id="R45"]')
+    expect(node).to_have_attribute("aria-label", re.compile("input.scatter-y_var"))
+    expect(node.locator("text").first).to_have_text("input.y_var")
+    expect(
+        page.locator('.module-box[data-module="scatter"] .module-name')
+    ).to_have_text("scatter")
+    search = page.locator("#search-input")
+    search.fill("scatter")
+    choice = page.locator("#search-results button").first
+    expect(choice).to_contain_text("input.scatter-y_var")
+    expect(choice).not_to_contain_text("R45")
+    expect(choice.locator(".module-name")).to_have_css("color", "rgb(196, 181, 253)")
+    choice.click()
+    expect(search).to_have_value("input.scatter-y_var")
+    expect(page.locator("#insp-title .module-name")).to_have_text("scatter")
+
+
+def test_timeline_legend_popover_error_pink_no_idle_border_and_code_colors(
+    page: Page,
+):
+    code = """from shiny import reactive
+from shiny.express import input, render
+ui.input_numeric("x", "X", 1)
+@render.text
+def out():
+    reactive.mark("check point")
+    if input.x() < 0:
+        raise ValueError("bad value")
+    return str(input.x())
+"""
+    data: dict[str, Any] = {
+        "sources": {"app.py": code},
+        "nodes": [
+            {"id": "input:x", "label": "input.x", "type": "input", "role": "source"},
+            {
+                "id": "output:out",
+                "label": "output:out",
+                "type": "output",
+                "role": "output",
+                "line": 5,
+                "source_file": "app.py",
+            },
+        ],
+        "edges": [{"from": "input:x", "to": "output:out"}],
+        "events": [
+            {
+                "step": 0,
+                "event": "userMark",
+                "node_id": "output:out",
+                "line": 6,
+                "source_file": "app.py",
+                "time": 0.1,
+            },
+            {
+                "step": 1,
+                "event": "outputError",
+                "error": "ValueError: bad value",
+                "node_id": "output:out",
+                "details": "ValueError: bad value",
+                "line": 8,
+                "source_file": "app.py",
+                "time": 0.2,
+            },
+        ],
+    }
+    page.set_content(format_reactlog_html(data, code))
+
+    styles = page.evaluate("""() => {
+        const root = getComputedStyle(document.documentElement);
+        const idleKey = getComputedStyle(document.querySelector('.timeline-key .key-idle'));
+        const errKey = getComputedStyle(document.querySelector('.timeline-key .key-error'));
+        return {
+            idleShadow: idleKey.boxShadow,
+            errKeyBg: errKey.backgroundColor,
+            stateError: root.getPropertyValue('--state-error').trim(),
+            timelineError: root.getPropertyValue('--timeline-error').trim(),
+            trackHeight: document.getElementById('trace-track-wrap').getBoundingClientRect().height,
+        };
+    }""")
+    assert styles["idleShadow"] == "none"
+    assert styles["timelineError"] == styles["stateError"] == "#f3a6af"
+    assert styles["trackHeight"] <= 18
+
+    legend_btn = page.locator("#btn-graph-legend")
+    legend_popover = page.locator("#graph-legend-popover")
+    timeline_key = legend_popover.locator("#timeline-key")
+    expect(legend_popover).to_be_hidden()
+    expect(timeline_key).to_be_hidden()
+    legend_btn.click()
+    expect(legend_popover).to_be_visible()
+    expect(legend_popover).to_contain_text("Ready")
+    expect(legend_popover).to_contain_text("Isolated dependency")
+    expect(timeline_key).to_be_visible()
+    expect(timeline_key).to_contain_text("Idle")
+    expect(timeline_key).to_contain_text("Output calculation")
+    expect(timeline_key).to_contain_text("User mark")
+    expect(timeline_key).to_contain_text("Error")
+    expect(timeline_key).to_contain_text("Current step")
+    page.keyboard.press("Escape")
+    expect(legend_popover).to_be_hidden()
+
+    page.locator("#btn-toggle-inspector").click()
+    page.get_by_role("tab", name="App code").click()
+    page.evaluate("seekTo(0)")
+    mark_line = page.locator("#source-panel .source-line.is-active.is-mark")
+    expect(mark_line).to_have_css("background-color", "rgba(0, 0, 0, 0)")
+    expect(mark_line).to_have_css("box-shadow", "none")
+    mark_color = mark_line.locator(".source-line-content").evaluate(
+        "el => getComputedStyle(el).color"
+    )
+    legend_mark_color = page.locator(".timeline-key .key-mark").evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    assert mark_color == legend_mark_color
+
+    page.evaluate("seekTo(1)")
+    err_line = page.locator("#source-panel .source-line.is-active.is-error")
+    expect(err_line).to_have_css("background-color", "rgba(0, 0, 0, 0)")
+    expect(err_line).to_have_css("box-shadow", "none")
+    err_color = err_line.locator(".source-line-content").evaluate(
+        "el => getComputedStyle(el).color"
+    )
+    legend_err_color = page.locator(".timeline-key .key-error").evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    assert err_color == legend_err_color
+
+
+def test_json_menu_exports_and_imports_reactlog(page: Page, tmp_path: Path):
+    rlog = report()
+    page.set_content(format_reactlog_html(rlog, CODE, title="Demo Export"))
+    menu_btn = page.locator("#btn-json-menu")
+    menu = page.locator("#json-menu")
+    expect(menu).to_be_hidden()
+    menu_btn.click()
+    expect(menu).to_be_visible()
+
+    with page.expect_download() as download_info:
+        page.locator("#btn-export-json").click()
+    download = download_info.value
+    assert download.suggested_filename == "demo-export-reactlog.json"
+    exported_path = tmp_path / "exported.json"
+    download.save_as(str(exported_path))
+    exported = json.loads(exported_path.read_text())
+    assert len(exported["nodes"]) == len(rlog["nodes"])
+
+    exported["nodes"].append(
+        {"id": "input:extra", "label": "input.extra", "type": "input", "role": "source"}
+    )
+    import_path = tmp_path / "imported.json"
+    import_path.write_text(json.dumps(exported))
+    menu_btn.click()
+    with page.expect_file_chooser() as chooser_info:
+        page.locator("#btn-import-json").click()
+    chooser_info.value.set_files(str(import_path))
+    expect(page.locator('.graph-node[data-id="input:extra"]')).to_be_visible()
+
+
+def test_import_does_not_duplicate_viewer_event_handlers(page: Page):
+    data = timeline_report()
+    page.set_content(format_reactlog_html(data, CODE, video_path="demo.webm"))
+    page.evaluate("report => loadReactlogObject(report)", data)
+    video = page.locator("#session-video")
+    video.evaluate("video => Object.defineProperty(video, 'duration', { value: 10 })")
+
+    # A metadata event should redraw the markers once, even after importing.
+    redraws = page.evaluate("""() => {
+        const video = document.getElementById('session-video');
+        const markers = document.getElementById('trace-markers');
+        const observer = new MutationObserver(() => {});
+        observer.observe(markers, { childList: true });
+        video.dispatchEvent(new Event('loadedmetadata'));
+        const removed = observer.takeRecords().reduce(
+            (count, record) => count + Number(record.removedNodes.length > 0), 0
+        );
+        observer.disconnect();
+        return removed;
+    }""")
+    assert redraws == 1
+
+
+def test_video_speed_setting_controls_the_recording(page: Page):
+    page.set_content(
+        format_reactlog_html(timeline_report(), CODE, video_path="demo.webm")
+    )
+    page.locator("#btn-settings").click()
+    speed = page.get_by_label("Video speed", exact=True)
+    expect(speed).to_have_value("1")
+    expect(speed.locator("option")).to_have_text(["1×", "0.5×", "0.25×"])
+
+    video = page.locator("#session-video")
+    for rate in (0.5, 0.25, 1):
+        speed.select_option(str(rate))
+        expect(video).to_have_js_property("playbackRate", rate)
+
+
+def test_playback_speed_setting_defaults_to_step_and_switches_modes(page: Page):
+    page.set_content(format_reactlog_html(timeline_report(), CODE))
+    expect(page.locator("#playback-speed-select")).to_have_value("step")
+    assert page.evaluate("window.playbackSpeed") == "step"
+
+    page.locator("#btn-play").click()
+    expect(page.locator("#scrubber-range")).not_to_have_value("0")
+    page.locator("#btn-play").click()
+
+    page.locator("#btn-settings").click()
+    speed_select = page.locator("#settings-menu #playback-speed-select")
+    speed_select.select_option("realtime")
+    assert page.evaluate("window.playbackSpeed") == "realtime"
+    expect(speed_select).to_have_value("realtime")
+    page.locator("#btn-settings").click()
+
+    page.evaluate("seekTo(0)")
+    page.locator("#btn-play").click()
+    expect(page.locator("#scrubber-range")).not_to_have_value("0")
+    page.locator("#btn-play").click()
+
+    page.locator("#btn-settings").click()
+    speed_select.select_option("step")
+    assert page.evaluate("window.playbackSpeed") == "step"
+    expect(speed_select).to_have_value("step")
