@@ -11,6 +11,7 @@ not true when running in native Python, we want to be as safe as possible.
 
 from __future__ import annotations
 
+import inspect
 import re
 from typing import Any
 
@@ -33,9 +34,43 @@ if "pyodide" not in sys.modules:
     import starlette.staticfiles
 
     FileResponse = starlette.responses.FileResponse  # type: ignore
+    _STARLETTE_HAS_FOLLOW_SYMLINK = (
+        "follow_symlink"
+        in inspect.signature(starlette.staticfiles.StaticFiles.__init__).parameters
+    )
 
     # Wrapper for StaticFiles to fix .js content-type issues on Windows 10 (see #1601)
     class StaticFiles(starlette.staticfiles.StaticFiles):  # type: ignore
+        def __init__(
+            self, *args: Any, follow_symlink: bool = False, **kwargs: Any
+        ) -> None:
+            if _STARLETTE_HAS_FOLLOW_SYMLINK:
+                super().__init__(
+                    *args, follow_symlink=follow_symlink, **kwargs  # type: ignore
+                )
+            else:
+                super().__init__(*args, **kwargs)
+                self.follow_symlink = follow_symlink
+
+        def lookup_path(self, path: str) -> tuple[str, os.stat_result | None]:
+            if _STARLETTE_HAS_FOLLOW_SYMLINK or not self.follow_symlink:
+                return super().lookup_path(path)
+
+            # Starlette added follow_symlink in 0.24. Keep the same containment
+            # check for older supported releases.
+            if path.startswith(("/", "\\")):
+                return "", None
+            for directory in self.all_directories:
+                full_path = os.path.abspath(os.path.join(directory, path))
+                directory = os.path.abspath(directory)
+                if os.path.commonpath([full_path, directory]) != directory:
+                    continue
+                try:
+                    return full_path, os.stat(full_path)
+                except (FileNotFoundError, NotADirectoryError):
+                    continue
+            return "", None
+
         def file_response(
             self,
             full_path: str | os.PathLike[str],
@@ -202,3 +237,18 @@ else:
                 )
             ]
         return header_list
+
+
+def package_static_files(directory: str) -> Any:
+    """Serve files from an installed package directory.
+
+    uv on Windows can install each file as a symlink into its cache, outside
+    the package directory. Starlette's default (``follow_symlink=False``)
+    realpaths the file and then rejects it as a path escape, so every
+    HTML-dependency asset 404s. Application ``www/`` mounts do not use this
+    helper and keep that default.
+    """
+    if "pyodide" in sys.modules:
+        return StaticFiles(directory=directory)
+    kwargs: dict[str, Any] = {"directory": directory, "follow_symlink": True}
+    return StaticFiles(**kwargs)
