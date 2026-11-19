@@ -20,6 +20,8 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, cast
 
+from ._reactlog_format import TRACE_VERSION, check_trace_version
+
 _R_SENTINEL_REACT_IDS = frozenset({"rNoCtxReactId", "rNoCtx", "rDummyReactId"})
 
 
@@ -1325,6 +1327,7 @@ def generate_reactlog(
         return {
             "success": True,
             "version": "1.0",
+            "trace_version": TRACE_VERSION,
             "session": session,
             "trace_kind": "inferred_simulation_with_recorded_browser_events",
             "nodes": nodes,
@@ -1523,6 +1526,7 @@ def generate_reactlog(
     return {
         "success": True,
         "version": "1.0",
+        "trace_version": TRACE_VERSION,
         "session": session,
         "trace_kind": "static_inferred_simulation",
         "sources": graph.get("sources", {}),
@@ -1578,6 +1582,7 @@ def load_reactlog_json(
                 raw_events.append(cast(Dict[str, Any], e))
     elif isinstance(parsed, dict):
         dict_data = cast(Dict[str, Any], parsed)
+        check_trace_version(dict_data)
         version = str(dict_data.get("version", "1.0"))
         session_name = str(dict_data.get("session", "default"))
         nodes_field = dict_data.get("nodes")
@@ -1915,6 +1920,7 @@ def load_reactlog_json(
     return {
         "success": True,
         "version": version,
+        "trace_version": TRACE_VERSION,
         "session": session_name,
         "trace_kind": "loaded_reactlog_json",
         "sources": sources_val,

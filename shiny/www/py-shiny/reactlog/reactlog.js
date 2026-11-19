@@ -137,6 +137,107 @@ var ReactlogViewer = (() => {
     zoomIn: () => zoomIn,
     zoomOut: () => zoomOut
   });
+
+  // reactlog/replay.ts
+  var TRACE_VERSION = 1;
+  function checkTraceVersion(version) {
+    if (version !== void 0 && version !== TRACE_VERSION) {
+      throw new Error(`Unsupported Reactlog trace version: ${String(version)}`);
+    }
+  }
+  function traceForReplay(report) {
+    checkTraceVersion(report.trace_version);
+    const events = report.events ?? report.log ?? report.entries ?? [];
+    return {
+      trace_version: TRACE_VERSION,
+      log: events.map((event) => ({
+        ...event,
+        action: event.action || event.event || "unknown",
+        reactId: event.edge_to || event.node_id || event.reactId || event.id,
+        depOnReactId: event.edge_from || event.dependsOn || event.depOnReactId
+      }))
+    };
+  }
+  function reactiveEventState(action, error) {
+    if (typeof error === "string" || action === "outputError")
+      return "error";
+    switch (action) {
+      case "enter":
+      case "execStart":
+      case "wouldEvaluate":
+      case "recalculate":
+      case "render":
+      case "output":
+        return "calculating";
+      case "invalidateStart":
+        return "invalidating";
+      case "invalidateEnd":
+      case "invalidate":
+      case "propagate":
+      case "define":
+        return "invalidated";
+      case "exit":
+      case "execEnd":
+      case "ordered":
+      case "outputUpdated":
+      case "valueChange":
+      case "inputChange":
+      case "assumeValue":
+        return "ready";
+      default:
+        return null;
+    }
+  }
+  function dependencyKey(event) {
+    if (event.depOnReactId && event.reactId) {
+      return JSON.stringify([event.depOnReactId, event.reactId]);
+    }
+  }
+  function replayGraph(trace, step) {
+    checkTraceVersion(trace.trace_version);
+    const states = /* @__PURE__ */ new Map();
+    const frozen = /* @__PURE__ */ new Set();
+    const inactiveEdges = /* @__PURE__ */ new Set();
+    for (const event of trace.log) {
+      if (event.action === "dependsOn") {
+        const edge = dependencyKey(event);
+        if (edge)
+          inactiveEdges.add(edge);
+      }
+    }
+    for (let i = 0; i <= step && i < trace.log.length; i++) {
+      const event = trace.log[i];
+      const { action, reactId } = event;
+      const state = reactiveEventState(action, event.error);
+      if (state) {
+        for (const target of event.invalidated_node_ids ?? [reactId]) {
+          if (!target)
+            continue;
+          if (action === "exit" && state === "ready" && states.get(target) === "error")
+            continue;
+          states.set(target, state);
+        }
+      }
+      if (reactId && action === "freeze")
+        frozen.add(reactId);
+      if (reactId && action === "thaw")
+        frozen.delete(reactId);
+      if (action === "dependsOnRemove" || action === "dependsOn") {
+        const edge = dependencyKey(event);
+        if (!edge)
+          continue;
+        if (action === "dependsOnRemove")
+          inactiveEdges.add(edge);
+        else
+          inactiveEdges.delete(edge);
+      }
+    }
+    for (const id of frozen)
+      states.set(id, "frozen");
+    return { states, inactiveEdges };
+  }
+
+  // reactlog/reactlog.ts
   var ICONS = {
     play: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
     pause: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
@@ -1134,10 +1235,12 @@ var ReactlogViewer = (() => {
     document.querySelectorAll(".pipeline-step-item").forEach((el) => el.classList.toggle("is-selected-stage", el.id === `pipe-${selectedStageFilter}`));
     renderEventList();
   }
+  var replayTrace;
   function init() {
     if (Array.isArray(reactlogData) || reactlogData && (!reactlogData.nodes || !reactlogData.events)) {
       reactlogData = normalizeReactlogData(reactlogData);
     }
+    replayTrace = traceForReplay(reactlogData);
     initTheme();
     prepareEventTimings();
     buildGraphIndices();
@@ -1161,47 +1264,8 @@ var ReactlogViewer = (() => {
   function isErrorEvent(ev) {
     return ev && (typeof ev.error === "string" || (ev.action || ev.event) === "outputError");
   }
-  function reactiveEventState(ev) {
-    const action = ev.action || ev.event;
-    if (isErrorEvent(ev))
-      return "error";
-    if (["enter", "execStart", "wouldEvaluate", "recalculate", "render", "output"].includes(action))
-      return "calculating";
-    if (action === "invalidateStart")
-      return "invalidating";
-    if (["invalidateEnd", "invalidate", "propagate", "define"].includes(action))
-      return "invalidated";
-    if (["exit", "execEnd", "ordered", "outputUpdated", "valueChange", "inputChange", "assumeValue"].includes(action))
-      return "ready";
-    return null;
-  }
   function graphStateAtStep() {
-    const states = /* @__PURE__ */ new Map(), frozen = /* @__PURE__ */ new Set(), inactiveEdges = /* @__PURE__ */ new Set();
-    const events = reactlogData.events || reactlogData.log || [];
-    events.forEach((ev) => {
-      if ((ev.action || ev.event) === "dependsOn")
-        inactiveEdges.add(JSON.stringify([ev.edge_from || ev.dependsOn || ev.depOnReactId, ev.edge_to || ev.node_id || ev.reactId || ev.id]));
-    });
-    for (let i = 0; i <= currentStep && i < events.length; i++) {
-      const ev = events[i], action = ev.action || ev.event;
-      const id = ev.node_id || ev.reactId || ev.id;
-      const state = reactiveEventState(ev);
-      if (id && state)
-        states.set(id, state);
-      if (action === "freeze")
-        frozen.add(id);
-      if (action === "thaw")
-        frozen.delete(id);
-      const from = ev.edge_from || ev.dependsOn || ev.depOnReactId;
-      const to = ev.edge_to || id;
-      const key = JSON.stringify([from, to]);
-      if (action === "dependsOnRemove")
-        inactiveEdges.add(key);
-      if (action === "dependsOn")
-        inactiveEdges.delete(key);
-    }
-    frozen.forEach((id) => states.set(id, "frozen"));
-    return { states, inactiveEdges };
+    return replayGraph(replayTrace, currentStep);
   }
   function nodeKind(n) {
     if (n.type === "module")
@@ -1434,7 +1498,7 @@ var ReactlogViewer = (() => {
       badgesWrap.appendChild(provBadge);
       const badge = document.createElement("span");
       badge.className = `event-badge ${ev.status || "idle"}`;
-      badge.textContent = isIdleEvent(ev) ? "Idle" : reactiveEventState(ev) || ev.status || ev.action || ev.event;
+      badge.textContent = isIdleEvent(ev) ? "Idle" : reactiveEventState(ev.action || ev.event, ev.error) || ev.status || ev.action || ev.event;
       badgesWrap.appendChild(badge);
       header.appendChild(nameWrap);
       header.appendChild(badgesWrap);
@@ -3216,6 +3280,7 @@ var ReactlogViewer = (() => {
   });
   var R_SENTINEL_IDS = /* @__PURE__ */ new Set(["rNoCtxReactId", "rNoCtx", "rDummyReactId"]);
   function normalizeReactlogData(loadedData) {
+    checkTraceVersion(loadedData?.trace_version);
     if (!loadedData || typeof loadedData !== "object") {
       return loadedData;
     }
@@ -3453,7 +3518,7 @@ var ReactlogViewer = (() => {
   }
   function exportReactlogJson() {
     document.getElementById("json-menu")?.hidePopover?.();
-    const json = JSON.stringify(reactlogData, null, 2);
+    const json = JSON.stringify({ ...reactlogData, ...traceForReplay(reactlogData) }, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const rawTitle = (document.querySelector(".brand-title")?.textContent || "reactlog").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "reactlog";

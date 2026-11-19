@@ -64,10 +64,12 @@ export interface ReactlogEvent {
   isolate?: boolean;
   isolated?: boolean;
   isError?: boolean;
+  invalidated_node_ids?: string[];
   [key: string]: any;
 }
 
 export interface ReactlogData {
+  trace_version?: number;
   success?: boolean;
   version?: string;
   session?: string;

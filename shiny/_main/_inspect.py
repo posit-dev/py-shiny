@@ -17,6 +17,7 @@ from .._inspect import (
     load_reactlog_json,
     record_shiny_session,
 )
+from .._reactlog_format import check_trace_version
 from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success
 
 
@@ -409,6 +410,10 @@ def inspect(
                         if isinstance(parsed_json, list)
                         else cast(Dict[str, Any], parsed_json)
                     )
+                    try:
+                        check_trace_version(payload)
+                    except ValueError as err:
+                        raise click.ClickException(str(err)) from err
                     if output_format == "html" and (
                         "nodes" not in payload
                         or isinstance(payload.get("events"), list)
@@ -419,6 +424,8 @@ def inspect(
                         reactlog_data.pop("video_path", None)
                     else:
                         reactlog_data = load_reactlog_json(payload)
+            except click.ClickException:
+                raise
             except Exception:
                 is_json_input = False
 

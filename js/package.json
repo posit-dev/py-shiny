@@ -5,7 +5,8 @@
   "scripts": {
     "lint": "tsc -noEmit && eslint .",
     "bundle": "tsx build.ts",
-    "build": "npm run lint && npm run bundle",
+    "test": "tsx --test reactlog/replay.test.ts",
+    "build": "npm run lint && npm test && npm run bundle",
     "watch": "npx nodemon --exec 'npm run build' --ext '*' --ignore dist/ --ignore esbuild-metadata.json",
     "build-fast": "tsx build.ts --minify=false",
     "watch-fast": "npx nodemon --exec 'npm run build-fast' --ext '*' --ignore dist/ --ignore esbuild-metadata.json"

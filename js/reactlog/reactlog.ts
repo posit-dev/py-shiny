@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ReactlogData } from "./types";
+import { checkTraceVersion, reactiveEventState, replayGraph, traceForReplay } from "./replay";
+import type { ReactlogTrace } from "./replay";
 
 declare let reactlogData: ReactlogData;
 declare let rawAppSource: string | null | undefined;
@@ -982,10 +984,13 @@ function updateFilterState(nodes: any) {
   renderEventList();
 }
 
+let replayTrace: ReactlogTrace;
+
 function init() {
   if (Array.isArray(reactlogData) || (reactlogData && (!reactlogData.nodes || !reactlogData.events))) {
     reactlogData = normalizeReactlogData(reactlogData);
   }
+  replayTrace = traceForReplay(reactlogData);
   initTheme();
   prepareEventTimings();
   buildGraphIndices();
@@ -1015,37 +1020,8 @@ function isErrorEvent(ev: any) {
   return ev && (typeof ev.error === 'string' || (ev.action || ev.event) === 'outputError');
 }
 
-function reactiveEventState(ev: any) {
-  const action = ev.action || ev.event;
-  if (isErrorEvent(ev)) return 'error';
-  if (['enter', 'execStart', 'wouldEvaluate', 'recalculate', 'render', 'output'].includes(action)) return 'calculating';
-  if (action === 'invalidateStart') return 'invalidating';
-  if (['invalidateEnd', 'invalidate', 'propagate', 'define'].includes(action)) return 'invalidated';
-  if (['exit', 'execEnd', 'ordered', 'outputUpdated', 'valueChange', 'inputChange', 'assumeValue'].includes(action)) return 'ready';
-  return null;
-}
-
 function graphStateAtStep() {
-  const states: Map<any, any> = new Map(), frozen: Set<any> = new Set(), inactiveEdges: Set<any> = new Set();
-  const events = reactlogData.events || reactlogData.log || [];
-  events.forEach((ev: any) => {
-    if ((ev.action || ev.event) === 'dependsOn') inactiveEdges.add(JSON.stringify([ev.edge_from || ev.dependsOn || ev.depOnReactId, ev.edge_to || ev.node_id || ev.reactId || ev.id]));
-  });
-  for (let i = 0; i <= currentStep && i < events.length; i++) {
-    const ev = events[i]!, action = ev.action || ev.event;
-    const id = ev.node_id || ev.reactId || ev.id;
-    const state = reactiveEventState(ev);
-    if (id && state) states.set(id, state);
-    if (action === 'freeze') frozen.add(id);
-    if (action === 'thaw') frozen.delete(id);
-    const from = ev.edge_from || ev.dependsOn || ev.depOnReactId;
-    const to = ev.edge_to || id;
-    const key = JSON.stringify([from, to]);
-    if (action === 'dependsOnRemove') inactiveEdges.add(key);
-    if (action === 'dependsOn') inactiveEdges.delete(key);
-  }
-  frozen.forEach((id: any) => states.set(id, 'frozen'));
-  return { states, inactiveEdges };
+  return replayGraph(replayTrace, currentStep);
 }
 
 function nodeKind(n: any) {
@@ -1280,7 +1256,7 @@ function renderEventList() {
 
     const badge = document.createElement('span');
     badge.className = `event-badge ${ev.status || 'idle'}`;
-    badge.textContent = isIdleEvent(ev) ? 'Idle' : (reactiveEventState(ev) || ev.status || ev.action || ev.event);
+    badge.textContent = isIdleEvent(ev) ? 'Idle' : (reactiveEventState(ev.action || ev.event, ev.error) || ev.status || ev.action || ev.event);
     badgesWrap.appendChild(badge);
 
     header.appendChild(nameWrap);
@@ -3063,6 +3039,7 @@ document.addEventListener('webkitfullscreenchange', () => {
 const R_SENTINEL_IDS = new Set(['rNoCtxReactId', 'rNoCtx', 'rDummyReactId']);
 
 function normalizeReactlogData(loadedData: any): ReactlogData {
+  checkTraceVersion(loadedData?.trace_version);
   if (!loadedData || typeof loadedData !== 'object') {
     return loadedData;
   }
@@ -3297,7 +3274,7 @@ function importReactlogJson() {
 
 function exportReactlogJson() {
   (document.getElementById('json-menu') as any)?.hidePopover?.();
-  const json = JSON.stringify(reactlogData, null, 2);
+  const json = JSON.stringify({ ...reactlogData, ...traceForReplay(reactlogData) }, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const rawTitle = ((document.querySelector('.brand-title') as any)?.textContent || 'reactlog')
