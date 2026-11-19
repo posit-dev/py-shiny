@@ -2248,7 +2248,7 @@ app = App(app_ui, server, reactlog=True)
     response = TestClient(app.init_starlette_app()).get("/__reactlog__")
     assert response.status_code == 200
     report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
+        response.text.split("let reactlogData = ", 1)[1]
     )
     nodes = {n["id"]: n for n in report["nodes"]}
     assert "output:sales-total" in nodes
@@ -2276,7 +2276,7 @@ def test_in_app_reactlog_dedents_source_fallback(monkeypatch: pytest.MonkeyPatch
     app = App(ui.page_fluid(), server, reactlog=True)
     response = TestClient(app.init_starlette_app()).get("/__reactlog__")
     report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
+        response.text.split("let reactlogData = ", 1)[1]
     )
     assert report["success"] is True
     assert {n["id"] for n in report["nodes"]} == {"input:x", "output:out"}
@@ -2302,7 +2302,7 @@ def total():
     app = wrap_express_app(app_file)
     response = TestClient(app.init_starlette_app()).get("/__reactlog__")
     report, _ = json.JSONDecoder().raw_decode(
-        response.text.split("const reactlogData = ", 1)[1]
+        response.text.split("let reactlogData = ", 1)[1]
     )
     assert {n["id"] for n in report["nodes"]} == {"input:amount", "output:total"}
     assert report["sources"]["app.py"] == source
@@ -2653,6 +2653,13 @@ def test_reactlog_shared_viewer_bundle_assets_and_r_adapter():
         },
     ]
 
+    r_trace.extend(
+        [
+            {"action": "enter", "reactId": "r2", "session": "s1"},
+            {"action": "exit", "reactId": "r2", "session": "s1"},
+            {"action": "enter", "reactId": "r2", "provenance": "inferred"},
+        ]
+    )
     loaded = load_reactlog_json(r_trace)
     node_ids = {n["id"] for n in loaded["nodes"]}
     assert "rNoCtxReactId" not in node_ids
@@ -2660,7 +2667,13 @@ def test_reactlog_shared_viewer_bundle_assets_and_r_adapter():
     r1_node = next(n for n in loaded["nodes"] if n["id"] == "r1")
     assert r1_node["role"] == "source"
     assert r1_node["type"] == "input"
-    assert loaded["edges"] == [{"from": "r1", "to": "r2"}]
+    assert loaded["edges"] == [{"from": "r1", "to": "r2", "isolated": True}]
+    assert [e["action"] for e in loaded["events"]] == [e["action"] for e in r_trace]
+    assert [e["provenance"] for e in loaded["events"][-3:]] == [
+        "observed",
+        "observed",
+        "inferred",
+    ]
     html = format_reactlog_html(loaded, "")
     assert "r1" in html and "r2" in html
 
@@ -2677,7 +2690,7 @@ const rawAppSource = null;
 const code = fs.readFileSync({js_path}, "utf8");
 const viewer = (new Function("window", "document", "reactlogData", "rawAppSource", code + "; return ReactlogViewer;"))(global.window, global.document, reactlogData, rawAppSource);
 const normalized = viewer.normalizeReactlogData({trace_json});
-console.log(JSON.stringify({{ nodes: normalized.nodes, edges: normalized.edges }}));
+console.log(JSON.stringify({{ nodes: normalized.nodes, edges: normalized.edges, events: normalized.events }}));
 """
         result = subprocess.run(
             [node, "-e", script], capture_output=True, text=True, check=True
@@ -2689,4 +2702,8 @@ console.log(JSON.stringify({{ nodes: normalized.nodes, edges: normalized.edges }
         js_r1 = next(n for n in parsed["nodes"] if n["id"] == "r1")
         assert js_r1["role"] == "source"
         assert js_r1["type"] == "input"
-        assert parsed["edges"] == [{"from": "r1", "to": "r2", "isolated": True}]
+        assert parsed["edges"] == loaded["edges"]
+        for key in ("action", "provenance", "session", "step"):
+            assert [e[key] for e in parsed["events"]] == [
+                e[key] for e in loaded["events"]
+            ]

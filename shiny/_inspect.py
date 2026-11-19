@@ -1610,7 +1610,8 @@ def load_reactlog_json(
                     raw_events.append(cast(Dict[str, Any], ev_item))
 
     nodes_map: Dict[str, Dict[str, Any]] = {}
-    edges_set: Set[tuple[str, str]] = set()
+    # An edge is isolated only if every recorded read along it was isolated.
+    edges_isolated: Dict[tuple[str, str], bool] = {}
 
     if existing_nodes:
         for n in existing_nodes:
@@ -1628,7 +1629,7 @@ def load_reactlog_json(
                 and f not in _R_SENTINEL_REACT_IDS
                 and t not in _R_SENTINEL_REACT_IDS
             ):
-                edges_set.add((f, t))
+                edges_isolated[(f, t)] = bool(e.get("isolated"))
 
     raw_times: List[float] = []
     for item in raw_events:
@@ -1735,9 +1736,18 @@ def load_reactlog_json(
 
     normalized_events: List[Dict[str, Any]] = []
     step_idx = 0
+    isolate_depth: Dict[str, int] = {}
 
     for item in raw_events:
         action = str(item.get("action") or item.get("event") or "")
+        session = str(item.get("session") or session_name)
+        depth = isolate_depth.get(session, 0)
+        if action == "isolateEnter":
+            depth += 1
+        elif action == "isolateExit":
+            depth = max(0, depth - 1)
+        isolate_depth[session] = depth
+        isolated = bool(item.get("isolate") or depth)
         nid = item.get("reactId") or item.get("node_id") or item.get("id")
         lbl = _resolve_node_label(nid, item.get("label") or item.get("node_label"))
         ntype = item.get("type") or item.get("node_type") or "calc"
@@ -1766,11 +1776,8 @@ def load_reactlog_json(
         )
         t_ms = int(t_sec * 1000)
 
-        prov = item.get("provenance") or (
-            "observed"
-            if action in ("valueChange", "inputChange", "userClick", "userAction")
-            else "inferred"
-        )
+        # Raw log entries record runtime events. Simulated traces carry explicit provenance.
+        prov = item.get("provenance") or "observed"
         phase = item.get("phase") or (
             "init"
             if action in ("define", "analysisInit", "createContext", "sessionInit")
@@ -1825,7 +1832,8 @@ def load_reactlog_json(
             and str(dep_from) not in _R_SENTINEL_REACT_IDS
             and str(dep_to) not in _R_SENTINEL_REACT_IDS
         ):
-            edges_set.add((str(dep_from), str(dep_to)))
+            key = (str(dep_from), str(dep_to))
+            edges_isolated[key] = edges_isolated.get(key, True) and isolated
 
         ev_dict = _make_event(
             step=step_idx,
@@ -1842,10 +1850,12 @@ def load_reactlog_json(
             edge_from=str(dep_from) if (action == "dependsOn" or dep_from) else None,
             edge_to=str(dep_to) if (action == "dependsOn" or dep_to) else None,
             details=details,
-            session=str(item.get("session") or session_name),
+            session=session,
             action=action,
         )
-        for key in ("error", "source_file", "line", "isolate"):
+        if isolated:
+            ev_dict["isolate"] = True
+        for key in ("error", "source_file", "line"):
             if key in item:
                 ev_dict[key] = item[key]
         preview = item.get("plot")
@@ -1862,7 +1872,10 @@ def load_reactlog_json(
         step_idx += 1
 
     final_nodes = list(nodes_map.values())
-    final_edges = [{"from": f, "to": t} for f, t in sorted(edges_set)]
+    final_edges = [
+        {"from": f, "to": t, **({"isolated": True} if isolated else {})}
+        for (f, t), isolated in sorted(edges_isolated.items())
+    ]
 
     if not normalized_events and final_nodes:
         for i, n in enumerate(final_nodes):

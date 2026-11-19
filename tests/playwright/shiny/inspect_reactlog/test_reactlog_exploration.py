@@ -1051,8 +1051,42 @@ def test_json_menu_exports_and_imports_reactlog(page: Page, tmp_path: Path):
     expect(page.locator('.graph-node[data-id="input:extra"]')).to_be_visible()
 
 
+def test_import_replaces_source_recording_and_export(page: Page, tmp_path: Path):
+    original = report()
+    original.update(sources={"app.py": CODE}, entry_file="app.py")
+    page.set_content(format_reactlog_html(original, CODE, video_path="demo.webm"))
+    page.evaluate("selectNode('calc:doubled')")
+    expect(page.locator("#insp-source-code code")).not_to_be_empty()
+    trace = [{"action": "enter", "reactId": "r1", "session": "new-session"}]
+    page.locator("#reactlog-file-input").set_input_files(
+        {
+            "name": "new-trace.json",
+            "mimeType": "application/json",
+            "buffer": json.dumps(trace).encode(),
+        }
+    )
+    expect(page.locator('.graph-node[data-id="r1"]')).to_have_count(1)
+    expect(page.locator("#source-panel code")).to_be_empty()
+    expect(page.locator("#insp-source-code code")).to_be_empty()
+    expect(page.locator("#source-file-select")).to_be_hidden()
+    expect(page.locator("#video-tab")).to_be_hidden()
+    expect(page.locator("#session-video")).to_have_count(0)
+
+    page.locator("#btn-json-menu").click()
+    with page.expect_download() as downloaded:
+        page.locator("#btn-export-json").click()
+    assert downloaded.value.suggested_filename == "new-trace-reactlog.json"
+    path = tmp_path / "reexport.json"
+    downloaded.value.save_as(path)
+    imported = json.loads(path.read_text())
+    assert not imported.get("sources")
+    assert not imported.get("action_waves")
+    assert imported["events"][0]["session"] == "new-session"
+    assert imported["events"][0]["provenance"] == "observed"
+
+
 def test_import_does_not_duplicate_viewer_event_handlers(page: Page):
-    data = timeline_report()
+    data = {**timeline_report(), "video_path": "demo.webm"}
     page.set_content(format_reactlog_html(data, CODE, video_path="demo.webm"))
     page.evaluate("report => loadReactlogObject(report)", data)
     video = page.locator("#session-video")

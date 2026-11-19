@@ -1136,7 +1136,7 @@ var ReactlogViewer = (() => {
   }
   function init() {
     if (Array.isArray(reactlogData) || reactlogData && (!reactlogData.nodes || !reactlogData.events)) {
-      Object.assign(reactlogData, normalizeReactlogData(reactlogData));
+      reactlogData = normalizeReactlogData(reactlogData);
     }
     initTheme();
     prepareEventTimings();
@@ -2706,6 +2706,7 @@ var ReactlogViewer = (() => {
       toast.hidden = true;
     }
   }
+  var disconnectVideo;
   function setupVideoSync() {
     const video = document.getElementById("session-video");
     if (!video)
@@ -2776,6 +2777,14 @@ var ReactlogViewer = (() => {
         videoFrameRequest = requestAnimationFrame((now) => syncVideoFrame(now, null));
       }
     };
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    disconnectVideo = () => {
+      listeners.abort();
+      stopFrameSync();
+      speedSelect.onchange = null;
+      disconnectVideo = void 0;
+    };
     video.addEventListener("loadedmetadata", () => {
       updateSyncStatus(`Paused at ${formatTime(video.currentTime)}`);
       if (video.duration && !isNaN(video.duration)) {
@@ -2785,7 +2794,7 @@ var ReactlogViewer = (() => {
           totalDisplay.textContent = formatTime(maxSessionDuration);
         initTraceTimeline();
       }
-    });
+    }, { signal });
     video.addEventListener("play", () => {
       if (playTimer) {
         clearInterval(playTimer);
@@ -2797,21 +2806,21 @@ var ReactlogViewer = (() => {
       updatePlayButton(true);
       updateSyncStatus("Following recording");
       requestNextFrame();
-    });
+    }, { signal });
     video.addEventListener("pause", () => {
       isPlaying = false;
       stopFrameSync();
       updatePlayButton(false);
       updateSyncStatus(`Paused at ${formatTime(video.currentTime)}`);
-    });
+    }, { signal });
     video.addEventListener("ended", () => {
       isPlaying = false;
       stopFrameSync();
       updatePlayButton(false);
       updateSyncStatus("Recording complete");
-    });
-    video.addEventListener("timeupdate", () => syncGraphToTime(video.currentTime));
-    video.addEventListener("seeked", () => syncGraphToTime(video.currentTime));
+    }, { signal });
+    video.addEventListener("timeupdate", () => syncGraphToTime(video.currentTime), { signal });
+    video.addEventListener("seeked", () => syncGraphToTime(video.currentTime), { signal });
   }
   function updateSourceHighlight() {
     const events = reactlogData.events || reactlogData.log || [];
@@ -3221,7 +3230,8 @@ var ReactlogViewer = (() => {
         edges: Array.isArray(loadedData.edges) ? loadedData.edges.filter((e) => e && !R_SENTINEL_IDS.has(String(e.from || "")) && !R_SENTINEL_IDS.has(String(e.to || ""))) : []
       };
     }
-    const rawEvents = Array.isArray(loadedData) ? loadedData : loadedData.log || loadedData.events || loadedData.entries || [];
+    const entries = Array.isArray(loadedData) ? loadedData : loadedData.log || loadedData.events || loadedData.entries || [];
+    const rawEvents = entries.filter((entry) => entry && typeof entry === "object");
     const nodesMap = /* @__PURE__ */ Object.create(null);
     const edgesMap = /* @__PURE__ */ new Map();
     const normEvents = [];
@@ -3284,14 +3294,11 @@ var ReactlogViewer = (() => {
     const isolateDepthBySession = /* @__PURE__ */ new Map();
     rawEvents.forEach((item) => {
       const act = item.action || item.event || "";
-      const sessKey = String(item.session || "default");
+      const sessKey = String(item.session || loadedData.session || "default");
       if (act === "isolateEnter") {
         isolateDepthBySession.set(sessKey, (isolateDepthBySession.get(sessKey) || 0) + 1);
-        return;
-      }
-      if (act === "isolateExit") {
+      } else if (act === "isolateExit") {
         isolateDepthBySession.set(sessKey, Math.max(0, (isolateDepthBySession.get(sessKey) || 0) - 1));
-        return;
       }
       const nid = item.reactId || item.node_id || item.id;
       const lbl = resolveNodeLabel(nid, item.label || item.node_label);
@@ -3303,7 +3310,7 @@ var ReactlogViewer = (() => {
       const rawT = Number(item.time || item.time_sec || Number(item.timestamp || 0) / 1e3 || 0);
       const tSec = Math.max(0, baseEpoch > 0 ? rawT - baseEpoch : rawT);
       const tMs = Number(item.timestamp || tSec * 1e3);
-      const prov = item.provenance || (["valueChange", "inputChange", "userClick", "userAction"].includes(act) ? "observed" : "inferred");
+      const prov = item.provenance || "observed";
       const phase = item.phase || (["define", "analysisInit", "createContext", "sessionInit"].includes(act) ? "init" : "interaction");
       const isIsolated = Boolean(item.isolate || (isolateDepthBySession.get(sessKey) || 0) > 0);
       if (act === "dependsOn" && depFrom && depTo && !R_SENTINEL_IDS.has(String(depFrom)) && !R_SENTINEL_IDS.has(String(depTo))) {
@@ -3352,6 +3359,7 @@ var ReactlogViewer = (() => {
         status: item.status || (act === "define" ? "discovered" : act === "invalidate" ? "affected" : "scheduled"),
         phase,
         provenance: prov,
+        session: sessKey,
         time: tSec,
         time_sec: tSec,
         timestamp: tMs,
@@ -3360,7 +3368,11 @@ var ReactlogViewer = (() => {
         edge_from: depFrom,
         edge_to: depTo,
         isolate: isIsolated,
-        details
+        details,
+        error: item.error,
+        line: item.line,
+        source_file: item.source_file,
+        plot: item.plot
       });
       sIdx++;
     });
@@ -3370,6 +3382,9 @@ var ReactlogViewer = (() => {
       success: true,
       version: !Array.isArray(loadedData) && loadedData.version || "1.0",
       session: !Array.isArray(loadedData) && loadedData.session || "default",
+      title: loadedData.title,
+      sources: loadedData.sources,
+      entry_file: loadedData.entry_file,
       nodes: finalNodes,
       edges: finalEdges,
       events: normEvents,
@@ -3377,9 +3392,45 @@ var ReactlogViewer = (() => {
       summary: `Loaded Reactlog: ${finalNodes.length} nodes, ${finalEdges.length} edges, ${normEvents.length} log events`
     };
   }
-  function loadReactlogObject(loadedData) {
+  function loadReactlogObject(loadedData, title = "Reactlog") {
     const normalized = normalizeReactlogData(loadedData);
-    Object.assign(reactlogData, normalized);
+    if (!Array.isArray(normalized?.events))
+      throw new Error("Expected a Reactlog event list");
+    clearInterval(playTimer);
+    playTimer = null;
+    isPlaying = false;
+    realtimePlayLastTick = null;
+    const video = document.querySelector("#session-video");
+    video?.pause();
+    if (video && !(normalized.video_path && normalized.video_path === reactlogData.video_path)) {
+      disconnectVideo?.();
+      document.getElementById("video-panel")?.remove();
+      document.getElementById("video-tab")?.remove();
+      document.getElementById("video-speed-setting").hidden = true;
+    }
+    const play = document.getElementById("btn-play");
+    play.textContent = "▶ Play";
+    play.setAttribute("aria-label", "Play timeline");
+    play.title = "Play / Pause (Space)";
+    reactlogData = normalized;
+    document.title = normalized.title || title;
+    document.querySelector(".brand-title").textContent = document.title;
+    rawAppSource = null;
+    displayedSourceFile = "";
+    highlightedSourceCache.clear();
+    if (isSourceDrawerOpen)
+      toggleSourceDrawer();
+    document.getElementById("insp-source-drawer").hidden = true;
+    document.querySelector("#insp-source-code code").replaceChildren();
+    document.getElementById("insp-source-refs").replaceChildren();
+    document.querySelector("#source-panel code").replaceChildren();
+    const sourceSelect = document.querySelector("#source-file-select");
+    sourceSelect.replaceChildren();
+    sourceSelect.hidden = true;
+    document.getElementById("source-tab").hidden = !Object.keys(normalized.sources || {}).length;
+    showSidebarPanel("timeline");
+    selectedSearchNodeId = null;
+    activeBurstIndex = 0;
     document.getElementById("graph-edge-pulses").replaceChildren();
     selectedNodeId = null;
     focusedNodeId = null;
@@ -3422,7 +3473,7 @@ var ReactlogViewer = (() => {
     reader.onload = (evt) => {
       try {
         const parsed = JSON.parse(evt.target.result);
-        loadReactlogObject(parsed);
+        loadReactlogObject(parsed, file.name.replace(/\.json$/i, ""));
       } catch (err) {
         alert("Error parsing JSON file: " + err.message);
       } finally {

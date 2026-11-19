@@ -404,7 +404,21 @@ def inspect(
                 parsed_json: Any = json.loads(source_code)
                 if isinstance(parsed_json, (dict, list)):
                     is_json_input = True
-                    reactlog_data = load_reactlog_json(cast(Any, parsed_json))
+                    payload: Dict[str, Any] = (
+                        {"log": parsed_json}
+                        if isinstance(parsed_json, list)
+                        else cast(Dict[str, Any], parsed_json)
+                    )
+                    if output_format == "html" and (
+                        "nodes" not in payload
+                        or isinstance(payload.get("events"), list)
+                    ):
+                        # Use the same viewer import path as Open JSON.
+                        reactlog_data = {**payload, "success": True}
+                        # A saved trace does not attach a recording from the local filesystem.
+                        reactlog_data.pop("video_path", None)
+                    else:
+                        reactlog_data = load_reactlog_json(payload)
             except Exception:
                 is_json_input = False
 
@@ -447,9 +461,7 @@ def inspect(
             html_content = format_reactlog_html(
                 reactlog_data,
                 title=report_title,
-                source_code=(
-                    source_code if not is_json_input else "# Loaded from Reactlog JSON"
-                ),
+                source_code=(source_code if not is_json_input else ""),
                 video_path=actual_video_path,
                 html_path=out_file_path,
                 theme=theme,

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ReactlogData } from "./types";
 
-declare const reactlogData: ReactlogData;
-declare const rawAppSource: string | null | undefined;
+declare let reactlogData: ReactlogData;
+declare let rawAppSource: string | null | undefined;
 
 const ICONS = {
   play: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
@@ -984,7 +984,7 @@ function updateFilterState(nodes: any) {
 
 function init() {
   if (Array.isArray(reactlogData) || (reactlogData && (!reactlogData.nodes || !reactlogData.events))) {
-    Object.assign(reactlogData, normalizeReactlogData(reactlogData));
+    reactlogData = normalizeReactlogData(reactlogData);
   }
   initTheme();
   prepareEventTimings();
@@ -2562,6 +2562,8 @@ function updateActionToast() {
   }
 }
 
+let disconnectVideo: (() => void) | undefined;
+
 function setupVideoSync() {
   const video = (document.getElementById('session-video') as any);
   if (!video) return;
@@ -2636,6 +2638,15 @@ function setupVideoSync() {
     }
   };
 
+  const listeners = new AbortController();
+  const { signal } = listeners;
+  disconnectVideo = () => {
+    listeners.abort();
+    stopFrameSync();
+    speedSelect.onchange = null;
+    disconnectVideo = undefined;
+  };
+
   video.addEventListener('loadedmetadata', () => {
     updateSyncStatus(`Paused at ${formatTime(video.currentTime)}`);
     if (video.duration && !isNaN(video.duration)) {
@@ -2644,7 +2655,7 @@ function setupVideoSync() {
       if (totalDisplay) totalDisplay.textContent = formatTime(maxSessionDuration);
       initTraceTimeline();
     }
-  });
+  }, { signal });
 
   video.addEventListener('play', () => {
     if (playTimer) {
@@ -2657,24 +2668,24 @@ function setupVideoSync() {
     updatePlayButton(true);
     updateSyncStatus('Following recording');
     requestNextFrame();
-  });
+  }, { signal });
 
   video.addEventListener('pause', () => {
     isPlaying = false;
     stopFrameSync();
     updatePlayButton(false);
     updateSyncStatus(`Paused at ${formatTime(video.currentTime)}`);
-  });
+  }, { signal });
 
   video.addEventListener('ended', () => {
     isPlaying = false;
     stopFrameSync();
     updatePlayButton(false);
     updateSyncStatus('Recording complete');
-  });
+  }, { signal });
 
-  video.addEventListener('timeupdate', () => syncGraphToTime(video.currentTime));
-  video.addEventListener('seeked', () => syncGraphToTime(video.currentTime));
+  video.addEventListener('timeupdate', () => syncGraphToTime(video.currentTime), { signal });
+  video.addEventListener('seeked', () => syncGraphToTime(video.currentTime), { signal });
 }
 
 function updateSourceHighlight() {
@@ -3069,7 +3080,8 @@ function normalizeReactlogData(loadedData: any): ReactlogData {
     };
   }
 
-  const rawEvents: any[] = Array.isArray(loadedData) ? loadedData : (loadedData.log || loadedData.events || loadedData.entries || []);
+  const entries = Array.isArray(loadedData) ? loadedData : (loadedData.log || loadedData.events || loadedData.entries || []);
+  const rawEvents = entries.filter((entry: any) => entry && typeof entry === 'object');
   const nodesMap: Record<string, any> = Object.create(null);
   const edgesMap: Map<string, any> = new Map();
   const normEvents: any[] = [];
@@ -3129,14 +3141,11 @@ function normalizeReactlogData(loadedData: any): ReactlogData {
 
   rawEvents.forEach((item: any) => {
     const act = item.action || item.event || '';
-    const sessKey = String(item.session || 'default');
+    const sessKey = String(item.session || loadedData.session || 'default');
     if (act === 'isolateEnter') {
       isolateDepthBySession.set(sessKey, (isolateDepthBySession.get(sessKey) || 0) + 1);
-      return;
-    }
-    if (act === 'isolateExit') {
+    } else if (act === 'isolateExit') {
       isolateDepthBySession.set(sessKey, Math.max(0, (isolateDepthBySession.get(sessKey) || 0) - 1));
-      return;
     }
 
     const nid = item.reactId || item.node_id || item.id;
@@ -3149,7 +3158,7 @@ function normalizeReactlogData(loadedData: any): ReactlogData {
     const rawT = Number(item.time || item.time_sec || (Number(item.timestamp || 0) / 1000.0) || 0);
     const tSec = Math.max(0, baseEpoch > 0 ? (rawT - baseEpoch) : rawT);
     const tMs = Number(item.timestamp || (tSec * 1000));
-    const prov = item.provenance || (['valueChange', 'inputChange', 'userClick', 'userAction'].includes(act) ? 'observed' : 'inferred');
+    const prov = item.provenance || 'observed';
     const phase = item.phase || (['define', 'analysisInit', 'createContext', 'sessionInit'].includes(act) ? 'init' : 'interaction');
     const isIsolated = Boolean(item.isolate || (isolateDepthBySession.get(sessKey) || 0) > 0);
 
@@ -3191,6 +3200,7 @@ function normalizeReactlogData(loadedData: any): ReactlogData {
       status: item.status || (act === 'define' ? 'discovered' : (act === 'invalidate' ? 'affected' : 'scheduled')),
       phase: phase,
       provenance: prov,
+      session: sessKey,
       time: tSec,
       time_sec: tSec,
       timestamp: tMs,
@@ -3199,7 +3209,11 @@ function normalizeReactlogData(loadedData: any): ReactlogData {
       edge_from: depFrom,
       edge_to: depTo,
       isolate: isIsolated,
-      details: details
+      details: details,
+      error: item.error,
+      line: item.line,
+      source_file: item.source_file,
+      plot: item.plot
     });
     sIdx++;
   });
@@ -3211,6 +3225,9 @@ function normalizeReactlogData(loadedData: any): ReactlogData {
     success: true,
     version: (!Array.isArray(loadedData) && loadedData.version) || "1.0",
     session: (!Array.isArray(loadedData) && loadedData.session) || "default",
+    title: loadedData.title,
+    sources: loadedData.sources,
+    entry_file: loadedData.entry_file,
     nodes: finalNodes,
     edges: finalEdges,
     events: normEvents,
@@ -3219,9 +3236,43 @@ function normalizeReactlogData(loadedData: any): ReactlogData {
   };
 }
 
-function loadReactlogObject(loadedData: any) {
+function loadReactlogObject(loadedData: any, title = "Reactlog") {
   const normalized = normalizeReactlogData(loadedData);
-  Object.assign(reactlogData, normalized);
+  if (!Array.isArray(normalized?.events)) throw new Error('Expected a Reactlog event list');
+  clearInterval(playTimer);
+  playTimer = null;
+  isPlaying = false;
+  realtimePlayLastTick = null;
+  const video = document.querySelector<HTMLVideoElement>('#session-video');
+  video?.pause();
+  if (video && !(normalized.video_path && normalized.video_path === reactlogData.video_path)) {
+    disconnectVideo?.();
+    document.getElementById('video-panel')?.remove();
+    document.getElementById('video-tab')?.remove();
+    document.getElementById('video-speed-setting')!.hidden = true;
+  }
+  const play = document.getElementById('btn-play')!;
+  play.textContent = '▶ Play';
+  play.setAttribute('aria-label', 'Play timeline');
+  play.title = 'Play / Pause (Space)';
+  reactlogData = normalized;
+  document.title = normalized.title || title;
+  document.querySelector('.brand-title')!.textContent = document.title;
+  rawAppSource = null;
+  displayedSourceFile = '';
+  highlightedSourceCache.clear();
+  if (isSourceDrawerOpen) toggleSourceDrawer();
+  document.getElementById('insp-source-drawer')!.hidden = true;
+  document.querySelector('#insp-source-code code')!.replaceChildren();
+  document.getElementById('insp-source-refs')!.replaceChildren();
+  document.querySelector('#source-panel code')!.replaceChildren();
+  const sourceSelect = document.querySelector<HTMLSelectElement>('#source-file-select')!;
+  sourceSelect.replaceChildren();
+  sourceSelect.hidden = true;
+  document.getElementById('source-tab')!.hidden = !Object.keys(normalized.sources || {}).length;
+  showSidebarPanel('timeline');
+  selectedSearchNodeId = null;
+  activeBurstIndex = 0;
   (document.getElementById('graph-edge-pulses') as any).replaceChildren();
   selectedNodeId = null;
   focusedNodeId = null;
@@ -3270,7 +3321,7 @@ function handleReactlogFileUpload(e: any) {
   reader.onload = (evt: any) => {
     try {
       const parsed = JSON.parse(evt.target.result);
-      loadReactlogObject(parsed);
+      loadReactlogObject(parsed, file.name.replace(/\.json$/i, ''));
     } catch (err: any) {
       alert('Error parsing JSON file: ' + err.message);
     } finally {
