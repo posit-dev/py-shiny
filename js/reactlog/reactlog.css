@@ -219,7 +219,6 @@
     .graph-edge:hover { opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.8px !important; }
     .graph-edge.is-isolated { opacity: 1; stroke: var(--text-muted); stroke-dasharray: 5 4; }
     .graph-edge.is-inactive { stroke: var(--text-muted); stroke-dasharray: 1 5; opacity: 1; }
-    .graph-edge-pulse { fill: var(--text); stroke: var(--bg); stroke-width: 1.5px; pointer-events: none; }
     .legend-swatch { width: 14px; height: 14px; border: 1.5px solid var(--node-stroke); border-radius: 4px; }
     .legend-line { display: inline-block; width: 16px; border-top: 2px solid var(--text-muted); }
     .legend-line.is-isolated { border-top-style: dashed; }
@@ -251,7 +250,6 @@
     @media (prefers-reduced-motion: reduce) {
       .graph-node, .graph-edge, .source-line, .trace-chip, .trace-playhead { transition: none; }
       .graph-edge[data-active="true"] { animation: none; }
-      .graph-edge-pulse { display: none; }
       .action-toast[hidden] { display: none; }
     .action-toast { animation: none; }
     }

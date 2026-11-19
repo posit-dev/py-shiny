@@ -36,7 +36,7 @@ def graph_node(page: Page, selector: str) -> Locator:
     return page.locator(selector)
 
 
-def test_dependency_dot_travels_across_a_scrubbed_step(page: Page) -> None:
+def test_new_edge_is_highlighted_without_a_moving_dot(page: Page) -> None:
     data = {
         "nodes": [
             {"id": "input:x", "label": "input.x", "type": "input", "role": "source"},
@@ -70,30 +70,103 @@ def test_dependency_dot_travels_across_a_scrubbed_step(page: Page) -> None:
         ],
     }
     load_graph_report(page, format_reactlog_html(data, ""))
-    dot = page.locator(".graph-edge-pulse")
-    expect(dot).to_have_count(0)
-    scrubber = page.get_by_role("slider", name="Timeline step scrubber")
-    page.emulate_media(reduced_motion="reduce")
-    scrubber.fill("2")
-    expect(dot).to_have_count(0)
-    scrubber.fill("0")
     page.emulate_media(reduced_motion="no-preference")
+    edge = page.locator('.graph-edge[data-from="input:x"][data-to="output:y"]')
+    expect(edge).to_have_class(re.compile(r"\bis-inactive\b"))
+    scrubber = page.get_by_role("slider", name="Timeline step scrubber")
+    scrubber.fill("1")
+    expect(edge).to_have_attribute("data-active", "true")
+    expect(edge).to_have_attribute("marker-end", "url(#arrow-active)")
+    expect(page.locator(".graph-edge-pulse, svg animateMotion")).to_have_count(0)
 
-    graph = page.locator("#reactlog-svg")
-    graph.evaluate("svg => svg.pauseAnimations()")
-    scrubber.fill("2")
-    expect(dot).to_have_count(1)
-    start = dot.bounding_box()
-    assert start is not None
-    graph.evaluate("svg => svg.setCurrentTime(svg.getCurrentTime() + 0.6)")
-    scrubber.fill("3")
-    middle = dot.bounding_box()
-    assert middle is not None and middle["x"] > start["x"] + 10
-    graph.evaluate("svg => svg.setCurrentTime(svg.getCurrentTime() + 0.7)")
-    expect(dot).to_have_count(0)
-    scrubber.fill("4")
-    expect(dot).to_have_count(0)
-    graph.evaluate("svg => svg.unpauseAnimations()")
+
+def _filtered_playback_report() -> str:
+    clientdata = "input:.clientdata_output_result_hidden"
+    return format_reactlog_html(
+        {
+            "nodes": [
+                {"id": "output:result", "type": "output", "role": "observer"},
+                {"id": "output:other", "type": "output", "role": "observer"},
+                {"id": clientdata, "type": "input", "role": "source"},
+            ],
+            "edges": [{"from": clientdata, "to": "output:result"}],
+            "events": [
+                {"action": "enter", "node_id": "output:result", "time_sec": 0},
+                {"action": "valueChange", "node_id": clientdata, "time_sec": 0.2},
+                {"action": "valueChange", "node_id": clientdata, "time_sec": 0.4},
+                {"action": "exit", "node_id": "output:result", "time_sec": 0.6},
+                {"action": "enter", "node_id": "output:other", "time_sec": 0.8},
+                {
+                    "action": "dependsOn",
+                    "edge_from": clientdata,
+                    "edge_to": "output:result",
+                    "node_id": "output:result",
+                    "time_sec": 1,
+                },
+                {
+                    "action": "invalidate",
+                    "node_id": "output:other",
+                    "invalidated_node_ids": ["output:other", "output:result"],
+                    "time_sec": 1.2,
+                },
+                {"action": "queueEmpty", "time_sec": 1.4},
+                {"action": "queueEmpty", "time_sec": 1.6},
+                {"action": "queueEmpty", "time_sec": 1.8},
+                {"action": "queueEmpty", "time_sec": 2},
+                {"action": "exit", "node_id": "output:other", "time_sec": 2.2},
+                {"action": "queueEmpty", "time_sec": 2.4},
+                {"action": "queueEmpty", "time_sec": 2.6},
+                {"action": "queueEmpty", "time_sec": 2.8},
+                {"action": "enter", "node_id": "output:result", "time_sec": 3},
+            ],
+        },
+        "",
+    )
+
+
+def test_arrow_keys_skip_events_outside_the_visible_graph(page: Page) -> None:
+    page.set_content(_filtered_playback_report())
+    scrubber = page.get_by_role("slider", name="Timeline step scrubber")
+    play = page.locator("#btn-play")
+    play.focus()
+    play.press("ArrowRight")
+    expect(scrubber).to_have_value("3")
+
+    page.locator("#search-input").fill("id:output:result")
+    play.focus()
+    for step in (6, 7, 10, 15):
+        play.press("ArrowRight")
+        expect(scrubber).to_have_value(str(step))
+    for step in (10, 7, 6, 3, 0):
+        play.press("ArrowLeft")
+        expect(scrubber).to_have_value(str(step))
+
+    page.locator("#btn-settings").click()
+    page.locator("#clientdata-select").select_option("show")
+    page.locator("#btn-settings").click()
+    scrubber.press("ArrowRight")
+    expect(scrubber).to_have_value("1")
+
+
+@pytest.mark.parametrize("speed", ["step", "realtime"])
+def test_playback_visits_only_visible_graph_events(page: Page, speed: str) -> None:
+    page.set_content(_filtered_playback_report())
+    page.locator("#search-input").fill("id:output:result")
+    page.locator("#btn-settings").click()
+    page.locator("#playback-speed-select").select_option(speed)
+    page.locator("#btn-settings").click()
+
+    page.evaluate("""() => {
+      const label = document.getElementById('step-display');
+      window.visitedSteps = [];
+      new MutationObserver(() => {
+        window.visitedSteps.push(Number(label.textContent.split(' ')[1]));
+      }).observe(label, { childList: true });
+    }""")
+    page.get_by_role("button", name="Play timeline").click()
+    expect(page.locator("#scrubber-range")).to_have_value("15")
+    expect(page.get_by_role("button", name="Play timeline")).to_be_visible()
+    assert page.evaluate("window.visitedSteps") == [3, 6, 7, 10, 15]
 
 
 @pytest.mark.parametrize(

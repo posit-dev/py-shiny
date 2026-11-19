@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { ReactlogData } from "./types";
+import type { ReactlogData, ReactlogNode } from "./types";
 import { checkTraceVersion, reactiveEventState, replayGraph, traceForReplay } from "./replay";
 import type { ReactlogTrace } from "./replay";
 
@@ -642,10 +642,10 @@ function prevAction() {
   seekTo(0);
 }
 
-function getCurrentFlushIndex() {
+function getCurrentFlushIndex(step = currentStep) {
   if (!allBursts || allBursts.length === 0) return 0;
   for (let i = allBursts.length - 1; i >= 0; i--) {
-    if (currentStep >= allBursts[i].startStep) return i;
+    if (step >= allBursts[i].startStep) return i;
   }
   return 0;
 }
@@ -932,9 +932,9 @@ function updateFlushUI() {
 
 }
 
-function getScopedNodes() {
+function getScopedNodes(step = currentStep) {
   const lineage = getActiveLineageSet();
-  const wave = allBursts[getCurrentFlushIndex()] || allBursts[0];
+  const wave = allBursts[getCurrentFlushIndex(step)] || allBursts[0];
   const active = currentViewMode === 'flush' && !focusedNodeId && wave ? getActiveFlushNodeIds(wave) : null;
   return filterItems(reactlogData.nodes || [], (n: any) => {
     const roleKey = nodeRoleKey(n);
@@ -2015,7 +2015,11 @@ function getNodeShapePath(n: any, p: any, width: any, height: any) {
   return `M ${x0} ${y0} H ${x1} V ${y1} H ${x0} L ${x0 + wc} ${ym} Z`;
 }
 
-function renderGraph(previousStep = currentStep) {
+function graphRepresentative(node: ReactlogNode) {
+  return node.module && collapsedModules.has(node.module) ? `module:${node.module}` : node.id;
+}
+
+function renderGraph() {
   const svg = (document.getElementById('graph-content') as any);
   if (!svg) return;
   svg.innerHTML = '';
@@ -2038,7 +2042,7 @@ function renderGraph(previousStep = currentStep) {
   updateFilterState(scopedNodes);
   scopedNodes.forEach((n: any) => {
     if (n.module && collapsedModules.has(n.module)) {
-      const id = `module:${n.module}`;
+      const id = graphRepresentative(n);
       representatives.set(n.id, id);
       if (!moduleNodes.has(id)) {
         const group = { id, label: n.module, type: 'module', role: 'conductor', module: n.module, members: [] };
@@ -2216,7 +2220,6 @@ function renderGraph(previousStep = currentStep) {
     curWave.outputs.forEach((o: any) => executedInBurst.add(o.nodeId));
   }
 
-  const motionPaths: Map<any, any> = new Map();
   edges.forEach((e: any) => {
     const p1 = pos[e.from];
     const p2 = pos[e.to];
@@ -2230,7 +2233,6 @@ function renderGraph(previousStep = currentStep) {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       const d = graphEdgePath(e, pos, nodeWidth, nodeHeight, edges);
       path.setAttribute('d', String(d));
-      if (e.related && !e.isolated) motionPaths.set(JSON.stringify([e.from, e.to]), d);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke-linecap', 'butt');
       path.setAttribute('stroke-linejoin', 'round');
@@ -2254,7 +2256,6 @@ function renderGraph(previousStep = currentStep) {
       svg.appendChild(path);
     }
   });
-  updateEdgePulses(motionPaths, representatives, events, previousStep);
 
   const execCounts = getNodeExecutionCounts();
   nodes.forEach((n: any) => {
@@ -2407,48 +2408,6 @@ function renderGraph(previousStep = currentStep) {
   });
 }
 
-function updateEdgePulses(paths: any, representatives: any, events: any, previousStep: any) {
-  const layer = (document.getElementById('graph-edge-pulses') as any);
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    layer.replaceChildren();
-    return;
-  }
-  const moving: Set<any> = new Set();
-  for (const dot of (Array.from(layer.children) as any[])) {
-    const key = dot.dataset.edge;
-    if (paths.get(key) === dot.firstElementChild.getAttribute('path')) moving.add(key);
-    else dot.remove();
-  }
-
-  // A scrub can skip dependency events. Use the closest visible one to where it landed.
-  const forward = currentStep > previousStep;
-  const direction = forward ? -1 : 1;
-  for (let step = currentStep; forward ? step > previousStep : step < previousStep; step += direction) {
-    const ev = events[step];
-    if (!ev || ev.isolate || !['dependsOn', 'invalidate', 'invalidateStart', 'propagate'].includes(ev.action || ev.event)) continue;
-    const from = representatives.get(ev.edge_from || ev.depOnReactId || ev.dependsOn);
-    const to = representatives.get(ev.edge_to || ev.node_id || ev.reactId || ev.id);
-    const key = JSON.stringify([from, to]);
-    const path = paths.get(key);
-    if (!path) continue;
-    if (moving.has(key)) return;
-
-    const dot = document.createElementNS(layer.namespaceURI, 'circle');
-    dot.setAttribute('class', 'graph-edge-pulse');
-    dot.setAttribute('r', '6');
-    dot.dataset.edge = key;
-    const motion = document.createElementNS(layer.namespaceURI, 'animateMotion') as any;
-    motion.setAttribute('path', String(path));
-    motion.setAttribute('dur', '1.1s');
-    motion.setAttribute('begin', 'indefinite');
-    motion.addEventListener('endEvent', () => dot.remove(), { once: true });
-    dot.appendChild(motion);
-    layer.appendChild(dot);
-    motion.beginElement();
-    return;
-  }
-}
-
 function highlightDependencies(nodeId: any) {
   if (focusedNodeId) return;
   document.querySelectorAll('.graph-edge').forEach((edge: any) => {
@@ -2475,7 +2434,6 @@ function resetHighlight() {
 
 function seekTo(step: any, fromVideo = false, mediaTime: any = null) {
   const events = reactlogData.events || reactlogData.log || [];
-  const previousStep = currentStep;
   currentStep = Math.max(0, Math.min(step, events.length - 1));
   (document.getElementById('scrubber-range') as any).value = currentStep;
   (document.getElementById('step-display') as any).textContent = `Step ${currentStep} / ${Math.max(0, events.length - 1)}`;
@@ -2499,7 +2457,7 @@ function seekTo(step: any, fromVideo = false, mediaTime: any = null) {
     }
   }
   renderInspector();
-  renderGraph(previousStep);
+  renderGraph();
   updateSourceHighlight();
   updateActionToast();
   updateFlushUI();
@@ -2568,17 +2526,7 @@ function setupVideoSync() {
     // Paused graph stepping must keep the exact event when timestamps coincide.
     if (video.paused && graphSeekTime !== null && Math.abs(curSec - graphSeekTime) < 0.05) return;
     graphSeekTime = null;
-    updateTraceTimelineScrubber(curSec);
-    let matchIdx = 0;
-    const events = reactlogData.events || reactlogData.log || [];
-    for (let i = 0; i < events.length; i++) {
-      const ev = events[i]!;
-      const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
-      if (t <= curSec) matchIdx = i;
-    }
-    if (matchIdx !== currentStep) {
-      seekTo(matchIdx, true, curSec);
-    }
+    syncGraphToPlaybackTime(curSec);
   };
 
   const stopFrameSync = () => {
@@ -2745,36 +2693,97 @@ function togglePlay() {
         const dt = Math.max(0, (now - (realtimePlayLastTick || now)) / 1000);
         realtimePlayLastTick = now;
         const nextSec = Math.min(maxSessionDuration, currentTimelineTime + dt);
-        let matchIdx = 0;
-        for (let i = 0; i < events.length; i++) {
-          const ev = events[i]!;
-          const t = ev.effective_time !== undefined ? ev.effective_time : ((ev.time_sec !== undefined ? ev.time_sec : ev.time) || 0);
-          if (t <= nextSec) matchIdx = i;
-        }
-        if (matchIdx !== currentStep) {
-          seekTo(matchIdx, true, nextSec);
-        } else {
-          updateTraceTimelineScrubber(nextSec);
-        }
+        syncGraphToPlaybackTime(nextSec);
         if (nextSec >= maxSessionDuration) {
           togglePlay();
         }
       }, 50);
     } else {
-      if (currentStep >= events.length - 1) currentStep = 0;
+      const last = events.length - 1;
+      let fromStart = findVisibleStep(currentStep + 1, last, 1) === null;
       playTimer = setInterval(() => {
-        if (currentStep < events.length - 1) {
-          seekTo(currentStep + 1);
-        } else {
-          togglePlay();
-        }
+        const step = findVisibleStep(fromStart ? 0 : currentStep + 1, last, 1);
+        fromStart = false;
+        if (step === null) togglePlay();
+        else seekTo(step);
       }, 600);
     }
   }
 }
 
-function stepForward() { seekTo(currentStep + 1); }
-function stepBack() { seekTo(currentStep - 1); }
+function findVisibleStep(start: number, end: number, direction: 1 | -1): number | null {
+  const events = replayTrace.log;
+  const scopeByActivity = (currentViewMode === 'flush' && !focusedNodeId) || selectedStageFilter;
+  let lastScope: number | undefined;
+  let representatives = new Map<string, string>();
+
+  function hasVisibleActivity(step: number) {
+    const event = events[step]!;
+    if (!event.reactId && !event.invalidated_node_ids?.length) return false;
+
+    // Current-activity and stage filters are evaluated at the destination step.
+    const scope = scopeByActivity ? getCurrentFlushIndex(step) : 0;
+    if (scope !== lastScope) {
+      representatives = new Map(getScopedNodes(step).map((node: ReactlogNode) => [node.id, graphRepresentative(node)]));
+      lastScope = scope;
+    }
+    const target = event.reactId ? representatives.get(event.reactId) : undefined;
+    if (event.action === 'dependsOn' || event.action === 'dependsOnRemove') {
+      const source = event.depOnReactId ? representatives.get(event.depOnReactId) : undefined;
+      return Boolean(source && target && source !== target);
+    }
+    return Boolean(target || event.invalidated_node_ids?.some(id => representatives.has(id)));
+  }
+
+  function idleAt(step: number) {
+    const event = events[step];
+    return event !== undefined && isIdleEvent(event);
+  }
+
+  for (let step = start; step >= 0 && step < events.length && direction * (end - step) >= 0; step += direction) {
+    if (!idleAt(step)) {
+      if (hasVisibleActivity(step)) return step;
+      continue;
+    }
+    if (idleAt(step - 1) && idleAt(step + 1)) continue;
+
+    // Keep either end of an idle run only when the last node activity was visible.
+    let preceding = step - 1;
+    while (idleAt(preceding)) preceding--;
+    for (; preceding >= 0 && !idleAt(preceding); preceding--) {
+      const event = events[preceding]!;
+      if (event.reactId || event.invalidated_node_ids?.length) {
+        if (hasVisibleActivity(preceding)) return step;
+        break;
+      }
+    }
+  }
+  return null;
+}
+
+function syncGraphToPlaybackTime(seconds: number) {
+  const events = reactlogData.events || reactlogData.log || [];
+  let last = events.length - 1;
+  while (last >= 0) {
+    const event = events[last]!;
+    if ((event.effective_time ?? event.time_sec ?? event.time ?? 0) <= seconds) break;
+    last--;
+  }
+  const step = findVisibleStep(last, 0, -1);
+  if (step !== null && step !== currentStep) seekTo(step, true, seconds);
+  else updateTraceTimelineScrubber(seconds);
+}
+
+function stepForward() {
+  const step = findVisibleStep(currentStep + 1, replayTrace.log.length - 1, 1);
+  if (step !== null) seekTo(step);
+}
+
+function stepBack() {
+  const step = findVisibleStep(currentStep - 1, 0, -1);
+  if (step !== null) seekTo(step);
+}
+
 function resetTimeline() { seekTo(0); }
 
 function nodeSearchScore(node: any, query: any) {
@@ -3250,7 +3259,6 @@ function loadReactlogObject(loadedData: any, title = "Reactlog") {
   showSidebarPanel('timeline');
   selectedSearchNodeId = null;
   activeBurstIndex = 0;
-  (document.getElementById('graph-edge-pulses') as any).replaceChildren();
   selectedNodeId = null;
   focusedNodeId = null;
   collapsedModules.clear();
@@ -3345,6 +3353,12 @@ document.addEventListener('keydown', (e: any) => {
   const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable);
 
   if (isInput) {
+    if (e.target.id === 'scrubber-range' && !e.shiftKey && !e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') stepBack();
+      else stepForward();
+      return;
+    }
     if (e.key === 'Escape') {
       const openPopover = (document.querySelector('[popover]:popover-open') as any);
       if (openPopover) {
@@ -3543,7 +3557,6 @@ const reactlogExports = {
   toggleShortcutsModal,
   getNodeShapePath,
   renderGraph,
-  updateEdgePulses,
   highlightDependencies,
   resetHighlight,
   seekTo,
@@ -3675,7 +3688,6 @@ export {
   toggleShortcutsModal,
   getNodeShapePath,
   renderGraph,
-  updateEdgePulses,
   highlightDependencies,
   resetHighlight,
   seekTo,
