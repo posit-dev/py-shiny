@@ -10,6 +10,7 @@ from typing import Any, cast
 
 import click
 
+from .._reactlog_format import check_trace_version
 from ..reactive._reactlog._record import (
     RecordingError,
     record_session,
@@ -72,6 +73,10 @@ def _load_saved(path: Path) -> dict[str, Any]:
     if not isinstance(export, dict):
         raise RecordingError(f"Not a reactlog JSON file: {path}")
     export = cast("dict[str, Any]", export)
+    try:
+        check_trace_version(export)
+    except ValueError as err:
+        raise RecordingError(str(err)) from err
     if not isinstance(export.get("log"), list) or not all(
         isinstance(event, dict) for event in export["log"]
     ):
@@ -330,7 +335,14 @@ def _write_outputs(
             # The viewer opens portable JSON exactly as it would via Open JSON.
             report = {
                 key: export[key]
-                for key in ("version", "session", "log", "sources", "entry_file")
+                for key in (
+                    "trace_version",
+                    "version",
+                    "session",
+                    "log",
+                    "sources",
+                    "entry_file",
+                )
                 if key in export
             }
         entry = str(export.get("entry_file") or "")

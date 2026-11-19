@@ -6,8 +6,8 @@ import pytest
 from click.testing import CliRunner
 from playwright.sync_api import Page, expect
 
-from shiny._inspect import format_reactlog_html, load_reactlog_json
 from shiny._main import main
+from shiny.reactive._reactlog import format_reactlog_html, load_reactlog_json
 
 
 @pytest.mark.parametrize("wrapped", [False, True])
@@ -70,7 +70,7 @@ def test_cli_rejects_unknown_trace_version(tmp_path: Path) -> None:
     source.write_text(json.dumps({"trace_version": 2, "log": []}))
     html = tmp_path / "trace.html"
 
-    result = CliRunner().invoke(main, ["inspect", str(source), "--html", str(html)])
+    result = CliRunner().invoke(main, ["reactlog", str(source), "--html", str(html)])
 
     assert result.exit_code != 0
     assert "Unsupported Reactlog trace version: 2" in result.output

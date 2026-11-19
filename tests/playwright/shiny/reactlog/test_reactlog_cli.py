@@ -69,4 +69,5 @@ def test_reactlog_cli_no_browser_exports_after_ctrl_c(
     assert re.search(r'"source_file": "app.py"', text)
     assert re.search(r'"line": \d+', text)
     export = json.loads(out_json.read_text())
+    assert export["trace_version"] == 1
     assert any(e.get("label") == "input.n" for e in export["log"])
