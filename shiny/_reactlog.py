@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 
 from htmltools import tags
 
+from ._reactlog_format import TRACE_VERSION
 from .reactive._trace import (
     DependencyAdded,
     DependencyRemoved,
@@ -117,7 +118,12 @@ class ReactlogRecorder(ReactiveTracer):
         log = sorted(
             [*nodes.values(), *shared.events, *own.events], key=lambda x: x["time"]
         )
-        return {"version": "1", "session": session_id, "log": log}
+        return {
+            "version": "1",
+            "trace_version": TRACE_VERSION,
+            "session": session_id,
+            "log": log,
+        }
 
     def drop_session(self, session_id: str) -> None:
         self._logs.pop(session_id, None)

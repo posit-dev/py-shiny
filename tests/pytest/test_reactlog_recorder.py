@@ -56,7 +56,9 @@ async def test_recorder_export_round_trips(recorder: ReactlogRecorder) -> None:
         c()
 
     await flush()
-    data = load_reactlog_json(recorder.export("any-session"))
+    trace = recorder.export("any-session")
+    assert trace["trace_version"] == 1
+    data = load_reactlog_json(trace)
     labels = {n["label"] for n in data["nodes"]}
     assert {"a", "b", "reactive.calc c", "reactive.effect e"} <= labels
 

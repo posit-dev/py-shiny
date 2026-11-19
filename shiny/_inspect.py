@@ -1922,8 +1922,6 @@ def load_reactlog_json(
                 label=mark_label, time_sec=round(t_sec, 3), step=step_idx, index=0
             )
         else:
-            # A removed dependency is not an active edge; only `details` names it.
-            is_removal = action == "dependsOnRemove"
             ev_dict = _make_event(
                 step=step_idx,
                 event=action,
@@ -1937,15 +1935,9 @@ def load_reactlog_json(
                 time_sec=round(t_sec, 3),
                 value=val_str,
                 edge_from=(
-                    str(dep_from)
-                    if not is_removal and (action == "dependsOn" or dep_from)
-                    else None
+                    str(dep_from) if (action == "dependsOn" or dep_from) else None
                 ),
-                edge_to=(
-                    str(dep_to)
-                    if not is_removal and (action == "dependsOn" or dep_to)
-                    else None
-                ),
+                edge_to=(str(dep_to) if (action == "dependsOn" or dep_to) else None),
                 details=details,
                 session=session,
                 action=action,

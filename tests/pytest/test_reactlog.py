@@ -2164,10 +2164,10 @@ def test_load_reactlog_json_invalidate_start_is_an_invalidation():
     assert ev["semantic_state"] == "invalidated"
 
 
-def test_load_reactlog_json_depends_on_remove_is_not_an_active_edge():
+def test_load_reactlog_json_preserves_dependency_removal_endpoints():
     ev = next(e for e in _live_events() if e["action"] == "dependsOnRemove")
-    assert ev.get("edge_from") is None
-    assert ev.get("dependsOn") is None
+    assert (ev["edge_from"], ev["edge_to"]) == ("r1", "r2")
+    assert (ev["depOnReactId"], ev["reactId"]) == ("r1", "r2")
     assert ev["details"] == "Removed dependency: 'r1' no longer used by 'r2'"
 
 
