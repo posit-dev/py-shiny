@@ -440,8 +440,8 @@ def _viewer_payload(body: bytes | memoryview) -> tuple[dict[str, Any], str]:
     """The reactlog data and app source embedded in the viewer page."""
     text = bytes(body).decode()
     decoder = json.JSONDecoder()
-    data, _ = decoder.raw_decode(text.split("const reactlogData = ", 1)[1])
-    source, _ = decoder.raw_decode(text.split("const rawAppSource = ", 1)[1])
+    data, _ = decoder.raw_decode(text.split(" reactlogData = ", 1)[1])
+    source, _ = decoder.raw_decode(text.split(" rawAppSource = ", 1)[1])
     return data, source
 
 
