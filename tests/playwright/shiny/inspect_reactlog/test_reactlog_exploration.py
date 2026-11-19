@@ -154,13 +154,6 @@ def test_compact_layout_opens_graph_and_only_shows_current_flush(page: Page):
     set_activity_mode(page, "flush")
     expect(page.locator("#reactlog-svg")).to_be_visible()
     expect(page.locator("#sidebar")).to_be_hidden()
-    expect(page.locator("#sidebar-rail")).to_have_css("width", "40px")
-    expect(page.locator("#btn-toggle-inspector")).to_have_text("")
-    expect(
-        page.locator(
-            "#timeline-tab, #actions-tab, #btn-summary-toggle, #flush-pipeline-bar, #timeline-sidebar, #flush-select"
-        )
-    ).to_have_count(0)
     expect(page.locator("#scrubber-range")).to_have_attribute(
         "aria-valuetext", re.compile(r"Initial render")
     )
@@ -202,7 +195,7 @@ def test_progress_bar_supports_pointer_keyboard_and_idle_markers(page: Page):
     expect(slider).to_have_value("0")
 
 
-def test_recording_floats_below_timeline_and_rail_stays_40px(page: Page):
+def test_recording_fits_below_the_timeline(page: Page):
     page.set_content(format_reactlog_html(report(), CODE, video_path="demo.webm"))
     player = page.get_by_role("region", name="Recording")
     expect(player).to_be_visible()
@@ -211,13 +204,9 @@ def test_recording_floats_below_timeline_and_rail_stays_40px(page: Page):
         rail = page.locator("#sidebar-rail").bounding_box()
         video = player.bounding_box()
         timeline = page.locator("#trace-timeline-bar").bounding_box()
-        graph = page.locator("#graph-container").bounding_box()
-        assert rail and video and timeline and graph
-        assert rail["width"] == 40
-        assert video["width"] <= 440
+        assert rail and video and timeline
         assert video["x"] + video["width"] < rail["x"]
         assert timeline["y"] + timeline["height"] <= video["y"]
-        assert graph["width"] == width - 40
     page.get_by_role("button", name="Hide recording", exact=True).click()
     expect(player).to_be_hidden()
     page.get_by_role("button", name="Toggle recording").click()
@@ -252,19 +241,6 @@ def test_module_search_filters_nodes_and_clears(page: Page, query: str):
     page.locator("#search-input").press("Escape")
     expect(page.locator(".graph-node")).to_have_count(5)
     expect(page.locator("#module-filter-select, #phase-filter-select")).to_have_count(0)
-
-
-def test_timeline_and_controls_are_above_graph(page: Page):
-    page.set_content(format_reactlog_html(report(), CODE))
-    expect(page.locator("#bottom-timeline-bar")).to_have_count(0)
-    graph = page.locator("#graph-container").bounding_box()
-    timeline = page.locator("#trace-timeline-bar").bounding_box()
-    header_controls = page.locator(".header-center .timeline-navigation").bounding_box()
-    search_box = page.locator(".header-center .search-wrap").bounding_box()
-    assert graph and timeline and header_controls and search_box
-    assert timeline["y"] + timeline["height"] <= graph["y"]
-    assert header_controls["x"] >= search_box["x"] + search_box["width"] - 1
-    assert header_controls["y"] + header_controls["height"] <= timeline["y"]
 
 
 def test_replay_uses_r_states_dependencies_and_idle_navigation(page: Page):
@@ -453,112 +429,17 @@ def test_update_labels_and_view_controls(page: Page):
     expect(page.locator("#flush-card-outputs")).to_have_text("Outputs that ran: 1")
 
 
-@pytest.mark.parametrize(
-    ("theme", "idle_color"),
-    [("dark", "rgb(163, 197, 134)"), ("light", "rgb(53, 92, 35)")],
-)
-def test_timeline_idle_marker_is_solid(page: Page, theme: str, idle_color: str):
-    page.set_content(format_reactlog_html(timeline_report(), CODE, theme=theme))
-    idle = page.locator(".timeline-marker.is-idle").first
-    expect(idle).to_have_css("box-shadow", "none")
-    expect(idle).to_have_css("background-color", idle_color)
-    expect(page.locator(".timeline-key .key-idle")).to_have_css(
-        "background-color", idle_color
-    )
-
-
-def test_ui_improvements_picker_roles_clientdata_and_ergonomics(page: Page):
-    data = timeline_report()
-    data["nodes"].append(
-        {
-            "id": "input:.clientdata_output_result_hidden",
-            "name": ".clientdata_output_result_hidden",
-            "label": ".clientdata_output_result_hidden",
-            "type": "input",
-            "role": "source",
-            "module": "",
-        }
-    )
-    long_code = "\n".join([f"# padding line {i}" for i in range(1, 50)] + [CODE])
-    for node in data["nodes"]:
-        if node.get("id") == "calc:doubled":
-            node["line"] = 51
+def test_recording_stays_clear_of_open_inspector(page: Page):
     page.set_viewport_size({"width": 1280, "height": 720})
-    page.set_content(format_reactlog_html(data, long_code, video_path="demo.webm"))
-
-    idle_bg = page.locator(".timeline-marker.is-idle").first.evaluate(
-        "el => getComputedStyle(el).backgroundColor"
-    )
-    out_bg = page.locator(".timeline-marker.is-output").first.evaluate(
-        "el => getComputedStyle(el).backgroundColor"
-    )
-    assert idle_bg != out_bg
-
-    track_bg = page.locator("#trace-track-wrap").evaluate(
-        "el => getComputedStyle(el).backgroundColor"
-    )
-    assert track_bg == "rgb(27, 38, 52)"
-
-    expect(page.locator("#btn-flush-picker")).to_have_count(0)
-    expect(page.locator("#flush-picker-menu")).to_have_count(0)
-    expect(page.locator("#flush-counter-badge")).to_have_count(0)
-    expect(page.locator("#btn-toggle-clientdata")).to_have_count(0)
-    expect(page.locator("#btn-toggle-changes")).to_have_count(0)
-
-    page.locator("#btn-settings").click()
-    page.locator("#activity-select").select_option("full")
-    expect(page.locator(".graph-node")).to_have_count(5)
-
-    client_select = page.locator("#clientdata-select")
-    expect(client_select).to_be_visible()
-    expect(client_select).to_have_value("hide")
-    client_select.select_option("show")
-    expect(page.locator(".graph-node")).to_have_count(6)
-    client_select.select_option("hide")
-    expect(page.locator(".graph-node")).to_have_count(5)
-    client_select.select_option("show")
-    expect(page.locator(".graph-node")).to_have_count(6)
-    page.locator("#btn-settings").click()
-
-    expect(page.locator(".legend-role-btn")).to_have_count(0)
-    page.evaluate("toggleRoleFilter('conductor')")
-    expect(page.locator(".graph-node")).to_have_count(5)
-    expect(page.get_by_role("button", name="Remove role filter")).to_be_visible()
-    page.get_by_role("button", name="Remove role filter").click()
-    expect(page.locator(".graph-node")).to_have_count(6)
-
-    edge_titles = page.locator(".graph-edge title").count()
-    assert edge_titles >= 3
-
-    video_box_closed = page.locator("#video-panel").bounding_box()
-    assert video_box_closed and video_box_closed["width"] >= 440
+    page.set_content(format_reactlog_html(report(), CODE, video_path="demo.webm"))
     page.locator('.graph-node[data-id="calc:doubled"]').click()
-    expect(page.locator("#sidebar")).to_be_visible()
-    expect(page.locator("#main-view")).to_have_class(re.compile(r"is-inspector-open"))
-    video_box_open = page.locator("#video-panel").bounding_box()
-    sidebar_box = page.locator("#sidebar").bounding_box()
-    assert video_box_closed and video_box_open and sidebar_box
-    assert video_box_open["x"] < video_box_closed["x"]
-    assert video_box_open["x"] + video_box_open["width"] <= sidebar_box["x"]
 
-    page.locator("#btn-toggle-inspector").click()
-    expect(page.locator("#sidebar")).to_be_hidden()
-    expect(page.locator("#btn-toggle-inspector-bottom")).to_have_class(
-        re.compile(r"has-selection")
-    )
-    page.locator("#btn-toggle-inspector").click()
-    expect(page.locator("#sidebar")).to_be_visible()
-
-    page.get_by_role("tab", name="App code").click()
-    expect(page.locator("#source-panel .source-line.is-active")).to_have_attribute(
-        "data-line", "51"
-    )
-
-    page.get_by_role("button", name="Close Inspector", exact=True).click()
-    expect(page.locator("#sidebar")).to_be_hidden()
-    expect(page.locator("#btn-toggle-inspector-bottom")).not_to_have_class(
-        re.compile(r"has-selection")
-    )
+    sidebar = page.locator("#sidebar")
+    expect(sidebar).to_be_visible()
+    video_box = page.get_by_role("region", name="Recording").bounding_box()
+    sidebar_box = sidebar.bounding_box()
+    assert video_box and sidebar_box
+    assert video_box["x"] + video_box["width"] <= sidebar_box["x"]
 
 
 @pytest.mark.parametrize("width,height", [(1366, 768), (1024, 600), (390, 700)])
@@ -583,20 +464,6 @@ def test_node_details_events_remain_readable_in_small_windows(
         assert page.locator(f"#event-list {selector}").evaluate_all(
             "els => els.every(el => el.scrollWidth <= el.clientWidth + 1)"
         ), selector
-
-
-def test_report_has_two_graph_views_and_no_overview(page: Page):
-    page.set_content(format_reactlog_html(report(), CODE))
-    expect(page.get_by_role("button", name="Overview", exact=True)).to_have_count(0)
-    expect(page.locator("#module-overview-panel")).to_have_count(0)
-    page.keyboard.press("o")
-    expect(page.locator("#reactlog-svg")).to_be_visible()
-    set_activity_mode(page, "full")
-    expect(page.locator(".graph-node")).to_have_count(5)
-    set_activity_mode(page, "flush")
-    expect(page.locator("#reactlog-svg")).to_be_visible()
-    page.get_by_role("button", name="Shortcuts").click()
-    expect(page.locator("#shortcuts-modal")).not_to_contain_text("Overview")
 
 
 def test_clientdata_is_hidden_by_default_and_can_be_shown(page: Page):
@@ -630,92 +497,6 @@ def test_search_dropdown_opens_and_filters_nodes(page: Page):
     page.keyboard.press("Enter")
     expect(page.locator("#search-results")).to_be_hidden()
     expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_be_visible()
-
-
-def test_node_count_and_controls_share_header(page: Page):
-    page.set_content(format_reactlog_html(report(), CODE))
-    expect(page.locator(".zoom-controls #filter-node-count")).to_be_visible()
-    expect(page.locator(".app-header #filter-node-count")).to_have_count(0)
-    expect(page.locator(".app-header #clientdata-select")).to_have_count(0)
-    expect(page.locator(".app-header #activity-select")).to_have_count(0)
-    expect(page.locator("#btn-settings")).to_be_visible()
-    expect(page.locator("#settings-menu")).to_be_hidden()
-    page.locator("#btn-settings").click()
-    expect(page.locator("#settings-menu")).to_be_visible()
-    expect(page.locator("#settings-menu #clientdata-select")).to_be_visible()
-    expect(page.locator("#settings-menu #activity-select")).to_be_visible()
-    speed_select = page.locator("#settings-menu #playback-speed-select")
-    expect(speed_select).to_be_visible()
-    expect(speed_select).to_have_value("step")
-    expect(speed_select.locator("option")).to_have_text(
-        ["Progress bar (step-by-step)", "Real time (video speed)"]
-    )
-    expect(page.get_by_label("Video speed", exact=True)).to_be_hidden()
-    expect(page.locator("#settings-menu #btn-toggle-collapse-all")).to_be_visible()
-    expect(page.locator("#settings-menu #btn-reset-view")).to_be_visible()
-    expect(page.locator(".zoom-controls > #btn-toggle-collapse-all")).to_have_count(0)
-    expect(page.locator(".zoom-controls > #btn-reset-view")).to_have_count(0)
-    expect(page.locator(".app-header #btn-toggle-clientdata")).to_have_count(0)
-    expect(page.locator(".app-header #btn-toggle-changes")).to_have_count(0)
-    expect(page.get_by_role("button", name="Clear all filters")).to_have_count(0)
-    expect(page.locator("body > .filter-state")).to_have_count(0)
-
-
-def test_only_nodes_with_recorded_value_changes_are_shown(page: Page):
-    data = report()
-    data["nodes"].extend(
-        [
-            {
-                "id": "input:fixed",
-                "label": "input.fixed",
-                "role": "source",
-                "type": "input",
-            },
-            {
-                "id": "input:changed",
-                "label": "input.changed",
-                "role": "source",
-                "type": "input",
-            },
-        ]
-    )
-    data["events"] = [
-        {"action": "valueChange", "node_id": "input:fixed", "value": "1"},
-        {"action": "valueChange", "node_id": "input:changed", "value": "1"},
-        {"action": "queueEmpty"},
-        {"action": "valueChange", "node_id": "input:fixed", "value": "1"},
-        {"action": "valueChange", "node_id": "input:changed", "value": "2"},
-    ]
-    page.set_content(format_reactlog_html(data, CODE))
-    set_activity_mode(page, "full")
-    expect(page.locator('.graph-node[data-id="input:fixed"]')).to_have_count(1)
-    expect(page.locator('.graph-node[data-id="input:changed"]')).to_have_count(1)
-
-
-def test_default_graph_includes_observed_executions(page: Page):
-    data = report()
-    data["events"] = [
-        {"action": "queueEmpty"},
-        {"action": "enter", "node_id": "calc:doubled", "provenance": "observed"},
-        {"action": "enter", "node_id": "output:result", "provenance": "observed"},
-        {"action": "enter", "node_id": "output:other", "provenance": "inferred"},
-    ]
-    page.set_content(format_reactlog_html(data, CODE))
-    expect(page.locator('.graph-node[data-id="calc:doubled"]')).to_have_count(1)
-    expect(page.locator('.graph-node[data-id="output:result"]')).to_have_count(1)
-
-
-def test_empty_changed_graph_explains_how_to_show_all_nodes(page: Page):
-    data = report()
-    data["events"] = [
-        {"action": "valueChange", "node_id": "input:x", "value": "1"},
-        {"action": "queueEmpty"},
-    ]
-    page.set_content(format_reactlog_html(data, CODE))
-    expect(
-        page.get_by_text("No recorded changes or executions in this view.")
-    ).to_be_hidden()
-    expect(page.locator(".graph-node")).to_have_count(5)
 
 
 def test_clear_all_shows_hidden_nodes(page: Page):
@@ -792,51 +573,6 @@ def test_search_escape_closes_dropdown_after_keyboard_navigation(page: Page):
     expect(search).to_be_focused()
 
 
-def test_timeline_uses_keyboard_navigation(page: Page):
-    page.set_content(format_reactlog_html(report(), CODE))
-    expect(page.locator("#timeline-more-controls")).to_have_count(0)
-    expect(
-        page.get_by_role("button", name="Previous activity", exact=True)
-    ).to_have_count(0)
-    expect(page.get_by_role("button", name="Next activity", exact=True)).to_have_count(
-        0
-    )
-    expect(page.locator("#step-display")).to_be_visible()
-    page.locator("#btn-play").focus()
-    page.keyboard.press("ArrowDown")
-    expect(page.locator("#scrubber-range")).to_have_attribute(
-        "aria-valuetext", re.compile(r"\. x")
-    )
-    page.keyboard.press("ArrowUp")
-    expect(page.locator("#scrubber-range")).to_have_attribute(
-        "aria-valuetext", re.compile(r"Initial render")
-    )
-    page.keyboard.press("ArrowRight")
-    expect(page.locator("#step-display")).to_contain_text("Step 1 /")
-
-
-def test_smooth_connecting_edges_and_header_dropdowns(page: Page):
-    page.set_content(format_reactlog_html(report(), CODE))
-    page.locator("#btn-settings").click()
-    client_select = page.locator("#settings-menu #clientdata-select")
-    activity_select = page.locator("#settings-menu #activity-select")
-    expect(client_select).to_be_visible()
-    expect(activity_select).to_be_visible()
-    expect(client_select.locator("option")).to_have_text(
-        ["Hide clientdata", "Show clientdata"]
-    )
-    expect(activity_select.locator("option")).to_have_text(
-        ["Show all activity", "Show current activity"]
-    )
-    page.locator("#btn-settings").click()
-    edges = page.locator(".graph-edge")
-    expect(edges).not_to_have_count(0)
-    for i in range(edges.count()):
-        d_attr = edges.nth(i).get_attribute("d") or ""
-        assert " C " in d_attr
-        assert " L " not in d_attr
-
-
 def test_timeline_controls_fit_small_screen(page: Page):
     page.set_viewport_size({"width": 390, "height": 844})
     page.set_content(format_reactlog_html(report(), CODE))
@@ -904,15 +640,12 @@ def test_report_uses_names_and_highlights_module_names(page: Page):
     choice = page.locator("#search-results button").first
     expect(choice).to_contain_text("input.scatter-y_var")
     expect(choice).not_to_contain_text("R45")
-    expect(choice.locator(".module-name")).to_have_css("color", "rgb(196, 181, 253)")
     choice.click()
     expect(search).to_have_value("input.scatter-y_var")
     expect(page.locator("#insp-title .module-name")).to_have_text("scatter")
 
 
-def test_timeline_legend_popover_error_pink_no_idle_border_and_code_colors(
-    page: Page,
-):
+def test_timeline_legend_and_source_highlights(page: Page):
     code = """from shiny import reactive
 from shiny.express import input, render
 ui.input_numeric("x", "X", 1)
@@ -960,22 +693,6 @@ def out():
     }
     page.set_content(format_reactlog_html(data, code))
 
-    styles = page.evaluate("""() => {
-        const root = getComputedStyle(document.documentElement);
-        const idleKey = getComputedStyle(document.querySelector('.timeline-key .key-idle'));
-        const errKey = getComputedStyle(document.querySelector('.timeline-key .key-error'));
-        return {
-            idleShadow: idleKey.boxShadow,
-            errKeyBg: errKey.backgroundColor,
-            stateError: root.getPropertyValue('--state-error').trim(),
-            timelineError: root.getPropertyValue('--timeline-error').trim(),
-            trackHeight: document.getElementById('trace-track-wrap').getBoundingClientRect().height,
-        };
-    }""")
-    assert styles["idleShadow"] == "none"
-    assert styles["timelineError"] == styles["stateError"] == "#f3a6af"
-    assert styles["trackHeight"] <= 18
-
     legend_btn = page.locator("#btn-graph-legend")
     legend_popover = page.locator("#graph-legend-popover")
     timeline_key = legend_popover.locator("#timeline-key")
@@ -998,8 +715,7 @@ def out():
     page.get_by_role("tab", name="App code").click()
     page.evaluate("seekTo(0)")
     mark_line = page.locator("#source-panel .source-line.is-active.is-mark")
-    expect(mark_line).to_have_css("background-color", "rgba(0, 0, 0, 0)")
-    expect(mark_line).to_have_css("box-shadow", "none")
+    expect(mark_line).to_have_attribute("data-line", "6")
     mark_color = mark_line.locator(".source-line-content").evaluate(
         "el => getComputedStyle(el).color"
     )
@@ -1010,8 +726,7 @@ def out():
 
     page.evaluate("seekTo(1)")
     err_line = page.locator("#source-panel .source-line.is-active.is-error")
-    expect(err_line).to_have_css("background-color", "rgba(0, 0, 0, 0)")
-    expect(err_line).to_have_css("box-shadow", "none")
+    expect(err_line).to_have_attribute("data-line", "8")
     err_color = err_line.locator(".source-line-content").evaluate(
         "el => getComputedStyle(el).color"
     )

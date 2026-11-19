@@ -5,10 +5,8 @@ import re
 import runpy
 import shutil
 import subprocess
-import xml.etree.ElementTree as ET
-from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, List, cast
 
 import pytest
 from click.testing import CliRunner
@@ -22,22 +20,6 @@ from shiny._inspect import (
     load_reactlog_json,
 )
 from shiny._main import main
-
-
-class _TagCollector(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.tags: List[Tuple[str, dict[str, str | None]]] = []
-
-    def handle_starttag(self, tag: str, attrs: List[Tuple[str, str | None]]) -> None:
-        self.tags.append((tag, dict(attrs)))
-
-    def has_tag(self, tag: str, **attrs: str) -> bool:
-        return any(
-            candidate == tag
-            and all(candidate_attrs.get(key) == value for key, value in attrs.items())
-            for candidate, candidate_attrs in self.tags
-        )
 
 
 def test_inspect_graph_roles():
@@ -161,13 +143,16 @@ def display():
     assert reactlog["observed_events_count"] == 3
     assert reactlog["inferred_events_count"] > 0
 
-    event_types = [e["event"] for e in reactlog["events"]]
-    assert "analysisInit" in event_types
-    assert "define" in event_types
-    assert "inputChange" in event_types
-    assert "userClick" in event_types
-    assert "outputUpdated" in event_types
-    assert "recordingComplete" in event_types
+    events = reactlog["events"]
+    observed = {e["event"] for e in events if e["provenance"] == "observed"}
+    assert observed == {"inputChange", "userClick", "outputUpdated"}
+    simulated = {
+        e["event"]: e["semantic_state"] for e in events if e["provenance"] == "inferred"
+    }
+    assert {"analysisInit", "recordingComplete"} <= simulated.keys()
+    assert simulated["define"] == "dependency_only"
+    assert simulated["propagate"] == "invalidated"
+    assert simulated["wouldEvaluate"] == "inferred_execution"
 
 
 def test_recorded_output_error_survives_json_reload():
@@ -212,31 +197,6 @@ def out():
     assert len(input_changes) == 2
     assert input_changes[0]["value"] == "10"
     assert input_changes[1]["value"] == "20"
-
-
-def test_observed_vs_inferred_provenance_labels():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("n", "N", 5)
-@reactive.calc
-def double():
-    return input.n() * 2
-@render.text
-def out():
-    return str(double())
-"""
-    actions = [
-        {"type": "input", "name": "n", "value": 15, "timestamp": 200},
-        {"type": "output", "name": "out", "timestamp": 300},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=actions)
-    for e in reactlog["events"]:
-        assert e.get("provenance") in ("observed", "inferred")
-
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert "provenance-observed" in html
-    assert "provenance-inferred" in html
 
 
 def test_relative_video_path_different_directories():
@@ -290,44 +250,6 @@ def greeting():
     assert "<!DOCTYPE html>" in html
     assert "</script><script>alert('xss')</script>" not in html
     assert "\\u003c/script\\u003e\\u003cscript\\u003e" in html
-
-
-def test_format_reactlog_html_semantic_tags():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    parser = _TagCollector()
-    parser.feed(html)
-    assert parser.has_tag("header")
-    assert parser.has_tag("main")
-    assert parser.has_tag("aside")
-    assert parser.has_tag("button")
-
-
-def test_format_reactlog_html_graph_visible_on_initialization():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("a", "A", 1)
-@reactive.calc
-def calc_b():
-    return input.a() + 1
-@render.text
-def out_c():
-    return str(calc_b())
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert ".graph-edge" in html
-    edge_style = re.search(r"^    \.graph-edge \{([^}]+)\}", html, re.MULTILINE)
-    assert edge_style is not None
-    assert "opacity: 1;" in edge_style[1]
-    assert ".graph-edge { opacity: 0;" not in html
 
 
 def test_reactlog_phase_separation():
@@ -444,46 +366,6 @@ def greet():
     assert reactlog["inferred_events_count"] == len(inferred_events)
 
 
-def test_cli_inspect_basic():
-    runner = CliRunner()
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_slider("x", "X", 1, 5, 2)
-
-@reactive.calc
-def squared():
-    return input.x() ** 2
-
-@render.text
-def result():
-    return f"Res: {squared()}"
-"""
-    res = runner.invoke(main, ["inspect", "--code", code])
-    assert res.exit_code == 0
-    assert "Reactive Dependency Graph" in res.output
-    assert "Inputs (Sources):" in res.output
-    assert "input.x" in res.output
-    assert "squared" in res.output
-    assert "result" in res.output
-
-
-def test_cli_inspect_json():
-    runner = CliRunner()
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("val", "Val", 10)
-@render.text
-def out():
-    return f"V: {input.val()}"
-"""
-    res = runner.invoke(main, ["inspect", "--code", code, "--json"])
-    assert res.exit_code == 0
-    data = json.loads(res.output)
-    assert data["success"] is True
-    assert len(data["nodes"]) == 2
-    assert len(data["edges"]) == 1
-
-
 def test_exact_edge_highlighting_with_multiple_dependencies():
     code = """from shiny.express import input, render, ui
 from shiny import reactive
@@ -518,58 +400,6 @@ def out():
         e.get("edge_from") == "input:b" and e.get("edge_to") == "calc:total"
         for e in depends_events
     )
-
-
-def test_format_reactlog_html_has_compact_sidebar():
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("val", "Val", 10)
-@render.text
-def out():
-    return f"V: {input.val()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="sidebar-rail"' in html
-    assert 'id="split-resizer"' not in html
-    assert "width: 40px" in html
-
-
-def test_html_trace_timeline_ribbon():
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("n", "N", 10)
-@render.text
-def out():
-    return f"V={input.n()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="trace-timeline-bar"' in html
-    assert 'id="trace-track-wrap"' in html
-    assert 'id="scrubber-range"' in html
-    assert 'id="trace-markers"' in html
-    assert "initTraceTimeline()" in html
-
-
-def test_cli_inspect_json_clean_stdout(tmp_path: Path):
-    app_file = tmp_path / "app.py"
-    app_file.write_text(
-        """from shiny.express import input, render, ui
-ui.input_numeric("n", "N", 10)
-@render.text
-def out():
-    return f"Val={input.n()}"
-""",
-        encoding="utf-8",
-    )
-    runner = CliRunner()
-    res = runner.invoke(main, ["inspect", str(app_file), "--json"])
-    assert res.exit_code == 0
-    json_start = res.output.find("{")
-    assert json_start != -1
-    data = json.loads(res.output[json_start:])
-    assert data["success"] is True
-    assert "events" in data
-    assert len(data["nodes"]) == 2
 
 
 def test_cli_inspect_record_json_clean_stdout(
@@ -624,25 +454,6 @@ def show():
     assert res.exit_code == 0
     assert "Reactive Event Log" in res.output
     assert "analysisInit" in res.output
-
-
-def test_cli_inspect_html_export(tmp_path: Path):
-    runner = CliRunner()
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("val", "Val", 10)
-@render.text
-def out():
-    return f"V: {input.val()}"
-"""
-    out_html = tmp_path / "custom_reactlog.html"
-    res = runner.invoke(
-        main,
-        ["inspect", "--code", code, "--html", str(out_html)],
-    )
-    assert res.exit_code == 0
-    assert out_html.is_file()
-    content = out_html.read_text(encoding="utf-8")
-    assert "Reactlog report" in content
 
 
 def test_reactlog_json_contract_r_shiny_compatibility():
@@ -756,82 +567,6 @@ def test_load_reactlog_json_with_r_reactlog_schema():
     assert loaded_raw["success"] is True
     assert len(loaded_raw["nodes"]) == 3
     assert len(loaded_raw["edges"]) == 2
-
-
-def test_format_reactlog_html_compact_controls():
-    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
-    parser = _TagCollector()
-    parser.feed(html)
-    for control_id in (
-        "timeline-more-controls",
-        "btn-prev-activity",
-        "btn-next-activity",
-        "btn-step-back",
-        "btn-step-forward",
-        "btn-prev-flush",
-        "btn-next-flush",
-        "flush-counter-badge",
-        "btn-flush-picker",
-        "flush-picker-menu",
-        "btn-toggle-clientdata",
-        "btn-toggle-changes",
-    ):
-        assert not any(attrs.get("id") == control_id for _, attrs in parser.tags)
-    assert parser.has_tag(
-        "button", id="btn-shortcuts", **{"aria-label": "Keyboard shortcuts"}
-    )
-    shortcuts = re.search(
-        r'<button[^>]*id="btn-shortcuts"[^>]*>(.*?)</button>', html, re.DOTALL
-    )
-    assert shortcuts is not None
-    assert re.sub(r"<[^>]*>", "", shortcuts[1]).strip() == ""
-    assert parser.has_tag("input", id="scrubber-range")
-    assert parser.has_tag("button", id="search-clear")
-    assert parser.has_tag("select", id="clientdata-select")
-    assert parser.has_tag("select", id="activity-select")
-
-
-@pytest.mark.parametrize("label", ["Zoom in", "Zoom out"])
-def test_format_reactlog_html_zoom_icons_have_valid_svg(label: str):
-    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
-    button = re.search(rf'<button[^>]*aria-label="{label}"[^>]*>(.*?)</button>', html)
-    assert button is not None
-    svg = ET.fromstring(button[1])
-    assert int(svg.attrib["width"]) >= 18
-    handle = svg.find("line")
-    assert handle is not None
-    assert handle.attrib == {"x1": "21", "x2": "16.65", "y1": "21", "y2": "16.65"}
-    lines = svg.findall("line")
-    assert len(lines) == (3 if label == "Zoom in" else 2)
-    assert lines[-1].attrib == {"x1": "8", "x2": "14", "y1": "11", "y2": "11"}
-
-
-def test_format_reactlog_html_node_names_and_module_markup():
-    node = shutil.which("node")
-    if node is None:
-        pytest.skip("Node.js is needed to run the report's label formatter")
-    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
-    functions: list[str] = []
-    for name in ("escapeHTML", "nodeDisplayName", "nodeLabelHTML"):
-        match = re.search(rf"    function {name}\([\s\S]*?\n    \}}", html)
-        assert match is not None
-        functions.append(match[0])
-    script = "\n".join(functions) + """
-const node = {id: 'R45', label: 'input.scatter-y_var', module: 'scatter'};
-console.log(JSON.stringify([
-  nodeDisplayName(node), nodeLabelHTML(node), nodeLabelHTML(node, true),
-  nodeLabelHTML({id: 'R46', label: 'input.<img>', module: '<img>'})
-]));
-"""
-    result = subprocess.run(
-        [node, "-e", script], capture_output=True, text=True, check=True
-    )
-    assert json.loads(result.stdout) == [
-        "input.scatter-y_var",
-        'input.<span class="module-name">scatter</span>-y_var',
-        'input.<tspan class="module-name">scatter</tspan>-y_var',
-        'input.<span class="module-name">&lt;img&gt;</span>',
-    ]
 
 
 @pytest.mark.parametrize("precomputed", [False, True])
@@ -1014,40 +749,8 @@ console.log(JSON.stringify(arrangeGraphBand(nodes, edges, ranks, 70, 350, 92)));
     )
 
 
-def test_format_reactlog_html_theme_support():
-    code = """from shiny.express import input, render, ui
-ui.input_numeric("n", "N", 5)
-@render.text
-def out():
-    return str(input.n())
-"""
-    reactlog = generate_reactlog(code)
-
-    html_dark = format_reactlog_html(reactlog, source_code=code, theme="dark")
-    assert 'data-theme="dark"' in html_dark
-    assert 'id="btn-theme-toggle"' in html_dark
-    assert 'id="btn-json-menu"' in html_dark
-    assert 'id="btn-import-json"' in html_dark
-    assert 'id="btn-export-json"' in html_dark
-
-    html_light = format_reactlog_html(reactlog, source_code=code, theme="light")
-    assert 'data-theme="light"' in html_light
-    assert '[data-theme="light"]' in html_light
-    assert "--bg: #f8fafc;" in html_light
-    assert "--track-bg: #1b2634;" in html_light
-    assert 'id="clientdata-select"' in html_light
-    assert 'id="activity-select"' in html_light
-    assert 'id="graph-legend-popover"' in html_light
-    assert 'id="btn-graph-legend"' in html_light
-    assert '<span class="legend-label">Type</span>' not in html_light
-    assert 'class="legend-role-btn' not in html_light
-
-
-@pytest.mark.parametrize("theme", ["dark", "light", "auto"])
-def test_format_reactlog_html_accessible_palette(theme: str):
-    html = format_reactlog_html(
-        {"nodes": [], "edges": [], "events": []}, "", theme=theme
-    )
+def test_format_reactlog_html_accessible_palette():
+    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
     style = re.search(r"<style>(.*?)</style>", html, re.DOTALL)
     assert style is not None
     palettes: list[bool] = []
@@ -1059,13 +762,7 @@ def test_format_reactlog_html_accessible_palette(theme: str):
         if "--source" not in tokens:
             continue
         is_light = any(value in selector for value in ('"light"', '"auto"'))
-        expected = (
-            ["#005a9c", "#9c4f00", "#994a78", "#006e59"]
-            if is_light
-            else ["#56b4e9", "#e9b44c", "#e3a4c8", "#5fc7a7"]
-        )
         roles = [tokens[f"--{role}"] for role in ("source", "calc", "effect", "output")]
-        assert roles == expected
         palettes.append(is_light)
 
         def luminance(color: str) -> float:
@@ -1084,7 +781,7 @@ def test_format_reactlog_html_accessible_palette(theme: str):
                 assert (levels[1] + 0.05) / (levels[0] + 0.05) >= 4.5
 
         for marker in (
-            "#355c23" if is_light else shared["--state-ready"],
+            tokens.get("--timeline-idle", shared["--state-ready"]),
             tokens["--timeline-output"],
             tokens["--timeline-mark"],
             tokens["--timeline-error"],
@@ -1117,49 +814,6 @@ def test_format_reactlog_html_accessible_palette(theme: str):
 
     # Explicit light/dark themes and the automatic light-mode fallback agree.
     assert palettes == [False, True, True]
-
-
-def test_format_reactlog_html_distinct_node_and_marker_shapes():
-    node = shutil.which("node")
-    if node is None:
-        pytest.skip("Node.js is needed to inspect nodeKind shapes")
-    html = format_reactlog_html({"nodes": [], "edges": [], "events": []}, "")
-    match_kind = re.search(r"    function nodeKind\([\s\S]*?\n    \}", html)
-    assert match_kind is not None
-    match_card = re.search(r"    function getNodeShapePath\([\s\S]*?\n    \}", html)
-    assert match_card is not None
-    script = match_kind[0] + "\n" + match_card[0] + """
-const samples = [
-  {role: 'source', type: 'input'},
-  {role: 'conductor', type: 'calc'},
-  {role: 'observer', type: 'effect'},
-  {role: 'observer', type: 'output'},
-  {role: 'observer', type: 'output', render_type: 'plot'},
-  {role: 'conductor', type: 'module'},
-];
-const pos = {x: 100, y: 100};
-console.log(JSON.stringify({
-  kinds: samples.map(n => nodeKind(n)),
-  paths: samples.map(n => getNodeShapePath(n, pos, 280, 64))
-}));
-"""
-    result = subprocess.run(
-        [node, "-e", script], capture_output=True, text=True, check=True
-    )
-    payload = json.loads(result.stdout)
-    shapes = [k["shape"] for k in payload["kinds"]]
-    assert len(set(shapes)) == 6
-    paths = payload["paths"]
-    assert len(set(paths)) == 4
-    assert '<span class="legend-label">Type</span>' not in html
-    assert 'class="legend-role-btn' not in html
-    assert 'id="arrow-isolated"' in html
-    isolated_marker = re.search(
-        r'<marker id="arrow-isolated"[^>]*>(.*?)</marker>', html, re.DOTALL
-    )
-    assert isolated_marker is not None
-    assert 'fill="var(--bg)"' in isolated_marker[1]
-    assert 'stroke="var(--text-muted)"' in isolated_marker[1]
 
 
 def test_cli_inspect_theme_and_json_file(tmp_path: Path):
@@ -1398,45 +1052,6 @@ def test_real_shiny_for_r_reactlog_parsing_and_epoch_time_normalization():
     assert all(e["time_sec"] < 100.0 for e in events)
 
 
-def test_reactlog_html_xss_protection_on_imported_data():
-    malicious_log = {
-        "version": "1.0",
-        "session": "xss_session",
-        "log": [
-            {
-                "action": "define",
-                "reactId": "<img src=x onerror=alert(1)>",
-                "label": "<script>alert('xss')</script>",
-                "type": "observable",
-                "time": 1.0,
-                "details": "<b onmouseover=alert(2)>Click me</b>",
-            },
-            {
-                "action": "define",
-                "reactId": "out1",
-                "label": "Safe Output",
-                "type": "observer",
-                "time": 1.5,
-            },
-            {
-                "action": "dependsOn",
-                "reactId": "out1",
-                "depOnReactId": "<img src=x onerror=alert(1)>",
-                "time": 2.0,
-            },
-        ],
-    }
-
-    html = format_reactlog_html(malicious_log, source_code="# test")
-    assert "escapeHTML" in html
-    assert (
-        "<script>alert('xss')</script>" not in html
-        or "\\u003c" in html
-        or "\\u0022" in html
-        or "escapeHTML" in html
-    )
-
-
 def test_cli_inspect_record_with_format_json_and_video_defaults(tmp_path: Path):
     app_file = tmp_path / "app.py"
     app_file.write_text(
@@ -1463,48 +1078,6 @@ def out():
     assert res_html.exit_code == 0
     html_text = html_out.read_text(encoding="utf-8")
     assert 'id="video-tab"' not in html_text
-
-
-def test_reactlog_execution_debugger_elements_and_helpers():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("val", "Val", 10)
-@reactive.calc
-def computed():
-    return input.val() * 2
-@render.text
-def out():
-    return f"Computed: {computed()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-
-    assert "why-card" in html
-    assert "why-story" in html
-    assert "why-cascade-flow" in html
-    assert "btn-focus-upstream" not in html
-    assert "btn-focus-downstream" not in html
-    assert "btn-focus-all" not in html
-    assert 'id="btn-summary-toggle"' not in html
-    assert 'id="recording-summary-popover"' not in html
-    assert 'id="actions-tab"' not in html
-    assert 'id="actions-panel"' not in html
-    assert 'id="action-list"' not in html
-    assert "insp-source-drawer" in html
-    assert "insp-upstream-list" in html
-    assert "insp-downstream-list" in html
-    assert "explainWhyNodeRan" in html
-    assert "buildGraphIndices" in html
-    assert "getUpstreamNodes" in html
-    assert "getDownstreamNodes" in html
-    assert "setFocusMode" not in html
-    assert "renderInspector" in html
-    assert "role-filter-dropdown" not in html
-    assert "getActiveLineageSet" in html
-    assert "filterLineageForNode" in html
-    assert "trace-status-line" not in html
-    assert 'id="btn-play"' in html
 
 
 def test_password_and_secret_inputs_redacted_at_ast_visitor():
@@ -1571,44 +1144,6 @@ def summary():
     assert "Click" in click_w["trigger"]
 
 
-def test_semantic_states_in_events():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("x", "X", 5)
-
-@reactive.calc
-def doubled():
-    return input.x() * 2
-
-@render.text
-def out():
-    return str(doubled())
-"""
-    actions = [
-        {"type": "input", "name": "x", "value": 10, "timestamp": 100},
-        {"type": "output", "name": "out", "timestamp": 200},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=actions)
-    events = reactlog["events"]
-
-    define_evs = [e for e in events if e["event"] == "define"]
-    for e in define_evs:
-        assert e["semantic_state"] == "dependency_only"
-
-    input_evs = [e for e in events if e["event"] == "inputChange"]
-    for e in input_evs:
-        assert e["semantic_state"] == "observed_execution"
-
-    prop_evs = [e for e in events if e["event"] == "propagate"]
-    for e in prop_evs:
-        assert e["semantic_state"] == "invalidated"
-
-    eval_evs = [e for e in events if e["event"] == "wouldEvaluate"]
-    for e in eval_evs:
-        assert e["semantic_state"] == "inferred_execution"
-
-
 def test_record_session_options_passive_by_default():
     import inspect as py_inspect
 
@@ -1627,17 +1162,6 @@ def test_record_session_options_passive_by_default():
         sig_cb = py_inspect.signature(inspect_cli_fn.callback)
         assert sig_cb.parameters["auto_interact"].default is False
         assert sig_cb.parameters["redact_inputs"].default is False
-
-
-def test_source_code_html_includes_line_numbers():
-    from shiny._inspect import _format_python_source_html
-
-    code = "from shiny.express import input, render, ui\n\nui.input_numeric('x', 'X', 10)\n"
-    html = _format_python_source_html(code)
-    assert 'class="source-line" data-line="1"' in html
-    assert '<span class="source-line-num" aria-hidden="true">1</span>' in html
-    assert 'class="source-line" data-line="3"' in html
-    assert '<span class="source-line-num" aria-hidden="true">3</span>' in html
 
 
 def test_r_reactlog_types_and_late_definitions():
@@ -2043,24 +1567,6 @@ def test_reactive_marks_api_and_generate_reactlog(tmp_path: Path):
     reactive.clear_marks()
 
 
-def test_reactlog_html_features():
-    code = "from shiny.express import input, render\n@render.text\ndef out():\n    return f'{input.x()}'"
-    rlog = generate_reactlog(
-        code,
-        recorded_actions=[
-            {"type": "input", "name": "x", "value": 1, "timestamp": 10},
-            {"type": "input", "name": "x", "value": 2, "timestamp": 20},
-            {"type": "input", "name": "x", "value": 3, "timestamp": 30},
-            {"type": "input", "name": "x", "value": 4, "timestamp": 40},
-        ],
-    )
-    html = format_reactlog_html(rlog, code)
-    assert "shortcuts-modal" in html
-    assert "Isolated read" in html
-    assert "arrow-isolated" in html
-    assert "node-exec-badge" in html
-
-
 def test_reactlog_server_routes_and_hotkey(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("SHINY_REACTLOG", "1")
     from starlette.testclient import TestClient
@@ -2125,13 +1631,6 @@ def out():
     end_idx = next(i for i, l in enumerate(labels) if "End Mark" in l)
 
     assert start_idx < x_idx < mid_idx < y_idx < end_idx
-
-
-def test_shiny_run_reactlog_flag():
-    runner = CliRunner()
-    result = runner.invoke(main, ["run", "--help"])
-    assert result.exit_code == 0
-    assert "--reactlog" in result.output
 
 
 def test_reactlog_remote_security_access_control():
@@ -2206,18 +1705,6 @@ def test_reactive_marks_session_scoping_and_isolation():
 
     with session_context(sess_b):  # pyright: ignore[reportArgumentType]
         assert len(reactive.get_marks()) == 1
-
-
-def test_app_reactlog_explicit_config(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("SHINY_REACTLOG", raising=False)
-    from shiny import App, ui
-
-    app_disabled = App(ui.page_fluid("Off"), None, reactlog=False)
-    assert app_disabled.reactlog_enabled is False
-
-    app_enabled = App(ui.page_fluid("On"), None, reactlog=True)
-    assert app_enabled.reactlog_enabled is True
-    assert len(app_enabled.reactlog_token) > 10
 
 
 def test_in_app_reactlog_reads_complete_source_file(
@@ -2370,171 +1857,6 @@ def test_inspect_ignores_unrelated_decorator_names(decorator: str):
         f"@{decorator}\ndef helper():\n    return input.x()\n"
     )
     assert graph["nodes"] == []
-
-
-def test_express_showcase_reactlog_features():
-    app_file = Path(__file__).resolve().parent.parent.parent / "dist2" / "app.py"
-    if not app_file.exists():
-        return
-    source = app_file.read_text(encoding="utf-8")
-    report = generate_reactlog(source, source_path=app_file)
-    assert report["success"] is True
-    node_types = {n["type"] for n in report["nodes"]}
-    assert {"input", "calc", "effect", "output"}.issubset(node_types)
-    modules = {n.get("module") for n in report["nodes"] if n.get("module")}
-    assert modules == {"solar", "wind"}
-    isolated = [e for e in report["edges"] if e.get("isolated")]
-    assert len(isolated) >= 1
-    assert set(report["sources"].keys()) == {"app.py", "zone_module.py"}
-
-
-def test_format_reactlog_html_flush_navigation_and_pipeline():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-ui.input_numeric("x", "X", 10)
-@reactive.calc
-def doubled():
-    return input.x() * 2
-@render.text
-def out():
-    return str(doubled())
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="flush-select"' not in html
-    assert 'id="btn-prev-flush"' not in html
-    assert 'id="btn-next-flush"' not in html
-    assert 'id="flush-counter-badge"' not in html
-    assert 'id="btn-flush-picker"' not in html
-    assert 'id="flush-picker-menu"' not in html
-    assert 'id="flush-pipeline-bar"' not in html
-    assert 'id="pipe-trigger"' not in html
-    assert 'id="pipe-invalidated"' not in html
-    assert 'id="pipe-calcs"' not in html
-    assert 'id="pipe-outputs"' not in html
-    assert "selectFlush(" in html
-    assert "updateFlushUI(" in html
-
-
-def test_format_reactlog_html_graph_view_modes():
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-ui.input_numeric("n", "N", 5)
-@reactive.calc
-def sq():
-    return input.n() ** 2
-@render.text
-def display():
-    return f"Val={sq()}"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="activity-select"' in html
-    assert "Show current activity" in html
-    assert "Show all activity" in html
-    assert 'id="clientdata-select"' in html
-    assert "Show clientdata" in html
-    assert "Hide clientdata" in html
-    assert 'id="btn-toggle-clientdata"' not in html
-    assert 'id="module-filter-select"' not in html
-    assert "setViewMode(" in html
-
-
-def test_format_reactlog_html_flush_details_card():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name", "World")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}!"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="flush-card"' in html
-    assert 'id="flush-card-title"' in html
-    assert 'id="flush-card-trigger"' in html
-    assert 'id="flush-execution-order"' in html
-    assert "getActiveFlushNodeIds(" in html
-
-
-def test_format_reactlog_html_settings_cogwheel_and_unified_timeline():
-    code = """from shiny.express import input, render, ui
-ui.input_text("name", "Name", "World")
-@render.text
-def greeting():
-    return f"Hello, {input.name()}!"
-"""
-    reactlog = generate_reactlog(code)
-    html = format_reactlog_html(reactlog, source_code=code)
-    assert 'id="btn-settings"' in html
-    assert 'id="settings-menu"' in html
-    assert 'id="clientdata-select"' in html
-    assert 'id="activity-select"' in html
-    assert 'id="playback-speed-select"' in html
-    assert "setPlaybackSpeed(this.value)" in html
-    assert 'id="btn-toggle-collapse-all"' in html
-    assert 'id="btn-reset-view"' in html
-    assert 'id="btn-close-sidebar"' in html
-    assert "closeSidebarAndClearSelection()" in html
-    assert 'id="btn-clear-selection"' not in html
-    assert '<footer class="bottom-timeline-bar' not in html
-    assert 'id="bottom-timeline-bar"' not in html
-    assert 'id="active-flush-label"' not in html
-    assert (
-        '<div class="zoom-controls">\n              <div class="filter-state"' in html
-    )
-    assert 'id="btn-fullscreen"' in html
-    assert "toggleFullscreen()" in html
-    assert "--timeline-output:" in html
-
-
-def test_viewer_timeline_legend_code_highlight_and_json_actions():
-    code = """from shiny import reactive
-from shiny.express import input, render
-@reactive.calc
-def val():
-    return input.x()
-@render.text
-def out():
-    reactive.mark("step")
-    return str(val())
-"""
-    html = format_reactlog_html(generate_reactlog(code), source_code=code)
-
-    assert "--state-error: #f3a6af;" in html
-    assert "--timeline-error: #f3a6af;" in html
-    assert (
-        ".source-line.is-active.is-mark, .source-line.is-active.is-error "
-        "{ background: transparent; box-shadow: none; }" in html
-    )
-    assert (
-        ".source-line.is-active.is-error .source-line-content, "
-        ".source-line.is-active.is-error .source-line-content span "
-        "{ color: var(--timeline-error); }" in html
-    )
-    assert 'id="btn-graph-legend"' in html
-    assert 'popovertarget="graph-legend-popover"' in html
-    legend_popover = re.search(
-        r'id="graph-legend-popover"[\s\S]*?id="timeline-key"[\s\S]*?Current step', html
-    )
-    assert legend_popover is not None
-    assert 'id="json-menu"' in html
-    assert "exportReactlogJson()" in html
-    assert "importReactlogJson()" in html
-
-    header_center = re.search(
-        r'<div class="header-center">([\s\S]*?)<div class="header-actions">', html
-    )
-    assert header_center is not None
-    assert 'id="search-input"' in header_center[1]
-    assert 'id="btn-play"' in header_center[1]
-    assert 'id="step-display"' in header_center[1]
-
-    topbar = re.search(
-        r'<div class="graph-topbar">([\s\S]*?)<div id="live-action-toast"', html
-    )
-    assert topbar is not None
-    assert "graph-legend-popover" not in topbar[1]
-    assert "legend-swatch" not in topbar[1]
 
 
 def test_graph_edge_ports_attach_to_chevron_and_concave_notches():

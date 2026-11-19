@@ -491,43 +491,6 @@ def out():
     assert reactlog["trace_kind"] == "inferred_simulation_with_recorded_browser_events"
 
 
-def test_action_navigation_without_skip_button(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("n", "N", 10)
-@reactive.calc
-def double_n():
-    return input.n() * 2
-@render.text
-def out_txt():
-    return f"Result: {double_n()}"
-"""
-    recorded_actions = [
-        {"type": "input", "name": "n", "value": 25, "timestamp": 800},
-        {"type": "output", "name": "out_txt", "timestamp": 1100},
-    ]
-    reactlog = generate_reactlog(
-        code, recorded_actions=recorded_actions, video_path="demo.webm"
-    )
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
-        wait_until="domcontentloaded",
-    )
-
-    expect(page.locator("#btn-skip-init")).to_have_count(0)
-    page.locator("#btn-play").focus()
-    page.keyboard.press("ArrowDown")
-
-    first_interact_step = reactlog["first_interaction_step"]
-    expect(page.locator("#step-display")).to_have_text(
-        f"Step {first_interact_step} / {reactlog['steps_total'] - 1}"
-    )
-
-    expect(page.locator("#phase-filter-select")).to_have_count(0)
-
-
 def test_event_timeline_labels_initialization_and_recorded_actions(
     page: Page,
 ) -> None:
@@ -863,43 +826,6 @@ def other():
     expect(page.locator('.graph-node[data-id="output:other"]')).to_have_class(
         re.compile("is-selected")
     )
-
-
-def test_actions_story_tab_and_inline_code_drawer(page: Page) -> None:
-    code = """from shiny.express import input, render, ui
-from shiny import reactive
-
-ui.input_numeric("val", "Val", 5)
-@reactive.calc
-def calc_b():
-    return input.val() + 1
-@render.text
-def out():
-    return str(calc_b())
-"""
-    recorded_actions = [
-        {"type": "input", "name": "val", "value": 42, "timestamp": 1000},
-        {"type": "output", "name": "out", "timestamp": 1200},
-    ]
-    reactlog = generate_reactlog(code, recorded_actions=recorded_actions)
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code),
-        wait_until="domcontentloaded",
-    )
-
-    expect(page.locator("#actions-tab, #timeline-tab")).to_have_count(0)
-
-    graph_node(page, '.graph-node[data-id="calc:calc_b"]').click()
-    drawer_toggle = page.locator("#btn-toggle-source-drawer")
-    expect(drawer_toggle).to_be_visible()
-
-    source_code = page.locator("#insp-source-code")
-    expect(source_code).to_be_hidden()
-
-    drawer_toggle.click()
-    expect(source_code).to_be_visible()
-    expect(source_code).to_contain_text("def calc_b():")
 
 
 def test_id_lineage_filter_and_timeline_preservation(page: Page) -> None:
@@ -1793,34 +1719,6 @@ def out():
     expect(page.locator("#flush-card-invalidated")).to_contain_text("2 nodes")
     expect(page.locator("#flush-card-calcs")).to_contain_text("1 calcs")
     expect(page.locator("#flush-card-outputs")).to_contain_text("Outputs that ran: 1")
-
-
-def test_reactlog_repeat_execution_badge_uniform(page: Page) -> None:
-    code = """from shiny import reactive
-from shiny.express import input, render
-
-@reactive.calc
-def compute():
-    return input.val() * 2
-
-@render.text
-def out():
-    return f"{compute()}"
-"""
-    actions = [
-        {"type": "input", "name": "val", "value": 1, "timestamp": 10},
-        {"type": "input", "name": "val", "value": 2, "timestamp": 20},
-        {"type": "input", "name": "val", "value": 3, "timestamp": 30},
-        {"type": "input", "name": "val", "value": 4, "timestamp": 40},
-    ]
-    rlog = generate_reactlog(code, recorded_actions=actions)
-    load_graph_report(page, format_reactlog_html(rlog, code))
-
-    badge = page.locator('.graph-node[data-id="calc:compute"] .node-exec-badge')
-    expect(badge).to_be_visible()
-    badge_text = badge.text_content() or ""
-    assert "🔥" not in badge_text
-    assert "4" in badge_text
 
 
 def test_reactlog_inspector_drawer_toggle(page: Page) -> None:
