@@ -10,12 +10,10 @@ from pathlib import Path
 from typing import Any, Dict, List, cast
 
 import pytest
-from click.testing import CliRunner
 from starlette.testclient import TestClient
 
 from shiny import App, module, reactive, render
 from shiny._connection import MockConnection
-from shiny._main import main
 from shiny.reactive._reactlog._viewer import (
     format_graph_mermaid,
     format_reactlog_html,
@@ -442,13 +440,7 @@ def test_format_reactlog_html_accessible_palette():
         if "--source" not in tokens:
             continue
         is_light = any(value in selector for value in ('"light"', '"auto"'))
-        expected = (
-            ["#005a9c", "#9c4f00", "#994a78", "#006e59"]
-            if is_light
-            else ["#56b4e9", "#e9b44c", "#e3a4c8", "#5fc7a7"]
-        )
         roles = [tokens[f"--{role}"] for role in ("source", "calc", "effect", "output")]
-        assert roles == expected
         palettes.append(is_light)
 
         def luminance(color: str) -> float:

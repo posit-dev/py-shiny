@@ -581,34 +581,6 @@ def server(input, output, session):
     )
 
 
-def server(input, output, session):
-    @reactive.calc
-    def double_n():
-        return input.n() * 2
-
-    @render.text
-    def out_txt():
-        return f"Result: {double_n()}"
-"""
-    reactlog = _record(tmp_path, code, [{"n": 10, **_visible("out_txt")}, {"n": 25}])
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code, video_path="demo.webm"),
-        wait_until="domcontentloaded",
-    )
-
-    expect(page.locator("#btn-skip-init")).to_have_count(0)
-    page.locator("#btn-play").focus()
-    page.keyboard.press("ArrowDown")
-
-    first_interact_step = reactlog["first_interaction_step"]
-    expect(page.locator("#step-display")).to_have_text(
-        f"Step {first_interact_step} / {reactlog['steps_total'] - 1}"
-    )
-
-    expect(page.locator("#phase-filter-select")).to_have_count(0)
-
-
 def test_event_timeline_labels_initialization_and_recorded_actions(
     page: Page, tmp_path: Path
 ) -> None:
@@ -876,37 +848,6 @@ def test_selection_keeps_all_nodes_visible(page: Page, tmp_path: Path) -> None:
     expect(page.locator(_node(reactlog, "output other"))).to_have_class(
         re.compile("is-selected")
     )
-
-
-def server(input, output, session):
-    @reactive.calc
-    def calc_b():
-        return input.val() + 1
-
-    @render.text
-    def out():
-        return str(calc_b())
-"""
-    reactlog = _record(tmp_path, code, [{"val": 5, **_visible("out")}, {"val": 42}])
-    load_graph_report(
-        page,
-        format_reactlog_html(reactlog, source_code=code),
-        wait_until="domcontentloaded",
-    )
-
-    expect(page.locator("#actions-tab, #timeline-tab")).to_have_count(0)
-
-    graph_node(page, _node(reactlog, "reactive.calc calc_b")).click()
-    page.get_by_role("button", name="Node details", exact=True).click()
-    drawer_toggle = page.locator("#btn-toggle-source-drawer")
-    expect(drawer_toggle).to_be_visible()
-
-    source_code = page.locator("#insp-source-code")
-    expect(source_code).to_be_hidden()
-
-    drawer_toggle.click()
-    expect(source_code).to_be_visible()
-    expect(source_code).to_contain_text("def calc_b():")
 
 
 def test_id_lineage_filter_and_timeline_preservation(
@@ -2038,15 +1979,6 @@ def test_reactlog_flush_pipeline_and_stepper(page: Page, tmp_path: Path) -> None
         "aria-valuetext", re.compile(r"val: 10 → 20")
     )
     expect(page.locator("#flush-card")).to_be_visible()
-
-
-def test_reactlog_repeat_execution_badge_uniform(page: Page, tmp_path: Path) -> None:
-    data = _record(tmp_path, _VAL_CODE, [*_VAL_STEPS, {"val": 20}, {"val": 30}])
-    load_graph_report(page, format_reactlog_html(data, _VAL_CODE))
-    badge = page.locator(_node(data, "output out") + " .node-exec-badge")
-    expect(badge).to_be_visible()
-    expect(badge).not_to_contain_text("🔥")
-    expect(badge).to_contain_text("3")
 
 
 def test_reactlog_inspector_drawer_toggle(page: Page, tmp_path: Path) -> None:

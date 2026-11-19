@@ -695,6 +695,7 @@ def test_recording_stays_clear_of_open_inspector(page: Page):
     page.set_viewport_size({"width": 1280, "height": 720})
     page.set_content(format_reactlog_html(report(), CODE, video_path="demo.webm"))
     page.locator('.graph-node[data-id="calc:doubled"]').click()
+    page.get_by_role("button", name="Node details", exact=True).click()
 
     sidebar = page.locator("#sidebar")
     expect(sidebar).to_be_visible()
