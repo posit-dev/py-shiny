@@ -1042,6 +1042,8 @@ def test_json_menu_exports_and_imports_reactlog(page: Page, tmp_path: Path):
 def test_import_replaces_source_recording_and_export(page: Page, tmp_path: Path):
     original = report()
     original.update(sources={"app.py": CODE}, entry_file="app.py")
+    doubled = next(node for node in original["nodes"] if node["id"] == "calc:doubled")
+    doubled.update(source_file="app.py", line=3)
     page.set_content(format_reactlog_html(original, CODE, video_path="demo.webm"))
     page.evaluate("selectNode('calc:doubled')")
     expect(page.locator("#insp-source-code code")).not_to_be_empty()

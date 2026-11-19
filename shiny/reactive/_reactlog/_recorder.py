@@ -122,6 +122,7 @@ class ReactlogRecorder(ReactiveTracer):
             [*nodes.values(), *shared.events, *own.events], key=lambda x: x["time"]
         )
         return {
+            "producer": "shiny-python",
             "version": "1",
             "trace_version": TRACE_VERSION,
             "session": session_id,

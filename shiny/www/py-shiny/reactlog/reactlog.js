@@ -3703,6 +3703,20 @@ var ReactlogViewer = (() => {
         return fb;
       return mapped || fb || sid;
     };
+    let initEnd = -1;
+    for (const [index, entry] of rawEvents.entries()) {
+      const action = entry.action || entry.event;
+      if (["userClick", "userAction", "userMark"].includes(action))
+        break;
+      if (initEnd >= 0 && action === "valueChange") {
+        const id = String(entry.reactId || entry.node_id || entry.id || "");
+        const label = String(entry.label || entry.node_label || "");
+        if ((entry.type || entry.node_type) === "input" || id.startsWith("input:") || label.startsWith("input."))
+          break;
+      }
+      if (action === "queueEmpty")
+        initEnd = index;
+    }
     const isolateDepthBySession = /* @__PURE__ */ new Map();
     rawEvents.forEach((item) => {
       const act = item.action || item.event || "";
@@ -3723,7 +3737,7 @@ var ReactlogViewer = (() => {
       const tSec = Math.max(0, baseEpoch > 0 ? rawT - baseEpoch : rawT);
       const tMs = Number(item.timestamp || tSec * 1e3);
       const prov = item.provenance || "observed";
-      const phase = item.phase || (["define", "analysisInit", "createContext", "sessionInit"].includes(act) ? "init" : "interaction");
+      const phase = item.phase || (sIdx <= initEnd || ["define", "analysisInit", "createContext", "sessionInit"].includes(act) ? "init" : "interaction");
       const isIsolated = Boolean(item.isolate || (isolateDepthBySession.get(sessKey) || 0) > 0);
       if (act === "dependsOn" && depFrom && depTo && !R_SENTINEL_IDS.has(String(depFrom)) && !R_SENTINEL_IDS.has(String(depTo))) {
         const edgeKey = `${depFrom}==>${depTo}`;

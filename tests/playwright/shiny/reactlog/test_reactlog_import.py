@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 from playwright.sync_api import Page, expect
 
@@ -9,8 +10,9 @@ from shiny._inspect import format_reactlog_html, load_reactlog_json
 from shiny._main import main
 
 
+@pytest.mark.parametrize("wrapped", [False, True])
 def test_cli_report_and_browser_import_replay_the_same_r_trace(
-    page: Page, tmp_path: Path
+    page: Page, tmp_path: Path, wrapped: bool
 ) -> None:
     trace = [
         {"action": "define", "reactId": "r1", "type": "reactiveVal"},
@@ -20,9 +22,12 @@ def test_cli_report_and_browser_import_replay_the_same_r_trace(
         {"action": "isolateExit"},
         {"action": "enter", "reactId": "r2"},
         {"action": "exit", "reactId": "r2"},
+        {"action": "queueEmpty"},
+        {"action": "valueChange", "reactId": "r1", "type": "input"},
     ]
     source = tmp_path / "trace.json"
-    source.write_text(json.dumps(trace))
+    payload = {"version": "1", "session": "s1", "log": trace} if wrapped else trace
+    source.write_text(json.dumps(payload))
     html = tmp_path / "trace.html"
     result = CliRunner().invoke(main, ["reactlog", str(source), "--html", str(html)])
     assert result.exit_code == 0, result.output
@@ -31,8 +36,9 @@ def test_cli_report_and_browser_import_replay_the_same_r_trace(
     cli = page.evaluate(graph)
     assert cli["edges"] == [{"from": "r1", "to": "r2", "isolated": True}]
     assert [event["action"] for event in cli["events"]] == [e["action"] for e in trace]
-    assert cli["events"][-2]["provenance"] == "observed"
-    page.evaluate("trace => loadReactlogObject(trace)", trace)
+    assert cli["events"][5]["provenance"] == "observed"
+    assert [event["phase"] for event in cli["events"]] == ["init"] * 8 + ["interaction"]
+    page.evaluate("trace => loadReactlogObject(trace)", payload)
     assert page.evaluate(graph) == cli
 
 

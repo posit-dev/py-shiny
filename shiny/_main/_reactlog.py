@@ -67,10 +67,14 @@ def _load_saved(path: Path) -> dict[str, Any]:
         export = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as err:  # JSONDecodeError and UnicodeDecodeError
         raise RecordingError(f"Not a reactlog JSON file: {path}") from err
+    if isinstance(export, list):
+        export = {"log": cast(list[Any], export)}
     if not isinstance(export, dict):
         raise RecordingError(f"Not a reactlog JSON file: {path}")
     export = cast("dict[str, Any]", export)
-    if not isinstance(export.get("log"), list):
+    if not isinstance(export.get("log"), list) or not all(
+        isinstance(event, dict) for event in export["log"]
+    ):
         raise RecordingError(f"Not a reactlog JSON file: {path}")
     return export
 
@@ -310,11 +314,28 @@ def _write_outputs(
     title: str | None,
     theme: str,
 ) -> None:
-    data = load_reactlog_json(export)
     if html_out is not None:
+        # Recorded sessions need the recorder's flush and source enrichment.
+        # Older Python exports used the version-1 session envelope without a producer.
+        producer = export.get("producer")
+        native_recording = producer == "shiny-python" or (
+            producer is None
+            and export.get("version") == "1"
+            and "session" in export
+            and any(event.get("provenance") == "observed" for event in export["log"])
+        )
+        if native_recording or "nodes" in export:
+            report = load_reactlog_json(export)
+        else:
+            # The viewer opens portable JSON exactly as it would via Open JSON.
+            report = {
+                key: export[key]
+                for key in ("version", "session", "log", "sources", "entry_file")
+                if key in export
+            }
         entry = str(export.get("entry_file") or "")
         html = format_reactlog_html(
-            data,
+            report,
             str(export.get("sources", {}).get(entry, "")),
             title=title or entry or "Shiny App",
             video_path=str(video_path) if video_path is not None else None,
@@ -327,5 +348,5 @@ def _write_outputs(
         _write(json_out, json.dumps(export, indent=2))
         click.echo(cli_success(f"Reactlog JSON written to {json_out}"))
     if mermaid_out is not None:
-        _write(mermaid_out, format_graph_mermaid(data))
+        _write(mermaid_out, format_graph_mermaid(load_reactlog_json(export)))
         click.echo(cli_success(f"Mermaid graph written to {mermaid_out}"))
