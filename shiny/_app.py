@@ -38,12 +38,19 @@ if TYPE_CHECKING:
     from htmltools import Tagified
 
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from starlette.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
+from ._reactlog_dependency import MissingReactlogError, require_reactlog
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, is_test_mode, sort_keys_length
 from .bookmark._global import as_bookmark_dir_fn
@@ -60,8 +67,6 @@ from .reactive._core import _reactive_environment
 from .reactive._reactlog import (
     ReactlogRecorder,
     SessionInfo,
-    format_reactlog_html,
-    load_reactlog_json,
     session_picker_html,
 )
 from .reactive._trace import add_tracer
@@ -749,6 +754,11 @@ window.addEventListener('keydown', function(e) {{
                     )
                 )
 
+        try:
+            report_viewer = require_reactlog()
+        except MissingReactlogError as err:
+            return PlainTextResponse(str(err), status_code=503)
+
         data = (
             self._reactlog_export(
                 session_id, local=self._is_direct_local_request(request)
@@ -757,12 +767,14 @@ window.addEventListener('keydown', function(e) {{
             else None
         )
         if data is not None:
-            reactlog_data = load_reactlog_json(data)
+            reactlog_data = report_viewer.load_reactlog_json(data)
         else:
-            reactlog_data = load_reactlog_json({"log": []})
+            reactlog_data = report_viewer.load_reactlog_json({"log": []})
             reactlog_data["summary"] = _REACTLOG_NO_SESSION_NOTICE
         app_name = os.path.basename(app_file) if app_file else "Shiny App"
-        html = format_reactlog_html(reactlog_data, source_code, title=app_name)
+        html = report_viewer.format_reactlog_html(
+            reactlog_data, source_code, title=app_name
+        )
         return HTMLResponse(content=html)
 
     async def _on_reactlog_mark_cb(self, request: Request) -> Response:

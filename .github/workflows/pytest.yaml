@@ -148,7 +148,7 @@ jobs:
           EOF
           cat test-tooling.txt
 
-          uv pip install -e ".[theme,otel]" -r test-tooling.txt \
+          uv pip install --group reactlog-dev -e ".[theme,otel]" -r test-tooling.txt \
             --constraint lowest-constraints.txt
 
       - name: Pip list

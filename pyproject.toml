@@ -188,6 +188,13 @@ add-test = [
 ]
 
 
+[dependency-groups]
+# Development pin until the shared Reactlog package has a PyPI release.
+reactlog-dev = [
+    "reactlog @ git+https://github.com/rstudio/reactlog.git@d653500b933b4e0095c54cf95eda4c668d0ad30a#subdirectory=pkg-py",
+]
+
+
 [project.urls]
 Homepage = "https://github.com/posit-dev/py-shiny"
 Documentation = "https://shiny.posit.co/py/"
