@@ -418,15 +418,11 @@ def subset_frame(
     narwhals 2.24.0)
     """
     # The nested if-else structure is used to navigate around narwhals' typing system and lack of `:` operator outside of `[`, `]`.
-
-    # Note: pyright resolves `DataFrame.__getitem__` to the overload returning `Self`
-    # (i.e. `DataFrameT`), but pyrefly resolves `Self` to the type variable's bound
-    # (`DataFrame[Any]`), hence the pyrefly ignores on the subsetted returns.
     if cols is None:
         if rows is None:
             return data
         else:
-            return data[rows, :]  # pyrefly: ignore[bad-return]
+            return data[rows, :]
     else:
         # `cols` is not None. Resolve names to positions once, here, so that the
         # subsetting below only ever deals with positions.
@@ -435,12 +431,12 @@ def subset_frame(
         # Return a DataFrame with no rows or columns
         # If there are no columns, there are no Series objects to support any rows
         if len(col_indexes) == 0:
-            return data[[], []]  # pyrefly: ignore[bad-return]
+            return data[[], []]
 
         if rows is None:
-            return data[:, col_indexes]  # pyrefly: ignore[bad-return]
+            return data[:, col_indexes]
         else:
-            return data[rows, col_indexes]  # pyrefly: ignore[bad-return]
+            return data[rows, col_indexes]
 
 
 class ScatterValues(TypedDict):
