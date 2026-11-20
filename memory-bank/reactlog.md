@@ -1,6 +1,6 @@
 ---
 title: "Reactlog trace format and replay"
-description: "The versioned JSON trace contract and standalone TypeScript graph replay used by the Reactlog viewer."
+description: "The versioned JSON trace contract and the shared Reactlog report dependency."
 ---
 
 # Reactlog trace format
@@ -36,18 +36,15 @@ report with a display event list and precomputed node and edge lists. The
 Readers accept older unversioned R and Python exports and reject unknown
 explicit trace versions.
 
-## Replay
+## Report rendering
 
-`js/reactlog/replay.ts` exports `replayGraph(trace, step)`. It returns
-a node-state map and the dependency pairs that are inactive at that step.
-A step is the zero-based index of the last event applied. Step `-1` applies
-no events. A dependency with an add event begins inactive, becomes active at
-its add event, and goes inactive at its removal. Static edges with no add
-event are available from the start. The viewer can show inactive edges for
-context.
+The [Reactlog repository](https://github.com/rstudio/reactlog) owns the report
+template, stylesheet, browser code, JSON normalization, and replay tests.
+Shiny generates traces and delegates HTML and Mermaid reports to the optional
+`reactlog` package. CLI, recording, and application integration tests remain
+here.
 
-Use `traceForReplay()` at the viewer boundary to translate legacy field
-aliases into the portable format. Keep rendering, timeline layout, and
-capture in their respective callers. Test the replay module independently
-with `npm test` in `js/` and use report tests to check the same semantics
-through the browser.
+For development, run `uv sync --extra dev --extra test --group reactlog-dev`.
+The development group pins the shared viewer while the package is prepared
+for release. Run Reactlog tests with `uv run --extra dev --extra test
+--group reactlog-dev python -m pytest tests/pytest/test_reactlog.py`.

@@ -11,12 +11,10 @@ import click
 
 from .._inspect import (
     format_graph_dot,
-    format_graph_mermaid,
-    format_reactlog_html,
     generate_reactlog,
-    load_reactlog_json,
     record_shiny_session,
 )
+from .._reactlog_dependency import MissingReactlogError, require_reactlog
 from .._reactlog_format import check_trace_version
 from ._utils import cli_bold, cli_code, cli_danger, cli_info, cli_success
 
@@ -423,8 +421,8 @@ def inspect(
                         # A saved trace does not attach a recording from the local filesystem.
                         reactlog_data.pop("video_path", None)
                     else:
-                        reactlog_data = load_reactlog_json(payload)
-            except click.ClickException:
+                        reactlog_data = require_reactlog().load_reactlog_json(payload)
+            except (click.ClickException, MissingReactlogError):
                 raise
             except Exception:
                 is_json_input = False
@@ -465,7 +463,7 @@ def inspect(
                 report_title = clean_desc or "Shiny App"
             else:
                 report_title = "Shiny App"
-            html_content = format_reactlog_html(
+            html_content = require_reactlog().format_reactlog_html(
                 reactlog_data,
                 title=report_title,
                 source_code=(source_code if not is_json_input else ""),
@@ -488,7 +486,7 @@ def inspect(
             sys.exit(0)
 
         elif output_format == "mermaid":
-            click.echo(format_graph_mermaid(reactlog_data))
+            click.echo(require_reactlog().format_graph_mermaid(reactlog_data))
             sys.exit(0)
 
         elif output_format == "dot":
@@ -576,6 +574,8 @@ def inspect(
             )
             sys.exit(0)
 
+    except MissingReactlogError as err:
+        raise click.ClickException(str(err)) from err
     finally:
         if temp_dir_to_clean:
             try:

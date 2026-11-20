@@ -6,8 +6,9 @@ from typing import Any
 
 import pytest
 from playwright.sync_api import Error, Page, expect
+from reactlog import format_reactlog_html
 
-from shiny._inspect import format_reactlog_html, generate_reactlog
+from shiny._inspect import generate_reactlog
 
 
 @pytest.fixture(autouse=True)
@@ -79,6 +80,7 @@ def test_search_selection_opens_details_and_filters_events(page: Page):
     page.locator("#search-input").fill("id:calc:doubled")
     expect(clear_btn).to_be_visible()
     page.locator("#search-results button").click()
+    page.get_by_role("button", name="Node details", exact=True).click()
     page.locator("#btn-play").hover()
     expect(clear_btn).to_be_visible()
     expect(page.locator("#sidebar")).to_be_visible()
@@ -433,6 +435,7 @@ def test_recording_stays_clear_of_open_inspector(page: Page):
     page.set_viewport_size({"width": 1280, "height": 720})
     page.set_content(format_reactlog_html(report(), CODE, video_path="demo.webm"))
     page.locator('.graph-node[data-id="calc:doubled"]').click()
+    page.get_by_role("button", name="Node details", exact=True).click()
 
     sidebar = page.locator("#sidebar")
     expect(sidebar).to_be_visible()
@@ -538,7 +541,6 @@ def test_search_can_reveal_a_node_hidden_by_default(page: Page):
     expect(
         page.locator('.graph-node[data-id="input:.clientdata_pixelratio"]')
     ).to_be_visible()
-    expect(page.locator("#sidebar")).to_be_visible()
 
 
 def test_empty_search_choices_respect_default_filters(page: Page):
