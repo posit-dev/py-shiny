@@ -324,7 +324,7 @@ ci-install-wheel: FORCE
 install-deps: FORCE ## install dependencies
 	pip install -e ".[dev,test]" --upgrade
 ci-install-deps: FORCE
-	uv pip install -e ".[dev,test]"
+	uv pip install --group reactlog-dev -e ".[dev,test]"
 ci-install-py-shiny-templates-deps: FORCE
 	uv pip install -r py-shiny-templates/requirements.txt
 
@@ -332,7 +332,7 @@ install-docs: FORCE
 	pip install -e ".[dev,test,doc]"
 	pip install https://github.com/posit-dev/py-shinylive/tarball/main
 ci-install-docs: FORCE
-	uv pip install -e ".[dev,test,doc]" \
+	uv pip install --group reactlog-dev -e ".[dev,test,doc]" \
 		"shinylive @ git+https://github.com/posit-dev/py-shinylive.git"
 
 ci-install-rsconnect: FORCE

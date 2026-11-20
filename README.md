@@ -58,6 +58,8 @@ To see what's bundled without installing anything, run `shiny skills list`.
 
 ## Developer CLI
 
+Install the shared Reactlog viewer for HTML reports with `uv pip install --group reactlog-dev` from this checkout.
+
 - `shiny inspect app.py --reactlog`: Static reactive dependency graph (DAG) with simulated invalidation ordering and interactive HTML export (`--html`). It does not execute app code.
 
 Reactlog analysis recognizes conventional `reactive.calc`, `reactive.effect`,

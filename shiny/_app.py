@@ -44,8 +44,9 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from ._autoreload import InjectAutoreloadMiddleware, autoreload_url
 from ._connection import Connection, StarletteConnection
 from ._error import ErrorMiddleware
-from ._inspect import format_reactlog_html, generate_reactlog, load_reactlog_json
+from ._inspect import generate_reactlog
 from ._reactlog import ReactlogRecorder, session_picker_html
+from ._reactlog_dependency import MissingReactlogError, require_reactlog
 from ._shinyenv import is_pyodide
 from ._utils import guess_mime_type, is_async_callable, is_test_mode, sort_keys_length
 from .bookmark._global import as_bookmark_dir_fn
@@ -585,6 +586,10 @@ window.addEventListener('keydown', function(e) {{
 
         if (err := self._check_reactlog_access(request)) is not None:
             return err
+        try:
+            report_viewer = require_reactlog()
+        except MissingReactlogError as err:
+            return PlainTextResponse(str(err), status_code=503)
 
         target_fn = self._raw_server_fn
         source_code = ""
@@ -677,7 +682,7 @@ window.addEventListener('keydown', function(e) {{
                     )
                     for entry in recorded["log"]
                 ]
-            reactlog_data = load_reactlog_json(recorded)
+            reactlog_data = report_viewer.load_reactlog_json(recorded)
         else:
             marks = list(self._app_marks) + reactive.get_marks()
             # No live session to show: fall back to static analysis of the source.
@@ -685,7 +690,9 @@ window.addEventListener('keydown', function(e) {{
                 source_code, source_path=app_file, marks=marks
             )
         app_name = os.path.basename(app_file) if app_file else "Shiny App"
-        html = format_reactlog_html(reactlog_data, source_code, title=app_name)
+        html = report_viewer.format_reactlog_html(
+            reactlog_data, source_code, title=app_name
+        )
         return HTMLResponse(content=html)
 
     async def _on_reactlog_mark_cb(self, request: Request) -> Response:

@@ -4,8 +4,8 @@ from pathlib import Path
 
 from click.testing import CliRunner
 from playwright.sync_api import Page, expect
+from reactlog import format_reactlog_html, load_reactlog_json
 
-from shiny._inspect import format_reactlog_html, load_reactlog_json
 from shiny._main import main
 
 

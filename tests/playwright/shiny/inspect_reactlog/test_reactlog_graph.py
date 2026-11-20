@@ -6,11 +6,10 @@ from typing import Literal
 
 import pytest
 from playwright.sync_api import Locator, Page, expect
+from reactlog import format_reactlog_html, load_reactlog_json
 
 from shiny._inspect import (
-    format_reactlog_html,
     generate_reactlog,
-    load_reactlog_json,
     record_shiny_session,
 )
 
@@ -646,8 +645,12 @@ def res():
 
     assert page.evaluate("Boolean(window.__videoFrameCallback)") is True
     page.evaluate("window.__videoFrameCallback(performance.now(), { mediaTime: 1.25 })")
+    before_output = max(
+        i for i, event in enumerate(reactlog["events"]) if event["time_sec"] <= 1.25
+    )
+    assert before_output < reactlog["steps_total"] - 1
     expect(page.locator("#step-display")).to_have_text(
-        f"Step {reactlog['first_interaction_step']} / {reactlog['steps_total'] - 1}"
+        f"Step {before_output} / {reactlog['steps_total'] - 1}"
     )
 
 
@@ -1146,8 +1149,6 @@ def out():
 
 
 def test_r_import_search_preserves_all_nodes(page: Page) -> None:
-    from shiny._inspect import load_reactlog_json
-
     raw = [
         {"action": "invalidateStart", "reactId": "r2"},
         {
@@ -1203,8 +1204,6 @@ def test_r_import_search_preserves_all_nodes(page: Page) -> None:
 
 
 def test_fit_large_graph(page: Page) -> None:
-    from shiny._inspect import load_reactlog_json
-
     raw = [
         {
             "action": "define",
