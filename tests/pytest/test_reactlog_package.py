@@ -3,9 +3,6 @@ from pathlib import Path
 import shiny.reactive
 from shiny.reactive._reactlog import (
     ReactlogRecorder,
-    format_graph_mermaid,
-    format_reactlog_html,
-    load_reactlog_json,
     session_picker_html,
 )
 
@@ -20,9 +17,6 @@ def test_reactlog_package_exports() -> None:
         callable(x)
         for x in (
             ReactlogRecorder,
-            format_graph_mermaid,
-            format_reactlog_html,
-            load_reactlog_json,
             session_picker_html,
         )
     )

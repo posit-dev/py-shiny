@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 from playwright.sync_api import Error, Page, expect
+from reactlog import format_reactlog_html, load_reactlog_json
 
 from shiny import reactive, render
-from shiny.reactive._reactlog._viewer import format_reactlog_html, load_reactlog_json
 from tests.pytest._reactlog_fixtures import record_export
 
 

@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 from playwright.sync_api import Page, expect
+from reactlog import format_reactlog_html, load_reactlog_json
 
 from shiny._main import main
-from shiny.reactive._reactlog import format_reactlog_html, load_reactlog_json
 
 
 @pytest.mark.parametrize("wrapped", [False, True])

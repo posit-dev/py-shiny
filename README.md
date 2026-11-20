@@ -58,6 +58,8 @@ To see what's bundled without installing anything, run `shiny skills list`.
 
 ## Developer CLI
 
+Install the shared Reactlog viewer for HTML reports with `uv pip install --group reactlog-dev` from this checkout.
+
 - `shiny reactlog app.py`: Run the app, record a real browser session (with video), and export an interactive Reactlog (HTML, JSON, or Mermaid). `--no-browser` lets you drive the app yourself; a saved `.json` can be reopened.
 
 The Reactlog is a trace of what actually ran: every reactive node defined, every

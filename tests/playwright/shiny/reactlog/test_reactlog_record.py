@@ -6,10 +6,10 @@ from typing import Any
 import psutil
 import pytest
 from playwright.sync_api import Page, expect
+from reactlog import format_reactlog_html, load_reactlog_json
 
 from shiny.playwright import controller
 from shiny.reactive._reactlog._record import record_session
-from shiny.reactive._reactlog._viewer import format_reactlog_html, load_reactlog_json
 
 APP = Path(__file__).parent / "record_app" / "app.py"
 

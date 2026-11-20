@@ -10,17 +10,13 @@ from typing import Any, cast
 
 import click
 
+from .._reactlog_dependency import MissingReactlogError, require_reactlog
 from .._reactlog_format import check_trace_version
 from ..reactive._reactlog._record import (
     RecordingError,
     record_session,
     redact_export,
     serve_and_collect,
-)
-from ..reactive._reactlog._viewer import (
-    format_graph_mermaid,
-    format_reactlog_html,
-    load_reactlog_json,
 )
 from ._utils import cli_danger, cli_success
 
@@ -226,6 +222,9 @@ def reactlog(
                 out_paths + ([video_path] if video_path is not None else []),
             )
 
+            if html_out is not None or mermaid_out is not None:
+                require_reactlog()
+
             if saved_input:
                 exports = [_load_saved(input_file)]
             elif no_browser:
@@ -282,7 +281,7 @@ def reactlog(
                 )
             if video_path is not None:
                 click.echo(cli_success(f"Video saved to {video_path}"))
-    except RecordingError as err:
+    except (RecordingError, MissingReactlogError) as err:
         click.echo(cli_danger(str(err)))
         sys.exit(1)
 
@@ -330,7 +329,7 @@ def _write_outputs(
             and any(event.get("provenance") == "observed" for event in export["log"])
         )
         if native_recording or "nodes" in export:
-            report = load_reactlog_json(export)
+            report = require_reactlog().load_reactlog_json(export)
         else:
             # The viewer opens portable JSON exactly as it would via Open JSON.
             report = {
@@ -346,7 +345,7 @@ def _write_outputs(
                 if key in export
             }
         entry = str(export.get("entry_file") or "")
-        html = format_reactlog_html(
+        html = require_reactlog().format_reactlog_html(
             report,
             str(export.get("sources", {}).get(entry, "")),
             title=title or entry or "Shiny App",
@@ -360,5 +359,10 @@ def _write_outputs(
         _write(json_out, json.dumps(export, indent=2))
         click.echo(cli_success(f"Reactlog JSON written to {json_out}"))
     if mermaid_out is not None:
-        _write(mermaid_out, format_graph_mermaid(load_reactlog_json(export)))
+        _write(
+            mermaid_out,
+            require_reactlog().format_graph_mermaid(
+                require_reactlog().load_reactlog_json(export)
+            ),
+        )
         click.echo(cli_success(f"Mermaid graph written to {mermaid_out}"))

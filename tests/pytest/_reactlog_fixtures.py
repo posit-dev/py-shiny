@@ -7,8 +7,9 @@ import concurrent.futures
 import json
 from typing import Any, Callable
 
+from reactlog import load_reactlog_json
+
 from shiny import App, Inputs, Outputs, Session, ui
-from shiny.reactive._reactlog import load_reactlog_json
 
 from ._reactlog_connection import SettledConnection
 

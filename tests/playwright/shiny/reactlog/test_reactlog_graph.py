@@ -7,8 +7,8 @@ from typing import Any, Literal
 
 import pytest
 from playwright.sync_api import Locator, Page, expect
+from reactlog import format_reactlog_html, load_reactlog_json
 
-from shiny.reactive._reactlog._viewer import format_reactlog_html, load_reactlog_json
 from tests.pytest._reactlog_fixtures import record_export
 
 PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7S8AAAAASUVORK5CYII="
