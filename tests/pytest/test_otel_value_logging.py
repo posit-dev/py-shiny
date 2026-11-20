@@ -16,7 +16,7 @@ which don't have complete type stubs available.
 # pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportMissingParameterType=false
 
 import os
-from typing import Iterator, Tuple
+from typing import TYPE_CHECKING, Iterator, Tuple
 from unittest.mock import Mock, patch
 
 import pytest
@@ -24,13 +24,18 @@ from opentelemetry._logs import set_logger_provider
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs.export import SimpleLogRecordProcessor
 
-try:
+# Type checkers only see the new name; otherwise they merge both branches and
+# flag every use as the deprecated alias.
+if TYPE_CHECKING:
     from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter
-except ImportError:
-    # Renamed in opentelemetry-sdk 1.39.0; same API under the old name
-    from opentelemetry.sdk._logs.export import (
-        InMemoryLogExporter as InMemoryLogRecordExporter,  # pyright: ignore[reportDeprecated]
-    )
+else:
+    try:
+        from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter
+    except ImportError:
+        # Renamed in opentelemetry-sdk 1.39.0; same API under the old name
+        from opentelemetry.sdk._logs.export import (
+            InMemoryLogExporter as InMemoryLogRecordExporter,
+        )
 
 from shiny import reactive
 from shiny._namespaces import ResolvedId
