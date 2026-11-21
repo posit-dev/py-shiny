@@ -41,17 +41,20 @@ function ColorPickerReact({
   );
 }
 
-makeReactOutput<{ value: string }>({
+makeReactOutput<{ value: string } | null>({
   name: "custom-component-output",
   selector: "custom-component-output",
-  renderComp: ({ value }) => (
-    <div
-      style={{
-        backgroundColor: value,
-        border: "1px solid black",
-        height: "100px",
-        width: "100px",
-      }}
-    />
-  ),
+  renderComp: (data) => {
+    if (data === null) return null;
+    return (
+      <div
+        style={{
+          backgroundColor: data.value,
+          border: "1px solid black",
+          height: "100px",
+          width: "100px",
+        }}
+      />
+    );
+  },
 });
