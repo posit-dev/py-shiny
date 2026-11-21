@@ -641,19 +641,33 @@ class BookmarkProxy(Bookmark):
         self._proxy_session = session_proxy
         self._root_session = session_proxy._root_session
 
+        self._cancel_forwarder: dict[AsyncCallbacks, CancelCallback] = {}
+
         # Be sure root bookmark has access to proxy's excluded values
         def exclude_cb() -> list[str]:
             return [str(self._ns(name)) for name in self.exclude]
 
         self._root_bookmark._on_get_exclude.append(exclude_cb)
-        session_proxy.on_destroy(
-            lambda: self._root_bookmark._on_get_exclude.remove(exclude_cb)
-        )
 
-        # Note: This proxy bookmark class will not register a handler (`on_bookmark`,
-        # `on_bookmarked`, `on_restore`, `on_restored`) until one is requested either by
-        # the app author or a sub-proxy bookmark class
-        # These function are utilized
+        def detach() -> None:
+            self._root_bookmark._on_get_exclude.remove(exclude_cb)
+            for cancel in self._cancel_forwarder.values():
+                cancel()
+            self._cancel_forwarder.clear()
+
+        session_proxy.on_destroy(detach)
+
+    def _cancel_proxy_callback(
+        self, callbacks: AsyncCallbacks, cancel: CancelCallback
+    ) -> CancelCallback:
+        def unregister() -> None:
+            cancel()
+            if callbacks.count() == 0:
+                detach = self._cancel_forwarder.pop(callbacks, None)
+                if detach is not None:
+                    detach()
+
+        return unregister
 
     # The goal of this method is to save the scope's values. All namespaced inputs
     # will already exist within the `root_state`.
@@ -703,8 +717,12 @@ class BookmarkProxy(Bookmark):
     ) -> CancelCallback:
         if self._on_bookmark_callbacks.count() == 0:
             # Register a proxy callback on the parent session
-            self._root_bookmark.on_bookmark(self._scoped_on_bookmark)
-        return super().on_bookmark(callback)
+            self._cancel_forwarder[self._on_bookmark_callbacks] = (
+                self._root_bookmark.on_bookmark(self._scoped_on_bookmark)
+            )
+        return self._cancel_proxy_callback(
+            self._on_bookmark_callbacks, super().on_bookmark(callback)
+        )
 
     def on_bookmarked(
         self,
@@ -714,14 +732,19 @@ class BookmarkProxy(Bookmark):
             from ..session import session_context
 
             # Register a proxy callback on the parent session
-            @self._root_bookmark.on_bookmarked
             async def scoped_on_bookmarked(url: str) -> None:
                 if self._on_bookmarked_callbacks.count() == 0:
                     return
                 with session_context(self._proxy_session):
                     await self._on_bookmarked_callbacks.invoke(url)
 
-        return super().on_bookmarked(callback)
+            self._cancel_forwarder[self._on_bookmarked_callbacks] = (
+                self._root_bookmark.on_bookmarked(scoped_on_bookmarked)
+            )
+
+        return self._cancel_proxy_callback(
+            self._on_bookmarked_callbacks, super().on_bookmarked(callback)
+        )
 
     def on_restore(
         self,
@@ -734,7 +757,6 @@ class BookmarkProxy(Bookmark):
             from ..session import session_context
 
             # Register a proxy callback on the parent session
-            @self._root_bookmark.on_restore
             async def scoped_on_restore(restore_state: RestoreState) -> None:
                 if self._on_restore_callbacks.count() == 0:
                     return
@@ -744,7 +766,13 @@ class BookmarkProxy(Bookmark):
                 with session_context(self._proxy_session):
                     await self._on_restore_callbacks.invoke(scoped_restore_state)
 
-        return super().on_restore(callback)
+            self._cancel_forwarder[self._on_restore_callbacks] = (
+                self._root_bookmark.on_restore(scoped_on_restore)
+            )
+
+        return self._cancel_proxy_callback(
+            self._on_restore_callbacks, super().on_restore(callback)
+        )
 
     def on_restored(
         self,
@@ -757,7 +785,6 @@ class BookmarkProxy(Bookmark):
             from ..session import session_context
 
             # Register a proxy callback on the parent session
-            @self._root_bookmark.on_restored
             async def scoped_on_restored(restore_state: RestoreState) -> None:
                 if self._on_restored_callbacks.count() == 0:
                     return
@@ -767,7 +794,13 @@ class BookmarkProxy(Bookmark):
                 with session_context(self._proxy_session):
                     await self._on_restored_callbacks.invoke(scoped_restore_state)
 
-        return super().on_restored(callback)
+            self._cancel_forwarder[self._on_restored_callbacks] = (
+                self._root_bookmark.on_restored(scoped_on_restored)
+            )
+
+        return self._cancel_proxy_callback(
+            self._on_restored_callbacks, super().on_restored(callback)
+        )
 
     @property
     def store(self) -> BookmarkStore:

@@ -183,7 +183,8 @@ wait:
   proxy destroy.
 - Every `SessionProxy` (nested included) gets a `BookmarkProxy` registered
   directly on the root `AppSession`'s `BookmarkApp`, with the full namespace.
-- Proxy hooks lazily register one forwarding callback on the root.
+- Proxy hooks lazily register one forwarding callback on the root per hook. Cancelling
+  the last local callback or destroying the module removes its forwarder.
   `_scoped_on_bookmark` gives module callbacks unprefixed `values` (copied back
   with the namespace) and a `dir` subfolder `root.dir / ns`. Restore callbacks
   get `RestoreState._state_within_namespace(prefix)` with unprefixed
