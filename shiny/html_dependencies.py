@@ -30,7 +30,7 @@ def _page_deps(*, include_css: bool) -> list[HTMLDependency]:
 
 def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
     """
-    Shiny's own client-side dependencies: `shiny.js`, and the busy indicators.
+    Shiny's minified client runtime and busy indicators.
 
     Also includes a `shiny-devmode` dependency, which sets
     `window.__SHINY_DEV_MODE__`, when the `SHINY_DEV_MODE` environment variable is
@@ -47,7 +47,7 @@ def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
             name="shiny",
             version=__version__,
             source={"package": "shiny", "subdir": "www/shared/"},
-            script={"src": "shiny.js"},
+            script={"src": "shiny.min.js"},
             # This CSS is now rendered against default Bootstrap
             stylesheet={"href": "shiny.min.css"} if include_css else None,
         ),
@@ -77,7 +77,7 @@ def shiny_deps(include_css: bool = True) -> list[HTMLDependency]:
 
 def jquery_deps() -> HTMLDependency:
     """
-    jQuery, which `shiny.js` and Bootstrap's JavaScript are both written against.
+    jQuery, which the Shiny runtime and Bootstrap's JavaScript both use.
 
     Must come before either of them on the page.
     """

@@ -1,6 +1,7 @@
 """Tests for `App(ui=ui.page_html(...))` -- a complete, author-owned document."""
 
 import pathlib
+import re
 
 import pytest
 from htmltools import HTMLDependency, HTMLDocument, HTMLTextDocument, TagList, tags
@@ -23,8 +24,25 @@ def test_document_ui_gets_shiny_deps():
     # Served as-is: no nested <html>, Shiny's deps at the placeholder.
     assert html.count("<html>") == 1
     assert PLACEHOLDER not in html
-    assert "require.min.js" in html and "jquery" in html and "shiny.js" in html
+    assert "require.min.js" in html and "jquery" in html and "shiny.min.js" in html
     assert {"requirejs", "jquery", "shiny"} <= {d.name for d in app.ui["dependencies"]}
+
+
+@pytest.mark.parametrize("app_ui", [TagList("hello"), page_html(HTML)])
+def test_page_serves_the_minified_shiny_runtime(app_ui: TagList | PageHtmlDocument):
+    with TestClient(App(app_ui, None)) as client:
+        scripts = re.findall(
+            r'<script src="([^"]+/shiny(?:\.min)?\.js)"', client.get("/").text
+        )
+
+        assert len(scripts) == 1
+        script = scripts[0]
+        assert script.endswith("/shiny.min.js")
+
+        response = client.get(script)
+        assert response.status_code == 200
+        assert "sourceMappingURL=shiny.min.js.map" in response.text
+        assert client.get(f"{script}.map").status_code == 200
 
 
 def test_document_ui_from_a_path(tmp_path: pathlib.Path):
@@ -34,7 +52,7 @@ def test_document_ui_from_a_path(tmp_path: pathlib.Path):
     app = App(page_html(index), None)
 
     assert not callable(app.ui)
-    assert "shiny.js" in app.ui["html"]
+    assert "shiny.min.js" in app.ui["html"]
 
 
 def test_document_ui_keeps_extra_deps_in_one_manifest():
@@ -46,8 +64,8 @@ def test_document_ui_keeps_extra_deps_in_one_manifest():
     # Two manifest tags would be concatenated without a separator by the client.
     assert html.count('type="application/html-dependencies"') == 1
     assert "my-dep[1.0.0]" in html and "shiny[" in html
-    # Shiny's deps come first, so shiny.js is loaded before the author's script.
-    assert html.index("shiny.js") < html.index("my-dep.js")
+    # Shiny's deps come first, so shiny.min.js is loaded before the author's script.
+    assert html.index("shiny.min.js") < html.index("my-dep.js")
     # The extra dep got a route registered, not just markup.
     assert "my-dep" in {d.name for d in app.ui["dependencies"]}
 
@@ -62,7 +80,7 @@ def test_document_ui_custom_replace_pattern():
     )
 
     assert not callable(app.ui)
-    assert "shiny.js" in app.ui["html"]
+    assert "shiny.min.js" in app.ui["html"]
 
 
 def test_document_ui_without_placeholder_errors():
@@ -130,7 +148,7 @@ def test_document_ui_from_a_ui_function():
     body = client.get("/").text
     assert body.count("<html>") == 1
     assert body.count('type="application/html-dependencies"') == 1
-    assert "shiny.js" in body
+    assert "shiny.min.js" in body
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +178,7 @@ span("dropped markup", HTMLDependency("harvested-dep", "1.0.0", script={{"src": 
     assert not callable(app.ui)
     html = app.ui["html"]
     assert html.count("<html>") == 1
-    assert "shiny.js" in html
+    assert "shiny.min.js" in html
     assert "harvested-dep" in html
     assert "dropped markup" not in html
 
