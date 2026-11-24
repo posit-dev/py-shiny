@@ -60,3 +60,18 @@ def test_to_float_string_categorical_is_unchanged():
     vals = pd.Series(pd.Categorical(["b", "a", "b"], categories=["b", "a"]))
 
     assert to_float(vals).tolist() == [1, 2, 1]
+
+
+def test_brushed_points_y_brush_uses_ymax():
+    df = pd.DataFrame(
+        {
+            "xval": [10.0, 20.0, 30.0],
+            "yval": [1.0, 2.0, 3.0],
+            "label": ["a", "b", "c"],
+        }
+    )
+
+    # The x range covers every row, so only the y limits decide which rows are in.
+    res = brushed_points(df, _brushinfo(0.0, 100.0, 1.5, 2.5))
+
+    assert res["label"].tolist() == ["b"]
