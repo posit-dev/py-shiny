@@ -11,7 +11,7 @@ __all__ = (
 
 import math
 from datetime import date, datetime, timedelta, timezone
-from typing import Iterable, Optional, TypeVar, Union, cast
+from typing import Any, Iterable, Optional, TypeVar, Union, cast
 
 from htmltools import HTML, Tag, TagAttrValue, TagChild, css, div, tags
 
@@ -143,9 +143,11 @@ def input_slider(
     """
 
     resolved_id = resolve_id(id)
-    value = restore_input(resolved_id, value)
     # Thanks to generic typing, max, value, etc. should be of the same type
     data_type = _slider_type(min)
+    restored_value = restore_input(resolved_id, value)
+    if restored_value is not value:
+        value = _decode_bookmarked_value(restored_value, data_type, default=value)
     # Make sure min, max, value, and step are all numeric
     # (converts dates/datetimes to milliseconds since epoch...this is the value JS wants)
     min_num = _as_numeric(min)
@@ -242,6 +244,32 @@ def _slider_type(x: SliderValueArg) -> str:
     if isinstance(x, date):
         return "date"
     return "number"
+
+
+def _decode_bookmarked_value(value: Any, data_type: str, *, default: Any) -> Any:
+    if isinstance(value, (list, tuple)):
+        items = list(cast(Iterable[Any], value))
+        # A hand-edited bookmark URL can hold a range of the wrong length.
+        if len(items) != 2:
+            return default
+        return [_decode_bookmarked_item(item, data_type) for item in items]
+    return _decode_bookmarked_item(value, data_type)
+
+
+def _decode_bookmarked_item(value: Any, data_type: str) -> Any:
+    # Bookmark JSON stores dates and datetimes as ISO strings. Only decode date
+    # sliders; numeric slider values and all non-string values pass through.
+    if data_type in ("date", "datetime") and isinstance(value, str):
+        try:
+            return (
+                date.fromisoformat(value)
+                if data_type == "date"
+                else datetime.fromisoformat(value)
+            )
+        except ValueError:
+            # Preserve the client's existing handling of malformed bookmark values.
+            return value
+    return value
 
 
 def _as_numeric(x: SliderStepArg | datetime | date) -> float:
