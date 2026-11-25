@@ -2,40 +2,38 @@
 
 from __future__ import annotations
 
+from htmltools import Tag
+
 from shiny import ui
 
 
-def _textarea_style(x: ui.Tag) -> str:
-    textarea = x.get_html_string()
-    start = textarea.index("<textarea")
-    end = textarea.index(">", start)
-    return textarea[start:end]
+def _textarea(x: Tag) -> Tag:
+    textareas = [
+        child
+        for child in x.children
+        if isinstance(child, Tag) and child.name == "textarea"
+    ]
+    assert len(textareas) == 1
+    return textareas[0]
 
 
 class TestInputTextAreaWidth:
     def test_width_is_applied_to_the_textarea(self):
-        # Arrange / Act
         area = ui.input_text_area("x", "Label", width="600px")
 
-        # Assert: the container carries the requested width and the textarea
-        # fills it, so the field is as wide as the caller asked for.
-        assert 'style="width:600px;"' in area.get_html_string()
-        assert "width:100%" in _textarea_style(area)
+        # The container carries the requested width and the textarea fills it.
+        assert area.attrs.get("style") == "width:600px;"
+        assert _textarea(area).attrs.get("style") == "width:100%;"
 
-    def test_no_width_leaves_the_textarea_unstyled(self):
-        # Arrange / Act
+    def test_no_width_leaves_the_textarea_without_inline_width(self):
         area = ui.input_text_area("x", "Label", cols=20)
 
-        # Assert: no inline rule of its own, so the field is left to the
-        # stylesheet and to `cols`, instead of being forced to 100%.
-        assert "width" not in _textarea_style(area)
-        assert 'cols="20"' in _textarea_style(area)
+        textarea = _textarea(area)
+        assert area.attrs.get("style") is None
+        assert textarea.attrs.get("style") is None
+        assert textarea.attrs.get("cols") == "20"
 
     def test_height_is_independent_of_width(self):
-        # Arrange / Act
         area = ui.input_text_area("x", "Label", height="200px")
 
-        # Assert
-        style = _textarea_style(area)
-        assert "height:200px" in style
-        assert "width" not in style
+        assert _textarea(area).attrs.get("style") == "height:200px;"

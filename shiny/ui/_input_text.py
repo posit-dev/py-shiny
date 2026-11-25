@@ -122,7 +122,7 @@ def input_text_area(
     cols
         Value of the visible character columns of the input, e.g., 80. This argument only
         takes effect if there is no CSS width rule for this element. Bootstrap's
-        ``.form-control`` rule, which every textarea carries, is such a rule, so `cols`
+        ``.form-control`` rule, which every textarea carries, is such a rule, so ``cols``
         needs a rule of its own (e.g., ``width: auto``) to reach the rendered width.
     rows
         The value of the visible character rows of the input, e.g., 6. If the height
