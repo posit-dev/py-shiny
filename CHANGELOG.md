@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Python 3.10 is no longer supported. The minimum supported Python version is now 3.11 (#2519).
 
+* `reactive.poll()` and `reactive.file_reader()` no longer call `poll_func` when the decorator is applied; the first value comes from the first poll, in the first reactive flush. Until then, reading the decorated function raises a silent exception. Reading it from inside an output, calc, or effect works as before: the reader waits for the first poll and runs again once it lands. Code that reads it outside the reactive runtime, for example in `reactive.isolate()` while the server function runs, now raises instead of getting the value; move that read into a calc or effect. For `reactive.file_reader()`, a missing file no longer raises when the decorator is applied; the error is raised when the value is read (#2576).
+
 ### Lifecycle changes
 
 * The first argument of `reactive.invalidate_later()` is renamed from `delay` to `delay_secs`, to make clear that it is in seconds, not milliseconds. Passing `delay=` still works but emits a `ShinyDeprecationWarning`. Calls that pass the delay by position are unaffected (#2604).
@@ -32,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `playwright.controller.OutputPlot` now finds a plot output by its `shiny-plot-output` class alone (#2596).
 
 * When a client message's `method` is not a string, the session now prints `Message 'method' must be a string.` and closes, instead of printing an unrelated `TypeError` traceback. A client message that is not a JSON object (such as `1`) now prints `Message does not contain 'method'.` and closes the session the same way (#2607).
+
+* `ui.input_text_area()` now puts an inline `width:100%` style on the `<textarea>` when `width=` is given, instead of when it is not. The default rendered width is unchanged, since Bootstrap's `.form-control` rule already makes the field fill its container. What changes is which CSS wins: without `width=`, your own width rule for the textarea now takes effect; with `width=`, the inline style overrides it. `playwright.controller.InputTextArea.expect_width()` now checks for the inline style in the new case, so tests that call `expect_width(None)` on a textarea without `width=` need updating. The `cols` documentation now says that `.form-control` overrides it. (Thanks, @Rodrigo-Palma!) (#2507)
+
+* `reactive.poll()` now works with an `async` `poll_func` and a custom `equals`; previously every poll failed. (Thanks, @pcbeingused333!) (#2576)
 
 ## [1.9.0] - 2026-10-29
 
@@ -61,8 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   (#2508, #2515)
 
-* `reactive.poll()` and `reactive.file_reader()` no longer call `poll_func` when the decorator is applied; the first value comes from the first poll, in the first reactive flush. Until then, reading the decorated function raises a silent exception. Reading it from inside an output, calc, or effect works as before: the reader waits for the first poll and runs again once it lands. Code that reads it outside the reactive runtime, for example in `reactive.isolate()` while the server function runs, now raises instead of getting the value; move that read into a calc or effect. For `reactive.file_reader()`, a missing file no longer raises when the decorator is applied; the error is raised when the value is read (#2576).
-
 * `near_points(add_dist=True)`, imported from `shiny.plotutils`, now names its distance column `dist_` instead of `dist`. Code reading `df["dist"]` from the result must now read `df["dist_"]` (#2510).
 
 ### Lifecycle changes
@@ -78,8 +82,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `ui.sidebar()` gains a `role` argument (`"form"`, `"search"`, `"complementary"`, or `"region"`) for opt-in ARIA landmark markup (rstudio/bslib#1359). `"complementary"` renders an `<aside>`, other roles render a `<div>` with the corresponding `role` attribute, and landmark roles require an accessible name (from `title`, `aria_label`, or `aria_labelledby`). Note that the default (`role=None`) now renders a neutral `<div>` instead of an `<aside>`. In addition, `ui.page_sidebar()` now places the whole sidebar layout inside the page's `<main>` landmark (#2526).
 
 ### Bug fixes and minor improvements
-
-* `reactive.poll()` now works with an `async` `poll_func` and a custom `equals`; previously every poll failed. (Thanks, @pcbeingused333!) (#2576)
 
 * On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
 
@@ -114,8 +116,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * In `ui.input_date()`, `datesdisabled` now works when `format` is not the default `yyyy-mm-dd`. The dates are now converted on the client the same way `min`/`max` are, instead of being parsed by bootstrap-datepicker with the display `format`. The `data-date-dates-disabled` attribute is replaced by `data-dates-disabled` (and omitted when `datesdisabled` is `None`), and `controller.InputDate.expect_datesdisabled()` checks the new attribute. This relies on the updated vendored `shiny.js` (rstudio/shiny#4434, #2523).
 
 * `ui.navset_tab()` and the other navsets now add `aria-controls`, pointing at the panel's `id`, to nav links that target a tab panel, alongside the existing `href` (rstudio/bslib#1355, #2526).
-
-* `ui.input_text_area()` now puts an inline `width:100%` style on the `<textarea>` when `width=` is given, instead of when it is not. The default rendered width is unchanged, since Bootstrap's `.form-control` rule already makes the field fill its container. What changes is which CSS wins: without `width=`, your own width rule for the textarea now takes effect; with `width=`, the inline style overrides it. `playwright.controller.InputTextArea.expect_width()` now checks for the inline style in the new case, so tests that call `expect_width(None)` on a textarea without `width=` need updating. The `cols` documentation now says that `.form-control` overrides it. (Thanks, @Rodrigo-Palma!) (#2507)
 
 ## [1.8.0] - 2026-09-12
 
