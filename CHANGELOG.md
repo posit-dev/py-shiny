@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * When a client message's `method` is not a string, the session now prints `Message 'method' must be a string.` and closes, instead of printing an unrelated `TypeError` traceback. A client message that is not a JSON object (such as `1`) now prints `Message does not contain 'method'.` and closes the session the same way (#2607).
 
+* With `bookmark_store="server"`, bookmarking an app whose file inputs each hold an upload with the same file name (such as the first `.csv` of two `ui.input_file()` inputs) no longer replaces one input's file with the other's. Each saved file now gets its own name in the bookmark folder (#2606).
+
 ## [1.9.0] - 2026-10-29
 
 ### Breaking changes
