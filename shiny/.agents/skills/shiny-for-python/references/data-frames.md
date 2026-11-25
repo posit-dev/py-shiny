@@ -27,6 +27,17 @@ app = App(app_ui, server)
 
 Returning a bare `DataFrame` is shorthand for `render.DataGrid(df)`.
 
+## Contents
+
+- DataGrid vs DataTable
+- Read the selected rows
+- Read sorted / filtered / edited state
+- Edit cells
+- Style cells
+- Programmatic updates (async)
+- Quick reference
+- Common mistakes
+
 ## DataGrid vs DataTable
 
 Identical API; they differ only in browser styling and default height. Use

@@ -12,6 +12,18 @@ responsive and theme-aware for free.
 This reference documents the Core (function-call) form, e.g. `ui.card(...)`. For the
 Express context-manager form (`with ui.card():`) see `references/express.md`.
 
+## Contents
+
+- Choose a page function
+- Group content in a card
+- Arrange cards in a grid: `layout_columns`
+- Equal-size tiles: `layout_column_wrap`
+- Sidebar inside a card or region: `layout_sidebar`
+- KPI tiles: `value_box`
+- Collapsible sections: `accordion`
+- Quick reference
+- Common mistakes
+
 ## Choose a page function
 
 Every app_ui is wrapped in exactly one page function:

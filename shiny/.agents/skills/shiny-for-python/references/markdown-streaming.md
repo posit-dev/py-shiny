@@ -14,6 +14,16 @@ incremental rendering, Markdown parsing, and auto-scroll for you.
 
 `.stream()` is async; write async generators and `await` the call.
 
+## Contents
+
+- Express: stream into a card
+- Core: `output_markdown_stream`
+- Stream an LLM response
+- Set, replace, and append content
+- Content type
+- Quick reference
+- Common mistakes
+
 ## Express: stream into a card
 
 ```python

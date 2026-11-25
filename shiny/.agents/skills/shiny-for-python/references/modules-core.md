@@ -19,6 +19,17 @@ A module has two halves linked by a shared instance `id`:
 Calling `foo_ui("counter1")` and `foo_server("counter1")` with the **same id**
 wires that UI instance to that server instance.
 
+## Contents
+
+- End-to-end example
+- Pass data in, get values out
+- Reading a nested module's input from outside
+- Nesting modules
+- Remove a dynamically added module
+- Express mode
+- Quick reference
+- Common mistakes
+
 ## End-to-end example
 
 ```python

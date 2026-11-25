@@ -109,12 +109,14 @@ works for a `references/<topic>.md` file:
 
 1. **Overview** — the core principle in 1-3 sentences, including what NOT to
    do (the workaround the skill replaces).
-2. **Task-oriented sections** — one per job the agent came to do, each with a
+2. **Contents** — for files over 100 lines, a bulleted list of the sections
+   below in the first 50 lines so an agent scanning the file sees its full scope.
+3. **Task-oriented sections** — one per job the agent came to do, each with a
    short runnable example against the **public API only** (imports included,
    copy-paste ready). One excellent example per pattern; no variations.
-3. **Quick-reference table** for enumerable facts (env vars, flags, marker
+4. **Quick-reference table** for enumerable facts (env vars, flags, marker
    strings).
-4. **Common mistakes** — concrete symptom → fix pairs, especially the
+5. **Common mistakes** — concrete symptom → fix pairs, especially the
    non-obvious gotchas (e.g. module namespacing of ids, 404 when a feature
    flag is off).
 
