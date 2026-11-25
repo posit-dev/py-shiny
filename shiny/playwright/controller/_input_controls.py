@@ -8,7 +8,7 @@ from playwright.sync_api import expect as playwright_expect
 
 from ...types import MISSING, MISSING_TYPE, ListOrTuple
 from .._types import AttrValue, ListPatternOrStr, PatternOrStr, Timeout
-from ..expect._expect import _attr_match_str
+from ..expect._expect import _attr_match_str, _xpath_match_str
 from ..expect._internal import (
     expect_attribute_to_have_value as _expect_attribute_to_have_value,
 )
@@ -22,6 +22,7 @@ from ._base import (
     not_is_missing,
 )
 from ._expect import (
+    assert_arr_is_unique,
     expect_locator_contains_values_in_list,
     expect_locator_values_in_list,
 )
@@ -923,20 +924,19 @@ class InputCheckboxGroup(
         timeout
             The timeout for the expectation. Defaults to `None`.
         """
+        assert_arr_is_unique(value, "`selected` must be unique")
+
         # Playwright doesn't like lists of size 0
         if len(value) == 0:
             playwright_expect(self.loc_selected).to_have_count(0, timeout=timeout)
             return
 
-        expect_locator_values_in_list(
-            page=self.page,
-            loc_container=self.loc_container,
-            el_type="input[type=checkbox]",
-            arr_name="selected",
-            arr=value,
-            timeout=timeout,
-            is_checked=True,
-        )
+        playwright_expect(self.loc_selected).to_have_count(len(value), timeout=timeout)
+        for item in value:
+            selected_item = self.loc_selected.locator(
+                f'xpath=self::*[{_xpath_match_str("value", item)}]'
+            )
+            playwright_expect(selected_item).to_have_count(1, timeout=timeout)
 
 
 class InputCheckbox(_InputCheckboxBase):
