@@ -2495,7 +2495,10 @@ class Inputs:
 
     def __setitem__(self, key: str, value: Value[Any]) -> None:
         if not isinstance(value, reactive.Value):
-            raise TypeError("`value` must be a reactive.Value object.")
+            raise TypeError(
+                f"Cannot assign directly to 'input.{key}'. Shiny inputs are read-only. "
+                "Use 'reactive.value()' or 'ui.update_*' functions to manage state."
+            )
 
         # Set the name on the Value for OpenTelemetry logging (before namespacing)
         # The module ns will be included separately
