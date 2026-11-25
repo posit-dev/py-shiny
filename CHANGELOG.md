@@ -109,6 +109,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `ui.navset_tab()` and the other navsets now add `aria-controls`, pointing at the panel's `id`, to nav links that target a tab panel, alongside the existing `href` (rstudio/bslib#1355, #2526).
 
+* `ui.input_text_area()` now puts an inline `width:100%` style on the `<textarea>` when `width=` is given, instead of when it is not. The default rendered width is unchanged, since Bootstrap's `.form-control` rule already makes the field fill its container. What changes is which CSS wins: without `width=`, your own width rule for the textarea now takes effect; with `width=`, the inline style overrides it. `playwright.controller.InputTextArea.expect_width()` now checks for the inline style in the new case, so tests that call `expect_width(None)` on a textarea without `width=` need updating. The `cols` documentation now says that `.form-control` overrides it. (Thanks, @Rodrigo-Palma!) (#2507)
+
 ## [1.8.0] - 2026-09-12
 
 ### Deprecations
