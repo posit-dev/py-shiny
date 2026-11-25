@@ -248,9 +248,6 @@ def accordion(
     * :func:`~shiny.ui.update_accordion_panel`
     """
 
-    # TODO-bookmarking: Restore input here
-    # open = restore_input(id = id, default = open)
-
     attrs, panels = consolidate_attrs(*args, class_=class_, **kwargs)
     for panel in panels:
         if not isinstance(panel, AccordionPanel):
