@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, TypeVar, c
 
 from .. import _utils, otel, reactive
 from .._docstring import add_example
-from .._validation import req
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -100,8 +99,8 @@ def poll(
 
     with otel.suppress():
         # Starts unset: the effect below reads the first value (an async `poll_func`
-        # can't be awaited here). Until then, the decorated function `req()`s it, and
-        # its readers re-run once the first value is set.
+        # can't be awaited here). Until then, `last_value.get()` in the decorated
+        # function raises a silent exception, and its readers re-run once it is set.
         last_value: reactive.Value[Any] = reactive.Value()
         last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
 
@@ -115,35 +114,40 @@ def poll(
 
                 with reactive.isolate():
                     has_old = last_value.is_set()
-                    old = last_value.get() if has_old else None
 
-                try:
-                    is_equal = has_old and equals(old, new)
-                except Exception as e:
-                    # For example, pandas DataFrame throws if you try to compare it to a
-                    # non-comparable object
-                    raise TypeError(
-                        "The reactive.poll polling function returned an object that "
-                        "couldn't be compared with a previously returned object. Try "
-                        "modifying your polling function to return a simpler type, like a "
-                        "str, float, list, or dict."
-                    ) from e
-                if not isinstance(is_equal, bool):
-                    # Comparison succeeded, but we don't understand the result
-                    if equals is eq:
-                        # We used == but it didn't work
+                if has_old:
+                    with reactive.isolate():
+                        old = last_value.get()
+                    try:
+                        is_equal = equals(old, new)
+                    except Exception as e:
+                        # For example, pandas DataFrame throws if you try to compare it
+                        # to a non-comparable object
                         raise TypeError(
                             "The reactive.poll polling function returned an object "
-                            "that doesn't implement a simple == operator. Try "
-                            "modifying your polling function to return a simpler type, "
-                            "like a str, float, list, or dict."
-                        )
-                    else:
-                        # The caller passed in a custom function
-                        raise TypeError(
-                            "The reactive.poll `equals` function returned a non-bool "
-                            "value"
-                        )
+                            "that couldn't be compared with a previously returned "
+                            "object. Try modifying your polling function to return a "
+                            "simpler type, like a str, float, list, or dict."
+                        ) from e
+                    if not isinstance(is_equal, bool):
+                        # Comparison succeeded, but we don't understand the result
+                        if equals is eq:
+                            # We used == but it didn't work
+                            raise TypeError(
+                                "The reactive.poll polling function returned an "
+                                "object that doesn't implement a simple == operator. "
+                                "Try modifying your polling function to return a "
+                                "simpler type, like a str, float, list, or dict."
+                            )
+                        else:
+                            # The caller passed in a custom function
+                            raise TypeError(
+                                "The reactive.poll `equals` function returned a "
+                                "non-bool value"
+                            )
+                else:
+                    # First poll: nothing to compare with
+                    is_equal = False
 
                 # If we got here, the comparison succeeded. Need to make sure the error is
                 # cleared, but don't unnecessarily call last_error.set(); at the time of
@@ -176,8 +180,8 @@ def poll(
                     if err is not None:
                         raise err
 
-                    # Wait for the first poll, then take a dependency on its result
-                    req(last_value.is_set())
+                    # Take dependency on polling result (raises a silent exception
+                    # until the first poll sets it)
                     last_value.get()
 
                     # Note that we also depend on the main function
@@ -200,8 +204,8 @@ def poll(
                     if err is not None:
                         raise err
 
-                    # Wait for the first poll, then take a dependency on its result
-                    req(last_value.is_set())
+                    # Take dependency on polling result (raises a silent exception
+                    # until the first poll sets it)
                     last_value.get()
 
                     # Note that we also depend on the main function

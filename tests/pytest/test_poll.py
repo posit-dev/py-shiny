@@ -287,6 +287,65 @@ async def test_poll_errors():
 
 
 @pytest.mark.asyncio
+async def test_poll_first_poll_raises():
+    # When the first poll fails, there is no value yet. Readers must see the real
+    # error (not a silent exception), and a later successful poll must recover.
+    async with OnEndedSessionCallbacks():
+        should_raise = True
+
+        def poll_func() -> int:
+            if should_raise:
+                raise ValueError("boom")
+            return 1
+
+        @poll(poll_func)
+        def value_func() -> str:
+            return "data"
+
+        mock_time = MockTime()
+        with mock_time():
+            with isolate():
+                await flush()
+
+                with pytest.raises(ValueError, match="boom"):
+                    value_func()
+
+                should_raise = False
+                await mock_time.advance_time(1.01)
+
+                assert value_func() == "data"
+
+
+@pytest.mark.asyncio
+async def test_file_reader_missing_file():
+    # A missing file doesn't raise when @file_reader() is applied; the error is raised
+    # to whoever reads the value after the first poll.
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "missing.txt")
+
+        async with OnEndedSessionCallbacks():
+            mock_time = MockTime()
+            with mock_time():
+
+                @file_reader(path)
+                def read_file():
+                    with open(path, "r") as f:
+                        return f.read()
+
+                with isolate():
+                    await flush()
+
+                    with pytest.raises(FileNotFoundError):
+                        read_file()
+
+                    with open(path, "w") as f:
+                        f.write("hello\n")
+                    await mock_time.advance_time(1.01)
+
+                    assert read_file() == "hello\n"
+
+
+@pytest.mark.asyncio
 async def test_file_reader():
     tmpfile = tempfile.NamedTemporaryFile(delete=False)
     try:
