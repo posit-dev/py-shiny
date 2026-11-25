@@ -14,6 +14,7 @@ from typing import (
 )
 
 import narwhals.stable.v1 as nw
+import orjson
 from htmltools import TagNode
 from narwhals.stable.v1.dtypes import DType as DType
 from narwhals.stable.v1.typing import DataFrameT as DataFrameT
@@ -159,7 +160,9 @@ class FrameJsonOptions(TypedDict):
 class FrameJson(TypedDict):
     columns: Required[list[str]]  # column names
     # index: Required[list[Any]]  # pandas index values
-    data: Required[list[list[Jsonifiable]]]  # each entry is a row of len(columns)
+    # The rows (each of len(columns)), already JSON-encoded. The session embeds them in
+    # the outgoing message as they are, so they are never decoded on the server.
+    data: Required[orjson.Fragment]
     typeHints: Required[
         list[FrameDtype]
     ]  # each entry is a hint for the type of the column
@@ -268,8 +271,9 @@ BrowserStyleInfo = BrowserStyleInfoBody
 #
 # A cell's value is either HTML-like content (`TagNode`, which includes `str`) or a
 # non-string scalar. The scalars are limited to the JSON-native types, as patch values
-# are sent back to the browser with `json.dumps()`; e.g. a `datetime` would serialize
-# the data frame fine but raise when the patch is sent to the client.
+# are sent back to the browser without the `str()` fallback that `serialize_frame()`
+# has; e.g. a `Decimal` would serialize the data frame fine but raise when the patch is
+# sent to the client.
 #
 # Non-string scalars matter when patching a non-string column: the browser always sends
 # the edited value as a `str`, and writing that `str` into (say) a numeric column can

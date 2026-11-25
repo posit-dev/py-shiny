@@ -2,7 +2,10 @@
 
 import asyncio
 import json
+from typing import NamedTuple
 
+import numpy as np
+import orjson
 import pytest
 
 from shiny import App, Inputs, Outputs, Session, module, ui
@@ -85,6 +88,91 @@ async def test_non_object_message_closes_session(
     err = capsys.readouterr().err
     assert "Message does not contain 'method'." in err
     assert "Traceback" not in err
+
+
+@pytest.mark.asyncio
+async def test_send_message_non_finite_floats_are_null():
+    # A bare `NaN`/`Infinity` token is not JSON: the browser's `JSON.parse()` throws
+    text = await sent_text({"custom": {"x": {"a": float("nan"), "b": float("inf")}}})
+
+    assert strict_json_loads(text) == {"custom": {"x": {"a": None, "b": None}}}
+
+
+@pytest.mark.asyncio
+async def test_send_message_embeds_pre_encoded_json():
+    text = await sent_text(
+        {"values": {"df": {"data": orjson.Fragment(b'[[1,"a"],[2,"b"]]')}}}
+    )
+
+    assert strict_json_loads(text) == {"values": {"df": {"data": [[1, "a"], [2, "b"]]}}}
+
+
+class Point(NamedTuple):
+    x: int
+    y: int
+
+
+@pytest.mark.parametrize(
+    ("value", "want"),
+    [
+        ({1: "a"}, {"1": "a"}),
+        (2**70, 1180591620717411303424),
+        (np.float64(1.5), 1.5),
+        (Point(1, 2), [1, 2]),
+        ("\ud800", "\ud800"),
+    ],
+    ids=[
+        "non-str key",
+        "int beyond 64 bits",
+        "float subclass",
+        "namedtuple",
+        "lone surrogate",
+    ],
+)
+@pytest.mark.asyncio
+async def test_send_message_values_only_the_stdlib_encoder_accepts(
+    value: object, want: object
+):
+    text = await sent_text({"custom": {"x": value}})
+
+    assert strict_json_loads(text) == {"custom": {"x": want}}
+
+
+@pytest.mark.asyncio
+async def test_send_message_pre_encoded_json_beside_stdlib_only_value():
+    # One batched message can hold a data frame's rows and another output's value
+    text = await sent_text({"values": {"df": orjson.Fragment(b"[[1]]"), "n": 2**70}})
+
+    assert strict_json_loads(text) == {
+        "values": {"df": [[1]], "n": 1180591620717411303424}
+    }
+
+
+class RecordingConnection(MockConnection):
+    def __init__(self):
+        super().__init__()
+        self.sent: list[str] = []
+
+    async def send(self, message: str) -> None:
+        self.sent.append(message)
+
+
+async def sent_text(message: dict[str, object]) -> str:
+    """The text `AppSession._send_message()` puts on the wire for `message`."""
+    conn = RecordingConnection()
+    sess = App(ui.TagList(), None)._create_session(conn)
+    await sess._send_message(message)
+    (text,) = conn.sent
+    return text
+
+
+def strict_json_loads(text: str) -> object:
+    """`json.loads()`, but rejecting the non-JSON tokens `NaN` and `Infinity`."""
+
+    def reject(token: str) -> object:
+        raise ValueError(f"{token} is not valid JSON")
+
+    return json.loads(text, parse_constant=reject)
 
 
 def test_require_active_session_error_messages():

@@ -1733,7 +1733,7 @@ class AppSession(Session):
         await self._send_message({"custom": {type: message}})
 
     async def _send_message(self, message: dict[str, object]) -> None:
-        message_str = json.dumps(message)
+        message_str = encode_message(message)
         if self._debug:
             print(
                 "SEND: "
@@ -2399,6 +2399,32 @@ class SessionProxy(Session):
             )(fn)
 
         return wrapper
+
+
+def encode_message(message: dict[str, object]) -> str:
+    """
+    JSON-encode a message for the client.
+
+    `orjson` is several times faster than `json` and embeds `orjson.Fragment` values
+    (JSON that is already encoded) as they are. It rejects some values that `json`
+    accepts (non-`str` dict keys, integers beyond 64 bits, `float` subclasses such as
+    `numpy.float64`, named tuples, lone surrogates), so those messages fall back to
+    `json`.
+    """
+    try:
+        return orjson.dumps(message).decode()
+    except orjson.JSONEncodeError:
+        return json.dumps(message, default=decode_fragment)
+
+
+def decode_fragment(value: object) -> object:
+    """
+    `json.dumps(default=)` hook for `orjson.Fragment`, whose contents only `orjson` can
+    read back.
+    """
+    if isinstance(value, orjson.Fragment):
+        return orjson.loads(orjson.dumps(value))
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
 # ======================================================================================
