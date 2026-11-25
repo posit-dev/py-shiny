@@ -82,14 +82,15 @@ def render_plotly_streaming(
 
 
 def deduplicate(func):
-    with reactive.isolate():
-        rv = reactive.value(func())
+    # Starts unset; the effect below sets it once `func()` has a value. Reading it
+    # before then raises a silent exception, and readers re-run once it is set.
+    rv = reactive.value()
 
     @reactive.effect
     def update():
         x = func()
         with reactive.isolate():
-            if x != rv():
+            if not rv.is_set() or x != rv():
                 rv.set(x)
 
     @reactive.calc

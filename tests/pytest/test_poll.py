@@ -93,56 +93,129 @@ async def test_poll():
 
         mock_time = MockTime()
         with mock_time():
-            # Poll func is invoked once during @poll(), to seed the underlying reactive val
-            assert (poll_invocations, value_invocations) == (1, 0)
+            # Poll func is not invoked during @poll(); the polling observer reads the first value
+            assert (poll_invocations, value_invocations) == (0, 0)
 
             await flush()
 
             # The observer that updates poll has executed once.
             # @poll returns a lazy Calc, so value hasn't been invoked yet.
-            assert (poll_invocations, value_invocations) == (2, 0)
+            assert (poll_invocations, value_invocations) == (1, 0)
 
             @effect()
             def _():
                 value_func()
 
             await flush()
-            assert (poll_invocations, value_invocations) == (2, 1)
+            assert (poll_invocations, value_invocations) == (1, 1)
 
             await flush()
-            assert (poll_invocations, value_invocations) == (2, 1)
+            assert (poll_invocations, value_invocations) == (1, 1)
 
             await mock_time.advance_time(1.01)
             # poll_invocations advances without a flush() because invalidate_later itself
             # invokes flush()
-            assert (poll_invocations, value_invocations) == (3, 1)
+            assert (poll_invocations, value_invocations) == (2, 1)
             await flush()
-            assert (poll_invocations, value_invocations) == (3, 1)
+            assert (poll_invocations, value_invocations) == (2, 1)
 
             # Now change value
             poll_return1 += 1
             await flush()
             # Nothing changes because no time has passed, poll() has not tried again
-            assert (poll_invocations, value_invocations) == (3, 1)
+            assert (poll_invocations, value_invocations) == (2, 1)
             await mock_time.advance_time(1.01)
-            assert (poll_invocations, value_invocations) == (4, 2)
+            assert (poll_invocations, value_invocations) == (3, 2)
 
             # When a reactive dependency of poll_func invalidates, there's no need to wait
             # until the next poll
             with isolate():
                 poll_return2.set(poll_return2() + 1)
             await flush()
-            assert (poll_invocations, value_invocations) == (5, 3)
+            assert (poll_invocations, value_invocations) == (4, 3)
 
             # When a reactive dependency of value_func invalidates, there's no need to wait
             # until the next poll
             with isolate():
                 value_dep.set(value_dep() + 1)
             await flush()
-            assert (poll_invocations, value_invocations) == (5, 4)
+            assert (poll_invocations, value_invocations) == (4, 4)
 
             await mock_time.advance_time(1.01)
-            assert (poll_invocations, value_invocations) == (6, 4)
+            assert (poll_invocations, value_invocations) == (5, 4)
+
+
+@pytest.mark.asyncio
+async def test_poll_async_poll_func_with_custom_equals():
+    async with OnEndedSessionCallbacks():
+        poll_invocations = 0
+
+        async def poll_func():
+            nonlocal poll_invocations
+            poll_invocations += 1
+            return {"version": 1}
+
+        @poll(poll_func, equals=lambda old, new: old["version"] == new["version"])
+        def value_func():
+            return "data"
+
+        mock_time = MockTime()
+        with mock_time():
+            # An async poll_func can't be awaited when @poll() runs, so nothing has
+            # been polled yet and there is no previous value to compare with.
+            assert poll_invocations == 0
+
+            await flush()
+            assert poll_invocations == 1
+
+            with isolate():
+                assert value_func() == "data"
+
+            await mock_time.advance_time(1.01)
+            assert poll_invocations == 2
+
+            with isolate():
+                assert value_func() == "data"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("is_async", [False, True])
+async def test_poll_reader_runs_before_first_poll(is_async: bool):
+    # A consumer that runs before the polling effect (here, because the polling effect
+    # has a lower priority) must not cause the expensive read function to run twice.
+    async with OnEndedSessionCallbacks():
+        poll_invocations = 0
+        value_invocations = 0
+
+        def sync_poll_func():
+            nonlocal poll_invocations
+            poll_invocations += 1
+            return 1
+
+        async def async_poll_func():
+            return sync_poll_func()
+
+        @poll(async_poll_func if is_async else sync_poll_func, priority=-1)
+        def value_func():
+            nonlocal value_invocations
+            value_invocations += 1
+            return "data"
+
+        seen: list[str] = []
+
+        @effect()
+        def _():
+            seen.append(value_func())
+
+        mock_time = MockTime()
+        with mock_time():
+            await flush()
+            assert (poll_invocations, value_invocations) == (1, 1)
+            assert seen == ["data"]
+
+            await mock_time.advance_time(1.01)
+            assert (poll_invocations, value_invocations) == (2, 1)
+            assert seen == ["data"]
 
 
 @pytest.mark.asyncio
@@ -211,6 +284,65 @@ async def test_poll_errors():
                     bad_poll()
 
                 assert invocations == 3
+
+
+@pytest.mark.asyncio
+async def test_poll_first_poll_raises():
+    # When the first poll fails, there is no value yet. Readers must see the real
+    # error (not a silent exception), and a later successful poll must recover.
+    async with OnEndedSessionCallbacks():
+        should_raise = True
+
+        def poll_func() -> int:
+            if should_raise:
+                raise ValueError("boom")
+            return 1
+
+        @poll(poll_func)
+        def value_func() -> str:
+            return "data"
+
+        mock_time = MockTime()
+        with mock_time():
+            with isolate():
+                await flush()
+
+                with pytest.raises(ValueError, match="boom"):
+                    value_func()
+
+                should_raise = False
+                await mock_time.advance_time(1.01)
+
+                assert value_func() == "data"
+
+
+@pytest.mark.asyncio
+async def test_file_reader_missing_file():
+    # A missing file doesn't raise when @file_reader() is applied; the error is raised
+    # to whoever reads the value after the first poll.
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "missing.txt")
+
+        async with OnEndedSessionCallbacks():
+            mock_time = MockTime()
+            with mock_time():
+
+                @file_reader(path)
+                def read_file():
+                    with open(path, "r") as f:
+                        return f.read()
+
+                with isolate():
+                    await flush()
+
+                    with pytest.raises(FileNotFoundError):
+                        read_file()
+
+                    with open(path, "w") as f:
+                        f.write("hello\n")
+                    await mock_time.advance_time(1.01)
+
+                    assert read_file() == "hello\n"
 
 
 @pytest.mark.asyncio
