@@ -1,6 +1,7 @@
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlencode
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -17,10 +18,9 @@ from shiny.run import run_shiny_app
 
 @pytest.mark.parametrize("store", ["url", "server"])
 def test_date_slider_bookmark(
-    page: Page, store: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    page: Page, store: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("SHINY_SLIDER_BOOKMARK_STORE", store)
-    monkeypatch.setenv("SHINY_SLIDER_BOOKMARK_DIR", str(tmp_path))
     with run_shiny_app(Path(__file__).with_name("app.py"), wait_for_start=True) as app:
         page.goto(app.url)
         values = OutputCode(page, "values")
@@ -58,3 +58,24 @@ def test_date_slider_bookmark(
         InputSlider(page, "number").expect_value("7")
         InputSliderRange(page, "numbers").expect_value(("6", "9"))
         InputSlider(page, "m-day").expect_value("2026-06-16")
+
+
+def test_slider_bookmark_wrong_length_range(page: Page) -> None:
+    # A hand-edited bookmark URL can hold a range with the wrong number of values.
+    # The app must still load, and those sliders fall back to their defaults.
+    query = urlencode(
+        {
+            "days": json.dumps(["2026-06-15"]),
+            "moments": json.dumps(["2026-06-15T12:34:56", "2026-07-01", "2026-08-01"]),
+            "numbers": json.dumps([6]),
+            "day": json.dumps("2026-06-15"),
+        }
+    )
+    with run_shiny_app(Path(__file__).with_name("app.py"), wait_for_start=True) as app:
+        page.goto(f"{app.url}?_inputs_&{query}")
+        InputSliderRange(page, "days").expect_value(("2026-02-01", "2026-03-01"))
+        InputSliderRange(page, "moments").expect_value(
+            ("2026-02-01 00:00:00", "2026-03-01 00:00:00")
+        )
+        InputSliderRange(page, "numbers").expect_value(("2", "3"))
+        InputSlider(page, "day").expect_value("2026-06-15")

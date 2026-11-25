@@ -1,12 +1,13 @@
 import json
 import os
+import shutil
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from starlette.requests import Request
 
 from shiny import App, Inputs, Outputs, Session, module, reactive, render, ui
+from shiny._utils import rand_hex
 from shiny.module import ResolvedId
 
 
@@ -106,8 +107,10 @@ store = (
     else "url"
 )
 app = App(app_ui, server, bookmark_store=store)
-bookmark_tmp = TemporaryDirectory(prefix="shiny-slider-bookmark-")
-bookmark_dir = Path(os.environ.get("SHINY_SLIDER_BOOKMARK_DIR", bookmark_tmp.name))
+# Test-only bookmark directory, removed when the app shuts down.
+bookmark_dir = Path(__file__).parent / f"bookmarks-{rand_hex(8)}"
+bookmark_dir.mkdir()
+app.on_shutdown(lambda: shutil.rmtree(bookmark_dir))
 
 
 def save_dir(state_id: str) -> Path:

@@ -10,7 +10,7 @@ from typing import Generator
 
 import pytest
 
-from shiny.ui._input_slider import _as_numeric, _restore_slider_value
+from shiny.ui._input_slider import _as_numeric, _decode_bookmarked_item
 
 TIMEZONES = [
     "UTC",
@@ -129,6 +129,6 @@ def test_as_numeric_other_types():
 )
 def test_as_numeric_bookmarked_iso_values(tz: str, saved: str, expected: datetime):
     with local_timezone(tz):
-        value = _as_numeric(_restore_slider_value(saved, "datetime"))
+        value = _as_numeric(_decode_bookmarked_item(saved, "datetime"))
         assert value == expected.replace(tzinfo=timezone.utc).timestamp() * 1000
         assert _read_back_datetime(value) == expected
