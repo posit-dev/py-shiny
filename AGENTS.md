@@ -210,6 +210,16 @@ passes. Run it through `uv run` (not bare `make`) so the venv's black/isort/
 pyrefly/pyright are used — a system toolchain can silently miss failures that
 CI then rejects.
 
+### External contributions
+
+When working on a PR opened by someone outside the maintainer team (including
+when pushing follow-up commits to their branch), thank the author:
+
+- End the PR's `CHANGELOG.md` entry with `(Thanks, @author!)` before the PR
+  number, e.g. `... (Thanks, @octocat!) (#1234)`. Use their GitHub login.
+- Thank them in a PR comment, and say what you changed on their branch, if
+  anything.
+
 ## Sibling Repo: Shiny for R
 
 [rstudio/shiny](https://github.com/rstudio/shiny) is Shiny for R. Keep the
