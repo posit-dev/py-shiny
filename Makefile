@@ -59,15 +59,15 @@ clean-test: FORCE
 typings/folium:
 	@echo "Creating folium stubs"
 	dir="$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('folium').origin))")" && \
-		pyrefly stubgen "$$dir" -o typings/folium --include-private
+		pyrefly stubgen "$$dir/**/*.py" -o typings/folium --include-private
 typings/uvicorn:
 	@echo "Creating uvicorn stubs"
 	dir="$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('uvicorn').origin))")" && \
-		pyrefly stubgen "$$dir" -o typings/uvicorn --include-private
+		pyrefly stubgen "$$dir/**/*.py" -o typings/uvicorn --include-private
 typings/seaborn:
 	@echo "Creating seaborn stubs"
 	dir="$$(python -c "import importlib.util as u,os;print(os.path.dirname(u.find_spec('seaborn').origin))")" && \
-		pyrefly stubgen "$$dir" -o typings/seaborn --include-private
+		pyrefly stubgen "$$dir/**/*.py" -o typings/seaborn --include-private
 typings/matplotlib/__init__.pyi:
 	@echo "Creating matplotlib stubs"
 	mkdir -p typings

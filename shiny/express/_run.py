@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import importlib.abc
-import importlib.util
 import sys
 import types
 from importlib.machinery import ModuleSpec
@@ -85,12 +84,10 @@ class ShinyExpressAppImportFinder(importlib.abc.MetaPathFinder):
         if fullname in package_filepath_map:
             app_path = package_filepath_map[fullname]
             app_dir = str(app_path.parent)
-            spec = importlib.util.spec_from_loader(
-                fullname, ShinyExpressAppLoader(), origin=app_dir
-            )
-            if spec is None:
-                return None
-
+            # Same result as `importlib.util.spec_from_loader()` for this loader, but
+            # typed against `importlib.abc.Loader`: on Python 3.15 typeshed's
+            # `LoaderProtocol` still requires the removed `load_module()`.
+            spec = ModuleSpec(fullname, ShinyExpressAppLoader(), origin=app_dir)
             spec.submodule_search_locations = [app_dir]
             self.loaded_modules[fullname] = spec
             return spec
