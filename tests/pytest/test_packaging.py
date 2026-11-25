@@ -216,7 +216,7 @@ def test_router_skill_index_matches_reference_files() -> None:
     reference_files = {p.stem for p in references_dir.glob("*.md")}
     assert reference_files, "shiny-for-python/references/ has no .md files"
 
-    skill_md = (ROUTER_SKILL_DIR / "SKILL.md").read_text()
+    skill_md = (ROUTER_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     linked_topics = set(re.findall(r"references/([a-z0-9-]+)\.md", skill_md))
 
     dangling = linked_topics - reference_files
@@ -238,7 +238,7 @@ def test_skill_frontmatter_has_name_and_description() -> None:
     # cannot read.
     yaml = pytest.importorskip("yaml")
     for skill_dir in skill_dirs():
-        text = (skill_dir / "SKILL.md").read_text()
+        text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
         assert text.startswith("---\n"), f"{skill_dir}: SKILL.md missing frontmatter"
         frontmatter = text.split("---", 2)[1]
         try:

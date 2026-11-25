@@ -22,7 +22,7 @@ def test_skills_list_shows_names_and_descriptions() -> None:
     # The one-line description from the skill's frontmatter is shown (with any
     # wrapping YAML quotes stripped).
     skill_line = next(line for line in result.output.splitlines() if SKILL_NAME in line)
-    skill_md = (SKILLS_DIR / SKILL_NAME / "SKILL.md").read_text()
+    skill_md = (SKILLS_DIR / SKILL_NAME / "SKILL.md").read_text(encoding="utf-8")
     match = re.search(r'^description: "?(.+?)"?$', skill_md, re.MULTILINE)
     assert match is not None
     assert match.group(1)[:40] in skill_line
@@ -37,6 +37,33 @@ def test_skills_list_with_empty_skills_dir(
 
     assert result.exit_code == 0
     assert "No skills" in result.output
+
+
+def test_skills_list_reads_utf8_with_non_utf8_locale(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    skill_dir = tmp_path / "unicode-skill"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text(
+        '---\nname: unicode-skill\ndescription: "A café skill"\n---\n'
+        "Use “shiny docs” to inspect signatures.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(_main_skills, "SKILLS_DIR", tmp_path)
+    original_read_text = Path.read_text
+
+    def read_text_with_cp1252_default(
+        path: Path, encoding: str | None = None, errors: str | None = None
+    ) -> str:
+        return original_read_text(path, encoding=encoding or "cp1252", errors=errors)
+
+    monkeypatch.setattr(Path, "read_text", read_text_with_cp1252_default)
+
+    result = CliRunner().invoke(main, ["skills", "list"])
+
+    assert result.exit_code == 0
+    assert "unicode-skill" in result.output
+    assert "A café skill" in result.output
 
 
 def test_skills_path_prints_skill_directory() -> None:

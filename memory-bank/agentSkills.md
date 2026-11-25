@@ -41,7 +41,9 @@ shiny/.agents/skills/
 
 - There is **one** skill directory, `shiny-for-python`; it is not prefixed
   further (installers namespace skills by package, and the description scopes
-  the skill to Shiny for Python).
+  the skill to Shiny for Python). Cross-cutting tools such as the `shiny docs`
+  lookup command get a reference file (`references/shiny-docs.md`) and an
+  index row, not a skill of their own.
 - `SKILL.md`'s body is a grouped index: short sections that bucket related
   topics (core concepts, layout/UI, outputs, app capabilities, extending
   shiny, ...), each with a row per topic linking to its
