@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   (#2508, #2515)
 
+* `reactive.poll()` and `reactive.file_reader()` no longer call `poll_func` when the decorator is applied; the first value comes from the first poll, in the first reactive flush. Until then, reading the decorated function raises a silent exception. Reading it from inside an output, calc, or effect works as before: the reader waits for the first poll and runs again once it lands. Code that reads it outside the reactive runtime, for example in `reactive.isolate()` while the server function runs, now raises instead of getting the value; move that read into a calc or effect. For `reactive.file_reader()`, a missing file no longer raises when the decorator is applied; the error is raised when the value is read (#2576).
+
 * `near_points(add_dist=True)`, imported from `shiny.plotutils`, now names its distance column `dist_` instead of `dist`. Code reading `df["dist"]` from the result must now read `df["dist_"]` (#2510).
 
 ### Lifecycle changes
@@ -47,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes and minor improvements
 
-* `reactive.poll()` now works with an `async` `poll_func` and a custom `equals`; previously every poll failed. `poll_func` is no longer called when `@poll()` is applied, so readers wait for the first poll. For `reactive.file_reader()`, a missing file no longer raises when the decorator is applied; the error is raised when the value is read. (Thanks, @pcbeingused333!) (#2576)
+* `reactive.poll()` now works with an `async` `poll_func` and a custom `equals`; previously every poll failed. (Thanks, @pcbeingused333!) (#2576)
 
 * On Windows, an output's busy indicator now shows while the output renders. Previously, when a synchronous render function blocked the event loop, the message that turns on the indicator reached the browser together with the output's new value, so most outputs never showed it (#1381).
 
