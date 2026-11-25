@@ -10,6 +10,7 @@ def test_input_text_area_kitchen(page: Page, local_app: ShinyAppProc) -> None:
     default = controller.InputTextArea(page, "default")
     default.expect_label("Default text area")
     default.expect_value("")
+    default.expect_width(None)
     controller.OutputCode(page, "default_txt").expect.to_have_text("")
 
     placeholder = controller.InputTextArea(page, "placeholder")
