@@ -764,6 +764,35 @@ async def test_destroy_cleans_up_child_namespace_registrations():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "hook", ["on_bookmark", "on_bookmarked", "on_restore", "on_restored"]
+)
+async def test_module_bookmark_callbacks_detach(hook: str):
+    root = _make_real_app_session()
+    module = root.make_scope("mod")
+    register = getattr(module.bookmark, hook)
+    root_callbacks = getattr(root.bookmark, f"_{hook}_callbacks")
+    initial = root_callbacks.count()
+
+    def callback(value: object) -> None:
+        pass
+
+    first = register(callback)
+    second = register(callback)
+    assert root_callbacks.count() == initial + 1
+    first()
+    assert root_callbacks.count() == initial + 1
+    second()
+    assert root_callbacks.count() == initial
+    replacement = register(callback)
+    first()
+    assert root_callbacks.count() == initial + 1
+    await module.destroy()
+    assert root_callbacks.count() == initial
+    replacement()
+
+
+@pytest.mark.asyncio
 async def test_destroy_cleans_up_bookmark_proxy_registrations():
     """destroy() removes BookmarkProxy's _on_get_exclude entry from root session."""
     root = _make_real_app_session()
