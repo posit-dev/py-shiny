@@ -179,6 +179,46 @@ async def test_poll_async_poll_func_with_custom_equals():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("is_async", [False, True])
+async def test_poll_reader_runs_before_first_poll(is_async: bool):
+    # A consumer that runs before the polling effect (here, because the polling effect
+    # has a lower priority) must not cause the expensive read function to run twice.
+    async with OnEndedSessionCallbacks():
+        poll_invocations = 0
+        value_invocations = 0
+
+        def sync_poll_func():
+            nonlocal poll_invocations
+            poll_invocations += 1
+            return 1
+
+        async def async_poll_func():
+            return sync_poll_func()
+
+        @poll(async_poll_func if is_async else sync_poll_func, priority=-1)
+        def value_func():
+            nonlocal value_invocations
+            value_invocations += 1
+            return "data"
+
+        seen: list[str] = []
+
+        @effect()
+        def _():
+            seen.append(value_func())
+
+        mock_time = MockTime()
+        with mock_time():
+            await flush()
+            assert (poll_invocations, value_invocations) == (1, 1)
+            assert seen == ["data"]
+
+            await mock_time.advance_time(1.01)
+            assert (poll_invocations, value_invocations) == (2, 1)
+            assert seen == ["data"]
+
+
+@pytest.mark.asyncio
 async def test_poll_errors():
     async with OnEndedSessionCallbacks():
 

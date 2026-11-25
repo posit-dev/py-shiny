@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, TypeVar, c
 
 from .. import _utils, otel, reactive
 from .._docstring import add_example
+from .._validation import req
 from ..types import MISSING, MISSING_TYPE
 
 if TYPE_CHECKING:
@@ -15,10 +16,6 @@ if TYPE_CHECKING:
 __all__ = ("poll", "file_reader")
 
 T = TypeVar("T")
-
-# Stands in for the first `poll_func` value of an async `poll_func`, which the polling
-# effect reads on its first run.
-_NO_VALUE: Any = object()
 
 
 @add_example()
@@ -102,9 +99,10 @@ def poll(
     """
 
     with otel.suppress():
-        # The first value is read by the effect below; calling `poll_func` here would also
-        # run it outside the polling loop, and an async one can't be awaited.
-        last_value: reactive.Value[Any] = reactive.Value(_NO_VALUE)
+        # Starts unset: the effect below reads the first value (an async `poll_func`
+        # can't be awaited here). Until then, the decorated function `req()`s it, and
+        # its readers re-run once the first value is set.
+        last_value: reactive.Value[Any] = reactive.Value()
         last_error: reactive.Value[Optional[Exception]] = reactive.Value(None)
 
         @reactive.effect(priority=priority, session=session)
@@ -116,10 +114,11 @@ def poll(
                     new = poll_func()
 
                 with reactive.isolate():
-                    old = last_value.get()
+                    has_old = last_value.is_set()
+                    old = last_value.get() if has_old else None
 
                 try:
-                    is_equal = False if old is _NO_VALUE else equals(old, new)
+                    is_equal = has_old and equals(old, new)
                 except Exception as e:
                     # For example, pandas DataFrame throws if you try to compare it to a
                     # non-comparable object
@@ -177,7 +176,8 @@ def poll(
                     if err is not None:
                         raise err
 
-                    # Take dependency on polling result
+                    # Wait for the first poll, then take a dependency on its result
+                    req(last_value.is_set())
                     last_value.get()
 
                     # Note that we also depend on the main function
@@ -200,7 +200,8 @@ def poll(
                     if err is not None:
                         raise err
 
-                    # Take dependency on polling result
+                    # Wait for the first poll, then take a dependency on its result
+                    req(last_value.is_set())
                     last_value.get()
 
                     # Note that we also depend on the main function
