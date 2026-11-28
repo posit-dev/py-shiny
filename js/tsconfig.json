@@ -21,5 +21,5 @@
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
   },
-  "include": ["**/*.tsx", "**/*.ts"],
+  "include": ["**/*.tsx", "**/*.ts", "**/*.js"]
 }
